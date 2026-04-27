@@ -24,6 +24,7 @@ export function StoreRegistrationForm() {
       return;
     }
 
+    const client = supabase;
     const form = event.currentTarget;
     const formData = new FormData(form);
     const name = readText(formData, "name");
@@ -88,7 +89,7 @@ export function StoreRegistrationForm() {
       return;
     }
 
-    const { error } = await supabase.from("stores").insert({
+    const { error } = await client.from("stores").insert({
       id: storeId,
       name,
       slug,
@@ -129,7 +130,7 @@ export function StoreRegistrationForm() {
       name: "logo" | "banner";
     }) {
       const path = `pending/${folder}/${assetName}-${crypto.randomUUID()}${getFileExtension(file.name)}`;
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await client.storage
         .from("store-assets")
         .upload(path, file, {
           cacheControl: "3600",
@@ -140,7 +141,7 @@ export function StoreRegistrationForm() {
         return null;
       }
 
-      const { data } = supabase.storage.from("store-assets").getPublicUrl(path);
+      const { data } = client.storage.from("store-assets").getPublicUrl(path);
       return data.publicUrl;
     }
   }
