@@ -9,10 +9,11 @@ import {
 } from "react";
 import { categoryOptions, cityOptions, conditionOptions } from "@/lib/listings";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import type { Database } from "@/lib/supabase/database.types";
 
 type AuthState = "checking" | "signed_out" | "not_admin" | "admin";
-type ListingStatus = "pending" | "approved" | "rejected" | "hidden" | "sold";
-type StoreStatus = "pending" | "active" | "hidden";
+type ListingStatus = Database["public"]["Enums"]["listing_status"];
+type StoreStatus = Database["public"]["Enums"]["store_status"];
 
 type AdminListing = {
   id: string;
