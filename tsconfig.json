@@ -19,9 +19,12 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/components/ui/*": ["./components_v0/ui/*"],
+      "@/hooks/use-mobile": ["./components_v0/ui/use-mobile"],
+      "@/hooks/use-toast": ["./components_v0/ui/use-toast"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "components_v0/ui/**"]
 }
