@@ -29,6 +29,7 @@ export const sortOptions = [
 ] as const;
 
 export type ListingSort = (typeof sortOptions)[number]["value"];
+export type ListingAttributes = Record<string, unknown>;
 
 export type ListingFilters = {
   category?: string;
@@ -56,6 +57,10 @@ export type ListingCardData = {
   model: string | null;
   condition: string | null;
   price_pen: number | null;
+  instrument_type: string | null;
+  attributes: ListingAttributes | null;
+  published_at: string | null;
+  view_count: number | null;
   city: string;
   region: string;
   seller_type: "individual" | "store";

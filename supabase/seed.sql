@@ -433,6 +433,269 @@ insert into public.listings (
     '51981234567'
   );
 
+update public.listings as listing
+set
+  instrument_type = metadata.instrument_type,
+  attributes = metadata.attributes,
+  published_at = metadata.published_at,
+  view_count = metadata.view_count
+from (
+  values
+    (
+      '20000000-0000-0000-0000-000000000001'::uuid,
+      'electric_guitar',
+      '{
+        "body_type": "solid_body",
+        "shape": "strat",
+        "strings": "6",
+        "bridge": "tremolo",
+        "pickups": ["sss", "single_coil"],
+        "handedness": "right_handed",
+        "frets": "21"
+      }'::jsonb,
+      '2026-04-20 10:00:00-05'::timestamptz,
+      184
+    ),
+    (
+      '20000000-0000-0000-0000-000000000002'::uuid,
+      'bass',
+      '{
+        "strings": "4",
+        "bass_type": "modern",
+        "pickups": ["pj", "passive"],
+        "scale_length": "long",
+        "handedness": "right_handed"
+      }'::jsonb,
+      '2026-04-21 09:30:00-05'::timestamptz,
+      143
+    ),
+    (
+      '20000000-0000-0000-0000-000000000003'::uuid,
+      'pedals',
+      '{
+        "pedal_type": "distortion",
+        "format": "compact",
+        "true_bypass": "no"
+      }'::jsonb,
+      null::timestamptz,
+      22
+    ),
+    (
+      '20000000-0000-0000-0000-000000000004'::uuid,
+      'microphones',
+      '{
+        "microphone_type": "dynamic",
+        "use_case": ["voice", "instrument"],
+        "polar_pattern": "cardioid",
+        "connection": "xlr"
+      }'::jsonb,
+      '2026-04-22 11:15:00-05'::timestamptz,
+      126
+    ),
+    (
+      '20000000-0000-0000-0000-000000000005'::uuid,
+      'amplifiers',
+      '{
+        "amplifier_type": "combo",
+        "technology": "solid_state",
+        "power": "16_50w",
+        "use_case": "guitar"
+      }'::jsonb,
+      '2026-04-22 16:45:00-05'::timestamptz,
+      98
+    ),
+    (
+      '20000000-0000-0000-0000-000000000006'::uuid,
+      'audio_interface',
+      '{
+        "inputs": "1",
+        "connection": "usb",
+        "phantom_power": "yes",
+        "midi": "no"
+      }'::jsonb,
+      null::timestamptz,
+      31
+    ),
+    (
+      '20000000-0000-0000-0000-000000000007'::uuid,
+      'cymbals',
+      '{
+        "cymbal_type": "hi_hat",
+        "size": "14",
+        "alloy": "brass",
+        "finish": "traditional"
+      }'::jsonb,
+      '2026-04-23 14:10:00-05'::timestamptz,
+      87
+    ),
+    (
+      '20000000-0000-0000-0000-000000000008'::uuid,
+      'drums',
+      '{
+        "drum_type": "acoustic",
+        "configuration": "shells_only",
+        "pieces": "5",
+        "material": "poplar",
+        "includes_hardware": "no",
+        "includes_cymbals": "no",
+        "kick_size": "22"
+      }'::jsonb,
+      '2026-04-24 08:40:00-05'::timestamptz,
+      205
+    ),
+    (
+      '30000000-0000-0000-0000-000000000001'::uuid,
+      'acoustic_guitar',
+      '{
+        "acoustic_type": "acoustic",
+        "body_shape": "dreadnought",
+        "strings_material": "steel",
+        "handedness": "right_handed",
+        "has_preamp": "no"
+      }'::jsonb,
+      '2026-04-19 12:00:00-05'::timestamptz,
+      162
+    ),
+    (
+      '30000000-0000-0000-0000-000000000002'::uuid,
+      'pedals',
+      '{
+        "pedal_type": "overdrive",
+        "format": "compact",
+        "true_bypass": "yes"
+      }'::jsonb,
+      '2026-04-21 13:20:00-05'::timestamptz,
+      72
+    ),
+    (
+      '30000000-0000-0000-0000-000000000003'::uuid,
+      'amplifiers',
+      '{
+        "amplifier_type": "combo",
+        "technology": "solid_state",
+        "power": "16_50w",
+        "use_case": "guitar"
+      }'::jsonb,
+      '2026-04-21 17:50:00-05'::timestamptz,
+      119
+    ),
+    (
+      '30000000-0000-0000-0000-000000000004'::uuid,
+      'microphones',
+      '{
+        "microphone_type": "condenser",
+        "use_case": ["voice", "podcast", "instrument"],
+        "polar_pattern": "cardioid",
+        "connection": "xlr"
+      }'::jsonb,
+      null::timestamptz,
+      44
+    ),
+    (
+      '30000000-0000-0000-0000-000000000005'::uuid,
+      'audio_interface',
+      '{
+        "inputs": "2",
+        "connection": "usb",
+        "phantom_power": "yes",
+        "midi": "no"
+      }'::jsonb,
+      '2026-04-23 10:25:00-05'::timestamptz,
+      136
+    ),
+    (
+      '30000000-0000-0000-0000-000000000006'::uuid,
+      'bass',
+      '{
+        "strings": "4",
+        "bass_type": "modern",
+        "pickups": ["pj", "active"],
+        "scale_length": "long",
+        "handedness": "right_handed"
+      }'::jsonb,
+      '2026-04-24 09:05:00-05'::timestamptz,
+      112
+    ),
+    (
+      '30000000-0000-0000-0000-000000000007'::uuid,
+      'microphones',
+      '{
+        "microphone_type": "dynamic",
+        "use_case": ["drums", "instrument"],
+        "polar_pattern": "cardioid",
+        "connection": "xlr"
+      }'::jsonb,
+      '2026-04-24 15:30:00-05'::timestamptz,
+      91
+    ),
+    (
+      '30000000-0000-0000-0000-000000000008'::uuid,
+      'cymbals',
+      '{
+        "cymbal_type": "crash",
+        "size": "16",
+        "alloy": "brass",
+        "finish": "brilliant"
+      }'::jsonb,
+      null::timestamptz,
+      28
+    ),
+    (
+      '30000000-0000-0000-0000-000000000009'::uuid,
+      'drums',
+      '{
+        "drum_type": "acoustic",
+        "configuration": "complete",
+        "pieces": "5",
+        "material": "poplar",
+        "includes_hardware": "yes",
+        "includes_cymbals": "yes",
+        "kick_size": "22"
+      }'::jsonb,
+      null::timestamptz,
+      53
+    ),
+    (
+      '30000000-0000-0000-0000-000000000010'::uuid,
+      'amplifiers',
+      '{
+        "amplifier_type": "combo",
+        "technology": "solid_state",
+        "power": "16_50w",
+        "use_case": "bass"
+      }'::jsonb,
+      null::timestamptz,
+      39
+    ),
+    (
+      '30000000-0000-0000-0000-000000000011'::uuid,
+      'pedals',
+      '{
+        "pedal_type": "overdrive",
+        "format": "compact",
+        "true_bypass": "yes"
+      }'::jsonb,
+      '2026-04-25 12:35:00-05'::timestamptz,
+      76
+    ),
+    (
+      '30000000-0000-0000-0000-000000000012'::uuid,
+      'electric_guitar',
+      '{
+        "body_type": "solid_body",
+        "shape": "superstrat",
+        "strings": "6",
+        "bridge": "fixed",
+        "pickups": ["hh", "humbucker"],
+        "handedness": "right_handed",
+        "frets": "24"
+      }'::jsonb,
+      '2026-04-25 18:20:00-05'::timestamptz,
+      131
+    )
+) as metadata(id, instrument_type, attributes, published_at, view_count)
+where listing.id = metadata.id;
+
 insert into public.listing_photos (
   id,
   listing_id,

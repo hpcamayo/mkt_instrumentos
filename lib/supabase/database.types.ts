@@ -1,3 +1,11 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 export type Database = {
   public: {
     Tables: {
@@ -53,6 +61,10 @@ export type Database = {
           model: string | null;
           condition: string | null;
           price_pen: number | null;
+          instrument_type: string | null;
+          attributes: Json | null;
+          published_at: string | null;
+          view_count: number | null;
           city: string;
           region: string;
           contact_name: string | null;
@@ -73,6 +85,10 @@ export type Database = {
           model?: string | null;
           condition?: string | null;
           price_pen?: number | null;
+          instrument_type?: string | null;
+          attributes?: Json | null;
+          published_at?: string | null;
+          view_count?: number | null;
           city: string;
           region?: string;
           contact_name?: string | null;
@@ -93,6 +109,10 @@ export type Database = {
           model?: string | null;
           condition?: string | null;
           price_pen?: number | null;
+          instrument_type?: string | null;
+          attributes?: Json | null;
+          published_at?: string | null;
+          view_count?: number | null;
           city?: string;
           region?: string;
           contact_name?: string | null;
