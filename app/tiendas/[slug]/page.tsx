@@ -59,7 +59,7 @@ export default async function StorePage({ params }: StorePageProps) {
     notFound();
   }
 
-  const { data: listings } = await supabase
+  const { data } = await supabase
     .from("listings")
     .select(
       `
@@ -86,6 +86,8 @@ export default async function StorePage({ params }: StorePageProps) {
           is_verified
         ),
         listing_photos (
+          id,
+          listing_id,
           image_url,
           alt_text,
           sort_order
@@ -98,14 +100,46 @@ export default async function StorePage({ params }: StorePageProps) {
     .order("sort_order", {
       foreignTable: "listing_photos",
       ascending: true,
-    });
+    })
+    .limit(1, { foreignTable: "listing_photos" });
+
+  const listings = (data ?? []) as ListingCardData[];
+  const photoCounts = await getListingPhotoCounts(
+    supabase,
+    listings.map((listing) => listing.id),
+  );
 
   return (
     <StoreView
       store={store as StoreData}
-      listings={(listings ?? []) as ListingCardData[]}
+      listings={listings.map((listing) => ({
+        ...listing,
+        photo_count: photoCounts.get(listing.id) ?? listing.listing_photos.length,
+      }))}
     />
   );
+}
+
+async function getListingPhotoCounts(
+  supabase: NonNullable<ReturnType<typeof getPublicSupabaseClient>>,
+  listingIds: string[],
+) {
+  const counts = new Map<string, number>();
+
+  if (listingIds.length === 0) {
+    return counts;
+  }
+
+  const { data } = await supabase
+    .from("listing_photos")
+    .select("listing_id")
+    .in("listing_id", listingIds);
+
+  for (const photo of data ?? []) {
+    counts.set(photo.listing_id, (counts.get(photo.listing_id) ?? 0) + 1);
+  }
+
+  return counts;
 }
 
 function StoreView({

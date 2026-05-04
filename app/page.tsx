@@ -64,6 +64,8 @@ export default async function HomePage() {
               is_verified
             ),
             listing_photos (
+              id,
+              listing_id,
               image_url,
               alt_text,
               sort_order
@@ -76,6 +78,7 @@ export default async function HomePage() {
           foreignTable: "listing_photos",
           ascending: true,
         })
+        .limit(1, { foreignTable: "listing_photos" })
         .limit(8),
       supabase
         .from("stores")

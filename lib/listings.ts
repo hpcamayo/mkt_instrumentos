@@ -33,6 +33,13 @@ export const sortOptions = [
 
 export type ListingSort = (typeof sortOptions)[number]["value"];
 export type ListingAttributes = Record<string, unknown>;
+export type ListingPhotoData = {
+  id?: string;
+  listing_id?: string;
+  image_url: string;
+  alt_text: string | null;
+  sort_order: number;
+};
 
 export type ListingFilters = {
   category?: string;
@@ -71,11 +78,9 @@ export type ListingCardData = {
   region: string;
   seller_type: "individual" | "store";
   created_at: string;
+  photo_count?: number;
   stores: StoreSummary | StoreSummary[] | null;
-  listing_photos: {
-    image_url: string;
-    alt_text: string | null;
-  }[];
+  listing_photos: ListingPhotoData[];
 };
 
 export type ListingDetailData = ListingCardData & {

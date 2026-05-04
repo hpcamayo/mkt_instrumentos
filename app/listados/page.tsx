@@ -78,6 +78,8 @@ export default async function ListingsPage({ searchParams }: ListingsPageProps) 
           is_verified
         ),
         listing_photos (
+          id,
+          listing_id,
           image_url,
           alt_text,
           sort_order
@@ -139,13 +141,23 @@ export default async function ListingsPage({ searchParams }: ListingsPageProps) 
     foreignTable: "listing_photos",
     ascending: true,
   });
+  query = query.limit(1, { foreignTable: "listing_photos" });
 
   const { count, data, error } = await query;
+  const listings = (data ?? []) as ListingCardData[];
+  const photoCounts = await getListingPhotoCounts(
+    supabase,
+    listings.map((listing) => listing.id),
+  );
+  const listingsWithPhotoCounts = listings.map((listing) => ({
+    ...listing,
+    photo_count: photoCounts.get(listing.id) ?? listing.listing_photos.length,
+  }));
 
   return (
     <ListingsView
       filters={filters}
-      listings={(data ?? []) as ListingCardData[]}
+      listings={listingsWithPhotoCounts}
       totalCount={count ?? 0}
       errorMessage={error?.message}
     />
@@ -166,7 +178,7 @@ function ListingsView({
   errorMessage,
 }: ListingsViewProps) {
   return (
-    <section className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
+    <section className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-3 py-5 sm:gap-6 sm:px-4 sm:py-6 lg:px-5 xl:px-6">
       <div className="space-y-2">
         <p className="text-sm font-semibold uppercase tracking-wide text-brass">
           Listados
@@ -187,10 +199,10 @@ function ListingsView({
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[260px_1fr] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start xl:gap-6">
         <ListingFilters filters={filters} />
 
-        <div className="grid gap-4">
+        <div className="grid min-w-0 gap-4">
           <ActiveFilterChips filters={filters} />
 
           {errorMessage ? (
@@ -201,19 +213,25 @@ function ListingsView({
           ) : null}
 
           {!errorMessage && listings.length === 0 ? (
-            <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm leading-6 text-slate-600 shadow-sm">
-              <p className="font-semibold text-ink">
-                No hay instrumentos con esos filtros.
+            <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm leading-6 text-slate-600 shadow-sm">
+              <p className="text-base font-semibold text-ink">
+                No encontramos resultados con esos filtros
               </p>
-              <p className="mt-1">
-                Prueba limpiar la búsqueda, cambiar la ciudad o revisar otra
-                categoría.
+              <p className="mx-auto mt-2 max-w-md">
+                Prueba ampliar la búsqueda, cambiar la ciudad o revisar otra
+                categoría de instrumentos.
               </p>
+              <a
+                href="/listados"
+                className="mt-5 inline-flex items-center justify-center rounded-md bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+              >
+                Limpiar filtros
+              </a>
             </div>
           ) : null}
 
           {listings.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-[18px] min-[460px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 2xl:gap-6">
               {listings.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} />
               ))}
@@ -223,6 +241,28 @@ function ListingsView({
       </div>
     </section>
   );
+}
+
+async function getListingPhotoCounts(
+  supabase: NonNullable<ReturnType<typeof getPublicSupabaseClient>>,
+  listingIds: string[],
+) {
+  const counts = new Map<string, number>();
+
+  if (listingIds.length === 0) {
+    return counts;
+  }
+
+  const { data } = await supabase
+    .from("listing_photos")
+    .select("listing_id")
+    .in("listing_id", listingIds);
+
+  for (const photo of data ?? []) {
+    counts.set(photo.listing_id, (counts.get(photo.listing_id) ?? 0) + 1);
+  }
+
+  return counts;
 }
 
 function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
@@ -256,7 +296,7 @@ function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
 
 function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
   return (
-    <section className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
+    <section className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-3 py-5 sm:gap-6 sm:px-4 sm:py-6 lg:px-5 xl:px-6">
       <div className="space-y-2">
         <p className="text-sm font-semibold uppercase tracking-wide text-brass">
           Listados
@@ -270,7 +310,7 @@ function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
           esta página mostrará solo publicaciones aprobadas.
         </p>
       </div>
-      <div className="grid gap-5 lg:grid-cols-[260px_1fr] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start xl:gap-6">
         <ListingFilters filters={filters} />
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
           Copia `.env.example` a `.env.local`, agrega las credenciales públicas

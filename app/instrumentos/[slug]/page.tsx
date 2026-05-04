@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
 import {
   buildWhatsAppUrl,
   formatPrice,
@@ -141,6 +142,12 @@ function ListingDetail({ listing }: { listing: ListingDetailData }) {
           <p className="mt-3 text-3xl font-bold text-ink">
             {formatPrice(listing.price_pen)}
           </p>
+          <ListingDetailMetadata
+            listingId={listing.id}
+            publishedAt={listing.published_at}
+            createdAt={listing.created_at}
+            initialViewCount={listing.view_count}
+          />
 
           <dl className="mt-6 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
             <DetailItem label="Categoría" value={getCategoryLabel(listing.category)} />

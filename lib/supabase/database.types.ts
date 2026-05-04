@@ -212,6 +212,12 @@ export type Database = {
         };
         Returns: boolean;
       };
+      increment_listing_view_count: {
+        Args: {
+          p_listing_id: string;
+        };
+        Returns: number;
+      };
     };
     Enums: {
       listing_status: "pending" | "approved" | "rejected" | "hidden" | "sold";
