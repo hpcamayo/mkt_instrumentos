@@ -1,3 +1,5 @@
+import { instrumentFilterGroups } from "@/lib/instrument-filters";
+
 export const categoryOptions = [
   { value: "guitars", label: "Guitarras" },
   { value: "basses", label: "Bajos" },
@@ -20,6 +22,7 @@ export const conditionOptions = [
 export const sellerTypeOptions = [
   { value: "individual", label: "Particular" },
   { value: "store", label: "Tienda" },
+  { value: "verified_store", label: "Tienda verificada" },
 ] as const;
 
 export const sortOptions = [
@@ -35,9 +38,12 @@ export type ListingFilters = {
   category?: string;
   city?: string;
   condition?: string;
-  sellerType?: "individual" | "store";
+  brand?: string;
+  sellerType?: "individual" | "store" | "verified_store";
+  instrumentType?: string;
   minPrice?: number;
   maxPrice?: number;
+  advanced: Record<string, string | string[] | number | boolean>;
   sort: ListingSort;
 };
 
@@ -151,20 +157,89 @@ export function parseListingFilters(
 
   const sellerType = readString("seller_type");
   const sort = readString("sort");
+  const location = readString("location");
+  const instrumentType = readString("instrument_type");
+  const advanced = parseAdvancedFilters(searchParams, instrumentType);
 
   return {
     category: readString("category") || undefined,
-    city: readString("city") || undefined,
+    city: location || readString("city") || undefined,
     condition: readString("condition") || undefined,
+    brand: readString("brand") || undefined,
     sellerType:
-      sellerType === "individual" || sellerType === "store"
+      sellerType === "individual" ||
+      sellerType === "store" ||
+      sellerType === "verified_store"
         ? sellerType
         : undefined,
+    instrumentType: instrumentType || undefined,
     minPrice: readNumber("min_price"),
     maxPrice: readNumber("max_price"),
+    advanced,
     sort:
       sort === "price_asc" || sort === "price_desc" || sort === "newest"
         ? sort
         : "newest",
   };
+}
+
+function parseAdvancedFilters(
+  searchParams: Record<string, string | string[] | undefined>,
+  instrumentType?: string,
+) {
+  const groups = instrumentType
+    ? instrumentFilterGroups.filter(
+        (group) => group.instrumentType === instrumentType,
+      )
+    : instrumentFilterGroups;
+  const filterTypes = new Map<
+    string,
+    "select" | "multiselect" | "boolean" | "number"
+  >();
+
+  for (const group of groups) {
+    for (const filter of group.filters) {
+      const currentType = filterTypes.get(filter.key);
+      filterTypes.set(
+        filter.key,
+        currentType === "multiselect" ? currentType : filter.type,
+      );
+    }
+  }
+  const advancedFilters: ListingFilters["advanced"] = {};
+
+  for (const [key, type] of filterTypes) {
+    const rawValue = searchParams[key];
+    if (rawValue === undefined) {
+      continue;
+    }
+
+    const values = (Array.isArray(rawValue) ? rawValue : [rawValue])
+      .flatMap((value) => value.split(","))
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (values.length === 0) {
+      continue;
+    }
+
+    if (type === "number") {
+      const numberValue = Number(values[0]);
+      if (Number.isFinite(numberValue)) {
+        advancedFilters[key] = numberValue;
+      }
+      continue;
+    }
+
+    if (type === "boolean") {
+      const value = values[0];
+      advancedFilters[key] =
+        value === "true" ? true : value === "false" ? false : value;
+      continue;
+    }
+
+    advancedFilters[key] = type === "multiselect" ? values : values[0];
+  }
+
+  return advancedFilters;
 }
