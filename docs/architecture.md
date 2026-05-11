@@ -124,6 +124,7 @@ Admin controls supply quality. The admin panel can:
 ## Component Structure
 
 Core local components:
+- `components/page-container.tsx`
 - `components/listing-card.tsx`
 - `components/listing-filters.tsx`
 - `components/listing-detail-metadata.tsx`
@@ -153,6 +154,8 @@ Tailwind includes content paths for:
 
 Custom colors include `ink`, `brass`, `cedar`, `mist`, and shadcn-like tokens such as `background`, `foreground`, `card`, `primary`, `muted`, `border`, `input`, and `ring`.
 
+Public page width is centralized in `components/page-container.tsx`. `PageContainer` uses the listings-page rhythm: `max-w-[1600px]` with `px-3 sm:px-4 lg:px-5 xl:px-6`. It is used by the public header/footer, homepage sections, `/listados`, `/instrumentos/[slug]`, `/tiendas/[slug]`, `/vender`, and `/registrar-tienda`. Admin pages remain on their existing admin-specific wrapper.
+
 Do not blindly replace working Tailwind 3 global CSS with v0/Tailwind 4 CSS. Merge variables/config deliberately.
 
 ## Deployment Flow
@@ -181,4 +184,3 @@ Before merging significant changes:
 - Review Vercel deployment logs.
 
 Recent local limitation: npm and dependencies were not available in this workspace, so checks may need to run elsewhere.
-

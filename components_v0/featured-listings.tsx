@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { BadgeCheck, MapPin } from "lucide-react";
 import Link from "next/link";
+import { PageContainer } from "@/components/page-container";
 
 export type FeaturedListing = {
   id: string;
@@ -37,7 +38,7 @@ export function FeaturedListings({
 }) {
   return (
     <section className="bg-secondary/50 py-16 md:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <PageContainer>
         <div className="mb-12 flex items-center justify-between">
           <div>
             <h2 className="font-serif text-3xl text-foreground md:text-4xl">
@@ -128,7 +129,7 @@ export function FeaturedListings({
             Ver todos los anuncios
           </Link>
         </div>
-      </div>
+      </PageContainer>
     </section>
   );
 }

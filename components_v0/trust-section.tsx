@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { BadgeCheck, MessageCircle, SearchCheck, Store } from "lucide-react";
+import { PageContainer } from "@/components/page-container";
 
 const features = [
   {
@@ -48,7 +49,7 @@ const item = {
 export function TrustSection() {
   return (
     <section className="bg-foreground py-16 md:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <PageContainer>
         <div className="mb-12 text-center">
           <h2 className="font-serif text-3xl text-background md:text-4xl">
             Un marketplace directo para musicos
@@ -83,7 +84,7 @@ export function TrustSection() {
             </motion.div>
           ))}
         </motion.div>
-      </div>
+      </PageContainer>
     </section>
   );
 }

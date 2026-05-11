@@ -3,12 +3,13 @@
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { PageContainer } from "@/components/page-container";
 import { Button } from "@/components_v0/ui/button";
 
 export function CTASection() {
   return (
     <section className="py-20 md:py-32">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <PageContainer>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -54,7 +55,7 @@ export function CTASection() {
             </p>
           </div>
         </motion.div>
-      </div>
+      </PageContainer>
     </section>
   );
 }

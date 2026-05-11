@@ -55,6 +55,8 @@ It fetches real Supabase data:
 - Up to 4 active verified stores.
 - Only the first listing photo is embedded for homepage listings.
 
+Layout uses the shared `PageContainer` public width system.
+
 ## Listings Page
 
 Route: `/listados`
@@ -73,7 +75,7 @@ Features:
 - URL query params as source of truth, so filtered pages are shareable.
 
 Layout:
-- Max width around `1600px`.
+- Max width around `1600px`, centralized through `PageContainer`.
 - Desktop: `260px` sidebar + listing grid.
 - Grid: 1 column on narrow screens, 2 on wider mobile, 3 on medium, 4 on large desktop, 5 on very wide screens.
 
@@ -123,17 +125,29 @@ Route: `/instrumentos/[slug]`
 
 Features:
 - Reads one approved listing by `slug`.
-- Shows full title, price, category, brand, model, condition, city, seller, description.
-- Displays main photo and additional thumbnails.
-- Shows seller type and verified-store badge where relevant.
-- Shows metadata:
+- Uses a commercial two-column layout on desktop:
+  - Left side: large product photo and thumbnails.
+  - Right side: breadcrumb, seller badge, title, price, metadata, key specs, WhatsApp CTA, and seller trust box.
+- Breadcrumb format is `Inicio / Categoria / Titulo`, with the category linking back to filtered listings.
+- Title prefers `brand + model`, falling back to the original listing title.
+- Top metadata shows:
   - `Publicado hace X dias`
   - `Visto X veces`
+- Key specs near the title/price show category, brand, model, condition, city, seller, and selected instrument attributes when available.
+- Lower sections show:
+  - `Descripción`
+  - `Especificaciones completas`
+  - `Sobre el vendedor` or `Sobre la tienda`
+  - `Artículos similares`
+  - `Más de este vendedor` or `Más de esta tienda`
 - Increments `view_count` through `/api/listings/[id]/view`.
 - Uses localStorage to avoid incrementing the same listing repeatedly in the same browser within 24 hours.
 - Primary CTA opens WhatsApp using a prefilled Spanish message.
 - Store listings include a secondary link to the store page.
 - Includes a safety/trust notice reminding users that Laria does not process payments, shipping, or guarantees.
+- Seller/store trust signals only use available data: name, seller type, location, verified-store badge, visible since date, and approved listing count when queryable.
+- Ratings, sales counts, reviews, checkout, delivery, payments, and chat are not shown because the MVP does not store or support them.
+- Layout uses the shared `PageContainer` public width system.
 
 ## Store Pages
 
@@ -148,6 +162,8 @@ Public store pages show:
 - Description.
 - WhatsApp button.
 - Approved listings from that store.
+
+Layout uses the shared `PageContainer` public width system.
 
 Store products also appear in general listings search.
 
@@ -179,6 +195,7 @@ Current behavior:
 - Uploads photos to `listing-photos`.
 - Inserts photo records in `listing_photos`.
 - Shows a success message saying an admin will review before publication.
+- Page wrapper uses `PageContainer`; the form content remains capped for readability.
 
 Note: the current seller form does not yet expose `instrument_type` or `attributes`, even though the listings page supports advanced filters. That is an important future improvement.
 
@@ -202,6 +219,7 @@ Current behavior:
 - Uploads logo/banner to `store-assets`.
 - Inserts a `pending` store with `listing_plan='free'`.
 - Shows a success message saying an admin will review before activation.
+- Page wrapper uses `PageContainer`; the form content remains capped for readability.
 
 ## Admin Panel
 
@@ -231,4 +249,3 @@ Do not add without explicit decision:
 - Subscription billing.
 - Commission logic.
 - Complex analytics.
-

@@ -31,7 +31,9 @@ Key files:
 - `lib/instrument-filters.ts`: actual advanced filter config and current filter keys.
 - `components/listing-filters.tsx`: desktop sidebar and mobile filter/sort sheets.
 - `components/listing-card.tsx`: compact card with first-photo lazy loading and on-demand photo carousel fetch.
+- `app/instrumentos/[slug]/page.tsx`: listing detail layout, gallery, breadcrumb, specs, seller trust sections, similar listings, and more-from-seller listings.
 - `components/listing-detail-metadata.tsx`: `Publicado hace X dias` / `Visto X veces` and client-side view-count increment.
+- `components/page-container.tsx`: shared public page width and horizontal padding wrapper.
 - `components/admin-panel.tsx`: admin login, moderation queues, status updates.
 - `supabase/migrations/*`: manual SQL migrations for schema, RLS, storage, metadata, and view count RPC.
 
@@ -40,4 +42,3 @@ Operational rule: Vercel deploys code, but does not apply Supabase SQL migration
 Context-reset rule: before new work, read `/docs` first and summarize the current product, architecture, schema, features, filters, decisions, and roadmap. Do not rely on chat history.
 
 Known local environment limitation from recent sessions: `npm` and `node_modules` were not available in this workspace, so local build/typecheck/lint could not be run here. Verify with `npm install`, `npm run typecheck`, `npm run lint`, and `npm run build` in a proper Node environment or on Vercel.
-

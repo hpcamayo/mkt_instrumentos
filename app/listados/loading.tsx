@@ -1,6 +1,8 @@
+import { PageContainer } from "@/components/page-container";
+
 export default function ListingsLoading() {
   return (
-    <section className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-3 py-5 sm:gap-6 sm:px-4 sm:py-6 lg:px-5 xl:px-6">
+    <PageContainer as="section" className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6">
       <span className="sr-only">Cargando listados</span>
 
       <div className="space-y-3">
@@ -53,7 +55,7 @@ export default function ListingsLoading() {
           </div>
         </div>
       </div>
-    </section>
+    </PageContainer>
   );
 }
 

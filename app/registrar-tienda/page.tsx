@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { PageContainer } from "@/components/page-container";
 import { StoreRegistrationForm } from "@/components/store-registration-form";
 
 export const metadata: Metadata = {
@@ -15,20 +16,22 @@ export const metadata: Metadata = {
 
 export default function RegisterStorePage() {
   return (
-    <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brass">
-          Tiendas
-        </p>
-        <h1 className="text-2xl font-bold text-ink sm:text-3xl">
-          Registra tu tienda
-        </h1>
-        <p className="max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-          Envía los datos básicos de tu tienda. Un administrador revisará la
-          solicitud antes de activar la página pública.
-        </p>
+    <PageContainer as="section" className="py-6">
+      <div className="flex w-full max-w-4xl flex-col gap-6">
+        <div className="space-y-2">
+          <p className="text-sm font-semibold uppercase tracking-wide text-brass">
+            Tiendas
+          </p>
+          <h1 className="text-2xl font-bold text-ink sm:text-3xl">
+            Registra tu tienda
+          </h1>
+          <p className="max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+            Envía los datos básicos de tu tienda. Un administrador revisará la
+            solicitud antes de activar la página pública.
+          </p>
+        </div>
+        <StoreRegistrationForm />
       </div>
-      <StoreRegistrationForm />
-    </section>
+    </PageContainer>
   );
 }

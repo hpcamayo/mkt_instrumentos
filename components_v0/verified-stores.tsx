@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { BadgeCheck, MapPin } from "lucide-react";
 import Link from "next/link";
+import { PageContainer } from "@/components/page-container";
 
 export type VerifiedStore = {
   id: string;
@@ -31,7 +32,7 @@ const item = {
 export function VerifiedStores({ stores }: { stores: VerifiedStore[] }) {
   return (
     <section className="py-16 md:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <PageContainer>
         <div className="mb-12 flex items-center justify-between">
           <div>
             <div className="mb-2 flex items-center gap-2">
@@ -105,7 +106,7 @@ export function VerifiedStores({ stores }: { stores: VerifiedStore[] }) {
             Pronto mostraremos tiendas verificadas.
           </div>
         )}
-      </div>
+      </PageContainer>
     </section>
   );
 }

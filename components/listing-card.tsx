@@ -6,6 +6,7 @@ import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import {
   formatPrice,
   getCategoryLabel,
+  getListingDisplayTitle,
   normalizeStore,
   type ListingCardData,
   type ListingPhotoData,
@@ -31,7 +32,7 @@ export function ListingCard({ listing }: ListingCardProps) {
     sellerLabel === "Tienda verificada"
       ? "bg-emerald-50 text-emerald-700"
       : "bg-slate-100 text-slate-700";
-  const displayTitle = getDisplayTitle(listing);
+  const displayTitle = getListingDisplayTitle(listing);
   const categoryLabel = getListingTagLabel(listing);
   const conditionLabel = formatCondition(listing.condition);
   const hasMultiplePhotos = photoCount > 1;
@@ -232,12 +233,6 @@ export function ListingCard({ listing }: ListingCardProps) {
       </div>
     </article>
   );
-}
-
-function getDisplayTitle(listing: ListingCardData) {
-  const productName = [listing.brand, listing.model].filter(Boolean).join(" ");
-
-  return productName || listing.title;
 }
 
 function getListingTagLabel(listing: ListingCardData) {

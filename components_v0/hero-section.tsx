@@ -3,11 +3,12 @@
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import Link from "next/link";
+import { PageContainer } from "@/components/page-container";
 
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden py-20 md:py-32">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <PageContainer>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -61,7 +62,7 @@ export function HeroSection() {
             </Link>
           </div>
         </motion.div>
-      </div>
+      </PageContainer>
     </section>
   );
 }

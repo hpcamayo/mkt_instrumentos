@@ -59,10 +59,16 @@ type StoreSummary = {
   slug: string;
   status: "pending" | "active" | "hidden";
   is_verified: boolean | null;
+  description?: string | null;
+  city?: string | null;
+  district?: string | null;
+  whatsapp_phone?: string | null;
+  created_at?: string | null;
 };
 
 export type ListingCardData = {
   id: string;
+  store_id?: string | null;
   title: string;
   slug: string;
   category: string;
@@ -117,6 +123,16 @@ export function normalizeStore(listing: ListingCardData) {
 
 export function getSellerTypeLabel(sellerType: "individual" | "store") {
   return sellerType === "store" ? "Tienda" : "Particular";
+}
+
+export function getListingDisplayTitle(listing: {
+  brand: string | null;
+  model: string | null;
+  title: string;
+}) {
+  const productName = [listing.brand, listing.model].filter(Boolean).join(" ");
+
+  return productName || listing.title;
 }
 
 export function buildWhatsAppUrl(listing: ListingDetailData) {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ListingCard } from "@/components/listing-card";
 import { ListingFilters } from "@/components/listing-filters";
+import { PageContainer } from "@/components/page-container";
 import {
   instrumentFilterGroups,
   type InstrumentFilterConfig,
@@ -178,7 +179,7 @@ function ListingsView({
   errorMessage,
 }: ListingsViewProps) {
   return (
-    <section className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-3 py-5 sm:gap-6 sm:px-4 sm:py-6 lg:px-5 xl:px-6">
+    <PageContainer as="section" className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6">
       <div className="space-y-2">
         <p className="text-sm font-semibold uppercase tracking-wide text-brass">
           Listados
@@ -239,7 +240,7 @@ function ListingsView({
           ) : null}
         </div>
       </div>
-    </section>
+    </PageContainer>
   );
 }
 
@@ -296,7 +297,7 @@ function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
 
 function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
   return (
-    <section className="mx-auto flex w-full max-w-[1600px] flex-col gap-5 px-3 py-5 sm:gap-6 sm:px-4 sm:py-6 lg:px-5 xl:px-6">
+    <PageContainer as="section" className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6">
       <div className="space-y-2">
         <p className="text-sm font-semibold uppercase tracking-wide text-brass">
           Listados
@@ -317,7 +318,7 @@ function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
           de Supabase y reinicia el servidor de desarrollo.
         </div>
       </div>
-    </section>
+    </PageContainer>
   );
 }
 

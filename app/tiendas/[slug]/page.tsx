@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ListingCard } from "@/components/listing-card";
+import { PageContainer } from "@/components/page-container";
 import {
   buildStoreWhatsAppUrl,
   type ListingCardData,
@@ -150,7 +151,7 @@ function StoreView({
   listings: ListingCardData[];
 }) {
   return (
-    <section className="mx-auto flex w-full max-w-6xl flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
+    <PageContainer as="section" className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6">
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="relative h-40 bg-slate-100 sm:h-56">
           {store.banner_url ? (
@@ -243,14 +244,14 @@ function StoreView({
           </p>
         </div>
       )}
-    </section>
+    </PageContainer>
   );
 }
 
 function SupabaseSetupMessage() {
   return (
-    <section className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+    <PageContainer as="section" className="py-8">
+      <div className="max-w-3xl rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
         <h1 className="text-xl font-bold text-ink">
           Configura Supabase para ver esta tienda
         </h1>
@@ -260,6 +261,6 @@ function SupabaseSetupMessage() {
           credenciales públicas y reinicia el servidor de desarrollo.
         </p>
       </div>
-    </section>
+    </PageContainer>
   );
 }

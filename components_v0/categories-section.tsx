@@ -12,6 +12,7 @@ import {
   Speaker,
 } from "lucide-react";
 import Link from "next/link";
+import { PageContainer } from "@/components/page-container";
 
 type Category = {
   value: string;
@@ -49,7 +50,7 @@ const item = {
 export function CategoriesSection({ categories }: { categories: Category[] }) {
   return (
     <section className="py-16 md:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <PageContainer>
         <div className="mb-12 text-center">
           <h2 className="font-serif text-3xl text-foreground md:text-4xl">
             Explora por categoria
@@ -91,7 +92,7 @@ export function CategoriesSection({ categories }: { categories: Category[] }) {
             );
           })}
         </motion.div>
-      </div>
+      </PageContainer>
     </section>
   );
 }
