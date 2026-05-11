@@ -126,8 +126,16 @@ Route: `/instrumentos/[slug]`
 Features:
 - Reads one approved listing by `slug`.
 - Uses a commercial two-column layout on desktop:
-  - Left side: large product photo and thumbnails.
+  - Left side: sticky product gallery.
   - Right side: breadcrumb, seller badge, title, price, metadata, key specs, WhatsApp CTA, and seller trust box.
+- Gallery behavior:
+  - Desktop gallery uses `position: sticky` with a top offset so details scroll past it.
+  - Mobile gallery is not sticky and appears above the detail column.
+  - Main image uses `object-contain` to avoid aggressive instrument cropping.
+  - Thumbnail buttons update the active image and show a visible selected state.
+  - Previous/next buttons appear when multiple photos exist; arrow keys also work when the gallery is focused.
+  - Missing photos show a `Foto pendiente` fallback.
+  - The gallery renders one large active image plus compact thumbnails, preserving existing Supabase image URLs and upload/storage behavior.
 - Breadcrumb format is `Inicio / Categoria / Titulo`, with the category linking back to filtered listings.
 - Title prefers `brand + model`, falling back to the original listing title.
 - Top metadata shows:
@@ -140,12 +148,20 @@ Features:
   - `Sobre el vendedor` or `Sobre la tienda`
   - `Artículos similares`
   - `Más de este vendedor` or `Más de esta tienda`
+- Recommendation sections use the existing compact listing cards:
+  - `Artículos similares` reads approved listings only, excludes the current listing, prioritizes the same `instrument_type` when present or otherwise the same category, boosts same-brand results within that pool, and can fill remaining slots with same-brand listings. It shows up to 4 items.
+  - `Más de este vendedor` / `Más de esta tienda` reads approved listings only, excludes the current listing, uses `store_id` for stores and `whatsapp_phone` for individual sellers, shows up to 4 items, and is hidden when there are no results.
+- `Especificaciones completas` renders clean label/value rows. It includes base fields `Publicado`, `Condición`, `Categoría`, `Marca`, `Modelo`, `Ciudad`, and `Vendedor`/`Tienda`, followed by non-empty `attributes` values.
+- Attribute labels and option values reuse `lib/instrument-filters.ts` through `lib/listing-specs.ts`; raw JSON and snake_case keys should not be exposed to users.
 - Increments `view_count` through `/api/listings/[id]/view`.
 - Uses localStorage to avoid incrementing the same listing repeatedly in the same browser within 24 hours.
 - Primary CTA opens WhatsApp using a prefilled Spanish message.
 - Store listings include a secondary link to the store page.
 - Includes a safety/trust notice reminding users that Laria does not process payments, shipping, or guarantees.
-- Seller/store trust signals only use available data: name, seller type, location, verified-store badge, visible since date, and approved listing count when queryable.
+- Seller/store trust box:
+  - Individual listings show `Sobre el vendedor`, seller name when available, `Particular`, location, active approved listing count, visible-since date, WhatsApp contact action, and a short safety note.
+  - Store listings show `Sobre la tienda`, store name, verified badge when `stores.is_verified=true`, location, short store description when available, active approved listing count, visible-since date, WhatsApp contact action, and a link to the public store page.
+  - Listing counts use approved active listings from the same store or, for individuals, the same WhatsApp contact.
 - Ratings, sales counts, reviews, checkout, delivery, payments, and chat are not shown because the MVP does not store or support them.
 - Layout uses the shared `PageContainer` public width system.
 

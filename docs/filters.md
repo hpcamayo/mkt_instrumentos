@@ -13,11 +13,13 @@ listings.attributes jsonb
 
 Current code locations:
 - `lib/instrument-filters.ts`: actual filter groups, keys, labels, and options.
+- `lib/listing-specs.ts`: reuses the filter groups to render listing detail attribute labels and option values.
 - `lib/listings.ts`: URL query parsing into `ListingFilters`.
 - `components/listing-filters.tsx`: desktop and mobile filter UI.
 - `app/listados/page.tsx`: Supabase query application.
 
 UI labels are Spanish. Internal values are stable English/snake_case where practical.
+Detail pages should render friendly labels/values and never expose raw `attributes` JSON or ugly snake_case keys to buyers.
 
 ## Core Filters
 
@@ -228,4 +230,3 @@ The same URL params drive both layouts.
 ## Current Gap
 
 The public listing submission form does not yet collect `instrument_type` or `attributes`. Advanced filters work for seeded/admin-populated data, but new public submissions may not match advanced filters until those fields are captured or edited by admin.
-

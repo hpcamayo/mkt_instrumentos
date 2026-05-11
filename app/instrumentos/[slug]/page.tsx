@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { ListingCard } from "@/components/listing-card";
+import { ListingDetailGallery } from "@/components/listing-detail-gallery";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
 import { PageContainer } from "@/components/page-container";
 import {
-  getInstrumentFilterGroup,
-  type InstrumentFilterConfig,
-} from "@/lib/instrument-filters";
+  getFullListingSpecs,
+  getKeyListingSpecs,
+  type ListingSpec,
+} from "@/lib/listing-specs";
 import {
   buildWhatsAppUrl,
   formatPrice,
@@ -15,7 +17,6 @@ import {
   getListingDisplayTitle,
   getSellerTypeLabel,
   normalizeStore,
-  type ListingAttributes,
   type ListingCardData,
   type ListingDetailData,
 } from "@/lib/listings";
@@ -32,11 +33,6 @@ type ListingDetailPageProps = {
 type PublicSupabaseClient = NonNullable<
   ReturnType<typeof getPublicSupabaseClient>
 >;
-
-type DetailSpec = {
-  label: string;
-  value: string;
-};
 
 type ListingDetailViewData = {
   listing: ListingDetailData;
@@ -178,17 +174,22 @@ function ListingDetail({
       ? [store?.district, store?.city].filter(Boolean).join(", ") ||
         `${listing.city}, ${listing.region}`
       : `${listing.city}, ${listing.region}`;
-  const keySpecs = getKeySpecs(listing, sellerName);
-  const fullSpecs = getFullSpecs(listing, sellerName);
+  const keySpecs = getKeyListingSpecs(listing, sellerName);
+  const fullSpecs = getFullListingSpecs(listing, sellerName);
 
   return (
     <PageContainer as="section" className="py-5 sm:py-6">
       <Breadcrumb listing={listing} displayTitle={displayTitle} />
 
-      <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.9fr)] lg:items-start xl:gap-8">
-        <ListingGallery listing={listing} />
+      <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.9fr)] lg:items-start xl:gap-8">
+        <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+          <ListingDetailGallery
+            photos={listing.listing_photos}
+            title={displayTitle}
+          />
+        </div>
 
-        <aside className="space-y-5 lg:sticky lg:top-6">
+        <aside className="min-w-0 space-y-5">
           <div className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
             <div className="flex flex-wrap gap-2">
               <SellerBadge label={sellerTypeLabel} isVerified={store?.is_verified === true} />
@@ -250,8 +251,8 @@ function ListingDetail({
         </aside>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.9fr)] xl:gap-8">
-        <div className="space-y-6">
+      <div className="mt-8 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.9fr)] xl:gap-8">
+        <div className="min-w-0 space-y-6">
           <DetailSection title="Descripción">
             {listing.description ? (
               <p className="whitespace-pre-line text-sm leading-7 text-slate-600 sm:text-base">
@@ -269,7 +270,7 @@ function ListingDetail({
           </DetailSection>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <SellerAboutSection
             listing={listing}
             sellerName={sellerName}
@@ -286,19 +287,16 @@ function ListingDetail({
         listings={similarListings}
       />
 
-      <RelatedListingsSection
-        title={
-          listing.seller_type === "store"
-            ? "Más de esta tienda"
-            : "Más de este vendedor"
-        }
-        emptyMessage={
-          listing.seller_type === "store"
-            ? "Esta tienda no tiene otros artículos aprobados por ahora."
-            : "Este vendedor no tiene otros artículos aprobados por ahora."
-        }
-        listings={moreFromSellerListings}
-      />
+      {moreFromSellerListings.length > 0 ? (
+        <RelatedListingsSection
+          title={
+            listing.seller_type === "store"
+              ? "Más de esta tienda"
+              : "Más de este vendedor"
+          }
+          listings={moreFromSellerListings}
+        />
+      ) : null}
     </PageContainer>
   );
 }
@@ -307,19 +305,16 @@ async function getSimilarListings(
   supabase: PublicSupabaseClient,
   listing: ListingDetailData,
 ) {
-  let query = supabase
+  const primaryFilterColumn = listing.instrument_type
+    ? "instrument_type"
+    : "category";
+  const primaryFilterValue = listing.instrument_type ?? listing.category;
+  const primaryQuery = supabase
     .from("listings")
     .select(relatedListingSelect)
     .eq("status", "approved")
-    .neq("id", listing.id);
-
-  if (listing.instrument_type) {
-    query = query.eq("instrument_type", listing.instrument_type);
-  } else {
-    query = query.eq("category", listing.category);
-  }
-
-  query = query
+    .neq("id", listing.id)
+    .eq(primaryFilterColumn, primaryFilterValue)
     .order("published_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .order("sort_order", {
@@ -327,10 +322,38 @@ async function getSimilarListings(
       ascending: true,
     })
     .limit(1, { foreignTable: "listing_photos" })
-    .limit(4);
+    .limit(12);
 
-  const { data } = await query;
-  const listings = (data ?? []) as ListingCardData[];
+  const { data: primaryData } = await primaryQuery;
+  let listings = sortSimilarListings(
+    (primaryData ?? []) as ListingCardData[],
+    listing,
+  ).slice(0, 4);
+
+  if (listings.length < 4 && listing.brand) {
+    const currentIds = new Set([listing.id, ...listings.map((item) => item.id)]);
+    const { data: brandData } = await supabase
+      .from("listings")
+      .select(relatedListingSelect)
+      .eq("status", "approved")
+      .neq("id", listing.id)
+      .eq("brand", listing.brand)
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .order("sort_order", {
+        foreignTable: "listing_photos",
+        ascending: true,
+      })
+      .limit(1, { foreignTable: "listing_photos" })
+      .limit(8);
+
+    const brandListings = ((brandData ?? []) as ListingCardData[]).filter(
+      (item) => !currentIds.has(item.id),
+    );
+
+    listings = [...listings, ...brandListings].slice(0, 4);
+  }
+
   const photoCounts = await getListingPhotoCounts(
     supabase,
     listings.map((item) => item.id),
@@ -342,6 +365,38 @@ async function getSimilarListings(
       photo_count: photoCounts.get(item.id) ?? item.listing_photos.length,
     })),
   };
+}
+
+function sortSimilarListings(
+  listings: ListingCardData[],
+  sourceListing: ListingDetailData,
+) {
+  return [...listings].sort((listingA, listingB) => {
+    const listingABrandMatch = hasSameBrand(listingA, sourceListing);
+    const listingBBrandMatch = hasSameBrand(listingB, sourceListing);
+
+    if (listingABrandMatch !== listingBBrandMatch) {
+      return listingABrandMatch ? -1 : 1;
+    }
+
+    return getListingSortTime(listingB) - getListingSortTime(listingA);
+  });
+}
+
+function hasSameBrand(
+  listing: ListingCardData,
+  sourceListing: ListingDetailData,
+) {
+  const sourceBrand = sourceListing.brand?.trim().toLocaleLowerCase("es-PE");
+  const listingBrand = listing.brand?.trim().toLocaleLowerCase("es-PE");
+
+  return Boolean(sourceBrand && listingBrand && sourceBrand === listingBrand);
+}
+
+function getListingSortTime(listing: ListingCardData) {
+  const date = new Date(listing.published_at ?? listing.created_at);
+
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
 async function getMoreFromSellerListings(
@@ -417,7 +472,7 @@ function Breadcrumb({
   const categoryLabel = getCategoryLabel(listing.category);
 
   return (
-    <nav aria-label="Ruta de navegación" className="text-sm text-slate-500">
+    <nav aria-label="Ruta de navegación" className="text-sm leading-6 text-slate-500">
       <ol className="flex flex-wrap items-center gap-2">
         <li>
           <Link href="/" className="font-medium underline-offset-4 hover:text-ink hover:underline">
@@ -434,55 +489,9 @@ function Breadcrumb({
           </Link>
         </li>
         <li aria-hidden="true">/</li>
-        <li className="min-w-0 truncate text-ink">{displayTitle}</li>
+        <li className="min-w-0 break-words text-ink">{displayTitle}</li>
       </ol>
     </nav>
-  );
-}
-
-function ListingGallery({ listing }: { listing: ListingDetailData }) {
-  const photos = listing.listing_photos;
-  const primaryPhoto = photos[0];
-
-  return (
-    <div className="space-y-3">
-      <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200">
-        {primaryPhoto ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={primaryPhoto.image_url}
-            alt={primaryPhoto.alt_text ?? listing.title}
-            className="aspect-[4/3] w-full object-cover"
-          />
-        ) : (
-          <div className="flex aspect-[4/3] items-center justify-center bg-slate-100 text-sm text-slate-500">
-            Foto pendiente
-          </div>
-        )}
-      </div>
-
-      {photos.length > 1 ? (
-        <div className="grid grid-cols-4 gap-2 sm:grid-cols-5 lg:grid-cols-6">
-          {photos.map((photo, index) => (
-            <div
-              key={photo.id ?? photo.image_url}
-              className={
-                index === 0
-                  ? "overflow-hidden rounded-md bg-white ring-2 ring-ink"
-                  : "overflow-hidden rounded-md bg-white ring-1 ring-slate-200"
-              }
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={photo.image_url}
-                alt={photo.alt_text ?? listing.title}
-                className="aspect-square w-full object-cover"
-              />
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -506,7 +515,7 @@ function SellerBadge({
   );
 }
 
-function KeySpecs({ specs }: { specs: DetailSpec[] }) {
+function KeySpecs({ specs }: { specs: ListingSpec[] }) {
   return (
     <dl className="mt-6 grid grid-cols-2 gap-x-5 gap-y-4 border-y border-slate-200 py-5 text-sm">
       {specs.map((spec) => (
@@ -514,7 +523,7 @@ function KeySpecs({ specs }: { specs: DetailSpec[] }) {
           <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             {spec.label}
           </dt>
-          <dd className="mt-1 truncate font-medium text-ink">{spec.value}</dd>
+          <dd className="mt-1 break-words font-medium text-ink">{spec.value}</dd>
         </div>
       ))}
     </dl>
@@ -535,48 +544,76 @@ function SellerTrustBox({
   sellerPublishedCount: number | null;
 }) {
   const store = normalizeStore(listing);
+  const isStore = listing.seller_type === "store";
   const visibleSince =
-    listing.seller_type === "store" && store?.created_at
+    isStore && store?.created_at
       ? formatDate(store.created_at)
       : formatDate(listing.created_at);
+  const publishedListingsLabel =
+    sellerPublishedCount === null
+      ? "No disponible"
+      : `${sellerPublishedCount} ${
+          sellerPublishedCount === 1 ? "listado activo" : "listados activos"
+        }`;
 
   return (
-    <div className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200">
-      <p className="text-xs font-semibold uppercase tracking-wide text-brass">
-        {listing.seller_type === "store" ? "Sobre la tienda" : "Sobre el vendedor"}
-      </p>
-      <div className="mt-3 flex items-start justify-between gap-3">
+    <section className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-ink">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brass">
+            {isStore ? "Sobre la tienda" : "Sobre el vendedor"}
+          </p>
+          <h2 className="mt-2 text-xl font-bold text-ink">
             {sellerName || "Vendedor particular"}
           </h2>
-          <p className="mt-1 text-sm text-slate-500">{sellerTypeLabel}</p>
+          <p className="mt-1 text-sm font-medium text-slate-500">
+            {sellerTypeLabel}
+          </p>
         </div>
         {store?.is_verified === true ? (
           <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-            Verificada
+            Tienda verificada
           </span>
         ) : null}
       </div>
 
-      <div className="mt-5 grid gap-3 text-sm">
-        <InlineMetric label="Ubicación" value={sellerLocation || "No indicada"} />
-        <InlineMetric
-          label="Listados publicados"
-          value={
-            sellerPublishedCount === null
-              ? "No disponible"
-              : String(sellerPublishedCount)
-          }
-        />
-        <InlineMetric label="Visible desde" value={visibleSince} />
+      {isStore && store?.description ? (
+        <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">
+          {store.description}
+        </p>
+      ) : null}
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <TrustSignal label="Ubicación" value={sellerLocation || "No indicada"} />
+        <TrustSignal label="Inventario" value={publishedListingsLabel} />
+        <TrustSignal label="Visible desde" value={visibleSince} />
       </div>
 
-      <p className="mt-4 text-xs leading-5 text-slate-500">
-        Laria muestra señales disponibles en la base de datos. No mostramos
-        ratings ni ventas porque el MVP no registra esas métricas.
+      <div className="mt-5 grid gap-3">
+        <a
+          href={buildWhatsAppUrl(listing)}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+        >
+          {isStore ? "Escribir por WhatsApp" : "Contactar por WhatsApp"}
+        </a>
+        {isStore && store ? (
+          <Link
+            href={`/tiendas/${store.slug}`}
+            className="inline-flex w-full items-center justify-center rounded-md border border-slate-300 px-4 py-3 text-sm font-semibold text-ink transition hover:bg-slate-100"
+          >
+            Ver página de la tienda
+          </Link>
+        ) : null}
+      </div>
+
+      <p className="mt-5 rounded-md bg-amber-50 p-3 text-xs leading-5 text-amber-900 ring-1 ring-amber-100">
+        Coordina por WhatsApp, revisa el instrumento cuando sea posible y evita
+        adelantos si no conoces al vendedor. Laria no procesa pagos, envíos ni
+        garantías.
       </p>
-    </div>
+    </section>
   );
 }
 
@@ -652,26 +689,48 @@ function DetailSection({
   );
 }
 
-function SpecsList({ specs }: { specs: DetailSpec[] }) {
+function SpecsList({ specs }: { specs: ListingSpec[] }) {
+  if (specs.length === 0) {
+    return (
+      <p className="text-sm leading-6 text-slate-500">
+        No hay especificaciones disponibles para este listado.
+      </p>
+    );
+  }
+
   return (
-    <dl className="grid gap-x-8 gap-y-4 text-sm sm:grid-cols-2">
+    <dl className="divide-y divide-slate-100 rounded-lg border border-slate-100 text-sm">
       {specs.map((spec) => (
-        <div key={spec.label} className="border-b border-slate-100 pb-3">
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <div
+          key={spec.label}
+          className="grid gap-1 px-4 py-3 sm:grid-cols-[minmax(160px,0.42fr)_1fr] sm:gap-6"
+        >
+          <dt className="font-medium text-slate-500">
             {spec.label}
           </dt>
-          <dd className="mt-1 font-medium text-ink">{spec.value}</dd>
+          <dd className="break-words font-semibold text-ink sm:text-right">{spec.value}</dd>
         </div>
       ))}
     </dl>
   );
 }
 
-function InlineMetric({ label, value }: DetailSpec) {
+function InlineMetric({ label, value }: ListingSpec) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-2 last:border-0 last:pb-0">
       <span className="text-slate-500">{label}</span>
-      <span className="max-w-[60%] text-right font-medium text-ink">{value}</span>
+      <span className="min-w-0 max-w-[60%] break-words text-right font-medium text-ink">{value}</span>
+    </div>
+  );
+}
+
+function TrustSignal({ label, value }: ListingSpec) {
+  return (
+    <div className="rounded-md bg-mist p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold leading-5 text-ink">{value}</p>
     </div>
   );
 }
@@ -682,7 +741,7 @@ function RelatedListingsSection({
   listings,
 }: {
   title: string;
-  emptyMessage: string;
+  emptyMessage?: string;
   listings: ListingCardData[];
 }) {
   return (
@@ -698,114 +757,11 @@ function RelatedListingsSection({
         </div>
       ) : (
         <div className="rounded-lg bg-white p-5 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
-          {emptyMessage}
+          {emptyMessage ?? "No hay artículos disponibles por ahora."}
         </div>
       )}
     </section>
   );
-}
-
-function getKeySpecs(
-  listing: ListingDetailData,
-  sellerName?: string | null,
-) {
-  return [
-    ...getCoreSpecs(listing, sellerName),
-    ...getAttributeSpecs(listing).slice(0, 3),
-  ].slice(0, 8);
-}
-
-function getFullSpecs(
-  listing: ListingDetailData,
-  sellerName?: string | null,
-) {
-  const instrumentLabel = listing.instrument_type
-    ? getInstrumentFilterGroup(listing.instrument_type)?.label
-    : null;
-
-  return [
-    ...(instrumentLabel ? [{ label: "Instrumento", value: instrumentLabel }] : []),
-    ...getCoreSpecs(listing, sellerName),
-    ...getAttributeSpecs(listing),
-  ];
-}
-
-function getCoreSpecs(
-  listing: ListingDetailData,
-  sellerName?: string | null,
-): DetailSpec[] {
-  return [
-    { label: "Categoría", value: getCategoryLabel(listing.category) },
-    { label: "Marca", value: listing.brand || "No indicada" },
-    { label: "Modelo", value: listing.model || "No indicado" },
-    { label: "Condición", value: listing.condition || "No indicada" },
-    { label: "Ciudad", value: `${listing.city}, ${listing.region}` },
-    { label: "Vendedor", value: sellerName || "Vendedor particular" },
-  ];
-}
-
-function getAttributeSpecs(listing: ListingDetailData): DetailSpec[] {
-  const attributes = normalizeAttributes(listing.attributes);
-  const entries = Object.entries(attributes);
-
-  if (entries.length === 0) {
-    return [];
-  }
-
-  const group = listing.instrument_type
-    ? getInstrumentFilterGroup(listing.instrument_type)
-    : null;
-  const filters = new Map<string, InstrumentFilterConfig>(
-    group?.filters.map((filter) => [filter.key, filter] as const) ?? [],
-  );
-
-  return entries
-    .map(([key, value]) => {
-      const filter = filters.get(key);
-      return {
-        label: filter?.label ?? formatAttributeKey(key),
-        value: formatAttributeValue(value, filter),
-      };
-    })
-    .filter((spec) => spec.value !== "");
-}
-
-function normalizeAttributes(attributes: ListingAttributes | null) {
-  if (!attributes || Array.isArray(attributes)) {
-    return {};
-  }
-
-  return attributes;
-}
-
-function formatAttributeValue(
-  value: unknown,
-  filter?: InstrumentFilterConfig,
-) {
-  const values = Array.isArray(value) ? value : [value];
-
-  return values
-    .map((item) => {
-      if (item === null || item === undefined) {
-        return "";
-      }
-
-      const stringValue = String(item);
-      return (
-        filter?.options?.find((option) => option.value === stringValue)
-          ?.label ?? formatAttributeKey(stringValue)
-      );
-    })
-    .filter(Boolean)
-    .join(", ");
-}
-
-function formatAttributeKey(value: string) {
-  return value
-    .split("_")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 }
 
 function formatDate(value: string) {

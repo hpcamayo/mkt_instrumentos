@@ -28,10 +28,12 @@ Important current routes:
 
 Key files:
 - `lib/listings.ts`: shared listing types, filter parsing, labels, WhatsApp URLs.
+- `lib/listing-specs.ts`: listing detail spec rows, base field labels, and attributes JSONB display formatting.
 - `lib/instrument-filters.ts`: actual advanced filter config and current filter keys.
 - `components/listing-filters.tsx`: desktop sidebar and mobile filter/sort sheets.
 - `components/listing-card.tsx`: compact card with first-photo lazy loading and on-demand photo carousel fetch.
 - `app/instrumentos/[slug]/page.tsx`: listing detail layout, gallery, breadcrumb, specs, seller trust sections, similar listings, and more-from-seller listings.
+- `components/listing-detail-gallery.tsx`: interactive listing detail gallery with main image, thumbnails, and previous/next controls.
 - `components/listing-detail-metadata.tsx`: `Publicado hace X dias` / `Visto X veces` and client-side view-count increment.
 - `components/page-container.tsx`: shared public page width and horizontal padding wrapper.
 - `components/admin-panel.tsx`: admin login, moderation queues, status updates.

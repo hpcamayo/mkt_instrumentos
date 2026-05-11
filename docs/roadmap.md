@@ -86,6 +86,7 @@ Potential features:
 - Report listing button.
 - Stronger safety tips.
 - Better seller/store profile trust signals.
+- Real ratings or sales counts only after the database and product flow actually capture them.
 - Required minimum photo count.
 - Optional store location map.
 
@@ -163,4 +164,3 @@ Priorities:
 4. Track WhatsApp interest.
 5. Learn what buyers search for.
 6. Learn what stores are willing to pay for.
-

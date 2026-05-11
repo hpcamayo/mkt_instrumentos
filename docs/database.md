@@ -108,9 +108,13 @@ Current behavior:
 - Admin can set listing status to `approved`, `rejected`, `hidden`, or `sold`.
 - `published_at` is used for newest sort and detail metadata. If null, detail metadata falls back to `created_at`.
 - `view_count` is incremented by an RPC when detail pages are opened.
+- Listing detail pages render `attributes` as user-facing specification rows through `lib/listing-specs.ts`, using labels/options from `lib/instrument-filters.ts`. Empty attributes are hidden and raw JSON should not be shown in the UI.
+- Listing detail seller/store trust boxes count active approved listings by `store_id` for stores and by `whatsapp_phone` for individual sellers, because full seller accounts do not exist yet.
+- Listing detail recommendation sections only read `status='approved'` listings. Similar listings exclude the current listing, prioritize the same `instrument_type` or category, and use `brand` as a secondary relevance signal. More-from-seller/store listings use `store_id` for stores and `whatsapp_phone` for individual sellers.
 
 Important current gap:
 - The public seller form does not yet collect `instrument_type` or `attributes`, although advanced filtering uses those fields.
+- Individual seller listing counts are a best-effort contact-based signal until seller accounts exist.
 
 ### `public.listing_photos`
 

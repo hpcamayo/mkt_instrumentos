@@ -127,6 +127,7 @@ Core local components:
 - `components/page-container.tsx`
 - `components/listing-card.tsx`
 - `components/listing-filters.tsx`
+- `components/listing-detail-gallery.tsx`
 - `components/listing-detail-metadata.tsx`
 - `components/admin-panel.tsx`
 - `components/sell-listing-form.tsx`
