@@ -11,6 +11,7 @@ Product scope:
 - Stores register from `/registrar-tienda`; after approval they get public pages at `/tiendas/[slug]`.
 - Store products also appear in `/listados`.
 - Admin curation is central: pending listings/stores must be reviewed before public visibility.
+- Phase 2 account foundation exists in the database: `profiles`, `store_members`, listing/store ownership fields, account-aware RLS helpers, and publication validation RPCs. The public account UI still needs to be built.
 - Future monetization likely starts with stores: listing packages, featured stores/listings, homepage/category placement, and catalog services.
 - Do not add payments, checkout, escrow, delivery, reviews, subscriptions, commissions, seller dashboards, or in-app chat unless explicitly requested.
 - UI copy should stay in Spanish.
@@ -20,6 +21,9 @@ Important current routes:
 - `/`: homepage using `components_v0` sections with real Supabase data.
 - `/listados`: advanced searchable listings page.
 - `/instrumentos/[slug]`: listing detail page with a sticky desktop gallery at about 45% of the main detail grid, a wider right-side detail column, WhatsApp CTA, published/view metadata, seller/store trust box, description, full specs, and recommendation sections below the main grid.
+- `/login`: magic-link login.
+- `/auth/callback`: Supabase email invite/magic-link callback.
+- `/logout`: session logout.
 - `/tiendas/[slug]`: public store page plus approved store listings.
 - `/vender`: public individual listing submission form.
 - `/publicar`: redirects to `/vender`.
@@ -37,6 +41,11 @@ Key files:
 - `components/listing-detail-metadata.tsx`: `Publicado hace X dias` / `Visto X veces` and client-side view-count increment.
 - `components/page-container.tsx`: shared public page width and horizontal padding wrapper.
 - `components/admin-panel.tsx`: admin login, moderation queues, status updates.
+- `lib/supabase/server-client.ts`: cookie-aware Supabase server client for auth routes/session utilities.
+- `lib/supabase/admin-client.ts`: server-only service-role client for later invite/admin server actions.
+- `lib/auth/session.ts`: current-user/session helpers and protected-route redirect helper.
+- `middleware.ts`: Supabase session refresh and protection for future account routes.
+- `supabase/migrations/20260516180000_phase_2_accounts.sql`: Phase 2 account schema, ownership fields, helper functions, and RLS policies.
 - `supabase/migrations/*`: manual SQL migrations for schema, RLS, storage, metadata, and view count RPC.
 
 Operational rule: Vercel deploys code, but does not apply Supabase SQL migrations. Schema changes must be run manually in Supabase SQL Editor unless migration automation is added later.

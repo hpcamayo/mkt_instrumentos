@@ -30,10 +30,11 @@ Supabase handles:
 - Database tables.
 - Row Level Security policies.
 - Listing and store records.
+- Seller/store-owner account ownership tables.
 - Listing photos.
 - Public image storage buckets.
 - Admin auth through Supabase Auth.
-- RPC helpers such as `is_admin()` and `increment_listing_view_count()`.
+- RPC helpers such as `is_admin()`, store membership checks, publication validation, and `increment_listing_view_count()`.
 
 Vercel handles:
 - Production deployments.
@@ -55,9 +56,21 @@ GitHub is the source repository. Supabase schema is managed separately through S
 `lib/supabase/browser-client.ts` exposes `getSupabaseBrowserClient()`:
 - Uses the same public env vars.
 - Caches a browser Supabase client.
-- Used by `components/admin-panel.tsx` because admin login needs Supabase Auth session persistence.
+- Uses `@supabase/ssr` `createBrowserClient`.
+- Used by `components/admin-panel.tsx` and account UI because Supabase Auth session persistence is needed in the browser.
 
-There is no service-role key used in current app code. If `SUPABASE_SERVICE_ROLE_KEY` is ever added for server-only jobs, it must never be exposed to browser/client code.
+`lib/supabase/server-client.ts` exposes `getSupabaseServerClient()`:
+- Uses `@supabase/ssr` `createServerClient`.
+- Reads and writes Supabase Auth cookies through Next.js `cookies()`.
+- Used by `/auth/callback`, `/logout`, and server-side session utilities.
+
+`lib/supabase/admin-client.ts` exposes `getSupabaseAdminClient()`:
+- Server-only.
+- Uses `SUPABASE_SERVICE_ROLE_KEY`.
+- Must never be imported by Client Components or exposed as `NEXT_PUBLIC_*`.
+- Intended for later admin invite/server actions.
+
+`middleware.ts` refreshes Supabase Auth sessions and protects future account routes that start with `/mi-cuenta` or `/mis-publicaciones`.
 
 ## Actual Route Map
 
@@ -66,11 +79,14 @@ app/
   layout.tsx
   page.tsx                         Homepage
   admin/page.tsx                   Admin panel
+  auth/callback/route.ts           Supabase magic-link/invite callback
   api/listings/[id]/photos/route.ts
   api/listings/[id]/view/route.ts
   instrumentos/[slug]/page.tsx     Listing detail
   listados/page.tsx                Listings/search page
   listados/loading.tsx             Listings loading skeleton
+  login/page.tsx                   Magic-link login
+  logout/route.ts                  Sign out and redirect to /login
   publicar/page.tsx                Redirects to /vender
   registrar-tienda/page.tsx        Store registration
   tiendas/[slug]/page.tsx          Public store page
@@ -94,9 +110,12 @@ pending -> approved
 pending -> rejected
 approved -> hidden
 approved -> sold
+approved -> archived
 ```
 
 Only `approved` listings should be visible publicly.
+
+Phase 2 adds nullable listing ownership through `owner_user_id`, plus `sold_at`, `archived_at`, `created_by_source`, and `marketplace_rules_accepted_at`. Legacy listings can keep `owner_user_id=null`.
 
 ### Stores
 
@@ -110,6 +129,8 @@ Stores are mini-shop pages for small music stores. A store has:
 
 Only `active` stores should be visible publicly.
 
+Phase 2 adds `profiles` and `store_members`. Stores can have `owner_user_id`, and owner stores automatically get an owner membership when inserted through the account-aware flow. The database still uses `stores.status='active'` for product-approved stores.
+
 ### Admin
 
 Admin controls supply quality. The admin panel can:
@@ -120,6 +141,8 @@ Admin controls supply quality. The admin panel can:
 - Edit basic store fields.
 - Approve or hide stores.
 - Mark stores verified.
+
+Admin authority remains based on Supabase Auth `app_metadata.role = "admin"`. Profile `account_type` is app metadata only and is not the security boundary.
 
 ## Component Structure
 

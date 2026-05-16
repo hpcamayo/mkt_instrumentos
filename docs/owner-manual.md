@@ -287,6 +287,27 @@ Before pushing changes that depend on database changes:
 Environment variables required in Vercel:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` for server-only admin invite/account actions. Never expose it with a `NEXT_PUBLIC_` prefix.
+
+## Account Auth Setup
+
+Supabase Auth redirect URLs should include:
+- Local callback: `http://localhost:3000/auth/callback`
+- Production callback: `https://laria.audio/auth/callback` or the active production domain.
+- Vercel preview callback pattern if preview magic-link testing is needed.
+
+Magic-link and invite flows should redirect through `/auth/callback?next=...`.
+
+Supported invite next paths:
+- `/registro/vendedor/invitacion`
+- `/registro/tienda/invitacion`
+
+To test locally:
+1. Start the app with `npm run dev`.
+2. Open `http://localhost:3000/login`.
+3. Enter an email.
+4. Open the local Supabase/Mailpit email if using local Supabase, or the real inbox if using production Supabase env vars.
+5. Click the link and confirm it lands on `/auth/callback` before redirecting to the `next` path.
 
 ## What Not To Build Yet
 

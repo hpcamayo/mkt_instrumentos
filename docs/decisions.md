@@ -77,6 +77,18 @@ Why:
 Tradeoff:
 - Some actions, like view-count incrementing, need carefully scoped security-definer RPCs.
 
+## Phase 2 Account Ownership Is Additive
+
+Decision: add `profiles`, `store_members`, and nullable ownership fields without breaking legacy listings or public store pages.
+
+Why:
+- Existing approved listings and active stores must remain visible.
+- Legacy listings do not have Auth users yet, so `owner_user_id` stays nullable.
+- Store approval continues to use the existing database value `stores.status='active'`.
+- Admin moderation keeps working while account-aware seller/store flows are built.
+
+Protected fields such as listing `status`, `published_at`, `view_count`, store `status`, `listing_plan`, and `is_verified` should only be changed by admins or controlled RPC/server logic.
+
 ## JSONB Attributes for Advanced Filters
 
 Decision: use `listings.instrument_type` plus `listings.attributes jsonb`.
@@ -237,4 +249,3 @@ Why:
 - Documentation prevents AI from undoing product/engineering decisions.
 
 Every significant feature should update docs.
-

@@ -250,6 +250,20 @@ Admin behavior:
 
 Only pending queues are shown. Already approved/hidden/rejected/sold items are not listed in the current admin UI.
 
+## Account Auth Plumbing
+
+Routes:
+- `/login`: minimal magic-link login page.
+- `/auth/callback`: exchanges Supabase magic-link/invite `code` values for an app session.
+- `/logout`: signs out and redirects to `/login`.
+
+Behavior:
+- Magic links use `/auth/callback?next=...`.
+- Callback redirects only to safe same-site paths.
+- Intended invite next paths are `/registro/vendedor/invitacion` and `/registro/tienda/invitacion`.
+- Middleware refreshes Supabase Auth cookies and protects future `/mi-cuenta` and `/mis-publicaciones` routes.
+- Seller dashboards, listing management pages, and invite setup pages are not built yet.
+
 ## Features Intentionally Not Implemented Yet
 
 Do not add without explicit decision:

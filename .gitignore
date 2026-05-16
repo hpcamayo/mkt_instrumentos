@@ -1,9 +1,11 @@
 # dependencies
 node_modules
+.pnpm-store
 
 # Next.js
 .next
 out
+tsconfig.tsbuildinfo
 
 # production
 build
@@ -22,3 +24,4 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 .vercel
+supabase/.temp
