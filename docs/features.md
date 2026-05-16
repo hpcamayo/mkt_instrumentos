@@ -126,10 +126,10 @@ Route: `/instrumentos/[slug]`
 Features:
 - Reads one approved listing by `slug`.
 - Uses a commercial two-column layout on desktop:
-  - Left side: sticky product gallery.
-  - Right side: breadcrumb, seller badge, title, price, metadata, key specs, WhatsApp CTA, and seller trust box.
+  - Left side: sticky product gallery using `minmax(0,0.82fr)`, currently about 45% of the main detail grid.
+  - Right side: wider detail panel using `minmax(0,1fr)`, with breadcrumb, seller badge, title, price, metadata, key specs, WhatsApp CTA, seller trust box, description, and full specs.
 - Gallery behavior:
-  - Desktop gallery uses `position: sticky` with a top offset so details scroll past it.
+  - Desktop gallery uses `position: sticky` with a top offset and remains beside the right-side detail panel while details scroll past it.
   - Mobile gallery is not sticky and appears above the detail column.
   - Main image uses `object-contain` to avoid aggressive instrument cropping.
   - Thumbnail buttons update the active image and show a visible selected state.
@@ -142,10 +142,8 @@ Features:
   - `Publicado hace X dias`
   - `Visto X veces`
 - Key specs near the title/price show category, brand, model, condition, city, seller, and selected instrument attributes when available.
-- Lower sections show:
-  - `Descripción`
-  - `Especificaciones completas`
-  - `Sobre el vendedor` or `Sobre la tienda`
+- The right detail column shows `Descripción` and `Especificaciones completas` below `Sobre el vendedor` or `Sobre la tienda`, so the sticky gallery can remain beside the full detail content on desktop.
+- Lower recommendation sections remain below the main two-column detail area:
   - `Artículos similares`
   - `Más de este vendedor` or `Más de esta tienda`
 - Recommendation sections use the existing compact listing cards:

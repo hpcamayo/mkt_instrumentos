@@ -181,7 +181,7 @@ function ListingDetail({
     <PageContainer as="section" className="py-5 sm:py-6">
       <Breadcrumb listing={listing} displayTitle={displayTitle} />
 
-      <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.9fr)] lg:items-start xl:gap-8">
+      <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] lg:items-start xl:gap-8">
         <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <ListingDetailGallery
             photos={listing.listing_photos}
@@ -248,11 +248,7 @@ function ListingDetail({
             listing={listing}
             sellerPublishedCount={sellerPublishedCount}
           />
-        </aside>
-      </div>
 
-      <div className="mt-8 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.9fr)] xl:gap-8">
-        <div className="min-w-0 space-y-6">
           <DetailSection title="Descripción">
             {listing.description ? (
               <p className="whitespace-pre-line text-sm leading-7 text-slate-600 sm:text-base">
@@ -268,17 +264,7 @@ function ListingDetail({
           <DetailSection title="Especificaciones completas">
             <SpecsList specs={fullSpecs} />
           </DetailSection>
-        </div>
-
-        <div className="min-w-0 space-y-6">
-          <SellerAboutSection
-            listing={listing}
-            sellerName={sellerName}
-            sellerTypeLabel={sellerTypeLabel}
-            sellerLocation={sellerLocation}
-            sellerPublishedCount={sellerPublishedCount}
-          />
-        </div>
+        </aside>
       </div>
 
       <RelatedListingsSection
@@ -617,63 +603,6 @@ function SellerTrustBox({
   );
 }
 
-function SellerAboutSection({
-  listing,
-  sellerName,
-  sellerTypeLabel,
-  sellerLocation,
-  sellerPublishedCount,
-}: {
-  listing: ListingDetailData;
-  sellerName?: string | null;
-  sellerTypeLabel: string;
-  sellerLocation: string;
-  sellerPublishedCount: number | null;
-}) {
-  const store = normalizeStore(listing);
-
-  return (
-    <DetailSection
-      title={listing.seller_type === "store" ? "Sobre la tienda" : "Sobre el vendedor"}
-    >
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-bold text-ink">
-            {sellerName || "Vendedor particular"}
-          </h3>
-          <p className="mt-1 text-sm text-slate-500">
-            {sellerTypeLabel} · {sellerLocation || "Ubicación no indicada"}
-          </p>
-        </div>
-
-        {store?.description ? (
-          <p className="text-sm leading-6 text-slate-600">{store.description}</p>
-        ) : (
-          <p className="text-sm leading-6 text-slate-600">
-            Este vendedor tiene información pública limitada. Coordina por
-            WhatsApp y revisa el instrumento antes de cerrar una compra.
-          </p>
-        )}
-
-        <div className="grid gap-3 text-sm">
-          <InlineMetric
-            label="Listados aprobados"
-            value={
-              sellerPublishedCount === null
-                ? "No disponible"
-                : String(sellerPublishedCount)
-            }
-          />
-          <InlineMetric
-            label="Contacto"
-            value="Disponible por WhatsApp desde este listado"
-          />
-        </div>
-      </div>
-    </DetailSection>
-  );
-}
-
 function DetailSection({
   title,
   children,
@@ -712,15 +641,6 @@ function SpecsList({ specs }: { specs: ListingSpec[] }) {
         </div>
       ))}
     </dl>
-  );
-}
-
-function InlineMetric({ label, value }: ListingSpec) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-2 last:border-0 last:pb-0">
-      <span className="text-slate-500">{label}</span>
-      <span className="min-w-0 max-w-[60%] break-words text-right font-medium text-ink">{value}</span>
-    </div>
   );
 }
 

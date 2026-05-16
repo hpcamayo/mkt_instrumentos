@@ -19,7 +19,7 @@ Product scope:
 Important current routes:
 - `/`: homepage using `components_v0` sections with real Supabase data.
 - `/listados`: advanced searchable listings page.
-- `/instrumentos/[slug]`: listing detail page with WhatsApp CTA, published/view metadata, and full photo display.
+- `/instrumentos/[slug]`: listing detail page with a sticky desktop gallery at about 45% of the main detail grid, a wider right-side detail column, WhatsApp CTA, published/view metadata, seller/store trust box, description, full specs, and recommendation sections below the main grid.
 - `/tiendas/[slug]`: public store page plus approved store listings.
 - `/vender`: public individual listing submission form.
 - `/publicar`: redirects to `/vender`.
@@ -43,4 +43,4 @@ Operational rule: Vercel deploys code, but does not apply Supabase SQL migration
 
 Context-reset rule: before new work, read `/docs` first and summarize the current product, architecture, schema, features, filters, decisions, and roadmap. Do not rely on chat history.
 
-Known local environment limitation from recent sessions: `npm` and `node_modules` were not available in this workspace, so local build/typecheck/lint could not be run here. Verify with `npm install`, `npm run typecheck`, `npm run lint`, and `npm run build` in a proper Node environment or on Vercel.
+Local npm checks are available in this workspace. Use `npm run typecheck`, `npm run lint`, and `npm run build` for implementation tickets when code changes.

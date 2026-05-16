@@ -141,6 +141,8 @@ Generated/imported UI:
 
 The homepage uses `components_v0` sections, but marketplace data logic remains in the route page. v0-generated UI should be integrated carefully and should not replace Supabase/business logic blindly.
 
+The listing detail route composes `ListingDetailGallery` in a sticky desktop column using `minmax(0,0.82fr)`, with the main listing facts, seller/store trust box, description, and full specs in the wider `minmax(0,1fr)` right column. Recommendation sections stay below that main detail grid.
+
 ## Styling
 
 The app uses Tailwind CSS 3-style config:
@@ -183,5 +185,3 @@ Before merging significant changes:
 - Verify Supabase reads/writes.
 - Verify image uploads if forms/storage changed.
 - Review Vercel deployment logs.
-
-Recent local limitation: npm and dependencies were not available in this workspace, so checks may need to run elsewhere.

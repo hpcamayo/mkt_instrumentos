@@ -33,13 +33,12 @@ Implemented or in progress:
 - On-demand extra photo fetch.
 - Skeleton loaders.
 - Empty state.
-- Published time and view count on detail page.
+- Polished listing detail page with sticky gallery, seller/store trust box, full specs, published time, view count, and recommendation sections.
 
 Remaining quality work:
 - Add `instrument_type` and `attributes` fields to public seller submission flow.
 - Add admin editing for `instrument_type` and `attributes`.
-- Run full build/type/lint in a local environment with dependencies.
-- Browser-test mobile and desktop layouts.
+- Keep running build/type/lint and browser QA before releases.
 
 ## Phase 2: Seller Accounts, Light Version
 

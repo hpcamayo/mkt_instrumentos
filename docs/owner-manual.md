@@ -111,7 +111,7 @@ Listings page `/listados`:
 
 Listing detail page `/instrumentos/[slug]`:
 - Shows one product in detail.
-- Includes photos, price, product information, seller/store information, WhatsApp contact, safety notice, published time, and view count.
+- Includes photos, price, product information, seller/store information, WhatsApp contact, safety notice, published time, view count, full specs, and recommendation sections.
 
 Store page `/tiendas/[slug]`:
 - Works like a mini-shop.
@@ -222,6 +222,22 @@ For browsing speed, listing cards initially load only the first photo.
 If a listing has more photos, the card shows arrows/dots. Extra photos are loaded only when someone clicks to view them.
 
 Detail pages show all listing photos.
+
+## Listing Detail QA Checklist
+
+When reviewing `/instrumentos/[slug]`, check these cases when test data is available:
+- No photo: gallery shows `Foto pendiente`.
+- One photo: gallery shows a single main image without thumbnail controls.
+- Multiple photos: gallery shows previous/next controls and selectable thumbnails.
+- No attributes: `Especificaciones completas` still shows base listing fields and hides empty attribute rows.
+- Attributes present: technical values render as friendly Spanish labels, not raw JSON.
+- Individual seller: page shows `Sobre el vendedor`, WhatsApp contact, location, and active listing count when queryable.
+- Store listing: page shows `Sobre la tienda`, store description when available, store page link, and WhatsApp contact.
+- Verified store: page shows `Tienda verificada`.
+- No similar items: `Artículos similares` shows its empty state.
+- No more items from seller/store: `Más de este vendedor` / `Más de esta tienda` is hidden.
+- Desktop: gallery stays sticky while the right detail panel scrolls through seller/store info, description, and specs.
+- Mobile: gallery appears first and is not sticky; description, specs, and recommendations remain readable.
 
 ## Supabase Tasks
 
