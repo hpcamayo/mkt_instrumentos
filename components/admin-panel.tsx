@@ -14,6 +14,23 @@ import type { Database } from "@/lib/supabase/database.types";
 type AuthState = "checking" | "signed_out" | "not_admin" | "admin";
 type ListingStatus = Database["public"]["Enums"]["listing_status"];
 type StoreStatus = Database["public"]["Enums"]["store_status"];
+type InviteAccountType = "seller" | "store_owner";
+
+type InviteResponse = {
+  ok: boolean;
+  message: string;
+  invite?: {
+    email: string;
+    accountType: InviteAccountType;
+    finalInvitePath: string;
+    fullName: string;
+    phone: string;
+    city: string;
+    region: string;
+    storeName: string;
+    notes: string;
+  };
+};
 
 type AdminListing = {
   id: string;
@@ -72,6 +89,13 @@ export function AdminPanel() {
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [stores, setStores] = useState<AdminStore[]>([]);
   const [message, setMessage] = useState("");
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [inviteResult, setInviteResult] = useState<InviteResponse["invite"] | null>(
+    null,
+  );
+  const [inviteAccountType, setInviteAccountType] =
+    useState<InviteAccountType>("seller");
+  const [isInviting, setIsInviting] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
@@ -274,6 +298,46 @@ export function AdminPanel() {
     );
   }
 
+  async function handleInviteSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    setIsInviting(true);
+    setInviteMessage("");
+    setInviteResult(null);
+
+    const response = await fetch("/api/admin/invite-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: readFormText(formData, "email"),
+        fullName: readFormText(formData, "fullName"),
+        phone: readFormText(formData, "phone"),
+        accountType: inviteAccountType,
+        city: readFormText(formData, "city"),
+        region: readFormText(formData, "region"),
+        storeName: readFormText(formData, "storeName"),
+        notes: readFormText(formData, "notes"),
+      }),
+    });
+    const result = (await response.json().catch(() => ({
+      ok: false,
+      message: "No se pudo procesar la respuesta del servidor.",
+    }))) as InviteResponse;
+
+    setIsInviting(false);
+    setInviteMessage(result.message);
+
+    if (response.ok && result.ok) {
+      setInviteResult(result.invite ?? null);
+      form.reset();
+      setInviteAccountType("seller");
+    }
+  }
+
   function updateListing(id: string, changes: Partial<AdminListing>) {
     setListings((current) =>
       current.map((listing) =>
@@ -338,6 +402,14 @@ export function AdminPanel() {
     <PanelShell title="Panel administrativo" onSignOut={handleSignOut}>
       <div className="grid gap-8">
         {message ? <StatusMessage message={message} /> : null}
+        <InviteUserSection
+          accountType={inviteAccountType}
+          inviteMessage={inviteMessage}
+          inviteResult={inviteResult}
+          isInviting={isInviting}
+          onAccountTypeChange={setInviteAccountType}
+          onSubmit={handleInviteSubmit}
+        />
         <section className="grid gap-4">
           <SectionHeading
             title="Listados pendientes"
@@ -592,6 +664,142 @@ export function AdminPanel() {
   );
 }
 
+function InviteUserSection({
+  accountType,
+  inviteMessage,
+  inviteResult,
+  isInviting,
+  onAccountTypeChange,
+  onSubmit,
+}: {
+  accountType: InviteAccountType;
+  inviteMessage: string;
+  inviteResult: InviteResponse["invite"] | null;
+  isInviting: boolean;
+  onAccountTypeChange: (value: InviteAccountType) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+      <div>
+        <h2 className="text-lg font-bold text-ink">Invitar usuario</h2>
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          Envia un enlace de activacion para vendedores particulares o duenos de
+          tienda. No se crean contrasenas temporales.
+        </p>
+      </div>
+
+      <form onSubmit={onSubmit} className="grid gap-4 lg:grid-cols-2">
+        <AdminFormInput
+          label="Correo"
+          name="email"
+          type="email"
+          required
+          placeholder="persona@email.com"
+        />
+        <AdminFormInput
+          label="Nombre completo"
+          name="fullName"
+          required
+          placeholder="Nombre de contacto"
+        />
+        <AdminFormInput
+          label="WhatsApp"
+          name="phone"
+          required
+          placeholder="+51 999 999 999"
+        />
+        <label className="grid gap-2 text-sm font-medium text-slate-700">
+          Tipo de cuenta
+          <select
+            value={accountType}
+            onChange={(event) =>
+              onAccountTypeChange(event.target.value as InviteAccountType)
+            }
+            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+          >
+            <option value="seller">Vendedor particular</option>
+            <option value="store_owner">Dueno de tienda</option>
+          </select>
+        </label>
+        <AdminFormInput label="Ciudad" name="city" placeholder="Lima" />
+        <AdminFormInput label="Region" name="region" placeholder="Lima" />
+        {accountType === "store_owner" ? (
+          <AdminFormInput
+            label="Nombre de tienda"
+            name="storeName"
+            placeholder="Nombre comercial"
+          />
+        ) : null}
+        <label className="grid gap-2 text-sm font-medium text-slate-700 lg:col-span-2">
+          Notas internas
+          <textarea
+            name="notes"
+            rows={3}
+            placeholder="Contexto de campo, origen del contacto o seguimiento pendiente"
+            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+          />
+        </label>
+
+        <div className="grid gap-3 lg:col-span-2">
+          {inviteMessage ? <StatusMessage message={inviteMessage} /> : null}
+          {inviteResult ? (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-800">
+              <p className="font-semibold text-emerald-900">
+                Seguimiento de invitacion
+              </p>
+              <p>{inviteResult.fullName} - {inviteResult.email}</p>
+              <p>
+                Tipo:{" "}
+                {inviteResult.accountType === "seller"
+                  ? "Vendedor particular"
+                  : "Dueno de tienda"}
+              </p>
+              <p>Destino: {inviteResult.finalInvitePath}</p>
+              {inviteResult.storeName ? <p>Tienda: {inviteResult.storeName}</p> : null}
+              {inviteResult.notes ? <p>Notas: {inviteResult.notes}</p> : null}
+            </div>
+          ) : null}
+          <button
+            type="submit"
+            disabled={isInviting}
+            className="w-fit rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-400"
+          >
+            {isInviting ? "Enviando..." : "Enviar invitacion"}
+          </button>
+        </div>
+      </form>
+    </section>
+  );
+}
+
+function AdminFormInput({
+  label,
+  name,
+  type = "text",
+  required,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  type?: "email" | "text";
+  required?: boolean;
+  placeholder?: string;
+}) {
+  return (
+    <label className="grid gap-2 text-sm font-medium text-slate-700">
+      {label}
+      <input
+        type={type}
+        name={name}
+        required={required}
+        placeholder={placeholder}
+        className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+      />
+    </label>
+  );
+}
+
 function PanelShell({
   title,
   children,
@@ -785,4 +993,9 @@ function Textarea({
 
 function normalizePhone(value: string) {
   return value.replace(/\D/g, "");
+}
+
+function readFormText(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === "string" ? value.trim() : "";
 }

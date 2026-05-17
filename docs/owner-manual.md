@@ -125,6 +125,31 @@ Register store page `/registrar-tienda`:
 - Lets a store request a store page.
 - Store goes to admin review before public display.
 
+Login page `/login`:
+- Lets existing users log in with email/password or request a magic link.
+- Login magic links are for existing users and should not create new accounts.
+
+Seller signup page `/registro/vendedor`:
+- Lets an individual seller create an account.
+- Collects name, email, WhatsApp, city, region, password, and marketplace rules acceptance.
+- Creates or completes a profile. In the database, Particular seller accounts use `profiles.account_type='seller'`.
+
+Seller invite page `/registro/vendedor/invitacion`:
+- Used after an admin seller invite redirects through `/auth/callback`.
+- Requires an authenticated session.
+- Completes missing seller profile fields and continues to `/vender`.
+
+Store invite page `/registro/tienda/invitacion`:
+- Used after an admin store-owner invite redirects through `/auth/callback`.
+- Requires an authenticated session.
+- Completes the store-owner contact profile and continues to `/registrar-tienda` for the store application.
+- Does not approve the store automatically; admin review is still required.
+- The current `/registrar-tienda` form is still the existing public pending-store application form; account-owned store application management is a later step.
+
+Account page `/mi-cuenta`:
+- Protected placeholder that confirms the user is logged in.
+- Shows the current profile basics until the seller dashboard is built.
+
 Admin page `/admin`:
 - Used to control quality.
 - Admin can approve, reject, hide, or mark listings/stores.
@@ -156,6 +181,32 @@ Review `Tiendas pendientes`:
 - Click `Ocultar` if it should not be public.
 
 Only `active` stores appear publicly.
+
+### Invite Sellers Or Store Owners
+
+Go to `/admin`, log in as an admin, and use `Invitar usuario`.
+
+Required fields:
+- Email.
+- Full name.
+- WhatsApp.
+- Account type: `Vendedor particular` or `Dueno de tienda`.
+
+Optional fields:
+- City.
+- Region.
+- Store name for store-owner invites.
+- Internal notes for fieldwork follow-up.
+
+The app sends the invite from a trusted server endpoint. It verifies admin access first, then uses `SUPABASE_SERVICE_ROLE_KEY` on the server only. Do not expose that key to browser code.
+
+Invite destinations:
+- Seller: `/auth/callback?next=/registro/vendedor/invitacion`
+- Store owner: `/auth/callback?next=/registro/tienda/invitacion`
+
+No temporary passwords are used. The invite email comes from Supabase Auth, and users finish setup after clicking the link.
+
+Store-owner invites do not approve stores automatically. The owner still completes the store application, and an admin must approve it.
 
 ### Verify the Public Site
 
@@ -244,15 +295,15 @@ When reviewing `/instrumentos/[slug]`, check these cases when test data is avail
 ### Apply SQL Migrations
 
 When code adds a new migration:
-1. Open Supabase.
-2. Go to SQL Editor.
-3. Open the migration file from `supabase/migrations`.
-4. Copy the SQL.
-5. Paste it into Supabase SQL Editor.
-6. Run it.
-7. Deploy the code.
+1. Check migration state with `supabase migration list` when the CLI is logged in.
+2. Prefer applying pending migrations with `supabase db push`.
+3. If CLI access is unavailable, open Supabase SQL Editor, review the migration file from `supabase/migrations`, paste the SQL, and run it manually.
+4. After any manual SQL run, document what was applied and verify migration history/state before the next schema ticket.
+5. Deploy the code only after production Supabase has the required schema.
 
 Vercel does not automatically run SQL migrations.
+
+Important: early production schema changes existed before clean CLI migration history. Those baseline migration files should not be replayed blindly against production.
 
 ### Create an Admin User
 
@@ -291,6 +342,10 @@ Environment variables required in Vercel:
 
 ## Account Auth Setup
 
+Detailed Supabase Auth email subjects and HTML bodies live in `docs/auth-email-templates.md`.
+
+Supabase email/password authentication must be enabled if `/login` and `/registro/vendedor` should support password login/signup. If email confirmation is enabled, seller signup waits for the user to confirm by email and `/auth/callback` completes the profile from stored metadata.
+
 Supabase Auth redirect URLs should include:
 - Local callback: `http://localhost:3000/auth/callback`
 - Production callback: `https://laria.audio/auth/callback` or the active production domain.
@@ -302,12 +357,26 @@ Supported invite next paths:
 - `/registro/vendedor/invitacion`
 - `/registro/tienda/invitacion`
 
+Admin invite metadata should include `account_type='seller'` for seller invites and `account_type='store_owner'` for store-owner invites. Invite pages use that metadata when available. If the metadata/profile type is missing or mismatched, the app shows a recovery panel instead of changing account type silently.
+
+Invite flows do not use temporary passwords. Users activate through Supabase invite/magic-link style links and finish setup after the callback.
+
+Supabase may expose only one built-in `Invite user` template. In that case, use one generic invite email and rely on invite metadata plus the post-click onboarding pages for seller/store-specific behavior.
+
 To test locally:
 1. Start the app with `npm run dev`.
 2. Open `http://localhost:3000/login`.
-3. Enter an email.
-4. Open the local Supabase/Mailpit email if using local Supabase, or the real inbox if using production Supabase env vars.
-5. Click the link and confirm it lands on `/auth/callback` before redirecting to the `next` path.
+3. Test password login with an existing user.
+4. Test magic link with an existing user; the email should redirect through `/auth/callback` and then to the safe `next` path.
+5. Open `http://localhost:3000/registro/vendedor` and create a Particular seller account.
+6. If email confirmation is enabled, open the local Supabase/Mailpit email if using local Supabase, or the real inbox if using production Supabase env vars.
+7. Confirm the new user lands on `/mi-cuenta` and that the `profiles` row has `account_type='seller'`.
+8. Confirm `/mi-cuenta` redirects anonymous users to `/login?next=/mi-cuenta`.
+9. Test a seller invite with `redirectTo` ending in `/auth/callback?next=/registro/vendedor/invitacion`; confirm the setup page completes the profile and continues to `/vender`.
+10. Test a store-owner invite with `redirectTo` ending in `/auth/callback?next=/registro/tienda/invitacion`; confirm the setup page completes the profile and continues to `/registrar-tienda`.
+11. Test an invite with missing or wrong `account_type` metadata; confirm the recovery panel appears instead of changing account type silently.
+12. In `/admin`, send a seller invite and confirm the success panel shows the email, type, and destination for follow-up.
+13. In `/admin`, send a store-owner invite and confirm the destination is `/registro/tienda/invitacion`.
 
 ## What Not To Build Yet
 

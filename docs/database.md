@@ -14,11 +14,12 @@ Supabase is used for:
 Environment variables used in current code:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
 Important:
 - `NEXT_PUBLIC_SUPABASE_URL` should be only the base Supabase URL, for example `https://xxxxx.supabase.co`, not `/rest/v1/`.
-- There is no service-role key used in current app code.
-- If a future `SUPABASE_SERVICE_ROLE_KEY` is added, it must be server-only and never exposed to browser code.
+- `SUPABASE_SERVICE_ROLE_KEY` is used only by `lib/supabase/admin-client.ts` for future server-side admin/invite actions.
+- `SUPABASE_SERVICE_ROLE_KEY` must stay server-only and must never be exposed to browser code or prefixed with `NEXT_PUBLIC_`.
 
 ## Current Tables
 
@@ -32,7 +33,9 @@ Older Laria business docs describe the intended model in product language. The c
 - Store plan exists as `listing_plan`; there is no separate `listing_limit` column yet.
 - Current instrument types include plural values for some groups: `microphones`, `pedals`, and `amplifiers`.
 
-When in doubt, treat migration files and `lib/supabase/database.types.ts` as the implementation source of truth. Planning names should only become schema names through an explicit migration and app update.
+When in doubt, treat migration files and the live Supabase schema as the implementation source of truth. Planning names should only become schema names through an explicit migration and app update.
+
+Important current maintenance note: `lib/supabase/database.types.ts` is stale after the Phase 2 account migration. It does not yet include `profiles`, `store_members`, ownership fields, new status enum values, or Phase 2 helper RPCs. Regenerate or update it before writing TypeScript code that depends on those schema additions.
 
 ### `public.profiles`
 
@@ -320,6 +323,11 @@ Current migrations:
 - `20260503233000_increment_listing_view_count.sql`: view count RPC.
 - `20260516180000_phase_2_accounts.sql`: profiles, store members, ownership columns, lifecycle fields, account RLS helpers, owner/member RLS policies, publication validation RPC, and authenticated owner-folder storage policies.
 
+Production history note:
+- The six pre-Phase-2 migrations describe the historical baseline that already existed in production. Earlier schema work was originally applied manually in Supabase SQL Editor, then Supabase migration history was repaired so the CLI would not replay those files.
+- Do not re-apply old baseline migrations blindly against production. Use `supabase migration list` first and apply only pending migrations through the CLI or a carefully reviewed SQL path.
+- `20260516180000_phase_2_accounts.sql` was applied to local Supabase and pushed to production through Supabase CLI during Phase 2 Ticket 2.
+
 ## Manual Migration Reminder
 
 Vercel does not apply database migrations automatically.
@@ -327,8 +335,9 @@ Vercel does not apply database migrations automatically.
 When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 1. Create a migration file in `supabase/migrations`.
 2. Review the SQL.
-3. Run it manually in Supabase SQL Editor.
-4. Deploy code only after production Supabase has the required schema.
+3. Prefer `supabase migration list` and `supabase db push` when the CLI is logged in and linked.
+4. If using SQL Editor manually, verify migration history/state afterward so old migrations are not replayed later.
+5. Deploy code only after production Supabase has the required schema.
 
 ## Future Tables Not Yet Implemented
 

@@ -100,9 +100,11 @@ If a feature needs schema changes:
 1. Ask Codex to create a migration file in `supabase/migrations`.
 2. Ask Codex to update `lib/supabase/database.types.ts` and relevant app interfaces.
 3. Review SQL.
-4. Manually run SQL in Supabase SQL Editor unless migration CI is set up.
-5. Push code.
-6. Test production.
+4. Run `supabase migration list` before applying anything to production.
+5. Prefer `supabase db push` when Supabase CLI is logged in and linked.
+6. If SQL Editor is used manually, document it and verify migration history afterward.
+7. Push code.
+8. Test production.
 
 Reminder:
 
@@ -110,6 +112,8 @@ Reminder:
 Vercel deploys code.
 Vercel does not apply Supabase SQL migrations.
 ```
+
+Phase 2 history note: early production schema migrations were originally applied manually, then migration history was repaired before pushing `20260516180000_phase_2_accounts.sql`. Do not replay older baseline migrations blindly against production.
 
 ## UI Integration Workflow with v0
 

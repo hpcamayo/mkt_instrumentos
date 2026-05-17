@@ -242,6 +242,7 @@ Route: `/admin`
 Admin behavior:
 - Uses Supabase Auth email/password login.
 - Calls `is_admin()` to verify `app_metadata.role = "admin"`.
+- Includes an `Invitar usuario` section for fieldwork onboarding.
 - Loads pending listings and pending stores.
 - Allows editing listing basics before moderation.
 - Listing actions: `Aprobar`, `Rechazar`, `Ocultar`, `Marcar vendido`.
@@ -250,19 +251,48 @@ Admin behavior:
 
 Only pending queues are shown. Already approved/hidden/rejected/sold items are not listed in the current admin UI.
 
+Admin invite behavior:
+- Admin can invite a seller or store owner by email.
+- Fields include email, full name, WhatsApp, account type, optional city/region, optional store name, and notes for fieldwork follow-up.
+- Invites are sent by `/api/admin/invite-user`, a trusted server route that verifies `is_admin()` before using the server-only Supabase service-role client.
+- Seller invites route through `/auth/callback?next=/registro/vendedor/invitacion`.
+- Store-owner invites route through `/auth/callback?next=/registro/tienda/invitacion`.
+- No temporary passwords are created.
+- Seller invite metadata stores the database-safe `account_type='seller'` and `invite_account_type='individual'`.
+- Store-owner invite metadata stores `account_type='store_owner'`.
+- Store-owner invites do not create or approve a store automatically; the user completes the existing store application after activation.
+- Supabase may still use one built-in invite email template, so seller/store-specific experience currently happens after the click.
+
 ## Account Auth Plumbing
 
 Routes:
-- `/login`: minimal magic-link login page.
+- `/login`: email/password login plus magic-link login for existing users.
+- `/registro/vendedor`: public individual seller signup and profile completion.
+- `/registro/vendedor/invitacion`: invited seller profile setup.
+- `/registro/tienda/invitacion`: invited store-owner profile setup.
+- `/mi-cuenta`: protected account placeholder after login/signup.
 - `/auth/callback`: exchanges Supabase magic-link/invite `code` values for an app session.
 - `/logout`: signs out and redirects to `/login`.
 
 Behavior:
 - Magic links use `/auth/callback?next=...`.
+- Login-page magic links use `shouldCreateUser:false` so they do not accidentally create new users.
+- Individual seller signup creates a Supabase Auth user, stores onboarding metadata, and creates or updates the matching `profiles` row.
+- The product concept Particular maps to `profiles.account_type='seller'` in the current database schema.
+- Signup collects full name, email, WhatsApp, city, region, password, and marketplace rules acceptance.
+- If Supabase email confirmation is enabled, `/auth/callback` completes the seller profile from Auth user metadata after the user clicks the confirmation link.
 - Callback redirects only to safe same-site paths.
 - Intended invite next paths are `/registro/vendedor/invitacion` and `/registro/tienda/invitacion`.
-- Middleware refreshes Supabase Auth cookies and protects future `/mi-cuenta` and `/mis-publicaciones` routes.
-- Seller dashboards, listing management pages, and invite setup pages are not built yet.
+- Seller invite flow shows `Activa tu cuenta de vendedor`, completes missing profile fields, confirms the Particular account type, and continues to creating a first listing through `/vender`.
+- Store invite flow shows `Activa la cuenta de tu tienda`, completes store-owner contact profile fields, explains that admin approval is required, and continues to the store application form at `/registrar-tienda`.
+- Current store application submission at `/registrar-tienda` remains the existing public pending-store form; deeper account-owned store application management is still a later Phase 2 step.
+- Invite pages require an authenticated session after `/auth/callback`; anonymous visitors are redirected to `/login` with the invite route preserved in `next`.
+- Invite pages use `account_type` metadata/profile type when available. If metadata is missing or mismatched, they show a safe recovery panel instead of silently changing account type.
+- Invite flows do not use temporary passwords.
+- Supabase Auth email template copy is documented in `docs/auth-email-templates.md`.
+- Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
+- Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
+- Seller dashboards, listing management pages, store account signup, and invite setup pages are not built yet.
 
 ## Features Intentionally Not Implemented Yet
 

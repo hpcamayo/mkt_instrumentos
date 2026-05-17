@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  INDIVIDUAL_SELLER_ACCOUNT_TYPE,
+  upsertSellerProfile,
+} from "@/lib/auth/profile";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
@@ -36,6 +40,18 @@ export async function GET(request: Request) {
     return NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent("No se pudo confirmar la sesion.")}`,
     );
+  }
+
+  const { data } = await supabase.auth.getUser();
+  const metadata = data.user?.user_metadata;
+
+  if (data.user && metadata?.account_type === INDIVIDUAL_SELLER_ACCOUNT_TYPE) {
+    await upsertSellerProfile(supabase, data.user.id, {
+      fullName: String(metadata.full_name ?? ""),
+      phone: String(metadata.phone ?? ""),
+      city: String(metadata.city ?? ""),
+      region: String(metadata.region ?? ""),
+    });
   }
 
   return NextResponse.redirect(`${origin}${next}`);

@@ -70,7 +70,7 @@ GitHub is the source repository. Supabase schema is managed separately through S
 - Must never be imported by Client Components or exposed as `NEXT_PUBLIC_*`.
 - Intended for later admin invite/server actions.
 
-`middleware.ts` refreshes Supabase Auth sessions and protects future account routes that start with `/mi-cuenta` or `/mis-publicaciones`.
+`middleware.ts` refreshes Supabase Auth sessions and protects account routes that start with `/mi-cuenta` or `/mis-publicaciones`.
 
 ## Actual Route Map
 
@@ -80,15 +80,22 @@ app/
   page.tsx                         Homepage
   admin/page.tsx                   Admin panel
   auth/callback/route.ts           Supabase magic-link/invite callback
+  api/admin/invite-user/route.ts   Server-only admin invite endpoint
   api/listings/[id]/photos/route.ts
   api/listings/[id]/view/route.ts
   instrumentos/[slug]/page.tsx     Listing detail
   listados/page.tsx                Listings/search page
   listados/loading.tsx             Listings loading skeleton
-  login/page.tsx                   Magic-link login
+  login/page.tsx                   Password and magic-link login
   logout/route.ts                  Sign out and redirect to /login
+  mi-cuenta/page.tsx               Protected account placeholder
   publicar/page.tsx                Redirects to /vender
   registrar-tienda/page.tsx        Store registration
+  registro/vendedor/page.tsx       Individual seller account signup
+  registro/vendedor/invitacion/page.tsx
+                                    Invited seller profile setup
+  registro/tienda/invitacion/page.tsx
+                                    Invited store-owner profile setup
   tiendas/[slug]/page.tsx          Public store page
   vender/page.tsx                  Individual listing submission
 ```
@@ -129,7 +136,7 @@ Stores are mini-shop pages for small music stores. A store has:
 
 Only `active` stores should be visible publicly.
 
-Phase 2 adds `profiles` and `store_members`. Stores can have `owner_user_id`, and owner stores automatically get an owner membership when inserted through the account-aware flow. The database still uses `stores.status='active'` for product-approved stores.
+Phase 2 adds `profiles` and `store_members`. Individual seller signup stores `profiles.account_type='seller'` even though UI labels say Particular. Stores can have `owner_user_id`, and owner stores automatically get an owner membership when inserted through the account-aware flow. The database still uses `stores.status='active'` for product-approved stores.
 
 ### Admin
 
@@ -144,6 +151,8 @@ Admin controls supply quality. The admin panel can:
 
 Admin authority remains based on Supabase Auth `app_metadata.role = "admin"`. Profile `account_type` is app metadata only and is not the security boundary.
 
+Admin-created invites are sent through `app/api/admin/invite-user/route.ts`. The route first checks the current cookie session with the normal server Supabase client and `is_admin()`, then uses the server-only service-role client to call Supabase Auth Admin invite APIs. `SUPABASE_SERVICE_ROLE_KEY` must never be imported into Client Components.
+
 ## Component Structure
 
 Core local components:
@@ -152,6 +161,10 @@ Core local components:
 - `components/listing-filters.tsx`
 - `components/listing-detail-gallery.tsx`
 - `components/listing-detail-metadata.tsx`
+- `components/login-form.tsx`
+- `components/seller-signup-form.tsx`
+- `components/invite-profile-setup-form.tsx`
+- `components/invite-recovery-panel.tsx`
 - `components/admin-panel.tsx`
 - `components/sell-listing-form.tsx`
 - `components/store-registration-form.tsx`
@@ -165,6 +178,12 @@ Generated/imported UI:
 The homepage uses `components_v0` sections, but marketplace data logic remains in the route page. v0-generated UI should be integrated carefully and should not replace Supabase/business logic blindly.
 
 The listing detail route composes `ListingDetailGallery` in a sticky desktop column using `minmax(0,0.82fr)`, with the main listing facts, seller/store trust box, description, and full specs in the wider `minmax(0,1fr)` right column. Recommendation sections stay below that main detail grid.
+
+Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/registro/vendedor` creates a Supabase Auth user, stores seller metadata for email confirmation callbacks, and upserts the matching `profiles` row when a session is available. `/auth/callback` also completes the seller profile from user metadata after email confirmation.
+
+Invite setup pages require an authenticated Supabase session after the invite callback. `/registro/vendedor/invitacion` completes a Particular seller profile and continues to `/vender`; `/registro/tienda/invitacion` completes a store-owner profile and continues to `/registrar-tienda` for the store application. Invite routing depends on `account_type` metadata when available. If metadata/profile type does not match the route, the page shows a recovery panel instead of changing account type blindly. Temporary passwords are not used.
+
+The admin invite endpoint builds Supabase `redirectTo` URLs as `/auth/callback?next=/registro/.../invitacion`, so the app callback exchanges the Supabase code before sending the user to the seller/store setup page. Seller invite metadata stores `account_type='seller'` plus `invite_account_type='individual'`; store-owner invite metadata stores `account_type='store_owner'`.
 
 ## Styling
 

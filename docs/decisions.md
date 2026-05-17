@@ -71,11 +71,12 @@ Decision: public reads/inserts and admin updates are controlled primarily by Sup
 
 Why:
 - Small team can understand and review SQL policies.
-- No separate backend server or service role key is needed for current flows.
+- Most public/admin access remains understandable through RLS and scoped RPCs.
 - Supabase Auth can carry admin identity through JWT app metadata.
 
 Tradeoff:
 - Some actions, like view-count incrementing, need carefully scoped security-definer RPCs.
+- Phase 2 adds a server-only service-role client for future invite/admin server actions. It must never be imported into client code.
 
 ## Phase 2 Account Ownership Is Additive
 
@@ -88,6 +89,24 @@ Why:
 - Admin moderation keeps working while account-aware seller/store flows are built.
 
 Protected fields such as listing `status`, `published_at`, `view_count`, store `status`, `listing_plan`, and `is_verified` should only be changed by admins or controlled RPC/server logic.
+
+## Supabase Auth Emails First
+
+Decision: use Supabase Auth invite links and magic links for Phase 2 account onboarding before adding a custom email provider.
+
+Why:
+- It keeps the sprint focused on accounts and ownership.
+- Supabase Auth already supports invite links and magic links.
+- Seller/store-specific behavior can be routed through `account_type` metadata and `redirectTo` paths.
+
+Current limitation:
+- Supabase may only expose one built-in invite email template. If distinct seller/store invite bodies become important, add a custom email provider or custom server-side email flow later.
+
+Implementation note:
+- Admin-created invites are sent from a trusted server route, not from browser code.
+- The route verifies `is_admin()` with the user's normal Supabase session before using the server-only service-role client.
+- No temporary passwords are created.
+- Invite links route through `/auth/callback?next=...` so the app can establish the session before the seller/store setup page.
 
 ## JSONB Attributes for Advanced Filters
 
@@ -193,15 +212,17 @@ Tradeoff:
 
 ## Manual Supabase SQL Migrations
 
-Decision: the current production workflow uses manual SQL execution in Supabase.
+Decision: schema changes are tracked in `supabase/migrations`, while production application can be manual SQL or Supabase CLI depending on project state.
 
 Why:
 - The owner currently has online Supabase access.
 - SQL migrations remain reviewable in `supabase/migrations`.
+- The Supabase CLI is now linked for this project, but earlier production schema changes were originally applied manually and migration history was repaired afterward.
 
 Tradeoff:
-- The owner must apply SQL before deploying code that depends on new schema/RPC.
+- The owner/Codex must confirm migration history before applying schema changes.
 - Vercel does not automatically run migrations.
+- Old baseline migrations should not be replayed blindly against production.
 
 ## Use v0 Carefully
 
