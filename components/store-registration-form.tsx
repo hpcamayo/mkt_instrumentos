@@ -1,7 +1,8 @@
 "use client";
 
 import { type FormEvent, useMemo, useState } from "react";
-import { cityOptions } from "@/lib/listings";
+import { LocationFields } from "@/components/location-fields";
+import { normalizePeruRegion } from "@/lib/location";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 type FormState = "idle" | "submitting" | "success" | "error";
@@ -29,6 +30,7 @@ export function StoreRegistrationForm() {
     const formData = new FormData(form);
     const name = readText(formData, "name");
     const city = readText(formData, "city");
+    const region = normalizePeruRegion(readText(formData, "region"));
     const district = readText(formData, "district");
     const address = readText(formData, "address");
     const whatsapp = normalizePhone(readText(formData, "whatsapp"));
@@ -41,6 +43,7 @@ export function StoreRegistrationForm() {
     if (
       !name ||
       !city ||
+      !region ||
       !district ||
       !address ||
       whatsapp.length < 9 ||
@@ -50,7 +53,7 @@ export function StoreRegistrationForm() {
     ) {
       setState("error");
       setMessage(
-        "Completa los campos obligatorios, agrega un WhatsApp válido, un logo y un banner.",
+        "Completa los campos obligatorios, selecciona una región válida, agrega un WhatsApp válido, un logo y un banner.",
       );
       return;
     }
@@ -99,7 +102,7 @@ export function StoreRegistrationForm() {
       contact_name: name,
       whatsapp_phone: whatsapp,
       city,
-      region: city === "Huancayo" ? "Junin" : city,
+      region,
       district,
       address,
       instagram_url: instagram || null,
@@ -174,12 +177,7 @@ export function StoreRegistrationForm() {
       <TextField label="Nombre de la tienda" name="name" required />
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <SelectField
-          label="Ciudad"
-          name="city"
-          required
-          options={cityOptions.map((city) => ({ value: city, label: city }))}
-        />
+        <LocationFields />
         <TextField label="Distrito" name="district" required />
         <TextField label="Dirección" name="address" required />
         <TextField
@@ -253,39 +251,6 @@ function TextField({
         placeholder={placeholder}
         className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
       />
-    </label>
-  );
-}
-
-type SelectFieldProps = {
-  label: string;
-  name: string;
-  required?: boolean;
-  options: {
-    value: string;
-    label: string;
-  }[];
-};
-
-function SelectField({ label, name, required, options }: SelectFieldProps) {
-  return (
-    <label className="grid gap-2 text-sm font-medium text-slate-700">
-      {label}
-      <select
-        name={name}
-        required={required}
-        defaultValue=""
-        className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
-      >
-        <option value="" disabled>
-          Selecciona una opción
-        </option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
     </label>
   );
 }

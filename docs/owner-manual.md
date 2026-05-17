@@ -349,9 +349,10 @@ Supabase email/password authentication must be enabled if `/login` and `/registr
 Supabase Auth redirect URLs should include:
 - Local callback: `http://localhost:3000/auth/callback`
 - Production callback: `https://laria.audio/auth/callback` or the active production domain.
+- Current Vercel production callback if testing before the custom domain is fixed: `https://mkt-instrumentos.vercel.app/auth/callback`
 - Vercel preview callback pattern if preview magic-link testing is needed.
 
-Magic-link and invite flows should redirect through `/auth/callback?next=...`.
+Magic-link, signup confirmation, and invite flows should redirect through `/auth/callback?next=...`. The confirmation success page is `/confirmacion-correo`, but Supabase still only needs the callback URL allowlisted.
 
 Supported invite next paths:
 - `/registro/vendedor/invitacion`
@@ -370,13 +371,17 @@ To test locally:
 4. Test magic link with an existing user; the email should redirect through `/auth/callback` and then to the safe `next` path.
 5. Open `http://localhost:3000/registro/vendedor` and create a Particular seller account.
 6. If email confirmation is enabled, open the local Supabase/Mailpit email if using local Supabase, or the real inbox if using production Supabase env vars.
-7. Confirm the new user lands on `/mi-cuenta` and that the `profiles` row has `account_type='seller'`.
+7. Confirm the new user lands on `/confirmacion-correo` and that the `profiles` row has `account_type='seller'`.
 8. Confirm `/mi-cuenta` redirects anonymous users to `/login?next=/mi-cuenta`.
 9. Test a seller invite with `redirectTo` ending in `/auth/callback?next=/registro/vendedor/invitacion`; confirm the setup page completes the profile and continues to `/vender`.
 10. Test a store-owner invite with `redirectTo` ending in `/auth/callback?next=/registro/tienda/invitacion`; confirm the setup page completes the profile and continues to `/registrar-tienda`.
 11. Test an invite with missing or wrong `account_type` metadata; confirm the recovery panel appears instead of changing account type silently.
 12. In `/admin`, send a seller invite and confirm the success panel shows the email, type, and destination for follow-up.
 13. In `/admin`, send a store-owner invite and confirm the destination is `/registro/tienda/invitacion`.
+14. Try signing up with an existing email; the form should show `Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.` and a login link.
+15. Try invalid region text in seller signup, invite setup, store registration, and admin invite. The form should reject it.
+
+Valid region values are fixed to Peru regions. City fields show suggestions but can be typed manually when the city is not in the list.
 
 ## What Not To Build Yet
 

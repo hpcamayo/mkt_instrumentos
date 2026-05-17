@@ -108,6 +108,23 @@ Implementation note:
 - No temporary passwords are created.
 - Invite links route through `/auth/callback?next=...` so the app can establish the session before the seller/store setup page.
 
+## Duplicate Signup UX Uses A Server Precheck
+
+Decision: seller signup checks for existing Auth emails before calling Supabase `signUp()`.
+
+Why:
+- Supabase can obfuscate repeated signup attempts and return a response that looks successful even when no confirmation email will be sent.
+- Showing "check your email" for `user_repeated_signup` is confusing during field testing.
+- `profiles` does not currently store email, and adding an email column is not required just for this UX fix.
+
+Implementation:
+- `/api/auth/check-email` uses the server-only service-role client to scan Supabase Auth users.
+- The endpoint returns only whether the normalized email is available; it does not expose user IDs or profile details.
+- Existing emails show `Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.` with a link to `/login`.
+
+Tradeoff:
+- This intentionally reveals that an email is registered, which is acceptable for this marketplace onboarding flow. If abuse becomes a concern, add rate limiting or move to a less specific message.
+
 ## JSONB Attributes for Advanced Filters
 
 Decision: use `listings.instrument_type` plus `listings.attributes jsonb`.

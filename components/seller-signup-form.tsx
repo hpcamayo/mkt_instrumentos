@@ -3,13 +3,21 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { LocationFields } from "@/components/location-fields";
 import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   upsertSellerProfile,
 } from "@/lib/auth/profile";
+import { normalizePeruRegion } from "@/lib/location";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
-type FormState = "idle" | "loading" | "submitting" | "sent" | "error";
+type FormState =
+  | "idle"
+  | "loading"
+  | "submitting"
+  | "sent"
+  | "duplicate"
+  | "error";
 
 export function SellerSignupForm() {
   const router = useRouter();
@@ -56,7 +64,9 @@ export function SellerSignupForm() {
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const phone = String(formData.get("phone") ?? "").trim();
     const city = String(formData.get("city") ?? "").trim();
-    const region = String(formData.get("region") ?? "").trim();
+    const region = normalizePeruRegion(
+      String(formData.get("region") ?? "").trim(),
+    );
     const password = String(formData.get("password") ?? "");
     const acceptedRules = formData.get("acceptedRules") === "on";
     const supabase = getSupabaseBrowserClient();
@@ -67,9 +77,15 @@ export function SellerSignupForm() {
       return;
     }
 
-    if (!fullName || !phone || !city || !region) {
+    if (!fullName || !phone || !city) {
       setState("error");
-      setMessage("Completa tu nombre, WhatsApp, ciudad y region.");
+      setMessage("Completa tu nombre, WhatsApp y ciudad.");
+      return;
+    }
+
+    if (!region) {
+      setState("error");
+      setMessage("Selecciona una region valida de Peru.");
       return;
     }
 
@@ -106,7 +122,23 @@ export function SellerSignupForm() {
       return;
     }
 
-    const emailRedirectTo = `${window.location.origin}/auth/callback?next=/mi-cuenta`;
+    const emailCheck = await checkEmailAvailability(email);
+
+    if (emailCheck === "exists") {
+      setState("duplicate");
+      setMessage(
+        "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.",
+      );
+      return;
+    }
+
+    if (emailCheck === "error") {
+      setState("error");
+      setMessage("No pudimos verificar el correo. Intenta nuevamente.");
+      return;
+    }
+
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=/confirmacion-correo`;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -125,7 +157,15 @@ export function SellerSignupForm() {
 
     if (error) {
       setState("error");
-      setMessage("No se pudo crear la cuenta. Intenta nuevamente.");
+      setMessage("No se pudo crear la cuenta. Revisa los datos e intenta nuevamente.");
+      return;
+    }
+
+    if (data.user?.identities && data.user.identities.length === 0) {
+      setState("duplicate");
+      setMessage(
+        "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.",
+      );
       return;
     }
 
@@ -214,27 +254,7 @@ export function SellerSignupForm() {
           />
         </label>
 
-        <label className="block">
-          <span className="text-sm font-semibold text-ink">Ciudad</span>
-          <input
-            name="city"
-            required
-            autoComplete="address-level2"
-            className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
-            placeholder="Lima"
-          />
-        </label>
-
-        <label className="block sm:col-span-2">
-          <span className="text-sm font-semibold text-ink">Region</span>
-          <input
-            name="region"
-            required
-            autoComplete="address-level1"
-            className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
-            placeholder="Lima"
-          />
-        </label>
+        <LocationFields />
       </div>
 
       <label className="flex gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-700">
@@ -252,15 +272,20 @@ export function SellerSignupForm() {
       </label>
 
       {message ? (
-        <p
+        <div
           className={`rounded-md px-3 py-2 text-sm ${
             state === "sent"
               ? "bg-emerald-50 text-emerald-700"
               : "bg-amber-50 text-amber-800"
           }`}
         >
-          {message}
-        </p>
+          <p>{message}</p>
+          {state === "duplicate" ? (
+            <Link className="mt-2 inline-flex font-semibold text-ink hover:text-brass" href="/login">
+              Ir a ingresar
+            </Link>
+          ) : null}
+        </div>
       ) : null}
 
       <button
@@ -283,4 +308,23 @@ export function SellerSignupForm() {
       </p>
     </form>
   );
+}
+
+async function checkEmailAvailability(email: string) {
+  const response = await fetch("/api/auth/check-email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+  const result = (await response.json().catch(() => null)) as
+    | { ok?: boolean; available?: boolean }
+    | null;
+
+  if (!response.ok || !result?.ok) {
+    return "error" as const;
+  }
+
+  return result.available ? ("available" as const) : ("exists" as const);
 }

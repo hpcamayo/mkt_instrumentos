@@ -7,6 +7,8 @@ import {
   useMemo,
   useState,
 } from "react";
+import { LocationFields } from "@/components/location-fields";
+import { normalizePeruRegion } from "@/lib/location";
 import { categoryOptions, cityOptions, conditionOptions } from "@/lib/listings";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import type { Database } from "@/lib/supabase/database.types";
@@ -302,6 +304,13 @@ export function AdminPanel() {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
+    const rawRegion = readFormText(formData, "region");
+    const normalizedRegion = rawRegion ? normalizePeruRegion(rawRegion) : null;
+
+    if (rawRegion && !normalizedRegion) {
+      setInviteMessage("Selecciona una region valida de Peru.");
+      return;
+    }
 
     setIsInviting(true);
     setInviteMessage("");
@@ -318,7 +327,7 @@ export function AdminPanel() {
         phone: readFormText(formData, "phone"),
         accountType: inviteAccountType,
         city: readFormText(formData, "city"),
-        region: readFormText(formData, "region"),
+        region: normalizedRegion ?? "",
         storeName: readFormText(formData, "storeName"),
         notes: readFormText(formData, "notes"),
       }),
@@ -722,8 +731,7 @@ function InviteUserSection({
             <option value="store_owner">Dueno de tienda</option>
           </select>
         </label>
-        <AdminFormInput label="Ciudad" name="city" placeholder="Lima" />
-        <AdminFormInput label="Region" name="region" placeholder="Lima" />
+        <LocationFields required={false} />
         {accountType === "store_owner" ? (
           <AdminFormInput
             label="Nombre de tienda"

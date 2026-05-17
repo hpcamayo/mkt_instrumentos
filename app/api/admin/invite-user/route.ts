@@ -3,6 +3,7 @@ import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   STORE_OWNER_ACCOUNT_TYPE,
 } from "@/lib/auth/profile";
+import { normalizePeruRegion } from "@/lib/location";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
@@ -32,7 +33,9 @@ export async function POST(request: Request) {
   const phone = readText(payload, "phone");
   const accountType = readAccountType(payload);
   const city = readText(payload, "city");
-  const region = readText(payload, "region");
+  const regionInput = readText(payload, "region");
+  const normalizedRegion = regionInput ? normalizePeruRegion(regionInput) : null;
+  const region = normalizedRegion ?? "";
   const storeName = readText(payload, "storeName");
   const notes = readText(payload, "notes");
 
@@ -50,6 +53,10 @@ export async function POST(request: Request) {
 
   if (!accountType) {
     return jsonError("Selecciona el tipo de cuenta.", 400);
+  }
+
+  if (regionInput && !normalizedRegion) {
+    return jsonError("Selecciona una region valida de Peru.", 400);
   }
 
   const adminClient = getSupabaseAdminClient();

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { normalizePeruRegion } from "@/lib/location";
 import type { Database } from "@/lib/supabase/database.types";
 
 export const INDIVIDUAL_SELLER_ACCOUNT_TYPE = "seller";
@@ -23,6 +24,12 @@ export async function upsertSellerProfile(
   userId: string,
   input: SellerProfileInput,
 ): Promise<ProfileResult> {
+  const location = validateProfileLocation(input.city, input.region);
+
+  if (!location.ok) {
+    return location;
+  }
+
   const { data: currentProfile, error: profileError } = await supabase
     .from("profiles")
     .select("account_type")
@@ -52,8 +59,8 @@ export async function upsertSellerProfile(
       account_type: INDIVIDUAL_SELLER_ACCOUNT_TYPE,
       full_name: input.fullName.trim(),
       phone: input.phone.trim(),
-      city: input.city.trim(),
-      region: input.region.trim(),
+      city: location.city,
+      region: location.region,
     },
     { onConflict: "id" },
   );
@@ -73,6 +80,12 @@ export async function upsertStoreOwnerProfile(
   userId: string,
   input: SellerProfileInput,
 ): Promise<ProfileResult> {
+  const location = validateProfileLocation(input.city, input.region);
+
+  if (!location.ok) {
+    return location;
+  }
+
   const { data: currentProfile, error: profileError } = await supabase
     .from("profiles")
     .select("account_type")
@@ -103,8 +116,8 @@ export async function upsertStoreOwnerProfile(
       account_type: STORE_OWNER_ACCOUNT_TYPE,
       full_name: input.fullName.trim(),
       phone: input.phone.trim(),
-      city: input.city.trim(),
-      region: input.region.trim(),
+      city: location.city,
+      region: location.region,
     },
     { onConflict: "id" },
   );
@@ -117,4 +130,29 @@ export async function upsertStoreOwnerProfile(
   }
 
   return { ok: true };
+}
+
+function validateProfileLocation(city: string, region: string) {
+  const trimmedCity = city.trim();
+  const normalizedRegion = normalizePeruRegion(region);
+
+  if (!trimmedCity) {
+    return {
+      ok: false as const,
+      message: "Ingresa una ciudad valida.",
+    };
+  }
+
+  if (!normalizedRegion) {
+    return {
+      ok: false as const,
+      message: "Selecciona una region valida de Peru.",
+    };
+  }
+
+  return {
+    ok: true as const,
+    city: trimmedCity,
+    region: normalizedRegion,
+  };
 }

@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { LocationFields } from "@/components/location-fields";
 import {
   upsertSellerProfile,
   upsertStoreOwnerProfile,
 } from "@/lib/auth/profile";
+import { normalizePeruRegion } from "@/lib/location";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 type InviteMode = "seller" | "store";
@@ -64,7 +66,9 @@ export function InviteProfileSetupForm({
     const fullName = String(formData.get("fullName") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").trim();
     const city = String(formData.get("city") ?? "").trim();
-    const region = String(formData.get("region") ?? "").trim();
+    const region = normalizePeruRegion(
+      String(formData.get("region") ?? "").trim(),
+    );
     const supabase = getSupabaseBrowserClient();
 
     if (!supabase) {
@@ -73,9 +77,15 @@ export function InviteProfileSetupForm({
       return;
     }
 
-    if (!fullName || !phone || !city || !region) {
+    if (!fullName || !phone || !city) {
       setState("error");
       setMessage("Completa todos los campos para continuar.");
+      return;
+    }
+
+    if (!region) {
+      setState("error");
+      setMessage("Selecciona una region valida de Peru.");
       return;
     }
 
@@ -155,29 +165,10 @@ export function InviteProfileSetupForm({
           />
         </label>
 
-        <label className="block">
-          <span className="text-sm font-semibold text-ink">Ciudad</span>
-          <input
-            name="city"
-            required
-            autoComplete="address-level2"
-            defaultValue={initialValues.city}
-            className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
-            placeholder="Lima"
-          />
-        </label>
-
-        <label className="block sm:col-span-2">
-          <span className="text-sm font-semibold text-ink">Region</span>
-          <input
-            name="region"
-            required
-            autoComplete="address-level1"
-            defaultValue={initialValues.region}
-            className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
-            placeholder="Lima"
-          />
-        </label>
+        <LocationFields
+          defaultCity={initialValues.city}
+          defaultRegion={initialValues.region}
+        />
       </div>
 
       {message ? (

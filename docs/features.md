@@ -268,6 +268,7 @@ Admin invite behavior:
 Routes:
 - `/login`: email/password login plus magic-link login for existing users.
 - `/registro/vendedor`: public individual seller signup and profile completion.
+- `/confirmacion-correo`: email confirmation success page after seller signup.
 - `/registro/vendedor/invitacion`: invited seller profile setup.
 - `/registro/tienda/invitacion`: invited store-owner profile setup.
 - `/mi-cuenta`: protected account placeholder after login/signup.
@@ -278,9 +279,10 @@ Behavior:
 - Magic links use `/auth/callback?next=...`.
 - Login-page magic links use `shouldCreateUser:false` so they do not accidentally create new users.
 - Individual seller signup creates a Supabase Auth user, stores onboarding metadata, and creates or updates the matching `profiles` row.
+- Before seller signup calls Supabase Auth, `/api/auth/check-email` performs a server-side duplicate-email precheck using the service-role Auth Admin API. If the email already exists, the form shows `Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.` with a link to `/login`.
 - The product concept Particular maps to `profiles.account_type='seller'` in the current database schema.
 - Signup collects full name, email, WhatsApp, city, region, password, and marketplace rules acceptance.
-- If Supabase email confirmation is enabled, `/auth/callback` completes the seller profile from Auth user metadata after the user clicks the confirmation link.
+- If Supabase email confirmation is enabled, `/auth/callback` completes the seller profile from Auth user metadata after the user clicks the confirmation link, then redirects to `/confirmacion-correo`.
 - Callback redirects only to safe same-site paths.
 - Intended invite next paths are `/registro/vendedor/invitacion` and `/registro/tienda/invitacion`.
 - Seller invite flow shows `Activa tu cuenta de vendedor`, completes missing profile fields, confirms the Particular account type, and continues to creating a first listing through `/vender`.
@@ -289,6 +291,7 @@ Behavior:
 - Invite pages require an authenticated session after `/auth/callback`; anonymous visitors are redirected to `/login` with the invite route preserved in `next`.
 - Invite pages use `account_type` metadata/profile type when available. If metadata is missing or mismatched, they show a safe recovery panel instead of silently changing account type.
 - Invite flows do not use temporary passwords.
+- Account and invite location forms use a fixed Peru region list and city suggestions with free-text city fallback. Region must normalize to one of: Amazonas, Áncash, Apurímac, Arequipa, Ayacucho, Cajamarca, Callao, Cusco, Huancavelica, Huánuco, Ica, Junín, La Libertad, Lambayeque, Lima, Loreto, Madre de Dios, Moquegua, Pasco, Piura, Puno, San Martín, Tacna, Tumbes, Ucayali.
 - Supabase Auth email template copy is documented in `docs/auth-email-templates.md`.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.

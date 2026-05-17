@@ -81,8 +81,10 @@ app/
   admin/page.tsx                   Admin panel
   auth/callback/route.ts           Supabase magic-link/invite callback
   api/admin/invite-user/route.ts   Server-only admin invite endpoint
+  api/auth/check-email/route.ts    Server-only duplicate-email availability check
   api/listings/[id]/photos/route.ts
   api/listings/[id]/view/route.ts
+  confirmacion-correo/page.tsx     Email confirmation success page
   instrumentos/[slug]/page.tsx     Listing detail
   listados/page.tsx                Listings/search page
   listados/loading.tsx             Listings loading skeleton
@@ -165,6 +167,7 @@ Core local components:
 - `components/seller-signup-form.tsx`
 - `components/invite-profile-setup-form.tsx`
 - `components/invite-recovery-panel.tsx`
+- `components/location-fields.tsx`
 - `components/admin-panel.tsx`
 - `components/sell-listing-form.tsx`
 - `components/store-registration-form.tsx`
@@ -181,9 +184,15 @@ The listing detail route composes `ListingDetailGallery` in a sticky desktop col
 
 Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/registro/vendedor` creates a Supabase Auth user, stores seller metadata for email confirmation callbacks, and upserts the matching `profiles` row when a session is available. `/auth/callback` also completes the seller profile from user metadata after email confirmation.
 
+Seller signup checks duplicate emails through `app/api/auth/check-email/route.ts` before calling Supabase `signUp()`. The route uses the server-only service-role client to scan Supabase Auth users and returns only an availability flag, because `profiles` does not currently store email. Repeated signup attempts show a Spanish error and a link to `/login` instead of a false "check your email" success state.
+
+Signup confirmation emails redirect through `/auth/callback?next=/confirmacion-correo`. The success page is `/confirmacion-correo`; Supabase only needs the `/auth/callback` URL allowlisted for each domain.
+
 Invite setup pages require an authenticated Supabase session after the invite callback. `/registro/vendedor/invitacion` completes a Particular seller profile and continues to `/vender`; `/registro/tienda/invitacion` completes a store-owner profile and continues to `/registrar-tienda` for the store application. Invite routing depends on `account_type` metadata when available. If metadata/profile type does not match the route, the page shows a recovery panel instead of changing account type blindly. Temporary passwords are not used.
 
 The admin invite endpoint builds Supabase `redirectTo` URLs as `/auth/callback?next=/registro/.../invitacion`, so the app callback exchanges the Supabase code before sending the user to the seller/store setup page. Seller invite metadata stores `account_type='seller'` plus `invite_account_type='individual'`; store-owner invite metadata stores `account_type='store_owner'`.
+
+Location onboarding uses `components/location-fields.tsx` with a fixed Peru region list from `lib/location.ts`. Region values are normalized to canonical labels such as `Junín`; city uses suggestions but remains free text after trimming.
 
 ## Styling
 
