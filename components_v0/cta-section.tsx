@@ -1,58 +1,50 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
-import { Button } from "@/components_v0/ui/button";
 
 export function CTASection() {
   return (
-    <section className="py-20 md:py-32">
+    <section className="bg-white py-10 md:py-14">
       <PageContainer>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="relative overflow-hidden rounded-3xl bg-secondary p-8 text-center md:p-16"
+          transition={{ duration: 0.55 }}
+          className="relative overflow-hidden rounded-lg bg-laria-black p-6 text-white shadow-2xl shadow-black/15 sm:p-8 lg:p-10"
         >
-          <div className="relative">
-            <span className="mb-6 inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
-              Publicacion gratis
-            </span>
-            <h2 className="font-serif text-3xl tracking-tight text-foreground md:text-5xl lg:text-6xl">
-              Publica tu instrumento
-              <br />
-              <span className="text-primary">en minutos</span>
-            </h2>
-            <p className="mx-auto mt-6 max-w-xl text-lg text-muted-foreground">
-              Sube tu instrumento usado, espera la revision del equipo y recibe
-              consultas directas por WhatsApp.
-            </p>
-            <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
-              <Button
-                asChild
-                size="lg"
-                className="h-12 rounded-full bg-primary px-8 text-base text-primary-foreground hover:bg-primary/90"
-              >
-                <Link href="/publicar">
-                  Publicar ahora
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="h-12 rounded-full px-8 text-base"
-              >
-                <Link href="/registrar-tienda">Registrar tienda</Link>
-              </Button>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(47,128,255,0.34),transparent_34%),linear-gradient(90deg,rgba(5,6,8,1),rgba(16,18,23,0.76))]" />
+          <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-laria-yellow">
+                Publica gratis
+              </p>
+              <h2 className="mt-3 max-w-3xl text-3xl font-black uppercase leading-tight tracking-tight md:text-5xl">
+                La musica nos conecta.
+                <br />
+                <span className="text-laria-blue">Laria lo hace posible.</span>
+              </h2>
+              <p className="mt-4 max-w-xl text-sm leading-6 text-white/70 md:text-base">
+                Sube tu instrumento, espera la revision del equipo y recibe
+                consultas directas por WhatsApp.
+              </p>
             </div>
-            <p className="mt-6 text-sm text-muted-foreground">
-              Sin pagos dentro de la plataforma, sin comisiones y con contacto por WhatsApp.
-            </p>
+            <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
+              <Link
+                href="/publicar"
+                className="laria-button-primary min-h-12 px-6 py-3 text-sm uppercase tracking-wide"
+              >
+                Publicar mi equipo
+              </Link>
+              <Link
+                href="/listados"
+                className="inline-flex min-h-12 items-center justify-center rounded-md border border-white/40 px-6 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:border-laria-blue hover:text-laria-blue"
+              >
+                Explorar productos
+              </Link>
+            </div>
           </div>
         </motion.div>
       </PageContainer>

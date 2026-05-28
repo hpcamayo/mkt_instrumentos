@@ -14,99 +14,196 @@ export type VerifiedStore = {
   description: string;
 };
 
+// UI placeholder only; replace with real community/content data when feature is implemented.
+const communityItems = [
+  "Guia rapida para comprar tu primera guitarra usada",
+  "Como revisar un amplificador antes de cerrar trato",
+  "Checklist para publicar mejores fotos de tu instrumento",
+];
+
+// UI placeholder only; replace with real store discovery data when feature is implemented.
+const placeholderStores: VerifiedStore[] = [
+  {
+    id: "ui-store-1",
+    name: "Tienda demo",
+    slug: "",
+    logoUrl: null,
+    location: "Lima, PE",
+    description: "Vista previa de tienda verificada para el nuevo diseño.",
+  },
+  {
+    id: "ui-store-2",
+    name: "Backline demo",
+    slug: "",
+    logoUrl: null,
+    location: "Arequipa, PE",
+    description: "Espacio visual temporal hasta tener tiendas activas.",
+  },
+  {
+    id: "ui-store-3",
+    name: "Audio demo",
+    slug: "",
+    logoUrl: null,
+    location: "Cusco, PE",
+    description: "Bloque placeholder sin funcionalidad nueva.",
+  },
+];
+
 const container = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.08,
     },
   },
 };
 
 const item = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 18 },
   show: { opacity: 1, y: 0 },
 };
 
 export function VerifiedStores({ stores }: { stores: VerifiedStore[] }) {
-  return (
-    <section className="py-16 md:py-24">
-      <PageContainer>
-        <div className="mb-12 flex items-center justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2">
-              <BadgeCheck className="h-5 w-5 text-primary" />
-              <span className="text-sm font-medium text-primary">
-                Tiendas verificadas
-              </span>
-            </div>
-            <h2 className="font-serif text-3xl text-foreground md:text-4xl">
-              Compra con confianza
-            </h2>
-            <p className="mt-2 text-muted-foreground">
-              Tiendas activas revisadas por Instrumentos Peru
-            </p>
-          </div>
-        </div>
+  const hasRealStores = stores.length > 0;
+  const visibleStores = hasRealStores ? stores : placeholderStores;
 
-        {stores.length > 0 ? (
-          <motion.div
-            variants={container}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            {stores.map((store) => (
-              <motion.div key={store.id} variants={item}>
-                <Link
-                  href={`/tiendas/${store.slug}`}
-                  className="group block rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:border-primary/30 hover:shadow-lg"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="relative h-14 w-14 overflow-hidden rounded-full bg-muted">
-                      {store.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={store.logoUrl}
-                          alt={`Logo de ${store.name}`}
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-muted-foreground">
-                          {store.name.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1">
-                        <h3 className="truncate font-medium text-foreground transition-colors group-hover:text-primary">
-                          {store.name}
-                        </h3>
-                        <BadgeCheck className="h-4 w-4 flex-shrink-0 text-primary" />
-                      </div>
-                      <span className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5" />
-                        {store.location}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-4 border-t border-border pt-4">
-                    <p className="line-clamp-3 text-sm text-muted-foreground">
-                      {store.description}
-                    </p>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </motion.div>
-        ) : (
-          <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-            Pronto mostraremos tiendas verificadas.
+  return (
+    <section className="bg-white py-10 md:py-14">
+      <PageContainer>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="rounded-lg border border-laria-fog bg-laria-cloud p-5 sm:p-6">
+            <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+                  Tiendas y musicos
+                </p>
+                <h2 className="laria-section-title mt-2 text-2xl uppercase md:text-3xl">
+                  Que inspiran
+                </h2>
+              </div>
+              <Link
+                href="/registrar-tienda"
+                className="laria-button-secondary min-h-10 w-fit px-4 py-2 text-xs uppercase tracking-wide"
+              >
+                Registrar tienda
+              </Link>
+            </div>
+
+            <motion.div
+              variants={container}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-100px" }}
+              className="grid gap-4 sm:grid-cols-3"
+            >
+              {visibleStores.map((store, index) => (
+                <motion.div key={store.id} variants={item}>
+                  <StoreCard
+                    store={store}
+                    isPlaceholder={!hasRealStores}
+                    visualIndex={index}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
           </div>
-        )}
+
+          <aside className="rounded-lg border border-laria-fog bg-laria-cloud p-5 sm:p-6">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+              De la comunidad
+            </p>
+            <h2 className="laria-section-title mt-2 text-xl uppercase">
+              Ideas para comprar mejor
+            </h2>
+            <div className="mt-5 grid gap-4">
+              {communityItems.map((title, index) => (
+                <div key={title} className="flex gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-laria-black text-sm font-black text-laria-yellow">
+                    {index + 1}
+                  </div>
+                  <p className="text-sm font-bold leading-5 text-laria-ink">
+                    {title}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-5 text-xs leading-5 text-laria-muted">
+              Bloque visual temporal. Laria aun no tiene una seccion real de
+              comunidad o blog.
+            </p>
+          </aside>
+        </div>
       </PageContainer>
     </section>
   );
+}
+
+function StoreCard({
+  store,
+  isPlaceholder,
+  visualIndex,
+}: {
+  store: VerifiedStore;
+  isPlaceholder: boolean;
+  visualIndex: number;
+}) {
+  const content = (
+    <article className="group overflow-hidden rounded-lg border border-laria-fog bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
+      <div className={`h-28 bg-gradient-to-br ${getStoreGradient(visualIndex)}`}>
+        <div className="flex h-full items-center justify-center text-2xl font-black text-white">
+          {store.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={store.logoUrl}
+              alt={`Logo de ${store.name}`}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            store.name.charAt(0)
+          )}
+        </div>
+      </div>
+      <div className="p-4">
+        <div className="flex items-center gap-1">
+          <h3 className="truncate text-sm font-black text-laria-ink transition-colors group-hover:text-laria-blue">
+            {store.name}
+          </h3>
+          <BadgeCheck className="h-4 w-4 shrink-0 text-laria-blue" />
+        </div>
+        <span className="mt-2 flex items-center gap-1 text-xs text-laria-muted">
+          <MapPin className="h-3.5 w-3.5" />
+          {store.location}
+        </span>
+        <p className="mt-3 line-clamp-3 text-xs leading-5 text-laria-text-soft">
+          {store.description}
+        </p>
+        {isPlaceholder ? (
+          <p className="mt-3 text-[11px] font-bold uppercase text-laria-blue">
+            Vista previa
+          </p>
+        ) : null}
+      </div>
+    </article>
+  );
+
+  if (isPlaceholder) {
+    return content;
+  }
+
+  return (
+    <Link href={`/tiendas/${store.slug}`} className="block">
+      {content}
+    </Link>
+  );
+}
+
+function getStoreGradient(index: number) {
+  const gradients = [
+    "from-laria-black via-slate-800 to-laria-blue",
+    "from-zinc-950 via-zinc-700 to-zinc-500",
+    "from-blue-950 via-blue-700 to-cyan-400",
+  ];
+
+  return gradients[index % gradients.length];
 }
