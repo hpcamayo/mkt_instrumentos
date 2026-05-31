@@ -178,112 +178,117 @@ function ListingDetail({
   const fullSpecs = getFullListingSpecs(listing, sellerName);
 
   return (
-    <PageContainer as="section" className="py-5 sm:py-6">
-      <Breadcrumb listing={listing} displayTitle={displayTitle} />
+    <section className="bg-laria-cloud/70">
+      <PageContainer className="py-6 sm:py-8">
+        <Breadcrumb listing={listing} displayTitle={displayTitle} />
 
-      <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] lg:items-start xl:gap-8">
-        <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
-          <ListingDetailGallery
-            photos={listing.listing_photos}
-            title={displayTitle}
-          />
-        </div>
-
-        <aside className="min-w-0 space-y-5">
-          <div className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
-            <div className="flex flex-wrap gap-2">
-              <SellerBadge label={sellerTypeLabel} isVerified={store?.is_verified === true} />
-            </div>
-
-            <h1 className="mt-4 text-2xl font-bold leading-tight text-ink sm:text-3xl">
-              {displayTitle}
-            </h1>
-            {displayTitle !== listing.title ? (
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                {listing.title}
-              </p>
-            ) : null}
-            <p className="mt-4 text-3xl font-bold text-ink sm:text-4xl">
-              {formatPrice(listing.price_pen)}
-            </p>
-
-            <ListingDetailMetadata
-              listingId={listing.id}
-              publishedAt={listing.published_at}
-              createdAt={listing.created_at}
-              initialViewCount={listing.view_count}
+        <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] lg:items-start xl:gap-8">
+          <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+            <ListingDetailGallery
+              photos={listing.listing_photos}
+              title={displayTitle}
             />
-
-            <KeySpecs specs={keySpecs} />
-
-            <div className="mt-6 grid gap-3">
-              <a
-                href={buildWhatsAppUrl(listing)}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
-              >
-                Preguntar por WhatsApp
-              </a>
-              {listing.seller_type === "store" && store ? (
-                <Link
-                  href={`/tiendas/${store.slug}`}
-                  className="inline-flex w-full items-center justify-center rounded-md border border-slate-300 px-4 py-3 text-sm font-semibold text-ink transition hover:bg-slate-100"
-                >
-                  Ver página de la tienda
-                </Link>
-              ) : null}
-            </div>
-
-            <p className="mt-4 text-xs leading-5 text-slate-500">
-              Contacto directo por WhatsApp. Laria no procesa pagos, envíos ni
-              garantías.
-            </p>
           </div>
 
-          <SellerTrustBox
-            sellerName={sellerName}
-            sellerTypeLabel={sellerTypeLabel}
-            sellerLocation={sellerLocation}
-            listing={listing}
-            sellerPublishedCount={sellerPublishedCount}
-          />
+          <aside className="min-w-0 space-y-5">
+            <div className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_18px_48px_rgb(16_18_23/0.07)] sm:p-6">
+              <div className="flex flex-wrap gap-2">
+                <SellerBadge
+                  label={sellerTypeLabel}
+                  isVerified={store?.is_verified === true}
+                />
+              </div>
 
-          <DetailSection title="Descripción">
-            {listing.description ? (
-              <p className="whitespace-pre-line text-sm leading-7 text-slate-600 sm:text-base">
-                {listing.description}
+              <h1 className="mt-4 text-3xl font-black leading-tight text-laria-ink sm:text-4xl">
+                {displayTitle}
+              </h1>
+              {displayTitle !== listing.title ? (
+                <p className="mt-2 text-sm font-medium leading-6 text-laria-text-soft">
+                  {listing.title}
+                </p>
+              ) : null}
+              <p className="mt-5 text-4xl font-black tracking-tight text-laria-black sm:text-5xl">
+                {formatPrice(listing.price_pen)}
               </p>
-            ) : (
-              <p className="text-sm leading-6 text-slate-500">
-                Este listado aún no tiene descripción.
+
+              <ListingDetailMetadata
+                listingId={listing.id}
+                publishedAt={listing.published_at}
+                createdAt={listing.created_at}
+                initialViewCount={listing.view_count}
+              />
+
+              <KeySpecs specs={keySpecs} />
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
+                <a
+                  href={buildWhatsAppUrl(listing)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="laria-button-primary min-h-12 w-full px-5 py-3 text-sm uppercase tracking-wide"
+                >
+                  Preguntar por WhatsApp
+                </a>
+                {listing.seller_type === "store" && store ? (
+                  <Link
+                    href={`/tiendas/${store.slug}`}
+                    className="laria-button-secondary min-h-12 w-full px-5 py-3 text-sm sm:w-auto"
+                  >
+                    Ver tienda
+                  </Link>
+                ) : null}
+              </div>
+
+              <p className="mt-4 rounded-md border border-blue-100 bg-[#eef5ff] p-3 text-xs font-medium leading-5 text-laria-text-soft">
+                Contacto directo por WhatsApp. Laria no procesa pagos, envíos
+                ni garantías.
               </p>
-            )}
-          </DetailSection>
+            </div>
 
-          <DetailSection title="Especificaciones completas">
-            <SpecsList specs={fullSpecs} />
-          </DetailSection>
-        </aside>
-      </div>
+            <SellerTrustBox
+              sellerName={sellerName}
+              sellerTypeLabel={sellerTypeLabel}
+              sellerLocation={sellerLocation}
+              listing={listing}
+              sellerPublishedCount={sellerPublishedCount}
+            />
 
-      <RelatedListingsSection
-        title="Artículos similares"
-        emptyMessage="Todavía no hay artículos similares publicados."
-        listings={similarListings}
-      />
+            <DetailSection title="Descripción">
+              {listing.description ? (
+                <p className="whitespace-pre-line text-sm leading-7 text-laria-text-soft sm:text-base">
+                  {listing.description}
+                </p>
+              ) : (
+                <p className="text-sm leading-6 text-laria-muted">
+                  Este listado aún no tiene descripción.
+                </p>
+              )}
+            </DetailSection>
 
-      {moreFromSellerListings.length > 0 ? (
+            <DetailSection title="Especificaciones completas">
+              <SpecsList specs={fullSpecs} />
+            </DetailSection>
+          </aside>
+        </div>
+
         <RelatedListingsSection
-          title={
-            listing.seller_type === "store"
-              ? "Más de esta tienda"
-              : "Más de este vendedor"
-          }
-          listings={moreFromSellerListings}
+          title="Artículos similares"
+          emptyMessage="Todavía no hay artículos similares publicados."
+          listings={similarListings}
         />
-      ) : null}
-    </PageContainer>
+
+        {moreFromSellerListings.length > 0 ? (
+          <RelatedListingsSection
+            title={
+              listing.seller_type === "store"
+                ? "Más de esta tienda"
+                : "Más de este vendedor"
+            }
+            listings={moreFromSellerListings}
+          />
+        ) : null}
+      </PageContainer>
+    </section>
   );
 }
 
@@ -458,24 +463,34 @@ function Breadcrumb({
   const categoryLabel = getCategoryLabel(listing.category);
 
   return (
-    <nav aria-label="Ruta de navegación" className="text-sm leading-6 text-slate-500">
+    <nav
+      aria-label="Ruta de navegación"
+      className="rounded-lg border border-laria-fog bg-white px-4 py-3 text-sm font-semibold leading-6 text-laria-text-soft shadow-sm"
+    >
       <ol className="flex flex-wrap items-center gap-2">
         <li>
-          <Link href="/" className="font-medium underline-offset-4 hover:text-ink hover:underline">
+          <Link
+            href="/"
+            className="underline-offset-4 hover:text-laria-blue hover:underline"
+          >
             Inicio
           </Link>
         </li>
-        <li aria-hidden="true">/</li>
+        <li aria-hidden="true" className="text-laria-steel">
+          /
+        </li>
         <li>
           <Link
             href={`/listados?category=${encodeURIComponent(listing.category)}`}
-            className="font-medium underline-offset-4 hover:text-ink hover:underline"
+            className="underline-offset-4 hover:text-laria-blue hover:underline"
           >
             {categoryLabel}
           </Link>
         </li>
-        <li aria-hidden="true">/</li>
-        <li className="min-w-0 break-words text-ink">{displayTitle}</li>
+        <li aria-hidden="true" className="text-laria-steel">
+          /
+        </li>
+        <li className="min-w-0 break-words text-laria-ink">{displayTitle}</li>
       </ol>
     </nav>
   );
@@ -492,8 +507,8 @@ function SellerBadge({
     <span
       className={
         isVerified
-          ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
-          : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700"
+          ? "rounded-full border border-blue-200 bg-[#eef5ff] px-2.5 py-1 text-xs font-black text-laria-blue"
+          : "rounded-full border border-laria-fog bg-laria-cloud px-2.5 py-1 text-xs font-black text-laria-text-soft"
       }
     >
       {label}
@@ -503,13 +518,15 @@ function SellerBadge({
 
 function KeySpecs({ specs }: { specs: ListingSpec[] }) {
   return (
-    <dl className="mt-6 grid grid-cols-2 gap-x-5 gap-y-4 border-y border-slate-200 py-5 text-sm">
+    <dl className="mt-6 grid grid-cols-2 gap-x-5 gap-y-4 border-y border-laria-fog py-5 text-sm">
       {specs.map((spec) => (
         <div key={spec.label} className="min-w-0">
-          <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <dt className="text-xs font-black uppercase tracking-wide text-laria-blue">
             {spec.label}
           </dt>
-          <dd className="mt-1 break-words font-medium text-ink">{spec.value}</dd>
+          <dd className="mt-1 break-words font-bold text-laria-ink">
+            {spec.value}
+          </dd>
         </div>
       ))}
     </dl>
@@ -543,28 +560,28 @@ function SellerTrustBox({
         }`;
 
   return (
-    <section className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
+    <section className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_14px_34px_rgb(16_18_23/0.06)] sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-brass">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-laria-blue">
             {isStore ? "Sobre la tienda" : "Sobre el vendedor"}
           </p>
-          <h2 className="mt-2 text-xl font-bold text-ink">
+          <h2 className="mt-2 text-xl font-black text-laria-ink">
             {sellerName || "Vendedor particular"}
           </h2>
-          <p className="mt-1 text-sm font-medium text-slate-500">
+          <p className="mt-1 text-sm font-bold text-laria-text-soft">
             {sellerTypeLabel}
           </p>
         </div>
         {store?.is_verified === true ? (
-          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          <span className="rounded-full border border-blue-200 bg-[#eef5ff] px-2.5 py-1 text-xs font-black text-laria-blue">
             Tienda verificada
           </span>
         ) : null}
       </div>
 
       {isStore && store?.description ? (
-        <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">
+        <p className="mt-4 line-clamp-3 text-sm leading-6 text-laria-text-soft">
           {store.description}
         </p>
       ) : null}
@@ -580,21 +597,21 @@ function SellerTrustBox({
           href={buildWhatsAppUrl(listing)}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+          className="laria-button-primary inline-flex w-full items-center justify-center px-4 py-3 text-sm"
         >
           {isStore ? "Escribir por WhatsApp" : "Contactar por WhatsApp"}
         </a>
         {isStore && store ? (
           <Link
             href={`/tiendas/${store.slug}`}
-            className="inline-flex w-full items-center justify-center rounded-md border border-slate-300 px-4 py-3 text-sm font-semibold text-ink transition hover:bg-slate-100"
+            className="laria-button-secondary inline-flex w-full items-center justify-center px-4 py-3 text-sm"
           >
             Ver página de la tienda
           </Link>
         ) : null}
       </div>
 
-      <p className="mt-5 rounded-md bg-amber-50 p-3 text-xs leading-5 text-amber-900 ring-1 ring-amber-100">
+      <p className="mt-5 rounded-md border border-laria-fog bg-laria-cloud p-3 text-xs font-medium leading-5 text-laria-text-soft">
         Coordina por WhatsApp, revisa el instrumento cuando sea posible y evita
         adelantos si no conoces al vendedor. Laria no procesa pagos, envíos ni
         garantías.
@@ -611,8 +628,8 @@ function DetailSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
-      <h2 className="text-xl font-bold text-ink">{title}</h2>
+    <section className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_14px_34px_rgb(16_18_23/0.06)] sm:p-6">
+      <h2 className="text-xl font-black text-laria-ink">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -628,16 +645,16 @@ function SpecsList({ specs }: { specs: ListingSpec[] }) {
   }
 
   return (
-    <dl className="divide-y divide-slate-100 rounded-lg border border-slate-100 text-sm">
+    <dl className="divide-y divide-laria-fog rounded-lg border border-laria-fog text-sm">
       {specs.map((spec) => (
         <div
           key={spec.label}
-          className="grid gap-1 px-4 py-3 sm:grid-cols-[minmax(160px,0.42fr)_1fr] sm:gap-6"
+          className="grid gap-1 px-4 py-3 transition even:bg-laria-cloud/55 sm:grid-cols-[minmax(160px,0.42fr)_1fr] sm:gap-6"
         >
-          <dt className="font-medium text-slate-500">
-            {spec.label}
-          </dt>
-          <dd className="break-words font-semibold text-ink sm:text-right">{spec.value}</dd>
+          <dt className="font-bold text-laria-text-soft">{spec.label}</dt>
+          <dd className="break-words font-black text-laria-ink sm:text-right">
+            {spec.value}
+          </dd>
         </div>
       ))}
     </dl>
@@ -646,11 +663,11 @@ function SpecsList({ specs }: { specs: ListingSpec[] }) {
 
 function TrustSignal({ label, value }: ListingSpec) {
   return (
-    <div className="rounded-md bg-mist p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <div className="rounded-md border border-laria-fog bg-laria-cloud p-3">
+      <p className="text-xs font-black uppercase tracking-wide text-laria-blue">
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold leading-5 text-ink">{value}</p>
+      <p className="mt-1 text-sm font-bold leading-5 text-laria-ink">{value}</p>
     </div>
   );
 }
@@ -667,7 +684,7 @@ function RelatedListingsSection({
   return (
     <section className="mt-8">
       <div className="mb-4 flex items-end justify-between gap-4">
-        <h2 className="text-xl font-bold text-ink">{title}</h2>
+        <h2 className="text-2xl font-black text-laria-ink">{title}</h2>
       </div>
       {listings.length > 0 ? (
         <div className="grid grid-cols-1 gap-[18px] min-[460px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
@@ -676,7 +693,7 @@ function RelatedListingsSection({
           ))}
         </div>
       ) : (
-        <div className="rounded-lg bg-white p-5 text-sm text-slate-500 shadow-sm ring-1 ring-slate-200">
+        <div className="rounded-lg border border-laria-fog bg-white p-5 text-sm font-medium text-laria-text-soft shadow-[0_14px_34px_rgb(16_18_23/0.06)]">
           {emptyMessage ?? "No hay artículos disponibles por ahora."}
         </div>
       )}
@@ -700,17 +717,19 @@ function formatDate(value: string) {
 
 function SupabaseSetupMessage() {
   return (
-    <PageContainer as="section" className="py-8">
-      <div className="max-w-3xl rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
-        <h1 className="text-xl font-bold text-ink">
-          Configura Supabase para ver este instrumento
-        </h1>
-        <p className="mt-2">
-          Falta definir `NEXT_PUBLIC_SUPABASE_URL` y
-          `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local`. Agrega las
-          credenciales públicas y reinicia el servidor de desarrollo.
-        </p>
-      </div>
-    </PageContainer>
+    <section className="bg-laria-cloud/70">
+      <PageContainer className="py-8">
+        <div className="max-w-3xl rounded-lg border border-yellow-200 bg-yellow-50 p-5 text-sm font-medium leading-6 text-laria-ink shadow-sm">
+          <h1 className="text-xl font-black text-laria-ink">
+            Configura Supabase para ver este instrumento
+          </h1>
+          <p className="mt-2">
+            Falta definir `NEXT_PUBLIC_SUPABASE_URL` y
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local`. Agrega las
+            credenciales públicas y reinicia el servidor de desarrollo.
+          </p>
+        </div>
+      </PageContainer>
+    </section>
   );
 }

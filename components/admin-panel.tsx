@@ -379,7 +379,7 @@ export function AdminPanel() {
           <button
             type="submit"
             disabled={isBusy}
-            className="rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-400"
+            className="rounded-md bg-laria-ink px-4 py-3 text-sm font-black text-white transition hover:bg-laria-blue disabled:bg-laria-steel"
           >
             {isBusy ? "Ingresando..." : "Ingresar"}
           </button>
@@ -398,7 +398,7 @@ export function AdminPanel() {
           <button
             type="button"
             onClick={handleSignOut}
-            className="w-fit rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            className="w-fit rounded-md border border-laria-steel bg-white px-4 py-2 text-sm font-black text-laria-ink transition hover:border-laria-blue hover:text-laria-blue"
           >
             Cerrar sesión
           </button>
@@ -411,6 +411,17 @@ export function AdminPanel() {
     <PanelShell title="Panel administrativo" onSignOut={handleSignOut}>
       <div className="grid gap-8">
         {message ? <StatusMessage message={message} /> : null}
+        <section
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+          aria-label="Resumen administrativo"
+        >
+          <AdminStatCard label="Listados pendientes" value={listings.length} />
+          <AdminStatCard label="Tiendas pendientes" value={stores.length} />
+          {/* UI placeholder only; replace with real moderation metrics when implemented. */}
+          <AdminStatCard label="Acciones de hoy" value="--" />
+          {/* UI placeholder only; replace with real invite metrics when implemented. */}
+          <AdminStatCard label="Invitaciones" value="--" />
+        </section>
         <InviteUserSection
           accountType={inviteAccountType}
           inviteMessage={inviteMessage}
@@ -425,9 +436,9 @@ export function AdminPanel() {
             count={listings.length}
             onRefresh={loadAdminQueues}
           />
-          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-lg border border-laria-fog bg-white shadow-[0_14px_34px_rgb(16_18_23/0.06)]">
             <table className="min-w-[1100px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="bg-laria-cloud text-xs font-black uppercase tracking-wide text-laria-text-soft">
                 <tr>
                   <th className="px-3 py-3">Listado</th>
                   <th className="px-3 py-3">Datos</th>
@@ -436,10 +447,11 @@ export function AdminPanel() {
                   <th className="px-3 py-3">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-laria-fog">
                 {listings.map((listing) => (
-                  <tr key={listing.id} className="align-top">
+                  <tr key={listing.id} className="align-top transition hover:bg-[#f8fbff]">
                     <td className="space-y-3 px-3 py-4">
+                      <StatusBadge label="Pendiente" tone="blue" />
                       <Input
                         value={listing.title}
                         onChange={(value) => updateListing(listing.id, { title: value })}
@@ -516,7 +528,7 @@ export function AdminPanel() {
                         type="button"
                         disabled={isBusy}
                         onClick={() => saveListing(listing)}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold"
+                        className="w-full rounded-md border border-laria-steel px-3 py-2 text-xs font-black text-laria-ink transition hover:border-laria-blue hover:text-laria-blue disabled:opacity-50"
                       >
                         Guardar
                       </button>
@@ -527,7 +539,7 @@ export function AdminPanel() {
                             key={action.status}
                             disabled={isBusy}
                             onClick={() => updateListingStatus(listing.id, action.status)}
-                            className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:bg-slate-400"
+                            className="rounded-md bg-laria-ink px-3 py-2 text-xs font-black text-white transition hover:bg-laria-blue disabled:bg-laria-steel"
                           >
                             {action.label}
                           </button>
@@ -538,7 +550,7 @@ export function AdminPanel() {
                 ))}
                 {listings.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-slate-500">
+                    <td colSpan={5} className="px-3 py-10 text-center font-medium text-laria-text-soft">
                       No hay listados pendientes.
                     </td>
                   </tr>
@@ -554,9 +566,9 @@ export function AdminPanel() {
             count={stores.length}
             onRefresh={loadAdminQueues}
           />
-          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-lg border border-laria-fog bg-white shadow-[0_14px_34px_rgb(16_18_23/0.06)]">
             <table className="min-w-[1000px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+              <thead className="bg-laria-cloud text-xs font-black uppercase tracking-wide text-laria-text-soft">
                 <tr>
                   <th className="px-3 py-3">Tienda</th>
                   <th className="px-3 py-3">Ubicación</th>
@@ -565,15 +577,16 @@ export function AdminPanel() {
                   <th className="px-3 py-3">Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-laria-fog">
                 {stores.map((store) => (
-                  <tr key={store.id} className="align-top">
+                  <tr key={store.id} className="align-top transition hover:bg-[#f8fbff]">
                     <td className="space-y-3 px-3 py-4">
+                      <StatusBadge label="Pendiente" tone="blue" />
                       <Input
                         value={store.name}
                         onChange={(value) => updateStore(store.id, { name: value })}
                       />
-                      <label className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                      <label className="flex items-center gap-2 text-xs font-bold text-laria-text-soft">
                         <input
                           type="checkbox"
                           checked={store.is_verified}
@@ -637,7 +650,7 @@ export function AdminPanel() {
                         type="button"
                         disabled={isBusy}
                         onClick={() => saveStore(store)}
-                        className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold"
+                        className="w-full rounded-md border border-laria-steel px-3 py-2 text-xs font-black text-laria-ink transition hover:border-laria-blue hover:text-laria-blue disabled:opacity-50"
                       >
                         Guardar
                       </button>
@@ -648,7 +661,7 @@ export function AdminPanel() {
                             key={action.status}
                             disabled={isBusy}
                             onClick={() => updateStoreStatus(store.id, action.status)}
-                            className="rounded-md bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:bg-slate-400"
+                            className="rounded-md bg-laria-ink px-3 py-2 text-xs font-black text-white transition hover:bg-laria-blue disabled:bg-laria-steel"
                           >
                             {action.label}
                           </button>
@@ -659,7 +672,7 @@ export function AdminPanel() {
                 ))}
                 {stores.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-slate-500">
+                    <td colSpan={5} className="px-3 py-10 text-center font-medium text-laria-text-soft">
                       No hay tiendas pendientes.
                     </td>
                   </tr>
@@ -689,12 +702,17 @@ function InviteUserSection({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="grid gap-4 rounded-lg border border-laria-fog bg-white p-5 shadow-[0_14px_34px_rgb(16_18_23/0.06)]">
       <div>
-        <h2 className="text-lg font-bold text-ink">Invitar usuario</h2>
-        <p className="mt-1 text-sm leading-6 text-slate-600">
-          Envia un enlace de activacion para vendedores particulares o duenos de
-          tienda. No se crean contrasenas temporales.
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-laria-blue">
+          Acceso
+        </p>
+        <h2 className="mt-1 text-xl font-black text-laria-ink">
+          Invitar usuario
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-laria-text-soft">
+          Envía un enlace de activación para vendedores particulares o dueños de
+          tienda. No se crean contraseñas temporales.
         </p>
       </div>
 
@@ -718,17 +736,17 @@ function InviteUserSection({
           required
           placeholder="+51 999 999 999"
         />
-        <label className="grid gap-2 text-sm font-medium text-slate-700">
+        <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
           Tipo de cuenta
           <select
             value={accountType}
             onChange={(event) =>
               onAccountTypeChange(event.target.value as InviteAccountType)
             }
-            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+            className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
           >
             <option value="seller">Vendedor particular</option>
-            <option value="store_owner">Dueno de tienda</option>
+            <option value="store_owner">Dueño de tienda</option>
           </select>
         </label>
         <LocationFields required={false} />
@@ -739,29 +757,29 @@ function InviteUserSection({
             placeholder="Nombre comercial"
           />
         ) : null}
-        <label className="grid gap-2 text-sm font-medium text-slate-700 lg:col-span-2">
+        <label className="grid gap-2 text-sm font-bold text-laria-text-soft lg:col-span-2">
           Notas internas
           <textarea
             name="notes"
             rows={3}
             placeholder="Contexto de campo, origen del contacto o seguimiento pendiente"
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+            className="rounded-md border border-laria-steel bg-white px-3 py-2 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
           />
         </label>
 
         <div className="grid gap-3 lg:col-span-2">
           {inviteMessage ? <StatusMessage message={inviteMessage} /> : null}
           {inviteResult ? (
-            <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-800">
-              <p className="font-semibold text-emerald-900">
-                Seguimiento de invitacion
+            <div className="rounded-md border border-blue-100 bg-[#eef5ff] p-4 text-sm font-medium leading-6 text-laria-text-soft">
+              <p className="font-black text-laria-blue">
+                Seguimiento de invitación
               </p>
               <p>{inviteResult.fullName} - {inviteResult.email}</p>
               <p>
                 Tipo:{" "}
                 {inviteResult.accountType === "seller"
                   ? "Vendedor particular"
-                  : "Dueno de tienda"}
+                  : "Dueño de tienda"}
               </p>
               <p>Destino: {inviteResult.finalInvitePath}</p>
               {inviteResult.storeName ? <p>Tienda: {inviteResult.storeName}</p> : null}
@@ -771,9 +789,9 @@ function InviteUserSection({
           <button
             type="submit"
             disabled={isInviting}
-            className="w-fit rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-400"
+            className="w-fit rounded-md bg-laria-ink px-4 py-3 text-sm font-black text-white transition hover:bg-laria-blue disabled:bg-laria-steel"
           >
-            {isInviting ? "Enviando..." : "Enviar invitacion"}
+            {isInviting ? "Enviando..." : "Enviar invitación"}
           </button>
         </div>
       </form>
@@ -795,14 +813,14 @@ function AdminFormInput({
   placeholder?: string;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-slate-700">
+    <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
       {label}
       <input
         type={type}
         name={name}
         required={required}
         placeholder={placeholder}
-        className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+        className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
       />
     </label>
   );
@@ -818,33 +836,65 @@ function PanelShell({
   onSignOut?: () => void;
 }) {
   return (
-    <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-brass">
-            Admin
+    <main className="bg-laria-cloud/70">
+      <div className="mx-auto grid w-full max-w-[1600px] gap-5 px-3 py-6 sm:px-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-5 xl:px-6">
+        <aside className="rounded-lg border border-white/10 bg-laria-black p-4 text-white shadow-[0_18px_48px_rgb(5_6_8/0.22)] lg:sticky lg:top-24 lg:self-start">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-yellow">
+            Laria Admin
           </p>
-          <h1 className="mt-2 text-2xl font-bold text-ink sm:text-3xl">{title}</h1>
+          <h1 className="mt-2 text-2xl font-black leading-tight">{title}</h1>
+          <p className="mt-2 text-sm leading-6 text-white/68">
+            Revisa solicitudes, modera publicaciones e invita nuevos vendedores.
+          </p>
+
+          <nav aria-label="Navegación administrativa" className="mt-5 grid gap-2">
+            <AdminNavItem label="Cola de revisión" isActive />
+            <AdminNavItem label="Invitaciones" />
+            <AdminNavItem label="Tiendas" />
+            <AdminNavItem label="Listados" />
+          </nav>
+
+          {onSignOut ? (
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="mt-5 min-h-10 w-full rounded-md border border-white/20 px-4 py-2 text-sm font-black text-white transition hover:border-laria-blue hover:text-laria-blue"
+            >
+              Cerrar sesión
+            </button>
+          ) : null}
+        </aside>
+
+        <div className="min-w-0 space-y-5">
+          <header className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_18px_48px_rgb(16_18_23/0.07)] sm:p-6">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+              Operaciones
+            </p>
+            <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-3xl font-black tracking-tight text-laria-ink sm:text-4xl">
+                  {title}
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-laria-text-soft">
+                  Panel operativo para revisión manual. Las acciones conservan
+                  el flujo actual de aprobación y rechazo.
+                </p>
+              </div>
+              <StatusBadge label="Modo admin" tone="blue" />
+            </div>
+          </header>
+
+          {children}
         </div>
-        {onSignOut ? (
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="w-fit rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-          >
-            Cerrar sesión
-          </button>
-        ) : null}
       </div>
-      {children}
-    </section>
+    </main>
   );
 }
 
 function SetupMessage() {
   return (
     <PanelShell title="Panel administrativo">
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+      <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm font-medium leading-6 text-laria-ink">
         Falta configurar Supabase. Agrega `NEXT_PUBLIC_SUPABASE_URL` y
         `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local`.
       </div>
@@ -864,15 +914,15 @@ function SectionHeading({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h2 className="text-lg font-bold text-ink">{title}</h2>
-        <p className="text-sm text-slate-500">
+        <h2 className="text-xl font-black text-laria-ink">{title}</h2>
+        <p className="text-sm font-medium text-laria-text-soft">
           {count} solicitud{count === 1 ? "" : "es"}
         </p>
       </div>
       <button
         type="button"
         onClick={onRefresh}
-        className="w-fit rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold"
+        className="w-fit rounded-md border border-laria-steel bg-white px-3 py-2 text-xs font-black text-laria-ink transition hover:border-laria-blue hover:text-laria-blue"
       >
         Actualizar
       </button>
@@ -880,9 +930,76 @@ function SectionHeading({
   );
 }
 
+function AdminNavItem({
+  label,
+  isActive = false,
+}: {
+  label: string;
+  isActive?: boolean;
+}) {
+  return (
+    <div
+      className={
+        isActive
+          ? "rounded-md border border-blue-300/30 bg-laria-blue px-3 py-2 text-sm font-black text-white"
+          : "rounded-md border border-transparent px-3 py-2 text-sm font-bold text-white/68"
+      }
+    >
+      {label}
+    </div>
+  );
+}
+
+function AdminStatCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <div className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_14px_34px_rgb(16_18_23/0.06)]">
+      <p className="text-xs font-black uppercase tracking-wide text-laria-text-soft">
+        {label}
+      </p>
+      <div className="mt-4 flex items-end justify-between gap-3">
+        <p className="text-3xl font-black text-laria-ink">{value}</p>
+        <div
+          className="flex h-9 w-14 items-end gap-1 rounded bg-[#eef5ff] px-2 py-1"
+          aria-hidden="true"
+        >
+          <span className="h-3 w-2 rounded-t bg-laria-blue/45" />
+          <span className="h-5 w-2 rounded-t bg-laria-blue/65" />
+          <span className="h-7 w-2 rounded-t bg-laria-blue" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "blue" | "neutral";
+}) {
+  return (
+    <span
+      className={
+        tone === "blue"
+          ? "inline-flex w-fit items-center rounded-full border border-blue-200 bg-[#eef5ff] px-2.5 py-1 text-xs font-black text-laria-blue"
+          : "inline-flex w-fit items-center rounded-full border border-laria-fog bg-laria-cloud px-2.5 py-1 text-xs font-black text-laria-text-soft"
+      }
+    >
+      {label}
+    </span>
+  );
+}
+
 function StatusMessage({ message }: { message: string }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700 shadow-sm">
+    <div className="rounded-md border border-blue-100 bg-[#eef5ff] p-4 text-sm font-bold text-laria-text-soft shadow-sm">
       {message}
     </div>
   );
@@ -898,13 +1015,13 @@ function TextField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-slate-700">
+    <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
       {label}
       <input
         type="email"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+        className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
       />
     </label>
   );
@@ -920,13 +1037,13 @@ function PasswordField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-slate-700">
+    <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
       {label}
       <input
         type="password"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+        className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
       />
     </label>
   );
@@ -950,7 +1067,7 @@ function Input({
       placeholder={placeholder}
       min={type === "number" ? 0 : undefined}
       onChange={(event) => onChange(event.target.value)}
-      className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none focus:border-brass focus:ring-2 focus:ring-amber-100"
+      className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
     />
   );
 }
@@ -971,7 +1088,7 @@ function Select({
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none focus:border-brass focus:ring-2 focus:ring-amber-100"
+      className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -994,7 +1111,7 @@ function Textarea({
       value={value}
       rows={8}
       onChange={(event) => onChange(event.target.value)}
-      className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-ink outline-none focus:border-brass focus:ring-2 focus:ring-amber-100"
+      className="w-full rounded-md border border-laria-steel bg-white px-3 py-2 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
     />
   );
 }

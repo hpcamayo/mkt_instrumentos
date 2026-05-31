@@ -55,10 +55,10 @@ export function ListingDetailGallery({
       <div
         tabIndex={hasMultiplePhotos ? 0 : -1}
         onKeyDown={handleKeyDown}
-        className="group relative overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-slate-200 focus:outline-none focus:ring-2 focus:ring-ink"
+        className="group relative overflow-hidden rounded-lg border border-laria-fog bg-white shadow-[0_18px_48px_rgb(16_18_23/0.08)] focus:outline-none focus:ring-2 focus:ring-laria-blue"
       >
         {hasPhotos && activePhoto ? (
-          <div className="flex aspect-[4/3] items-center justify-center bg-slate-50">
+          <div className="flex aspect-[4/3] items-center justify-center bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_54%,#eef5ff_100%)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               key={activePhoto.id ?? activePhoto.image_url}
@@ -70,8 +70,11 @@ export function ListingDetailGallery({
             />
           </div>
         ) : (
-          <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 bg-slate-100 px-4 text-center text-sm text-slate-500">
-            <ImageIcon className="h-8 w-8 text-slate-400" aria-hidden="true" />
+          <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_48%,#f1f3f5_100%)] px-4 text-center text-sm font-bold text-laria-muted">
+            <ImageIcon
+              className="h-9 w-9 text-laria-blue/65"
+              aria-hidden="true"
+            />
             <span>Foto pendiente</span>
           </div>
         )}
@@ -82,7 +85,7 @@ export function ListingDetailGallery({
               type="button"
               onClick={showPreviousPhoto}
               aria-label="Foto anterior"
-              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm ring-1 ring-slate-200 transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-ink"
+              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 text-laria-ink shadow-sm ring-1 ring-laria-fog transition hover:bg-laria-blue hover:text-white focus:outline-none focus:ring-2 focus:ring-laria-blue"
             >
               <ChevronLeft className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -90,11 +93,11 @@ export function ListingDetailGallery({
               type="button"
               onClick={showNextPhoto}
               aria-label="Foto siguiente"
-              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-ink shadow-sm ring-1 ring-slate-200 transition hover:bg-white focus:outline-none focus:ring-2 focus:ring-ink"
+              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 text-laria-ink shadow-sm ring-1 ring-laria-fog transition hover:bg-laria-blue hover:text-white focus:outline-none focus:ring-2 focus:ring-laria-blue"
             >
               <ChevronRight className="h-5 w-5" aria-hidden="true" />
             </button>
-            <span className="absolute bottom-3 right-3 rounded-full bg-slate-950/70 px-3 py-1 text-xs font-semibold text-white">
+            <span className="absolute bottom-3 right-3 rounded-full bg-laria-black/75 px-3 py-1 text-xs font-bold text-white">
               {activeIndex + 1} / {photos.length}
             </span>
           </>
@@ -115,8 +118,8 @@ export function ListingDetailGallery({
               aria-current={index === activeIndex ? "true" : undefined}
               className={
                 index === activeIndex
-                  ? "h-16 w-16 shrink-0 overflow-hidden rounded-md bg-white ring-2 ring-ink ring-offset-2 ring-offset-white focus:outline-none"
-                  : "h-16 w-16 shrink-0 overflow-hidden rounded-md bg-white ring-1 ring-slate-200 transition hover:ring-slate-400 focus:outline-none focus:ring-2 focus:ring-ink focus:ring-offset-2 focus:ring-offset-white"
+                  ? "h-16 w-16 shrink-0 overflow-hidden rounded-md bg-white ring-2 ring-laria-blue ring-offset-2 ring-offset-white focus:outline-none"
+                  : "h-16 w-16 shrink-0 overflow-hidden rounded-md bg-white ring-1 ring-laria-fog transition hover:ring-laria-blue focus:outline-none focus:ring-2 focus:ring-laria-blue focus:ring-offset-2 focus:ring-offset-white"
               }
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
