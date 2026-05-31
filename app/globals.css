@@ -11,11 +11,11 @@
   --laria-cloud: #f1f3f5;
   --laria-fog: #e9edf3;
   --laria-steel: #c8cdd6;
-  --laria-muted: #6b7280;
+  --laria-muted: #9da3af;
   --laria-text: #101217;
   --laria-text-soft: #4b5563;
   --laria-yellow: #f1ea16;
-  --laria-blue: #2f80ff;
+  --laria-blue: #6ba6ff;
   background: var(--laria-white);
   color: var(--laria-text);
 }
@@ -97,7 +97,7 @@ a {
   .laria-button-secondary:hover {
     border-color: var(--laria-blue);
     color: var(--laria-blue);
-    background: #f8fbff;
+    background: rgb(107 166 255 / 0.08);
   }
 
   .laria-section-title {
@@ -114,7 +114,7 @@ a {
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
-    background: #eef5ff;
+    background: rgb(107 166 255 / 0.12);
     color: var(--laria-blue);
     font-size: 0.75rem;
     font-weight: 800;

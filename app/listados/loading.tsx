@@ -9,7 +9,7 @@ export default function ListingsLoading() {
         <div className="rounded-lg border border-laria-fog bg-white p-4 shadow-[0_18px_48px_rgb(16_18_23/0.06)] sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-3">
-              <div className="h-4 w-24 animate-pulse rounded bg-blue-100" />
+              <div className="h-4 w-24 animate-pulse rounded bg-laria-blue/20" />
               <div className="h-10 w-80 max-w-full animate-pulse rounded bg-laria-fog" />
               <div className="h-4 w-[36rem] max-w-full animate-pulse rounded bg-laria-fog" />
             </div>
@@ -26,7 +26,7 @@ export default function ListingsLoading() {
           <aside className="hidden rounded-lg border border-laria-fog bg-white p-4 shadow-[0_16px_36px_rgb(16_18_23/0.06)] lg:sticky lg:top-5 lg:block">
             <div className="mb-5 flex items-center justify-between gap-3">
               <div className="space-y-2">
-                <div className="h-3 w-16 animate-pulse rounded bg-blue-100" />
+                <div className="h-3 w-16 animate-pulse rounded bg-laria-blue/20" />
                 <div className="h-5 w-20 animate-pulse rounded bg-laria-fog" />
               </div>
               <div className="h-4 w-24 animate-pulse rounded bg-laria-fog" />

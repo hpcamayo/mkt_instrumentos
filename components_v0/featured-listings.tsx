@@ -167,7 +167,7 @@ function ListingPreviewCard({
           </div>
         )}
 
-        <span className="absolute left-3 top-3 rounded bg-laria-blue px-2 py-1 text-[11px] font-black uppercase text-white">
+        <span className="absolute left-3 top-3 rounded bg-laria-blue px-2 py-1 text-[11px] font-black uppercase text-laria-black">
           {isPlaceholder ? "Vista previa" : "Nuevo"}
         </span>
       </div>

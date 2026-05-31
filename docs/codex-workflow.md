@@ -117,6 +117,8 @@ Phase 2 history note: early production schema migrations were originally applied
 
 ## UI Integration Workflow with v0
 
+Before visual/frontend work, read `docs/design-system.md` and preserve the current Laria visual system.
+
 When using v0-generated UI, do not overwrite the app blindly.
 
 Recommended process:

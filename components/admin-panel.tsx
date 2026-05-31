@@ -379,7 +379,7 @@ export function AdminPanel() {
           <button
             type="submit"
             disabled={isBusy}
-            className="rounded-md bg-laria-ink px-4 py-3 text-sm font-black text-white transition hover:bg-laria-blue disabled:bg-laria-steel"
+            className="rounded-md bg-laria-ink px-4 py-3 text-sm font-black text-white transition hover:bg-laria-blue hover:text-laria-black disabled:bg-laria-steel"
           >
             {isBusy ? "Ingresando..." : "Ingresar"}
           </button>
@@ -449,7 +449,7 @@ export function AdminPanel() {
               </thead>
               <tbody className="divide-y divide-laria-fog">
                 {listings.map((listing) => (
-                  <tr key={listing.id} className="align-top transition hover:bg-[#f8fbff]">
+                  <tr key={listing.id} className="align-top transition hover:bg-laria-blue/5">
                     <td className="space-y-3 px-3 py-4">
                       <StatusBadge label="Pendiente" tone="blue" />
                       <Input
@@ -539,7 +539,7 @@ export function AdminPanel() {
                             key={action.status}
                             disabled={isBusy}
                             onClick={() => updateListingStatus(listing.id, action.status)}
-                            className="rounded-md bg-laria-ink px-3 py-2 text-xs font-black text-white transition hover:bg-laria-blue disabled:bg-laria-steel"
+                            className="rounded-md bg-laria-ink px-3 py-2 text-xs font-black text-white transition hover:bg-laria-blue hover:text-laria-black disabled:bg-laria-steel"
                           >
                             {action.label}
                           </button>
@@ -579,7 +579,7 @@ export function AdminPanel() {
               </thead>
               <tbody className="divide-y divide-laria-fog">
                 {stores.map((store) => (
-                  <tr key={store.id} className="align-top transition hover:bg-[#f8fbff]">
+                  <tr key={store.id} className="align-top transition hover:bg-laria-blue/5">
                     <td className="space-y-3 px-3 py-4">
                       <StatusBadge label="Pendiente" tone="blue" />
                       <Input
@@ -661,7 +661,7 @@ export function AdminPanel() {
                             key={action.status}
                             disabled={isBusy}
                             onClick={() => updateStoreStatus(store.id, action.status)}
-                            className="rounded-md bg-laria-ink px-3 py-2 text-xs font-black text-white transition hover:bg-laria-blue disabled:bg-laria-steel"
+                            className="rounded-md bg-laria-ink px-3 py-2 text-xs font-black text-white transition hover:bg-laria-blue hover:text-laria-black disabled:bg-laria-steel"
                           >
                             {action.label}
                           </button>
@@ -743,7 +743,7 @@ function InviteUserSection({
             onChange={(event) =>
               onAccountTypeChange(event.target.value as InviteAccountType)
             }
-            className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+            className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
           >
             <option value="seller">Vendedor particular</option>
             <option value="store_owner">Dueño de tienda</option>
@@ -763,14 +763,14 @@ function InviteUserSection({
             name="notes"
             rows={3}
             placeholder="Contexto de campo, origen del contacto o seguimiento pendiente"
-            className="rounded-md border border-laria-steel bg-white px-3 py-2 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+            className="rounded-md border border-laria-steel bg-white px-3 py-2 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
           />
         </label>
 
         <div className="grid gap-3 lg:col-span-2">
           {inviteMessage ? <StatusMessage message={inviteMessage} /> : null}
           {inviteResult ? (
-            <div className="rounded-md border border-blue-100 bg-[#eef5ff] p-4 text-sm font-medium leading-6 text-laria-text-soft">
+            <div className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-4 text-sm font-medium leading-6 text-laria-text-soft">
               <p className="font-black text-laria-blue">
                 Seguimiento de invitación
               </p>
@@ -789,7 +789,7 @@ function InviteUserSection({
           <button
             type="submit"
             disabled={isInviting}
-            className="w-fit rounded-md bg-laria-ink px-4 py-3 text-sm font-black text-white transition hover:bg-laria-blue disabled:bg-laria-steel"
+            className="w-fit rounded-md bg-laria-ink px-4 py-3 text-sm font-black text-white transition hover:bg-laria-blue hover:text-laria-black disabled:bg-laria-steel"
           >
             {isInviting ? "Enviando..." : "Enviar invitación"}
           </button>
@@ -820,7 +820,7 @@ function AdminFormInput({
         name={name}
         required={required}
         placeholder={placeholder}
-        className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+        className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
       />
     </label>
   );
@@ -941,7 +941,7 @@ function AdminNavItem({
     <div
       className={
         isActive
-          ? "rounded-md border border-blue-300/30 bg-laria-blue px-3 py-2 text-sm font-black text-white"
+          ? "rounded-md border border-laria-blue/35 bg-laria-blue px-3 py-2 text-sm font-black text-laria-black"
           : "rounded-md border border-transparent px-3 py-2 text-sm font-bold text-white/68"
       }
     >
@@ -965,7 +965,7 @@ function AdminStatCard({
       <div className="mt-4 flex items-end justify-between gap-3">
         <p className="text-3xl font-black text-laria-ink">{value}</p>
         <div
-          className="flex h-9 w-14 items-end gap-1 rounded bg-[#eef5ff] px-2 py-1"
+          className="flex h-9 w-14 items-end gap-1 rounded bg-laria-blue/10 px-2 py-1"
           aria-hidden="true"
         >
           <span className="h-3 w-2 rounded-t bg-laria-blue/45" />
@@ -988,7 +988,7 @@ function StatusBadge({
     <span
       className={
         tone === "blue"
-          ? "inline-flex w-fit items-center rounded-full border border-blue-200 bg-[#eef5ff] px-2.5 py-1 text-xs font-black text-laria-blue"
+          ? "inline-flex w-fit items-center rounded-full border border-laria-blue/35 bg-laria-blue/10 px-2.5 py-1 text-xs font-black text-laria-blue"
           : "inline-flex w-fit items-center rounded-full border border-laria-fog bg-laria-cloud px-2.5 py-1 text-xs font-black text-laria-text-soft"
       }
     >
@@ -999,7 +999,7 @@ function StatusBadge({
 
 function StatusMessage({ message }: { message: string }) {
   return (
-    <div className="rounded-md border border-blue-100 bg-[#eef5ff] p-4 text-sm font-bold text-laria-text-soft shadow-sm">
+    <div className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-4 text-sm font-bold text-laria-text-soft shadow-sm">
       {message}
     </div>
   );
@@ -1021,7 +1021,7 @@ function TextField({
         type="email"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+        className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
       />
     </label>
   );
@@ -1043,7 +1043,7 @@ function PasswordField({
         type="password"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+        className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
       />
     </label>
   );
@@ -1067,7 +1067,7 @@ function Input({
       placeholder={placeholder}
       min={type === "number" ? 0 : undefined}
       onChange={(event) => onChange(event.target.value)}
-      className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+      className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
     />
   );
 }
@@ -1088,7 +1088,7 @@ function Select({
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+      className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -1111,7 +1111,7 @@ function Textarea({
       value={value}
       rows={8}
       onChange={(event) => onChange(event.target.value)}
-      className="w-full rounded-md border border-laria-steel bg-white px-3 py-2 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+      className="w-full rounded-md border border-laria-steel bg-white px-3 py-2 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
     />
   );
 }

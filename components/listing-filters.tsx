@@ -121,7 +121,7 @@ export function ListingFilters({ filters }: ListingFiltersProps) {
                   href={buildListingsHref(filters, { sort: option.value })}
                   className={
                     option.value === filters.sort
-                      ? "rounded-md bg-laria-blue px-4 py-3 text-sm font-bold text-white"
+                      ? "rounded-md bg-laria-blue px-4 py-3 text-sm font-bold text-laria-black"
                       : "rounded-md border border-laria-fog px-4 py-3 text-sm font-bold text-laria-text-soft transition hover:border-laria-blue hover:text-laria-blue"
                   }
                 >
@@ -302,7 +302,7 @@ function SelectField({
         name={name}
         defaultValue={defaultValue ?? ""}
         onChange={(event) => onChange?.(event.target.value)}
-        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
       >
         {includeAllOption ? <option value="">Todos</option> : null}
         {options.map((option) => (
@@ -375,7 +375,7 @@ function TextField({ label, name, defaultValue, placeholder }: TextFieldProps) {
         name={name}
         defaultValue={defaultValue}
         placeholder={placeholder}
-        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
       />
     </label>
   );
@@ -397,7 +397,7 @@ function NumberField({ label, name, defaultValue }: NumberFieldProps) {
         name={name}
         defaultValue={defaultValue}
         placeholder="S/."
-        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
+        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
       />
     </label>
   );

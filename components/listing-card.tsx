@@ -30,7 +30,7 @@ export function ListingCard({ listing }: ListingCardProps) {
   const sellerLabel = getSellerBadgeLabel(listing, store);
   const sellerBadgeClass =
     sellerLabel === "Tienda verificada"
-      ? "border-blue-200 bg-[#eef5ff] text-laria-blue"
+      ? "border-laria-blue/35 bg-laria-blue/10 text-laria-blue"
       : "border-laria-fog bg-laria-cloud text-laria-text-soft";
   const displayTitle = getListingDisplayTitle(listing);
   const categoryLabel = getListingTagLabel(listing);
@@ -122,7 +122,7 @@ export function ListingCard({ listing }: ListingCardProps) {
   }
 
   return (
-    <article className="group overflow-hidden rounded-lg border border-laria-fog bg-white shadow-[0_14px_34px_rgb(16_18_23/0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_22px_48px_rgb(16_18_23/0.11)]">
+    <article className="group overflow-hidden rounded-lg border border-laria-fog bg-white shadow-[0_14px_34px_rgb(16_18_23/0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-laria-blue/35 hover:shadow-[0_22px_48px_rgb(16_18_23/0.11)]">
       <div className="relative aspect-[4/3] bg-laria-cloud">
         {activePhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -134,7 +134,7 @@ export function ListingCard({ listing }: ListingCardProps) {
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]"
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_48%,#f1f3f5_100%)] px-4 text-center">
+          <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#f7fbff_0%,rgba(107,166,255,0.14)_48%,#f1f3f5_100%)] px-4 text-center">
             <div className="grid gap-2">
               <div className="mx-auto h-10 w-16 rounded-md border border-dashed border-laria-steel bg-white/70" />
               <span className="text-xs font-bold text-laria-muted">
@@ -155,7 +155,7 @@ export function ListingCard({ listing }: ListingCardProps) {
                 type="button"
                 onClick={showPreviousPhoto}
                 aria-label="Foto anterior"
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-laria-black/75 text-sm font-bold text-white transition hover:bg-laria-blue"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-laria-black/75 text-sm font-bold text-white transition hover:bg-laria-blue hover:text-laria-black"
               >
                 ‹
               </button>
@@ -180,7 +180,7 @@ export function ListingCard({ listing }: ListingCardProps) {
                 type="button"
                 onClick={showNextPhoto}
                 aria-label="Foto siguiente"
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-laria-black/75 text-sm font-bold text-white transition hover:bg-laria-blue"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-laria-black/75 text-sm font-bold text-white transition hover:bg-laria-blue hover:text-laria-black"
               >
                 ›
               </button>

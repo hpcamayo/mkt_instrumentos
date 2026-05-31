@@ -239,7 +239,7 @@ function ListingDetail({
                 ) : null}
               </div>
 
-              <p className="mt-4 rounded-md border border-blue-100 bg-[#eef5ff] p-3 text-xs font-medium leading-5 text-laria-text-soft">
+              <p className="mt-4 rounded-md border border-laria-blue/25 bg-laria-blue/10 p-3 text-xs font-medium leading-5 text-laria-text-soft">
                 Contacto directo por WhatsApp. Laria no procesa pagos, envíos
                 ni garantías.
               </p>
@@ -507,7 +507,7 @@ function SellerBadge({
     <span
       className={
         isVerified
-          ? "rounded-full border border-blue-200 bg-[#eef5ff] px-2.5 py-1 text-xs font-black text-laria-blue"
+          ? "rounded-full border border-laria-blue/35 bg-laria-blue/10 px-2.5 py-1 text-xs font-black text-laria-blue"
           : "rounded-full border border-laria-fog bg-laria-cloud px-2.5 py-1 text-xs font-black text-laria-text-soft"
       }
     >
@@ -574,7 +574,7 @@ function SellerTrustBox({
           </p>
         </div>
         {store?.is_verified === true ? (
-          <span className="rounded-full border border-blue-200 bg-[#eef5ff] px-2.5 py-1 text-xs font-black text-laria-blue">
+          <span className="rounded-full border border-laria-blue/35 bg-laria-blue/10 px-2.5 py-1 text-xs font-black text-laria-blue">
             Tienda verificada
           </span>
         ) : null}

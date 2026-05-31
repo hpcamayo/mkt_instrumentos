@@ -58,7 +58,7 @@ export function ListingDetailGallery({
         className="group relative overflow-hidden rounded-lg border border-laria-fog bg-white shadow-[0_18px_48px_rgb(16_18_23/0.08)] focus:outline-none focus:ring-2 focus:ring-laria-blue"
       >
         {hasPhotos && activePhoto ? (
-          <div className="flex aspect-[4/3] items-center justify-center bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_54%,#eef5ff_100%)]">
+          <div className="flex aspect-[4/3] items-center justify-center bg-[linear-gradient(135deg,#ffffff_0%,#f7fbff_54%,rgba(107,166,255,0.14)_100%)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               key={activePhoto.id ?? activePhoto.image_url}
@@ -70,7 +70,7 @@ export function ListingDetailGallery({
             />
           </div>
         ) : (
-          <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_48%,#f1f3f5_100%)] px-4 text-center text-sm font-bold text-laria-muted">
+          <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 bg-[linear-gradient(135deg,#f7fbff_0%,rgba(107,166,255,0.14)_48%,#f1f3f5_100%)] px-4 text-center text-sm font-bold text-laria-muted">
             <ImageIcon
               className="h-9 w-9 text-laria-blue/65"
               aria-hidden="true"
@@ -85,7 +85,7 @@ export function ListingDetailGallery({
               type="button"
               onClick={showPreviousPhoto}
               aria-label="Foto anterior"
-              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 text-laria-ink shadow-sm ring-1 ring-laria-fog transition hover:bg-laria-blue hover:text-white focus:outline-none focus:ring-2 focus:ring-laria-blue"
+              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 text-laria-ink shadow-sm ring-1 ring-laria-fog transition hover:bg-laria-blue hover:text-laria-black focus:outline-none focus:ring-2 focus:ring-laria-blue"
             >
               <ChevronLeft className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -93,7 +93,7 @@ export function ListingDetailGallery({
               type="button"
               onClick={showNextPhoto}
               aria-label="Foto siguiente"
-              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 text-laria-ink shadow-sm ring-1 ring-laria-fog transition hover:bg-laria-blue hover:text-white focus:outline-none focus:ring-2 focus:ring-laria-blue"
+              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 text-laria-ink shadow-sm ring-1 ring-laria-fog transition hover:bg-laria-blue hover:text-laria-black focus:outline-none focus:ring-2 focus:ring-laria-blue"
             >
               <ChevronRight className="h-5 w-5" aria-hidden="true" />
             </button>

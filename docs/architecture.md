@@ -90,7 +90,7 @@ app/
   listados/loading.tsx             Listings loading skeleton
   login/page.tsx                   Password and magic-link login
   logout/route.ts                  Sign out and redirect to /login
-  mi-cuenta/page.tsx               Protected account placeholder
+  mi-cuenta/page.tsx               Protected account/seller panel shell
   publicar/page.tsx                Redirects to /vender
   registrar-tienda/page.tsx        Store registration
   registro/vendedor/page.tsx       Individual seller account signup
@@ -182,6 +182,8 @@ The homepage uses `components_v0` sections, but marketplace data logic remains i
 
 The listing detail route composes `ListingDetailGallery` in a sticky desktop column using `minmax(0,0.82fr)`, with the main listing facts, seller/store trust box, description, and full specs in the wider `minmax(0,1fr)` right column. Recommendation sections stay below that main detail grid.
 
+The UI visual refresh covers the homepage, listings/catalog page, listing detail page, `/mi-cuenta` seller/account panel shell, and `/admin` panel. It is a visual layer only: it does not add backend logic, schema changes, Supabase queries, auth changes, moderation changes, or marketplace features. Unsupported visual areas must remain placeholder-only and commented in code.
+
 Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/registro/vendedor` creates a Supabase Auth user, stores seller metadata for email confirmation callbacks, and upserts the matching `profiles` row when a session is available. `/auth/callback` also completes the seller profile from user metadata after email confirmation.
 
 Seller signup checks duplicate emails through `app/api/auth/check-email/route.ts` before calling Supabase `signUp()`. The route uses the server-only service-role client to scan Supabase Auth users and returns only an availability flag, because `profiles` does not currently store email. Repeated signup attempts show a Spanish error and a link to `/login` instead of a false "check your email" success state.
@@ -196,6 +198,8 @@ Location onboarding uses `components/location-fields.tsx` with a fixed Peru regi
 
 ## Styling
 
+Canonical visual guidance lives in `docs/design-system.md`. Read it before UI/design/frontend visual work.
+
 The app uses Tailwind CSS 3-style config:
 - `tailwind.config.ts`
 - `postcss.config.js`
@@ -206,7 +210,9 @@ Tailwind includes content paths for:
 - `components/**/*`
 - `components_v0/**/*`
 
-Custom colors include `ink`, `brass`, `cedar`, `mist`, and shadcn-like tokens such as `background`, `foreground`, `card`, `primary`, `muted`, `border`, `input`, and `ring`.
+Custom colors include legacy aliases such as `ink`, `brass`, `cedar`, and `mist`, shadcn-like tokens such as `background`, `foreground`, `card`, `primary`, `muted`, `border`, `input`, and `ring`, plus the current `laria.*` palette. Future UI work should prefer the Laria tokens and the rules in `docs/design-system.md`.
+
+Current Laria visual tokens include `laria.yellow` (`#F1EA16`) for logo/major CTAs, `laria.blue` (`#6BA6FF`) for interface accents, `laria.black` (`#050608`) for header/footer/dark panels, `laria.cloud` (`#F1F3F5`) for light page backgrounds, `laria.fog` (`#E9EDF3`) and `laria.steel` (`#C8CDD6`) for borders, and `laria.muted` (`#9DA3AF`) for low-priority text.
 
 Public page width is centralized in `components/page-container.tsx`. `PageContainer` uses the listings-page rhythm: `max-w-[1600px]` with `px-3 sm:px-4 lg:px-5 xl:px-6`. It is used by the public header/footer, homepage sections, `/listados`, `/instrumentos/[slug]`, `/tiendas/[slug]`, `/vender`, and `/registrar-tienda`. Admin pages remain on their existing admin-specific wrapper.
 

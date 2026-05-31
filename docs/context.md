@@ -11,10 +11,12 @@ Product scope:
 - Stores register from `/registrar-tienda`; after approval they get public pages at `/tiendas/[slug]`.
 - Store products also appear in `/listados`.
 - Admin curation is central: pending listings/stores must be reviewed before public visibility.
-- Phase 2 account foundation exists in the database: `profiles`, `store_members`, listing/store ownership fields, account-aware RLS helpers, and publication validation RPCs. Public entry now includes `/login`, `/registro/vendedor`, invite setup pages, and a protected `/mi-cuenta` placeholder.
+- Phase 2 account foundation exists in the database: `profiles`, `store_members`, listing/store ownership fields, account-aware RLS helpers, and publication validation RPCs. Public entry now includes `/login`, `/registro/vendedor`, invite setup pages, and a protected `/mi-cuenta` account/seller panel shell.
 - Future monetization likely starts with stores: listing packages, featured stores/listings, homepage/category placement, and catalog services.
 - Do not add payments, checkout, escrow, delivery, reviews, subscriptions, commissions, seller dashboards, or in-app chat unless explicitly requested.
 - UI copy should stay in Spanish.
+- Visual/frontend work should follow `docs/design-system.md`.
+- The completed UI visual refresh covers the homepage, listings/catalog page, listing detail page, user/seller panel, and admin panel. It was UI-only: no backend logic, schema changes, Supabase queries, or marketplace features were added.
 - Domain/brand target: `laria.audio`. Some current app metadata/copy may still say "Instrumentos Peru"; treat Laria as the intended platform name.
 
 Important current routes:
@@ -28,7 +30,7 @@ Important current routes:
 - `/registro/vendedor`: individual seller account signup. The product label is Particular, while the database stores this as `profiles.account_type='seller'`.
 - `/registro/vendedor/invitacion`: invited seller profile setup after Supabase invite callback.
 - `/registro/tienda/invitacion`: invited store-owner profile setup after Supabase invite callback; store approval still requires a pending store application.
-- `/mi-cuenta`: protected account placeholder after login/signup.
+- `/mi-cuenta`: protected account/seller control panel shell after login/signup. Current metrics and chart areas are UI placeholders until seller listing management and analytics are wired.
 - `/tiendas/[slug]`: public store page plus approved store listings.
 - `/vender`: public individual listing submission form.
 - `/publicar`: redirects to `/vender`.
@@ -61,6 +63,7 @@ Key files:
 - `lib/auth/session.ts`: current-user/session helpers and protected-route redirect helper.
 - `middleware.ts`: Supabase session refresh and protection for future account routes.
 - `docs/auth-email-templates.md`: owner-facing Supabase Auth invite and magic-link email copy for Phase 2 accounts.
+- `docs/design-system.md`: canonical Laria visual system for future UI work.
 - `supabase/migrations/20260516180000_phase_2_accounts.sql`: Phase 2 account schema, ownership fields, helper functions, and RLS policies.
 - `supabase/migrations/*`: manual SQL migrations for schema, RLS, storage, metadata, and view count RPC.
 

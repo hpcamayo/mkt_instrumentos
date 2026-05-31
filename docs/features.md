@@ -57,6 +57,11 @@ It fetches real Supabase data:
 
 Layout uses the shared `PageContainer` public width system.
 
+Visual refresh:
+- Uses the canonical Laria visual system from `docs/design-system.md`.
+- Keeps the black header/footer, yellow major CTAs, light marketplace sections, blue interface accents, and placeholder-only unsupported blocks.
+- Does not add backend logic, Supabase queries, or new marketplace features.
+
 ## Listings Page
 
 Route: `/listados`
@@ -78,6 +83,12 @@ Layout:
 - Max width around `1600px`, centralized through `PageContainer`.
 - Desktop: `260px` sidebar + listing grid.
 - Grid: 1 column on narrow screens, 2 on wider mobile, 3 on medium, 4 on large desktop, 5 on very wide screens.
+
+Visual refresh:
+- Light page canvas with white filter/card surfaces.
+- Blue active filter, focus, and selected states.
+- Product cards follow the image/title/metadata/price hierarchy from `docs/design-system.md`.
+- The refresh did not change filter logic, route params, query params, or listing fetching.
 
 ## Listing Cards
 
@@ -162,6 +173,7 @@ Features:
   - Listing counts use approved active listings from the same store or, for individuals, the same WhatsApp contact.
 - Ratings, sales counts, reviews, checkout, delivery, payments, and chat are not shown because the MVP does not store or support them.
 - Layout uses the shared `PageContainer` public width system.
+- Visual refresh keeps the same data and contact behavior while aligning the gallery, detail panels, seller trust box, specs, and recommendation cards with `docs/design-system.md`.
 
 ## Store Pages
 
@@ -251,6 +263,12 @@ Admin behavior:
 
 Only pending queues are shown. Already approved/hidden/rejected/sold items are not listed in the current admin UI.
 
+Admin visual refresh:
+- Uses a dark admin sidebar/header area and light operational workspace.
+- Uses white cards, subtle borders, dense readable tables, blue active states, and subtle status badges.
+- Placeholder admin metrics are visual-only and must stay commented in code until real metrics exist.
+- The refresh did not change moderation logic, approval/rejection behavior, invite behavior, or admin authorization.
+
 Admin invite behavior:
 - Admin can invite a seller or store owner by email.
 - Fields include email, full name, WhatsApp, account type, optional city/region, optional store name, and notes for fieldwork follow-up.
@@ -271,7 +289,7 @@ Routes:
 - `/confirmacion-correo`: email confirmation success page after seller signup.
 - `/registro/vendedor/invitacion`: invited seller profile setup.
 - `/registro/tienda/invitacion`: invited store-owner profile setup.
-- `/mi-cuenta`: protected account placeholder after login/signup.
+- `/mi-cuenta`: protected account/seller panel shell after login/signup.
 - `/auth/callback`: exchanges Supabase magic-link/invite `code` values for an app session.
 - `/logout`: signs out and redirects to `/login`.
 
@@ -296,6 +314,11 @@ Behavior:
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
 - Seller dashboards, listing management pages, store account signup, and invite setup pages are not built yet.
+
+Account panel visual refresh:
+- `/mi-cuenta` now uses a seller-control-panel style shell with sidebar navigation, profile data, empty publications table, and placeholder metric/chart cards.
+- Placeholder metrics and chart areas are visual-only and commented in code; they do not represent real analytics.
+- The refresh did not change auth/session logic or add seller listing management calculations.
 
 ## Features Intentionally Not Implemented Yet
 

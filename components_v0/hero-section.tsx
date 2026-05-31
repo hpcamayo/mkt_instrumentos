@@ -23,7 +23,7 @@ export function HeroSection() {
         backgroundSize: "cover",
       }}
     >
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_72%_18%,rgba(47,128,255,0.34),transparent_34%),linear-gradient(180deg,transparent_0%,rgba(5,6,8,0.74)_100%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_72%_18%,rgba(107,166,255,0.34),transparent_34%),linear-gradient(180deg,transparent_0%,rgba(5,6,8,0.74)_100%)]" />
       <PageContainer className="relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

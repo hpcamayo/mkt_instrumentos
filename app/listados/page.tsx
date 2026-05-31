@@ -283,7 +283,7 @@ function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
         <a
           key={chip.key}
           href={chip.href}
-          className="inline-flex items-center rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-laria-blue shadow-sm transition hover:border-laria-blue hover:bg-[#eef5ff]"
+          className="inline-flex items-center rounded-full border border-laria-blue/35 bg-white px-3 py-1.5 text-xs font-bold text-laria-blue shadow-sm transition hover:border-laria-blue hover:bg-laria-blue/10"
         >
           {chip.label}
           <span className="ml-2 text-laria-blue/55">×</span>

@@ -66,7 +66,7 @@ export function ListingDetailMetadata({
       <span className="inline-flex items-center rounded-full border border-laria-fog bg-laria-cloud px-3 py-1">
         {formatPublishedAgo(publishedAt ?? createdAt)}
       </span>
-      <span className="inline-flex items-center rounded-full border border-blue-100 bg-[#eef5ff] px-3 py-1 text-laria-blue">
+      <span className="inline-flex items-center rounded-full border border-laria-blue/25 bg-laria-blue/10 px-3 py-1 text-laria-blue">
         {formatViewCount(viewCount)}
       </span>
     </div>

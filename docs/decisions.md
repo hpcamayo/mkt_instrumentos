@@ -254,14 +254,14 @@ Rule:
 - Replace mock data with real data.
 - Keep existing routes and backend logic unless explicitly changing them.
 
-## Branding Redesign Should Wait for Final Identity
+## Laria Visual System Is Canonical
 
-Decision: do not over-polish the visual system until the Laria brand identity is ready.
+Decision: the current Laria visual system is documented in `docs/design-system.md` and should guide future UI work.
 
 Why:
-- Brand identity and logo are still in progress.
-- Site design should be revamped consistently once the visual direction is known.
-- Temporary UI improvements are acceptable for iteration.
+- The UI has been refreshed around a light marketplace canvas, black header/footer, yellow Laria logo/major CTAs, and blue interface accents.
+- Future UI work should extend the implemented system instead of starting a new visual direction.
+- Visual tickets should not add product features or change Supabase/business logic unless explicitly requested.
 
 ## Separate Brands for Future Verticals
 

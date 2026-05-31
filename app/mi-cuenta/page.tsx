@@ -217,7 +217,7 @@ export default async function AccountPage() {
                     publicaciones y analítica esté implementado.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 rounded-full border border-blue-100 bg-[#eef5ff] px-3 py-2 text-xs font-black text-laria-blue">
+                <div className="flex items-center gap-2 rounded-full border border-laria-blue/25 bg-laria-blue/10 px-3 py-2 text-xs font-black text-laria-blue">
                   <Megaphone className="h-4 w-4" aria-hidden="true" />
                   Próximamente
                 </div>
@@ -259,7 +259,7 @@ function DashboardNavItem({
     <div
       className={
         isActive
-          ? "flex min-h-10 items-center gap-3 rounded-md border border-blue-200 bg-[#eef5ff] px-3 py-2 text-sm font-black text-laria-blue"
+          ? "flex min-h-10 items-center gap-3 rounded-md border border-laria-blue/35 bg-laria-blue/10 px-3 py-2 text-sm font-black text-laria-blue"
           : "flex min-h-10 items-center gap-3 rounded-md border border-transparent px-3 py-2 text-sm font-bold text-laria-text-soft"
       }
     >
@@ -284,7 +284,7 @@ function DashboardStatCard({
       <div className="mt-4 flex items-end justify-between gap-3">
         <p className="text-3xl font-black text-laria-ink">{value}</p>
         <div
-          className="flex h-9 w-14 items-end gap-1 rounded bg-[#eef5ff] px-2 py-1"
+          className="flex h-9 w-14 items-end gap-1 rounded bg-laria-blue/10 px-2 py-1"
           aria-hidden="true"
         >
           <span className="h-3 w-2 rounded-t bg-laria-blue/45" />

@@ -49,6 +49,19 @@ Use:
 - Use Spanish for user-facing labels, buttons, empty states, validation messages, and page copy.
 - Keep WhatsApp contact flows simple and obvious.
 
+## UI And Visual Work
+
+- For any UI/design/frontend visual work, read `docs/design-system.md` before editing.
+- Follow the current Laria visual system.
+- UI work must not add features unless explicitly requested.
+- Do not change Supabase schema, migrations, auth, authorization, listing approval, store approval, or business logic for visual tasks.
+- Prefer reusable components and tokens over huge one-off Tailwind class strings.
+- If using Tailwind, keep class names readable and consistent.
+- Do not paste large v0-style CSS blocks blindly.
+- Use existing project conventions.
+- Do not rewrite unrelated components.
+- Placeholder-only UI must be commented and must not fake working behavior.
+
 ## Expected Seller And Listing Behavior
 
 - Individual seller listings represent used gear.

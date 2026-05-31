@@ -61,7 +61,7 @@ export function TrustSection() {
               className="border-b border-laria-fog p-5 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0"
             >
               <div className="flex items-start gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#eef5ff]">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-laria-blue/10">
                   <feature.icon className="h-5 w-5 text-laria-blue" />
                 </div>
                 <div>
