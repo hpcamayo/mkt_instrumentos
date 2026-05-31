@@ -30,8 +30,8 @@ export function ListingCard({ listing }: ListingCardProps) {
   const sellerLabel = getSellerBadgeLabel(listing, store);
   const sellerBadgeClass =
     sellerLabel === "Tienda verificada"
-      ? "bg-emerald-50 text-emerald-700"
-      : "bg-slate-100 text-slate-700";
+      ? "border-blue-200 bg-[#eef5ff] text-laria-blue"
+      : "border-laria-fog bg-laria-cloud text-laria-text-soft";
   const displayTitle = getListingDisplayTitle(listing);
   const categoryLabel = getListingTagLabel(listing);
   const conditionLabel = formatCondition(listing.condition);
@@ -122,8 +122,8 @@ export function ListingCard({ listing }: ListingCardProps) {
   }
 
   return (
-    <article className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="relative aspect-[4/3] bg-slate-100">
+    <article className="group overflow-hidden rounded-lg border border-laria-fog bg-white shadow-[0_14px_34px_rgb(16_18_23/0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_22px_48px_rgb(16_18_23/0.11)]">
+      <div className="relative aspect-[4/3] bg-laria-cloud">
         {activePhoto ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -131,15 +131,20 @@ export function ListingCard({ listing }: ListingCardProps) {
             alt={activePhoto.alt_text ?? listing.title}
             loading="lazy"
             decoding="async"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]"
           />
         ) : (
-          <div className="flex h-full items-center justify-center px-4 text-center text-xs text-slate-500">
-            Foto pendiente
+          <div className="flex h-full items-center justify-center bg-[linear-gradient(135deg,#f8fbff_0%,#eef5ff_48%,#f1f3f5_100%)] px-4 text-center">
+            <div className="grid gap-2">
+              <div className="mx-auto h-10 w-16 rounded-md border border-dashed border-laria-steel bg-white/70" />
+              <span className="text-xs font-bold text-laria-muted">
+                Foto pendiente
+              </span>
+            </div>
           </div>
         )}
 
-        <span className="absolute left-2 top-2 max-w-[calc(100%-4rem)] truncate rounded bg-white/95 px-2 py-1 text-[11px] font-semibold text-ink shadow-sm">
+        <span className="absolute left-2 top-2 max-w-[calc(100%-4rem)] truncate rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[11px] font-black text-laria-ink shadow-sm">
           {categoryLabel}
         </span>
 
@@ -150,11 +155,11 @@ export function ListingCard({ listing }: ListingCardProps) {
                 type="button"
                 onClick={showPreviousPhoto}
                 aria-label="Foto anterior"
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/70 text-sm font-bold text-white transition hover:bg-slate-950"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-laria-black/75 text-sm font-bold text-white transition hover:bg-laria-blue"
               >
                 ‹
               </button>
-              <div className="flex items-center gap-1.5 rounded-full bg-slate-950/55 px-2 py-1">
+              <div className="flex items-center gap-1.5 rounded-full bg-laria-black/60 px-2 py-1">
                 {Array.from({ length: Math.min(photoCount, 5) }).map(
                   (_, index) => (
                     <button
@@ -164,7 +169,7 @@ export function ListingCard({ listing }: ListingCardProps) {
                       aria-label={`Ver foto ${index + 1}`}
                       className={
                         index === activePhotoIndex
-                          ? "h-1.5 w-4 rounded-full bg-white"
+                          ? "h-1.5 w-4 rounded-full bg-laria-blue"
                           : "h-1.5 w-1.5 rounded-full bg-white/55"
                       }
                     />
@@ -175,55 +180,55 @@ export function ListingCard({ listing }: ListingCardProps) {
                 type="button"
                 onClick={showNextPhoto}
                 aria-label="Foto siguiente"
-                className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/70 text-sm font-bold text-white transition hover:bg-slate-950"
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-laria-black/75 text-sm font-bold text-white transition hover:bg-laria-blue"
               >
                 ›
               </button>
             </div>
-            <span className="absolute right-2 top-2 rounded bg-slate-950/75 px-2 py-1 text-[11px] font-semibold text-white">
+            <span className="absolute right-2 top-2 rounded-full bg-laria-black/75 px-2 py-1 text-[11px] font-bold text-white">
               {activePhotoIndex + 1} / {photoCount}
             </span>
           </>
         ) : null}
       </div>
 
-      <div className="space-y-3 p-3">
+      <div className="space-y-3 p-3.5">
         <div className="space-y-1.5">
           <div className="flex items-start justify-between gap-2">
-            <h2 className="line-clamp-2 min-w-0 text-sm font-semibold leading-5 text-ink">
+            <h2 className="line-clamp-2 min-w-0 text-sm font-black leading-5 text-laria-ink">
               <Link
                 href={`/instrumentos/${listing.slug}`}
-                className="underline-offset-4 hover:underline"
+                className="underline-offset-4 hover:text-laria-blue hover:underline"
               >
                 {displayTitle}
               </Link>
             </h2>
             <span
-              className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${sellerBadgeClass}`}
+              className={`shrink-0 rounded-full border px-2 py-1 text-[11px] font-black ${sellerBadgeClass}`}
             >
               {sellerLabel}
             </span>
           </div>
 
           {conditionLabel ? (
-            <p className="line-clamp-1 text-xs text-slate-500">
+            <p className="line-clamp-1 text-xs font-semibold text-laria-muted">
               {conditionLabel}
             </p>
           ) : null}
         </div>
 
         <div className="space-y-1">
-          <p className="text-base font-bold leading-5 text-ink">
+          <p className="text-lg font-black leading-5 text-laria-ink">
             {formatPrice(listing.price_pen)}
           </p>
-          <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+          <div className="flex items-center justify-between gap-2 text-xs font-semibold text-laria-muted">
             <p className="min-w-0 truncate">
               {listing.city}, {listing.region}
             </p>
             {store ? (
               <Link
                 href={`/tiendas/${store.slug}`}
-                className="max-w-[45%] shrink-0 truncate text-right font-semibold text-slate-600 underline-offset-4 hover:underline"
+                className="max-w-[45%] shrink-0 truncate text-right font-bold text-laria-text-soft underline-offset-4 hover:text-laria-blue hover:underline"
               >
                 {store.name}
               </Link>

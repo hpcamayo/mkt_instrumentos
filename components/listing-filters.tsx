@@ -45,14 +45,14 @@ export function ListingFilters({ filters }: ListingFiltersProps) {
         <button
           type="button"
           onClick={() => setIsFilterOpen(true)}
-          className="h-11 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-ink shadow-sm"
+          className="h-11 rounded-md border border-laria-steel bg-white px-4 text-sm font-bold text-laria-ink shadow-sm transition hover:border-laria-blue hover:text-laria-blue"
         >
           Filtrar
         </button>
         <button
           type="button"
           onClick={() => setIsSortOpen(true)}
-          className="h-11 rounded-md border border-slate-300 bg-white px-4 text-sm font-semibold text-ink shadow-sm"
+          className="h-11 rounded-md border border-laria-steel bg-white px-4 text-sm font-bold text-laria-ink shadow-sm transition hover:border-laria-blue hover:text-laria-blue"
         >
           Ordenar
         </button>
@@ -72,15 +72,15 @@ export function ListingFilters({ filters }: ListingFiltersProps) {
             type="button"
             aria-label="Cerrar filtros"
             onClick={() => setIsFilterOpen(false)}
-            className="absolute inset-0 bg-slate-950/40"
+            className="absolute inset-0 bg-laria-black/55"
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl">
+          <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-2xl border border-laria-fog bg-white p-4 shadow-2xl">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-ink">Filtros</h2>
+              <h2 className="text-base font-black text-laria-ink">Filtros</h2>
               <button
                 type="button"
                 onClick={() => setIsFilterOpen(false)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+                className="rounded-md border border-laria-steel px-3 py-2 text-sm font-bold text-laria-text-soft transition hover:border-laria-blue hover:text-laria-blue"
               >
                 Cerrar
               </button>
@@ -101,15 +101,15 @@ export function ListingFilters({ filters }: ListingFiltersProps) {
             type="button"
             aria-label="Cerrar orden"
             onClick={() => setIsSortOpen(false)}
-            className="absolute inset-0 bg-slate-950/40"
+            className="absolute inset-0 bg-laria-black/55"
           />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white p-4 shadow-2xl">
+          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-laria-fog bg-white p-4 shadow-2xl">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-ink">Ordenar</h2>
+              <h2 className="text-base font-black text-laria-ink">Ordenar</h2>
               <button
                 type="button"
                 onClick={() => setIsSortOpen(false)}
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+                className="rounded-md border border-laria-steel px-3 py-2 text-sm font-bold text-laria-text-soft transition hover:border-laria-blue hover:text-laria-blue"
               >
                 Cerrar
               </button>
@@ -121,8 +121,8 @@ export function ListingFilters({ filters }: ListingFiltersProps) {
                   href={buildListingsHref(filters, { sort: option.value })}
                   className={
                     option.value === filters.sort
-                      ? "rounded-md bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
-                      : "rounded-md border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700"
+                      ? "rounded-md bg-laria-blue px-4 py-3 text-sm font-bold text-white"
+                      : "rounded-md border border-laria-fog px-4 py-3 text-sm font-bold text-laria-text-soft transition hover:border-laria-blue hover:text-laria-blue"
                   }
                 >
                   {option.label}
@@ -153,7 +153,7 @@ function FilterForm({
       className={
         isFrameless
           ? ""
-          : "rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+          : "rounded-lg border border-laria-fog bg-white p-4 shadow-[0_16px_36px_rgb(16_18_23/0.06)]"
       }
     >
       <div
@@ -161,10 +161,17 @@ function FilterForm({
           isFrameless ? "hidden" : "flex items-center justify-between gap-3"
         }
       >
-        <h2 className="text-base font-semibold text-ink">Filtros</h2>
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-laria-blue">
+            Refina
+          </p>
+          <h2 className="mt-1 text-base font-black text-laria-ink">
+            Filtros
+          </h2>
+        </div>
         <a
           href="/listados"
-          className="text-sm font-semibold text-slate-600 underline-offset-4 hover:underline"
+          className="text-sm font-bold text-laria-text-soft underline-offset-4 transition hover:text-laria-blue hover:underline"
         >
           Limpiar filtros
         </a>
@@ -173,7 +180,7 @@ function FilterForm({
       {isFrameless ? (
         <a
           href="/listados"
-          className="mb-4 inline-flex text-sm font-semibold text-slate-600 underline-offset-4 hover:underline"
+          className="mb-4 inline-flex text-sm font-bold text-laria-text-soft underline-offset-4 transition hover:text-laria-blue hover:underline"
         >
           Limpiar filtros
         </a>
@@ -242,8 +249,8 @@ function FilterForm({
       </div>
 
       {advancedGroup ? (
-        <div className="mt-5 border-t border-slate-200 pt-5">
-          <h3 className="text-sm font-semibold text-ink">
+        <div className="mt-5 border-t border-laria-fog pt-5">
+          <h3 className="text-sm font-black text-laria-ink">
             Detalles de {advancedGroup.label.toLowerCase()}
           </h3>
           <div className="mt-4 grid gap-4">
@@ -260,7 +267,7 @@ function FilterForm({
 
       <button
         type="submit"
-        className="mt-5 w-full rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700"
+        className="laria-button-primary mt-5 min-h-11 w-full px-4 py-3 text-sm"
       >
         Aplicar filtros
       </button>
@@ -289,13 +296,13 @@ function SelectField({
   options,
 }: SelectFieldProps) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-slate-700">
+    <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
       {label}
       <select
         name={name}
         defaultValue={defaultValue ?? ""}
         onChange={(event) => onChange?.(event.target.value)}
-        className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
       >
         {includeAllOption ? <option value="">Todos</option> : null}
         {options.map((option) => (
@@ -361,14 +368,14 @@ type TextFieldProps = {
 
 function TextField({ label, name, defaultValue, placeholder }: TextFieldProps) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-slate-700">
+    <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
       {label}
       <input
         type="text"
         name={name}
         defaultValue={defaultValue}
         placeholder={placeholder}
-        className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
       />
     </label>
   );
@@ -382,7 +389,7 @@ type NumberFieldProps = {
 
 function NumberField({ label, name, defaultValue }: NumberFieldProps) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-slate-700">
+    <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
       {label}
       <input
         type="number"
@@ -390,7 +397,7 @@ function NumberField({ label, name, defaultValue }: NumberFieldProps) {
         name={name}
         defaultValue={defaultValue}
         placeholder="S/."
-        className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-amber-100"
+        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-blue-100"
       />
     </label>
   );
@@ -410,21 +417,21 @@ function AdvancedFilterField({
 
     return (
       <fieldset className="grid gap-2">
-        <legend className="text-sm font-medium text-slate-700">
+        <legend className="text-sm font-bold text-laria-text-soft">
           {filter.label}
         </legend>
         <div className="grid gap-2">
           {(filter.options ?? []).map((option) => (
             <label
               key={option.value}
-              className="flex items-center gap-2 text-sm text-slate-600"
+              className="flex items-center gap-2 text-sm font-semibold text-laria-text-soft"
             >
               <input
                 type="checkbox"
                 name={filter.key}
                 value={option.value}
                 defaultChecked={values.has(option.value)}
-                className="h-4 w-4 rounded border-slate-300 text-brass focus:ring-brass"
+                className="h-4 w-4 rounded border-laria-steel text-laria-blue focus:ring-laria-blue"
               />
               {option.label}
             </label>

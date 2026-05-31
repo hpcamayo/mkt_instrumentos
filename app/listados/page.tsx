@@ -179,68 +179,72 @@ function ListingsView({
   errorMessage,
 }: ListingsViewProps) {
   return (
-    <PageContainer as="section" className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6">
-      <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brass">
-          Listados
-        </p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-ink sm:text-3xl">
-              Instrumentos disponibles
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-              Explora publicaciones aprobadas de particulares y tiendas. Cuando
-              algo te interese, abre el detalle y conversa directo por WhatsApp.
-            </p>
+    <section className="bg-laria-cloud/70">
+      <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
+        <div className="rounded-lg border border-laria-fog bg-white p-4 shadow-[0_18px_48px_rgb(16_18_23/0.06)] sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+                Catálogo
+              </p>
+              <h1 className="mt-2 text-3xl font-black leading-tight text-laria-ink sm:text-4xl">
+                Instrumentos disponibles
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-laria-text-soft sm:text-base">
+                Explora publicaciones aprobadas de particulares y tiendas.
+                Cuando algo te interese, abre el detalle y conversa directo por
+                WhatsApp.
+              </p>
+            </div>
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-laria-fog bg-laria-cloud px-4 py-2 text-sm font-bold text-laria-ink">
+              <span className="h-2 w-2 rounded-full bg-laria-blue" />
+              {totalCount} resultado{totalCount === 1 ? "" : "s"}
+            </div>
           </div>
-          <p className="text-sm font-medium text-slate-500">
-            {totalCount} resultado{totalCount === 1 ? "" : "s"}
-          </p>
         </div>
-      </div>
 
-      <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start xl:gap-6">
-        <ListingFilters filters={filters} />
+        <div className="grid gap-5 lg:grid-cols-[286px_minmax(0,1fr)] lg:items-start xl:gap-6">
+          <ListingFilters filters={filters} />
 
-        <div className="grid min-w-0 gap-4">
-          <ActiveFilterChips filters={filters} />
+          <div className="grid min-w-0 gap-4">
+            <ActiveFilterChips filters={filters} />
 
-          {errorMessage ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              No se pudieron cargar los listados. Revisa la configuración de
-              Supabase e intenta nuevamente.
-            </div>
-          ) : null}
+            {errorMessage ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 shadow-sm">
+                No se pudieron cargar los listados. Revisa la configuración de
+                Supabase e intenta nuevamente.
+              </div>
+            ) : null}
 
-          {!errorMessage && listings.length === 0 ? (
-            <div className="rounded-lg border border-slate-200 bg-white p-6 text-center text-sm leading-6 text-slate-600 shadow-sm">
-              <p className="text-base font-semibold text-ink">
-                No encontramos resultados con esos filtros
-              </p>
-              <p className="mx-auto mt-2 max-w-md">
-                Prueba ampliar la búsqueda, cambiar la ciudad o revisar otra
-                categoría de instrumentos.
-              </p>
-              <a
-                href="/listados"
-                className="mt-5 inline-flex items-center justify-center rounded-md bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
-              >
-                Limpiar filtros
-              </a>
-            </div>
-          ) : null}
+            {!errorMessage && listings.length === 0 ? (
+              <div className="rounded-lg border border-laria-fog bg-white p-8 text-center text-sm leading-6 text-laria-text-soft shadow-[0_18px_48px_rgb(16_18_23/0.06)]">
+                <p className="text-lg font-black text-laria-ink">
+                  No encontramos resultados con esos filtros
+                </p>
+                <p className="mx-auto mt-2 max-w-md">
+                  Prueba ampliar la búsqueda, cambiar la ciudad o revisar otra
+                  categoría de instrumentos.
+                </p>
+                <a
+                  href="/listados"
+                  className="laria-button-primary mt-5 min-h-11 px-5 py-3 text-sm"
+                >
+                  Limpiar filtros
+                </a>
+              </div>
+            ) : null}
 
-          {listings.length > 0 ? (
-            <div className="grid grid-cols-1 gap-[18px] min-[460px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 2xl:gap-6">
-              {listings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
-              ))}
-            </div>
-          ) : null}
+            {listings.length > 0 ? (
+              <div className="grid grid-cols-1 gap-[18px] min-[460px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 2xl:gap-6">
+                {listings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
-    </PageContainer>
+      </PageContainer>
+    </section>
   );
 }
 
@@ -279,15 +283,15 @@ function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
         <a
           key={chip.key}
           href={chip.href}
-          className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-brass hover:text-ink"
+          className="inline-flex items-center rounded-full border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-laria-blue shadow-sm transition hover:border-laria-blue hover:bg-[#eef5ff]"
         >
           {chip.label}
-          <span className="ml-2 text-slate-400">×</span>
+          <span className="ml-2 text-laria-blue/55">×</span>
         </a>
       ))}
       <a
         href="/listados"
-        className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-700"
+        className="inline-flex items-center rounded-full bg-laria-ink px-3 py-1.5 text-xs font-bold text-white transition hover:bg-laria-graphite"
       >
         Limpiar filtros
       </a>
@@ -297,28 +301,30 @@ function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
 
 function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
   return (
-    <PageContainer as="section" className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6">
-      <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-wide text-brass">
-          Listados
-        </p>
-        <h1 className="text-2xl font-bold text-ink sm:text-3xl">
-          Configura Supabase para ver listados
-        </h1>
-        <p className="max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-          Falta definir `NEXT_PUBLIC_SUPABASE_URL` y
-          `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local`. Cuando estén listas,
-          esta página mostrará solo publicaciones aprobadas.
-        </p>
-      </div>
-      <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)] lg:items-start xl:gap-6">
-        <ListingFilters filters={filters} />
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-          Copia `.env.example` a `.env.local`, agrega las credenciales públicas
-          de Supabase y reinicia el servidor de desarrollo.
+    <section className="bg-laria-cloud/70">
+      <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
+        <div className="rounded-lg border border-laria-fog bg-white p-4 shadow-[0_18px_48px_rgb(16_18_23/0.06)] sm:p-6">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+            Catálogo
+          </p>
+          <h1 className="mt-2 text-3xl font-black leading-tight text-laria-ink sm:text-4xl">
+            Configura Supabase para ver listados
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-laria-text-soft sm:text-base">
+            Falta definir `NEXT_PUBLIC_SUPABASE_URL` y
+            `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local`. Cuando estén
+            listas, esta página mostrará solo publicaciones aprobadas.
+          </p>
         </div>
-      </div>
-    </PageContainer>
+        <div className="grid gap-5 lg:grid-cols-[286px_minmax(0,1fr)] lg:items-start xl:gap-6">
+          <ListingFilters filters={filters} />
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm font-medium leading-6 text-laria-ink shadow-sm">
+            Copia `.env.example` a `.env.local`, agrega las credenciales
+            públicas de Supabase y reinicia el servidor de desarrollo.
+          </div>
+        </div>
+      </PageContainer>
+    </section>
   );
 }
 
