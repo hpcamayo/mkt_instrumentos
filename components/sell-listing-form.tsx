@@ -4,6 +4,8 @@ import { type FormEvent, useMemo, useState } from "react";
 import { categoryOptions, cityOptions, conditionOptions } from "@/lib/listings";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
+import { createPublicSubmission } from "@/lib/public-submission";
+
 type FormState = "idle" | "submitting" | "success" | "error";
 
 const maxPhotos = 6;
@@ -11,13 +13,17 @@ const maxPhotoSizeBytes = 5 * 1024 * 1024;
 
 export function SellListingForm() {
   const supabase = useMemo(() => getPublicSupabaseClient(), []);
+  const submit = useMemo(
+    () => (supabase ? createPublicSubmission(supabase) : null),
+    [supabase],
+  );
   const [state, setState] = useState<FormState>("idle");
   const [message, setMessage] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!supabase) {
+    if (!supabase || !submit) {
       setState("error");
       setMessage(
         "Falta configurar Supabase. Agrega las variables públicas en .env.local y reinicia el servidor.",
@@ -77,76 +83,29 @@ export function SellListingForm() {
     setState("submitting");
     setMessage("");
 
-    const listingId = crypto.randomUUID();
-    const slug = `${slugify(title)}-${listingId.slice(0, 8)}`;
-
-    const { error: listingError } = await supabase.from("listings").insert({
-      id: listingId,
-      store_id: null,
-      seller_type: "individual",
-      status: "pending",
-      title,
-      slug,
-      description,
-      category,
-      brand,
-      model,
-      condition,
-      price_pen: pricePen,
-      city,
-      region: city === "Huancayo" ? "Junin" : city,
-      contact_name: sellerName,
-      whatsapp_phone: normalizedWhatsapp,
-    });
-
-    if (listingError) {
-      setState("error");
-      setMessage("No pudimos crear la publicación. Revisa los datos e intenta nuevamente.");
-      return;
-    }
-
-    const uploadedPhotos: {
-      listing_id: string;
-      image_url: string;
-      alt_text: string;
-      sort_order: number;
-    }[] = [];
-
-    for (const [index, photo] of photos.entries()) {
-      const extension = getFileExtension(photo.name);
-      const path = `pending/${listingId}/${index + 1}-${crypto.randomUUID()}${extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from("listing-photos")
-        .upload(path, photo, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) {
-        setState("error");
-        setMessage(
-          "La publicación fue creada, pero una foto no se pudo subir. Un administrador podrá revisarla.",
-        );
-        return;
-      }
-
-      const { data } = supabase.storage.from("listing-photos").getPublicUrl(path);
-      uploadedPhotos.push({
-        listing_id: listingId,
-        image_url: data.publicUrl,
-        alt_text: `Foto de ${title}`,
-        sort_order: index,
-      });
-    }
-
-    const { error: photosError } = await supabase
-      .from("listing_photos")
-      .insert(uploadedPhotos);
-
-    if (photosError) {
+    try {
+      await submit(
+        "listing",
+        {
+          title,
+          category,
+          brand,
+          model,
+          condition,
+          price_pen: pricePen,
+          city,
+          contact_name: sellerName,
+          whatsapp_phone: normalizedWhatsapp,
+          description,
+        },
+        photos,
+      );
+    } catch (error) {
       setState("error");
       setMessage(
-        "Las fotos se subieron, pero no pudimos guardarlas en la publicación. Intenta nuevamente.",
+        error instanceof Error
+          ? error.message
+          : "No se pudo completar el envío. Intenta nuevamente.",
       );
       return;
     }
@@ -178,14 +137,19 @@ export function SellListingForm() {
       {!supabase ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
           Falta configurar Supabase. Copia `.env.example` a `.env.local`, agrega
-          `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`, y reinicia
-          el servidor de desarrollo.
+          `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`, y
+          reinicia el servidor de desarrollo.
         </div>
       ) : null}
 
       <TextField label="Título" name="title" required />
       <div className="grid gap-5 sm:grid-cols-2">
-        <SelectField label="Categoría" name="category" required options={categoryOptions} />
+        <SelectField
+          label="Categoría"
+          name="category"
+          required
+          options={categoryOptions}
+        />
         <SelectField
           label="Condición"
           name="condition"
@@ -340,26 +304,11 @@ function readRequired(formData: FormData, key: string) {
 }
 
 function isImageFile(value: FormDataEntryValue): value is File {
-  return value instanceof File && value.size > 0 && value.type.startsWith("image/");
-}
-
-function slugify(value: string) {
-  const slug = value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 70);
-
-  return slug || "instrumento";
+  return (
+    value instanceof File && value.size > 0 && value.type.startsWith("image/")
+  );
 }
 
 function normalizePhone(value: string) {
   return value.replace(/\D/g, "");
-}
-
-function getFileExtension(fileName: string) {
-  const extension = fileName.split(".").pop();
-  return extension ? `.${extension.toLowerCase()}` : "";
 }

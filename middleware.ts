@@ -38,15 +38,13 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: claimsData } = await supabase.auth.getClaims();
 
   const isProtectedPath = protectedPathPrefixes.some((path) =>
     request.nextUrl.pathname.startsWith(path),
   );
 
-  if (isProtectedPath && !user) {
+  if (isProtectedPath && !claimsData?.claims) {
     const url = request.nextUrl.clone();
     const loginPath = new URL(getLoginPath(request.nextUrl.pathname), url);
     url.pathname = loginPath.pathname;
@@ -59,6 +57,12 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/mi-cuenta/:path*",
+    "/mis-publicaciones/:path*",
+    "/registro/:path*",
+    "/login",
+    "/logout",
+    "/admin",
+    "/api/admin/:path*",
   ],
 };

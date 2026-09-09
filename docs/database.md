@@ -35,7 +35,7 @@ Older Laria business docs describe the intended model in product language. The c
 
 When in doubt, treat migration files and the live Supabase schema as the implementation source of truth. Planning names should only become schema names through an explicit migration and app update.
 
-Important current maintenance note: `lib/supabase/database.types.ts` is stale after the Phase 2 account migration. It does not yet include `profiles`, `store_members`, ownership fields, new status enum values, or Phase 2 helper RPCs. Regenerate or update it before writing TypeScript code that depends on those schema additions.
+`lib/supabase/database.types.ts` includes the Phase 2 account tables, ownership fields, enums, and helper RPCs. Keep it aligned with later migrations. The PostgREST computed photo-count field uses explicit query result types because the SDK select parser does not infer computed columns.
 
 ### `public.profiles`
 
@@ -349,3 +349,7 @@ Do not add these until explicitly requested:
 - `store_plan_subscriptions`
 
 These are useful future concepts, but adding them early would create operational complexity before Laria has enough supply, store participation, and buyer demand to justify account, billing, or marketplace mechanics.
+
+## September 2026 reliability migration
+
+`20260909120000_marketplace_performance.sql` adds an RLS-aware computed photo count, a service-only indexed email lookup, first-approval timestamps, bounded-browsing indexes, and atomic idempotent public submissions. See `docs/performance.md` for behavior and rollback-only verification.

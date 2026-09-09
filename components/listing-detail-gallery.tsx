@@ -1,5 +1,7 @@
 "use client";
 
+import { MarketplaceImage as Image } from "@/components/marketplace-image";
+
 import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
 import type { ListingPhotoData } from "@/lib/listings";
@@ -59,8 +61,10 @@ export function ListingDetailGallery({
       >
         {hasPhotos && activePhoto ? (
           <div className="flex aspect-[4/3] items-center justify-center bg-[linear-gradient(135deg,#ffffff_0%,#f7fbff_54%,rgba(107,166,255,0.14)_100%)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
+              width={800}
+              height={600}
+              sizes="(max-width: 1023px) 100vw, 45vw"
               key={activePhoto.id ?? activePhoto.image_url}
               src={activePhoto.image_url}
               alt={activePhoto.alt_text ?? title}
@@ -122,11 +126,13 @@ export function ListingDetailGallery({
                   : "h-16 w-16 shrink-0 overflow-hidden rounded-md bg-white ring-1 ring-laria-fog transition hover:ring-laria-blue focus:outline-none focus:ring-2 focus:ring-laria-blue focus:ring-offset-2 focus:ring-offset-white"
               }
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
+                width={64}
+                height={64}
+                sizes="64px"
                 src={photo.image_url}
                 alt={photo.alt_text ?? `${title} foto ${index + 1}`}
-                loading={index < 4 ? "eager" : "lazy"}
+                loading="lazy"
                 decoding="async"
                 className="h-full w-full object-cover"
               />

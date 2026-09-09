@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
+import { cache, Suspense, type ReactNode } from "react";
 import { ListingCard } from "@/components/listing-card";
 import { ListingDetailGallery } from "@/components/listing-detail-gallery";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
@@ -34,13 +34,6 @@ type PublicSupabaseClient = NonNullable<
   ReturnType<typeof getPublicSupabaseClient>
 >;
 
-type ListingDetailViewData = {
-  listing: ListingDetailData;
-  similarListings: ListingCardData[];
-  moreFromSellerListings: ListingCardData[];
-  sellerPublishedCount: number | null;
-};
-
 const relatedListingSelect = `
   id,
   title,
@@ -64,6 +57,7 @@ const relatedListingSelect = `
     status,
     is_verified
   ),
+  photo_count:listing_photo_count,
   listing_photos (
     id,
     listing_id,
@@ -118,6 +112,7 @@ export default async function ListingDetailPage({
           whatsapp_phone,
           created_at
         ),
+        photo_count:listing_photo_count,
         listing_photos (
           id,
           listing_id,
@@ -133,34 +128,24 @@ export default async function ListingDetailPage({
       foreignTable: "listing_photos",
       ascending: true,
     })
-    .maybeSingle();
+    .maybeSingle()
+    .returns<ListingDetailData>();
 
   if (error || !data) {
     notFound();
   }
 
   const listing = data as ListingDetailData;
-  const [{ listings: similarListings }, sellerListings] = await Promise.all([
-    getSimilarListings(supabase, listing),
-    getMoreFromSellerListings(supabase, listing),
-  ]);
-
-  return (
-    <ListingDetail
-      listing={listing}
-      similarListings={similarListings}
-      moreFromSellerListings={sellerListings.listings}
-      sellerPublishedCount={sellerListings.publishedCount}
-    />
-  );
+  return <ListingDetail listing={listing} supabase={supabase} />;
 }
 
 function ListingDetail({
   listing,
-  similarListings,
-  moreFromSellerListings,
-  sellerPublishedCount,
-}: ListingDetailViewData) {
+  supabase,
+}: {
+  listing: ListingDetailData;
+  supabase: PublicSupabaseClient;
+}) {
   const store = normalizeStore(listing);
   const sellerName =
     listing.seller_type === "store" ? store?.name : listing.contact_name;
@@ -240,8 +225,8 @@ function ListingDetail({
               </div>
 
               <p className="mt-4 rounded-md border border-laria-blue/25 bg-laria-blue/10 p-3 text-xs font-medium leading-5 text-laria-text-soft">
-                Contacto directo por WhatsApp. Laria no procesa pagos, envíos
-                ni garantías.
+                Contacto directo por WhatsApp. Laria no procesa pagos, envíos ni
+                garantías.
               </p>
             </div>
 
@@ -250,7 +235,11 @@ function ListingDetail({
               sellerTypeLabel={sellerTypeLabel}
               sellerLocation={sellerLocation}
               listing={listing}
-              sellerPublishedCount={sellerPublishedCount}
+              sellerPublishedCount={
+                <Suspense fallback="Cargando…">
+                  <SellerInventory supabase={supabase} listing={listing} />
+                </Suspense>
+              }
             />
 
             <DetailSection title="Descripción">
@@ -271,22 +260,18 @@ function ListingDetail({
           </aside>
         </div>
 
-        <RelatedListingsSection
-          title="Artículos similares"
-          emptyMessage="Todavía no hay artículos similares publicados."
-          listings={similarListings}
-        />
-
-        {moreFromSellerListings.length > 0 ? (
-          <RelatedListingsSection
-            title={
-              listing.seller_type === "store"
-                ? "Más de esta tienda"
-                : "Más de este vendedor"
-            }
-            listings={moreFromSellerListings}
-          />
-        ) : null}
+        <Suspense
+          fallback={
+            <p className="py-6 text-sm text-laria-text-soft">
+              Cargando artículos similares…
+            </p>
+          }
+        >
+          <SimilarListings supabase={supabase} listing={listing} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <SellerListings supabase={supabase} listing={listing} />
+        </Suspense>
       </PageContainer>
     </section>
   );
@@ -315,14 +300,17 @@ async function getSimilarListings(
     .limit(1, { foreignTable: "listing_photos" })
     .limit(12);
 
-  const { data: primaryData } = await primaryQuery;
+  const { data: primaryData } = await primaryQuery.returns<ListingCardData[]>();
   let listings = sortSimilarListings(
     (primaryData ?? []) as ListingCardData[],
     listing,
   ).slice(0, 4);
 
   if (listings.length < 4 && listing.brand) {
-    const currentIds = new Set([listing.id, ...listings.map((item) => item.id)]);
+    const currentIds = new Set([
+      listing.id,
+      ...listings.map((item) => item.id),
+    ]);
     const { data: brandData } = await supabase
       .from("listings")
       .select(relatedListingSelect)
@@ -336,7 +324,8 @@ async function getSimilarListings(
         ascending: true,
       })
       .limit(1, { foreignTable: "listing_photos" })
-      .limit(8);
+      .limit(8)
+      .returns<ListingCardData[]>();
 
     const brandListings = ((brandData ?? []) as ListingCardData[]).filter(
       (item) => !currentIds.has(item.id),
@@ -345,16 +334,8 @@ async function getSimilarListings(
     listings = [...listings, ...brandListings].slice(0, 4);
   }
 
-  const photoCounts = await getListingPhotoCounts(
-    supabase,
-    listings.map((item) => item.id),
-  );
-
   return {
-    listings: listings.map((item) => ({
-      ...item,
-      photo_count: photoCounts.get(item.id) ?? item.listing_photos.length,
-    })),
+    listings,
   };
 }
 
@@ -390,68 +371,42 @@ function getListingSortTime(listing: ListingCardData) {
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
-async function getMoreFromSellerListings(
-  supabase: PublicSupabaseClient,
-  listing: ListingDetailData,
-) {
-  const baseQuery = supabase
-    .from("listings")
-    .select(relatedListingSelect, { count: "exact" })
-    .eq("status", "approved")
-    .neq("id", listing.id);
+const getMoreFromSellerListings = cache(
+  async function getMoreFromSellerListings(
+    supabase: PublicSupabaseClient,
+    listing: ListingDetailData,
+  ) {
+    const baseQuery = supabase
+      .from("listings")
+      .select(relatedListingSelect, { count: "exact" })
+      .eq("status", "approved")
+      .neq("id", listing.id);
 
-  const query =
-    listing.seller_type === "store" && listing.store_id
-      ? baseQuery.eq("store_id", listing.store_id)
-      : baseQuery
-          .eq("seller_type", "individual")
-          .eq("whatsapp_phone", listing.whatsapp_phone);
+    const query =
+      listing.seller_type === "store" && listing.store_id
+        ? baseQuery.eq("store_id", listing.store_id)
+        : baseQuery
+            .eq("seller_type", "individual")
+            .eq("whatsapp_phone", listing.whatsapp_phone);
 
-  const { count, data } = await query
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .order("sort_order", {
-      foreignTable: "listing_photos",
-      ascending: true,
-    })
-    .limit(1, { foreignTable: "listing_photos" })
-    .limit(4);
-  const listings = (data ?? []) as ListingCardData[];
-  const photoCounts = await getListingPhotoCounts(
-    supabase,
-    listings.map((item) => item.id),
-  );
+    const { count, data } = await query
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .order("sort_order", {
+        foreignTable: "listing_photos",
+        ascending: true,
+      })
+      .limit(1, { foreignTable: "listing_photos" })
+      .limit(4)
+      .returns<ListingCardData[]>();
+    const listings = (data ?? []) as ListingCardData[];
 
-  return {
-    listings: listings.map((item) => ({
-      ...item,
-      photo_count: photoCounts.get(item.id) ?? item.listing_photos.length,
-    })),
-    publishedCount: count === null ? null : count + 1,
-  };
-}
-
-async function getListingPhotoCounts(
-  supabase: PublicSupabaseClient,
-  listingIds: string[],
-) {
-  const counts = new Map<string, number>();
-
-  if (listingIds.length === 0) {
-    return counts;
-  }
-
-  const { data } = await supabase
-    .from("listing_photos")
-    .select("listing_id")
-    .in("listing_id", listingIds);
-
-  for (const photo of data ?? []) {
-    counts.set(photo.listing_id, (counts.get(photo.listing_id) ?? 0) + 1);
-  }
-
-  return counts;
-}
+    return {
+      listings,
+      publishedCount: count === null ? null : count + 1,
+    };
+  },
+);
 
 function Breadcrumb({
   listing,
@@ -544,7 +499,7 @@ function SellerTrustBox({
   sellerTypeLabel: string;
   sellerLocation: string;
   listing: ListingDetailData;
-  sellerPublishedCount: number | null;
+  sellerPublishedCount: ReactNode;
 }) {
   const store = normalizeStore(listing);
   const isStore = listing.seller_type === "store";
@@ -552,12 +507,6 @@ function SellerTrustBox({
     isStore && store?.created_at
       ? formatDate(store.created_at)
       : formatDate(listing.created_at);
-  const publishedListingsLabel =
-    sellerPublishedCount === null
-      ? "No disponible"
-      : `${sellerPublishedCount} ${
-          sellerPublishedCount === 1 ? "listado activo" : "listados activos"
-        }`;
 
   return (
     <section className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_14px_34px_rgb(16_18_23/0.06)] sm:p-6">
@@ -587,8 +536,11 @@ function SellerTrustBox({
       ) : null}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <TrustSignal label="Ubicación" value={sellerLocation || "No indicada"} />
-        <TrustSignal label="Inventario" value={publishedListingsLabel} />
+        <TrustSignal
+          label="Ubicación"
+          value={sellerLocation || "No indicada"}
+        />
+        <TrustSignal label="Inventario" value={sellerPublishedCount} />
         <TrustSignal label="Visible desde" value={visibleSince} />
       </div>
 
@@ -661,7 +613,7 @@ function SpecsList({ specs }: { specs: ListingSpec[] }) {
   );
 }
 
-function TrustSignal({ label, value }: ListingSpec) {
+function TrustSignal({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-md border border-laria-fog bg-laria-cloud p-3">
       <p className="text-xs font-black uppercase tracking-wide text-laria-blue">
@@ -732,4 +684,54 @@ function SupabaseSetupMessage() {
       </PageContainer>
     </section>
   );
+}
+
+async function SimilarListings({
+  supabase,
+  listing,
+}: {
+  supabase: PublicSupabaseClient;
+  listing: ListingDetailData;
+}) {
+  const result = await getSimilarListings(supabase, listing);
+  return (
+    <RelatedListingsSection
+      title="Artículos similares"
+      emptyMessage="Todavía no hay artículos similares publicados."
+      listings={result.listings}
+    />
+  );
+}
+
+async function SellerListings({
+  supabase,
+  listing,
+}: {
+  supabase: PublicSupabaseClient;
+  listing: ListingDetailData;
+}) {
+  const result = await getMoreFromSellerListings(supabase, listing);
+  return result.listings.length ? (
+    <RelatedListingsSection
+      title={
+        listing.seller_type === "store"
+          ? "Más de esta tienda"
+          : "Más de este vendedor"
+      }
+      listings={result.listings}
+    />
+  ) : null;
+}
+
+async function SellerInventory({
+  supabase,
+  listing,
+}: {
+  supabase: PublicSupabaseClient;
+  listing: ListingDetailData;
+}) {
+  const { publishedCount } = await getMoreFromSellerListings(supabase, listing);
+  return publishedCount === null
+    ? "No disponible"
+    : `${publishedCount} ${publishedCount === 1 ? "listado activo" : "listados activos"}`;
 }

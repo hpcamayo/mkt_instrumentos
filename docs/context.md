@@ -37,7 +37,7 @@ Important current routes:
 - `/registrar-tienda`: public store registration form.
 - `/admin`: Supabase Auth admin panel for pending listings/stores.
 - `/api/admin/invite-user`: server-only admin invite endpoint using Supabase service role after verifying the current user is admin.
-- `/api/auth/check-email`: server-only duplicate-email precheck for seller signup. It uses the service-role Auth Admin API and returns only availability, never user details.
+- `/api/auth/check-email`: server-only duplicate-email precheck for seller signup. It uses a service-only indexed database lookup and returns only availability, never user details.
 
 Key files:
 - `lib/listings.ts`: shared listing types, filter parsing, labels, WhatsApp URLs.
@@ -72,3 +72,5 @@ Operational rule: Vercel deploys code, but does not apply Supabase SQL migration
 Context-reset rule: before new work, read `/docs` first and summarize the current product, architecture, schema, features, filters, decisions, and roadmap. Do not rely on chat history.
 
 Local npm checks are available in this workspace. Use `npm run typecheck`, `npm run lint`, and `npm run build` for implementation tickets when code changes.
+
+Current reliability/performance reference: `docs/performance.md`. Catalog/store inventory is paginated; images are responsive; recommendations stream; public submissions use signed retries and atomic finalization through `/api/submissions`.

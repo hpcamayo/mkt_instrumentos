@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
-const maxPagesToScan = 25;
-const usersPerPage = 1000;
-
 export async function POST(request: Request) {
   const payload = await request.json().catch(() => null);
   const email = normalizeEmail(readText(payload, "email"));
@@ -28,9 +25,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const exists = await authEmailExists(email, adminClient);
+  const { data: exists, error } = await adminClient.rpc("auth_email_exists", {
+    p_email: email,
+  });
 
-  if (exists === null) {
+  if (error || exists === null) {
     return NextResponse.json(
       {
         ok: false,
@@ -45,40 +44,6 @@ export async function POST(request: Request) {
     ok: true,
     available: !exists,
   });
-}
-
-async function authEmailExists(
-  email: string,
-  adminClient: ReturnType<typeof getSupabaseAdminClient>,
-) {
-  if (!adminClient) {
-    return null;
-  }
-
-  let page = 1;
-  let lastPage = 1;
-
-  do {
-    const { data, error } = await adminClient.auth.admin.listUsers({
-      page,
-      perPage: usersPerPage,
-    });
-
-    if (error) {
-      return null;
-    }
-
-    if (
-      data.users.some((user) => normalizeEmail(user.email ?? "") === email)
-    ) {
-      return true;
-    }
-
-    lastPage = data.lastPage || page;
-    page += 1;
-  } while (page <= lastPage && page <= maxPagesToScan);
-
-  return false;
 }
 
 function readText(payload: unknown, key: string) {

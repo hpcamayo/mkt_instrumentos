@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
 
@@ -8,13 +5,7 @@ export function CTASection() {
   return (
     <section className="bg-white py-10 md:py-14">
       <PageContainer>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.55 }}
-          className="relative overflow-hidden rounded-lg bg-laria-black p-6 text-white shadow-2xl shadow-black/15 sm:p-8 lg:p-10"
-        >
+        <div className="relative overflow-hidden rounded-lg bg-laria-black p-6 text-white shadow-2xl shadow-black/15 sm:p-8 lg:p-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(107,166,255,0.34),transparent_34%),linear-gradient(90deg,rgba(5,6,8,1),rgba(16,18,23,0.76))]" />
           <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -46,7 +37,7 @@ export function CTASection() {
               </Link>
             </div>
           </div>
-        </motion.div>
+        </div>
       </PageContainer>
     </section>
   );

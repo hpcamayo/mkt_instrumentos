@@ -1,6 +1,4 @@
-"use client";
-
-import { motion } from "framer-motion";
+import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { BadgeCheck, MapPin } from "lucide-react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
@@ -49,21 +47,6 @@ const placeholderStores: VerifiedStore[] = [
   },
 ];
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-    },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0 },
-};
-
 export function VerifiedStores({ stores }: { stores: VerifiedStore[] }) {
   const hasRealStores = stores.length > 0;
   const visibleStores = hasRealStores ? stores : placeholderStores;
@@ -90,23 +73,17 @@ export function VerifiedStores({ stores }: { stores: VerifiedStore[] }) {
               </Link>
             </div>
 
-            <motion.div
-              variants={container}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-100px" }}
-              className="grid gap-4 sm:grid-cols-3"
-            >
+            <div className="grid gap-4 sm:grid-cols-3">
               {visibleStores.map((store, index) => (
-                <motion.div key={store.id} variants={item}>
+                <div key={store.id}>
                   <StoreCard
                     store={store}
                     isPlaceholder={!hasRealStores}
                     visualIndex={index}
                   />
-                </motion.div>
+                </div>
               ))}
-            </motion.div>
+            </div>
           </div>
 
           <aside className="rounded-lg border border-laria-fog bg-laria-cloud p-5 sm:p-6">
@@ -150,11 +127,15 @@ function StoreCard({
 }) {
   const content = (
     <article className="group overflow-hidden rounded-lg border border-laria-fog bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-      <div className={`h-28 bg-gradient-to-br ${getStoreGradient(visualIndex)}`}>
+      <div
+        className={`h-28 bg-gradient-to-br ${getStoreGradient(visualIndex)}`}
+      >
         <div className="flex h-full items-center justify-center text-2xl font-black text-white">
           {store.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
+              width={800}
+              height={600}
+              sizes="(max-width: 459px) 100vw, (max-width: 767px) 50vw, (max-width: 1279px) 33vw, 320px"
               src={store.logoUrl}
               alt={`Logo de ${store.name}`}
               className="h-full w-full object-cover"

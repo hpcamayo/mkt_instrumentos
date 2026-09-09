@@ -118,7 +118,7 @@ Why:
 - `profiles` does not currently store email, and adding an email column is not required just for this UX fix.
 
 Implementation:
-- `/api/auth/check-email` uses the server-only service-role client to scan Supabase Auth users.
+- `/api/auth/check-email` uses the server-only service-role client to call a targeted normalized-email lookup.
 - The endpoint returns only whether the normalized email is available; it does not expose user IDs or profile details.
 - Existing emails show `Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.` with a link to `/login`.
 
@@ -287,3 +287,7 @@ Why:
 - Documentation prevents AI from undoing product/engineering decisions.
 
 Every significant feature should update docs.
+
+## Performance and retry handling
+
+Catalog/store results are paginated, images use responsive Next Image delivery, and recommendation sections stream independently. Public submissions upload first and finalize atomically with a signed retry token; they still enter admin review. See `docs/performance.md`.

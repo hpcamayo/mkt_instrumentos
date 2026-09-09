@@ -5,19 +5,25 @@ import { LocationFields } from "@/components/location-fields";
 import { normalizePeruRegion } from "@/lib/location";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
+import { createPublicSubmission } from "@/lib/public-submission";
+
 type FormState = "idle" | "submitting" | "success" | "error";
 
 const maxImageSizeBytes = 5 * 1024 * 1024;
 
 export function StoreRegistrationForm() {
   const supabase = useMemo(() => getPublicSupabaseClient(), []);
+  const submit = useMemo(
+    () => (supabase ? createPublicSubmission(supabase) : null),
+    [supabase],
+  );
   const [state, setState] = useState<FormState>("idle");
   const [message, setMessage] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!supabase) {
+    if (!supabase || !submit) {
       setState("error");
       setMessage(
         "Falta configurar Supabase. Agrega las variables públicas en .env.local y reinicia el servidor.",
@@ -25,7 +31,6 @@ export function StoreRegistrationForm() {
       return;
     }
 
-    const client = supabase;
     const form = event.currentTarget;
     const formData = new FormData(form);
     const name = readText(formData, "name");
@@ -67,53 +72,29 @@ export function StoreRegistrationForm() {
     setState("submitting");
     setMessage("");
 
-    const storeId = crypto.randomUUID();
-    const slug = `${slugify(name)}-${storeId.slice(0, 8)}`;
-
-    const logoUrl = await uploadStoreAsset({
-      file: logo,
-      folder: storeId,
-      name: "logo",
-    });
-    if (!logoUrl) {
+    try {
+      await submit(
+        "store",
+        {
+          name,
+          city,
+          region,
+          district,
+          address,
+          whatsapp_phone: whatsapp,
+          instagram_url: instagram,
+          facebook_url: facebook,
+          description,
+        },
+        [logo, banner],
+      );
+    } catch (error) {
       setState("error");
-      setMessage("No pudimos subir el logo. Intenta nuevamente.");
-      return;
-    }
-
-    const bannerUrl = await uploadStoreAsset({
-      file: banner,
-      folder: storeId,
-      name: "banner",
-    });
-    if (!bannerUrl) {
-      setState("error");
-      setMessage("No pudimos subir el banner. Intenta nuevamente.");
-      return;
-    }
-
-    const { error } = await client.from("stores").insert({
-      id: storeId,
-      name,
-      slug,
-      description,
-      status: "pending",
-      listing_plan: "free",
-      contact_name: name,
-      whatsapp_phone: whatsapp,
-      city,
-      region,
-      district,
-      address,
-      instagram_url: instagram || null,
-      facebook_url: facebook || null,
-      logo_url: logoUrl,
-      banner_url: bannerUrl,
-    });
-
-    if (error) {
-      setState("error");
-      setMessage("No pudimos registrar la tienda. Revisa los datos e intenta nuevamente.");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "No se pudo completar el envío. Intenta nuevamente.",
+      );
       return;
     }
 
@@ -122,31 +103,6 @@ export function StoreRegistrationForm() {
     setMessage(
       "Tienda enviada. Un administrador revisará la solicitud antes de activar la página pública.",
     );
-
-    async function uploadStoreAsset({
-      file,
-      folder,
-      name: assetName,
-    }: {
-      file: File;
-      folder: string;
-      name: "logo" | "banner";
-    }) {
-      const path = `pending/${folder}/${assetName}-${crypto.randomUUID()}${getFileExtension(file.name)}`;
-      const { error: uploadError } = await client.storage
-        .from("store-assets")
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-        });
-
-      if (uploadError) {
-        return null;
-      }
-
-      const { data } = client.storage.from("store-assets").getPublicUrl(path);
-      return data.publicUrl;
-    }
   }
 
   return (
@@ -169,8 +125,8 @@ export function StoreRegistrationForm() {
       {!supabase ? (
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
           Falta configurar Supabase. Copia `.env.example` a `.env.local`, agrega
-          `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`, y reinicia
-          el servidor de desarrollo.
+          `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`, y
+          reinicia el servidor de desarrollo.
         </div>
       ) : null}
 
@@ -280,28 +236,13 @@ function readText(formData: FormData, key: string) {
 
 function readImage(formData: FormData, key: string) {
   const value = formData.get(key);
-  return value instanceof File && value.size > 0 && value.type.startsWith("image/")
+  return value instanceof File &&
+    value.size > 0 &&
+    value.type.startsWith("image/")
     ? value
     : null;
 }
 
-function slugify(value: string) {
-  const slug = value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 70);
-
-  return slug || "tienda";
-}
-
 function normalizePhone(value: string) {
   return value.replace(/\D/g, "");
-}
-
-function getFileExtension(fileName: string) {
-  const extension = fileName.split(".").pop();
-  return extension ? `.${extension.toLowerCase()}` : "";
 }

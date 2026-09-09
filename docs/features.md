@@ -333,3 +333,7 @@ Do not add without explicit decision:
 - Subscription billing.
 - Commission logic.
 - Complex analytics.
+
+## Performance and submission reliability
+
+Catalog and store inventories have 24-item pages. Product images are resized responsively. Detail recommendations stream separately from the product. Failed submissions can be retried in the same open form without creating duplicates; records are finalized only after uploads finish. See `docs/performance.md`.

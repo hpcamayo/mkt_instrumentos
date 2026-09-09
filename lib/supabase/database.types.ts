@@ -15,6 +15,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auth_email_exists: { Args: { p_email: string }; Returns: boolean }
+      complete_public_submission: { Args: { p_id: string; p_kind: string; p_fields: Json; p_photos: Json }; Returns: string }
+      listing_photo_count: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: number }
       graphql: {
         Args: {
           extensions?: Json
@@ -352,6 +355,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auth_email_exists: { Args: { p_email: string }; Returns: boolean }
+      complete_public_submission: { Args: { p_id: string; p_kind: string; p_fields: Json; p_photos: Json }; Returns: string }
+      listing_photo_count: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: number }
       can_manage_listing: { Args: { p_listing_id: string }; Returns: boolean }
       increment_listing_view_count: {
         Args: { p_listing_id: string }

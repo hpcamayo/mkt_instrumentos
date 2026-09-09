@@ -1,6 +1,4 @@
-"use client";
-
-import { motion } from "framer-motion";
+import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { BadgeCheck, MapPin } from "lucide-react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
@@ -60,21 +58,6 @@ const placeholderListings: FeaturedListing[] = [
   },
 ];
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-    },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0 },
-};
-
 export function FeaturedListings({
   listings,
 }: {
@@ -103,23 +86,17 @@ export function FeaturedListings({
           </Link>
         </div>
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-100px" }}
-          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
-        >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {visibleListings.map((listing, index) => (
-            <motion.div key={listing.id} variants={item}>
+            <div key={listing.id}>
               <ListingPreviewCard
                 listing={listing}
                 isPlaceholder={!hasRealListings}
                 visualIndex={index}
               />
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
 
         {!hasRealListings ? (
           <p className="mt-4 text-center text-sm text-laria-muted">
@@ -153,8 +130,10 @@ function ListingPreviewCard({
     <article className="group overflow-hidden rounded-lg border border-laria-fog bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
       <div className="relative aspect-[4/3] bg-laria-fog">
         {listing.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
+            width={800}
+            height={600}
+            sizes="(max-width: 459px) 100vw, (max-width: 767px) 50vw, (max-width: 1279px) 33vw, 320px"
             src={listing.imageUrl}
             alt={listing.imageAlt}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"

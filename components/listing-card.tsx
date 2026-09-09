@@ -1,5 +1,7 @@
 "use client";
 
+import { MarketplaceImage as Image } from "@/components/marketplace-image";
+
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
@@ -76,6 +78,8 @@ export function ListingCard({ listing }: ListingCardProps) {
       setHasLoadedRemainingPhotos(true);
 
       return mergedPhotos;
+    } catch {
+      return photos;
     } finally {
       setIsLoadingPhotos(false);
     }
@@ -125,8 +129,10 @@ export function ListingCard({ listing }: ListingCardProps) {
     <article className="group overflow-hidden rounded-lg border border-laria-fog bg-white shadow-[0_14px_34px_rgb(16_18_23/0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-laria-blue/35 hover:shadow-[0_22px_48px_rgb(16_18_23/0.11)]">
       <div className="relative aspect-[4/3] bg-laria-cloud">
         {activePhoto ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
+            width={800}
+            height={600}
+            sizes="(max-width: 459px) 100vw, (max-width: 767px) 50vw, (max-width: 1279px) 33vw, 320px"
             src={activePhoto.image_url}
             alt={activePhoto.alt_text ?? listing.title}
             loading="lazy"

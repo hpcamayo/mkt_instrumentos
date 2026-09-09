@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import {
   Drum,
   Guitar,
@@ -54,21 +51,6 @@ const categoryVisuals: Record<string, string> = {
   "audio interfaces": "from-slate-900 via-blue-900 to-laria-blue",
 };
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 },
-};
-
 export function CategoriesSection({ categories }: { categories: Category[] }) {
   return (
     <section className="bg-white py-10 md:py-14">
@@ -88,13 +70,7 @@ export function CategoriesSection({ categories }: { categories: Category[] }) {
           </p>
         </div>
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-100px" }}
-          className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8"
-        >
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
           {categories.map((category) => {
             const Icon =
               categoryIcons[category.value as keyof typeof categoryIcons] ??
@@ -104,12 +80,14 @@ export function CategoriesSection({ categories }: { categories: Category[] }) {
               "from-laria-graphite to-laria-blue";
 
             return (
-              <motion.div key={category.value} variants={item}>
+              <div key={category.value}>
                 <Link
                   href={`/listados?category=${encodeURIComponent(category.value)}`}
                   className="group block overflow-hidden rounded-lg border border-laria-fog bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-laria-steel hover:shadow-lg"
                 >
-                  <div className={`relative aspect-[4/3] bg-gradient-to-br ${visual}`}>
+                  <div
+                    className={`relative aspect-[4/3] bg-gradient-to-br ${visual}`}
+                  >
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_24%,rgba(255,255,255,0.34),transparent_28%)]" />
                     <Icon className="absolute bottom-3 right-3 h-12 w-12 text-white drop-shadow-lg transition group-hover:scale-105" />
                   </div>
@@ -122,10 +100,10 @@ export function CategoriesSection({ categories }: { categories: Category[] }) {
                     </p>
                   </div>
                 </Link>
-              </motion.div>
+              </div>
             );
           })}
-        </motion.div>
+        </div>
       </PageContainer>
     </section>
   );

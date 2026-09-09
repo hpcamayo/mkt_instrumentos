@@ -1,3 +1,6 @@
+import { redirect } from "next/navigation";
+import { Pagination } from "@/components/pagination";
+import { LISTINGS_PAGE_SIZE, parsePage, pageHref } from "@/lib/pagination";
 import type { Metadata } from "next";
 import { ListingCard } from "@/components/listing-card";
 import { ListingFilters } from "@/components/listing-filters";
@@ -40,9 +43,12 @@ type ActiveFilterChip = {
   href: string;
 };
 
-export default async function ListingsPage({ searchParams }: ListingsPageProps) {
+export default async function ListingsPage({
+  searchParams,
+}: ListingsPageProps) {
   const resolvedSearchParams = await searchParams;
   const filters = parseListingFilters(resolvedSearchParams);
+  const page = parsePage(resolvedSearchParams.page);
   const supabase = getPublicSupabaseClient();
 
   if (!supabase) {
@@ -78,6 +84,7 @@ export default async function ListingsPage({ searchParams }: ListingsPageProps) 
           status,
           is_verified
         ),
+        photo_count:listing_photo_count,
         listing_photos (
           id,
           listing_id,
@@ -144,21 +151,21 @@ export default async function ListingsPage({ searchParams }: ListingsPageProps) 
   });
   query = query.limit(1, { foreignTable: "listing_photos" });
 
-  const { count, data, error } = await query;
+  const { count, data, error } = await query
+    .order("id")
+    .range((page - 1) * LISTINGS_PAGE_SIZE, page * LISTINGS_PAGE_SIZE - 1)
+    .returns<ListingCardData[]>();
+  const lastPage = Math.max(1, Math.ceil((count ?? 0) / LISTINGS_PAGE_SIZE));
+  if (!error && page > lastPage)
+    redirect(pageHref("/listados", resolvedSearchParams, lastPage));
   const listings = (data ?? []) as ListingCardData[];
-  const photoCounts = await getListingPhotoCounts(
-    supabase,
-    listings.map((listing) => listing.id),
-  );
-  const listingsWithPhotoCounts = listings.map((listing) => ({
-    ...listing,
-    photo_count: photoCounts.get(listing.id) ?? listing.listing_photos.length,
-  }));
 
   return (
     <ListingsView
       filters={filters}
-      listings={listingsWithPhotoCounts}
+      listings={listings}
+      page={page}
+      searchParams={resolvedSearchParams}
       totalCount={count ?? 0}
       errorMessage={error?.message}
     />
@@ -169,6 +176,8 @@ type ListingsViewProps = {
   filters: ListingFiltersType;
   listings: ListingCardData[];
   totalCount: number;
+  page: number;
+  searchParams: Record<string, string | string[] | undefined>;
   errorMessage?: string;
 };
 
@@ -176,6 +185,8 @@ function ListingsView({
   filters,
   listings,
   totalCount,
+  page,
+  searchParams,
   errorMessage,
 }: ListingsViewProps) {
   return (
@@ -241,33 +252,19 @@ function ListingsView({
                 ))}
               </div>
             ) : null}
+            {!errorMessage && (
+              <Pagination
+                page={page}
+                total={totalCount}
+                path="/listados"
+                params={searchParams}
+              />
+            )}
           </div>
         </div>
       </PageContainer>
     </section>
   );
-}
-
-async function getListingPhotoCounts(
-  supabase: NonNullable<ReturnType<typeof getPublicSupabaseClient>>,
-  listingIds: string[],
-) {
-  const counts = new Map<string, number>();
-
-  if (listingIds.length === 0) {
-    return counts;
-  }
-
-  const { data } = await supabase
-    .from("listing_photos")
-    .select("listing_id")
-    .in("listing_id", listingIds);
-
-  for (const photo of data ?? []) {
-    counts.set(photo.listing_id, (counts.get(photo.listing_id) ?? 0) + 1);
-  }
-
-  return counts;
 }
 
 function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
@@ -328,7 +325,9 @@ function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
   );
 }
 
-function buildActiveFilterChips(filters: ListingFiltersType): ActiveFilterChip[] {
+function buildActiveFilterChips(
+  filters: ListingFiltersType,
+): ActiveFilterChip[] {
   const chips: ActiveFilterChip[] = [];
   const advancedConfig = getAdvancedFilterConfig(filters.instrumentType);
 
@@ -366,7 +365,13 @@ function buildActiveFilterChips(filters: ListingFiltersType): ActiveFilterChip[]
   }
 
   if (filters.sort !== "newest") {
-    addChip(chips, filters, "sort", "Orden", findLabel(sortOptions, filters.sort));
+    addChip(
+      chips,
+      filters,
+      "sort",
+      "Orden",
+      findLabel(sortOptions, filters.sort),
+    );
   }
 
   for (const [key, value] of Object.entries(filters.advanced)) {

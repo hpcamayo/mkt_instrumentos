@@ -176,7 +176,7 @@ Core local components:
 
 Generated/imported UI:
 - `components_v0/*`
-- `components_v0/ui/*`
+- Removed unused `components_v0/ui` scaffold
 
 The homepage uses `components_v0` sections, but marketplace data logic remains in the route page. v0-generated UI should be integrated carefully and should not replace Supabase/business logic blindly.
 
@@ -186,7 +186,7 @@ The UI visual refresh covers the homepage, listings/catalog page, listing detail
 
 Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/registro/vendedor` creates a Supabase Auth user, stores seller metadata for email confirmation callbacks, and upserts the matching `profiles` row when a session is available. `/auth/callback` also completes the seller profile from user metadata after email confirmation.
 
-Seller signup checks duplicate emails through `app/api/auth/check-email/route.ts` before calling Supabase `signUp()`. The route uses the server-only service-role client to scan Supabase Auth users and returns only an availability flag, because `profiles` does not currently store email. Repeated signup attempts show a Spanish error and a link to `/login` instead of a false "check your email" success state.
+Seller signup checks duplicate emails through `app/api/auth/check-email/route.ts` before calling Supabase `signUp()`. The route uses a service-only indexed Auth email lookup and returns only an availability flag, because `profiles` does not currently store email. Repeated signup attempts show a Spanish error and a link to `/login` instead of a false "check your email" success state.
 
 Signup confirmation emails redirect through `/auth/callback?next=/confirmacion-correo`. The success page is `/confirmacion-correo`; Supabase only needs the `/auth/callback` URL allowlisted for each domain.
 
@@ -242,3 +242,7 @@ Before merging significant changes:
 - Verify Supabase reads/writes.
 - Verify image uploads if forms/storage changed.
 - Review Vercel deployment logs.
+
+## Performance and reliability
+
+See `docs/performance.md` for pagination, responsive images, streamed recommendations, narrowed authentication middleware, computed photo counts, and the signed `/api/submissions` workflow. Homepage sections are server components. The unused v0 UI library and animation/theme dependencies were removed.

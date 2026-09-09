@@ -1,15 +1,17 @@
+import { redirect } from "next/navigation";
+import { Pagination } from "@/components/pagination";
+import { LISTINGS_PAGE_SIZE, parsePage, pageHref } from "@/lib/pagination";
+import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { notFound } from "next/navigation";
 import { ListingCard } from "@/components/listing-card";
 import { PageContainer } from "@/components/page-container";
-import {
-  buildStoreWhatsAppUrl,
-  type ListingCardData,
-} from "@/lib/listings";
+import { buildStoreWhatsAppUrl, type ListingCardData } from "@/lib/listings";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 export const dynamic = "force-dynamic";
 
 type StorePageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
   params: Promise<{
     slug: string;
   }>;
@@ -28,8 +30,12 @@ type StoreData = {
   is_verified: boolean;
 };
 
-export default async function StorePage({ params }: StorePageProps) {
+export default async function StorePage({
+  params,
+  searchParams,
+}: StorePageProps) {
   const { slug } = await params;
+  const page = parsePage((await searchParams).page);
   const supabase = getPublicSupabaseClient();
 
   if (!supabase) {
@@ -60,7 +66,7 @@ export default async function StorePage({ params }: StorePageProps) {
     notFound();
   }
 
-  const { data } = await supabase
+  const { data, count, error } = await supabase
     .from("listings")
     .select(
       `
@@ -86,6 +92,7 @@ export default async function StorePage({ params }: StorePageProps) {
           status,
           is_verified
         ),
+        photo_count:listing_photo_count,
         listing_photos (
           id,
           listing_id,
@@ -94,6 +101,7 @@ export default async function StorePage({ params }: StorePageProps) {
           sort_order
         )
       `,
+      { count: "exact" },
     )
     .eq("status", "approved")
     .eq("store_id", store.id)
@@ -102,61 +110,53 @@ export default async function StorePage({ params }: StorePageProps) {
       foreignTable: "listing_photos",
       ascending: true,
     })
-    .limit(1, { foreignTable: "listing_photos" });
+    .limit(1, { foreignTable: "listing_photos" })
+    .order("id")
+    .range((page - 1) * LISTINGS_PAGE_SIZE, page * LISTINGS_PAGE_SIZE - 1)
+    .returns<ListingCardData[]>();
 
+  const lastPage = Math.max(1, Math.ceil((count ?? 0) / LISTINGS_PAGE_SIZE));
+  if (!error && page > lastPage)
+    redirect(pageHref(`/tiendas/${slug}`, {}, lastPage));
   const listings = (data ?? []) as ListingCardData[];
-  const photoCounts = await getListingPhotoCounts(
-    supabase,
-    listings.map((listing) => listing.id),
-  );
 
   return (
     <StoreView
       store={store as StoreData}
-      listings={listings.map((listing) => ({
-        ...listing,
-        photo_count: photoCounts.get(listing.id) ?? listing.listing_photos.length,
-      }))}
+      listings={listings}
+      page={page}
+      total={count ?? 0}
+      hasError={Boolean(error)}
     />
   );
-}
-
-async function getListingPhotoCounts(
-  supabase: NonNullable<ReturnType<typeof getPublicSupabaseClient>>,
-  listingIds: string[],
-) {
-  const counts = new Map<string, number>();
-
-  if (listingIds.length === 0) {
-    return counts;
-  }
-
-  const { data } = await supabase
-    .from("listing_photos")
-    .select("listing_id")
-    .in("listing_id", listingIds);
-
-  for (const photo of data ?? []) {
-    counts.set(photo.listing_id, (counts.get(photo.listing_id) ?? 0) + 1);
-  }
-
-  return counts;
 }
 
 function StoreView({
   store,
   listings,
+  page,
+  total,
+  hasError,
 }: {
   store: StoreData;
   listings: ListingCardData[];
+  page: number;
+  total: number;
+  hasError: boolean;
 }) {
   return (
-    <PageContainer as="section" className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6">
+    <PageContainer
+      as="section"
+      className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6"
+    >
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="relative h-40 bg-slate-100 sm:h-56">
           {store.banner_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
+              width={1600}
+              height={400}
+              sizes="100vw"
+              priority
               src={store.banner_url}
               alt={`Banner de ${store.name}`}
               className="h-full w-full object-cover"
@@ -171,8 +171,10 @@ function StoreView({
         <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-[auto_1fr_auto] md:items-end">
           <div className="-mt-16 h-28 w-28 overflow-hidden rounded-lg border-4 border-white bg-slate-100 shadow-sm">
             {store.logo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
+                width={112}
+                height={112}
+                sizes="112px"
                 src={store.logo_url}
                 alt={`Logo de ${store.name}`}
                 className="h-full w-full object-cover"
@@ -226,11 +228,15 @@ function StoreView({
           </h2>
         </div>
         <p className="text-sm font-medium text-slate-500">
-          {listings.length} resultado{listings.length === 1 ? "" : "s"}
+          {total} resultado{total === 1 ? "" : "s"}
         </p>
       </div>
 
-      {listings.length > 0 ? (
+      {hasError ? (
+        <p role="alert">
+          No se pudieron cargar los productos. Intenta nuevamente.
+        </p>
+      ) : listings.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((listing) => (
             <ListingCard key={listing.id} listing={listing} />
@@ -238,11 +244,16 @@ function StoreView({
         </div>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
-          <p className="font-semibold text-ink">Esta tienda aún no tiene productos publicados.</p>
+          <p className="font-semibold text-ink">
+            Esta tienda aún no tiene productos publicados.
+          </p>
           <p className="mt-1 leading-6">
             Vuelve pronto para revisar sus instrumentos aprobados.
           </p>
         </div>
+      )}
+      {!hasError && (
+        <Pagination page={page} total={total} path={`/tiendas/${store.slug}`} />
       )}
     </PageContainer>
   );

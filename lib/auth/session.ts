@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
@@ -13,7 +14,7 @@ export async function getCurrentSession() {
   return data.session;
 }
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async function getCurrentUser() {
   const supabase = await getSupabaseServerClient();
 
   if (!supabase) {
@@ -27,7 +28,7 @@ export async function getCurrentUser() {
   }
 
   return data.user;
-}
+});
 
 export async function requireUser(nextPath?: string) {
   const user = await getCurrentUser();
