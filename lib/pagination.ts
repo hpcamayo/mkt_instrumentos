@@ -20,3 +20,15 @@ export function pageHref(
   if (page > 1) query.set("page", String(page));
   return query.size ? `${path}?${query}` : path;
 }
+
+// PostgREST returns 416 before supplying a count when the offset is past the end.
+export function getPageRedirect(
+  page: number,
+  count: number | null,
+  error: { code: string } | null,
+) {
+  if (error?.code === "PGRST103" && page > 1) return 1;
+  if (error || count === null) return null;
+  const lastPage = Math.max(1, Math.ceil(count / LISTINGS_PAGE_SIZE));
+  return page > lastPage ? lastPage : null;
+}

@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 import { Pagination } from "@/components/pagination";
-import { LISTINGS_PAGE_SIZE, parsePage, pageHref } from "@/lib/pagination";
+import {
+  LISTINGS_PAGE_SIZE,
+  parsePage,
+  pageHref,
+  getPageRedirect,
+} from "@/lib/pagination";
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { notFound } from "next/navigation";
 import { ListingCard } from "@/components/listing-card";
@@ -115,9 +120,9 @@ export default async function StorePage({
     .range((page - 1) * LISTINGS_PAGE_SIZE, page * LISTINGS_PAGE_SIZE - 1)
     .returns<ListingCardData[]>();
 
-  const lastPage = Math.max(1, Math.ceil((count ?? 0) / LISTINGS_PAGE_SIZE));
-  if (!error && page > lastPage)
-    redirect(pageHref(`/tiendas/${slug}`, {}, lastPage));
+  const redirectPage = getPageRedirect(page, count, error);
+  if (redirectPage !== null)
+    redirect(pageHref(`/tiendas/${slug}`, {}, redirectPage));
   const listings = (data ?? []) as ListingCardData[];
 
   return (

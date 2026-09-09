@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 import { Pagination } from "@/components/pagination";
-import { LISTINGS_PAGE_SIZE, parsePage, pageHref } from "@/lib/pagination";
+import {
+  LISTINGS_PAGE_SIZE,
+  parsePage,
+  pageHref,
+  getPageRedirect,
+} from "@/lib/pagination";
 import type { Metadata } from "next";
 import { ListingCard } from "@/components/listing-card";
 import { ListingFilters } from "@/components/listing-filters";
@@ -155,9 +160,9 @@ export default async function ListingsPage({
     .order("id")
     .range((page - 1) * LISTINGS_PAGE_SIZE, page * LISTINGS_PAGE_SIZE - 1)
     .returns<ListingCardData[]>();
-  const lastPage = Math.max(1, Math.ceil((count ?? 0) / LISTINGS_PAGE_SIZE));
-  if (!error && page > lastPage)
-    redirect(pageHref("/listados", resolvedSearchParams, lastPage));
+  const redirectPage = getPageRedirect(page, count, error);
+  if (redirectPage !== null)
+    redirect(pageHref("/listados", resolvedSearchParams, redirectPage));
   const listings = (data ?? []) as ListingCardData[];
 
   return (

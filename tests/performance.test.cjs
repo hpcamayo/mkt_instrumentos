@@ -170,3 +170,11 @@ test("changed data cannot silently replace an uncertain submission", async () =>
     global.fetch = previous;
   }
 });
+
+test("out-of-range database responses recover without hiding other failures", () => {
+  const { getPageRedirect } = load("lib/pagination.ts");
+  assert.equal(getPageRedirect(999, null, { code: "PGRST103" }), 1);
+  assert.equal(getPageRedirect(3, 25, null), 2);
+  assert.equal(getPageRedirect(1, 25, null), null);
+  assert.equal(getPageRedirect(3, null, { code: "PGRST000" }), null);
+});
