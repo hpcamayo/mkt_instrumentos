@@ -4,7 +4,9 @@ Base inicial para un marketplace MVP de instrumentos musicales en Perú.
 
 El proyecto usa Next.js, TypeScript, Tailwind CSS y Supabase para listados, tiendas, formularios públicos, almacenamiento de imágenes y moderación básica.
 
-## Alcance MVP
+## Alcance de Laria V1
+
+La fuente canónica del comportamiento de producto es [`docs/functional-spec.md`](docs/functional-spec.md). El código y las migraciones describen el estado actual de implementación, que todavía no cubre todo el contrato V1.
 
 - Vendedores individuales publican instrumentos usados.
 - Tiendas pequeñas tienen páginas públicas.
@@ -13,13 +15,14 @@ El proyecto usa Next.js, TypeScript, Tailwind CSS y Supabase para listados, tien
 - Toda la UI debe estar en español.
 - Diseño mobile-first.
 
-Fuera del MVP inicial:
+V1 también requiere cuentas Particular y Tienda, propiedad de publicaciones, favoritos, alertas, analítica, reportes, moderación ampliada, verificación de transacciones originadas en Laria y reseñas bidireccionales asociadas exclusivamente a esas transacciones verificadas.
+
+Fuera de V1:
 
 - Pagos
 - Checkout
 - Envíos
 - Escrow
-- Reseñas
 - Comisiones
 - Suscripciones
 - Chat interno
@@ -84,7 +87,7 @@ La migración inicial crea:
 - Enums de tipo de vendedor, estado de publicación, estado de tienda y plan de tienda.
 - Políticas RLS para lectura pública de contenido aprobado o activo, inserción pública como pendiente y actualización administrativa.
 
-No incluye pagos, checkout, envíos, reseñas, suscripciones, comisiones ni chat.
+El esquema actual no incluye todavía favoritos, alertas, transacciones verificadas ni reseñas. Esto es una brecha de implementación del contrato V1, no una exclusión de producto. Pagos, checkout, envíos, suscripciones, comisiones y chat siguen fuera de V1.
 
 ## Datos de prueba
 

@@ -1,12 +1,21 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
-export type Submission = { id: string; kind: "listing" | "store" };
+export type Submission = {
+  id: string;
+  kind: "listing" | "store";
+  ownerUserId?: string;
+};
 
 export function createSubmissionToken(
   kind: Submission["kind"],
   secret: string,
+  ownerUserId?: string,
 ) {
-  const submission: Submission = { id: randomUUID(), kind };
+  const submission: Submission = {
+    id: randomUUID(),
+    kind,
+    ...(ownerUserId ? { ownerUserId } : {}),
+  };
   const payload = Buffer.from(JSON.stringify(submission)).toString("base64url");
   return { ...submission, token: `${payload}.${sign(payload, secret)}` };
 }
@@ -28,7 +37,17 @@ export function readSubmissionToken(
       !["listing", "store"].includes(value.kind)
     )
       return null;
-    return { id: value.id, kind: value.kind };
+    if (
+      value.ownerUserId !== undefined &&
+      !/^[0-9a-f-]{36}$/.test(value.ownerUserId)
+    ) {
+      return null;
+    }
+    return {
+      id: value.id,
+      kind: value.kind,
+      ...(value.ownerUserId ? { ownerUserId: value.ownerUserId } : {}),
+    };
   } catch {
     return null;
   }

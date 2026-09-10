@@ -1,4 +1,7 @@
 import { instrumentFilterGroups } from "@/lib/instrument-filters";
+import { resolveParticularSeller } from "@/lib/seller-contact";
+
+export { resolveParticularSeller } from "@/lib/seller-contact";
 
 export const categoryOptions = [
   { value: "guitars", label: "Guitarras" },
@@ -66,6 +69,14 @@ type StoreSummary = {
   created_at?: string | null;
 };
 
+export type ParticularProfileSummary = {
+  full_name: string | null;
+  phone: string | null;
+  city: string | null;
+  region: string;
+  created_at: string;
+};
+
 export type ListingCardData = {
   id: string;
   store_id?: string | null;
@@ -93,6 +104,8 @@ export type ListingDetailData = ListingCardData & {
   description: string | null;
   contact_name: string | null;
   whatsapp_phone: string;
+  owner_user_id: string | null;
+  profiles: ParticularProfileSummary | ParticularProfileSummary[] | null;
 };
 
 export function getCategoryLabel(category: string) {
@@ -136,7 +149,8 @@ export function getListingDisplayTitle(listing: {
 }
 
 export function buildWhatsAppUrl(listing: ListingDetailData) {
-  const phone = listing.whatsapp_phone.replace(/\D/g, "");
+  const contact = resolveParticularSeller(listing);
+  const phone = String(contact.phone ?? listing.whatsapp_phone).replace(/\D/g, "");
   const message = encodeURIComponent(
     `Hola, vi tu publicación "${listing.title}" en Instrumentos Perú. ¿Sigue disponible?`,
   );

@@ -6,6 +6,10 @@ This document is the owner-facing setup reference for Supabase Auth email copy d
 
 Laria uses Supabase Auth invite links and magic links. There is no external email provider in this sprint.
 
+Password recovery also uses Supabase Auth. The app calls `resetPasswordForEmail` with `/auth/callback?next=/restablecer-contrasena`; after token verification, the user sets a new password in the authenticated recovery session. Marketplace email infrastructure is not involved.
+
+All browser auth emails must send their token hash through Laria's callback. The callback verifies that token server-side and writes the session cookies on the redirect response. Do not use the default confirmation URL in these three templates: its implicit URL fragment cannot establish the server-readable session required by protected Next.js routes.
+
 Type-specific invite behavior is handled by the invite metadata and redirect URL:
 - Seller invite metadata: `account_type='seller'`
 - Store owner invite metadata: `account_type='store_owner'`
@@ -137,13 +141,49 @@ Body:
 <p>Usa este enlace para ingresar a tu cuenta de Laria:</p>
 
 <p>
-  <a href="{{ .ConfirmationURL }}">Ingresar a Laria</a>
+  <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=magiclink">Ingresar a Laria</a>
 </p>
 
 <p>Este enlace es personal. Si no solicitaste iniciar sesión, puedes ignorar este correo.</p>
 
 <p>Equipo Laria</p>
 ```
+
+## Password Recovery
+
+Use Supabase's built-in `Reset Password` template. Its link must retain the redirect configured by the app so the browser returns through `/auth/callback?next=/restablecer-contrasena`:
+
+```html
+<h2>Restablece tu contraseña de Laria</h2>
+
+<p>Usa este enlace para elegir una contraseña nueva:</p>
+
+<p>
+  <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=recovery">Restablecer contraseña</a>
+</p>
+
+<p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+```
+
+The callback forces recovery tokens to `/restablecer-contrasena`, regardless of an injected `next` value. Invalid or expired tokens return safely to login without creating a session.
+
+## Particular Signup Confirmation
+
+Use the `Confirm signup` template with the token-hash callback link:
+
+```html
+<h2>Confirma tu cuenta Particular en Laria</h2>
+
+<p>Confirma tu correo para comprar y vender instrumentos en Laria:</p>
+
+<p>
+  <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email">Confirmar mi correo</a>
+</p>
+
+<p>Si no creaste esta cuenta, puedes ignorar este correo.</p>
+```
+
+The signup redirect includes the encoded destination `/mi-cuenta?confirmed=1`, so successful confirmation opens the dashboard with an explicit verified-email message.
 
 ## Manual Supabase Setup
 
@@ -152,9 +192,11 @@ In Supabase Dashboard:
 2. Go to Authentication settings.
 3. Confirm the redirect URLs listed above are allowed.
 4. Go to Email Templates.
-5. Set the `Magic Link` subject/body from this document.
+5. Set the `Confirm signup`, `Magic Link`, and `Reset Password` links to the token-hash versions in this document.
 6. Set the `Invite user` template. If Supabase allows only one invite template, use the store-neutral or most common version and keep type-specific messaging on the post-click onboarding pages.
-7. Test a seller invite with `redirectTo=/auth/callback?next=/registro/vendedor/invitacion`.
-8. Test a store owner invite with `redirectTo=/auth/callback?next=/registro/tienda/invitacion`.
+7. Test a real Particular confirmation and confirm it ends at `/mi-cuenta?confirmed=1` with an authenticated session.
+8. Test a magic link and a recovery link. Confirm protected navigation remains authenticated and recovery always opens `/restablecer-contrasena`.
+9. Test a seller invite with `redirectTo=/auth/callback?next=/registro/vendedor/invitacion`.
+10. Test a store owner invite with `redirectTo=/auth/callback?next=/registro/tienda/invitacion`.
 
-Do not add payments, checkout, chat, reviews, delivery, commissions, or subscriptions as part of account email setup.
+Keep this document limited to Supabase Auth messages. Payments, checkout, chat, delivery, commissions, and subscriptions remain post-V1; required verified-transaction review notifications belong to the future centralized marketplace email flow, not to account setup templates.

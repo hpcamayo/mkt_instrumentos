@@ -16,6 +16,8 @@ export type Database = {
     }
     Functions: {
       auth_email_exists: { Args: { p_email: string }; Returns: boolean }
+      can_add_listing_photo: { Args: { p_listing_id: string }; Returns: boolean }
+      can_remove_listing_photo: { Args: { p_listing_id: string }; Returns: boolean }
       complete_public_submission: { Args: { p_id: string; p_kind: string; p_fields: Json; p_photos: Json }; Returns: string }
       listing_photo_count: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: number }
       graphql: {
@@ -356,6 +358,8 @@ export type Database = {
     }
     Functions: {
       auth_email_exists: { Args: { p_email: string }; Returns: boolean }
+      can_add_listing_photo: { Args: { p_listing_id: string }; Returns: boolean }
+      can_remove_listing_photo: { Args: { p_listing_id: string }; Returns: boolean }
       complete_public_submission: { Args: { p_id: string; p_kind: string; p_fields: Json; p_photos: Json }; Returns: string }
       listing_photo_count: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: number }
       can_manage_listing: { Args: { p_listing_id: string }; Returns: boolean }
@@ -577,4 +581,3 @@ export const Constants = {
     },
   },
 } as const
-

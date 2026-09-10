@@ -7,8 +7,8 @@ import { LocationFields } from "@/components/location-fields";
 import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   upsertSellerProfile,
+  validateSellerProfileInput,
 } from "@/lib/auth/profile";
-import { normalizePeruRegion } from "@/lib/location";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 type FormState =
@@ -23,8 +23,6 @@ export function SellerSignupForm() {
   const router = useRouter();
   const [state, setState] = useState<FormState>("loading");
   const [message, setMessage] = useState<string | null>(null);
-  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
-
   useEffect(() => {
     let isMounted = true;
 
@@ -41,10 +39,13 @@ export function SellerSignupForm() {
 
       const { data } = await supabase.auth.getUser();
 
-      if (isMounted) {
-        setCurrentEmail(data.user?.email ?? null);
-        setState("idle");
+      if (!isMounted) return;
+      if (data.user) {
+        router.replace("/mi-cuenta");
+        router.refresh();
+        return;
       }
+      setState("idle");
     }
 
     loadUser();
@@ -52,7 +53,7 @@ export function SellerSignupForm() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,9 +65,7 @@ export function SellerSignupForm() {
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const phone = String(formData.get("phone") ?? "").trim();
     const city = String(formData.get("city") ?? "").trim();
-    const region = normalizePeruRegion(
-      String(formData.get("region") ?? "").trim(),
-    );
+    const region = String(formData.get("region") ?? "");
     const password = String(formData.get("password") ?? "");
     const acceptedRules = formData.get("acceptedRules") === "on";
     const supabase = getSupabaseBrowserClient();
@@ -77,42 +76,23 @@ export function SellerSignupForm() {
       return;
     }
 
-    if (!fullName || !phone || !city) {
-      setState("error");
-      setMessage("Completa tu nombre, WhatsApp y ciudad.");
-      return;
-    }
+    const validatedProfile = validateSellerProfileInput({
+      fullName,
+      phone,
+      city,
+      region,
+    });
 
-    if (!region) {
+    if (!validatedProfile.ok) {
       setState("error");
-      setMessage("Selecciona una region valida de Peru.");
+      setMessage(validatedProfile.message);
       return;
     }
+    const normalizedProfile = validatedProfile.profile;
 
     if (!acceptedRules) {
       setState("error");
       setMessage("Debes aceptar las reglas del marketplace para continuar.");
-      return;
-    }
-
-    const { data: userData } = await supabase.auth.getUser();
-
-    if (userData.user) {
-      const result = await upsertSellerProfile(supabase, userData.user.id, {
-        fullName,
-        phone,
-        city,
-        region,
-      });
-
-      if (!result.ok) {
-        setState("error");
-        setMessage(result.message);
-        return;
-      }
-
-      router.push("/mi-cuenta");
-      router.refresh();
       return;
     }
 
@@ -138,7 +118,7 @@ export function SellerSignupForm() {
       return;
     }
 
-    const emailRedirectTo = `${window.location.origin}/auth/callback?next=/confirmacion-correo`;
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/mi-cuenta?confirmed=1")}`;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -146,10 +126,10 @@ export function SellerSignupForm() {
         emailRedirectTo,
         data: {
           account_type: INDIVIDUAL_SELLER_ACCOUNT_TYPE,
-          full_name: fullName,
-          phone,
-          city,
-          region,
+          full_name: normalizedProfile.fullName,
+          phone: normalizedProfile.phone,
+          city: normalizedProfile.city,
+          region: normalizedProfile.region,
           marketplace_rules_accepted: true,
         },
       },
@@ -171,10 +151,7 @@ export function SellerSignupForm() {
 
     if (data.session && data.user) {
       const result = await upsertSellerProfile(supabase, data.user.id, {
-        fullName,
-        phone,
-        city,
-        region,
+        ...normalizedProfile,
       });
 
       if (!result.ok) {
@@ -183,24 +160,19 @@ export function SellerSignupForm() {
         return;
       }
 
-      router.push("/mi-cuenta");
+      router.push("/mi-cuenta?welcome=1");
       router.refresh();
       return;
     }
 
     setState("sent");
-    setMessage("Revisa tu correo para activar tu cuenta de vendedor.");
+    setMessage(
+      "Revisa tu correo para confirmar tu cuenta Particular. El enlace te llevará directamente a Mi cuenta.",
+    );
   }
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
-      {currentEmail ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          Estas ingresando como {currentEmail}. Completaremos tu perfil de
-          vendedor.
-        </div>
-      ) : null}
-
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block sm:col-span-2">
           <span className="text-sm font-semibold text-ink">Nombre completo</span>
@@ -213,8 +185,7 @@ export function SellerSignupForm() {
           />
         </label>
 
-        {!currentEmail ? (
-          <>
+        <>
             <label className="block">
               <span className="text-sm font-semibold text-ink">Correo</span>
               <input
@@ -239,8 +210,7 @@ export function SellerSignupForm() {
                 placeholder="Minimo 6 caracteres"
               />
             </label>
-          </>
-        ) : null}
+        </>
 
         <label className="block">
           <span className="text-sm font-semibold text-ink">WhatsApp</span>
@@ -295,9 +265,9 @@ export function SellerSignupForm() {
       >
         {state === "submitting"
           ? "Creando cuenta..."
-          : currentEmail
-            ? "Completar perfil"
-            : "Crear cuenta de vendedor"}
+          : state === "loading"
+            ? "Revisando sesión..."
+            : "Crear cuenta Particular"}
       </button>
 
       <p className="text-center text-sm text-slate-600">

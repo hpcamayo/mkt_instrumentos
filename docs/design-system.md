@@ -4,7 +4,7 @@ This is the canonical reference for Laria UI work. Read this before changing fro
 
 ## Brand Principles
 
-Laria is a focused music-gear marketplace for Peru. The interface should feel commercial, clear, and premium without implying platform payments, checkout, delivery, ratings, or buyer protection that the product does not support.
+Laria is a focused music-gear marketplace for Peru. The interface should feel commercial, clear, and premium without implying platform payments, checkout, delivery, or buyer protection that the product does not support. V1 ratings/reviews must appear only when backed by the verified-transaction workflow in `docs/functional-spec.md`.
 
 Design should prioritize:
 - Fast browsing and comparison.
@@ -76,7 +76,7 @@ Sprint scope was UI-only:
 - Laria logo stays yellow.
 - Navigation links use white or light gray.
 - Publishing/selling CTA can use yellow when present.
-- Do not add cart, favorites, checkout, or search behavior unless the feature already exists or is explicitly requested.
+- Do not add cart or checkout. Favorites and search-alert behavior are frozen V1 requirements but must appear only when backed by their real implementation, not as decorative controls.
 
 ## Background Rules
 
@@ -132,7 +132,7 @@ Cards should match the catalog style: white card, subtle border, soft shadow, bl
 - Price is large, dark, and high contrast.
 - WhatsApp contact remains the primary path and uses the yellow CTA.
 - Seller/store trust, description, full specs, similar items, and more-from-seller/store sections use clean white panels.
-- Do not add payments, checkout, shipping, favorites, ratings, or fake trust metrics.
+- Do not add payments, checkout, shipping, or fake trust metrics. Favorites and verified-transaction ratings/reviews may be added only with their real V1 data and behavior.
 
 ## User/Seller Panel Rules
 

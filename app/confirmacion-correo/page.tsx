@@ -19,23 +19,23 @@ export default async function EmailConfirmationPage() {
           Tu correo ha sido confirmado
         </h1>
         <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base">
-          Ya puedes ingresar a tu cuenta de Laria y empezar a administrar tus
-          publicaciones.
+          Tu cuenta Particular está lista para comprar, vender y administrar tu
+          información en Laria.
         </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
             className="inline-flex items-center justify-center rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-            href="/login"
+            href={user ? "/mi-cuenta" : "/login"}
           >
-            Ingresar
+            {user ? "Ir a Mi cuenta" : "Ingresar"}
           </Link>
           {user ? (
             <Link
               className="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-3 text-sm font-semibold text-ink transition hover:border-brass hover:text-brass"
               href="/mi-cuenta"
             >
-              Ir a mis publicaciones
+              Abrir el panel
             </Link>
           ) : null}
         </div>

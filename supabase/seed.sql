@@ -433,6 +433,10 @@ insert into public.listings (
     '51981234567'
   );
 
+-- The seed restores historical moderation metadata through the same narrowly
+-- scoped trigger bypass used by controlled server functions.
+select set_config('app.allow_listing_admin_fields', 'true', false);
+
 update public.listings as listing
 set
   instrument_type = metadata.instrument_type,
@@ -695,6 +699,8 @@ from (
     )
 ) as metadata(id, instrument_type, attributes, published_at, view_count)
 where listing.id = metadata.id;
+
+select set_config('app.allow_listing_admin_fields', '', false);
 
 insert into public.listing_photos (
   id,

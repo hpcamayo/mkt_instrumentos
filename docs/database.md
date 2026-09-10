@@ -1,6 +1,6 @@
 # Database and Supabase
 
-This document reflects the actual current migration files and TypeScript types, plus business expectations from Laria planning docs.
+This document reflects the actual current migration files and TypeScript types. `docs/functional-spec.md` is canonical for frozen V1 behavior; schema gaps recorded here are implementation gaps, not product exclusions.
 
 ## Supabase Usage
 
@@ -18,7 +18,7 @@ Environment variables used in current code:
 
 Important:
 - `NEXT_PUBLIC_SUPABASE_URL` should be only the base Supabase URL, for example `https://xxxxx.supabase.co`, not `/rest/v1/`.
-- `SUPABASE_SERVICE_ROLE_KEY` is used only by `lib/supabase/admin-client.ts` for future server-side admin/invite actions.
+- `SUPABASE_SERVICE_ROLE_KEY` is accessed only through `lib/supabase/admin-client.ts` for current trusted invite, email-lookup, and submission server routes and future server actions.
 - `SUPABASE_SERVICE_ROLE_KEY` must stay server-only and must never be exposed to browser code or prefixed with `NEXT_PUBLIC_`.
 
 ## Current Tables
@@ -33,7 +33,7 @@ Older Laria business docs describe the intended model in product language. The c
 - Store plan exists as `listing_plan`; there is no separate `listing_limit` column yet.
 - Current instrument types include plural values for some groups: `microphones`, `pedals`, and `amplifiers`.
 
-When in doubt, treat migration files and the live Supabase schema as the implementation source of truth. Planning names should only become schema names through an explicit migration and app update.
+Migration files and the live Supabase schema are the source of truth for current implementation only. The functional specification wins for required V1 behavior. Product names should become schema names only through an explicit migration and app update.
 
 `lib/supabase/database.types.ts` includes the Phase 2 account tables, ownership fields, enums, and helper RPCs. Keep it aligned with later migrations. The PostgREST computed photo-count field uses explicit query result types because the SDK select parser does not infer computed columns.
 
@@ -55,7 +55,7 @@ Added by `20260516180000_phase_2_accounts.sql`:
 
 ### `public.store_members`
 
-Purpose: link store accounts to store records and support future multiple employees per store.
+Purpose: currently links store accounts to store records and technically supports multiple employees. Frozen V1 uses one effective owner account per store; employee/staff management is post-V1.
 
 Added by `20260516180000_phase_2_accounts.sql`:
 - `id uuid primary key`
@@ -105,8 +105,9 @@ Current behavior:
 - Verified stores are highlighted through `is_verified`.
 - Phase 2 account-aware store applications can set `owner_user_id`; admin approval still controls public visibility and verification.
 
-Future business expectations:
-- Store plans may become monetized packages such as 20, 50, or 100 listings.
+Frozen V1 requirement and current gap:
+- No paid store plans are active. Every free store has a 50-concurrent-listing cap counting `pending` and `approved`; current schema/app logic does not enforce it.
+- `is_verified` must grant direct publication/edit authority and verification must approve current pending inventory; current code mainly treats it as a badge.
 - Existing code still uses `name` and `whatsapp_phone`; do not introduce duplicate `store_name` or `whatsapp` columns unless a later migration intentionally renames the app model.
 
 ### `public.listings`
@@ -153,16 +154,13 @@ Current behavior:
 - New individual submissions enter as `pending`.
 - Admin can set listing status to `approved`, `rejected`, `hidden`, or `sold`.
 - Phase 2 account-aware listings can be owned by `owner_user_id`; legacy listings keep `owner_user_id=null` and continue to display through existing contact fields.
+- New self-service Particular listings always set `owner_user_id`, remain `pending`, and copy profile contact values only as a compatibility snapshot. Approved owned listings resolve current seller identity/contact from `profiles`.
 - `created_by_source` tracks `legacy`, `self_service`, `admin_invite`, or `admin`.
 - `published_at` is used for newest sort and detail metadata. If null, detail metadata falls back to `created_at`.
 - `view_count` is incremented by an RPC when detail pages are opened.
 - Listing detail pages render `attributes` as user-facing specification rows through `lib/listing-specs.ts`, using labels/options from `lib/instrument-filters.ts`. Empty attributes are hidden and raw JSON should not be shown in the UI.
-- Listing detail seller/store trust boxes count active approved listings by `store_id` for stores and by `whatsapp_phone` for individual sellers, because full seller accounts do not exist yet.
-- Listing detail recommendation sections only read `status='approved'` listings. Similar listings exclude the current listing, prioritize the same `instrument_type` or category, and use `brand` as a secondary relevance signal. More-from-seller/store listings use `store_id` for stores and `whatsapp_phone` for individual sellers.
-
-Important current gap:
-- The public seller form does not yet collect `instrument_type` or `attributes`, although advanced filtering uses those fields.
-- Individual seller listing counts are a best-effort contact-based signal until seller accounts exist.
+- Listing detail seller/store trust boxes count approved listings by `store_id` for stores and by `owner_user_id` for account-owned Particular listings; legacy individual listings retain the WhatsApp fallback.
+- Seller and admin forms reuse `lib/instrument-filters.ts` for `instrument_type` and labeled `attributes` controls.
 
 ### `public.listing_photos`
 
@@ -226,9 +224,8 @@ Public read policies:
 - Photos are readable when their listing is approved.
 
 Public insert policies:
-- Pending listings can be inserted by `anon` and `authenticated`.
 - Pending free stores can be inserted by `anon` and `authenticated`.
-- These legacy public insert policies are intentionally preserved until the account-aware form flow fully replaces them.
+- Anonymous listing and listing-photo insert policies are removed. Legacy anonymous rows remain intact.
 
 Account policies:
 - Users can read and update their own profile; admins can read and update all profiles.
@@ -239,6 +236,8 @@ Account policies:
 - Listing owners and store members can read/update their own manageable listings, but triggers block non-admin changes to protected listing fields such as `status`, `published_at`, `view_count`, `created_by_source`, `owner_user_id`, `store_id`, and `seller_type`.
 - Approved store members can insert pending store listings.
 - Listing managers can manage photo rows for listings they can manage.
+- Owners may add photo rows only while fewer than ten exist and delete them only while more than two remain. Storage update/delete access is limited to the authenticated user's folder.
+- Public users may read a profile only when it belongs to an approved account-owned Particular listing; this supports dynamic seller display without exposing unrelated profiles.
 
 Admin policies:
 - Admin read/update policies depend on `public.is_admin()`.
@@ -266,11 +265,16 @@ Admin policies:
 - Security-definer helper that allows admins, listing owners, and store members to manage a listing.
 
 `public.listing_meets_publish_requirements(listing_id)`:
-- Checks strict publication requirements for later self-service publishing: at least 3 photos, required brand/model/category/condition/location/contact fields, positive price, minimum description length, and accepted marketplace rules.
+- Checks 2–10 photos, a category-compatible instrument type, required brand/model/condition/location/contact fields, positive price, minimum description length, and accepted marketplace rules.
+
+`public.complete_public_submission(id, kind, fields, photos)`:
+- Remains service-role only and idempotent.
+- For listings, requires a complete Particular profile and rules acceptance, inserts `owner_user_id`, `instrument_type`, `attributes`, a profile contact snapshot, `created_by_source='self_service'`, and `status='pending'` with 2–10 ordered photos.
 
 `public.submit_listing_for_publication(listing_id)`:
-- Security-definer RPC for later app flows.
-- Publishes valid individual-owner listings or valid approved-store-member listings by setting `status='approved'` and `published_at`.
+- A valid Particular draft/submission can only move to or remain `pending`; the owner cannot self-approve through this RPC.
+- Existing store behavior is unchanged in this sprint and will be corrected with the dedicated store verification/direct-publication work.
+- Status transitions into `approved` are guarded by the shared publication requirements.
 
 ## Storage Buckets
 
@@ -278,9 +282,9 @@ Admin policies:
 - Public bucket.
 - Max file size: 5 MB.
 - Allowed MIME types: JPEG, PNG, WebP.
-- Public select and insert policies.
-- Public listing submissions upload to paths like `pending/{listingId}/{n}-{uuid}.{ext}`.
-- Phase 2 adds authenticated owner-folder upload support for future paths like `{auth.uid()}/{listingId}/...`.
+- Public select policy for approved listing images; anonymous insert is removed.
+- Particular submissions upload through authenticated owner paths `{auth.uid()}/{submissionId}/{sortOrder}.{ext}`.
+- Signed completion and cleanup remain server-controlled and service-role credentials never reach the browser.
 
 `store-assets`:
 - Public bucket.
@@ -291,7 +295,7 @@ Admin policies:
 - Phase 2 adds authenticated owner-folder upload support for future paths like `{auth.uid()}/{storeId}/...`.
 
 Tradeoff: buckets are public. Moderation controls public app visibility through database status, not private object access.
-Legacy public upload policies remain in place until the current unauthenticated forms are replaced.
+The store-assets legacy upload policy remains until the separate store-account sprint replaces that public form.
 
 ## Indexes and Metadata
 
@@ -339,17 +343,18 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 4. If using SQL Editor manually, verify migration history/state afterward so old migrations are not replayed later.
 5. Deploy code only after production Supabase has the required schema.
 
-## Future Tables Not Yet Implemented
+## Missing V1 Data Models and Post-V1 Concepts
 
-Do not add these until explicitly requested:
-- `favorites`
-- `saved_searches`
-- `seller_accounts`
-- `featured_listing_orders`
-- `store_plan_subscriptions`
+Frozen V1 requires data models for favorites, exact-state search alerts and delivery deduplication, price-drop delivery, marketplace/contact events, listing revisions, verified transactions, two-way reviews, reports, analytics, and centralized marketplace email delivery. They are not present in current migrations.
 
-These are useful future concepts, but adding them early would create operational complexity before Laria has enough supply, store participation, and buyer demand to justify account, billing, or marketplace mechanics.
+The existing `profiles` table is the Particular/store-owner identity foundation; do not add a separate seller-only account that would prevent one Particular from buying and selling.
+
+Post-V1 concepts include `featured_listing_orders` and `store_plan_subscriptions`. The existing paid-sounding store-plan enum values are legacy schema possibilities, not active V1 products.
 
 ## September 2026 reliability migration
 
 `20260909120000_marketplace_performance.sql` adds an RLS-aware computed photo count, a service-only indexed email lookup, first-approval timestamps, bounded-browsing indexes, and atomic idempotent public submissions. See `docs/performance.md` for behavior and rollback-only verification.
+
+`20260910100000_particular_sprint_1.sql` binds Particular submissions to profiles, enforces the 2–10 contract in the publication RPC, removes anonymous listing creation/upload policies, enables approved seller-profile resolution, and adds minimum-preserving owner photo deletion.
+
+`20260910120000_sprint_1_owner_acceptance_fixes.sql` updates the Auth user trigger to persist normalized signup name, WhatsApp, city, and region without duplicate onboarding, safely fills only missing/default values on existing profiles from Auth metadata, and allows the shared `instrument_type='other'` fallback for supported categories.

@@ -20,11 +20,11 @@ Implemented September 2026, preserving the public pending-submission and admin-a
 ## Submission recovery
 
 - Images upload directly from the browser to Storage, avoiding server request-size limits.
-- `/api/submissions` issues a signed capability for a random submission ID. The server validates all fields and verifies uploaded paths before finalizing. Neither service-role credentials nor arbitrary object-deletion access is exposed to the browser.
-- `complete_public_submission` atomically inserts a pending listing and all photo records, or a pending free store. It is callable only by the service role. Repeated finalization with the same submission ID returns success without overwriting or duplicating records.
+- `/api/submissions` issues a signed capability for a random submission ID. Particular listing capabilities are bound to the authenticated user and upload under that user's storage folder. The server validates all fields and verifies uploaded paths before finalizing. Neither service-role credentials nor arbitrary object-deletion access is exposed to the browser.
+- `complete_public_submission` atomically inserts an owned pending Particular listing with 2–10 photo records, or a pending free store. It is callable only by the service role. Repeated finalization with the same submission ID returns success without overwriting or duplicating records.
 - Upload failures attempt to remove partial uploads. If cleanup fails, the retry token is retained so another attempt can reuse/clean the folder.
 - If the final response is lost, retry uses the same token without uploading again. Keep the form open and retry with the same values/files. Tokens are held in form memory; closing the page discards the attempt. Browser abandonment can still leave unreferenced storage objects; automatic orphan retention/cleanup is not configured.
-- Legacy public insert/upload policies remain for compatibility. This change does not migrate account ownership or change moderation rules.
+- Legacy anonymous listing rows remain compatible, but normal listing insert/upload policies now require an authenticated owner. The separate public store form remains unchanged until its sprint.
 
 ## Checks
 

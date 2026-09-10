@@ -2,22 +2,34 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   BarChart3,
+  CheckCircle2,
   ExternalLink,
   FileText,
   LogOut,
   Megaphone,
   Settings,
   UserRound,
+  AlertTriangle,
 } from "lucide-react";
 import { PageContainer } from "@/components/page-container";
 import { requireUser } from "@/lib/auth/session";
+import { isSellerProfileComplete } from "@/lib/auth/profile";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export const metadata = {
   title: "Mi cuenta",
 };
 
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    confirmed?: string;
+    password?: string;
+    welcome?: string;
+  }>;
+}) {
+  const status = await searchParams;
   const user = await requireUser("/mi-cuenta");
   const supabase = await getSupabaseServerClient();
   const { data: profile } = supabase
@@ -28,6 +40,7 @@ export default async function AccountPage() {
         .maybeSingle()
     : { data: null };
   const accountTypeLabel = getAccountTypeLabel(profile?.account_type);
+  const profileIsComplete = isSellerProfileComplete(profile);
   const locationLabel = [profile?.city, profile?.region]
     .filter(Boolean)
     .join(", ");
@@ -56,14 +69,17 @@ export default async function AccountPage() {
               <DashboardNavItem
                 icon={<FileText className="h-4 w-4" aria-hidden="true" />}
                 label="Publicaciones"
+                note="Próximo sprint"
               />
               <DashboardNavItem
                 icon={<UserRound className="h-4 w-4" aria-hidden="true" />}
                 label="Perfil"
+                href="/mi-cuenta/perfil"
               />
               <DashboardNavItem
                 icon={<Settings className="h-4 w-4" aria-hidden="true" />}
-                label="Configuración"
+                label="Seguridad"
+                href="/mi-cuenta/seguridad"
               />
             </nav>
 
@@ -76,6 +92,7 @@ export default async function AccountPage() {
               </Link>
               <Link
                 href="/logout"
+                prefetch={false}
                 className="laria-button-secondary min-h-11 gap-2 px-4 py-3 text-sm"
               >
                 <LogOut className="h-4 w-4" aria-hidden="true" />
@@ -85,6 +102,73 @@ export default async function AccountPage() {
           </aside>
 
           <div className="min-w-0 space-y-5">
+            {status.confirmed === "1" ? (
+              <section
+                role="status"
+                className="flex gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"
+              >
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                <div>
+                  <p className="font-black">Correo confirmado</p>
+                  <p className="mt-1 leading-6">
+                    Tu cuenta Particular está activa. Ya puedes comprar, vender
+                    y administrar tus datos desde este panel.
+                  </p>
+                </div>
+              </section>
+            ) : null}
+
+            {status.welcome === "1" ? (
+              <section
+                role="status"
+                className="flex gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"
+              >
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                <div>
+                  <p className="font-black">Cuenta Particular creada</p>
+                  <p className="mt-1 leading-6">
+                    Tu cuenta está activa y tus datos de perfil ya están guardados.
+                  </p>
+                </div>
+              </section>
+            ) : null}
+
+            {status.password === "updated" ? (
+              <section
+                role="status"
+                className="flex gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"
+              >
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                <p className="font-black">Tu contraseña se actualizó correctamente.</p>
+              </section>
+            ) : null}
+
+            {!profileIsComplete ? (
+              <section
+                aria-labelledby="incomplete-profile-heading"
+                className="flex flex-col gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex gap-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                  <div>
+                    <h2 id="incomplete-profile-heading" className="font-black">
+                      Completa tu perfil Particular
+                    </h2>
+                    <p className="mt-1 text-sm leading-6">
+                      Revisa tu nombre, WhatsApp y ubicación para poder publicar.
+                      Seguirás viendo el panel mientras completas estos datos.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/mi-cuenta/perfil"
+                  className="laria-button-secondary min-h-10 shrink-0 px-4 py-2 text-sm"
+                >
+                  Completar perfil
+                </Link>
+              </section>
+            ) : null}
+
             <section className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_18px_48px_rgb(16_18_23/0.07)] sm:p-6">
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="max-w-2xl">
@@ -92,11 +176,11 @@ export default async function AccountPage() {
                     Resumen
                   </p>
                   <h2 className="mt-2 text-3xl font-black tracking-tight text-laria-ink sm:text-4xl">
-                    Hola, {profile?.full_name || user.email || "vendedor"}
+                    Hola, {profile?.full_name || user.email || "bienvenido"}
                   </h2>
                   <p className="mt-3 text-sm leading-6 text-laria-text-soft sm:text-base">
                     Este panel mantiene tu sesión activa y centraliza las
-                    acciones principales para vender en Laria.
+                    acciones principales de tu cuenta Particular en Laria.
                   </p>
                 </div>
                 <Link
@@ -200,6 +284,10 @@ export default async function AccountPage() {
                     value={locationLabel || "-"}
                   />
                 </dl>
+                <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                  <Link href="/mi-cuenta/perfil" className="laria-button-secondary min-h-10 px-4 py-2 text-sm">Editar perfil</Link>
+                  <Link href="/mi-cuenta/seguridad" className="laria-button-secondary min-h-10 px-4 py-2 text-sm">Cambiar contraseña</Link>
+                </div>
               </section>
             </div>
 
@@ -250,21 +338,27 @@ function DashboardNavItem({
   icon,
   label,
   isActive = false,
+  href,
+  note,
 }: {
   icon: ReactNode;
   label: string;
   isActive?: boolean;
+  href?: string;
+  note?: string;
 }) {
-  return (
-    <div
-      className={
+  const className =
         isActive
           ? "flex min-h-10 items-center gap-3 rounded-md border border-laria-blue/35 bg-laria-blue/10 px-3 py-2 text-sm font-black text-laria-blue"
-          : "flex min-h-10 items-center gap-3 rounded-md border border-transparent px-3 py-2 text-sm font-bold text-laria-text-soft"
-      }
-    >
-      {icon}
-      {label}
+          : "flex min-h-10 items-center gap-3 rounded-md border border-transparent px-3 py-2 text-sm font-bold text-laria-text-soft hover:border-laria-fog hover:text-laria-blue";
+  const content = <>{icon}<span>{label}</span>{note ? <span className="ml-auto text-[10px] font-medium text-laria-muted">{note}</span> : null}</>;
+  return href ? (
+    <Link href={href} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <div className={className}>
+      {content}
     </div>
   );
 }
@@ -311,7 +405,7 @@ function ProfileField({ label, value }: { label: string; value: string }) {
 
 function getAccountTypeLabel(accountType?: string | null) {
   if (accountType === "seller" || accountType === "individual") {
-    return "Vendedor particular";
+    return "Particular";
   }
 
   if (accountType === "store_owner") {

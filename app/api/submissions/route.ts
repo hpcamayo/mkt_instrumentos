@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
-import { categoryOptions, cityOptions, conditionOptions } from "@/lib/listings";
+import {
+  MAX_LISTING_PHOTOS,
+  MIN_LISTING_PHOTOS,
+  isInstrumentTypeValid,
+  sanitizeListingAttributes,
+} from "@/lib/listing-submission";
+import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import { getSupabaseServerClient } from "@/lib/supabase/server-client";
+import type { Json } from "@/lib/supabase/database.types";
 import {
   createSubmissionToken,
   readSubmissionToken,
@@ -17,17 +25,38 @@ export async function POST(request: Request) {
     body.action === "start" &&
     (body.kind === "listing" || body.kind === "store")
   ) {
-    return NextResponse.json(createSubmissionToken(body.kind, secret));
+    if (body.kind === "store") {
+      const started = createSubmissionToken(body.kind, secret);
+      return NextResponse.json({ ...started, folder: `pending/${started.id}` });
+    }
+
+    const account = await getListingAccount();
+    if (!account.ok) return failure(account.message, account.status);
+    const started = createSubmissionToken(body.kind, secret, account.userId);
+    return NextResponse.json({
+      ...started,
+      folder: `${account.userId}/${started.id}`,
+    });
   }
   const submission =
     typeof body.token === "string"
       ? readSubmissionToken(body.token, secret)
       : null;
   if (!submission) return failure("El envío no es válido.", 403);
-  const { id, kind } = submission;
+  const { id, kind, ownerUserId } = submission;
+  if (kind === "listing") {
+    const account = await getListingAccount();
+    if (!account.ok) return failure(account.message, account.status);
+    if (!ownerUserId || ownerUserId !== account.userId) {
+      return failure("Este envío pertenece a otra cuenta.", 403);
+    }
+  }
   const table = kind === "listing" ? "listings" : "stores";
   const bucket = kind === "listing" ? "listing-photos" : "store-assets";
-  const folder = `pending/${id}`;
+  const folder =
+    kind === "listing" && ownerUserId
+      ? `${ownerUserId}/${id}`
+      : `pending/${id}`;
   const { data: existing, error: lookupError } = await client
     .from(table)
     .select("id")
@@ -63,7 +92,7 @@ export async function POST(request: Request) {
   const input = body.fields;
   if (!input || typeof input !== "object" || Array.isArray(input))
     return failure("Datos inválidos.");
-  const fields: Record<string, string | number> = {};
+  const fields: Record<string, unknown> = {};
   const names =
     kind === "listing"
       ? [
@@ -73,8 +102,7 @@ export async function POST(request: Request) {
           "model",
           "condition",
           "city",
-          "contact_name",
-          "whatsapp_phone",
+          "region",
           "description",
         ]
       : [
@@ -92,20 +120,48 @@ export async function POST(request: Request) {
       return failure("Completa los campos obligatorios.");
     fields[name] = value;
   }
-  if (!/^\d{9,15}$/.test(String(fields.whatsapp_phone)))
+  if (
+    kind === "store" &&
+    !/^\d{9,15}$/.test(String(fields.whatsapp_phone))
+  ) {
     return failure("Ingresa un WhatsApp válido.");
+  }
   if (kind === "listing") {
+    const account = await getListingAccount();
+    if (!account.ok) return failure(account.message, account.status);
     if (
       !categoryOptions.some((option) => option.value === fields.category) ||
       !conditionOptions.some((value) => value === fields.condition) ||
-      !cityOptions.some((value) => value === fields.city)
+      !normalizePeruRegion(String(fields.region))
     )
-      return failure("Revisa la categoría, condición y ciudad.");
+      return failure("Revisa la categoría, condición y ubicación.");
+    const instrumentType =
+      typeof input.instrument_type === "string"
+        ? input.instrument_type.trim()
+        : "";
+    if (!isInstrumentTypeValid(String(fields.category), instrumentType)) {
+      return failure("Selecciona un tipo de instrumento válido.");
+    }
+    const attributes = sanitizeListingAttributes(
+      instrumentType,
+      input.attributes,
+    );
+    if (!attributes) return failure("Revisa los atributos del instrumento.");
     const price = Number(input.price_pen);
-    if (!Number.isSafeInteger(price) || price < 0 || price > 2147483647)
+    if (!Number.isSafeInteger(price) || price <= 0 || price > 2147483647)
       return failure("Ingresa un precio válido en soles enteros.");
+    if (String(fields.description).length < 40)
+      return failure("La descripción debe tener al menos 40 caracteres.");
+    if (input.marketplace_rules_accepted !== true)
+      return failure("Debes aceptar las reglas del marketplace.");
     fields.price_pen = price;
-    fields.region = fields.city === "Huancayo" ? "Junín" : fields.city;
+    fields.region = normalizePeruRegion(String(fields.region))!;
+    fields.instrument_type = instrumentType;
+    fields.attributes = attributes;
+    fields.owner_user_id = account.userId;
+    fields.contact_name = account.profile.full_name;
+    fields.whatsapp_phone = normalizePhone(String(account.profile.phone));
+    fields.marketplace_rules_accepted = true;
   } else {
     const region = normalizePeruRegion(String(fields.region));
     if (!region) return failure("Selecciona una región válida.");
@@ -129,7 +185,7 @@ export async function POST(request: Request) {
   if (
     !Array.isArray(paths) ||
     (kind === "listing"
-      ? paths.length < 1 || paths.length > 6
+      ? paths.length < MIN_LISTING_PHOTOS || paths.length > MAX_LISTING_PHOTOS
       : paths.length !== 2)
   )
     return failure("Revisa las fotos del envío.");
@@ -141,7 +197,9 @@ export async function POST(request: Request) {
   for (const path of paths) {
     if (
       typeof path !== "string" ||
-      !new RegExp(`^pending/${id}/[0-5]\\.(jpg|png|webp)$`).test(path)
+      !new RegExp(
+        `^${escapeRegExp(folder)}/(?:[0-9])\\.(jpg|png|webp)$`,
+      ).test(path)
     )
       return failure("Foto inválida.");
     if (!objects?.some((object) => `${folder}/${object.name}` === path))
@@ -155,7 +213,7 @@ export async function POST(request: Request) {
   const { error } = await client.rpc("complete_public_submission", {
     p_id: id,
     p_kind: kind,
-    p_fields: fields,
+    p_fields: fields as Json,
     p_photos: photos,
   });
   if (error)
@@ -164,6 +222,47 @@ export async function POST(request: Request) {
       503,
     );
   return NextResponse.json({ ok: true, completed: true });
+}
+
+async function getListingAccount() {
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) {
+    return { ok: false as const, message: "No se pudo validar tu cuenta.", status: 503 };
+  }
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    return { ok: false as const, message: "Ingresa a tu cuenta para publicar.", status: 401 };
+  }
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("full_name,phone,city,region,account_type")
+    .eq("id", userData.user.id)
+    .maybeSingle();
+  if (
+    profileError ||
+    !profile ||
+    profile.account_type !== "seller" ||
+    !profile.full_name?.trim() ||
+    !profile.phone?.trim() ||
+    !/^\d{9,15}$/.test(normalizePhone(profile.phone)) ||
+    !profile.city?.trim() ||
+    !normalizePeruRegion(profile.region)
+  ) {
+    return {
+      ok: false as const,
+      message: "Completa tu perfil de Particular antes de publicar.",
+      status: 422,
+    };
+  }
+  return { ok: true as const, userId: userData.user.id, profile };
+}
+
+function normalizePhone(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function failure(message: string, status = 400) {

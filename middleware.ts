@@ -1,9 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getLoginPath } from "@/lib/auth/redirects";
+import { isProtectedAccountPath } from "@/lib/auth/protected-paths";
 import type { Database } from "@/lib/supabase/database.types";
-
-const protectedPathPrefixes = ["/mi-cuenta", "/mis-publicaciones"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -40,9 +39,7 @@ export async function middleware(request: NextRequest) {
 
   const { data: claimsData } = await supabase.auth.getClaims();
 
-  const isProtectedPath = protectedPathPrefixes.some((path) =>
-    request.nextUrl.pathname.startsWith(path),
-  );
+  const isProtectedPath = isProtectedAccountPath(request.nextUrl.pathname);
 
   if (isProtectedPath && !claimsData?.claims) {
     const url = request.nextUrl.clone();
@@ -59,6 +56,7 @@ export const config = {
   matcher: [
     "/mi-cuenta/:path*",
     "/mis-publicaciones/:path*",
+    "/vender",
     "/registro/:path*",
     "/login",
     "/logout",

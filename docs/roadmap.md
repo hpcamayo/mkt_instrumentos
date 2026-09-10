@@ -1,165 +1,103 @@
 # Roadmap
 
-This roadmap is intentionally phased to avoid feature creep.
+`docs/functional-spec.md` is the canonical, frozen Laria V1 product contract. This roadmap orders implementation; it does not make V1 features optional or redefine their behavior.
 
-Current strategic goal:
+The current strategic goal remains to make Laria the best place in Peru to discover musical instruments and gear without adding transaction-processing complexity. Payments, checkout, escrow, delivery, commissions, subscriptions, paid boosts, and internal chat remain post-V1.
 
-```text
-Make browsing useful enough for musicians that Laria feels serious before adding transactional complexity.
-```
+## Completed Foundation
 
-Do not add payments, checkout, escrow, delivery, reviews, commissions, subscriptions, internal chat, or complex dashboards until the product direction explicitly changes.
+### Public marketplace
 
-## Phase 1: Advanced Listings Experience
+- Public homepage, approved-listing catalog, listing detail, and active store pages.
+- URL-driven musician-focused filters, sorting, result counts, chips, responsive layouts, loading and empty states.
+- Instrument-type and JSONB attribute filtering/display foundations.
+- Store identity and Tienda Verificada badge display.
+- Direct WhatsApp contact.
 
-Status: mostly implemented in the current codebase.
+### Reliability and performance
 
-Goal: make the listings page feel like a real musician-focused marketplace.
+- Stable 24-item catalog and store pagination.
+- Database photo counts and on-demand additional card photos.
+- Responsive images and streamed recommendation sections.
+- Reduced public authentication overhead and targeted email lookup.
+- First-publication timestamps.
+- Signed, idempotent public submission retries, atomic finalization, partial-upload cleanup attempts, and regression tests.
 
-Implemented or in progress:
-- Core filters: Condicion, Marca, Precio, Ubicacion.
-- Seller type filter: Particular, Tienda, Tienda verificada.
-- Sorting: Mas recientes, Menor precio, Mayor precio.
-- Advanced filters by instrument group.
-- Result count.
-- Active filter chips.
-- Clear filters.
-- Sticky desktop sidebar.
-- Mobile filter/sort controls.
-- Compact listing cards.
-- 4-column large desktop grid.
-- Smaller margins and wider layout.
-- Efficient first-photo loading.
-- On-demand extra photo fetch.
-- Skeleton loaders.
-- Empty state.
-- Polished listing detail page with sticky gallery, seller/store trust box, full specs, published time, view count, and recommendation sections.
+See `docs/performance.md`; this work is completed and must be preserved.
 
-Remaining quality work:
-- Add `instrument_type` and `attributes` fields to public seller submission flow.
-- Add admin editing for `instrument_type` and `attributes`.
-- Keep running build/type/lint and browser QA before releases.
+### Account and ownership foundation
 
-## Phase 2: Seller Accounts, Light Version
+- Supabase Auth signup, email confirmation callback, password login, magic-link login, and logout.
+- Particular profiles and store-owner invitation setup.
+- Nullable listing/store ownership fields, store membership helpers, owner-aware RLS, and protected admin fields.
+- Protected `/mi-cuenta` shell.
 
-Goal: allow sellers to track their own listings without full marketplace complexity.
+These foundations are incomplete product flows, not completion of the V1 account/dashboard requirements.
 
-Potential features:
-- Supabase Auth for sellers.
-- User registration/login.
-- Link listings to user/account.
-- `Mis publicaciones`.
-- View listing status: Pendiente, Aprobado, Rechazado, Vendido.
-- Seller can mark as sold.
-- Seller can request edit.
-- Admin approval remains.
+## V1 Implementation Sequence
 
-Avoid for now:
-- Complex seller dashboards.
-- Internal messaging.
-- Payments.
+The sequence below is an implementation recommendation only. Every item remains required by the frozen specification.
 
-## Phase 3: Store Owner Tools
+### 1. Account-owned publication and lifecycle
 
-Goal: reduce manual work for store inventory management.
+- Make one Particular account capable of buying and selling.
+- Require authentication for new Particular listings and attach ownership.
+- Resolve account-owned seller identity/contact data dynamically from the profile.
+- Add instrument type, dynamic attributes, marketplace-rules acceptance, and 2–10 photo management.
+- Implement owner listing management, immediate edits, moderated revisions that preserve the live version, hide/restore, sold direct URLs, and copied relisting.
+- Add profile editing, forgot/reset password, and password change.
 
-Potential features:
-- Store owner login.
-- Store owner profile.
-- Manage store info.
-- Add store listings.
-- View store listings.
-- Track listing limits.
-- Basic listing plan display.
+### 2. Store-owner operation and verification
 
-Do not add billing automatically yet.
+- Bind the application to a separate store-owner account and one store.
+- Collect required business identity fields and enforce unique RUC.
+- Separate basic store approval (`Tienda`) from manual verification (`Tienda Verificada`).
+- Require moderation for normal Tienda inventory; allow qualifying Tienda Verificada inventory and edits to publish directly.
+- Approve pending inventory when verification is granted and preserve non-pending states.
+- Enforce the free 50-concurrent-listing cap.
+- Build store profile, inventory, lifecycle, and analytics tools.
 
-## Phase 4: Trust Layer
+### 3. Buyer retention and marketplace measurement
 
-Goal: increase buyer confidence.
+- Favorites and availability history.
+- Exact-state search alerts with immediate and daily frequencies and deduplication.
+- Price-drop alerts for eligible favorites with price deduplication.
+- Privacy-conscious marketplace event collection, including WhatsApp intent without message content.
+- Particular and store funnel analytics without revenue claims.
 
-Potential features:
-- Tienda verificada badge.
-- Vendedor verificado badge.
-- Listing reviewed badge: `Revisado por Laria`.
-- Report listing button.
-- Stronger safety tips.
-- Better seller/store profile trust signals.
-- Real ratings or sales counts only after the database and product flow actually capture them.
-- Required minimum photo count.
-- Optional store location map.
+### 4. Verified transactions, reviews, and reports
 
-## Phase 5: Monetization Experiments
+- Sold-item buyer selection limited to authenticated listing-specific WhatsApp contacts.
+- Buyer confirmation and verified Laria transaction records.
+- Two-way, one-per-side, double-blind reviews with a 10-day window.
+- Listing, store, and review reporting.
+- Clear disclaimers that Laria did not verify payment, delivery, or condition.
 
-Goal: start earning revenue without heavy infrastructure.
+### 5. Operational moderation and communications
 
-Potential features:
-- Featured listings.
-- Featured stores.
-- Homepage placement.
-- Category placement.
-- Manual store plans:
-  - Starter 20
-  - Growth 50
-  - Pro 100
-- Catalog management service.
+- Expand `/admin` from pending queues into the complete searchable moderation hub.
+- Add owner-visible required reasons, revision/history inspection, reports, reviews, verified transactions, user administration, store verification/revocation, and manual legacy ownership linking.
+- Add centralized marketplace email infrastructure for lifecycle, transaction, review, search-alert, and price-drop notifications.
 
-Billing can initially be handled manually/off-platform while software tracks plan type and listing limits.
+### 6. Discovery, legal, and launch completion
 
-## Phase 6: Marketplace Growth UX
+- Real category SEO browsing pages using the catalog/filter system.
+- Terms/marketplace rules, Privacy Policy, prohibited-item rules, and marketplace safety guidance.
+- End-to-end QA, reliability, accessibility, Spanish copy, mobile/desktop polish, analytics validation, marketplace supply, and store onboarding.
 
-Goal: make the platform feel bigger and stickier.
+## V1 Freeze and Post-V1
 
-Potential features:
-- Favorites.
-- Recently viewed.
-- Saved searches.
-- Search suggestions.
-- Brand pages.
-- Category landing pages.
-- SEO landing pages:
-  - `/instrumentos/guitarras`
-  - `/instrumentos/baterias`
-  - `/instrumentos/microfonos`
-- Store directory.
-- Similar listings.
+After all requirements are implemented, tested, and documented, freeze V1 and focus on quality and observed marketplace behavior. New features require an explicit product decision supported by usage or commercial evidence.
 
-## Phase 7: Transactional Marketplace, Later
-
-Only after traction.
-
-Potential features:
-- Payments.
-- Escrow.
-- Delivery integrations.
-- Reviews.
-- In-platform messaging.
-- Commission enforcement.
-- Dispute flow.
-
-Do not implement this early.
-
-## Phase 8: Multi-Vertical Playbook
-
-If Laria proves the model, repeat the same platform logic under separate brands for other niches.
-
-Possible future verticals:
-- Audiovisual/camera equipment.
-- DJ/event equipment.
-- Professional tools.
-- Creator/studio equipment.
-- Bikes or niche sports gear.
-
-Decision: future verticals should likely have separate names/domains/identities, not be forced under Laria.
+Post-V1 candidates, not current commitments, include payments, escrow, shipping integrations, commission enforcement, paid subscriptions/packages, paid boosts, internal messaging, multiple store employees, automatic SUNAT verification, email change, account deletion, sophisticated fraud scoring, and expansion into separately branded verticals.
 
 ## Commercial Priorities
 
-The next real business task is not only more code. It is supply and trust.
+Product development does not replace marketplace operations:
 
-Priorities:
-1. Get 50-100 quality listings.
-2. Onboard the first stores.
-3. Make listings look trustworthy.
-4. Track WhatsApp interest.
-5. Learn what buyers search for.
-6. Learn what stores are willing to pay for.
+1. Build a base of quality listings.
+2. Onboard initial stores.
+3. Make listings and safety guidance trustworthy without false guarantees.
+4. Track WhatsApp interest and search demand.
+5. Learn what buyers seek and what stores value.
+6. Use real marketplace evidence for post-V1 monetization decisions.

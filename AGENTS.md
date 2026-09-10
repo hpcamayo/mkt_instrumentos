@@ -17,16 +17,26 @@ The product should help buyers discover musical gear and contact sellers directl
 - Design mobile-first.
 - Keep features simple and working.
 
-Do not build these features in the MVP unless explicitly requested:
+The frozen V1 scope is defined in `docs/functional-spec.md`. V1 does not include:
 
 - Payments
 - Checkout
 - Delivery or shipping flows
 - Escrow
-- Reviews or ratings
 - Commissions
 - Subscriptions
 - In-app chat
+
+V1 does include the account, ownership, favorites, alerts, verified-transaction review, reporting, moderation, analytics, and store-verification behavior specified in `docs/functional-spec.md`.
+
+## Canonical Product Instructions
+
+- For any feature, product, backend, or frontend behavior work, read `docs/functional-spec.md` first and treat it as canonical for Laria V1 product behavior.
+- For visual or UI work, also read `docs/design-system.md` and treat it as canonical for visual behavior.
+- Do not invent new product behavior when the functional specification is explicit.
+- Do not move post-V1 functionality into V1 without explicit instruction.
+- When implementing a V1 feature, preserve already-working behavior unless the functional specification requires changing it.
+- Update relevant documentation when implementation state changes.
 
 ## Engineering Stack
 
@@ -68,7 +78,7 @@ Use:
 - Store listings represent products from a small store.
 - General search should include both individual listings and store products.
 - Store pages should show store identity and that store's products.
-- Avoid marketplace mechanics that imply the platform handles payment, delivery, guarantees, disputes, or buyer/seller reputation.
+- Reviews and ratings are permitted only through the verified-transaction flow in `docs/functional-spec.md`; never imply that Laria handled payment, delivery, guarantees, or disputes.
 
 ## Task Completion Requirements
 
@@ -88,4 +98,4 @@ If tests or verification could not be run, state that clearly.
 - Avoid unrelated refactors.
 - Prefer readable code and clear naming.
 - Add comments only when they clarify non-obvious logic.
-- When making product decisions, choose the simpler MVP path that respects the rules above.
+- Do not make a new product decision where the frozen V1 functional specification already defines the behavior.

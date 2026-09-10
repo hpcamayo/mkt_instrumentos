@@ -5,6 +5,7 @@ type Kind = "listing" | "store";
 type Attempt = {
   id: string;
   token: string;
+  folder: string;
   fingerprint: string;
   commitStarted: boolean;
 };
@@ -16,7 +17,7 @@ export function createPublicSubmission(client: Client) {
   let busy = false;
   return async (
     kind: Kind,
-    fields: Record<string, string | number>,
+    fields: Record<string, unknown>,
     files: File[],
   ) => {
     if (busy) throw new Error("El envío ya está en curso.");
@@ -40,6 +41,7 @@ export function createPublicSubmission(client: Client) {
         attempt = {
           id: started.id,
           token: started.token,
+          folder: started.folder ?? `pending/${started.id}`,
           fingerprint,
           commitStarted: false,
         };
@@ -47,7 +49,7 @@ export function createPublicSubmission(client: Client) {
       const bucket = kind === "listing" ? "listing-photos" : "store-assets";
       const paths = files.map(
         (file, index) =>
-          `pending/${attempt!.id}/${index}.${extension(file.type)}`,
+          `${attempt!.folder}/${index}.${extension(file.type)}`,
       );
       if (!attempt.commitStarted) {
         try {

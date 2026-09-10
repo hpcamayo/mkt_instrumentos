@@ -549,6 +549,11 @@ export const instrumentFilterGroups = [
       },
     ],
   },
+  {
+    instrumentType: "other",
+    label: "Otro",
+    filters: [],
+  },
 ] as const satisfies readonly InstrumentFilterGroup[];
 
 export function getInstrumentFilterGroup(instrumentType: string) {

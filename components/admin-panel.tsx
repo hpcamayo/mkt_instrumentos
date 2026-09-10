@@ -8,6 +8,8 @@ import {
   useState,
 } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
+import { getInstrumentTypeOptions } from "@/lib/listing-submission";
 import { normalizePeruRegion } from "@/lib/location";
 import { categoryOptions, cityOptions, conditionOptions } from "@/lib/listings";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -39,6 +41,8 @@ type AdminListing = {
   title: string;
   status: ListingStatus;
   category: string;
+  instrument_type: string | null;
+  attributes: Database["public"]["Tables"]["listings"]["Row"]["attributes"];
   brand: string | null;
   model: string | null;
   condition: string | null;
@@ -183,7 +187,7 @@ export function AdminPanel() {
         supabase
           .from("listings")
           .select(
-            "id,title,status,category,brand,model,condition,price_pen,city,description,contact_name,whatsapp_phone,created_at",
+            "id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,description,contact_name,whatsapp_phone,created_at",
           )
           .eq("status", "pending")
           .order("created_at", { ascending: true }),
@@ -234,6 +238,8 @@ export function AdminPanel() {
       .update({
         title: listing.title,
         category: listing.category,
+        instrument_type: listing.instrument_type,
+        attributes: listing.attributes,
         brand: listing.brand,
         model: listing.model,
         condition: listing.condition,
@@ -459,7 +465,20 @@ export function AdminPanel() {
                       <Select
                         value={listing.category}
                         options={categoryOptions}
-                        onChange={(value) => updateListing(listing.id, { category: value })}
+                        onChange={(value) => {
+                          const options = getInstrumentTypeOptions(value);
+                          updateListing(listing.id, {
+                            category: value,
+                            instrument_type:
+                              options.length === 1 ? options[0].value : null,
+                            attributes: {},
+                          });
+                        }}
+                      />
+                      <Select
+                        value={listing.instrument_type ?? ""}
+                        options={getInstrumentTypeOptions(listing.category)}
+                        onChange={(value) => updateListing(listing.id, { instrument_type: value, attributes: {} })}
                       />
                     </td>
                     <td className="space-y-3 px-3 py-4">
@@ -520,6 +539,12 @@ export function AdminPanel() {
                         value={listing.description ?? ""}
                         onChange={(value) =>
                           updateListing(listing.id, { description: value })
+                        }
+                      />
+                      <AdminAttributeFields
+                        listing={listing}
+                        onChange={(attributes) =>
+                          updateListing(listing.id, { attributes })
                         }
                       />
                     </td>
@@ -826,6 +851,62 @@ function AdminFormInput({
   );
 }
 
+function AdminAttributeFields({
+  listing,
+  onChange,
+}: {
+  listing: AdminListing;
+  onChange: (attributes: Database["public"]["Tables"]["listings"]["Row"]["attributes"]) => void;
+}) {
+  const group = listing.instrument_type
+    ? getInstrumentFilterGroup(listing.instrument_type)
+    : null;
+  if (!group) return null;
+  const attributes =
+    listing.attributes &&
+    typeof listing.attributes === "object" &&
+    !Array.isArray(listing.attributes)
+      ? listing.attributes
+      : {};
+  const update = (key: string, value: string | string[] | number | null) => {
+    const next = { ...attributes };
+    if (value === null || value === "" || (Array.isArray(value) && !value.length)) {
+      delete next[key];
+    } else {
+      next[key] = value;
+    }
+    onChange(next);
+  };
+
+  return (
+    <fieldset className="mt-3 grid gap-3 rounded-md border border-laria-fog bg-laria-cloud/60 p-3">
+      <legend className="px-1 text-xs font-black text-laria-blue">Atributos</legend>
+      {group.filters.map((filter) => {
+        const raw = attributes[filter.key];
+        if (filter.type === "multiselect") {
+          const selected = Array.isArray(raw) ? raw.map(String) : [];
+          return (
+            <fieldset key={filter.key} className="grid gap-1">
+              <legend className="text-xs font-bold text-laria-text-soft">{filter.label}</legend>
+              {filter.options?.map((option) => (
+                <label key={option.value} className="flex items-center gap-2 text-xs text-laria-ink">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(option.value)}
+                    onChange={(event) => update(filter.key, event.target.checked ? [...selected, option.value] : selected.filter((value) => value !== option.value))}
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </fieldset>
+          );
+        }
+        return <label key={filter.key} className="grid gap-1 text-xs font-bold text-laria-text-soft">{filter.label}<Select value={raw === undefined ? "" : String(raw)} options={filter.options ?? []} onChange={(value) => update(filter.key, value)} /></label>;
+      })}
+    </fieldset>
+  );
+}
+
 function PanelShell({
   title,
   children,
@@ -1090,6 +1171,7 @@ function Select({
       onChange={(event) => onChange(event.target.value)}
       className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
     >
+      {value === "" ? <option value="">Selecciona una opción</option> : null}
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}

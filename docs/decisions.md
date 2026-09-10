@@ -2,6 +2,8 @@
 
 This file records important decisions so future Codex sessions do not accidentally undo them.
 
+`docs/functional-spec.md` is canonical for the frozen V1 product contract. This file preserves decision rationale and implementation history; where older planning language conflicts with the functional specification, the functional specification wins.
+
 ## Marketplace First, Payments Later
 
 Decision: Laria begins as a discovery marketplace with WhatsApp contact, not a transactional platform.
@@ -12,7 +14,7 @@ Why:
 - Sellers in Peru are already comfortable with WhatsApp.
 - The main unknown is marketplace liquidity, not checkout infrastructure.
 
-Do not add payments, checkout, escrow, delivery, reviews, commissions, or internal chat until explicitly planned.
+Do not add payments, checkout, escrow, delivery, commissions, subscriptions, or internal chat in V1. Reviews are included only through the verified Laria transaction workflow in `docs/functional-spec.md`.
 
 ## Two Seller Models
 
@@ -43,7 +45,7 @@ Future monetization priority:
 
 ## Keep the MVP Simple
 
-Decision: keep marketplace mechanics limited to discovery, moderation, and WhatsApp contact.
+Decision: Laria remains a discovery and lead-generation marketplace without processing transactions. V1 nevertheless includes the identity, ownership, favorites, alerts, intent analytics, verified-transaction confirmation, transaction-bound reviews, and reports defined in the functional specification.
 
 Why:
 - It lets the product ship quickly.
@@ -52,7 +54,7 @@ Why:
 
 ## Admin Curation Matters
 
-Decision: listings and stores go through admin approval.
+Decision: Particular and normal Tienda listings go through admin approval. Store pages require basic approval. Tienda Verificada inventory and edits can publish directly when they meet requirements.
 
 Why:
 - Trust is essential in used gear markets.
@@ -64,6 +66,11 @@ Current status model:
 - Stores: `pending`, `active`, `hidden`.
 
 Only approved listings and active stores are public.
+
+Frozen V1 lifecycle clarification:
+- A sold listing is excluded from normal search but remains visible at its direct URL and is never reactivated; relisting creates a new record.
+- Moderated changes preserve the old approved version while a revision is pending.
+- Rejection and administrative hiding require an owner-visible reason.
 
 ## Use Supabase RLS Instead of a Custom Backend
 
@@ -102,6 +109,10 @@ Why:
 Current limitation:
 - Supabase may only expose one built-in invite email template. If distinct seller/store invite bodies become important, add a custom email provider or custom server-side email flow later.
 
+Frozen V1 clarification:
+- Supabase Auth remains responsible for authentication messages.
+- Marketplace lifecycle, transaction/review, search-alert, and price-drop messages use a centralized application email abstraction. Provider selection remains an implementation choice.
+
 Implementation note:
 - Admin-created invites are sent from a trusted server route, not from browser code.
 - The route verifies `is_admin()` with the user's normal Supabase session before using the server-only service-role client.
@@ -136,6 +147,20 @@ Why:
 - Easier to add new groups later.
 
 Do not convert this to many columns unless there is a strong reason.
+
+Frozen V1 submission behavior requires `instrument_type` where categories have meaningful subtypes and supports dynamic attributes. Attributes remain optional unless an explicit product rule marks selected fields required.
+
+## Store Verification Is Operational Authority
+
+Decision: `Tienda` and `Tienda Verificada` are the only public V1 store trust labels. Verification is manual and admin-only; it grants direct publication/edit authority, not merely a badge.
+
+When verification is granted, pending inventory is approved automatically while rejected, hidden, and sold inventory keeps its state. Revocation removes future direct-publication authority without hiding already-approved listings. Free stores have a 50-concurrent-listing cap across `pending` and `approved`; no paid plan is active in V1.
+
+## Verified Transactions Gate Reviews
+
+Decision: reviews are two-way and exist only after a seller selects an authenticated buyer who contacted that specific listing through Laria and the buyer confirms the purchase. This does not verify payment, delivery, amount, or item condition.
+
+Reviews use one submission per side, required 1–5 stars, optional text, double-blind release, and a 10-day window. Admin may hide reported abusive content but never rewrite it.
 
 ## URL-Driven Filters
 

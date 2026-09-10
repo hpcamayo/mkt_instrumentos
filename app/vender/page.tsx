@@ -1,6 +1,10 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/page-container";
 import { SellListingForm } from "@/components/sell-listing-form";
+import { requireUser } from "@/lib/auth/session";
+import { normalizePeruRegion } from "@/lib/location";
+import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export const metadata: Metadata = {
   title: "Vender instrumento",
@@ -14,7 +18,24 @@ export const metadata: Metadata = {
   },
 };
 
-export default function SellPage() {
+export default async function SellPage() {
+  const user = await requireUser("/vender");
+  const supabase = await getSupabaseServerClient();
+  const { data: profile } = supabase
+    ? await supabase
+        .from("profiles")
+        .select("full_name,phone,city,region,account_type")
+        .eq("id", user.id)
+        .maybeSingle()
+    : { data: null };
+  const isCompleteParticular = Boolean(
+    profile?.account_type === "seller" &&
+      profile.full_name?.trim() &&
+      profile.phone?.trim() &&
+      profile.city?.trim() &&
+      normalizePeruRegion(profile.region),
+  );
+
   return (
     <PageContainer as="section" className="py-6">
       <div className="flex w-full max-w-4xl flex-col gap-6">
@@ -30,7 +51,30 @@ export default function SellPage() {
             revisión. Cuando sea aprobada, aparecerá en los listados públicos.
           </p>
         </div>
-        <SellListingForm />
+        {isCompleteParticular && profile ? (
+          <SellListingForm
+            profile={{
+              fullName: profile.full_name!,
+              phone: profile.phone!,
+              city: profile.city!,
+              region: profile.region,
+            }}
+          />
+        ) : (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+            <h2 className="font-black">Completa tu perfil de Particular</h2>
+            <p className="mt-2">
+              Necesitamos tu nombre, WhatsApp, ciudad y región antes de crear
+              una publicación asociada a tu cuenta.
+            </p>
+            <Link
+              href="/mi-cuenta/perfil?next=/vender"
+              className="mt-4 inline-flex min-h-11 items-center rounded-md bg-laria-black px-4 py-2 font-black text-white"
+            >
+              Completar perfil
+            </Link>
+          </div>
+        )}
       </div>
     </PageContainer>
   );

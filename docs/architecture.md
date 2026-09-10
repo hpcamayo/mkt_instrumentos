@@ -68,7 +68,7 @@ GitHub is the source repository. Supabase schema is managed separately through S
 - Server-only.
 - Uses `SUPABASE_SERVICE_ROLE_KEY`.
 - Must never be imported by Client Components or exposed as `NEXT_PUBLIC_*`.
-- Intended for later admin invite/server actions.
+- Used by the current admin invite and duplicate-email server routes and available for other trusted server actions.
 
 `middleware.ts` refreshes Supabase Auth sessions and protects account routes that start with `/mi-cuenta` or `/mis-publicaciones`.
 
@@ -184,11 +184,15 @@ The listing detail route composes `ListingDetailGallery` in a sticky desktop col
 
 The UI visual refresh covers the homepage, listings/catalog page, listing detail page, `/mi-cuenta` seller/account panel shell, and `/admin` panel. It is a visual layer only: it does not add backend logic, schema changes, Supabase queries, auth changes, moderation changes, or marketplace features. Unsupported visual areas must remain placeholder-only and commented in code.
 
-Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/registro/vendedor` creates a Supabase Auth user, stores seller metadata for email confirmation callbacks, and upserts the matching `profiles` row when a session is available. `/auth/callback` also completes the seller profile from user metadata after email confirmation.
+Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/recuperar-contrasena` and `/restablecer-contrasena` use Supabase Auth recovery through the same callback, while `/mi-cuenta/seguridad` performs authenticated password changes. `/registro/vendedor` creates a Supabase Auth user and stores normalized Particular profile metadata. The auth-user trigger persists name, WhatsApp, city, and region immediately. `/auth/callback` accepts PKCE `code` callbacks and server-verifiable `token_hash` callbacks, writes the Supabase session cookies on its returned redirect, and repairs an incomplete seller profile from trusted Auth metadata when possible.
+
+`/vender` is protected in middleware and again in its Server Component. The browser keeps direct-to-Storage uploads and retry recovery, but listing submission capabilities are HMAC-signed and bound to `auth.uid()`. Authenticated uploads use `{userId}/{submissionId}/{sortOrder}.{ext}`; `/api/submissions` revalidates the session/profile and a service-only idempotent RPC atomically inserts the owned pending listing and ordered photo rows. Store submissions retain their separate legacy path until the store sprint.
+
+Approved account-owned Particular detail pages join the seller's profile under RLS and resolve current name, WhatsApp, city, and region dynamically. Legacy `owner_user_id=null` listings continue using their historical contact fields. More-from-seller grouping uses ownership when available and WhatsApp only for legacy rows.
 
 Seller signup checks duplicate emails through `app/api/auth/check-email/route.ts` before calling Supabase `signUp()`. The route uses a service-only indexed Auth email lookup and returns only an availability flag, because `profiles` does not currently store email. Repeated signup attempts show a Spanish error and a link to `/login` instead of a false "check your email" success state.
 
-Signup confirmation emails redirect through `/auth/callback?next=/confirmacion-correo`. The success page is `/confirmacion-correo`; Supabase only needs the `/auth/callback` URL allowlisted for each domain.
+Signup confirmation emails redirect through `/auth/callback?next=%2Fmi-cuenta%3Fconfirmed%3D1`. The dashboard renders the explicit confirmed-email state while preserving the normal account experience. `/confirmacion-correo` remains as a legacy standalone success page. Supabase needs the `/auth/callback` URL allowlisted for each domain, and the signup, magic-link, and recovery templates must use the token-hash links documented in `docs/auth-email-templates.md`.
 
 Invite setup pages require an authenticated Supabase session after the invite callback. `/registro/vendedor/invitacion` completes a Particular seller profile and continues to `/vender`; `/registro/tienda/invitacion` completes a store-owner profile and continues to `/registrar-tienda` for the store application. Invite routing depends on `account_type` metadata when available. If metadata/profile type does not match the route, the page shows a recovery panel instead of changing account type blindly. Temporary passwords are not used.
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -10,7 +10,6 @@ type FormState = "idle" | "submitting" | "sent" | "error";
 type LoginMode = "password" | "magic-link";
 
 export function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<LoginMode>("password");
   const [state, setState] = useState<FormState>("idle");
@@ -30,34 +29,40 @@ export function LoginForm() {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const password = String(formData.get("password") ?? "");
-    const supabase = getSupabaseBrowserClient();
-
-    if (!email || !supabase) {
+    if (!email) {
       setState("error");
-      setMessage("Ingresa un correo valido.");
+      setMessage("Ingresa un correo válido.");
       return;
     }
 
     if (mode === "password") {
       if (!password) {
         setState("error");
-        setMessage("Ingresa tu contrasena.");
+        setMessage("Ingresa tu contraseña.");
         return;
       }
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) {
+      if (!response.ok) {
         setState("error");
-        setMessage("No se pudo iniciar sesion. Revisa tu correo y contrasena.");
+        setMessage("No se pudo iniciar sesión. Revisa tu correo y contraseña.");
         return;
       }
 
-      router.push(nextPath);
-      router.refresh();
+      window.location.assign(nextPath);
+      return;
+    }
+
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setState("error");
+      setMessage("No se pudo iniciar sesión.");
       return;
     }
 
@@ -103,7 +108,7 @@ export function LoginForm() {
               : "text-slate-600 hover:text-ink"
           }`}
         >
-          Contrasena
+          Contraseña
         </button>
         <button
           type="button"
@@ -114,7 +119,7 @@ export function LoginForm() {
               : "text-slate-600 hover:text-ink"
           }`}
         >
-          Enlace magico
+          Enlace mágico
         </button>
       </div>
 
@@ -133,19 +138,19 @@ export function LoginForm() {
 
         {mode === "password" ? (
           <label className="block">
-            <span className="text-sm font-semibold text-ink">Contrasena</span>
+            <span className="text-sm font-semibold text-ink">Contraseña</span>
             <input
               type="password"
               name="password"
               required
               autoComplete="current-password"
               className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
-              placeholder="Tu contrasena"
+              placeholder="Tu contraseña"
             />
           </label>
         ) : (
           <p className="text-sm leading-6 text-slate-600">
-            Te enviaremos un enlace seguro. Esta opcion no crea cuentas nuevas.
+            Te enviaremos un enlace seguro. Esta opción no crea cuentas nuevas.
           </p>
         )}
 
@@ -172,17 +177,25 @@ export function LoginForm() {
               ? "Ingresar"
               : "Enviar enlace"}
         </button>
+        {mode === "password" ? (
+          <Link
+            href="/recuperar-contrasena"
+            className="block text-center text-sm font-semibold text-laria-blue hover:underline"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        ) : null}
       </form>
 
       <div className="space-y-2 border-t border-slate-200 pt-4 text-sm text-slate-600">
         <p>
-          Quieres vender como particular?{" "}
+          ¿Quieres comprar o vender como Particular?{" "}
           <Link className="font-semibold text-ink hover:text-brass" href="/registro/vendedor">
-            Crea tu cuenta de vendedor
+            Crea tu cuenta
           </Link>
         </p>
         <p>
-          Tienes una tienda?{" "}
+          ¿Tienes una tienda?{" "}
           <Link className="font-semibold text-ink hover:text-brass" href="/registrar-tienda">
             Registra tu tienda
           </Link>

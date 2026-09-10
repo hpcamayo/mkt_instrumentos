@@ -17,6 +17,7 @@ import {
   getListingDisplayTitle,
   getSellerTypeLabel,
   normalizeStore,
+  resolveParticularSeller,
   type ListingCardData,
   type ListingDetailData,
 } from "@/lib/listings";
@@ -83,6 +84,7 @@ export default async function ListingDetailPage({
       `
         id,
         store_id,
+        owner_user_id,
         title,
         slug,
         description,
@@ -101,6 +103,13 @@ export default async function ListingDetailPage({
         contact_name,
         whatsapp_phone,
         created_at,
+        profiles!listings_owner_user_id_fkey (
+          full_name,
+          phone,
+          city,
+          region,
+          created_at
+        ),
         stores (
           name,
           slug,
@@ -147,8 +156,9 @@ function ListingDetail({
   supabase: PublicSupabaseClient;
 }) {
   const store = normalizeStore(listing);
+  const particular = resolveParticularSeller(listing);
   const sellerName =
-    listing.seller_type === "store" ? store?.name : listing.contact_name;
+    listing.seller_type === "store" ? store?.name : particular.name;
   const displayTitle = getListingDisplayTitle(listing);
   const sellerTypeLabel =
     listing.seller_type === "store" && store?.is_verified === true
@@ -159,6 +169,11 @@ function ListingDetail({
       ? [store?.district, store?.city].filter(Boolean).join(", ") ||
         `${listing.city}, ${listing.region}`
       : `${listing.city}, ${listing.region}`;
+  const resolvedSellerLocation =
+    listing.seller_type === "store"
+      ? sellerLocation
+      : [particular.city, particular.region].filter(Boolean).join(", ") ||
+        sellerLocation;
   const keySpecs = getKeyListingSpecs(listing, sellerName);
   const fullSpecs = getFullListingSpecs(listing, sellerName);
 
@@ -233,7 +248,8 @@ function ListingDetail({
             <SellerTrustBox
               sellerName={sellerName}
               sellerTypeLabel={sellerTypeLabel}
-              sellerLocation={sellerLocation}
+              sellerLocation={resolvedSellerLocation}
+              sellerVisibleSince={particular.createdAt ?? listing.created_at}
               listing={listing}
               sellerPublishedCount={
                 <Suspense fallback="Cargando…">
@@ -385,9 +401,11 @@ const getMoreFromSellerListings = cache(
     const query =
       listing.seller_type === "store" && listing.store_id
         ? baseQuery.eq("store_id", listing.store_id)
-        : baseQuery
-            .eq("seller_type", "individual")
-            .eq("whatsapp_phone", listing.whatsapp_phone);
+        : listing.owner_user_id
+          ? baseQuery.eq("owner_user_id", listing.owner_user_id)
+          : baseQuery
+              .eq("seller_type", "individual")
+              .eq("whatsapp_phone", listing.whatsapp_phone);
 
     const { count, data } = await query
       .order("published_at", { ascending: false, nullsFirst: false })
@@ -492,12 +510,14 @@ function SellerTrustBox({
   sellerName,
   sellerTypeLabel,
   sellerLocation,
+  sellerVisibleSince,
   listing,
   sellerPublishedCount,
 }: {
   sellerName?: string | null;
   sellerTypeLabel: string;
   sellerLocation: string;
+  sellerVisibleSince: string;
   listing: ListingDetailData;
   sellerPublishedCount: ReactNode;
 }) {
@@ -506,7 +526,7 @@ function SellerTrustBox({
   const visibleSince =
     isStore && store?.created_at
       ? formatDate(store.created_at)
-      : formatDate(listing.created_at);
+      : formatDate(sellerVisibleSince);
 
   return (
     <section className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_14px_34px_rgb(16_18_23/0.06)] sm:p-6">

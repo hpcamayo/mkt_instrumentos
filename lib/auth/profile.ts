@@ -19,16 +19,67 @@ type ProfileResult =
       message: string;
     };
 
+export type NormalizedSellerProfile = {
+  fullName: string;
+  phone: string;
+  city: string;
+  region: string;
+};
+
+type ProfileValidationResult =
+  | { ok: true; profile: NormalizedSellerProfile }
+  | { ok: false; message: string };
+
+export function validateSellerProfileInput(
+  input: SellerProfileInput,
+): ProfileValidationResult {
+  const fullName = input.fullName.trim();
+  if (!fullName) {
+    return { ok: false, message: "Ingresa tu nombre completo." };
+  }
+
+  const phone = normalizeProfilePhone(input.phone);
+  if (!phone) {
+    return { ok: false, message: "Ingresa un WhatsApp válido." };
+  }
+
+  const location = validateProfileLocation(input.city, input.region);
+  if (!location.ok) return location;
+
+  return {
+    ok: true,
+    profile: {
+      fullName,
+      phone,
+      city: location.city,
+      region: location.region,
+    },
+  };
+}
+
+export function isSellerProfileComplete(
+  profile:
+    | Pick<Database["public"]["Tables"]["profiles"]["Row"], "full_name" | "phone" | "city" | "region">
+    | null
+    | undefined,
+) {
+  if (!profile) return false;
+  return validateSellerProfileInput({
+    fullName: profile.full_name ?? "",
+    phone: profile.phone ?? "",
+    city: profile.city ?? "",
+    region: profile.region ?? "",
+  }).ok;
+}
+
 export async function upsertSellerProfile(
   supabase: SupabaseClient<Database>,
   userId: string,
   input: SellerProfileInput,
 ): Promise<ProfileResult> {
-  const location = validateProfileLocation(input.city, input.region);
-
-  if (!location.ok) {
-    return location;
-  }
+  const validated = validateSellerProfileInput(input);
+  if (!validated.ok) return validated;
+  const normalized = validated.profile;
 
   const { data: currentProfile, error: profileError } = await supabase
     .from("profiles")
@@ -57,10 +108,10 @@ export async function upsertSellerProfile(
     {
       id: userId,
       account_type: INDIVIDUAL_SELLER_ACCOUNT_TYPE,
-      full_name: input.fullName.trim(),
-      phone: input.phone.trim(),
-      city: location.city,
-      region: location.region,
+      full_name: normalized.fullName,
+      phone: normalized.phone,
+      city: normalized.city,
+      region: normalized.region,
     },
     { onConflict: "id" },
   );
@@ -80,11 +131,9 @@ export async function upsertStoreOwnerProfile(
   userId: string,
   input: SellerProfileInput,
 ): Promise<ProfileResult> {
-  const location = validateProfileLocation(input.city, input.region);
-
-  if (!location.ok) {
-    return location;
-  }
+  const validated = validateSellerProfileInput(input);
+  if (!validated.ok) return validated;
+  const normalized = validated.profile;
 
   const { data: currentProfile, error: profileError } = await supabase
     .from("profiles")
@@ -114,10 +163,10 @@ export async function upsertStoreOwnerProfile(
     {
       id: userId,
       account_type: STORE_OWNER_ACCOUNT_TYPE,
-      full_name: input.fullName.trim(),
-      phone: input.phone.trim(),
-      city: location.city,
-      region: location.region,
+      full_name: normalized.fullName,
+      phone: normalized.phone,
+      city: normalized.city,
+      region: normalized.region,
     },
     { onConflict: "id" },
   );
@@ -130,6 +179,11 @@ export async function upsertStoreOwnerProfile(
   }
 
   return { ok: true };
+}
+
+export function normalizeProfilePhone(value: string) {
+  const phone = value.replace(/\D/g, "");
+  return /^\d{9,15}$/.test(phone) ? phone : null;
 }
 
 function validateProfileLocation(city: string, region: string) {

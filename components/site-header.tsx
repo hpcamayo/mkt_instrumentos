@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import logoClear from "@/app/logo-clear.svg";
 import { PageContainer } from "@/components/page-container";
+import { SiteHeaderAccountNav } from "@/components/site-header-account-nav";
 
 const navigation = [
   { href: "/", label: "Inicio" },
@@ -44,6 +45,7 @@ export function SiteHeader() {
                 </Link>
               </li>
             ))}
+            <SiteHeaderAccountNav />
           </ul>
         </nav>
       </PageContainer>

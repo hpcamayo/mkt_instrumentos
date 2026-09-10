@@ -2,6 +2,8 @@
 
 This is the practical owner guide for Laria.
 
+`docs/functional-spec.md` is canonical for the frozen V1 product contract. This manual describes operations and current implementation; it must not be used to override that contract.
+
 ## What Laria Is
 
 Laria is a marketplace for buying and selling musical instruments and related gear in Peru.
@@ -49,7 +51,7 @@ Initial model:
 - Admin approval.
 - Buyer contacts by WhatsApp.
 
-Future monetization:
+Post-V1 monetization possibilities (not active in V1):
 - Featured listings.
 - Visibility boosts.
 - Optional transaction commission only if payments/control are added later.
@@ -64,9 +66,10 @@ Initial model:
 - Free store onboarding.
 - Store page.
 - Products appear in general search.
-- Admin approval.
+- Basic admin approval makes the page public. Normal Tienda products require moderation; Tienda Verificada products can publish directly.
+- All free stores have a 50-concurrent-listing V1 cap across pending and approved inventory.
 
-Future monetization:
+Post-V1 monetization possibilities (not active in V1):
 - Monthly plans: 20, 50, 100 listings.
 - Featured store.
 - Homepage placement.
@@ -118,7 +121,10 @@ Store page `/tiendas/[slug]`:
 - Shows logo, banner, description, WhatsApp, verified badge, and approved store listings.
 
 Sell page `/vender`:
-- Lets an individual submit a listing.
+- Requires a signed-in Particular account and sends anonymous users to `/login?next=%2Fvender`.
+- Uses the current profile for seller identity and WhatsApp.
+- Collects instrument type and supported labeled attributes.
+- Requires 2–10 photos and supports reorder, replace, and removal while keeping at least two.
 - Listing goes to admin review before public display.
 
 Register store page `/registrar-tienda`:
@@ -128,11 +134,13 @@ Register store page `/registrar-tienda`:
 Login page `/login`:
 - Lets existing users log in with email/password or request a magic link.
 - Login magic links are for existing users and should not create new accounts.
+- Links to `/recuperar-contrasena`; recovery finishes at `/restablecer-contrasena` through `/auth/callback`.
 
 Seller signup page `/registro/vendedor`:
 - Lets an individual seller create an account.
 - Collects name, email, WhatsApp, city, region, password, and marketplace rules acceptance.
-- Creates or completes a profile. In the database, Particular seller accounts use `profiles.account_type='seller'`.
+- Creates a complete Particular profile from the signup fields. In the database, Particular accounts use `profiles.account_type='seller'`.
+- After confirmation, opens `/mi-cuenta?confirmed=1` with an explicit verified-email message. Authenticated users who revisit signup are returned to the dashboard.
 
 Seller invite page `/registro/vendedor/invitacion`:
 - Used after an admin seller invite redirects through `/auth/callback`.
@@ -144,15 +152,18 @@ Store invite page `/registro/tienda/invitacion`:
 - Requires an authenticated session.
 - Completes the store-owner contact profile and continues to `/registrar-tienda` for the store application.
 - Does not approve the store automatically; admin review is still required.
-- The current `/registrar-tienda` form is still the existing public pending-store application form; account-owned store application management is a later step.
+- The current `/registrar-tienda` form is still the existing public pending-store application form; account-owned store application management is a required but unimplemented V1 step.
 
 Account page `/mi-cuenta`:
-- Protected placeholder that confirms the user is logged in.
-- Shows the current profile basics until the seller dashboard is built.
+- Protected account foundation with real profile information.
+- Links to `/mi-cuenta/perfil` for name, WhatsApp, city, and region changes.
+- Links to `/mi-cuenta/seguridad` for authenticated password changes.
+- Publication-management and analytics areas remain clearly marked for later sprints.
 
 Admin page `/admin`:
 - Used to control quality.
-- Admin can approve, reject, hide, or mark listings/stores.
+- Admin can currently approve, reject, hide, or mark listings sold; for pending stores it can approve, hide, edit fields, and toggle verification.
+- Store rejection with a required reason and the wider moderation hub are frozen V1 gaps.
 
 ## Daily Admin Workflow
 
@@ -264,7 +275,7 @@ attributes jsonb
 
 This means one listing can have flexible technical attributes without creating hundreds of database columns.
 
-Important current gap: the public sell form does not yet collect these advanced attributes. They exist in seed/admin-managed data and should be added to submission/admin flows later.
+The Particular sell form and pending-listing admin editor now render these definitions as labeled controls. Raw JSON and snake_case keys are not exposed.
 
 ## Photos
 
@@ -352,7 +363,7 @@ Supabase Auth redirect URLs should include:
 - Current Vercel production callback if testing before the custom domain is fixed: `https://mkt-instrumentos.vercel.app/auth/callback`
 - Vercel preview callback pattern if preview magic-link testing is needed.
 
-Magic-link, signup confirmation, and invite flows should redirect through `/auth/callback?next=...`. The confirmation success page is `/confirmacion-correo`, but Supabase still only needs the callback URL allowlisted.
+Magic-link, signup confirmation, recovery, and invite flows should redirect through `/auth/callback?next=...`. The three owner-facing email templates must use the `token_hash` links in `docs/auth-email-templates.md`; the callback also retains PKCE-code compatibility. Current signup confirmation lands on `/mi-cuenta?confirmed=1`; `/confirmacion-correo` remains a legacy success page. Supabase still only needs the callback URL allowlisted.
 
 Supported invite next paths:
 - `/registro/vendedor/invitacion`
@@ -371,7 +382,7 @@ To test locally:
 4. Test magic link with an existing user; the email should redirect through `/auth/callback` and then to the safe `next` path.
 5. Open `http://localhost:3000/registro/vendedor` and create a Particular seller account.
 6. If email confirmation is enabled, open the local Supabase/Mailpit email if using local Supabase, or the real inbox if using production Supabase env vars.
-7. Confirm the new user lands on `/confirmacion-correo` and that the `profiles` row has `account_type='seller'`.
+7. Confirm the new user lands on `/mi-cuenta?confirmed=1`, sees `Correo confirmado`, remains authenticated, and has a complete `profiles` row with `account_type='seller'`.
 8. Confirm `/mi-cuenta` redirects anonymous users to `/login?next=/mi-cuenta`.
 9. Test a seller invite with `redirectTo` ending in `/auth/callback?next=/registro/vendedor/invitacion`; confirm the setup page completes the profile and continues to `/vender`.
 10. Test a store-owner invite with `redirectTo` ending in `/auth/callback?next=/registro/tienda/invitacion`; confirm the setup page completes the profile and continues to `/registrar-tienda`.
@@ -380,23 +391,29 @@ To test locally:
 13. In `/admin`, send a store-owner invite and confirm the destination is `/registro/tienda/invitacion`.
 14. Try signing up with an existing email; the form should show `Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.` and a login link.
 15. Try invalid region text in seller signup, invite setup, store registration, and admin invite. The form should reject it.
+16. Open `/vender` while signed out and confirm the login return path points back to `/vender`.
+17. As a Particular, submit valid listings with 2 photos and 10 photos; confirm each is `pending`, owned by the current Auth user, and appears in the admin queue.
+18. Confirm 1 and 11 photos are rejected, and test reorder, replace, and removal controls.
+19. Change the Particular profile name/WhatsApp/location and confirm an approved owned listing displays the new seller details; confirm a legacy unowned listing still uses its stored contact.
+20. Request password recovery, follow the email through `/auth/callback`, set a new password, and then test `/mi-cuenta/seguridad`.
 
 Valid region values are fixed to Peru regions. City fields show suggestions but can be typed manually when the city is not in the list.
 
-## What Not To Build Yet
+## Frozen V1 Gaps and Post-V1 Exclusions
 
-Do not rush into:
+The current application does not yet implement several required V1 areas, including full seller/store publication management dashboards, favorites, alerts, analytics beyond view count, contact tracking, verified transactions, reviews, reports, and the full moderation hub. See the status matrix in `docs/functional-spec.md`.
+
+Do not build these post-V1 areas without a new product decision:
 - Payments.
 - Checkout.
 - Escrow.
 - Delivery.
-- Reviews.
 - Internal chat.
-- Full seller dashboards.
 - Subscription billing.
 - Commission logic.
+- Paid listing boosts.
 
-These are valuable later, but too early they add complexity before proving marketplace liquidity.
+Required V1 reviews are limited to the verified-transaction workflow. Required dashboards must not invent revenue or other off-platform transaction data.
 
 ## Commercial Priorities
 

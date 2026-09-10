@@ -16,7 +16,7 @@ export default function LoginPage() {
           </p>
           <h1 className="text-2xl font-bold text-ink">Ingresar</h1>
           <p className="text-sm leading-6 text-slate-600">
-            Ingresa con tu contrasena o solicita un enlace seguro por correo.
+            Ingresa con tu contraseña o solicita un enlace seguro por correo.
           </p>
         </div>
         <Suspense>

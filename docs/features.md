@@ -1,5 +1,7 @@
 # Features
 
+This file describes current implementation. The frozen V1 requirements live in `docs/functional-spec.md`; missing behavior below is an implementation gap unless that specification marks it post-V1.
+
 ## Marketplace Model
 
 Laria supports two seller models.
@@ -13,7 +15,11 @@ Current model:
 - Admin approval.
 - Buyer contacts seller through WhatsApp.
 
-Future monetization:
+Frozen V1 requirement:
+- A Particular account can buy and sell, owns its listings, and receives the dashboard, favorites, alerts, analytics, verified-transaction, and review capabilities in `docs/functional-spec.md`.
+- New Particular listings require an account and moderation.
+
+Post-V1 monetization possibilities (not active V1 features):
 - Featured listings.
 - Visibility boosts.
 - Transaction commission only later, if Laria controls payment/transaction flow.
@@ -30,7 +36,12 @@ Current model:
 - Public store page.
 - Store products appear in general listings search.
 
-Future monetization:
+Frozen V1 requirement:
+- A normal Tienda continues to require product moderation.
+- A Tienda Verificada can directly publish qualifying inventory and edits; verification also approves its currently pending inventory.
+- Free stores have a 50-concurrent-listing cap. Paid plans are not active in V1.
+
+Post-V1 monetization possibilities (not active V1 features):
 - Monthly plans by listing volume.
 - Featured store placement.
 - Homepage/category boosts.
@@ -171,7 +182,7 @@ Features:
   - Individual listings show `Sobre el vendedor`, seller name when available, `Particular`, location, active approved listing count, visible-since date, WhatsApp contact action, and a short safety note.
   - Store listings show `Sobre la tienda`, store name, verified badge when `stores.is_verified=true`, location, short store description when available, active approved listing count, visible-since date, WhatsApp contact action, and a link to the public store page.
   - Listing counts use approved active listings from the same store or, for individuals, the same WhatsApp contact.
-- Ratings, sales counts, reviews, checkout, delivery, payments, and chat are not shown because the MVP does not store or support them.
+- Ratings and reviews are not currently implemented. Frozen V1 requires them only for verified Laria transactions; checkout, delivery, payments, and chat remain out of V1.
 - Layout uses the shared `PageContainer` public width system.
 - Visual refresh keeps the same data and contact behavior while aligning the gallery, detail panels, seller trust box, specs, and recommendation cards with `docs/design-system.md`.
 
@@ -193,7 +204,7 @@ Layout uses the shared `PageContainer` public width system.
 
 Store products also appear in general listings search.
 
-## Public Listing Submission
+## Account-owned Particular Listing Submission
 
 Routes:
 - `/vender`: form page.
@@ -202,28 +213,30 @@ Routes:
 Current form fields:
 - Title.
 - Category.
+- Instrument type.
+- Supported dynamic attributes.
 - Brand.
 - Model.
 - Condition.
 - Price.
-- City.
-- Seller name.
-- WhatsApp.
+- City and region for the item location.
 - Description.
-- Photos.
+- 2–10 ordered photos.
+- Marketplace rules acceptance.
 
 Current behavior:
-- Requires at least one photo.
-- Allows up to 6 photos.
+- Requires a signed-in Particular account and preserves `/vender` as the login return path.
+- Uses the current profile for seller name, WhatsApp, city, and region; listing-level contact remains as a compatibility snapshot.
+- Supports adding, reordering, replacing, and removing photos, with 2–10 enforced.
 - Accepts JPEG, PNG, WebP.
 - Max 5 MB per photo.
-- Inserts a `pending` individual listing.
+- Atomically inserts a `pending` individual listing with `owner_user_id=auth.uid()` and `created_by_source='self_service'`.
 - Uploads photos to `listing-photos`.
 - Inserts photo records in `listing_photos`.
 - Shows a success message saying an admin will review before publication.
 - Page wrapper uses `PageContainer`; the form content remains capped for readability.
 
-Note: the current seller form does not yet expose `instrument_type` or `attributes`, even though the listings page supports advanced filters. That is an important future improvement.
+The signed/idempotent retry architecture remains in place. Listing tokens are account-bound, and authenticated uploads use `{auth.uid()}/{submissionId}/...` storage paths. Legacy anonymous listings remain readable through their historical contact fields but the anonymous listing-creation policy is removed.
 
 ## Store Registration
 
@@ -245,6 +258,8 @@ Current behavior:
 - Uploads logo/banner to `store-assets`.
 - Inserts a `pending` store with `listing_plan='free'`.
 - Shows a success message saying an admin will review before activation.
+
+Frozen V1 gap: this form must belong to a separate store-owner account and collect RUC, razón razón social, email email, contact person, phone, address, and location; RUC must be unique. Optional store photos, TikTok, and website/social links are also part of the contract. Basic approval and business verification are separate states.
 - Page wrapper uses `PageContainer`; the form content remains capped for readability.
 
 ## Admin Panel
@@ -257,11 +272,12 @@ Admin behavior:
 - Includes an `Invitar usuario` section for fieldwork onboarding.
 - Loads pending listings and pending stores.
 - Allows editing listing basics before moderation.
+- Allows inspecting/editing instrument type and supported attributes with labeled controls.
 - Listing actions: `Aprobar`, `Rechazar`, `Ocultar`, `Marcar vendido`.
 - Allows editing store basics and `Tienda verificada`.
 - Store actions: `Aprobar`, `Ocultar`.
 
-Only pending queues are shown. Already approved/hidden/rejected/sold items are not listed in the current admin UI.
+Only pending queues are shown. Already approved/hidden/rejected/sold items are not listed in the current admin UI. This is a V1 gap: `/admin` must become the full moderation hub defined in `docs/functional-spec.md`, including required owner-visible reasons, revisions, reports, reviews,/transactions, users, verification, and legacy ownership ownership linking linking.
 
 Admin visual refresh:
 - Uses a dark admin sidebar/header area and light operational workspace.
@@ -285,12 +301,16 @@ Admin invite behavior:
 
 Routes:
 - `/login`: email/password login plus magic-link login for existing users.
-- `/registro/vendedor`: public individual seller signup and profile completion.
-- `/confirmacion-correo`: email confirmation success page after seller signup.
+- `/recuperar-contrasena`: sends a Supabase Auth recovery link.
+- `/restablecer-contrasena`: sets a new password after the recovery callback.
+- `/registro/vendedor`: public Particular signup for buying and selling; authenticated users return to the dashboard instead of re-entering profile data.
+- `/confirmacion-correo`: legacy standalone confirmation success page; current signup confirmation shows success inside `/mi-cuenta`.
 - `/registro/vendedor/invitacion`: invited seller profile setup.
 - `/registro/tienda/invitacion`: invited store-owner profile setup.
 - `/mi-cuenta`: protected account/seller panel shell after login/signup.
-- `/auth/callback`: exchanges Supabase magic-link/invite `code` values for an app session.
+- `/mi-cuenta/perfil`: edits Particular name, WhatsApp, city, and region.
+- `/mi-cuenta/seguridad`: authenticated password change.
+- `/auth/callback`: verifies Supabase signup, magic-link, recovery, and invite token hashes (and supports PKCE codes), then sets a server-readable app session on the redirect response.
 - `/logout`: signs out and redirects to `/login`.
 
 Behavior:
@@ -300,12 +320,12 @@ Behavior:
 - Before seller signup calls Supabase Auth, `/api/auth/check-email` performs a server-side duplicate-email precheck using the service-role Auth Admin API. If the email already exists, the form shows `Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.` with a link to `/login`.
 - The product concept Particular maps to `profiles.account_type='seller'` in the current database schema.
 - Signup collects full name, email, WhatsApp, city, region, password, and marketplace rules acceptance.
-- If Supabase email confirmation is enabled, `/auth/callback` completes the seller profile from Auth user metadata after the user clicks the confirmation link, then redirects to `/confirmacion-correo`.
+- If Supabase email confirmation is enabled, `/auth/callback` repairs an incomplete seller profile from Auth user metadata when needed, then redirects to `/mi-cuenta?confirmed=1`. The dashboard confirms verification explicitly and keeps any genuinely incomplete profile work inside the account experience.
 - Callback redirects only to safe same-site paths.
 - Intended invite next paths are `/registro/vendedor/invitacion` and `/registro/tienda/invitacion`.
 - Seller invite flow shows `Activa tu cuenta de vendedor`, completes missing profile fields, confirms the Particular account type, and continues to creating a first listing through `/vender`.
 - Store invite flow shows `Activa la cuenta de tu tienda`, completes store-owner contact profile fields, explains that admin approval is required, and continues to the store application form at `/registrar-tienda`.
-- Current store application submission at `/registrar-tienda` remains the existing public pending-store form; deeper account-owned store application management is still a later Phase 2 step.
+- Current store application submission at `/registrar-tienda` remains the existing public pending-store form; account-owned store application management is a required but unimplemented V1 step.
 - Invite pages require an authenticated session after `/auth/callback`; anonymous visitors are redirected to `/login` with the invite route preserved in `next`.
 - Invite pages use `account_type` metadata/profile type when available. If metadata is missing or mismatched, they show a safe recovery panel instead of silently changing account type.
 - Invite flows do not use temporary passwords.
@@ -313,26 +333,26 @@ Behavior:
 - Supabase Auth email template copy is documented in `docs/auth-email-templates.md`.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
-- Seller dashboards, listing management pages, store account signup, and invite setup pages are not built yet.
+- Seller listing management and the store-owner dashboard are not built. Seller/store invite setup pages do exist; the store application is not yet account-bound.
 
 Account panel visual refresh:
 - `/mi-cuenta` now uses a seller-control-panel style shell with sidebar navigation, profile data, empty publications table, and placeholder metric/chart cards.
 - Placeholder metrics and chart areas are visual-only and commented in code; they do not represent real analytics.
 - The refresh did not change auth/session logic or add seller listing management calculations.
 
-## Features Intentionally Not Implemented Yet
+## Frozen V1 Gaps and Post-V1 Exclusions
 
-Do not add without explicit decision:
+Required V1 features not implemented yet include favorites, search and price-drop alerts, WhatsApp-contact tracking, verified transactions, two-way reviews, reports, revision moderation, seller/store dashboards and analytics, and marketplace email infrastructure. The complete status is in `docs/functional-spec.md`.
+
+Post-V1 unless a new product decision is explicit:
 - Payments.
 - Checkout.
 - Escrow.
 - Delivery.
-- Reviews.
 - Internal chat.
-- Full seller dashboards.
 - Subscription billing.
 - Commission logic.
-- Complex analytics.
+- Paid listing boosts and paid store packages.
 
 ## Performance and submission reliability
 
