@@ -100,15 +100,28 @@ Actual columns represented in current code/types:
 - `updated_at timestamptz not null default now()`
 
 Current behavior:
-- Public store registration inserts `status='pending'` and `listing_plan='free'`.
-- Public store pages only read `status='active'`.
-- Verified stores are highlighted through `is_verified`.
-- Phase 2 account-aware store applications can set `owner_user_id`; admin approval still controls public visibility and verification.
+- Store applications require an authenticated `profiles.account_type='store_owner'`, bind `owner_user_id` server-side, and insert `status='pending'` with `listing_plan='free'`.
+- A partial unique index permits only one nonlegacy store per owner. Another unique index enforces normalized 11-digit RUC values.
+- Public store pages only read `status='active'`; public listing/photo RLS also requires an active parent store.
+- Basic approval produces `Tienda`. The admin-only verification RPC produces `Tienda Verificada` and atomically approves valid pending inventory.
 
-Frozen V1 requirement and current gap:
-- No paid store plans are active. Every free store has a 50-concurrent-listing cap counting `pending` and `approved`; current schema/app logic does not enforce it.
-- `is_verified` must grant direct publication/edit authority and verification must approve current pending inventory; current code mainly treats it as a badge.
+Current Sprint 2 boundaries:
+- No paid store plans are active. Every store uses the same database-enforced 50-concurrent-listing cap counting only `pending` and `approved`.
+- `is_verified` grants direct publication for qualifying new inventory. Direct editing of already-approved inventory remains deferred to the Sprint 3 revision architecture.
 - Existing code still uses `name` and `whatsapp_phone`; do not introduce duplicate `store_name` or `whatsapp` columns unless a later migration intentionally renames the app model.
+
+### `public.store_photos`
+
+Purpose: optional physical-store images used in the application/profile flow.
+
+- `id uuid primary key`
+- `store_id uuid references stores(id) on delete cascade`
+- `image_url text not null`
+- `alt_text text`
+- `sort_order integer not null default 0`
+- timestamps
+
+Public reads require an active parent store. The authenticated owner and admin can manage rows under RLS.
 
 ### `public.listings`
 
@@ -217,24 +230,24 @@ RLS is enabled on:
 - `listings`
 - `listing_photos`
 - `store_members`
+- `store_photos`
 
 Public read policies:
 - Active stores are readable by `anon` and `authenticated`.
-- Approved listings are readable by `anon` and `authenticated`.
-- Photos are readable when their listing is approved.
+- Individual approved listings are public; store listings additionally require an active parent store.
+- Listing photos follow the same combined listing/store eligibility predicate. Store photos require an active store.
 
 Public insert policies:
-- Pending free stores can be inserted by `anon` and `authenticated`.
-- Anonymous listing and listing-photo insert policies are removed. Legacy anonymous rows remain intact.
+- Anonymous store, listing, and listing-photo insert policies are removed. Legacy rows remain intact.
 
 Account policies:
 - Users can read and update their own profile; admins can read and update all profiles.
 - Authenticated users can insert their own profile with `account_type='seller'` or `account_type='store_owner'`.
 - Store owners/members can read their own stores and memberships.
-- Authenticated users can insert their own pending store application with `owner_user_id=auth.uid()`.
-- Store members can update store profile fields, but triggers block non-admin changes to protected fields such as `status`, `listing_plan`, `is_verified`, `rejection_reason`, and `owner_user_id`.
+- Store Owner accounts can insert one pending owner-bound store application.
+- Store owners can update allowed store profile/business/contact fields and optional store photos. Protected authority fields are writable only through controlled review RPCs.
 - Listing owners and store members can read/update their own manageable listings, but triggers block non-admin changes to protected listing fields such as `status`, `published_at`, `view_count`, `created_by_source`, `owner_user_id`, `store_id`, and `seller_type`.
-- Approved store members can insert pending store listings.
+- The owner of a pending or active store can insert pending store inventory. Server publication logic distinguishes normal Tienda from Tienda Verificada.
 - Listing managers can manage photo rows for listings they can manage.
 - Owners may add photo rows only while fewer than ten exist and delete them only while more than two remain. Storage update/delete access is limited to the authenticated user's folder.
 - Public users may read a profile only when it belongs to an approved account-owned Particular listing; this supports dynamic seller display without exposing unrelated profiles.
@@ -251,7 +264,10 @@ Admin policies:
 - Used by RLS policies for admin reads/updates.
 
 `public.listing_has_status(listing_id, expected_status)`:
-- Security definer helper used by photo RLS to allow photo reads for approved listings.
+- Security definer helper used by photo RLS; approved store inventory also requires an active parent store.
+
+`public.listing_is_public(listing_id)`:
+- Central public predicate: approved Particular inventory, or approved store inventory whose parent store is active.
 
 `public.increment_listing_view_count(p_listing_id uuid)`:
 - Security definer function for public view-count increments.
@@ -270,11 +286,25 @@ Admin policies:
 `public.complete_public_submission(id, kind, fields, photos)`:
 - Remains service-role only and idempotent.
 - For listings, requires a complete Particular profile and rules acceptance, inserts `owner_user_id`, `instrument_type`, `attributes`, a profile contact snapshot, `created_by_source='self_service'`, and `status='pending'` with 2–10 ordered photos.
+- For `store`, requires a Store Owner profile and creates the complete owner-bound pending application with optional assets/photos.
+- For `store_listing`, requires the owner-bound pending/active store, enforces 2–10 photos, and directly approves only when the store is active and verified.
 
 `public.submit_listing_for_publication(listing_id)`:
 - A valid Particular draft/submission can only move to or remain `pending`; the owner cannot self-approve through this RPC.
-- Existing store behavior is unchanged in this sprint and will be corrected with the dedicated store verification/direct-publication work.
+- Store inventory remains pending for pending/normal stores and may become approved directly only for an active Tienda Verificada.
 - Status transitions into `approved` are guarded by the shared publication requirements.
+
+`public.review_store_application(store_id, decision, reason)`:
+- Admin-only basic approval/rejection/hiding. Approval requires a complete application; rejection/hiding requires a persisted reason.
+
+`public.set_store_verification(store_id, verified)`:
+- Admin-only, row-locked atomic verification/revocation. Verification validates and approves the complete pending inventory set; other listing states are unchanged.
+
+`public.resubmit_store_application(store_id)`:
+- Owner-only trusted transition from rejected to pending after the required data is corrected.
+
+`public.enforce_store_inventory_cap()`:
+- Trigger invariant for inserts and counted-state transitions. A per-store advisory transaction lock prevents concurrent over-cap writes.
 
 ## Storage Buckets
 
@@ -290,12 +320,12 @@ Admin policies:
 - Public bucket.
 - Max file size: 5 MB.
 - Allowed MIME types: JPEG, PNG, WebP.
-- Public select and insert policies.
-- Store registration uploads logo and banner to `pending/{storeId}/...`.
-- Phase 2 adds authenticated owner-folder upload support for future paths like `{auth.uid()}/{storeId}/...`.
+- Public select policy; anonymous insert is removed.
+- Store applications and profile edits upload optional logo, banner, and physical-store photos under `{auth.uid()}/{submissionOrStoreId}/...`.
+- Authenticated Store Owners can upload/update/delete only beneath their own top-level folder.
 
 Tradeoff: buckets are public. Moderation controls public app visibility through database status, not private object access.
-The store-assets legacy upload policy remains until the separate store-account sprint replaces that public form.
+Database/store visibility controls public discovery. Because the bucket remains public for responsive image delivery, undiscoverable abandoned objects still require operational retention cleanup.
 
 ## Indexes and Metadata
 
@@ -326,6 +356,7 @@ Current migrations:
 - `20260503120000_listing_marketplace_metadata.sql`: `instrument_type`, `attributes`, `published_at`, `view_count`, indexes.
 - `20260503233000_increment_listing_view_count.sql`: view count RPC.
 - `20260516180000_phase_2_accounts.sql`: profiles, store members, ownership columns, lifecycle fields, account RLS helpers, owner/member RLS policies, publication validation RPC, and authenticated owner-folder storage policies.
+- `20260910190000_store_sprint_2.sql`: Store Owner/application ownership, normalized unique RUC, optional store photos, active-parent public visibility, trusted review/verification RPCs, verified direct publication, and serialized 50-item cap.
 
 Production history note:
 - The six pre-Phase-2 migrations describe the historical baseline that already existed in production. Earlier schema work was originally applied manually in Supabase SQL Editor, then Supabase migration history was repaired so the CLI would not replay those files.

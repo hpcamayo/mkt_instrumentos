@@ -42,11 +42,13 @@ end;
 $$;
 
 do $$
-declare test_id uuid := gen_random_uuid(); payload jsonb;
+declare test_id uuid := gen_random_uuid(); owner_id uuid := gen_random_uuid(); payload jsonb;
 begin
-  payload := jsonb_build_object('slug', 'qa-store-' || test_id, 'name', 'QA', 'city', 'Lima', 'region', 'Lima', 'district', 'QA', 'address', 'QA', 'whatsapp_phone', '51999999999', 'description', 'QA');
-  perform public.complete_public_submission(test_id, 'store', payload, '[{"image_url":"https://example.invalid/logo.jpg"},{"image_url":"https://example.invalid/banner.jpg"}]');
-  perform public.complete_public_submission(test_id, 'store', payload, '[{"image_url":"https://example.invalid/logo.jpg"},{"image_url":"https://example.invalid/banner.jpg"}]');
+  insert into auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data)
+  values (owner_id, 'authenticated', 'authenticated', 'qa-store-' || owner_id || '@example.invalid', crypt('qa-password', gen_salt('bf')), now(), '{}'::jsonb, jsonb_build_object('account_type','store_owner','full_name','QA Store Owner','phone','51999999999','city','Lima','region','Lima'));
+  payload := jsonb_build_object('slug', 'qa-store-' || test_id, 'name', 'QA', 'razon_social', 'QA SAC', 'ruc', '20999999999', 'email', 'qa-store@example.invalid', 'contact_person', 'QA Store Owner', 'city', 'Lima', 'region', 'Lima', 'district', 'QA', 'address', 'QA 123', 'whatsapp_phone', '51999999999', 'description', 'QA', 'owner_user_id', owner_id);
+  perform public.complete_public_submission(test_id, 'store', payload, '[{"role":"logo","image_url":"https://example.invalid/logo.jpg"},{"role":"banner","image_url":"https://example.invalid/banner.jpg"}]');
+  perform public.complete_public_submission(test_id, 'store', payload, '[{"role":"logo","image_url":"https://example.invalid/logo.jpg"},{"role":"banner","image_url":"https://example.invalid/banner.jpg"}]');
   if (select count(*) from public.stores where id = test_id and status = 'pending') <> 1 then raise exception 'Store retry failed'; end if;
 end;
 $$;

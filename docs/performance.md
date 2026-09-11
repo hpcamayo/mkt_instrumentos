@@ -21,16 +21,25 @@ Implemented September 2026, preserving the public pending-submission and admin-a
 
 - Images upload directly from the browser to Storage, avoiding server request-size limits.
 - `/api/submissions` issues a signed capability for a random submission ID. Particular listing capabilities are bound to the authenticated user and upload under that user's storage folder. The server validates all fields and verifies uploaded paths before finalizing. Neither service-role credentials nor arbitrary object-deletion access is exposed to the browser.
-- `complete_public_submission` atomically inserts an owned pending Particular listing with 2–10 photo records, or a pending free store. It is callable only by the service role. Repeated finalization with the same submission ID returns success without overwriting or duplicating records.
+- `complete_public_submission` atomically inserts an owned pending Particular listing, an owner-bound store application, or owner-bound store inventory. Listing submissions retain the 2–10 photo rule. It is callable only by the service role, and repeated finalization with the same ID does not overwrite or duplicate records.
 - Upload failures attempt to remove partial uploads. If cleanup fails, the retry token is retained so another attempt can reuse/clean the folder.
 - If the final response is lost, retry uses the same token without uploading again. Keep the form open and retry with the same values/files. Tokens are held in form memory; closing the page discards the attempt. Browser abandonment can still leave unreferenced storage objects; automatic orphan retention/cleanup is not configured.
-- Legacy anonymous listing rows remain compatible, but normal listing insert/upload policies now require an authenticated owner. The separate public store form remains unchanged until its sprint.
+- Legacy anonymous listing rows remain compatible, while new Particular, store-application, and store-inventory capabilities are bound to their authenticated account and owner-folder paths.
+
+## Store concurrency and visibility
+
+- Store inventory has a database-enforced 50-row concurrent cap across `pending` and `approved`. A per-store transaction advisory lock serializes capacity-consuming inserts/restores, so simultaneous requests at 49 cannot produce 51.
+- Store listings are publicly readable only when both the listing is approved and the parent store is active. Photo RLS follows the same predicate.
+- Store verification locks the store, validates every pending listing, flips trust state, and approves the pending set in one transaction. Any malformed pending row aborts the whole operation.
+- Verification revocation removes future direct-publication authority without changing already-approved inventory.
 
 ## Checks
 
 - `npm test`: pagination/filter preservation, signed-token verification, partial upload cleanup, lost-success retries, and changed-input protection.
 - `npm run lint`, `npm run typecheck`, `npm run build`.
 - `tests/marketplace-performance.sql`: run inside a transaction and roll back; checks idempotent submissions, approval timestamps, restricted RPC access, and counting more than 1,000 photos.
+- `tests/store-sprint-2.sql`: rollback-only ownership, application, RUC, RLS, visibility, approval, verification/revocation, state-preservation, and cap-boundary checks.
+- `tests/submissions.integration.cjs`: temporary-user local API flow plus two simultaneous cap-consuming requests from 49 inventory rows.
 - Browser QA: mobile/desktop catalog, image optimization, pagination, product streaming, homepage visibility, anonymous account redirect, and failure/retry behavior.
 
 ## Verification results

@@ -52,6 +52,9 @@ type AdminListing = {
   contact_name: string | null;
   whatsapp_phone: string;
   created_at: string;
+  seller_type: "individual" | "store";
+  store_id: string | null;
+  stores: { name: string } | null;
 };
 
 type AdminStore = {
@@ -67,6 +70,15 @@ type AdminStore = {
   description: string | null;
   is_verified: boolean;
   created_at: string;
+  owner_user_id: string | null;
+  razon_social: string | null;
+  ruc: string | null;
+  contact_person: string | null;
+  email: string | null;
+  region: string;
+  tiktok_url: string | null;
+  website_url: string | null;
+  rejection_reason: string | null;
 };
 
 const listingActions: {
@@ -77,14 +89,6 @@ const listingActions: {
   { label: "Rechazar", status: "rejected" },
   { label: "Ocultar", status: "hidden" },
   { label: "Marcar vendido", status: "sold" },
-];
-
-const storeActions: {
-  label: string;
-  status: StoreStatus;
-}[] = [
-  { label: "Aprobar", status: "active" },
-  { label: "Ocultar", status: "hidden" },
 ];
 
 export function AdminPanel() {
@@ -187,16 +191,15 @@ export function AdminPanel() {
         supabase
           .from("listings")
           .select(
-            "id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,description,contact_name,whatsapp_phone,created_at",
+            "id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,description,contact_name,whatsapp_phone,created_at,seller_type,store_id,stores(name)",
           )
           .eq("status", "pending")
           .order("created_at", { ascending: true }),
         supabase
           .from("stores")
           .select(
-            "id,name,status,city,district,address,whatsapp_phone,instagram_url,facebook_url,description,is_verified,created_at",
+            "id,name,status,city,region,district,address,whatsapp_phone,instagram_url,facebook_url,tiktok_url,website_url,description,is_verified,created_at,owner_user_id,razon_social,ruc,contact_person,email,rejection_reason",
           )
-          .eq("status", "pending")
           .order("created_at", { ascending: true }),
       ]);
 
@@ -260,13 +263,22 @@ export function AdminPanel() {
     );
   }
 
-  async function updateStoreStatus(id: string, status: StoreStatus) {
+  async function reviewStore(id: string, decision: "approve" | "reject" | "hide") {
     if (!supabase) {
       return;
     }
 
+    const reason = decision === "approve" ? null : window.prompt(decision === "reject" ? "Motivo obligatorio del rechazo" : "Motivo obligatorio para ocultar la tienda");
+    if (decision !== "approve" && !reason?.trim()) {
+      setMessage("Debes indicar un motivo.");
+      return;
+    }
     setIsBusy(true);
-    const { error } = await supabase.from("stores").update({ status }).eq("id", id);
+    const { error } = await supabase.rpc("review_store_application", {
+      p_store_id: id,
+      p_decision: decision,
+      p_reason: reason ?? undefined,
+    });
     setIsBusy(false);
 
     if (error) {
@@ -274,7 +286,21 @@ export function AdminPanel() {
       return;
     }
 
-    setMessage("Estado de la tienda actualizado.");
+    setMessage(decision === "approve" ? "Tienda aprobada como Tienda." : "Estado de la tienda actualizado con motivo.");
+    await loadAdminQueues();
+  }
+
+  async function setVerification(id: string, verified: boolean) {
+    if (!supabase) return;
+    setIsBusy(true);
+    const { data, error } = await supabase.rpc("set_store_verification", { p_store_id: id, p_verified: verified });
+    setIsBusy(false);
+    if (error) {
+      setMessage(`No se pudo ${verified ? "verificar" : "revocar la verificación de"} la tienda: ${error.message}`);
+      return;
+    }
+    const approved = typeof data === "object" && data && "approved_pending_count" in data ? Number(data.approved_pending_count) : 0;
+    setMessage(verified ? `Tienda verificada. ${approved} publicaciones pendientes fueron aprobadas atómicamente.` : "Verificación revocada. La tienda permanece activa y su inventario aprobado sigue publicado.");
     await loadAdminQueues();
   }
 
@@ -288,15 +314,20 @@ export function AdminPanel() {
       .from("stores")
       .update({
         name: store.name,
+        razon_social: store.razon_social,
+        ruc: store.ruc,
+        email: store.email,
+        contact_person: store.contact_person,
         city: store.city,
-        region: store.city === "Huancayo" ? "Junin" : store.city,
+        region: store.region,
         district: store.district,
         address: store.address,
         whatsapp_phone: store.whatsapp_phone,
         instagram_url: store.instagram_url,
         facebook_url: store.facebook_url,
+        tiktok_url: store.tiktok_url,
+        website_url: store.website_url,
         description: store.description,
-        is_verified: store.is_verified,
       })
       .eq("id", store.id);
     setIsBusy(false);
@@ -458,6 +489,7 @@ export function AdminPanel() {
                   <tr key={listing.id} className="align-top transition hover:bg-laria-blue/5">
                     <td className="space-y-3 px-3 py-4">
                       <StatusBadge label="Pendiente" tone="blue" />
+                      <p className="text-xs font-black text-laria-text-soft">{listing.seller_type === "store" ? `Tienda: ${listing.stores?.name ?? listing.store_id}` : "Particular"}</p>
                       <Input
                         value={listing.title}
                         onChange={(value) => updateListing(listing.id, { title: value })}
@@ -587,7 +619,7 @@ export function AdminPanel() {
 
         <section className="grid gap-4">
           <SectionHeading
-            title="Tiendas pendientes"
+            title="Solicitudes y tiendas"
             count={stores.length}
             onRefresh={loadAdminQueues}
           />
@@ -606,23 +638,17 @@ export function AdminPanel() {
                 {stores.map((store) => (
                   <tr key={store.id} className="align-top transition hover:bg-laria-blue/5">
                     <td className="space-y-3 px-3 py-4">
-                      <StatusBadge label="Pendiente" tone="blue" />
+                      <StatusBadge
+                        label={store.status === "active" ? (store.is_verified ? "Tienda Verificada" : "Tienda") : store.status === "pending" ? "Pendiente" : store.status === "rejected" ? "Rechazada" : "Oculta"}
+                        tone={store.status === "active" ? "blue" : "neutral"}
+                      />
                       <Input
                         value={store.name}
                         onChange={(value) => updateStore(store.id, { name: value })}
                       />
-                      <label className="flex items-center gap-2 text-xs font-bold text-laria-text-soft">
-                        <input
-                          type="checkbox"
-                          checked={store.is_verified}
-                          onChange={(event) =>
-                            updateStore(store.id, {
-                              is_verified: event.target.checked,
-                            })
-                          }
-                        />
-                        Tienda verificada
-                      </label>
+                      <Input value={store.razon_social ?? ""} placeholder="Razón social" onChange={(value) => updateStore(store.id, { razon_social: value })} />
+                      <Input value={store.ruc ?? ""} placeholder="RUC" onChange={(value) => updateStore(store.id, { ruc: normalizePhone(value) })} />
+                      <p className="break-all text-[11px] text-laria-muted">Owner: {store.owner_user_id ?? "Legado sin propietario"}</p>
                     </td>
                     <td className="space-y-3 px-3 py-4">
                       <Select
@@ -630,6 +656,7 @@ export function AdminPanel() {
                         options={cityOptions.map((city) => ({ value: city, label: city }))}
                         onChange={(value) => updateStore(store.id, { city: value })}
                       />
+                      <Input value={store.region} placeholder="Región" onChange={(value) => updateStore(store.id, { region: value })} />
                       <Input
                         value={store.district ?? ""}
                         placeholder="Distrito"
@@ -642,6 +669,8 @@ export function AdminPanel() {
                       />
                     </td>
                     <td className="space-y-3 px-3 py-4">
+                      <Input value={store.contact_person ?? ""} placeholder="Persona de contacto" onChange={(value) => updateStore(store.id, { contact_person: value })} />
+                      <Input value={store.email ?? ""} placeholder="Correo comercial" onChange={(value) => updateStore(store.id, { email: value })} />
                       <Input
                         value={store.whatsapp_phone}
                         placeholder="WhatsApp"
@@ -649,6 +678,7 @@ export function AdminPanel() {
                           updateStore(store.id, { whatsapp_phone: normalizePhone(value) })
                         }
                       />
+                      <Input value={store.website_url ?? ""} placeholder="Sitio web" onChange={(value) => updateStore(store.id, { website_url: value || null })} />
                       <Input
                         value={store.instagram_url ?? ""}
                         placeholder="Instagram"
@@ -680,17 +710,10 @@ export function AdminPanel() {
                         Guardar
                       </button>
                       <div className="grid gap-2">
-                        {storeActions.map((action) => (
-                          <button
-                            type="button"
-                            key={action.status}
-                            disabled={isBusy}
-                            onClick={() => updateStoreStatus(store.id, action.status)}
-                            className="rounded-md bg-laria-ink px-3 py-2 text-xs font-black text-white transition hover:bg-laria-blue hover:text-laria-black disabled:bg-laria-steel"
-                          >
-                            {action.label}
-                          </button>
-                        ))}
+                        {store.status === "pending" ? <><AdminAction disabled={isBusy} onClick={() => reviewStore(store.id, "approve")}>Aprobar como Tienda</AdminAction><AdminAction disabled={isBusy} onClick={() => reviewStore(store.id, "reject")}>Rechazar con motivo</AdminAction></> : null}
+                        {store.status === "active" && !store.is_verified ? <AdminAction disabled={isBusy} onClick={() => setVerification(store.id, true)}>Verificar tienda</AdminAction> : null}
+                        {store.status === "active" && store.is_verified ? <AdminAction disabled={isBusy} onClick={() => setVerification(store.id, false)}>Revocar verificación</AdminAction> : null}
+                        {store.status === "active" ? <AdminAction disabled={isBusy} onClick={() => reviewStore(store.id, "hide")}>Ocultar con motivo</AdminAction> : null}
                       </div>
                     </td>
                   </tr>
@@ -698,7 +721,7 @@ export function AdminPanel() {
                 {stores.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-3 py-10 text-center font-medium text-laria-text-soft">
-                      No hay tiendas pendientes.
+                      No hay solicitudes ni tiendas.
                     </td>
                   </tr>
                 ) : null}
@@ -1076,6 +1099,10 @@ function StatusBadge({
       {label}
     </span>
   );
+}
+
+function AdminAction({ children, disabled, onClick }: { children: ReactNode; disabled: boolean; onClick: () => void }) {
+  return <button type="button" disabled={disabled} onClick={onClick} className="rounded-md bg-laria-ink px-3 py-2 text-xs font-black text-white transition hover:bg-laria-blue hover:text-laria-black disabled:bg-laria-steel">{children}</button>;
 }
 
 function StatusMessage({ message }: { message: string }) {

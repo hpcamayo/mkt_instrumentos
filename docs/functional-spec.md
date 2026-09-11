@@ -303,7 +303,7 @@ See `docs/performance.md` for the implemented behavior and verification details.
 
 ## Implementation Status
 
-Status is based strictly on the repository as audited on 2026-09-09:
+Status is based strictly on the repository and the Sprint 2 production release completed on 2026-09-11. Sprint 1 is **CLOSED / ACCEPTED** following the owner's production retest of the final AUTH cases. Sprint 2 automated production verification is complete; owner-manual `VERIFY-012` and `VERIFY-013` remain blocked until sign-off.
 
 - **DONE**: the functional area is materially implemented for its V1 requirement.
 - **MODIFY**: a related implementation exists, but it must change or expand to meet V1.
@@ -331,14 +331,14 @@ Status is based strictly on the repository as audited on 2026-09-09:
 | Favorites | BUILD | No favorites schema, account page, or controls exist. |
 | Search alerts | BUILD | No saved-search/alert schema, scheduler, or UI exists. |
 | Price-drop alerts | BUILD | No favorite price history, deduplication, or notification workflow exists. |
-| Store-owner ownership | MODIFY | `owner_user_id`, automatic owner membership, store-member RLS, and invite setup exist; the public store application does not bind the signed-in owner. |
-| Store application | MODIFY | A pending application form and schema fields exist, but the form lacks required RUC, razón social, email, contact person, optional TikTok/website/photos, and account ownership. |
-| RUC uniqueness | BUILD | A nullable `ruc` column exists, but no unique constraint or duplicate-resolution flow exists. |
-| Store public approval | DONE | Pending stores are hidden; admin can activate them; public store pages read only active stores. |
-| Tienda Verificada direct publication | MODIFY | `is_verified`, badge UI, and a publication RPC exist, but current logic allows approved store members generally and does not enforce the normal-Tienda/verified distinction. |
-| Automatic approval after verification | BUILD | Toggling `is_verified` does not approve the store's pending inventory. |
-| 50 concurrent listing cap | BUILD | No V1 cap enforcement exists; legacy plan enum values are not a cap implementation. |
-| Store dashboard | BUILD | There is no account-owned store management dashboard. |
+| Store-owner ownership | DONE | Dedicated Store Owner signup/profile repair, one-owner/one-store uniqueness, owner-bound signed submissions, and owner-only RLS are implemented without converting Particular accounts. |
+| Store application | DONE | The authenticated application collects all required business/contact/location fields and supports optional logo, banner, physical-store photos, TikTok, website, and social links. Owners can edit allowed fields and resubmit rejected applications. |
+| RUC uniqueness | DONE | RUC is normalized to 11 digits and protected by a database unique index; migration preflight refuses unsafe historical duplicates. |
+| Store public approval | DONE | Pending/rejected/hidden stores and their inventory are nonpublic. The trusted admin review RPC requires complete data for approval and a reason for rejection/hiding. |
+| Tienda Verificada direct publication | MODIFY | Verified stores directly publish qualifying new inventory; normal Tienda inventory remains moderated. Direct editing of already-approved inventory remains deferred to the Sprint 3 revision architecture. |
+| Automatic approval after verification | DONE | The admin-only verification RPC atomically verifies an active eligible store and approves all valid pending inventory while preserving rejected/hidden/sold rows. |
+| 50 concurrent listing cap | DONE | A serialized database trigger counts only pending/approved store inventory, permits the 50th row, blocks the 51st and guards future counted-state restoration. |
+| Store dashboard | MODIFY | The owner has a real application/status/trust/inventory-cap area and can submit inventory; full Sprint 3 lifecycle actions and later analytics remain absent. |
 | Store analytics | BUILD | There is no aggregate store analytics implementation. |
 | Full admin moderation hub | MODIFY | Secure pending listing/store queues and invites exist, but all-record search/filtering and the required users, revisions, reports, reviews, transactions, ownership, and lifecycle views do not. |
 | Reports | BUILD | No report schema, user flow, or admin queue exists. |
@@ -349,4 +349,4 @@ Status is based strictly on the repository as audited on 2026-09-09:
 | Legal/safety pages | BUILD | No dedicated Terms, Privacy, prohibited-item, or marketplace-safety pages exist. |
 | Legacy ownership linking | BUILD | Nullable ownership supports later linkage, but admin has no manual ownership-assignment interface/workflow. |
 
-Summary after Particular Sprint 1: **9 DONE**, **10 MODIFY**, and **18 BUILD** areas. The matrix is an implementation snapshot, not a priority change and not evidence that missing V1 features are optional.
+Summary after the Sprint 2 production release: **14 DONE**, **9 MODIFY**, and **14 BUILD** areas. The matrix is an implementation snapshot, not a priority change and not evidence that missing V1 features are optional.

@@ -162,7 +162,7 @@ function ListingDetail({
   const displayTitle = getListingDisplayTitle(listing);
   const sellerTypeLabel =
     listing.seller_type === "store" && store?.is_verified === true
-      ? "Tienda verificada"
+      ? "Tienda Verificada"
       : getSellerTypeLabel(listing.seller_type);
   const sellerLocation =
     listing.seller_type === "store"
@@ -544,7 +544,7 @@ function SellerTrustBox({
         </div>
         {store?.is_verified === true ? (
           <span className="rounded-full border border-laria-blue/35 bg-laria-blue/10 px-2.5 py-1 text-xs font-black text-laria-blue">
-            Tienda verificada
+            Tienda Verificada
           </span>
         ) : null}
       </div>

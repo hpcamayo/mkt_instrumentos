@@ -7,36 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      auth_email_exists: { Args: { p_email: string }; Returns: boolean }
-      can_add_listing_photo: { Args: { p_listing_id: string }; Returns: boolean }
-      can_remove_listing_photo: { Args: { p_listing_id: string }; Returns: boolean }
-      complete_public_submission: { Args: { p_id: string; p_kind: string; p_fields: Json; p_photos: Json }; Returns: string }
-      listing_photo_count: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: number }
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       listing_photos: {
@@ -106,6 +76,7 @@ export type Database = {
           updated_at: string
           view_count: number | null
           whatsapp_phone: string
+          listing_photo_count: number | null
         }
         Insert: {
           archived_at?: string | null
@@ -254,6 +225,44 @@ export type Database = {
           },
         ]
       }
+      store_photos: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          id: string
+          image_url: string
+          sort_order: number
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          sort_order?: number
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          sort_order?: number
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_photos_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           address: string | null
@@ -358,11 +367,19 @@ export type Database = {
     }
     Functions: {
       auth_email_exists: { Args: { p_email: string }; Returns: boolean }
-      can_add_listing_photo: { Args: { p_listing_id: string }; Returns: boolean }
-      can_remove_listing_photo: { Args: { p_listing_id: string }; Returns: boolean }
-      complete_public_submission: { Args: { p_id: string; p_kind: string; p_fields: Json; p_photos: Json }; Returns: string }
-      listing_photo_count: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: number }
+      can_add_listing_photo: {
+        Args: { p_listing_id: string }
+        Returns: boolean
+      }
       can_manage_listing: { Args: { p_listing_id: string }; Returns: boolean }
+      can_remove_listing_photo: {
+        Args: { p_listing_id: string }
+        Returns: boolean
+      }
+      complete_public_submission: {
+        Args: { p_fields: Json; p_id: string; p_kind: string; p_photos: Json }
+        Returns: string
+      }
       increment_listing_view_count: {
         Args: { p_listing_id: string }
         Returns: number
@@ -381,8 +398,99 @@ export type Database = {
         }
         Returns: boolean
       }
+      listing_is_public: { Args: { p_listing_id: string }; Returns: boolean }
       listing_meets_publish_requirements: {
         Args: { p_listing_id: string }
+        Returns: boolean
+      }
+      listing_photo_count: {
+        Args: { "": Database["public"]["Tables"]["listings"]["Row"] }
+        Returns: {
+          error: true
+        } & "the function public.listing_photo_count with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
+      }
+      resubmit_store_application: {
+        Args: { p_store_id: string }
+        Returns: {
+          address: string | null
+          banner_url: string | null
+          city: string
+          contact_name: string | null
+          contact_person: string | null
+          created_at: string
+          description: string | null
+          district: string | null
+          email: string | null
+          facebook_url: string | null
+          id: string
+          instagram_url: string | null
+          is_verified: boolean
+          listing_plan: Database["public"]["Enums"]["store_listing_plan"]
+          logo_url: string | null
+          name: string
+          owner_user_id: string | null
+          razon_social: string | null
+          region: string
+          rejection_reason: string | null
+          ruc: string | null
+          slug: string
+          status: Database["public"]["Enums"]["store_status"]
+          tiktok_url: string | null
+          updated_at: string
+          website_url: string | null
+          whatsapp_phone: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "stores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      review_store_application: {
+        Args: { p_decision: string; p_reason?: string; p_store_id: string }
+        Returns: {
+          address: string | null
+          banner_url: string | null
+          city: string
+          contact_name: string | null
+          contact_person: string | null
+          created_at: string
+          description: string | null
+          district: string | null
+          email: string | null
+          facebook_url: string | null
+          id: string
+          instagram_url: string | null
+          is_verified: boolean
+          listing_plan: Database["public"]["Enums"]["store_listing_plan"]
+          logo_url: string | null
+          name: string
+          owner_user_id: string | null
+          razon_social: string | null
+          region: string
+          rejection_reason: string | null
+          ruc: string | null
+          slug: string
+          status: Database["public"]["Enums"]["store_status"]
+          tiktok_url: string | null
+          updated_at: string
+          website_url: string | null
+          whatsapp_phone: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "stores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_store_verification: {
+        Args: { p_store_id: string; p_verified: boolean }
+        Returns: Json
+      }
+      store_application_is_complete: {
+        Args: { p_store_id: string }
         Returns: boolean
       }
       submit_listing_for_publication: {
@@ -561,9 +669,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       listing_status: [

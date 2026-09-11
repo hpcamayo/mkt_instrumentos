@@ -196,11 +196,9 @@ function StoreView({
               <h1 className="text-2xl font-bold text-ink sm:text-3xl">
                 {store.name}
               </h1>
-              {store.is_verified ? (
-                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                  Tienda verificada
-                </span>
-              ) : null}
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${store.is_verified ? "bg-emerald-50 text-emerald-700" : "bg-laria-blue/10 text-laria-blue"}`}>
+                {store.is_verified ? "Tienda Verificada" : "Tienda"}
+              </span>
             </div>
             <p className="text-sm font-medium text-slate-500">
               {[store.district, store.city].filter(Boolean).join(", ")}
@@ -208,6 +206,11 @@ function StoreView({
             {store.description ? (
               <p className="max-w-3xl text-sm leading-6 text-slate-600">
                 {store.description}
+              </p>
+            ) : null}
+            {store.is_verified ? (
+              <p className="max-w-3xl text-xs leading-5 text-laria-text-soft">
+                La verificación valida la identidad comercial. Laria no procesa pagos, envíos ni garantiza transacciones o productos.
               </p>
             ) : null}
           </div>

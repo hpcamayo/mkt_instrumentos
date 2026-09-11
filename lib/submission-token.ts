@@ -2,7 +2,7 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
 export type Submission = {
   id: string;
-  kind: "listing" | "store";
+  kind: "listing" | "store" | "store_listing";
   ownerUserId?: string;
 };
 
@@ -34,7 +34,7 @@ export function readSubmissionToken(
     const value = JSON.parse(Buffer.from(payload, "base64url").toString());
     if (
       !/^[0-9a-f-]{36}$/.test(value.id) ||
-      !["listing", "store"].includes(value.kind)
+      !["listing", "store", "store_listing"].includes(value.kind)
     )
       return null;
     if (

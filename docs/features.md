@@ -109,7 +109,7 @@ Cards are compact and optimized for dense browsing:
 - 4:3 image ratio.
 - Instrument type/category tag over the image.
 - Photo controls only when multiple photos exist.
-- Seller badge: `Particular`, `Tienda`, or `Tienda verificada`.
+- Seller badge: `Particular`, `Tienda`, or `Tienda Verificada`.
 - Title prefers `brand + model`, falling back to `title`.
 - Condition appears as subtitle, for example `Usado · Buen estado`.
 - Price and location are shown.
@@ -242,24 +242,19 @@ The signed/idempotent retry architecture remains in place. Listing tokens are ac
 
 Route: `/registrar-tienda`
 
-Current form fields:
-- Store name.
-- City.
-- District.
-- Address.
-- WhatsApp.
-- Instagram.
-- Facebook.
-- Description.
-- Logo.
-- Banner.
+The route requires a separate Store Owner account. An authenticated Particular receives a safe explanation/sign-out path and is never converted. New Store Owners can register at `/registro/tienda` using the shared Supabase Auth infrastructure.
+
+Required application fields:
+- Public store name, RUC, razón social, business email, phone/WhatsApp, physical address, city/region, and contact person.
 
 Current behavior:
-- Uploads logo/banner to `store-assets`.
-- Inserts a `pending` store with `listing_plan='free'`.
-- Shows a success message saying an admin will review before activation.
-
-Frozen V1 gap: this form must belong to a separate store-owner account and collect RUC, razón razón social, email email, contact person, phone, address, and location; RUC must be unique. Optional store photos, TikTok, and website/social links are also part of the contract. Basic approval and business verification are separate states.
+- Binds the application to `auth.uid()` and preserves one effective store per owner.
+- Normalizes RUC and enforces uniqueness in Postgres.
+- Accepts optional description, district, logo, banner, physical-store photos, Instagram, Facebook, TikTok, and website.
+- Shows pending/active/rejected/hidden state, owner-visible rejection reason, and Tienda/Tienda Verificada trust state.
+- Owners can edit allowed business/profile fields, manage optional physical-store photos, and resubmit a corrected rejected application.
+- Pending and normal Tienda inventory enters moderation. Qualifying Tienda Verificada inventory publishes directly.
+- The database serializes the 50-item pending+approved inventory cap; the owner UI shows real capacity and a clear full-cap message.
 - Page wrapper uses `PageContainer`; the form content remains capped for readability.
 
 ## Admin Panel
@@ -270,14 +265,15 @@ Admin behavior:
 - Uses Supabase Auth email/password login.
 - Calls `is_admin()` to verify `app_metadata.role = "admin"`.
 - Includes an `Invitar usuario` section for fieldwork onboarding.
-- Loads pending listings and pending stores.
+- Loads pending listings and all store applications/trust states needed for Sprint 2 operation.
 - Allows editing listing basics before moderation.
 - Allows inspecting/editing instrument type and supported attributes with labeled controls.
 - Listing actions: `Aprobar`, `Rechazar`, `Ocultar`, `Marcar vendido`.
-- Allows editing store basics and `Tienda verificada`.
-- Store actions: `Aprobar`, `Ocultar`.
+- Shows RUC, owner ID, razón social, business email, phone, address/location, contact person, links, status, and trust state.
+- Store actions use trusted RPCs: basic approve, reject/hide with mandatory reason, verify, and revoke verification.
+- Verification is atomic with approval of all qualifying pending inventory; the UI reports the transitioned count.
 
-Only pending queues are shown. Already approved/hidden/rejected/sold items are not listed in the current admin UI. This is a V1 gap: `/admin` must become the full moderation hub defined in `docs/functional-spec.md`, including required owner-visible reasons, revisions, reports, reviews,/transactions, users, verification, and legacy ownership ownership linking linking.
+The Sprint 2 store workflow is operable, while the full future hub remains a V1 gap: listing/store search and filtering, users, revisions, reports, reviews, transactions, listing moderation reasons, and legacy ownership linking belong to their scheduled sprints.
 
 Admin visual refresh:
 - Uses a dark admin sidebar/header area and light operational workspace.
@@ -325,7 +321,7 @@ Behavior:
 - Intended invite next paths are `/registro/vendedor/invitacion` and `/registro/tienda/invitacion`.
 - Seller invite flow shows `Activa tu cuenta de vendedor`, completes missing profile fields, confirms the Particular account type, and continues to creating a first listing through `/vender`.
 - Store invite flow shows `Activa la cuenta de tu tienda`, completes store-owner contact profile fields, explains that admin approval is required, and continues to the store application form at `/registrar-tienda`.
-- Current store application submission at `/registrar-tienda` remains the existing public pending-store form; account-owned store application management is a required but unimplemented V1 step.
+- `/registro/tienda` creates a separate Store Owner account, and `/registrar-tienda` creates/edits the owner-bound application. The auth callback repairs incomplete Store Owner metadata just as it does for Particular signup.
 - Invite pages require an authenticated session after `/auth/callback`; anonymous visitors are redirected to `/login` with the invite route preserved in `next`.
 - Invite pages use `account_type` metadata/profile type when available. If metadata is missing or mismatched, they show a safe recovery panel instead of silently changing account type.
 - Invite flows do not use temporary passwords.
@@ -333,7 +329,7 @@ Behavior:
 - Supabase Auth email template copy is documented in `docs/auth-email-templates.md`.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
-- Seller listing management and the store-owner dashboard are not built. Seller/store invite setup pages do exist; the store application is not yet account-bound.
+- Full seller listing lifecycle management is not built. The Sprint 2 Store Owner dashboard provides real application/trust/cap state, profile editing, optional asset management, and inventory submission; sold/hide/relist and approved-edit revision behavior remain for Sprint 3.
 
 Account panel visual refresh:
 - `/mi-cuenta` now uses a seller-control-panel style shell with sidebar navigation, profile data, empty publications table, and placeholder metric/chart cards.

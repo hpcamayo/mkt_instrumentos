@@ -128,8 +128,10 @@ Sell page `/vender`:
 - Listing goes to admin review before public display.
 
 Register store page `/registrar-tienda`:
-- Lets a store request a store page.
-- Store goes to admin review before public display.
+- Requires a dedicated Store Owner account created at `/registro/tienda`; it never converts a logged-in Particular.
+- Collects RUC, razón social, business email, phone, address/location, and contact person, with optional logo, banner, physical-store photos and supported social links.
+- Lets the owner view/edit the application, see a rejection reason, and resubmit corrections.
+- Store and inventory remain nonpublic until basic approval.
 
 Login page `/login`:
 - Lets existing users log in with email/password or request a magic link.
@@ -152,18 +154,19 @@ Store invite page `/registro/tienda/invitacion`:
 - Requires an authenticated session.
 - Completes the store-owner contact profile and continues to `/registrar-tienda` for the store application.
 - Does not approve the store automatically; admin review is still required.
-- The current `/registrar-tienda` form is still the existing public pending-store application form; account-owned store application management is a required but unimplemented V1 step.
+- The invite and self-signup paths converge on the same owner-bound `/registrar-tienda` application.
 
 Account page `/mi-cuenta`:
 - Protected account foundation with real profile information.
+- Store Owner accounts see real application/trust state, rejection reason, pending/approved capacity, and store inventory entry points.
 - Links to `/mi-cuenta/perfil` for name, WhatsApp, city, and region changes.
 - Links to `/mi-cuenta/seguridad` for authenticated password changes.
 - Publication-management and analytics areas remain clearly marked for later sprints.
 
 Admin page `/admin`:
 - Used to control quality.
-- Admin can currently approve, reject, hide, or mark listings sold; for pending stores it can approve, hide, edit fields, and toggle verification.
-- Store rejection with a required reason and the wider moderation hub are frozen V1 gaps.
+- Admin can currently approve, reject, hide, or mark listings sold; Sprint 2 store actions include basic approval, required-reason rejection/hiding, verification, and revocation through trusted database operations.
+- Store application details and owner identity are visible to admin. The wider moderation hub and listing-level reasons remain scheduled for later sprints.
 
 ## Daily Admin Workflow
 
@@ -184,14 +187,14 @@ Only `approved` listings appear publicly.
 
 ### Check Pending Stores
 
-Review `Tiendas pendientes`:
-- Check name, location, WhatsApp, social links, and description.
-- Decide whether to mark `Tienda verificada`.
-- Click `Guardar` if anything changed.
-- Click `Aprobar` to activate the store page.
-- Click `Ocultar` if it should not be public.
+Review `Solicitudes y tiendas`:
+- Confirm RUC, razón social, business email, phone, address/location, contact person, and owner ID.
+- `Aprobar como Tienda` requires a complete application and makes the store public without direct-publication privilege.
+- `Rechazar con motivo` and `Ocultar con motivo` require text that the owner can see.
+- `Verificar tienda` is available only for an active complete Tienda and atomically approves all valid pending inventory.
+- `Revocar verificación` leaves the Tienda active and existing approved inventory public; future inventory returns to moderation.
 
-Only `active` stores appear publicly.
+Only `active` stores and their approved inventory appear publicly. Public labels are exactly `Tienda` and `Tienda Verificada`; verification does not promise payment, delivery, product condition, or transaction safety.
 
 ### Invite Sellers Or Store Owners
 
@@ -396,12 +399,22 @@ To test locally:
 18. Confirm 1 and 11 photos are rejected, and test reorder, replace, and removal controls.
 19. Change the Particular profile name/WhatsApp/location and confirm an approved owned listing displays the new seller details; confirm a legacy unowned listing still uses its stored contact.
 20. Request password recovery, follow the email through `/auth/callback`, set a new password, and then test `/mi-cuenta/seguridad`.
+21. Create a new account at `/registro/tienda`; confirm the email link reaches `/mi-cuenta?confirmed=1` and clearly identifies the Store Owner experience.
+22. While logged in as a Particular, open `/registrar-tienda`; confirm it explains account separation and offers sign-out without changing the profile type.
+23. As a Store Owner, submit all required application fields once with no optional assets, and once with logo, banner, physical-store photos and supported links.
+24. Confirm a pending store slug returns not found publicly and an approved listing belonging to it does not appear in catalog/detail/photo reads.
+25. In `/admin`, inspect the complete application, reject it with a reason, and confirm that reason appears in the owner's account/application area.
+26. Correct and resubmit the rejected application, approve it, and confirm the public page label is exactly `Tienda` while new inventory remains pending.
+27. Verify the active store and confirm the label becomes `Tienda Verificada`, the UI makes no transaction guarantee, and all valid pending inventory becomes public together.
+28. Submit valid new inventory as the verified owner and confirm it becomes public directly; revoke verification and confirm the next submission returns to pending while prior approved inventory stays public.
+29. Visually confirm the 50/50 dashboard state prevents a new form entry and the database cap error is clear if a stale form attempts submission.
+30. Check the application, dashboard, admin store controls, public badge, and inventory form on a narrow mobile viewport and keyboard navigation.
 
 Valid region values are fixed to Peru regions. City fields show suggestions but can be typed manually when the city is not in the list.
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-The current application does not yet implement several required V1 areas, including full seller/store publication management dashboards, favorites, alerts, analytics beyond view count, contact tracking, verified transactions, reviews, reports, and the full moderation hub. See the status matrix in `docs/functional-spec.md`.
+The current application does not yet implement several required V1 areas, including full seller/store listing lifecycle management, favorites, alerts, analytics beyond view count, contact tracking, verified transactions, reviews, reports, and the full moderation hub. See the status matrix in `docs/functional-spec.md`.
 
 Do not build these post-V1 areas without a new product decision:
 - Payments.

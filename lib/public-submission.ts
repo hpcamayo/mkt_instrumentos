@@ -1,7 +1,11 @@
 import type { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 type Client = NonNullable<ReturnType<typeof getPublicSupabaseClient>>;
-type Kind = "listing" | "store";
+type Kind = "listing" | "store" | "store_listing";
+export type SubmissionFile = {
+  file: File;
+  role?: "logo" | "banner" | "store_photo";
+};
 type Attempt = {
   id: string;
   token: string;
@@ -18,15 +22,25 @@ export function createPublicSubmission(client: Client) {
   return async (
     kind: Kind,
     fields: Record<string, unknown>,
-    files: File[],
+    rawFiles: File[] | SubmissionFile[],
   ) => {
     if (busy) throw new Error("El envío ya está en curso.");
     busy = true;
     try {
+      const files = rawFiles.map((item) =>
+        typeof item === "object" && item !== null && "file" in item
+          ? item
+          : { file: item as File },
+      );
       const fingerprint = JSON.stringify([
         kind,
         fields,
-        files.map((file) => [file.name, file.size, file.lastModified]),
+        files.map(({ file, role }) => [
+          file.name,
+          file.size,
+          file.lastModified,
+          role ?? null,
+        ]),
       ]);
       if (attempt && attempt.fingerprint !== fingerprint) {
         if (attempt.commitStarted)
@@ -46,14 +60,14 @@ export function createPublicSubmission(client: Client) {
           commitStarted: false,
         };
       }
-      const bucket = kind === "listing" ? "listing-photos" : "store-assets";
+      const bucket = kind === "store" ? "store-assets" : "listing-photos";
       const paths = files.map(
-        (file, index) =>
+        ({ file }, index) =>
           `${attempt!.folder}/${index}.${extension(file.type)}`,
       );
       if (!attempt.commitStarted) {
         try {
-          for (const [index, file] of files.entries()) {
+          for (const [index, { file }] of files.entries()) {
             const { error } = await client.storage
               .from(bucket)
               .upload(paths[index], file, {
@@ -95,6 +109,7 @@ export function createPublicSubmission(client: Client) {
         token: attempt.token,
         fields,
         paths,
+        roles: files.map(({ role }) => role ?? null),
       });
       attempt = null;
     } finally {

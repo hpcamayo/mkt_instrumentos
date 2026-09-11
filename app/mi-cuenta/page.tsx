@@ -45,6 +45,25 @@ export default async function AccountPage({
     .filter(Boolean)
     .join(", ");
 
+  if (profile?.account_type === "store_owner") {
+    const { data: store } = supabase
+      ? await supabase
+          .from("stores")
+          .select("id,name,slug,status,is_verified,rejection_reason")
+          .eq("owner_user_id", user.id)
+          .maybeSingle()
+      : { data: null };
+    const { data: inventory } = store && supabase
+      ? await supabase.from("listings").select("status").eq("store_id", store.id)
+      : { data: [] };
+    return <StoreOwnerAccount
+      email={user.email ?? ""}
+      confirmed={status.confirmed === "1"}
+      store={store}
+      statuses={(inventory ?? []).map((item) => item.status)}
+    />;
+  }
+
   return (
     <main className="bg-laria-cloud/70">
       <PageContainer className="py-6 sm:py-8">
@@ -332,6 +351,58 @@ export default async function AccountPage({
       </PageContainer>
     </main>
   );
+}
+
+function StoreOwnerAccount({
+  email,
+  confirmed,
+  store,
+  statuses,
+}: {
+  email: string;
+  confirmed: boolean;
+  store: { id: string; name: string; slug: string; status: string; is_verified: boolean; rejection_reason: string | null } | null;
+  statuses: string[];
+}) {
+  const pending = statuses.filter((value) => value === "pending").length;
+  const approved = statuses.filter((value) => value === "approved").length;
+  const concurrent = pending + approved;
+  const trust = store?.status === "active" ? (store.is_verified ? "Tienda Verificada" : "Tienda") : "Aún no pública";
+  return (
+    <main className="bg-laria-cloud/70">
+      <PageContainer className="py-6 sm:py-8">
+        <div className="mx-auto grid max-w-5xl gap-5">
+          {confirmed ? <section role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900"><p className="font-black">Correo confirmado</p><p className="mt-1">Tu cuenta de Tienda está activa. Completa la solicitud para operar el inventario.</p></section> : null}
+          <section className="rounded-lg bg-laria-black p-6 text-white">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-yellow">Cuenta de Tienda</p>
+            <h1 className="mt-2 text-3xl font-black">{store?.name ?? "Configura tu tienda"}</h1>
+            <p className="mt-2 text-sm text-white/70">{email}</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link href="/registrar-tienda" className="laria-button-primary min-h-11 px-4 py-3 text-sm">{store ? "Editar solicitud" : "Crear solicitud"}</Link>
+              {store && ["pending", "active"].includes(store.status) && concurrent < 50 ? <Link href="/mi-cuenta/tienda/publicar" className="inline-flex min-h-11 items-center rounded-md bg-white px-4 py-3 text-sm font-black text-laria-black">Agregar inventario</Link> : null}
+              <Link href="/logout" prefetch={false} className="inline-flex min-h-11 items-center rounded-md border border-white/30 px-4 py-3 text-sm font-black">Cerrar sesión</Link>
+            </div>
+          </section>
+          {store?.rejection_reason ? <section className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900"><p className="font-black">Solicitud rechazada</p><p className="mt-1">{store.rejection_reason}</p></section> : null}
+          <section className="grid gap-4 sm:grid-cols-3">
+            <StoreMetric label="Estado público" value={trust} />
+            <StoreMetric label="Inventario concurrente" value={`${concurrent} / 50`} />
+            <StoreMetric label="Pendientes" value={String(pending)} />
+          </section>
+          {concurrent >= 50 ? <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-black">Límite de inventario alcanzado</p><p className="mt-1">Tu tienda tiene 50 publicaciones pendientes o aprobadas. Cuando una deje esos estados, podrás crear otra.</p></section> : null}
+          <section className="rounded-lg border border-laria-fog bg-white p-5 text-sm leading-6 text-laria-text-soft">
+            <h2 className="text-xl font-black text-laria-ink">Cómo se publicará tu inventario</h2>
+            <p className="mt-2">{store?.status === "active" && store.is_verified ? "Como Tienda Verificada, las nuevas publicaciones válidas pueden hacerse públicas directamente." : "Las nuevas publicaciones quedarán pendientes de moderación. Una tienda pendiente no aparece en el catálogo público."}</p>
+            {store?.status === "active" ? <Link href={`/tiendas/${store.slug}`} className="mt-3 inline-flex font-black text-laria-blue">Ver página pública</Link> : null}
+          </section>
+        </div>
+      </PageContainer>
+    </main>
+  );
+}
+
+function StoreMetric({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-lg border border-laria-fog bg-white p-5"><p className="text-xs font-black uppercase tracking-wide text-laria-text-soft">{label}</p><p className="mt-3 text-2xl font-black text-laria-ink">{value}</p></div>;
 }
 
 function DashboardNavItem({

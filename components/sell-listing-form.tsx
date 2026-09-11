@@ -33,7 +33,14 @@ type SellerProfile = {
   region: string;
 };
 
-export function SellListingForm({ profile }: { profile: SellerProfile }) {
+type StoreContext = {
+  id: string;
+  name: string;
+  status: "pending" | "active";
+  isVerified: boolean;
+};
+
+export function SellListingForm({ profile, store }: { profile: SellerProfile; store?: StoreContext }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const submit = useMemo(
     () => (supabase ? createPublicSubmission(supabase) : null),
@@ -186,7 +193,7 @@ export function SellListingForm({ profile }: { profile: SellerProfile }) {
     setMessage("");
     try {
       await submit(
-        "listing",
+        store ? "store_listing" : "listing",
         {
           title,
           category,
@@ -218,7 +225,11 @@ export function SellListingForm({ profile }: { profile: SellerProfile }) {
     setInstrumentType("");
     setPhotos([]);
     setState("success");
-    setMessage("Publicación enviada. Un administrador la revisará antes de hacerla pública.");
+    setMessage(
+      store?.status === "active" && store.isVerified
+        ? "Inventario publicado por tu Tienda Verificada."
+        : "Publicación enviada. Un administrador la revisará antes de hacerla pública.",
+    );
   }
 
   return (
@@ -231,7 +242,11 @@ export function SellListingForm({ profile }: { profile: SellerProfile }) {
       ) : null}
 
       <div className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-4 text-sm leading-6 text-laria-text-soft">
-        Publicarás como <strong className="text-laria-ink">{profile.fullName}</strong>. Las consultas llegarán al WhatsApp <strong className="text-laria-ink">{profile.phone}</strong>. Puedes cambiar estos datos en <Link href="/mi-cuenta/perfil" className="font-black text-laria-blue underline-offset-4 hover:underline">tu perfil</Link>.
+        {store ? <>
+          Publicarás en <strong className="text-laria-ink">{store.name}</strong>. {store.status === "active" && store.isVerified ? "Tu Tienda Verificada puede publicar inventario válido directamente." : "Este inventario quedará pendiente de moderación."}
+        </> : <>
+          Publicarás como <strong className="text-laria-ink">{profile.fullName}</strong>. Las consultas llegarán al WhatsApp <strong className="text-laria-ink">{profile.phone}</strong>. Puedes cambiar estos datos en <Link href="/mi-cuenta/perfil" className="font-black text-laria-blue underline-offset-4 hover:underline">tu perfil</Link>.
+        </>}
       </div>
 
       <TextField label="Título" name="title" required />
@@ -295,7 +310,7 @@ export function SellListingForm({ profile }: { profile: SellerProfile }) {
       </label>
 
       <button type="submit" disabled={state === "submitting" || !supabase} className="laria-button-primary min-h-12 w-full px-5 py-3 text-sm uppercase tracking-wide sm:w-auto">
-        {state === "submitting" ? "Enviando..." : "Enviar para revisión"}
+        {state === "submitting" ? "Enviando..." : store?.status === "active" && store.isVerified ? "Publicar inventario" : "Enviar para revisión"}
       </button>
     </form>
   );

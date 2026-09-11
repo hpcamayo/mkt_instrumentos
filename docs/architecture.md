@@ -138,7 +138,11 @@ Stores are mini-shop pages for small music stores. A store has:
 
 Only `active` stores should be visible publicly.
 
-Phase 2 adds `profiles` and `store_members`. Individual seller signup stores `profiles.account_type='seller'` even though UI labels say Particular. Stores can have `owner_user_id`, and owner stores automatically get an owner membership when inserted through the account-aware flow. The database still uses `stores.status='active'` for product-approved stores.
+`profiles.account_type='seller'` represents a Particular and `store_owner` represents the separate Store Owner identity. Sprint 2 binds one nonlegacy store to one owner, keeps `store_members` for schema compatibility, and does not expose employee management. A pending/rejected/hidden store is nonpublic; `stores.status='active'` is the basic Tienda approval state and `is_verified=true` is the separate Tienda Verificada state.
+
+Public listing eligibility is a combined invariant: the listing must be `approved`, and store inventory additionally requires an `active` parent store. `listing_is_public()` centralizes this rule for listing and photo RLS so an individually moderated row cannot leak a pending or hidden store.
+
+The free-store cap is enforced by a trigger, not by UI counts. Capacity-consuming inserts/restores acquire a transaction advisory lock keyed by store ID and count only `pending`/`approved`, which prevents simultaneous requests from moving a store from 49 to 51.
 
 ### Admin
 
@@ -146,10 +150,11 @@ Admin controls supply quality. The admin panel can:
 - View pending listings.
 - Edit basic listing fields.
 - Approve, reject, hide, or mark listings sold.
-- View pending stores.
-- Edit basic store fields.
-- Approve or hide stores.
-- Mark stores verified.
+- Inspect the complete Store application and owner identity.
+- Edit allowed business/profile fields.
+- Approve a complete store as Tienda or reject/hide it with a required reason.
+- Verify an active store or revoke verification through admin-only RPCs.
+- Atomically approve the verified store's valid pending inventory.
 
 Admin authority remains based on Supabase Auth `app_metadata.role = "admin"`. Profile `account_type` is app metadata only and is not the security boundary.
 
@@ -184,9 +189,9 @@ The listing detail route composes `ListingDetailGallery` in a sticky desktop col
 
 The UI visual refresh covers the homepage, listings/catalog page, listing detail page, `/mi-cuenta` seller/account panel shell, and `/admin` panel. It is a visual layer only: it does not add backend logic, schema changes, Supabase queries, auth changes, moderation changes, or marketplace features. Unsupported visual areas must remain placeholder-only and commented in code.
 
-Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/recuperar-contrasena` and `/restablecer-contrasena` use Supabase Auth recovery through the same callback, while `/mi-cuenta/seguridad` performs authenticated password changes. `/registro/vendedor` creates a Supabase Auth user and stores normalized Particular profile metadata. The auth-user trigger persists name, WhatsApp, city, and region immediately. `/auth/callback` accepts PKCE `code` callbacks and server-verifiable `token_hash` callbacks, writes the Supabase session cookies on its returned redirect, and repairs an incomplete seller profile from trusted Auth metadata when possible.
+Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/recuperar-contrasena` and `/restablecer-contrasena` use Supabase Auth recovery through the same callback, while `/mi-cuenta/seguridad` performs authenticated password changes. `/registro/vendedor` and `/registro/tienda` create distinct account types with normalized profile metadata. The auth-user trigger persists name, WhatsApp, city, and region immediately. `/auth/callback` accepts PKCE `code` callbacks and server-verifiable `token_hash` callbacks, writes the Supabase session cookies on its returned redirect, and repairs incomplete Particular or Store Owner profiles from trusted Auth metadata when possible.
 
-`/vender` is protected in middleware and again in its Server Component. The browser keeps direct-to-Storage uploads and retry recovery, but listing submission capabilities are HMAC-signed and bound to `auth.uid()`. Authenticated uploads use `{userId}/{submissionId}/{sortOrder}.{ext}`; `/api/submissions` revalidates the session/profile and a service-only idempotent RPC atomically inserts the owned pending listing and ordered photo rows. Store submissions retain their separate legacy path until the store sprint.
+`/vender` is protected in middleware and again in its Server Component, and Store Owner accounts are directed to `/mi-cuenta/tienda/publicar` instead of creating Particular inventory. The browser keeps direct-to-Storage uploads and retry recovery, while all submission capabilities are HMAC-signed and bound to `auth.uid()`. Authenticated uploads use `{userId}/{submissionId}/{sortOrder}.{ext}`; `/api/submissions` revalidates account/store ownership and a service-only idempotent RPC atomically inserts the application/listing plus photo rows. A normal or pending store produces pending inventory; an active verified store may approve a qualifying new listing in the same transaction.
 
 Approved account-owned Particular detail pages join the seller's profile under RLS and resolve current name, WhatsApp, city, and region dynamically. Legacy `owner_user_id=null` listings continue using their historical contact fields. More-from-seller grouping uses ownership when available and WhatsApp only for legacy rows.
 

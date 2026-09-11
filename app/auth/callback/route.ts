@@ -7,8 +7,10 @@ import {
 } from "@/lib/auth/callback";
 import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
+  STORE_OWNER_ACCOUNT_TYPE,
   isSellerProfileComplete,
   upsertSellerProfile,
+  upsertStoreOwnerProfile,
 } from "@/lib/auth/profile";
 import type { Database } from "@/lib/supabase/database.types";
 
@@ -91,6 +93,20 @@ export async function GET(request: NextRequest) {
     const profileIsComplete = isSellerProfileComplete(profile);
     if (!profileIsComplete) {
       await upsertSellerProfile(supabase, data.user.id, {
+        fullName: String(metadata.full_name ?? ""),
+        phone: String(metadata.phone ?? ""),
+        city: String(metadata.city ?? ""),
+        region: String(metadata.region ?? ""),
+      });
+    }
+  } else if (data.user && metadata?.account_type === STORE_OWNER_ACCOUNT_TYPE) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name,phone,city,region")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    if (!isSellerProfileComplete(profile)) {
+      await upsertStoreOwnerProfile(supabase, data.user.id, {
         fullName: String(metadata.full_name ?? ""),
         phone: String(metadata.phone ?? ""),
         city: String(metadata.city ?? ""),

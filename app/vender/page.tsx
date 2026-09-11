@@ -36,6 +36,23 @@ export default async function SellPage() {
       normalizePeruRegion(profile.region),
   );
 
+  if (profile?.account_type === "store_owner") {
+    return (
+      <PageContainer as="section" className="py-10">
+        <div className="mx-auto max-w-2xl rounded-lg border border-laria-fog bg-white p-6">
+          <h1 className="text-2xl font-black text-laria-ink">Esta cuenta publica como Tienda</h1>
+          <p className="mt-3 text-sm leading-6 text-laria-text-soft">
+            `/vender` está reservado para publicaciones de una cuenta Particular. Usa el inventario de tu tienda para mantener separadas ambas identidades.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/mi-cuenta/tienda/publicar" className="laria-button-primary min-h-11 px-4 py-3 text-sm">Agregar inventario</Link>
+            <Link href="/mi-cuenta" className="laria-button-secondary min-h-11 px-4 py-3 text-sm">Volver a Mi cuenta</Link>
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer as="section" className="py-6">
       <div className="flex w-full max-w-4xl flex-col gap-6">
