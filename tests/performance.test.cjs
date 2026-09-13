@@ -120,7 +120,7 @@ test("auth callbacks support server-verifiable email flows and safe destinations
 });
 
 test("account logout is never prefetched as a GET side effect", () => {
-  const accountPage = fs.readFileSync("app/mi-cuenta/page.tsx", "utf8");
+  const accountPage = fs.readFileSync("components/account-navigation.tsx", "utf8");
   assert.match(
     accountPage,
     /href="\/logout"\s+prefetch=\{false\}/,

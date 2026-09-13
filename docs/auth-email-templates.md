@@ -167,14 +167,21 @@ Use Supabase's built-in `Reset Password` template. Its link must retain the redi
 
 The callback forces recovery tokens to `/restablecer-contrasena`, regardless of an injected `next` value. Invalid or expired tokens return safely to login without creating a session.
 
-## Particular Signup Confirmation
+## Signup Confirmation
 
-Use the `Confirm signup` template with the token-hash callback link:
+Supabase uses one hosted `Confirm signup` template for both account types. The signup forms already send the trusted `user_metadata.account_type` value. Use that metadata to select the correct wording, with a neutral fallback for missing or unexpected metadata, while retaining the same token-hash callback link:
 
 ```html
+{{ if eq .Data.account_type "store_owner" }}
+<h2>Confirma tu cuenta de Tienda en Laria</h2>
+<p>Confirma tu correo para administrar la solicitud y el inventario de tu negocio en Laria:</p>
+{{ else if eq .Data.account_type "seller" }}
 <h2>Confirma tu cuenta Particular en Laria</h2>
-
 <p>Confirma tu correo para comprar y vender instrumentos en Laria:</p>
+{{ else }}
+<h2>Confirma tu cuenta en Laria</h2>
+<p>Confirma tu correo para activar tu cuenta en Laria:</p>
+{{ end }}
 
 <p>
   <a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=email">Confirmar mi correo</a>
@@ -182,6 +189,8 @@ Use the `Confirm signup` template with the token-hash callback link:
 
 <p>Si no creaste esta cuenta, puedes ignorar este correo.</p>
 ```
+
+Use the neutral subject `Confirma tu cuenta en Laria`; the body supplies the correct Particular/Tienda identity without risking a false account label in the subject.
 
 The signup redirect includes the encoded destination `/mi-cuenta?confirmed=1`, so successful confirmation opens the dashboard with an explicit verified-email message.
 
@@ -192,9 +201,9 @@ In Supabase Dashboard:
 2. Go to Authentication settings.
 3. Confirm the redirect URLs listed above are allowed.
 4. Go to Email Templates.
-5. Set the `Confirm signup`, `Magic Link`, and `Reset Password` links to the token-hash versions in this document.
+5. Set the `Confirm signup`, `Magic Link`, and `Reset Password` links to the token-hash versions in this document. Keep the conditional `account_type` branches in the confirmation body.
 6. Set the `Invite user` template. If Supabase allows only one invite template, use the store-neutral or most common version and keep type-specific messaging on the post-click onboarding pages.
-7. Test a real Particular confirmation and confirm it ends at `/mi-cuenta?confirmed=1` with an authenticated session.
+7. Test one real Particular and one real Store Owner confirmation. Confirm both end at `/mi-cuenta?confirmed=1`, stay authenticated, and use the correct account-type wording.
 8. Test a magic link and a recovery link. Confirm protected navigation remains authenticated and recovery always opens `/restablecer-contrasena`.
 9. Test a seller invite with `redirectTo=/auth/callback?next=/registro/vendedor/invitacion`.
 10. Test a store owner invite with `redirectTo=/auth/callback?next=/registro/tienda/invitacion`.

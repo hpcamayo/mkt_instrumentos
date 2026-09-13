@@ -303,8 +303,10 @@ Routes:
 - `/confirmacion-correo`: legacy standalone confirmation success page; current signup confirmation shows success inside `/mi-cuenta`.
 - `/registro/vendedor/invitacion`: invited seller profile setup.
 - `/registro/tienda/invitacion`: invited store-owner profile setup.
-- `/mi-cuenta`: protected account/seller panel shell after login/signup.
-- `/mi-cuenta/perfil`: edits Particular name, WhatsApp, city, and region.
+- `/mi-cuenta`: protected role-aware account summary inside the shared account shell.
+- `/mi-cuenta/publicaciones` and `/mi-cuenta/publicar`: Particular owned-listing view and publication form.
+- `/mi-cuenta/tienda`, `/mi-cuenta/tienda/inventario`, and `/mi-cuenta/tienda/publicar`: Store Owner application/profile, inventory, and publication routes.
+- `/mi-cuenta/perfil`: edits the authenticated Particular or Store Owner contact profile.
 - `/mi-cuenta/seguridad`: authenticated password change.
 - `/auth/callback`: verifies Supabase signup, magic-link, recovery, and invite token hashes (and supports PKCE codes), then sets a server-readable app session on the redirect response.
 - `/logout`: signs out and redirects to `/login`.
@@ -326,15 +328,15 @@ Behavior:
 - Invite pages use `account_type` metadata/profile type when available. If metadata is missing or mismatched, they show a safe recovery panel instead of silently changing account type.
 - Invite flows do not use temporary passwords.
 - Account and invite location forms use a fixed Peru region list and city suggestions with free-text city fallback. Region must normalize to one of: Amazonas, Áncash, Apurímac, Arequipa, Ayacucho, Cajamarca, Callao, Cusco, Huancavelica, Huánuco, Ica, Junín, La Libertad, Lambayeque, Lima, Loreto, Madre de Dios, Moquegua, Pasco, Piura, Puno, San Martín, Tacna, Tumbes, Ucayali.
-- Supabase Auth email template copy is documented in `docs/auth-email-templates.md`.
+- Supabase Auth email template copy is documented in `docs/auth-email-templates.md`; the shared signup template branches safely on `user_metadata.account_type` so Store Owner mail never receives Particular wording.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
 - Full seller listing lifecycle management is not built. The Sprint 2 Store Owner dashboard provides real application/trust/cap state, profile editing, optional asset management, and inventory submission; sold/hide/relist and approved-edit revision behavior remain for Sprint 3.
 
-Account panel visual refresh:
-- `/mi-cuenta` now uses a seller-control-panel style shell with sidebar navigation, profile data, empty publications table, and placeholder metric/chart cards.
-- Placeholder metrics and chart areas are visual-only and commented in code; they do not represent real analytics.
-- The refresh did not change auth/session logic or add seller listing management calculations.
+Account shell:
+- `app/mi-cuenta/layout.tsx` keeps role-appropriate navigation visible across account subpages: a persistent desktop sidebar and an accessible collapsed mobile menu with active-section state.
+- Particulars see only real Particular routes; Store Owners see store routes only after an owner-bound store exists. Favorites, alerts, analytics, employee management, and later lifecycle actions are not exposed as fake links.
+- Dashboard counts and listing rows come from owner-scoped RLS queries; no analytics are fabricated.
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 

@@ -3,16 +3,18 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { LocationFields } from "@/components/location-fields";
-import { upsertSellerProfile } from "@/lib/auth/profile";
+import { upsertSellerProfile, upsertStoreOwnerProfile } from "@/lib/auth/profile";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 export function ProfileEditForm({
   userId,
   profile,
+  accountType = "seller",
 }: {
   userId: string;
   profile: { fullName: string; phone: string; city: string; region: string };
+  accountType?: "seller" | "store_owner";
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -29,7 +31,8 @@ export function ProfileEditForm({
     }
     setBusy(true);
     setMessage("");
-    const result = await upsertSellerProfile(supabase, userId, {
+    const saveProfile = accountType === "store_owner" ? upsertStoreOwnerProfile : upsertSellerProfile;
+    const result = await saveProfile(supabase, userId, {
       fullName: String(data.get("fullName") ?? ""),
       phone: String(data.get("phone") ?? ""),
       city: String(data.get("city") ?? ""),

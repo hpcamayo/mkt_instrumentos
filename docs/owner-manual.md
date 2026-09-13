@@ -157,11 +157,11 @@ Store invite page `/registro/tienda/invitacion`:
 - The invite and self-signup paths converge on the same owner-bound `/registrar-tienda` application.
 
 Account page `/mi-cuenta`:
-- Protected account foundation with real profile information.
-- Store Owner accounts see real application/trust state, rejection reason, pending/approved capacity, and store inventory entry points.
-- Links to `/mi-cuenta/perfil` for name, WhatsApp, city, and region changes.
-- Links to `/mi-cuenta/seguridad` for authenticated password changes.
-- Publication-management and analytics areas remain clearly marked for later sprints.
+- Uses one protected account shell across summary, profile/security, publication, store, and inventory pages.
+- Desktop keeps the role-appropriate sidebar visible; mobile exposes the same destinations through the `Cuenta` menu and identifies the active section.
+- Particulars can open `/mi-cuenta/publicaciones` and `/mi-cuenta/publicar`. Store Owners use `/mi-cuenta/tienda`, `/mi-cuenta/tienda/inventario`, and `/mi-cuenta/tienda/publicar`.
+- Store Owner summary shows the application/trust state, rejection reason, pending/approved capacity, and whether new inventory requires moderation or may publish directly.
+- Favorites, alerts, analytics, and Sprint 3 listing lifecycle actions are not exposed as working sections yet.
 
 Admin page `/admin`:
 - Used to control quality.

@@ -12,7 +12,7 @@ Product scope:
 - Stores register from `/registrar-tienda`; after approval they get public pages at `/tiendas/[slug]`.
 - Store products also appear in `/listados`.
 - Admin curation is central. Particular and normal Tienda listings require moderation; qualifying Tienda Verificada inventory publishes directly. Store pages require basic store approval.
-- Particular Sprint 1 is **CLOSED / ACCEPTED**. Sprint 2 was deployed to production on 2026-09-11 after local and production integration/RLS verification: separate Store Owner accounts, owner-bound applications, unique RUC, basic/verified trust, atomic pending-inventory approval, public parent-store gating, and the serialized 50-item cap. Owner production acceptance cases `VERIFY-012` and `VERIFY-013` remain blocked until manual sign-off.
+- Particular Sprint 1 is **CLOSED / ACCEPTED**. Sprint 2 trust-state cases `VERIFY-012` and `VERIFY-013` passed owner production acceptance on 2026-09-13. Sprint 2.1 adds the canonical role-aware account shell; `SDASH-001` remains failed pending the owner's production retest.
 - No paid plans are active in V1. Future monetization may start with stores, but the frozen V1 rule is a free 50-concurrent-listing cap.
 - V1 requires buyer/Particular accounts, ownership, seller/store dashboards, favorites, alerts, analytics, reports, verified transactions, and transaction-bound reviews. These are not all implemented yet; see the status matrix in `docs/functional-spec.md`.
 - Payments, checkout, escrow, delivery, subscriptions, commissions, and in-app chat remain post-V1.
@@ -33,7 +33,9 @@ Important current routes:
 - `/registro/vendedor`: Particular account signup for buying and selling. Signup metadata creates the complete profile; authenticated users are sent to `/mi-cuenta` instead of being asked for the same fields again. The database stores this account as `profiles.account_type='seller'`.
 - `/registro/vendedor/invitacion`: invited seller profile setup after Supabase invite callback.
 - `/registro/tienda/invitacion`: invited store-owner profile setup after Supabase invite callback; store approval still requires a pending store application.
-- `/mi-cuenta`: protected account shell; Particulars retain their profile experience, while Store Owners see real application/trust/cap state and inventory entry points.
+- `/mi-cuenta`: protected account summary inside a shared server-authenticated layout with a persistent desktop sidebar and equivalent mobile menu.
+- `/mi-cuenta/publicaciones` and `/mi-cuenta/publicar`: real Particular listing view and publication form.
+- `/mi-cuenta/tienda` and `/mi-cuenta/tienda/inventario`: Store Owner application/profile and inventory views.
 - `/mi-cuenta/tienda/publicar`: Store Owner inventory submission for pending, normal, or verified stores.
 - `/mi-cuenta/perfil`: Particular profile editing.
 - `/mi-cuenta/seguridad`: authenticated password change.

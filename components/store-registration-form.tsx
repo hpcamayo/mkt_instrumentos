@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { type FormEvent, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { LocationFields } from "@/components/location-fields";
 import { normalizePeruRegion } from "@/lib/location";
 import { createPublicSubmission, type SubmissionFile } from "@/lib/public-submission";
@@ -54,13 +55,15 @@ export function StoreRegistrationForm({
   const [currentBannerUrl, setCurrentBannerUrl] = useState(store?.banner_url ?? null);
   const statusRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (!message || !statusRef.current) return;
+    statusRef.current.focus({ preventScroll: true });
+    statusRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [message, state]);
+
   function show(nextState: State, nextMessage: string) {
     setState(nextState);
     setMessage(nextMessage);
-    requestAnimationFrame(() => {
-      statusRef.current?.focus({ preventScroll: true });
-      statusRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -180,7 +183,7 @@ export function StoreRegistrationForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-6 rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
-      {message ? <div ref={statusRef} tabIndex={-1} role="status" className={`rounded-md border p-4 text-sm ${state === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}>{message}</div> : null}
+      {message ? <div ref={statusRef} tabIndex={-1} role={state === "success" ? "status" : "alert"} className={`rounded-md border p-4 text-sm outline-none focus:ring-2 ${state === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800 focus:ring-emerald-600/30" : "border-red-200 bg-red-50 text-red-800 focus:ring-red-600/30"}`}><p>{message}</p>{state === "success" ? <div className="mt-3 flex flex-wrap gap-3"><Link href="/mi-cuenta" className="font-black underline underline-offset-4">Volver al resumen</Link><Link href="/mi-cuenta/tienda" className="font-black underline underline-offset-4">Ver estado de mi tienda</Link>{store ? <Link href="/mi-cuenta/tienda/inventario" className="font-black underline underline-offset-4">Ver inventario</Link> : null}</div> : null}</div> : null}
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Nombre público de la tienda" name="name" defaultValue={store?.name} />
         <Field label="Razón social" name="razon_social" defaultValue={store?.razon_social} />

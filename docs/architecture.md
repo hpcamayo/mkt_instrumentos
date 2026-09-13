@@ -90,9 +90,17 @@ app/
   listados/loading.tsx             Listings loading skeleton
   login/page.tsx                   Password and magic-link login
   logout/route.ts                  Sign out and redirect to /login
-  mi-cuenta/page.tsx               Protected account/seller panel shell
+  mi-cuenta/layout.tsx             Protected role-aware account shell
+  mi-cuenta/page.tsx               Particular/Store Owner account summary
+  mi-cuenta/publicaciones/page.tsx Particular owned-listing view
+  mi-cuenta/publicar/page.tsx      Particular listing submission
+  mi-cuenta/tienda/page.tsx        Store application/profile management
+  mi-cuenta/tienda/inventario/page.tsx
+                                    Store inventory view
+  mi-cuenta/tienda/publicar/page.tsx
+                                    Store inventory submission
   publicar/page.tsx                Redirects to /vender
-  registrar-tienda/page.tsx        Store registration
+  registrar-tienda/page.tsx        Compatibility gate/redirect to account store area
   registro/vendedor/page.tsx       Individual seller account signup
   registro/vendedor/invitacion/page.tsx
                                     Invited seller profile setup
@@ -187,7 +195,7 @@ The homepage uses `components_v0` sections, but marketplace data logic remains i
 
 The listing detail route composes `ListingDetailGallery` in a sticky desktop column using `minmax(0,0.82fr)`, with the main listing facts, seller/store trust box, description, and full specs in the wider `minmax(0,1fr)` right column. Recommendation sections stay below that main detail grid.
 
-The UI visual refresh covers the homepage, listings/catalog page, listing detail page, `/mi-cuenta` seller/account panel shell, and `/admin` panel. It is a visual layer only: it does not add backend logic, schema changes, Supabase queries, auth changes, moderation changes, or marketplace features. Unsupported visual areas must remain placeholder-only and commented in code.
+`app/mi-cuenta/layout.tsx` is the canonical authenticated application shell. It resolves the account type and owned-store presence from server-authenticated Supabase state, then renders persistent role-specific desktop navigation plus an accessible mobile account menu around every account subpage. `/vender` and authenticated `/registrar-tienda` remain compatibility entry points that redirect into the canonical account routes.
 
 Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/recuperar-contrasena` and `/restablecer-contrasena` use Supabase Auth recovery through the same callback, while `/mi-cuenta/seguridad` performs authenticated password changes. `/registro/vendedor` and `/registro/tienda` create distinct account types with normalized profile metadata. The auth-user trigger persists name, WhatsApp, city, and region immediately. `/auth/callback` accepts PKCE `code` callbacks and server-verifiable `token_hash` callbacks, writes the Supabase session cookies on its returned redirect, and repairs incomplete Particular or Store Owner profiles from trusted Auth metadata when possible.
 
@@ -197,7 +205,7 @@ Approved account-owned Particular detail pages join the seller's profile under R
 
 Seller signup checks duplicate emails through `app/api/auth/check-email/route.ts` before calling Supabase `signUp()`. The route uses a service-only indexed Auth email lookup and returns only an availability flag, because `profiles` does not currently store email. Repeated signup attempts show a Spanish error and a link to `/login` instead of a false "check your email" success state.
 
-Signup confirmation emails redirect through `/auth/callback?next=%2Fmi-cuenta%3Fconfirmed%3D1`. The dashboard renders the explicit confirmed-email state while preserving the normal account experience. `/confirmacion-correo` remains as a legacy standalone success page. Supabase needs the `/auth/callback` URL allowlisted for each domain, and the signup, magic-link, and recovery templates must use the token-hash links documented in `docs/auth-email-templates.md`.
+Signup confirmation emails redirect through `/auth/callback?next=%2Fmi-cuenta%3Fconfirmed%3D1`. The single hosted confirmation template branches on the signup metadata `account_type` to show correct Particular or Tienda wording and uses a neutral fallback; the token-hash callback/session behavior is unchanged. `/confirmacion-correo` remains a legacy standalone success page.
 
 Invite setup pages require an authenticated Supabase session after the invite callback. `/registro/vendedor/invitacion` completes a Particular seller profile and continues to `/vender`; `/registro/tienda/invitacion` completes a store-owner profile and continues to `/registrar-tienda` for the store application. Invite routing depends on `account_type` metadata when available. If metadata/profile type does not match the route, the page shows a recovery panel instead of changing account type blindly. Temporary passwords are not used.
 

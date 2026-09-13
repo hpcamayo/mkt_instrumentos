@@ -73,8 +73,14 @@ async function request(body, cookie = '') {
   assert.equal(loginResponse.status, 200);
   let cookie = loginResponse.headers.getSetCookie().map(value => value.split(';', 1)[0]).join('; ');
   assert.ok(cookie, 'Password login must return a server-readable auth cookie');
+  const particularAccount = await fetch(`${base}/mi-cuenta`, { headers: { Cookie: cookie } });
+  const particularHtml = await particularAccount.text();
+  assert.equal(particularAccount.status, 200);
+  assert.match(particularHtml, /Mis publicaciones/);
+  assert.doesNotMatch(particularHtml, />Mi tienda</);
   const protectedResponse = await fetch(`${base}/vender`, { headers: { Cookie: cookie }, redirect: 'manual' });
-  assert.equal(protectedResponse.status, 200, 'Authenticated /vender must survive a full request');
+  assert.equal(protectedResponse.status, 307, 'Authenticated /vender must redirect into the account shell');
+  assert.equal(new URL(protectedResponse.headers.get('location'), base).pathname, '/mi-cuenta/publicar');
 
   const magicLink = await admin.auth.admin.generateLink({ type: 'magiclink', email: qaEmail, options: { redirectTo: `${base}/auth/callback?next=/vender` } });
   assert.equal(magicLink.error, null);
@@ -172,6 +178,17 @@ async function request(body, cookie = '') {
     const stored = await admin.from('stores').select('owner_user_id,ruc,status,is_verified').eq('id', startedStore.id).single();
     assert.equal(stored.error, null);
     assert.deepEqual(stored.data, { owner_user_id: storeOwnerId, ruc, status: 'pending', is_verified: false });
+    const storeAccount = await fetch(`${base}/mi-cuenta`, { headers: { Cookie: storeCookie } });
+    const storeHtml = await storeAccount.text();
+    assert.equal(storeAccount.status, 200);
+    assert.match(storeHtml, /Mi tienda/);
+    assert.match(storeHtml, /Inventario/);
+    assert.match(storeHtml, /Solicitud pendiente/);
+    assert.match(storeHtml, /requiere moderación/);
+    assert.doesNotMatch(storeHtml, /Publicar instrumento/);
+    const staleRegistration = await fetch(`${base}/registrar-tienda`, { headers: { Cookie: storeCookie }, redirect: 'manual' });
+    assert.equal(staleRegistration.status, 307);
+    assert.equal(new URL(staleRegistration.headers.get('location'), base).pathname, '/mi-cuenta/tienda');
     assert.equal((await admin.from('store_photos').select('id').eq('store_id', startedStore.id)).data.length, 1);
 
     const duplicateStart = await fetch(`${base}/api/submissions`, { method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: storeCookie }, body: JSON.stringify({ action: 'start', kind: 'store' }) });

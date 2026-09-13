@@ -238,7 +238,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
       className="grid gap-6 rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6"
     >
       {message ? (
-        <StatusMessage ref={statusRef} state={state} message={message} />
+        <StatusMessage ref={statusRef} state={state} message={message} nextHref={store ? "/mi-cuenta/tienda/inventario" : "/mi-cuenta/publicaciones"} nextLabel={store ? "Ver inventario" : "Ver mis publicaciones"} />
       ) : null}
 
       <div className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-4 text-sm leading-6 text-laria-text-soft">
@@ -355,12 +355,16 @@ function StatusMessage({
   ref,
   state,
   message,
+  nextHref,
+  nextLabel,
 }: {
   ref: React.Ref<HTMLDivElement>;
   state: FormState;
   message: string;
+  nextHref: string;
+  nextLabel: string;
 }) {
-  return <div ref={ref} tabIndex={-1} role={state === "success" ? "status" : "alert"} className={state === "success" ? "rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 outline-none focus:ring-2 focus:ring-emerald-600/30" : "rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 outline-none focus:ring-2 focus:ring-red-600/30"}>{message}</div>;
+  return <div ref={ref} tabIndex={-1} role={state === "success" ? "status" : "alert"} className={state === "success" ? "rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 outline-none focus:ring-2 focus:ring-emerald-600/30" : "rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 outline-none focus:ring-2 focus:ring-red-600/30"}><p>{message}</p>{state === "success" ? <div className="mt-3 flex flex-wrap gap-3"><Link href="/mi-cuenta" className="font-black underline underline-offset-4">Volver al resumen</Link><Link href={nextHref} className="font-black underline underline-offset-4">{nextLabel}</Link></div> : null}</div>;
 }
 
 function TextField({ label, name, required }: { label: string; name: string; required?: boolean }) {

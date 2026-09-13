@@ -303,7 +303,7 @@ See `docs/performance.md` for the implemented behavior and verification details.
 
 ## Implementation Status
 
-Status is based strictly on the repository and the Sprint 2 production release completed on 2026-09-11. Sprint 1 is **CLOSED / ACCEPTED** following the owner's production retest of the final AUTH cases. Sprint 2 automated production verification is complete; owner-manual `VERIFY-012` and `VERIFY-013` remain blocked until sign-off.
+Status is based strictly on the repository and the Sprint 2.1 implementation prepared on 2026-09-13. Sprint 1 is **CLOSED / ACCEPTED**. Sprint 2 trust-state cases `VERIFY-012` and `VERIFY-013` passed owner production acceptance; `SDASH-001` remains failed pending owner retest of the Sprint 2.1 account shell in production.
 
 - **DONE**: the functional area is materially implemented for its V1 requirement.
 - **MODIFY**: a related implementation exists, but it must change or expand to meet V1.
@@ -319,7 +319,7 @@ Status is based strictly on the repository and the Sprint 2 production release c
 | Buyer/Particular account model | MODIFY | A `profiles` foundation and Particular signup exist, but the UI and flows still treat the account mainly as a seller and lack buyer features. |
 | Account-required listing publication | DONE | `/vender` requires authentication, preserves the login return path, binds signed retries to the current user, and atomically creates owned `pending` Particular listings. |
 | Seller listing ownership | DONE | New Particular listings set `owner_user_id`; owner/public/admin boundaries remain enforced by RLS, while legacy nullable ownership remains supported. |
-| Seller dashboard | MODIFY | `/mi-cuenta` renders real profile data and links to working profile/password forms, but publication management, actions, and analytics remain for later sprints. |
+| Seller dashboard | MODIFY | The persistent role-aware `/mi-cuenta` shell exposes real profile/security, owned-listing summary/list, and publication entry points; Sprint 3 lifecycle actions and later analytics remain absent. |
 | Seller analytics | BUILD | Dashboard metrics/charts are explicitly placeholders; only raw listing `view_count` exists. |
 | Instrument type/attributes submission | DONE | Seller creation and admin moderation reuse the canonical instrument filter definitions; supported attributes use labeled controls rather than raw JSON. |
 | 2–10 photo handling | DONE | Client/server/RPC validation enforces 2–10 photos; creation supports ordering, replacement, and removal while preserving the minimum. |
@@ -338,7 +338,7 @@ Status is based strictly on the repository and the Sprint 2 production release c
 | Tienda Verificada direct publication | MODIFY | Verified stores directly publish qualifying new inventory; normal Tienda inventory remains moderated. Direct editing of already-approved inventory remains deferred to the Sprint 3 revision architecture. |
 | Automatic approval after verification | DONE | The admin-only verification RPC atomically verifies an active eligible store and approves all valid pending inventory while preserving rejected/hidden/sold rows. |
 | 50 concurrent listing cap | DONE | A serialized database trigger counts only pending/approved store inventory, permits the 50th row, blocks the 51st and guards future counted-state restoration. |
-| Store dashboard | MODIFY | The owner has a real application/status/trust/inventory-cap area and can submit inventory; full Sprint 3 lifecycle actions and later analytics remain absent. |
+| Store dashboard | MODIFY | The persistent Store Owner shell exposes summary, application/profile, inventory, publication, profile/security, trust/rejection/cap states, and real counts; owner production retest remains pending, while Sprint 3 lifecycle actions and later analytics remain absent. |
 | Store analytics | BUILD | There is no aggregate store analytics implementation. |
 | Full admin moderation hub | MODIFY | Secure pending listing/store queues and invites exist, but all-record search/filtering and the required users, revisions, reports, reviews, transactions, ownership, and lifecycle views do not. |
 | Reports | BUILD | No report schema, user flow, or admin queue exists. |

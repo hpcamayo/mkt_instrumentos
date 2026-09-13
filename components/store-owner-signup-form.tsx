@@ -27,7 +27,7 @@ export function StoreOwnerSignupForm() {
     }
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        router.replace("/registrar-tienda");
+        router.replace("/mi-cuenta");
         router.refresh();
       } else {
         setState("idle");
@@ -101,7 +101,7 @@ export function StoreOwnerSignupForm() {
         setMessage(saved.message);
         return;
       }
-      router.push("/registrar-tienda");
+      router.push("/mi-cuenta");
       router.refresh();
       return;
     }
@@ -127,7 +127,7 @@ export function StoreOwnerSignupForm() {
         {state === "submitting" ? "Creando cuenta..." : "Crear cuenta de Tienda"}
       </button>
       <p className="text-center text-sm text-laria-text-soft">
-        ¿Ya tienes una cuenta de Tienda? <Link href="/login?next=/registrar-tienda" className="font-black text-laria-blue">Ingresar</Link>
+        ¿Ya tienes una cuenta de Tienda? <Link href="/login?next=/mi-cuenta" className="font-black text-laria-blue">Ingresar</Link>
       </p>
     </form>
   );
