@@ -303,7 +303,7 @@ See `docs/performance.md` for the implemented behavior and verification details.
 
 ## Implementation Status
 
-Status is based strictly on the repository and the Sprint 2.1 implementation prepared on 2026-09-13. Sprint 1 is **CLOSED / ACCEPTED**. Sprint 2 trust-state cases `VERIFY-012` and `VERIFY-013` passed owner production acceptance; `SDASH-001` remains failed pending owner retest of the Sprint 2.1 account shell in production.
+Status is based strictly on the repository and the Sprint 3 implementation prepared locally on 2026-09-13. Sprint 1 and Sprint 2 are **CLOSED / ACCEPTED**; `VERIFY-012`, `VERIFY-013`, and `SDASH-001` passed owner production acceptance. Sprint 3 is implemented and locally verified but has not been released to production.
 
 - **DONE**: the functional area is materially implemented for its V1 requirement.
 - **MODIFY**: a related implementation exists, but it must change or expand to meet V1.
@@ -313,18 +313,18 @@ Status is based strictly on the repository and the Sprint 2.1 implementation pre
 | --- | --- | --- |
 | Public browsing | DONE | Public homepage, approved-listing catalog, approved listing detail, and active store pages exist. |
 | Catalog pagination | DONE | Catalog and store inventory use stable 24-item pagination with filter preservation. |
-| Listing detail | MODIFY | Approved detail pages work, but sold listings are filtered out and therefore do not remain available by direct URL with `Vendido`. |
+| Listing detail | DONE | Approved detail pages work; sold listings remain available only by direct URL with a clear `Vendido` state and no contact CTA. |
 | WhatsApp contact | MODIFY | Listing/store WhatsApp links work; the click does not yet create the required intent event. |
 | Seller authentication | DONE | Particular signup, confirmation callback, password and magic-link login, logout, forgot/reset password, authenticated password change, and profile editing are implemented. |
 | Buyer/Particular account model | MODIFY | A `profiles` foundation and Particular signup exist, but the UI and flows still treat the account mainly as a seller and lack buyer features. |
 | Account-required listing publication | DONE | `/vender` requires authentication, preserves the login return path, binds signed retries to the current user, and atomically creates owned `pending` Particular listings. |
 | Seller listing ownership | DONE | New Particular listings set `owner_user_id`; owner/public/admin boundaries remain enforced by RLS, while legacy nullable ownership remains supported. |
-| Seller dashboard | MODIFY | The persistent role-aware `/mi-cuenta` shell exposes real profile/security, owned-listing summary/list, and publication entry points; Sprint 3 lifecycle actions and later analytics remain absent. |
+| Seller dashboard | DONE | The persistent role-aware `/mi-cuenta` shell exposes real profile/security, publication, owned-listing management, edit, hide/restore, sold, and relist workflows. Analytics remain tracked separately below. |
 | Seller analytics | BUILD | Dashboard metrics/charts are explicitly placeholders; only raw listing `view_count` exists. |
 | Instrument type/attributes submission | DONE | Seller creation and admin moderation reuse the canonical instrument filter definitions; supported attributes use labeled controls rather than raw JSON. |
 | 2–10 photo handling | DONE | Client/server/RPC validation enforces 2–10 photos; creation supports ordering, replacement, and removal while preserving the minimum. |
-| Revision moderation | BUILD | There is no separate pending revision model that keeps the approved version public. |
-| Sold/relist flow | MODIFY | The status and admin `Marcar vendido` action exist, but seller sold flow, immutable history, sold direct URL, and copied relisting do not. |
+| Revision moderation | DONE | Particular and normal Tienda moderated fields/photos create one pending revision while the approved live version remains public; admin approval patches only proposed fields. Tienda Verificada edits remain direct. |
+| Sold/relist flow | DONE | Owners can mark sold, sold records are immutable historical inventory with direct `Vendido` URLs, and relisting creates a linked copy with the correct moderation/verification behavior. |
 | WhatsApp contact event tracking | BUILD | No contact-event table or tracking endpoint exists. |
 | Verified transactions | BUILD | No transaction-confirmation model or workflow exists. |
 | Two-way reviews | BUILD | No review schema or workflow exists. |
@@ -335,18 +335,18 @@ Status is based strictly on the repository and the Sprint 2.1 implementation pre
 | Store application | DONE | The authenticated application collects all required business/contact/location fields and supports optional logo, banner, physical-store photos, TikTok, website, and social links. Owners can edit allowed fields and resubmit rejected applications. |
 | RUC uniqueness | DONE | RUC is normalized to 11 digits and protected by a database unique index; migration preflight refuses unsafe historical duplicates. |
 | Store public approval | DONE | Pending/rejected/hidden stores and their inventory are nonpublic. The trusted admin review RPC requires complete data for approval and a reason for rejection/hiding. |
-| Tienda Verificada direct publication | MODIFY | Verified stores directly publish qualifying new inventory; normal Tienda inventory remains moderated. Direct editing of already-approved inventory remains deferred to the Sprint 3 revision architecture. |
+| Tienda Verificada direct publication | DONE | Verified stores directly publish qualifying new inventory and apply valid listing edits directly; normal Tienda inventory and moderated edits remain reviewed. |
 | Automatic approval after verification | DONE | The admin-only verification RPC atomically verifies an active eligible store and approves all valid pending inventory while preserving rejected/hidden/sold rows. |
 | 50 concurrent listing cap | DONE | A serialized database trigger counts only pending/approved store inventory, permits the 50th row, blocks the 51st and guards future counted-state restoration. |
-| Store dashboard | MODIFY | The persistent Store Owner shell exposes summary, application/profile, inventory, publication, profile/security, trust/rejection/cap states, and real counts; owner production retest remains pending, while Sprint 3 lifecycle actions and later analytics remain absent. |
+| Store dashboard | DONE | The persistent Store Owner shell exposes summary, application/profile, inventory, publication, profile/security, trust/rejection/cap states, real counts, and Sprint 3 lifecycle actions. Analytics remain tracked separately below. |
 | Store analytics | BUILD | There is no aggregate store analytics implementation. |
 | Full admin moderation hub | MODIFY | Secure pending listing/store queues and invites exist, but all-record search/filtering and the required users, revisions, reports, reviews, transactions, ownership, and lifecycle views do not. |
 | Reports | BUILD | No report schema, user flow, or admin queue exists. |
-| Moderation reasons | MODIFY | Stores have `rejection_reason`, but listing reasons are absent and admin actions do not require/display reasons consistently. |
+| Moderation reasons | DONE | Store and listing rejection/administrative hiding persist required owner-visible reasons; revision rejection also requires and preserves a reason. |
 | Application emails | BUILD | Supabase Auth email flows and templates exist, but no centralized marketplace email abstraction or lifecycle/alert emails exist. |
 | Password reset | DONE | Forgot-password, recovery callback, reset, and authenticated password-change flows use Supabase Auth. |
 | Category SEO pages | BUILD | `/instrumentos/[slug]` is currently a listing-detail route; no real category landing flow exists. |
 | Legal/safety pages | BUILD | No dedicated Terms, Privacy, prohibited-item, or marketplace-safety pages exist. |
 | Legacy ownership linking | BUILD | Nullable ownership supports later linkage, but admin has no manual ownership-assignment interface/workflow. |
 
-Summary after the Sprint 2 production release: **14 DONE**, **9 MODIFY**, and **14 BUILD** areas. The matrix is an implementation snapshot, not a priority change and not evidence that missing V1 features are optional.
+Summary after the local Sprint 3 implementation: **21 DONE**, **3 MODIFY**, and **13 BUILD** areas. The matrix is an implementation snapshot, not a priority change and not evidence that missing V1 features are optional.

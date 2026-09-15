@@ -12,7 +12,7 @@ Product scope:
 - Stores register from `/registrar-tienda`; after approval they get public pages at `/tiendas/[slug]`.
 - Store products also appear in `/listados`.
 - Admin curation is central. Particular and normal Tienda listings require moderation; qualifying Tienda Verificada inventory publishes directly. Store pages require basic store approval.
-- Particular Sprint 1 is **CLOSED / ACCEPTED**. Sprint 2 trust-state cases `VERIFY-012` and `VERIFY-013` passed owner production acceptance on 2026-09-13. Sprint 2.1 adds the canonical role-aware account shell; `SDASH-001` remains failed pending the owner's production retest.
+- Sprint 1 and Sprint 2 are **CLOSED / ACCEPTED**. `VERIFY-012`, `VERIFY-013`, and `SDASH-001` passed owner production acceptance on 2026-09-13. Sprint 3 listing lifecycle/revision work is implemented and locally verified only; it has not been deployed.
 - No paid plans are active in V1. Future monetization may start with stores, but the frozen V1 rule is a free 50-concurrent-listing cap.
 - V1 requires buyer/Particular accounts, ownership, seller/store dashboards, favorites, alerts, analytics, reports, verified transactions, and transaction-bound reviews. These are not all implemented yet; see the status matrix in `docs/functional-spec.md`.
 - Payments, checkout, escrow, delivery, subscriptions, commissions, and in-app chat remain post-V1.
@@ -35,6 +35,7 @@ Important current routes:
 - `/registro/tienda/invitacion`: invited store-owner profile setup after Supabase invite callback; store approval still requires a pending store application.
 - `/mi-cuenta`: protected account summary inside a shared server-authenticated layout with a persistent desktop sidebar and equivalent mobile menu.
 - `/mi-cuenta/publicaciones` and `/mi-cuenta/publicar`: real Particular listing view and publication form.
+- `/mi-cuenta/publicaciones/[id]/editar`: shared owner listing editor with immediate/moderated edit separation.
 - `/mi-cuenta/tienda` and `/mi-cuenta/tienda/inventario`: Store Owner application/profile and inventory views.
 - `/mi-cuenta/tienda/publicar`: Store Owner inventory submission for pending, normal, or verified stores.
 - `/mi-cuenta/perfil`: Particular profile editing.
@@ -44,7 +45,8 @@ Important current routes:
 - `/publicar`: redirects to `/vender`.
 - `/registro/tienda`: separate Store Owner account signup.
 - `/registrar-tienda`: authenticated owner-bound store application/profile management.
-- `/admin`: Supabase Auth admin panel with pending listing moderation and Sprint 2 store approval/rejection/verification operations.
+- `/admin`: Supabase Auth admin panel with listing lifecycle/revision moderation and Sprint 2 store approval/rejection/verification operations.
+- `/api/listings/[id]/manage`: authenticated owner edit, lifecycle, and relist actions backed by trusted Postgres RPCs.
 - `/api/admin/invite-user`: server-only admin invite endpoint using Supabase service role after verifying the current user is admin.
 - `/api/auth/check-email`: server-only duplicate-email precheck for seller signup. It uses a service-only indexed database lookup and returns only availability, never user details.
 
@@ -58,6 +60,8 @@ Key files:
 - `app/instrumentos/[slug]/page.tsx`: listing detail layout, gallery, breadcrumb, specs, seller trust sections, similar listings, and more-from-seller listings.
 - `components/listing-detail-gallery.tsx`: interactive listing detail gallery with main image, thumbnails, and previous/next controls.
 - `components/listing-detail-metadata.tsx`: `Publicado hace X dias` / `Visto X veces` and client-side view-count increment.
+- `components/listing-management-table.tsx`: role-shared inventory states and lifecycle actions.
+- `components/listing-edit-form.tsx`: split immediate/moderated edits plus staged photo proposals.
 - `components/page-container.tsx`: shared public page width and horizontal padding wrapper.
 - `components/login-form.tsx`: login form with password and magic-link modes; login magic links do not create new users.
 - `components/seller-signup-form.tsx`: individual seller signup/profile completion form.
@@ -77,6 +81,7 @@ Key files:
 - `supabase/migrations/20260516180000_phase_2_accounts.sql`: Phase 2 account schema, ownership fields, helper functions, and RLS policies.
 - `supabase/migrations/20260910100000_particular_sprint_1.sql`: account-bound finalization, 2–10 publication requirements, profile projection policy, and removal of anonymous listing creation.
 - `supabase/migrations/20260910190000_store_sprint_2.sql`: Store Owner/application ownership, RUC uniqueness, store-photo RLS, trust/publication RPCs, active-parent visibility, and the concurrent inventory cap.
+- `supabase/migrations/20260913120000_listing_sprint_3.sql`: owner lifecycle, listing/revision moderation, sold immutability, relist lineage, proposed photos, and cap-safe restoration/relisting.
 - `supabase/migrations/*`: manual SQL migrations for schema, RLS, storage, metadata, and view count RPC.
 
 Operational rule: Vercel deploys code, but does not apply Supabase SQL migrations. Schema changes must be run manually in Supabase SQL Editor unless migration automation is added later.

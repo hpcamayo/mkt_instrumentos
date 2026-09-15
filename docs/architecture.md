@@ -30,11 +30,12 @@ Supabase handles:
 - Database tables.
 - Row Level Security policies.
 - Listing and store records.
+- Pending listing revisions and proposed photo sets.
 - Seller/store-owner account ownership tables.
 - Listing photos.
 - Public image storage buckets.
 - Admin auth through Supabase Auth.
-- RPC helpers such as `is_admin()`, store membership checks, publication validation, and `increment_listing_view_count()`.
+- RPC helpers such as `is_admin()`, store membership checks, publication validation, owner lifecycle/edit operations, revision review, and `increment_listing_view_count()`.
 
 Vercel handles:
 - Production deployments.
@@ -82,6 +83,8 @@ app/
   auth/callback/route.ts           Supabase magic-link/invite callback
   api/admin/invite-user/route.ts   Server-only admin invite endpoint
   api/auth/check-email/route.ts    Server-only duplicate-email availability check
+  api/listings/[id]/manage/route.ts
+                                    Owner listing edit/lifecycle endpoint
   api/listings/[id]/photos/route.ts
   api/listings/[id]/view/route.ts
   confirmacion-correo/page.tsx     Email confirmation success page
@@ -93,6 +96,8 @@ app/
   mi-cuenta/layout.tsx             Protected role-aware account shell
   mi-cuenta/page.tsx               Particular/Store Owner account summary
   mi-cuenta/publicaciones/page.tsx Particular owned-listing view
+  mi-cuenta/publicaciones/[id]/editar/page.tsx
+                                    Owner listing editor
   mi-cuenta/publicar/page.tsx      Particular listing submission
   mi-cuenta/tienda/page.tsx        Store application/profile management
   mi-cuenta/tienda/inventario/page.tsx
@@ -125,14 +130,22 @@ Listing status lifecycle:
 ```text
 pending -> approved
 pending -> rejected
+rejected -> pending
 approved -> hidden
+hidden(owner) -> approved
 approved -> sold
-approved -> archived
+sold -> copied new pending/approved listing
 ```
 
-Only `approved` listings should be visible publicly.
+Only `approved` listings participate in catalog/search. A sold historical record remains available at its exact detail URL with `Vendido`, but its row is not exposed through broad public table RLS.
 
 Phase 2 adds nullable listing ownership through `owner_user_id`, plus `sold_at`, `archived_at`, `created_by_source`, and `marketplace_rules_accepted_at`. Legacy listings can keep `owner_user_id=null`.
+
+Sprint 3 adds owner/admin hide provenance and reasons, rejection reasons, sold-to-copy lineage, and immutable sold rows. Owner lifecycle mutations run through locked security-definer RPCs, so direct client updates cannot bypass status, store-cap, publication, or ownership rules.
+
+Approved Particular and normal-Tienda edits are split by trust boundary. Price, description, location, and supported attributes apply to the live row immediately. Title, category, instrument type, brand, model, condition, and photos are stored in one `listing_revisions` proposal; proposed photos live in `listing_revision_photos`, and the existing approved row/photos remain public until admin approval. When instrument type changes, its dependent attribute set travels with that proposal so incompatible attributes do not leak onto the old public type. Admin approval patches only proposed fields in one transaction and never changes a concurrent owner/admin hide state. A qualifying Tienda Verificada bypasses revision moderation and applies the validated edit directly; if that later direct edit supersedes a pre-verification pending proposal, the old proposal is retained as cancelled history.
+
+If a listing is marked sold while a revision waits, the proposal becomes `cancelled` and cannot be applied to the historical row. Owner or admin hiding leaves the proposal pending; approving it patches content but preserves the current hidden status. Store verification does not auto-approve pending edit revisions, while future edits check current verification state inside the trusted transaction. Revocation therefore restores moderation for later edits immediately.
 
 ### Stores
 
@@ -163,6 +176,8 @@ Admin controls supply quality. The admin panel can:
 - Approve a complete store as Tienda or reject/hide it with a required reason.
 - Verify an active store or revoke verification through admin-only RPCs.
 - Atomically approve the verified store's valid pending inventory.
+- Review all listing lifecycle states with mandatory reasons for rejection or administrative hiding.
+- Compare current and proposed moderated listing fields/photos, then approve or reject a pending revision through admin-only RPCs.
 
 Admin authority remains based on Supabase Auth `app_metadata.role = "admin"`. Profile `account_type` is app metadata only and is not the security boundary.
 
@@ -183,6 +198,8 @@ Core local components:
 - `components/location-fields.tsx`
 - `components/admin-panel.tsx`
 - `components/sell-listing-form.tsx`
+- `components/listing-management-table.tsx`
+- `components/listing-edit-form.tsx`
 - `components/store-registration-form.tsx`
 - `components/site-header.tsx`
 - `components/site-footer.tsx`
@@ -203,9 +220,11 @@ Account UI uses the browser Supabase client for interactive auth. `/login` suppo
 
 Approved account-owned Particular detail pages join the seller's profile under RLS and resolve current name, WhatsApp, city, and region dynamically. Legacy `owner_user_id=null` listings continue using their historical contact fields. More-from-seller grouping uses ownership when available and WhatsApp only for legacy rows.
 
+The sold-listing detail exception is server-only: `app/instrumentos/[slug]/page.tsx` uses the server service client for the exact approved-or-sold record, then separately checks the existing `listing_is_public()` predicate for approved rows. Catalog, recommendations, photo endpoints, and ordinary public Supabase reads retain approved-only RLS. Sold pages remove WhatsApp actions.
+
 Seller signup checks duplicate emails through `app/api/auth/check-email/route.ts` before calling Supabase `signUp()`. The route uses a service-only indexed Auth email lookup and returns only an availability flag, because `profiles` does not currently store email. Repeated signup attempts show a Spanish error and a link to `/login` instead of a false "check your email" success state.
 
-Signup confirmation emails redirect through `/auth/callback?next=%2Fmi-cuenta%3Fconfirmed%3D1`. The single hosted confirmation template branches on the signup metadata `account_type` to show correct Particular or Tienda wording and uses a neutral fallback; the token-hash callback/session behavior is unchanged. `/confirmacion-correo` remains a legacy standalone success page.
+Signup confirmation emails redirect through `/auth/callback?next=%2Fmi-cuenta%3Fconfirmed%3D1`; the token-hash callback/session behavior is unchanged. The application already supplies trusted signup `account_type` metadata, but the production hosted confirmation template was still static Particular copy when audited on 2026-09-13. The exact required neutral-subject and conditional-body configuration is recorded in `docs/auth-email-templates.md` for the release gate. `/confirmacion-correo` remains a legacy standalone success page.
 
 Invite setup pages require an authenticated Supabase session after the invite callback. `/registro/vendedor/invitacion` completes a Particular seller profile and continues to `/vender`; `/registro/tienda/invitacion` completes a store-owner profile and continues to `/registrar-tienda` for the store application. Invite routing depends on `account_type` metadata when available. If metadata/profile type does not match the route, the page shows a recovery panel instead of changing account type blindly. Temporary passwords are not used.
 

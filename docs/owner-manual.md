@@ -161,12 +161,15 @@ Account page `/mi-cuenta`:
 - Desktop keeps the role-appropriate sidebar visible; mobile exposes the same destinations through the `Cuenta` menu and identifies the active section.
 - Particulars can open `/mi-cuenta/publicaciones` and `/mi-cuenta/publicar`. Store Owners use `/mi-cuenta/tienda`, `/mi-cuenta/tienda/inventario`, and `/mi-cuenta/tienda/publicar`.
 - Store Owner summary shows the application/trust state, rejection reason, pending/approved capacity, and whether new inventory requires moderation or may publish directly.
-- Favorites, alerts, analytics, and Sprint 3 listing lifecycle actions are not exposed as working sections yet.
+- Owned inventory pages now show edit, owner hide/restore, mark-sold, and copied-relist actions according to each listing state. Moderation and administrative-hide reasons are visible to the owner.
+- Rejected rows can be corrected in the editor and returned through `Enviar nuevamente`; Particular and normal Tienda rows return to moderation.
+- Favorites, alerts, and analytics are not exposed as working sections yet.
 
 Admin page `/admin`:
 - Used to control quality.
-- Admin can currently approve, reject, hide, or mark listings sold; Sprint 2 store actions include basic approval, required-reason rejection/hiding, verification, and revocation through trusted database operations.
-- Store application details and owner identity are visible to admin. The wider moderation hub and listing-level reasons remain scheduled for later sprints.
+- Admin can approve listings, reject/hide them with a required reason, restore eligible listings, and review pending moderated field/photo revisions through trusted database operations.
+- Sprint 2 store actions include basic approval, required-reason rejection/hiding, verification, and revocation. Store application details and owner identity are visible to admin.
+- The wider moderation hub still lacks global search/filtering, reports, reviews, transactions, lifecycle emails, and legacy ownership linking.
 
 ## Daily Admin Workflow
 
@@ -179,11 +182,19 @@ Review `Listados pendientes`:
 - Edit fields if needed.
 - Click `Guardar` if anything changed.
 - Click `Aprobar` to publish.
-- Click `Rechazar` if it should not be published.
-- Click `Ocultar` if it should not be public.
-- Click `Marcar vendido` if the item is no longer available.
+- Enter a reason before `Rechazar` or administratively `Ocultar`; the owner will see it.
+- Use `Restaurar` only after the administrative issue is resolved and publication requirements still pass.
 
-Only `approved` listings appear publicly.
+Only `approved` listings appear in public catalog/search. A sold listing remains available only at its existing direct URL with `Vendido` and no WhatsApp action.
+
+### Check Pending Listing Revisions
+
+Review `Revisiones pendientes`:
+- Compare the current live title/category/type/brand/model/photos with the proposed values.
+- `Aprobar cambios` applies only the proposed moderated fields and optional photo set; immediate owner edits that happened after submission are preserved.
+- `Rechazar cambios` requires a reason visible to the owner.
+- The current approved version remains public while the proposal waits. If the owner hides the listing, approving the proposal updates its content but does not make it public again.
+- Never try to reactivate a sold source record; the owner must use `Relistar` to create a new copy.
 
 ### Check Pending Stores
 
@@ -409,12 +420,22 @@ To test locally:
 28. Submit valid new inventory as the verified owner and confirm it becomes public directly; revoke verification and confirm the next submission returns to pending while prior approved inventory stays public.
 29. Visually confirm the 50/50 dashboard state prevents a new form entry and the database cap error is clear if a stale form attempts submission.
 30. Check the application, dashboard, admin store controls, public badge, and inventory form on a narrow mobile viewport and keyboard navigation.
+31. As a Particular with an approved listing, change price/description plus title and condition in one save. Confirm the immediate values update now, title and condition become a pending revision, and the old public title and condition stay visible.
+32. Try a second moderated change while the first revision is pending; confirm it is refused without losing allowed immediate edits.
+33. As admin, compare and approve the pending revision; confirm only proposed fields/photos change and owner changes made after submission remain intact.
+34. Reject another revision with a reason and confirm the owner sees the reason while the public listing remains unchanged.
+35. Hide an approved listing as owner and restore it. Then hide it as admin with a reason and confirm the owner cannot restore it.
+36. Mark a listing sold. Confirm it disappears from catalog/search, its direct URL shows `Vendido` without WhatsApp, and the source cannot be edited or restored.
+37. Relist the sold item. Confirm a new slug/record is created, the old sold URL remains unchanged, and moderation follows Particular/normal-Tienda/Tienda-Verificada rules.
+38. For a normal Tienda, confirm approved edits use revision moderation. Verify the store and confirm later valid edits apply directly; revoke verification and confirm subsequent moderated edits return to review.
+39. At the store cap, attempt owner restore and relist transitions that would consume capacity; confirm they fail without exceeding 50.
+40. Exercise photo add/reorder/replace/remove in the edit form, including a failed upload, and confirm the 2–10 rule, visible focus/error feedback, preserved public photos before approval, and no unexpected orphan object.
 
 Valid region values are fixed to Peru regions. City fields show suggestions but can be typed manually when the city is not in the list.
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-The current application does not yet implement several required V1 areas, including full seller/store listing lifecycle management, favorites, alerts, analytics beyond view count, contact tracking, verified transactions, reviews, reports, and the full moderation hub. See the status matrix in `docs/functional-spec.md`.
+The current application does not yet implement several required V1 areas, including favorites, alerts, analytics beyond view count, contact tracking, verified transactions, reviews, reports, centralized lifecycle email delivery, and the remaining full moderation hub. Listing lifecycle and revision moderation are now implemented. See the status matrix in `docs/functional-spec.md`.
 
 Do not build these post-V1 areas without a new product decision:
 - Payments.

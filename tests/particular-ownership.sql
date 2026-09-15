@@ -93,21 +93,32 @@ begin
 end;
 $$;
 
+-- Sprint 3 makes photo-row mutation a trusted server operation. Seed the photo
+-- fixture as the database owner, then continue exercising the authenticated path.
+reset role;
 insert into public.listing_photos (listing_id, image_url, sort_order) values
   ('20000000-0000-4000-8000-000000000001', 'https://example.invalid/front.jpg', 0),
   ('20000000-0000-4000-8000-000000000001', 'https://example.invalid/back.jpg', 1);
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
 do $$
 declare changed_count integer; denied boolean;
 begin
   if not public.listing_meets_publish_requirements('20000000-0000-4000-8000-000000000001') then raise exception 'Two-photo listing rejected'; end if;
-  update public.listings
-  set instrument_type = 'other', attributes = '{}'::jsonb
-  where id = '20000000-0000-4000-8000-000000000001';
+  perform public.update_owned_listing(
+    '20000000-0000-4000-8000-000000000001',
+    '{"attributes":{}}'::jsonb,
+    '{"instrument_type":"other"}'::jsonb,
+    null
+  );
   if not public.listing_meets_publish_requirements('20000000-0000-4000-8000-000000000001') then raise exception 'Other instrument subtype rejected'; end if;
-  update public.listings
-  set instrument_type = 'electric_guitar', attributes = '{"body_type":"solid_body","pickups":["humbucker"]}'::jsonb
-  where id = '20000000-0000-4000-8000-000000000001';
+  perform public.update_owned_listing(
+    '20000000-0000-4000-8000-000000000001',
+    '{"attributes":{"body_type":"solid_body","pickups":["humbucker"]}}'::jsonb,
+    '{"instrument_type":"electric_guitar"}'::jsonb,
+    null
+  );
   with changed as (
     delete from public.listing_photos
     where listing_id = '20000000-0000-4000-8000-000000000001' and sort_order = 1 returning 1
@@ -115,35 +126,53 @@ begin
   if changed_count <> 0 then raise exception 'Owner removed a photo below the two-photo minimum'; end if;
 
   denied := false;
-  begin update public.listings set status = 'approved' where id = '20000000-0000-4000-8000-000000000001';
+  begin
+    update public.listings set status = 'approved' where id = '20000000-0000-4000-8000-000000000001';
+    get diagnostics changed_count = row_count;
+    denied := changed_count = 0;
   exception when others then denied := true; end;
   if not denied then raise exception 'Seller changed protected status'; end if;
 
   denied := false;
-  begin update public.listings set owner_user_id = '10000000-0000-4000-8000-000000000002' where id = '20000000-0000-4000-8000-000000000001';
+  begin
+    update public.listings set owner_user_id = '10000000-0000-4000-8000-000000000002' where id = '20000000-0000-4000-8000-000000000001';
+    get diagnostics changed_count = row_count;
+    denied := changed_count = 0;
   exception when others then denied := true; end;
   if not denied then raise exception 'Seller changed protected ownership'; end if;
 
   denied := false;
-  begin update public.listings set published_at = now() where id = '20000000-0000-4000-8000-000000000001';
+  begin
+    update public.listings set published_at = now() where id = '20000000-0000-4000-8000-000000000001';
+    get diagnostics changed_count = row_count;
+    denied := changed_count = 0;
   exception when others then denied := true; end;
   if not denied then raise exception 'Seller changed protected publication fields'; end if;
 
   denied := false;
-  begin update public.listings set view_count = view_count + 1 where id = '20000000-0000-4000-8000-000000000001';
+  begin
+    update public.listings set view_count = view_count + 1 where id = '20000000-0000-4000-8000-000000000001';
+    get diagnostics changed_count = row_count;
+    denied := changed_count = 0;
   exception when others then denied := true; end;
   if not denied then raise exception 'Seller changed protected view_count'; end if;
 
   denied := false;
-  begin update public.listings set seller_type = 'store', store_id = '10000000-0000-0000-0000-000000000001' where id = '20000000-0000-4000-8000-000000000001';
+  begin
+    update public.listings set seller_type = 'store', store_id = '10000000-0000-0000-0000-000000000001' where id = '20000000-0000-4000-8000-000000000001';
+    get diagnostics changed_count = row_count;
+    denied := changed_count = 0;
   exception when others then denied := true; end;
   if not denied then raise exception 'Seller changed protected seller_type/store_id'; end if;
 end;
 $$;
 
+reset role;
 insert into public.listing_photos (listing_id, image_url, sort_order)
 select '20000000-0000-4000-8000-000000000001', 'https://example.invalid/qa-' || n || '.jpg', n
 from generate_series(2, 9) n;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
 do $$
 declare denied boolean := false; submitted public.listings;

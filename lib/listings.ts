@@ -101,6 +101,8 @@ export type ListingCardData = {
 };
 
 export type ListingDetailData = ListingCardData & {
+  status: "approved" | "sold";
+  sold_at: string | null;
   description: string | null;
   contact_name: string | null;
   whatsapp_phone: string;

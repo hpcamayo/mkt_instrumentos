@@ -7,6 +7,7 @@ const { createServerClient } = require('@supabase/ssr');
 loadEnvFile('.env.local');
 const base = process.argv[2];
 if (!base) throw new Error('Provide the app base URL explicitly.');
+assertLocalTargetMatches(base, process.env.NEXT_PUBLIC_SUPABASE_URL);
 const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9S8AAAAASUVORK5CYII=', 'base64');
 async function request(body, cookie = '') {
@@ -14,6 +15,12 @@ async function request(body, cookie = '') {
   const result = await response.json();
   assert.equal(response.status, 200, result.message);
   return result;
+}
+function assertLocalTargetMatches(appBase, supabaseUrl) {
+  const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
+  if (localHosts.has(new URL(appBase).hostname) && !localHosts.has(new URL(supabaseUrl).hostname)) {
+    throw new Error('Refusing to run a local integration test against a hosted Supabase project.');
+  }
 }
 (async () => {
   const qaEmail = `qa-${crypto.randomUUID()}@example.invalid`;

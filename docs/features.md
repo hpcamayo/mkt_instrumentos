@@ -146,7 +146,7 @@ Implementation:
 Route: `/instrumentos/[slug]`
 
 Features:
-- Reads one approved listing by `slug`.
+- Reads one approved or sold listing by exact `slug`; sold records are available only on their direct detail URL and remain absent from catalog/search.
 - Uses a commercial two-column layout on desktop:
   - Left side: sticky product gallery using `minmax(0,0.82fr)`, currently about 45% of the main detail grid.
   - Right side: wider detail panel using `minmax(0,1fr)`, with breadcrumb, seller badge, title, price, metadata, key specs, WhatsApp CTA, seller trust box, description, and full specs.
@@ -176,6 +176,7 @@ Features:
 - Increments `view_count` through `/api/listings/[id]/view`.
 - Uses localStorage to avoid incrementing the same listing repeatedly in the same browser within 24 hours.
 - Primary CTA opens WhatsApp using a prefilled Spanish message.
+- Sold detail shows `Vendido`, keeps the historical product information, and removes WhatsApp/contact actions.
 - Store listings include a secondary link to the store page.
 - Includes a safety/trust notice reminding users that Laria does not process payments, shipping, or guarantees.
 - Seller/store trust box:
@@ -238,6 +239,25 @@ Current behavior:
 
 The signed/idempotent retry architecture remains in place. Listing tokens are account-bound, and authenticated uploads use `{auth.uid()}/{submissionId}/...` storage paths. Legacy anonymous listings remain readable through their historical contact fields but the anonymous listing-creation policy is removed.
 
+## Owned Listing Management
+
+Routes:
+- `/mi-cuenta/publicaciones` for Particular inventory.
+- `/mi-cuenta/tienda/inventario` for Store Owner inventory.
+- `/mi-cuenta/publicaciones/[id]/editar` for the shared owner editor.
+- `/api/listings/[id]/manage` for authenticated edit/lifecycle actions backed by trusted database RPCs.
+
+Current behavior:
+- Owners see all owned states plus moderation or administrative-hide reasons, pending-revision state, and allowed actions.
+- Rejected listings remain editable and expose `Enviar nuevamente`; the trusted publication RPC clears the prior rejection reason and returns the corrected row to the appropriate pending/direct-publication path.
+- Approved owners can hide; only owner-hidden listings can be restored. Admin-hidden rows stay blocked from owner restoration.
+- Marking sold is irreversible for the historical row and cancels a pending revision. `Relistar` creates a new linked copy with a new slug and keeps the old record intact.
+- Particular and normal-Tienda relists return to moderation; eligible Tienda Verificada copies can publish directly.
+- Price, description, location, and supported attributes apply immediately on approved Particular/normal-Tienda inventory. Title, category, instrument type, brand, model, condition, and photo changes create one pending revision while the old public version remains live. Attributes that depend on a proposed instrument-type change stay inside that revision and are promoted atomically with the type.
+- A Tienda Verificada applies a complete valid edit directly. Revocation immediately returns later edits to revision moderation without altering already-approved inventory.
+- Verification does not auto-approve an older pending edit revision; it remains pending because the store-verification operation applies only to pending inventory listings. Future verified edits are evaluated directly at transaction time, and a later direct moderated/photo edit cancels an older pending proposal as superseded so it cannot overwrite newer live values.
+- Edit uploads use new owner-scoped object paths. Partial client uploads are cleaned on failure, and browser users cannot overwrite or delete historical listing-photo objects.
+
 ## Store Registration
 
 Route: `/registrar-tienda`
@@ -265,15 +285,16 @@ Admin behavior:
 - Uses Supabase Auth email/password login.
 - Calls `is_admin()` to verify `app_metadata.role = "admin"`.
 - Includes an `Invitar usuario` section for fieldwork onboarding.
-- Loads pending listings and all store applications/trust states needed for Sprint 2 operation.
+- Loads recent listings across lifecycle states, pending revisions, and all store applications/trust states needed for current operation.
 - Allows editing listing basics before moderation.
 - Allows inspecting/editing instrument type and supported attributes with labeled controls.
-- Listing actions: `Aprobar`, `Rechazar`, `Ocultar`, `Marcar vendido`.
+- Listing actions use trusted review RPCs: `Aprobar`, required-reason `Rechazar`, required-reason administrative `Ocultar`, and `Restaurar` where allowed.
+- Pending revisions show current/proposed moderated fields and current/proposed photo sets; admin can approve or reject them with a required rejection reason. A recent resolved-revision table keeps approved, rejected, and sold-cancelled history inspectable.
 - Shows RUC, owner ID, razón social, business email, phone, address/location, contact person, links, status, and trust state.
 - Store actions use trusted RPCs: basic approve, reject/hide with mandatory reason, verify, and revoke verification.
 - Verification is atomic with approval of all qualifying pending inventory; the UI reports the transitioned count.
 
-The Sprint 2 store workflow is operable, while the full future hub remains a V1 gap: listing/store search and filtering, users, revisions, reports, reviews, transactions, listing moderation reasons, and legacy ownership linking belong to their scheduled sprints.
+Store and listing/revision moderation are operable, while the full future hub remains a V1 gap: listing/store search and filtering, users, reports, reviews, transactions, lifecycle emails, and legacy ownership linking belong to later scheduled sprints.
 
 Admin visual refresh:
 - Uses a dark admin sidebar/header area and light operational workspace.
@@ -328,19 +349,19 @@ Behavior:
 - Invite pages use `account_type` metadata/profile type when available. If metadata is missing or mismatched, they show a safe recovery panel instead of silently changing account type.
 - Invite flows do not use temporary passwords.
 - Account and invite location forms use a fixed Peru region list and city suggestions with free-text city fallback. Region must normalize to one of: Amazonas, Áncash, Apurímac, Arequipa, Ayacucho, Cajamarca, Callao, Cusco, Huancavelica, Huánuco, Ica, Junín, La Libertad, Lambayeque, Lima, Loreto, Madre de Dios, Moquegua, Pasco, Piura, Puno, San Martín, Tacna, Tumbes, Ucayali.
-- Supabase Auth email template copy is documented in `docs/auth-email-templates.md`; the shared signup template branches safely on `user_metadata.account_type` so Store Owner mail never receives Particular wording.
+- Supabase Auth email template copy is documented in `docs/auth-email-templates.md`. Signup already sends trusted `user_metadata.account_type`, but the production hosted confirmation template still needs the documented conditional body/neutral subject at the release gate; callback/session code does not need a new format.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
-- Full seller listing lifecycle management is not built. The Sprint 2 Store Owner dashboard provides real application/trust/cap state, profile editing, optional asset management, and inventory submission; sold/hide/relist and approved-edit revision behavior remain for Sprint 3.
+- Sprint 3 owner listing lifecycle management and approved-edit revision behavior are implemented for Particulars and Store Owners. Later analytics, favorites, alerts, and transaction/review functions are still absent.
 
 Account shell:
 - `app/mi-cuenta/layout.tsx` keeps role-appropriate navigation visible across account subpages: a persistent desktop sidebar and an accessible collapsed mobile menu with active-section state.
-- Particulars see only real Particular routes; Store Owners see store routes only after an owner-bound store exists. Favorites, alerts, analytics, employee management, and later lifecycle actions are not exposed as fake links.
+- Particulars see only real Particular routes; Store Owners see store routes only after an owner-bound store exists. Favorites, alerts, analytics, and employee management are not exposed as fake links.
 - Dashboard counts and listing rows come from owner-scoped RLS queries; no analytics are fabricated.
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Required V1 features not implemented yet include favorites, search and price-drop alerts, WhatsApp-contact tracking, verified transactions, two-way reviews, reports, revision moderation, seller/store dashboards and analytics, and marketplace email infrastructure. The complete status is in `docs/functional-spec.md`.
+Required V1 features not implemented yet include favorites, search and price-drop alerts, WhatsApp-contact tracking, verified transactions, two-way reviews, reports, seller/store analytics, and marketplace email infrastructure. The complete status is in `docs/functional-spec.md`.
 
 Post-V1 unless a new product decision is explicit:
 - Payments.

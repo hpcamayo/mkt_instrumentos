@@ -194,6 +194,18 @@ Use the neutral subject `Confirma tu cuenta en Laria`; the body supplies the cor
 
 The signup redirect includes the encoded destination `/mi-cuenta?confirmed=1`, so successful confirmation opens the dashboard with an explicit verified-email message.
 
+### Hosted production audit — 2026-09-13
+
+The production Supabase `Confirm signup` template was inspected and still uses the static subject `Confirma tu cuenta Particular en Laria` plus a Particular-only body. The application signup metadata is already correct: Particular sends `account_type='seller'` and Store Owner sends `account_type='store_owner'`. The carried-over defect is therefore hosted template configuration, not callback or signup code.
+
+Required production release action:
+- Change the hosted subject to the neutral `Confirma tu cuenta en Laria`.
+- Replace the hosted body with the exact conditional template above, branching only on `.Data.account_type` and keeping the neutral fallback.
+- Preserve the existing `.RedirectTo`, `.TokenHash`, and `type=email` callback format.
+- Retest one real Particular and one real Store Owner inbox before closing the email-copy acceptance case.
+
+Sprint 3 is local-only, so this hosted production configuration was deliberately not changed as part of the implementation task.
+
 ## Manual Supabase Setup
 
 In Supabase Dashboard:

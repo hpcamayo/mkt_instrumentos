@@ -102,9 +102,12 @@ $$;
 -- Pending owners can submit inventory, but it remains pending.
 insert into public.listings (id,slug,title,seller_type,status,category,instrument_type,brand,model,condition,price_pen,city,region,contact_name,whatsapp_phone,description,owner_user_id,store_id,created_by_source,marketplace_rules_accepted_at)
 values ('33000000-0000-4000-8000-000000000001','pending-store-item','Pending Store Item','store','pending','guitars','electric_guitar','QA','Model','Nuevo',100,'Lima','Lima','Contacto A','51999999001','Descripción de inventario válida con más de cuarenta caracteres.','31000000-0000-4000-8000-000000000001','32000000-0000-4000-8000-000000000001','self_service',now());
+reset role;
 insert into public.listing_photos (listing_id,image_url,sort_order) values
  ('33000000-0000-4000-8000-000000000001','https://example.invalid/a-front.jpg',0),
  ('33000000-0000-4000-8000-000000000001','https://example.invalid/a-back.jpg',1);
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"31000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 do $$ declare submitted public.listings; begin
   submitted := public.submit_listing_for_publication('33000000-0000-4000-8000-000000000001');
   if submitted.status <> 'pending' then raise exception 'Pending store self-published inventory'; end if;

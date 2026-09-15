@@ -21,6 +21,7 @@ import {
   type ListingCardData,
   type ListingDetailData,
 } from "@/lib/listings";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 export const dynamic = "force-dynamic";
@@ -73,16 +74,19 @@ export default async function ListingDetailPage({
 }: ListingDetailPageProps) {
   const { slug } = await params;
   const supabase = getPublicSupabaseClient();
+  const detailClient = getSupabaseAdminClient();
 
-  if (!supabase) {
+  if (!supabase || !detailClient) {
     return <SupabaseSetupMessage />;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await detailClient
     .from("listings")
     .select(
       `
         id,
+        status,
+        sold_at,
         store_id,
         owner_user_id,
         title,
@@ -131,7 +135,7 @@ export default async function ListingDetailPage({
         )
       `,
     )
-    .eq("status", "approved")
+    .in("status", ["approved", "sold"])
     .eq("slug", slug)
     .order("sort_order", {
       foreignTable: "listing_photos",
@@ -142,6 +146,13 @@ export default async function ListingDetailPage({
 
   if (error || !data) {
     notFound();
+  }
+
+  if (data.status === "approved") {
+    const { data: isPublic } = await supabase.rpc("listing_is_public", {
+      p_listing_id: data.id,
+    });
+    if (!isPublic) notFound();
   }
 
   const listing = data as ListingDetailData;
@@ -176,6 +187,7 @@ function ListingDetail({
         sellerLocation;
   const keySpecs = getKeyListingSpecs(listing, sellerName);
   const fullSpecs = getFullListingSpecs(listing, sellerName);
+  const isSold = listing.status === "sold";
 
   return (
     <section className="bg-laria-cloud/70">
@@ -197,6 +209,11 @@ function ListingDetail({
                   label={sellerTypeLabel}
                   isVerified={store?.is_verified === true}
                 />
+                {isSold ? (
+                  <span className="rounded-full border border-laria-black bg-laria-black px-2.5 py-1 text-xs font-black uppercase tracking-wide text-white">
+                    Vendido
+                  </span>
+                ) : null}
               </div>
 
               <h1 className="mt-4 text-3xl font-black leading-tight text-laria-ink sm:text-4xl">
@@ -216,28 +233,35 @@ function ListingDetail({
                 publishedAt={listing.published_at}
                 createdAt={listing.created_at}
                 initialViewCount={listing.view_count}
+                trackView={!isSold}
               />
 
               <KeySpecs specs={keySpecs} />
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
-                <a
-                  href={buildWhatsAppUrl(listing)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="laria-button-primary min-h-12 w-full px-5 py-3 text-sm uppercase tracking-wide"
-                >
-                  Preguntar por WhatsApp
-                </a>
-                {listing.seller_type === "store" && store ? (
-                  <Link
-                    href={`/tiendas/${store.slug}`}
-                    className="laria-button-secondary min-h-12 w-full px-5 py-3 text-sm sm:w-auto"
+              {isSold ? (
+                <p className="mt-6 rounded-md border border-laria-steel bg-laria-cloud p-4 text-sm font-bold leading-6 text-laria-ink">
+                  Este instrumento fue marcado como vendido y ya no está disponible para consultas de compra.
+                </p>
+              ) : (
+                <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
+                  <a
+                    href={buildWhatsAppUrl(listing)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="laria-button-primary min-h-12 w-full px-5 py-3 text-sm uppercase tracking-wide"
                   >
-                    Ver tienda
-                  </Link>
-                ) : null}
-              </div>
+                    Preguntar por WhatsApp
+                  </a>
+                  {listing.seller_type === "store" && store ? (
+                    <Link
+                      href={`/tiendas/${store.slug}`}
+                      className="laria-button-secondary min-h-12 w-full px-5 py-3 text-sm sm:w-auto"
+                    >
+                      Ver tienda
+                    </Link>
+                  ) : null}
+                </div>
+              )}
 
               <p className="mt-4 rounded-md border border-laria-blue/25 bg-laria-blue/10 p-3 text-xs font-medium leading-5 text-laria-text-soft">
                 Contacto directo por WhatsApp. Laria no procesa pagos, envíos ni
@@ -251,6 +275,7 @@ function ListingDetail({
               sellerLocation={resolvedSellerLocation}
               sellerVisibleSince={particular.createdAt ?? listing.created_at}
               listing={listing}
+              isSold={isSold}
               sellerPublishedCount={
                 <Suspense fallback="Cargando…">
                   <SellerInventory supabase={supabase} listing={listing} />
@@ -421,7 +446,8 @@ const getMoreFromSellerListings = cache(
 
     return {
       listings,
-      publishedCount: count === null ? null : count + 1,
+      publishedCount:
+        count === null ? null : count + (listing.status === "approved" ? 1 : 0),
     };
   },
 );
@@ -512,6 +538,7 @@ function SellerTrustBox({
   sellerLocation,
   sellerVisibleSince,
   listing,
+  isSold,
   sellerPublishedCount,
 }: {
   sellerName?: string | null;
@@ -519,6 +546,7 @@ function SellerTrustBox({
   sellerLocation: string;
   sellerVisibleSince: string;
   listing: ListingDetailData;
+  isSold: boolean;
   sellerPublishedCount: ReactNode;
 }) {
   const store = normalizeStore(listing);
@@ -565,14 +593,16 @@ function SellerTrustBox({
       </div>
 
       <div className="mt-5 grid gap-3">
-        <a
-          href={buildWhatsAppUrl(listing)}
-          target="_blank"
-          rel="noreferrer"
-          className="laria-button-primary inline-flex w-full items-center justify-center px-4 py-3 text-sm"
-        >
-          {isStore ? "Escribir por WhatsApp" : "Contactar por WhatsApp"}
-        </a>
+        {!isSold ? (
+          <a
+            href={buildWhatsAppUrl(listing)}
+            target="_blank"
+            rel="noreferrer"
+            className="laria-button-primary inline-flex w-full items-center justify-center px-4 py-3 text-sm"
+          >
+            {isStore ? "Escribir por WhatsApp" : "Contactar por WhatsApp"}
+          </a>
+        ) : null}
         {isStore && store ? (
           <Link
             href={`/tiendas/${store.slug}`}
@@ -584,9 +614,9 @@ function SellerTrustBox({
       </div>
 
       <p className="mt-5 rounded-md border border-laria-fog bg-laria-cloud p-3 text-xs font-medium leading-5 text-laria-text-soft">
-        Coordina por WhatsApp, revisa el instrumento cuando sea posible y evita
-        adelantos si no conoces al vendedor. Laria no procesa pagos, envíos ni
-        garantías.
+        {isSold
+          ? "Este registro se conserva como historial. Laria no procesó ni garantizó la transacción."
+          : "Coordina por WhatsApp, revisa el instrumento cuando sea posible y evita adelantos si no conoces al vendedor. Laria no procesa pagos, envíos ni garantías."}
       </p>
     </section>
   );

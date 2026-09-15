@@ -9,6 +9,7 @@ type ListingDetailMetadataProps = {
   publishedAt: string | null;
   createdAt: string;
   initialViewCount: number | null;
+  trackView?: boolean;
 };
 
 export function ListingDetailMetadata({
@@ -16,10 +17,13 @@ export function ListingDetailMetadata({
   publishedAt,
   createdAt,
   initialViewCount,
+  trackView = true,
 }: ListingDetailMetadataProps) {
   const [viewCount, setViewCount] = useState(initialViewCount ?? 0);
 
   useEffect(() => {
+    if (!trackView) return;
+
     const storageKey = `listing-viewed:${listingId}`;
     const viewedAt = Number(window.localStorage.getItem(storageKey));
 
@@ -59,7 +63,7 @@ export function ListingDetailMetadata({
     return () => {
       isActive = false;
     };
-  }, [listingId]);
+  }, [listingId, trackView]);
 
   return (
     <div className="mt-4 flex flex-wrap gap-2 text-sm font-bold text-laria-text-soft">

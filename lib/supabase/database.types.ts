@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       listing_photos: {
@@ -47,6 +72,132 @@ export type Database = {
           },
         ]
       }
+      listing_revision_photos: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          id: string
+          image_url: string
+          revision_id: string
+          sort_order: number
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          revision_id: string
+          sort_order: number
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          revision_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_revision_photos_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "listing_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_revisions: {
+        Row: {
+          attributes: Json | null
+          brand: string | null
+          category: string | null
+          changed_fields: string[]
+          condition: string | null
+          created_at: string
+          id: string
+          instrument_type: string | null
+          listing_id: string
+          model: string | null
+          owner_user_id: string
+          rejection_reason: string | null
+          resolution_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          store_id: string | null
+          submitted_at: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          attributes?: Json | null
+          brand?: string | null
+          category?: string | null
+          changed_fields: string[]
+          condition?: string | null
+          created_at?: string
+          id?: string
+          instrument_type?: string | null
+          listing_id: string
+          model?: string | null
+          owner_user_id: string
+          rejection_reason?: string | null
+          resolution_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          store_id?: string | null
+          submitted_at?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attributes?: Json | null
+          brand?: string | null
+          category?: string | null
+          changed_fields?: string[]
+          condition?: string | null
+          created_at?: string
+          id?: string
+          instrument_type?: string | null
+          listing_id?: string
+          model?: string | null
+          owner_user_id?: string
+          rejection_reason?: string | null
+          resolution_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          store_id?: string | null
+          submitted_at?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_revisions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_revisions_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_revisions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listings: {
         Row: {
           archived_at: string | null
@@ -59,6 +210,9 @@ export type Database = {
           created_at: string
           created_by_source: string
           description: string | null
+          hidden_at: string | null
+          hidden_reason: string | null
+          hidden_source: string | null
           id: string
           instrument_type: string | null
           marketplace_rules_accepted_at: string | null
@@ -67,6 +221,8 @@ export type Database = {
           price_pen: number | null
           published_at: string | null
           region: string
+          rejection_reason: string | null
+          relisted_from_listing_id: string | null
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
@@ -89,6 +245,9 @@ export type Database = {
           created_at?: string
           created_by_source?: string
           description?: string | null
+          hidden_at?: string | null
+          hidden_reason?: string | null
+          hidden_source?: string | null
           id?: string
           instrument_type?: string | null
           marketplace_rules_accepted_at?: string | null
@@ -97,6 +256,8 @@ export type Database = {
           price_pen?: number | null
           published_at?: string | null
           region?: string
+          rejection_reason?: string | null
+          relisted_from_listing_id?: string | null
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at?: string | null
@@ -118,6 +279,9 @@ export type Database = {
           created_at?: string
           created_by_source?: string
           description?: string | null
+          hidden_at?: string | null
+          hidden_reason?: string | null
+          hidden_source?: string | null
           id?: string
           instrument_type?: string | null
           marketplace_rules_accepted_at?: string | null
@@ -126,6 +290,8 @@ export type Database = {
           price_pen?: number | null
           published_at?: string | null
           region?: string
+          rejection_reason?: string | null
+          relisted_from_listing_id?: string | null
           seller_type?: Database["public"]["Enums"]["seller_type"]
           slug?: string
           sold_at?: string | null
@@ -142,6 +308,13 @@ export type Database = {
             columns: ["owner_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listings_relisted_from_listing_id_fkey"
+            columns: ["relisted_from_listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
             referencedColumns: ["id"]
           },
           {
@@ -391,6 +564,14 @@ export type Database = {
       }
       is_store_member: { Args: { p_store_id: string }; Returns: boolean }
       is_store_owner: { Args: { p_store_id: string }; Returns: boolean }
+      listing_accepts_direct_photo_edits: {
+        Args: { p_listing_id: string }
+        Returns: boolean
+      }
+      listing_attribute_keys_are_valid: {
+        Args: { p_attributes: Json; p_instrument_type: string }
+        Returns: boolean
+      }
       listing_has_status: {
         Args: {
           expected_status: Database["public"]["Enums"]["listing_status"]
@@ -403,11 +584,66 @@ export type Database = {
         Args: { p_listing_id: string }
         Returns: boolean
       }
+      listing_owner_can_edit: {
+        Args: { p_listing_id: string }
+        Returns: boolean
+      }
       listing_photo_count: {
         Args: { "": Database["public"]["Tables"]["listings"]["Row"] }
         Returns: {
           error: true
         } & "the function public.listing_photo_count with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
+      }
+      listing_taxonomy_is_valid: {
+        Args: { p_category: string; p_instrument_type: string }
+        Returns: boolean
+      }
+      relist_sold_listing: {
+        Args: { p_listing_id: string }
+        Returns: {
+          archived_at: string | null
+          attributes: Json | null
+          brand: string | null
+          category: string
+          city: string
+          condition: string | null
+          contact_name: string | null
+          created_at: string
+          created_by_source: string
+          description: string | null
+          hidden_at: string | null
+          hidden_reason: string | null
+          hidden_source: string | null
+          id: string
+          instrument_type: string | null
+          marketplace_rules_accepted_at: string | null
+          model: string | null
+          owner_user_id: string | null
+          price_pen: number | null
+          published_at: string | null
+          region: string
+          rejection_reason: string | null
+          relisted_from_listing_id: string | null
+          seller_type: Database["public"]["Enums"]["seller_type"]
+          slug: string
+          sold_at: string | null
+          status: Database["public"]["Enums"]["listing_status"]
+          store_id: string | null
+          title: string
+          updated_at: string
+          view_count: number | null
+          whatsapp_phone: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "listings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      replace_listing_photos: {
+        Args: { p_listing_id: string; p_photos: Json }
+        Returns: undefined
       }
       resubmit_store_application: {
         Args: { p_store_id: string }
@@ -443,6 +679,79 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "stores"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      review_listing: {
+        Args: { p_decision: string; p_listing_id: string; p_reason?: string }
+        Returns: {
+          archived_at: string | null
+          attributes: Json | null
+          brand: string | null
+          category: string
+          city: string
+          condition: string | null
+          contact_name: string | null
+          created_at: string
+          created_by_source: string
+          description: string | null
+          hidden_at: string | null
+          hidden_reason: string | null
+          hidden_source: string | null
+          id: string
+          instrument_type: string | null
+          marketplace_rules_accepted_at: string | null
+          model: string | null
+          owner_user_id: string | null
+          price_pen: number | null
+          published_at: string | null
+          region: string
+          rejection_reason: string | null
+          relisted_from_listing_id: string | null
+          seller_type: Database["public"]["Enums"]["seller_type"]
+          slug: string
+          sold_at: string | null
+          status: Database["public"]["Enums"]["listing_status"]
+          store_id: string | null
+          title: string
+          updated_at: string
+          view_count: number | null
+          whatsapp_phone: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "listings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      review_listing_revision: {
+        Args: { p_decision: string; p_reason?: string; p_revision_id: string }
+        Returns: {
+          attributes: Json | null
+          brand: string | null
+          category: string | null
+          changed_fields: string[]
+          created_at: string
+          id: string
+          instrument_type: string | null
+          listing_id: string
+          model: string | null
+          owner_user_id: string
+          rejection_reason: string | null
+          resolution_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          store_id: string | null
+          submitted_at: string
+          title: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "listing_revisions"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -485,6 +794,49 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_owned_listing_lifecycle: {
+        Args: { p_action: string; p_listing_id: string }
+        Returns: {
+          archived_at: string | null
+          attributes: Json | null
+          brand: string | null
+          category: string
+          city: string
+          condition: string | null
+          contact_name: string | null
+          created_at: string
+          created_by_source: string
+          description: string | null
+          hidden_at: string | null
+          hidden_reason: string | null
+          hidden_source: string | null
+          id: string
+          instrument_type: string | null
+          marketplace_rules_accepted_at: string | null
+          model: string | null
+          owner_user_id: string | null
+          price_pen: number | null
+          published_at: string | null
+          region: string
+          rejection_reason: string | null
+          relisted_from_listing_id: string | null
+          seller_type: Database["public"]["Enums"]["seller_type"]
+          slug: string
+          sold_at: string | null
+          status: Database["public"]["Enums"]["listing_status"]
+          store_id: string | null
+          title: string
+          updated_at: string
+          view_count: number | null
+          whatsapp_phone: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "listings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_store_verification: {
         Args: { p_store_id: string; p_verified: boolean }
         Returns: Json
@@ -506,6 +858,9 @@ export type Database = {
           created_at: string
           created_by_source: string
           description: string | null
+          hidden_at: string | null
+          hidden_reason: string | null
+          hidden_source: string | null
           id: string
           instrument_type: string | null
           marketplace_rules_accepted_at: string | null
@@ -514,6 +869,8 @@ export type Database = {
           price_pen: number | null
           published_at: string | null
           region: string
+          rejection_reason: string | null
+          relisted_from_listing_id: string | null
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
@@ -530,6 +887,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      update_owned_listing: {
+        Args: {
+          p_immediate?: Json
+          p_listing_id: string
+          p_moderated?: Json
+          p_photos?: Json
+        }
+        Returns: Json
       }
     }
     Enums: {
@@ -669,6 +1035,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       listing_status: [

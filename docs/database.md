@@ -105,9 +105,9 @@ Current behavior:
 - Public store pages only read `status='active'`; public listing/photo RLS also requires an active parent store.
 - Basic approval produces `Tienda`. The admin-only verification RPC produces `Tienda Verificada` and atomically approves valid pending inventory.
 
-Current Sprint 2 boundaries:
+Current V1 store boundaries:
 - No paid store plans are active. Every store uses the same database-enforced 50-concurrent-listing cap counting only `pending` and `approved`.
-- `is_verified` grants direct publication for qualifying new inventory. Direct editing of already-approved inventory remains deferred to the Sprint 3 revision architecture.
+- `is_verified` grants direct publication for qualifying new inventory and direct valid edits of approved inventory. A normal Tienda uses the same pending-revision path as a Particular for moderated edits.
 - Existing code still uses `name` and `whatsapp_phone`; do not introduce duplicate `store_name` or `whatsapp` columns unless a later migration intentionally renames the app model.
 
 ### `public.store_photos`
@@ -149,6 +149,11 @@ Actual columns represented in current code/types:
 - `archived_at timestamptz`
 - `created_by_source text default 'legacy'`
 - `marketplace_rules_accepted_at timestamptz`
+- `rejection_reason text`
+- `hidden_source text` constrained to `owner`, `admin`, or the legacy backfill marker `legacy`
+- `hidden_reason text`
+- `hidden_at timestamptz`
+- `relisted_from_listing_id uuid references listings(id) on delete restrict`
 - `city text not null`
 - `region text not null default 'Peru'`
 - `contact_name text`
@@ -163,9 +168,9 @@ Important constraints:
 - Store listings must have `store_id is not null`.
 
 Current behavior:
-- Public pages only show `status='approved'`.
+- Catalog/search pages only show `status='approved'`. A `sold` record remains resolvable by its exact detail slug through a trusted server read, but is not broadly public through table RLS.
 - New individual submissions enter as `pending`.
-- Admin can set listing status to `approved`, `rejected`, `hidden`, or `sold`.
+- Trusted admin RPCs approve, reject, hide, and restore listings; rejection and administrative hiding require a reason.
 - Phase 2 account-aware listings can be owned by `owner_user_id`; legacy listings keep `owner_user_id=null` and continue to display through existing contact fields.
 - New self-service Particular listings always set `owner_user_id`, remain `pending`, and copy profile contact values only as a compatibility snapshot. Approved owned listings resolve current seller identity/contact from `profiles`.
 - `created_by_source` tracks `legacy`, `self_service`, `admin_invite`, or `admin`.
@@ -174,6 +179,8 @@ Current behavior:
 - Listing detail pages render `attributes` as user-facing specification rows through `lib/listing-specs.ts`, using labels/options from `lib/instrument-filters.ts`. Empty attributes are hidden and raw JSON should not be shown in the UI.
 - Listing detail seller/store trust boxes count approved listings by `store_id` for stores and by `owner_user_id` for account-owned Particular listings; legacy individual listings retain the WhatsApp fallback.
 - Seller and admin forms reuse `lib/instrument-filters.ts` for `instrument_type` and labeled `attributes` controls.
+- Owners can hide an approved listing, restore only an owner-hidden listing, and mark it sold. Sold rows are immutable and can only be copied by the relist RPC.
+- Relisted rows reference the sold source through `relisted_from_listing_id`; the source row is retained.
 
 ### `public.listing_photos`
 
@@ -192,6 +199,33 @@ Current behavior:
 - Browse pages embed only the first related photo.
 - Cards fetch additional photos on demand from `/api/listings/[id]/photos`.
 - Detail pages fetch the full relation and render main photo plus additional thumbnails.
+- Existing photo objects are not overwritten or deleted during owner edits. Proposed revision photos use new object paths and become live database photo rows only when the revision is approved.
+
+### `public.listing_revisions`
+
+Purpose: one pending moderated edit proposal per approved Particular or normal Tienda listing while the current live row remains public.
+
+Key columns:
+- `id uuid primary key`
+- `listing_id uuid references listings(id) on delete restrict`
+- `owner_user_id uuid references profiles(id)`
+- `store_id uuid references stores(id)`
+- `status text` constrained to `pending`, `approved`, `rejected`, or `cancelled`
+- `changed_fields text[]` containing only proposed moderated fields, including condition
+- nullable proposed `title`, `category`, `instrument_type`, dependent `attributes`, `brand`, and `model`; attributes are included only when they must move atomically with a type change
+- `rejection_reason text`
+- submission/review timestamps and `reviewed_by`
+
+A partial unique index on `listing_id` where `status='pending'` prevents a second pending revision. Owners can read only their own revisions; public roles have no access; admin review remains inside trusted RPCs.
+
+### `public.listing_revision_photos`
+
+Purpose: ordered proposed photo sets for revisions without mutating `listing_photos` early.
+
+- `revision_id uuid references listing_revisions(id) on delete restrict`
+- `image_url text`, `alt_text text`, and unique non-negative `sort_order`
+
+An accepted revision replaces the live photo rows atomically inside the admin review transaction. Rejected proposals remain historical moderation evidence.
 
 ## Enums
 
@@ -229,6 +263,8 @@ RLS is enabled on:
 - `stores`
 - `listings`
 - `listing_photos`
+- `listing_revisions`
+- `listing_revision_photos`
 - `store_members`
 - `store_photos`
 
@@ -246,10 +282,10 @@ Account policies:
 - Store owners/members can read their own stores and memberships.
 - Store Owner accounts can insert one pending owner-bound store application.
 - Store owners can update allowed store profile/business/contact fields and optional store photos. Protected authority fields are writable only through controlled review RPCs.
-- Listing owners and store members can read/update their own manageable listings, but triggers block non-admin changes to protected listing fields such as `status`, `published_at`, `view_count`, `created_by_source`, `owner_user_id`, `store_id`, and `seller_type`.
+- Listing owners and store members can read their own manageable listings. Lifecycle and edit mutations use owner-scoped RPCs; triggers block direct changes to protected authority fields and make sold rows immutable.
 - The owner of a pending or active store can insert pending store inventory. Server publication logic distinguishes normal Tienda from Tienda Verificada.
-- Listing managers can manage photo rows for listings they can manage.
-- Owners may add photo rows only while fewer than ten exist and delete them only while more than two remain. Storage update/delete access is limited to the authenticated user's folder.
+- Authenticated owners cannot mutate listing or live-photo rows directly; validated owner-scoped RPCs apply nonpublic/verified-store edits or stage approved Particular/normal-Tienda photo changes on a revision.
+- Listing-photo objects are append-only from the browser beneath the authenticated owner folder; update/delete policies are removed so a historical object cannot be replaced or destroyed. Trusted server cleanup still removes failed-attempt uploads.
 - Public users may read a profile only when it belongs to an approved account-owned Particular listing; this supports dynamic seller display without exposing unrelated profiles.
 
 Admin policies:
@@ -290,7 +326,7 @@ Admin policies:
 - For `store_listing`, requires the owner-bound pending/active store, enforces 2–10 photos, and directly approves only when the store is active and verified.
 
 `public.submit_listing_for_publication(listing_id)`:
-- A valid Particular draft/submission can only move to or remain `pending`; the owner cannot self-approve through this RPC.
+- A valid Particular draft/rejected submission can only move to or remain `pending`; the owner cannot self-approve through this RPC.
 - Store inventory remains pending for pending/normal stores and may become approved directly only for an active Tienda Verificada.
 - Status transitions into `approved` are guarded by the shared publication requirements.
 
@@ -306,6 +342,22 @@ Admin policies:
 `public.enforce_store_inventory_cap()`:
 - Trigger invariant for inserts and counted-state transitions. A per-store advisory transaction lock prevents concurrent over-cap writes.
 
+`public.update_owned_listing(listing_id, immediate_fields, moderated_fields, photos)`:
+- Locks and validates the owner-bound listing. Price, description, location, and supported attributes apply immediately. Condition joins title, category, instrument type, brand, model, and photos in the moderated proposal for Particular and normal Tienda inventory.
+- For approved Particular/normal-Tienda rows, title, category, instrument type, brand, model, and photos create one pending revision while the live row remains unchanged. Nonpublic rows and eligible verified-store rows apply the complete valid edit directly.
+- A moderated instrument-type change carries its compatible dynamic attributes inside the same revision, preventing either the old or proposed public version from exposing a mismatched type/attribute pair.
+- Proposed photo sets contain 2–10 unique URLs. Every URL must already belong to the listing or resolve to an existing ≤5 MB JPEG/PNG/WebP object in that owner's listing-edit folder, so direct RPC callers cannot inject arbitrary photos.
+- Store verification alone leaves an existing pending edit revision untouched. If the verified owner later applies a direct moderated/photo edit, that older pending proposal is atomically retained as `cancelled`/superseded so it cannot overwrite the newer live values.
+
+`public.set_owned_listing_lifecycle(listing_id, action)`:
+- Owner-only `hide`, `restore`, and `sold` transitions. Restore is allowed only for owner-hidden listings and reuses publication validation plus the store cap invariant. Marking sold cancels any pending revision; hiding leaves it pending, and later approval changes content without restoring visibility.
+
+`public.relist_sold_listing(listing_id)`:
+- Creates a new linked copy and copies the live photo references without mutating the sold source. Particular/normal-Tienda copies return to moderation; an eligible verified-store copy can publish directly.
+
+`public.review_listing(listing_id, decision, reason)` and `public.review_listing_revision(revision_id, decision, reason)`:
+- Admin-only, row-locked moderation. Listing reject/hide and revision reject require a reason. Revision approval applies only proposed fields and an optional staged photo set in one transaction, preserving unrelated immediate edits and any current owner-hidden state.
+
 ## Storage Buckets
 
 `listing-photos`:
@@ -314,6 +366,7 @@ Admin policies:
 - Allowed MIME types: JPEG, PNG, WebP.
 - Public select policy for approved listing images; anonymous insert is removed.
 - Particular submissions upload through authenticated owner paths `{auth.uid()}/{submissionId}/{sortOrder}.{ext}`.
+- Listing edit uploads use `{auth.uid()}/listing-edits/{listingId}/{attemptId}/{sortOrder}.{ext}` and are verified against the owner before they can enter a direct edit or pending revision.
 - Signed completion and cleanup remain server-controlled and service-role credentials never reach the browser.
 
 `store-assets`:
@@ -357,6 +410,7 @@ Current migrations:
 - `20260503233000_increment_listing_view_count.sql`: view count RPC.
 - `20260516180000_phase_2_accounts.sql`: profiles, store members, ownership columns, lifecycle fields, account RLS helpers, owner/member RLS policies, publication validation RPC, and authenticated owner-folder storage policies.
 - `20260910190000_store_sprint_2.sql`: Store Owner/application ownership, normalized unique RUC, optional store photos, active-parent public visibility, trusted review/verification RPCs, verified direct publication, and serialized 50-item cap.
+- `20260913120000_listing_sprint_3.sql`: listing lifecycle reasons/provenance, immutable sold history and relist lineage, pending revisions and proposed photos, owner/admin moderation RPCs, append-only listing-photo storage, and cap-safe restoration/relisting.
 
 Production history note:
 - The six pre-Phase-2 migrations describe the historical baseline that already existed in production. Earlier schema work was originally applied manually in Supabase SQL Editor, then Supabase migration history was repaired so the CLI would not replay those files.
@@ -376,7 +430,7 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
-Frozen V1 requires data models for favorites, exact-state search alerts and delivery deduplication, price-drop delivery, marketplace/contact events, listing revisions, verified transactions, two-way reviews, reports, analytics, and centralized marketplace email delivery. They are not present in current migrations.
+Frozen V1 still requires data models for favorites, exact-state search alerts and delivery deduplication, price-drop delivery, marketplace/contact events, verified transactions, two-way reviews, reports, analytics, and centralized marketplace email delivery. Listing revisions are now present in the Sprint 3 migration.
 
 The existing `profiles` table is the Particular/store-owner identity foundation; do not add a separate seller-only account that would prevent one Particular from buying and selling.
 
@@ -389,3 +443,5 @@ Post-V1 concepts include `featured_listing_orders` and `store_plan_subscriptions
 `20260910100000_particular_sprint_1.sql` binds Particular submissions to profiles, enforces the 2–10 contract in the publication RPC, removes anonymous listing creation/upload policies, enables approved seller-profile resolution, and adds minimum-preserving owner photo deletion.
 
 `20260910120000_sprint_1_owner_acceptance_fixes.sql` updates the Auth user trigger to persist normalized signup name, WhatsApp, city, and region without duplicate onboarding, safely fills only missing/default values on existing profiles from Auth metadata, and allows the shared `instrument_type='other'` fallback for supported categories.
+
+`20260913120000_listing_sprint_3.sql` adds owner lifecycle management, moderated revision isolation, sold immutability, copied relisting, owner-visible moderation reasons, admin review operations, and append-only edit uploads without weakening legacy or Sprint 2 store behavior.

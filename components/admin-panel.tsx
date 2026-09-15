@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   type FormEvent,
   type ReactNode,
@@ -8,6 +9,7 @@ import {
   useState,
 } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { listingStatusLabel } from "@/lib/account-ui";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
 import { normalizePeruRegion } from "@/lib/location";
@@ -55,6 +57,46 @@ type AdminListing = {
   seller_type: "individual" | "store";
   store_id: string | null;
   stores: { name: string } | null;
+  rejection_reason: string | null;
+  hidden_reason: string | null;
+  hidden_source: string | null;
+};
+
+type AdminRevision = {
+  id: string;
+  listing_id: string;
+  status: string;
+  changed_fields: string[];
+  title: string | null;
+  category: string | null;
+  instrument_type: string | null;
+  attributes: Record<string, unknown> | null;
+  brand: string | null;
+  model: string | null;
+  condition: string | null;
+  submitted_at: string;
+  reviewed_at: string | null;
+  rejection_reason: string | null;
+  resolution_reason: string | null;
+  listings: {
+    title: string;
+    category: string;
+    instrument_type: string | null;
+    attributes: Record<string, unknown> | null;
+    brand: string | null;
+    model: string | null;
+    condition: string | null;
+    listing_photos: {
+      image_url: string;
+      alt_text: string | null;
+      sort_order: number;
+    }[];
+  } | null;
+  listing_revision_photos: {
+    image_url: string;
+    alt_text: string | null;
+    sort_order: number;
+  }[];
 };
 
 type AdminStore = {
@@ -81,22 +123,13 @@ type AdminStore = {
   rejection_reason: string | null;
 };
 
-const listingActions: {
-  label: string;
-  status: ListingStatus;
-}[] = [
-  { label: "Aprobar", status: "approved" },
-  { label: "Rechazar", status: "rejected" },
-  { label: "Ocultar", status: "hidden" },
-  { label: "Marcar vendido", status: "sold" },
-];
-
 export function AdminPanel() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [listings, setListings] = useState<AdminListing[]>([]);
+  const [revisions, setRevisions] = useState<AdminRevision[]>([]);
   const [stores, setStores] = useState<AdminStore[]>([]);
   const [message, setMessage] = useState("");
   const [inviteMessage, setInviteMessage] = useState("");
@@ -178,6 +211,7 @@ export function AdminPanel() {
     await supabase.auth.signOut();
     setAuthState("signed_out");
     setListings([]);
+    setRevisions([]);
     setStores([]);
   }
 
@@ -186,15 +220,26 @@ export function AdminPanel() {
       return;
     }
 
-    const [{ data: listingRows, error: listingsError }, { data: storeRows, error: storesError }] =
+    const [
+      { data: listingRows, error: listingsError },
+      { data: revisionRows, error: revisionsError },
+      { data: storeRows, error: storesError },
+    ] =
       await Promise.all([
         supabase
           .from("listings")
           .select(
-            "id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,description,contact_name,whatsapp_phone,created_at,seller_type,store_id,stores(name)",
+            "id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,description,contact_name,whatsapp_phone,created_at,seller_type,store_id,rejection_reason,hidden_reason,hidden_source,stores(name)",
           )
-          .eq("status", "pending")
-          .order("created_at", { ascending: true }),
+          .order("created_at", { ascending: false })
+          .limit(100),
+        supabase
+          .from("listing_revisions")
+          .select(
+            "id,listing_id,status,changed_fields,title,category,instrument_type,attributes,brand,model,condition,submitted_at,reviewed_at,rejection_reason,resolution_reason,listings(title,category,instrument_type,attributes,brand,model,condition,listing_photos(image_url,alt_text,sort_order)),listing_revision_photos(image_url,alt_text,sort_order)",
+          )
+          .order("submitted_at", { ascending: false })
+          .limit(100),
         supabase
           .from("stores")
           .select(
@@ -203,12 +248,13 @@ export function AdminPanel() {
           .order("created_at", { ascending: true }),
       ]);
 
-    if (listingsError || storesError) {
+    if (listingsError || revisionsError || storesError) {
       setMessage("No pudimos cargar las solicitudes pendientes.");
       return;
     }
 
     setListings((listingRows ?? []) as AdminListing[]);
+    setRevisions((revisionRows ?? []) as AdminRevision[]);
     setStores((storeRows ?? []) as AdminStore[]);
   }
 
@@ -217,8 +263,20 @@ export function AdminPanel() {
       return;
     }
 
+    const decision = status === "approved" ? "approve" : status === "rejected" ? "reject" : status === "hidden" ? "hide" : status;
+    const reason = decision === "reject" || decision === "hide"
+      ? window.prompt(decision === "reject" ? "Motivo obligatorio del rechazo" : "Motivo obligatorio de la ocultación")
+      : null;
+    if ((decision === "reject" || decision === "hide") && !reason?.trim()) {
+      setMessage("Debes indicar un motivo.");
+      return;
+    }
     setIsBusy(true);
-    const { error } = await supabase.from("listings").update({ status }).eq("id", id);
+    const { error } = await supabase.rpc("review_listing", {
+      p_listing_id: id,
+      p_decision: decision,
+      p_reason: reason ?? undefined,
+    });
     setIsBusy(false);
 
     if (error) {
@@ -228,6 +286,40 @@ export function AdminPanel() {
 
     setMessage("Estado del listado actualizado.");
     await loadAdminQueues();
+  }
+
+  async function reviewRevision(id: string, decision: "approve" | "reject") {
+    if (!supabase) return;
+    const reason = decision === "reject" ? window.prompt("Motivo obligatorio del rechazo de cambios") : null;
+    if (decision === "reject" && !reason?.trim()) {
+      setMessage("Debes indicar un motivo para rechazar los cambios.");
+      return;
+    }
+    setIsBusy(true);
+    const { error } = await supabase.rpc("review_listing_revision", {
+      p_revision_id: id,
+      p_decision: decision,
+      p_reason: reason ?? undefined,
+    });
+    setIsBusy(false);
+    if (error) {
+      setMessage(`No se pudo resolver la revisión: ${error.message}`);
+      return;
+    }
+    setMessage(decision === "approve" ? "Cambios aprobados sin sobrescribir campos inmediatos." : "Cambios rechazados con motivo; la versión pública no cambió.");
+    await loadAdminQueues();
+  }
+
+  async function restoreListing(id: string) {
+    if (!supabase) return;
+    setIsBusy(true);
+    const { error } = await supabase.rpc("review_listing", {
+      p_listing_id: id,
+      p_decision: "restore",
+    });
+    setIsBusy(false);
+    setMessage(error ? `No se pudo restaurar: ${error.message}` : "Publicación restaurada por administración.");
+    if (!error) await loadAdminQueues();
   }
 
   async function saveListing(listing: AdminListing) {
@@ -402,6 +494,9 @@ export function AdminPanel() {
     return <SetupMessage />;
   }
 
+  const pendingRevisions = revisions.filter((revision) => revision.status === "pending");
+  const revisionHistory = revisions.filter((revision) => revision.status !== "pending");
+
   if (authState === "checking") {
     return <PanelShell title="Panel administrativo">Revisando acceso...</PanelShell>;
   }
@@ -452,12 +547,11 @@ export function AdminPanel() {
           className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
           aria-label="Resumen administrativo"
         >
-          <AdminStatCard label="Listados pendientes" value={listings.length} />
+          <AdminStatCard label="Listados pendientes" value={listings.filter((listing) => listing.status === "pending").length} />
+          <AdminStatCard label="Revisiones pendientes" value={pendingRevisions.length} />
           <AdminStatCard label="Tiendas pendientes" value={stores.length} />
           {/* UI placeholder only; replace with real moderation metrics when implemented. */}
           <AdminStatCard label="Acciones de hoy" value="--" />
-          {/* UI placeholder only; replace with real invite metrics when implemented. */}
-          <AdminStatCard label="Invitaciones" value="--" />
         </section>
         <InviteUserSection
           accountType={inviteAccountType}
@@ -469,7 +563,7 @@ export function AdminPanel() {
         />
         <section className="grid gap-4">
           <SectionHeading
-            title="Listados pendientes"
+            title="Moderación de listados"
             count={listings.length}
             onRefresh={loadAdminQueues}
           />
@@ -488,8 +582,10 @@ export function AdminPanel() {
                 {listings.map((listing) => (
                   <tr key={listing.id} className="align-top transition hover:bg-laria-blue/5">
                     <td className="space-y-3 px-3 py-4">
-                      <StatusBadge label="Pendiente" tone="blue" />
+                      <StatusBadge label={listingStatusLabel(listing.status)} tone={listing.status === "approved" ? "blue" : "neutral"} />
                       <p className="text-xs font-black text-laria-text-soft">{listing.seller_type === "store" ? `Tienda: ${listing.stores?.name ?? listing.store_id}` : "Particular"}</p>
+                      {listing.rejection_reason ? <p className="text-xs text-red-700">Rechazo: {listing.rejection_reason}</p> : null}
+                      {listing.hidden_reason ? <p className="text-xs text-red-700">Ocultación {listing.hidden_source === "admin" ? "administrativa" : "del dueño"}: {listing.hidden_reason}</p> : null}
                       <Input
                         value={listing.title}
                         onChange={(value) => updateListing(listing.id, { title: value })}
@@ -583,24 +679,16 @@ export function AdminPanel() {
                     <td className="space-y-3 px-3 py-4">
                       <button
                         type="button"
-                        disabled={isBusy}
+                        disabled={isBusy || listing.status === "sold" || listing.status === "archived"}
                         onClick={() => saveListing(listing)}
                         className="w-full rounded-md border border-laria-steel px-3 py-2 text-xs font-black text-laria-ink transition hover:border-laria-blue hover:text-laria-blue disabled:opacity-50"
                       >
                         Guardar
                       </button>
                       <div className="grid gap-2">
-                        {listingActions.map((action) => (
-                          <button
-                            type="button"
-                            key={action.status}
-                            disabled={isBusy}
-                            onClick={() => updateListingStatus(listing.id, action.status)}
-                            className="rounded-md bg-laria-ink px-3 py-2 text-xs font-black text-white transition hover:bg-laria-blue hover:text-laria-black disabled:bg-laria-steel"
-                          >
-                            {action.label}
-                          </button>
-                        ))}
+                        {listing.status === "pending" ? <><AdminAction disabled={isBusy} onClick={() => updateListingStatus(listing.id, "approved")}>Aprobar</AdminAction><AdminAction disabled={isBusy} onClick={() => updateListingStatus(listing.id, "rejected")}>Rechazar con motivo</AdminAction></> : null}
+                        {listing.status === "approved" ? <AdminAction disabled={isBusy} onClick={() => updateListingStatus(listing.id, "hidden")}>Ocultar con motivo</AdminAction> : null}
+                        {listing.status === "hidden" ? <AdminAction disabled={isBusy} onClick={() => restoreListing(listing.id)}>Restaurar</AdminAction> : null}
                       </div>
                     </td>
                   </tr>
@@ -608,10 +696,55 @@ export function AdminPanel() {
                 {listings.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-3 py-10 text-center font-medium text-laria-text-soft">
-                      No hay listados pendientes.
+                      No hay listados para mostrar.
                     </td>
                   </tr>
                 ) : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="grid gap-4">
+          <SectionHeading title="Cambios de publicaciones pendientes" count={pendingRevisions.length} onRefresh={loadAdminQueues} />
+          <div className="grid gap-4">
+            {pendingRevisions.map((revision) => (
+              <article key={revision.id} className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_14px_34px_rgb(16_18_23/0.06)]">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div><StatusBadge label="Revisión pendiente" tone="blue" /><h3 className="mt-2 text-lg font-black text-laria-ink">{revision.listings?.title ?? revision.listing_id}</h3><p className="mt-1 text-xs text-laria-text-soft">Enviada {new Date(revision.submitted_at).toLocaleString("es-PE")}</p></div>
+                  <div className="flex flex-wrap gap-2"><AdminAction disabled={isBusy} onClick={() => reviewRevision(revision.id, "approve")}>Aprobar cambios</AdminAction><AdminAction disabled={isBusy} onClick={() => reviewRevision(revision.id, "reject")}>Rechazar con motivo</AdminAction></div>
+                </div>
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {revision.changed_fields.filter((field) => field !== "photos").map((field) => {
+                    const current = revision.listings?.[field as keyof NonNullable<AdminRevision["listings"]>];
+                    const proposed = revision[field as keyof AdminRevision];
+                    return <div key={field} className="rounded-md border border-laria-fog bg-laria-cloud p-3"><dt className="text-xs font-black uppercase text-laria-blue">{revisionFieldLabel(field)}</dt><dd className="mt-2 text-xs text-laria-text-soft">Actual: <strong className="text-laria-ink">{formatRevisionValue(field, current, revision.listings?.instrument_type)}</strong></dd><dd className="mt-1 text-xs text-laria-text-soft">Propuesto: <strong className="text-laria-ink">{formatRevisionValue(field, proposed, revision.instrument_type ?? revision.listings?.instrument_type)}</strong></dd></div>;
+                  })}
+                </dl>
+                {revision.changed_fields.includes("photos") ? <div className="mt-4 grid gap-4 lg:grid-cols-2"><RevisionPhotos title="Fotos públicas actuales" revisionId={`${revision.id}-current`} photos={revision.listings?.listing_photos ?? []} /><RevisionPhotos title="Fotos propuestas" revisionId={`${revision.id}-proposed`} photos={revision.listing_revision_photos} /></div> : null}
+              </article>
+            ))}
+            {!pendingRevisions.length ? <p className="rounded-lg border border-laria-fog bg-white p-6 text-sm text-laria-text-soft">No hay cambios pendientes de revisión.</p> : null}
+          </div>
+        </section>
+
+        <section className="grid gap-4">
+          <SectionHeading title="Historial reciente de revisiones" count={revisionHistory.length} onRefresh={loadAdminQueues} />
+          <div className="overflow-x-auto rounded-lg border border-laria-fog bg-white shadow-[0_14px_34px_rgb(16_18_23/0.06)]">
+            <table className="min-w-[760px] text-left text-sm">
+              <thead className="bg-laria-cloud text-xs font-black uppercase tracking-wide text-laria-text-soft">
+                <tr><th className="px-4 py-3">Publicación</th><th className="px-4 py-3">Resultado</th><th className="px-4 py-3">Campos propuestos</th><th className="px-4 py-3">Resolución</th></tr>
+              </thead>
+              <tbody className="divide-y divide-laria-fog">
+                {revisionHistory.map((revision) => (
+                  <tr key={revision.id} className="align-top">
+                    <td className="px-4 py-3"><p className="font-black text-laria-ink">{revision.listings?.title ?? revision.listing_id}</p><p className="mt-1 text-xs text-laria-text-soft">Enviada {new Date(revision.submitted_at).toLocaleString("es-PE")}</p></td>
+                    <td className="px-4 py-3"><StatusBadge label={revisionStatusLabel(revision.status)} tone={revision.status === "approved" ? "blue" : "neutral"} /></td>
+                    <td className="px-4 py-3 text-xs text-laria-text-soft">{revision.changed_fields.map(revisionFieldLabel).join(", ")}</td>
+                    <td className="px-4 py-3 text-xs text-laria-text-soft">{revision.rejection_reason ?? revision.resolution_reason ?? (revision.reviewed_at ? new Date(revision.reviewed_at).toLocaleString("es-PE") : "Sin detalle")}</td>
+                  </tr>
+                ))}
+                {!revisionHistory.length ? <tr><td colSpan={4} className="px-4 py-8 text-center text-laria-text-soft">Todavía no hay revisiones resueltas.</td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -844,6 +977,34 @@ function InviteUserSection({
         </div>
       </form>
     </section>
+  );
+}
+
+function RevisionPhotos({
+  title,
+  revisionId,
+  photos,
+}: {
+  title: string;
+  revisionId: string;
+  photos: { image_url: string; alt_text: string | null; sort_order: number }[];
+}) {
+  return (
+    <div>
+      <p className="text-sm font-black text-laria-ink">{title}</p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {[...photos].sort((a, b) => a.sort_order - b.sort_order).map((photo) => (
+          <Image
+            key={`${revisionId}-${photo.sort_order}`}
+            src={photo.image_url}
+            alt={photo.alt_text ?? title}
+            width={320}
+            height={240}
+            className="aspect-[4/3] w-full rounded border border-laria-fog object-cover"
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1227,6 +1388,47 @@ function Textarea({
 
 function normalizePhone(value: string) {
   return value.replace(/\D/g, "");
+}
+
+function revisionFieldLabel(field: string) {
+  return ({
+    title: "Título",
+    category: "Categoría",
+    instrument_type: "Tipo de instrumento",
+    attributes: "Características",
+    brand: "Marca",
+    model: "Modelo",
+    condition: "Condición",
+    photos: "Fotos",
+  } as Record<string, string>)[field] ?? field;
+}
+
+function formatRevisionValue(field: string, value: unknown, instrumentType: string | null | undefined) {
+  if (field !== "attributes" || !value || typeof value !== "object" || Array.isArray(value)) {
+    return String(value ?? "—");
+  }
+  const attributes = value as Record<string, unknown>;
+  const group = getInstrumentFilterGroup(instrumentType ?? "");
+  if (!group) return Object.keys(attributes).length ? "Características actualizadas" : "Sin características";
+  const values = group.filters.flatMap((filter) => {
+    const raw = attributes[filter.key];
+    if (raw === undefined || raw === null || raw === "" || (Array.isArray(raw) && !raw.length)) return [];
+    const rawValues = Array.isArray(raw) ? raw : [raw];
+    const formatted = rawValues.map((entry) => {
+      const text = String(entry);
+      return filter.options?.find((option) => option.value === text)?.label ?? (text === "true" ? "Sí" : text === "false" ? "No" : text);
+    }).join(", ");
+    return [`${filter.label}: ${formatted}`];
+  });
+  return values.length ? values.join("; ") : "Sin características";
+}
+
+function revisionStatusLabel(status: string) {
+  return ({
+    approved: "Aprobada",
+    rejected: "Rechazada",
+    cancelled: "Cancelada",
+  } as Record<string, string>)[status] ?? status;
 }
 
 function readFormText(formData: FormData, key: string) {
