@@ -1,10 +1,12 @@
 """Lightweight codec, generation and semantic regression tests."""
 
 import tempfile
+import os
 import unittest
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
+from unittest.mock import patch
 
 from generate_xlsx import generate
 from registry import NS, ROOT, cases_from_xlsx, escape, excel_decode, excel_encode, load_cases, read_xlsx, unescape, write_cases
@@ -40,6 +42,7 @@ class RegistryTests(unittest.TestCase):
                     load_cases(path)
                 write_cases(cases, path)
 
+    @unittest.skipUnless(os.environ.get("LARIA_FINAL_GATE_XLSX_TESTS") == "1", "Dormant until final V1 freeze gate")
     def test_deterministic_and_updated_summary(self):
         with tempfile.TemporaryDirectory() as directory:
             first, second = (Path(directory) / name for name in ("first.xlsx", "second.xlsx"))
@@ -64,6 +67,11 @@ class RegistryTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(ValueError):
                 compare(cases, changed, "Mutation")
 
+    def test_default_validation_is_tsv_only(self):
+        with patch("validate.read_xlsx", side_effect=AssertionError("Must not read XLSX")), patch("validate.load_metadata", side_effect=AssertionError("Must not require workbook metadata")):
+            validate()
+
+    @unittest.skipUnless(os.environ.get("LARIA_FINAL_GATE_XLSX_TESTS") == "1", "Dormant until final V1 freeze gate")
     def test_workbook_presentation(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "book.xlsx"

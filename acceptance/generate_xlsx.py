@@ -1,4 +1,7 @@
-"""Generate the human acceptance workbook deterministically; no dependencies."""
+"""Dormant until final V1 acceptance/freeze: generate the human workbook once.
+
+Do not run during Sprints 4–9. Uses only the Python standard library.
+"""
 
 import argparse
 import math

@@ -40,11 +40,12 @@ V1 does include the account, ownership, favorites, alerts, verified-transaction 
 
 ## Acceptance Registry
 
-- `acceptance/cases.tsv` is the canonical V1 acceptance registry; `acceptance_matrix.xlsx` is a generated human view.
-- During normal implementation, do **not** read/parse the whole XLSX. Inspect `acceptance/sprints.tsv` for ownership guidance and retrieve only relevant TSV rows by exact Test ID or prefix.
+- `acceptance/cases.tsv` is the sole canonical V1 acceptance source; `acceptance/sprints.tsv` is the selective retrieval guide.
+- During Sprints 4–9, do **not** read or regenerate XLSX. Retrieve only the exact Test IDs/domain prefixes needed for the current sprint.
 - Update canonical TSV only when acceptance state actually changes; preserve unrelated statuses, requirements and IDs. Never renumber existing Test IDs or infer owner/manual PASS from code.
 - Follow the reversible field encoding in `acceptance/README.md`; status is column 5 and evidence is column 8.
-- Regenerate with `python3 -B acceptance/generate_xlsx.py`, then validate with `python3 -B acceptance/validate.py`. Whole-workbook parsing is reserved for explicit migration/generation audits.
+- After acceptance changes, run `python3 -B acceptance/validate.py` (TSV-only) and review the relevant TSV diff.
+- `acceptance/generate_xlsx.py` is dormant until the final V1 acceptance/freeze gate. Generate `acceptance_matrix.xlsx` only once at that gate, not during active sprint development.
 
 ```sh
 rg '^4\t' acceptance/sprints.tsv
