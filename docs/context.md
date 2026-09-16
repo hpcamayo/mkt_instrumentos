@@ -12,7 +12,7 @@ Product scope:
 - Stores register from `/registrar-tienda`; after approval they get public pages at `/tiendas/[slug]`.
 - Store products also appear in `/listados`.
 - Admin curation is central. Particular and normal Tienda listings require moderation; qualifying Tienda Verificada inventory publishes directly. Store pages require basic store approval.
-- Sprint 1 and Sprint 2 are **CLOSED / ACCEPTED**. Sprint 3 is deployed. Sprint 3.1 amendable revision, exact price/title, shared notice, duplicate-RUC message, and in-app notification fixes are implemented and locally verified; `LIST-013`, `REV-011`, `REV-012`, and `REV-014` remain pending owner production retest.
+- Sprint 1 and Sprint 2 are **CLOSED / ACCEPTED**. Sprint 3 and Sprint 3.1 are deployed. Sprint 3.1 amendable revision, exact price/title, shared notice, duplicate-RUC message, and in-app notification fixes passed local regression and production smoke on 2026-09-16; `LIST-013`, `REV-011`, `REV-012`, and `REV-014` remain pending owner production retest, not owner-accepted automatically.
 - No paid plans are active in V1. Future monetization may start with stores, but the frozen V1 rule is a free 50-concurrent-listing cap.
 - V1 requires buyer/Particular accounts, ownership, seller/store dashboards, favorites, alerts, analytics, reports, verified transactions, and transaction-bound reviews. These are not all implemented yet; see the status matrix in `docs/functional-spec.md`.
 - Payments, checkout, escrow, delivery, subscriptions, commissions, and in-app chat remain post-V1.

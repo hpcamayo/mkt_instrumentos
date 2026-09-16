@@ -61,6 +61,10 @@ Implemented September 2026, preserving the public pending-submission and admin-a
 
 ## Verification results
 
+Sprint 3.1 production verification (2026-09-16): migration `20260916120000_sprint_3_1_acceptance_fixes.sql` applied; committed application fixes released from `f0f590fc9a68ad7322028c3cac932da94cd81b75`. Temporary production accounts exercised exact 1200 initial / 1100 edited prices through stored rows, public API, cards and detail; canonical title approval/rejection; same-row field/photo/mixed amendments; stale decisions; notifications/RLS/read/links; duplicate-RUC messaging; Particular lifecycle; and normal/verified/revoked store behavior. Browser checks confirmed success/error focus and visible notices, both role menus on mobile, login/logout, and protected account access. Public route, legacy detail/store, pagination, and optimized WebP delivery smoke passed. All QA records and objects were removed. Existing owner visual acceptance failures remain pending retest.
+
+Price investigation: no fee, rounding, or arithmetic transformation was found in the payload/hash/RPC/query/formatting pipeline. The former native number input could change the amount through stepping before payload construction; text/numeric input and strict whole-sol parsing now eliminate that control behavior. The original owner's 1197 payload/interaction was not captured, so its historical trigger cannot be conclusively reconstructed. No existing real listing price was rewritten speculatively.
+
 Production build: homepage first-load JavaScript decreased from 158 kB to 110 kB. Unit tests, TypeScript, lint, and the rollback-only database tests passed. Listing and store uploads were tested through the API against temporary pending records, including repeated completion and cleanup protection; all QA records and images were removed.
 
 Run the explicit API integration test with `node tests/submissions.integration.cjs http://localhost:3100`; it requires local Supabase environment credentials and creates then removes pending QA records. It is intentionally excluded from `npm test`.

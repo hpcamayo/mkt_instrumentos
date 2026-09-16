@@ -308,7 +308,7 @@ See `docs/performance.md` for the implemented behavior and verification details.
 
 ## Implementation Status
 
-Status is based strictly on the Sprint 3.1 source prepared and locally verified on 2026-09-16. Sprint 1 and Sprint 2 are **CLOSED / ACCEPTED**. Sprint 3 is deployed; Sprint 3.1 fixes remain subject to production release and owner retest for `LIST-013`, `REV-011`, `REV-012`, and `REV-014`.
+Status is based strictly on the Sprint 3.1 source locally verified and deployed on 2026-09-16. Sprint 1 and Sprint 2 are **CLOSED / ACCEPTED**. Sprint 3.1 passed production API/browser smoke; owner retest remains required for `LIST-013`, `REV-011`, `REV-012`, and `REV-014` before those existing acceptance cases return to Pass.
 
 - **DONE**: the functional area is materially implemented for its V1 requirement.
 - **MODIFY**: a related implementation exists, but it must change or expand to meet V1.
@@ -355,4 +355,4 @@ Status is based strictly on the Sprint 3.1 source prepared and locally verified 
 | Legal/safety pages | BUILD | No dedicated Terms, Privacy, prohibited-item, or marketplace-safety pages exist. |
 | Legacy ownership linking | BUILD | Nullable ownership supports later linkage, but admin has no manual ownership-assignment interface/workflow. |
 
-Summary after the local Sprint 3.1 implementation: **22 DONE**, **3 MODIFY**, and **13 BUILD** areas. The matrix is an implementation snapshot, not a priority change and not evidence that missing V1 features are optional.
+Summary after the Sprint 3.1 implementation: **22 DONE**, **3 MODIFY**, and **13 BUILD** areas. The matrix is an implementation snapshot, not a priority change and not evidence that missing V1 features are optional.
