@@ -38,6 +38,21 @@ V1 does include the account, ownership, favorites, alerts, verified-transaction 
 - When implementing a V1 feature, preserve already-working behavior unless the functional specification requires changing it.
 - Update relevant documentation when implementation state changes.
 
+## Acceptance Registry
+
+- `acceptance/cases.tsv` is the canonical V1 acceptance registry; `acceptance_matrix.xlsx` is a generated human view.
+- During normal implementation, do **not** read/parse the whole XLSX. Inspect `acceptance/sprints.tsv` for ownership guidance and retrieve only relevant TSV rows by exact Test ID or prefix.
+- Update canonical TSV only when acceptance state actually changes; preserve unrelated statuses, requirements and IDs. Never renumber existing Test IDs or infer owner/manual PASS from code.
+- Follow the reversible field encoding in `acceptance/README.md`; status is column 5 and evidence is column 8.
+- Regenerate with `python3 -B acceptance/generate_xlsx.py`, then validate with `python3 -B acceptance/validate.py`. Whole-workbook parsing is reserved for explicit migration/generation audits.
+
+```sh
+rg '^4\t' acceptance/sprints.tsv
+rg '^REV-014\t' acceptance/cases.tsv
+rg '^(PHOTO|REV|AUTH|WA|AN|SANA|SDASH)-' acceptance/cases.tsv
+awk -F '\t' '$5 == "Fail"' acceptance/cases.tsv
+```
+
 ## Engineering Stack
 
 Use:

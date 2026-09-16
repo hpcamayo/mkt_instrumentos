@@ -1,0 +1,284 @@
+{
+  "source_commit": "d4d4c3271744fb764cac5e31a331a190b93be1d9",
+  "source_sha256": "4cfe919099b6ecebdb7e63e6e0bb30c17cba63539f4a3be831677312c0d26265",
+  "matrix_widths": [
+    11.0,
+    20.0,
+    24.0,
+    42.0,
+    36.0,
+    42.0,
+    48.0,
+    16.0,
+    16.0,
+    14.0,
+    10.0,
+    13.0,
+    18.0,
+    14.0,
+    14.0,
+    34.0,
+    14
+  ],
+  "summary_title": "Laria V1 Acceptance Coverage",
+  "summary_domains": [
+    "Public Marketplace",
+    "Accounts & Authentication",
+    "Listings",
+    "Security & Ownership",
+    "Particular Dashboard",
+    "Analytics",
+    "Stores",
+    "Store Dashboard",
+    "Buyer Features",
+    "Discovery",
+    "Transactions",
+    "Reviews",
+    "Trust & Safety",
+    "Admin",
+    "Notifications",
+    "Legal & Safety",
+    "Reliability",
+    "V1 Scope"
+  ],
+  "support_sheets": [
+    {
+      "name": "Test Personas",
+      "widths": [
+        14.0,
+        22.0,
+        38.0,
+        54.0
+      ],
+      "rows": [
+        [
+          "Fixture",
+          "Role",
+          "Purpose",
+          "Minimum Setup"
+        ],
+        [
+          "ANON",
+          "Anonymous visitor",
+          "Public browsing, public WhatsApp, auth gates",
+          "No session"
+        ],
+        [
+          "P-A",
+          "Particular A",
+          "Primary buyer/seller happy paths",
+          "Confirmed Particular profile with WhatsApp/city/region"
+        ],
+        [
+          "P-B",
+          "Particular B",
+          "Cross-user authorization and review/contact scenarios",
+          "Separate confirmed Particular profile"
+        ],
+        [
+          "P-C",
+          "Particular C",
+          "Eligible buyer for verified-transaction tests",
+          "Confirmed account + WhatsApp contact event on target listing"
+        ],
+        [
+          "STORE-N",
+          "Normal Tienda owner",
+          "Moderated store inventory",
+          "Store-owner account + approved nonverified store"
+        ],
+        [
+          "STORE-V",
+          "Tienda Verificada owner",
+          "Direct publication and edit bypass",
+          "Store-owner account + active verified store"
+        ],
+        [
+          "STORE-P",
+          "Pending store owner",
+          "Pre-approval submission behavior",
+          "Store-owner account + pending store"
+        ],
+        [
+          "ADMIN",
+          "Admin",
+          "Moderation, verification, linking, reports",
+          "Auth user with app_metadata.role='admin'"
+        ],
+        [
+          "LEGACY",
+          "Legacy unowned listing",
+          "Historical contact fallback/manual ownership",
+          "Listing owner_user_id=NULL with listing-level contact fields"
+        ],
+        [
+          "LIST-A",
+          "Approved Particular listing",
+          "Lifecycle/edit/favorite/contact tests",
+          "Owned approved listing with >=2 photos"
+        ],
+        [
+          "LIST-S",
+          "Sold listing",
+          "Direct URL/relist/transaction history",
+          "Sold listing with stable slug"
+        ],
+        [
+          "TX-V",
+          "Verified transaction",
+          "Review workflow",
+          "Sold listing + eligible buyer + buyer confirmation"
+        ]
+      ]
+    },
+    {
+      "name": "Spec Traceability",
+      "widths": [
+        34.0,
+        18.0,
+        26.0,
+        58.0
+      ],
+      "rows": [
+        [
+          "Spec Section",
+          "Spec Lines",
+          "Mapped Test Prefixes",
+          "Notes"
+        ],
+        [
+          "Product Model",
+          "L12-L25",
+          "PUB, SCOPE",
+          "Public discovery model and V1 exclusions"
+        ],
+        [
+          "Account Types / Authentication",
+          "L27-L57",
+          "AUTH",
+          "Particular, Store Owner, Admin and auth completeness"
+        ],
+        [
+          "Particular Listing Creation",
+          "L59-L79",
+          "LIST, PHOTO",
+          "Account-required listing creation and 2–10 photos"
+        ],
+        [
+          "Listing Lifecycle",
+          "L81-L97",
+          "LIFE",
+          "Hidden, sold, immutable history, relist copy"
+        ],
+        [
+          "Particular Dashboard / Profile",
+          "L99-L115",
+          "DASH, SANA, LIST",
+          "Management, analytics, dynamic profile fallback"
+        ],
+        [
+          "Approved Listing Editing",
+          "L117-L137",
+          "REV",
+          "Immediate vs moderated edits; live version preserved"
+        ],
+        [
+          "Store Account / Application",
+          "L139-L154",
+          "STORE",
+          "Owner binding, required business data, unique RUC"
+        ],
+        [
+          "Store Approval / Verification",
+          "L156-L165",
+          "VERIFY",
+          "Tienda vs Tienda Verificada"
+        ],
+        [
+          "Store Cap",
+          "L167-L171",
+          "CAP",
+          "50 concurrent pending+approved"
+        ],
+        [
+          "Store Dashboard",
+          "L173-L177",
+          "SDASH",
+          "Inventory/profile/commercial analytics"
+        ],
+        [
+          "Favorites / Alerts",
+          "L179-L193",
+          "FAV, PDA, ALERT",
+          "Favorites, price drops, search alerts"
+        ],
+        [
+          "Category SEO",
+          "L195-L198",
+          "SEO",
+          "Real category browsing, route collision prevention"
+        ],
+        [
+          "WhatsApp Tracking",
+          "L199-L203",
+          "WA",
+          "Intent events and buyer eligibility"
+        ],
+        [
+          "Marketplace Analytics",
+          "L205-L215",
+          "AN, SANA, SDASH",
+          "Primary funnel and derived metrics"
+        ],
+        [
+          "Verified Transactions",
+          "L217-L230",
+          "TX",
+          "Contact-qualified buyer confirmation"
+        ],
+        [
+          "Reviews",
+          "L232-L240",
+          "REVW",
+          "Two-way, double-blind, 10-day window"
+        ],
+        [
+          "Reports",
+          "L242-L244",
+          "REP",
+          "Listing/store/review reports"
+        ],
+        [
+          "Admin Hub",
+          "L246-L252",
+          "ADMIN",
+          "Operational moderation hub"
+        ],
+        [
+          "Email Notifications",
+          "L254-L258",
+          "MAIL, NOTIF",
+          "Marketplace email infrastructure plus in-app account lifecycle notifications"
+        ],
+        [
+          "Legal / Safety",
+          "L260-L264",
+          "LEGAL",
+          "Required pages and disclaimers"
+        ],
+        [
+          "Out of V1",
+          "L266-L278",
+          "SCOPE",
+          "Guardrails against feature creep"
+        ],
+        [
+          "Reliability Baseline",
+          "L286-L302",
+          "REL",
+          "September 2026 performance/reliability invariants"
+        ]
+      ]
+    }
+  ]
+}

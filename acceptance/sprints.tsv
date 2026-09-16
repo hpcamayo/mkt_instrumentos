@@ -1,0 +1,10 @@
+sprint	prefixes	focus
+1	AUTH,LIST,PHOTO,RLS,DASH	Particular accounts, ownership and publication foundation
+2	AUTH,STORE,VERIFY,CAP,RLS,SDASH	Store accounts, applications, verification and inventory cap
+3	LIST,LIFE,REV,DASH,STORE,SDASH,NOTIF	Listing lifecycle and amendable pending revisions; acceptance fixes
+4	PHOTO,REV,AUTH,WA,AN,SANA,SDASH	Photo subsystem repair + events/analytics
+5	FAV,PDA	Favorites + price-drop alerts
+6	TX,REVW,LIFE	Verified transactions + reviews
+7	ALERT,MAIL	Search alerts + marketplace mail
+8	REP,ADMIN	Reports + full Admin Hub
+9	SEO,LEGAL,REL	Launch completion
