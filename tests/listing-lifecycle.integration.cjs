@@ -40,16 +40,30 @@ const storeIds = [];
     }))).error, null);
     await addPhotos(liveId, "live");
 
+    const exactPriceApi = await service
+      .from("listings")
+      .select("title,price_pen,slug")
+      .eq("id", liveId)
+      .single();
+    assert.equal(exactPriceApi.error, null);
+    assert.equal(exactPriceApi.data.price_pen, 1200, "PostgREST must return the exact stored price");
+    const initialDetailHtml = await (await fetch(`${base}/instrumentos/${exactPriceApi.data.slug}`)).text();
+    const initialCatalogHtml = await (await fetch(`${base}/listados?sort=newest`)).text();
+    assert.match(initialDetailHtml, /Publicación Sprint 3/);
+    assert.match(initialDetailHtml, /1[,.]200/);
+    assert.match(initialCatalogHtml, /Publicación Sprint 3/);
+    assert.match(initialCatalogHtml, /1[,.]200/);
+
     const edit = await ownerClient.rpc("update_owned_listing", {
       p_listing_id: liveId,
-      p_immediate: { price_pen: 900 },
+      p_immediate: { price_pen: 1100 },
       p_moderated: { title: "Título propuesto de integración", condition: "Usado - con detalles" },
       p_photos: null,
     });
     assert.equal(edit.error, null);
     assert.equal(edit.data.mode, "revision");
     const before = await service.from("listings").select("title,condition,price_pen,status").eq("id", liveId).single();
-    assert.deepEqual(before.data, { title: "Publicación Sprint 3", condition: "Usado - buen estado", price_pen: 900, status: "approved" });
+    assert.deepEqual(before.data, { title: "Publicación Sprint 3", condition: "Usado - buen estado", price_pen: 1100, status: "approved" });
 
     const revision = await service.from("listing_revisions").select("id,status").eq("listing_id", liveId).single();
     assert.equal(revision.data.status, "pending");
@@ -57,9 +71,15 @@ const storeIds = [];
     assert.equal((await adminClient.rpc("review_listing_revision", {
       p_revision_id: revision.data.id,
       p_decision: "approve",
+      p_expected_version: 1,
     })).error, null);
     const after = await service.from("listings").select("title,condition,price_pen,status").eq("id", liveId).single();
-    assert.deepEqual(after.data, { title: "Título propuesto de integración", condition: "Usado - con detalles", price_pen: 900, status: "approved" });
+    assert.deepEqual(after.data, { title: "Título propuesto de integración", condition: "Usado - con detalles", price_pen: 1100, status: "approved" });
+    const approvedDetailHtml = await (await fetch(`${base}/instrumentos/${exactPriceApi.data.slug}`)).text();
+    const approvedCatalogHtml = await (await fetch(`${base}/listados?sort=newest`)).text();
+    assert.match(approvedDetailHtml, /Título propuesto de integración/);
+    assert.match(approvedCatalogHtml, /Título propuesto de integración/);
+    assert.match(approvedDetailHtml, /1[,.]100/);
 
     const cookie = await loginCookie(owner.email, owner.password);
     const rejectedId = crypto.randomUUID();
@@ -183,7 +203,7 @@ function validListing(overrides) {
     brand: "QA",
     model: "Sprint 3",
     condition: "Usado - buen estado",
-    price_pen: 1000,
+    price_pen: 1200,
     city: "Lima",
     region: "Lima",
     contact_name: "QA Owner",

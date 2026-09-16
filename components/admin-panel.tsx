@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { PageNotice } from "@/components/page-notice";
 import { listingStatusLabel } from "@/lib/account-ui";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
@@ -67,6 +68,7 @@ type AdminRevision = {
   listing_id: string;
   status: string;
   changed_fields: string[];
+  version: number;
   title: string | null;
   category: string | null;
   instrument_type: string | null;
@@ -236,7 +238,7 @@ export function AdminPanel() {
         supabase
           .from("listing_revisions")
           .select(
-            "id,listing_id,status,changed_fields,title,category,instrument_type,attributes,brand,model,condition,submitted_at,reviewed_at,rejection_reason,resolution_reason,listings(title,category,instrument_type,attributes,brand,model,condition,listing_photos(image_url,alt_text,sort_order)),listing_revision_photos(image_url,alt_text,sort_order)",
+            "id,listing_id,status,changed_fields,version,title,category,instrument_type,attributes,brand,model,condition,submitted_at,reviewed_at,rejection_reason,resolution_reason,listings(title,category,instrument_type,attributes,brand,model,condition,listing_photos(image_url,alt_text,sort_order)),listing_revision_photos(image_url,alt_text,sort_order)",
           )
           .order("submitted_at", { ascending: false })
           .limit(100),
@@ -288,7 +290,7 @@ export function AdminPanel() {
     await loadAdminQueues();
   }
 
-  async function reviewRevision(id: string, decision: "approve" | "reject") {
+  async function reviewRevision(revision: AdminRevision, decision: "approve" | "reject") {
     if (!supabase) return;
     const reason = decision === "reject" ? window.prompt("Motivo obligatorio del rechazo de cambios") : null;
     if (decision === "reject" && !reason?.trim()) {
@@ -297,13 +299,17 @@ export function AdminPanel() {
     }
     setIsBusy(true);
     const { error } = await supabase.rpc("review_listing_revision", {
-      p_revision_id: id,
+      p_revision_id: revision.id,
       p_decision: decision,
+      p_expected_version: revision.version,
       p_reason: reason ?? undefined,
     });
     setIsBusy(false);
     if (error) {
-      setMessage(`No se pudo resolver la revisión: ${error.message}`);
+      setMessage(error.message.includes("LISTING_REVISION_STALE")
+        ? "La propuesta cambió mientras la revisabas. Actualizamos la cola; revisa la versión más reciente antes de decidir."
+        : `No se pudo resolver la revisión: ${error.message}`);
+      if (error.message.includes("LISTING_REVISION_STALE")) await loadAdminQueues();
       return;
     }
     setMessage(decision === "approve" ? "Cambios aprobados sin sobrescribir campos inmediatos." : "Cambios rechazados con motivo; la versión pública no cambió.");
@@ -711,8 +717,8 @@ export function AdminPanel() {
             {pendingRevisions.map((revision) => (
               <article key={revision.id} className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_14px_34px_rgb(16_18_23/0.06)]">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div><StatusBadge label="Revisión pendiente" tone="blue" /><h3 className="mt-2 text-lg font-black text-laria-ink">{revision.listings?.title ?? revision.listing_id}</h3><p className="mt-1 text-xs text-laria-text-soft">Enviada {new Date(revision.submitted_at).toLocaleString("es-PE")}</p></div>
-                  <div className="flex flex-wrap gap-2"><AdminAction disabled={isBusy} onClick={() => reviewRevision(revision.id, "approve")}>Aprobar cambios</AdminAction><AdminAction disabled={isBusy} onClick={() => reviewRevision(revision.id, "reject")}>Rechazar con motivo</AdminAction></div>
+                  <div><StatusBadge label="Revisión pendiente" tone="blue" /><h3 className="mt-2 text-lg font-black text-laria-ink">{revision.listings?.title ?? revision.listing_id}</h3><p className="mt-1 text-xs text-laria-text-soft">Versión {revision.version} · actualizada {new Date(revision.submitted_at).toLocaleString("es-PE")}</p></div>
+                  <div className="flex flex-wrap gap-2"><AdminAction disabled={isBusy} onClick={() => reviewRevision(revision, "approve")}>Aprobar cambios</AdminAction><AdminAction disabled={isBusy} onClick={() => reviewRevision(revision, "reject")}>Rechazar con motivo</AdminAction></div>
                 </div>
                 <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {revision.changed_fields.filter((field) => field !== "photos").map((field) => {
@@ -1267,11 +1273,8 @@ function AdminAction({ children, disabled, onClick }: { children: ReactNode; dis
 }
 
 function StatusMessage({ message }: { message: string }) {
-  return (
-    <div className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-4 text-sm font-bold text-laria-text-soft shadow-sm">
-      {message}
-    </div>
-  );
+  const error = /^(No |Debes|Falta|La propuesta cambió)/.test(message);
+  return <PageNotice kind={error ? "error" : "info"} message={message} />;
 }
 
 function TextField({

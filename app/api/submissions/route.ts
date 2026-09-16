@@ -7,6 +7,7 @@ import {
 } from "@/lib/listing-submission";
 import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
+import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import type { Json } from "@/lib/supabase/database.types";
@@ -160,8 +161,8 @@ export async function POST(request: Request) {
       input.attributes,
     );
     if (!attributes) return failure("Revisa los atributos del instrumento.");
-    const price = Number(input.price_pen);
-    if (!Number.isSafeInteger(price) || price <= 0 || price > 2147483647)
+    const price = parseWholeSolPrice(input.price_pen);
+    if (price === null)
       return failure("Ingresa un precio válido en soles enteros.");
     if (String(fields.description).length < 40)
       return failure("La descripción debe tener al menos 40 caracteres.");
@@ -264,7 +265,7 @@ export async function POST(request: Request) {
     p_photos: photos,
   });
   if (error?.message.includes("stores_ruc_unique_idx"))
-    return failure("Ya existe una tienda registrada con este RUC.", 409);
+    return failure("Este RUC ya está registrado en Laria.", 409);
   if (error?.message.includes("stores_owner_user_unique_idx"))
     return failure("Esta cuenta ya tiene una solicitud de tienda.", 409);
   if (error?.message.includes("STORE_INVENTORY_LIMIT_REACHED"))

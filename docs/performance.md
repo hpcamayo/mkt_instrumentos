@@ -36,13 +36,15 @@ Implemented September 2026, preserving the public pending-submission and admin-a
 ## Listing lifecycle and revision reliability
 
 - Owner edit, hide/restore, sold, relist, listing review, and revision review operations lock the target row and execute as single Postgres transactions. Direct client status/authority writes remain blocked.
-- Approved Particular/normal-Tienda moderated edits are isolated in one pending revision; the live row and photos stay readable until approval. The pending unique index prevents competing proposals, and approval patches only proposed fields.
+- Approved Particular/normal-Tienda moderated edits are isolated in one pending revision; the live row and photos stay readable until approval. The pending unique index prevents competing proposals. The listing row lock serializes proposal amendment, merges the latest field/photo state, increments a revision version, and cancels an empty proposal.
+- Admin revision decisions compare the submitted expected version with the locked latest row. A stale approval/rejection aborts instead of resolving an older proposal snapshot.
 - Owner/admin hide state is orthogonal to revision review: approving a proposal never republishes a hidden listing. Store verification leaves existing proposals pending, while a later verified direct moderated edit atomically cancels any superseded proposal before applying the new live values.
 - Sold rows are immutable history. Relisting inserts a new linked row with a new slug and reuses photo records without rewriting or deleting the source objects.
 - Store restores and relists still pass through the existing serialized 50-item trigger. Concurrent attempts at the final slot cannot create a 51st pending/approved row.
 - Listing edit uploads use fresh owner-scoped paths. Browser storage policies no longer permit overwriting or deleting historical listing-photo objects; failed-attempt cleanup remains service-controlled, with a client cleanup attempt for failures before finalization.
 - The database accepts a proposed photo URL only when it is already attached to the edited listing or maps to an existing owner-scoped edit object with the supported media type and size. This preserves the API validation boundary for direct authenticated RPC calls.
 - Authenticated owner updates and live-photo row mutations are denied at the generic table-policy layer; lifecycle and edit changes enter through the validated, row-locked RPCs so direct clients cannot bypass taxonomy, revision, history, or photo-set invariants.
+- Listing/store lifecycle notifications are created in the same moderation transaction. RLS-scoped indexes support newest-first and unread-count reads, while the mark-read RPC cannot mutate event ownership or targets.
 
 ## Checks
 
@@ -51,8 +53,10 @@ Implemented September 2026, preserving the public pending-submission and admin-a
 - `tests/marketplace-performance.sql`: run inside a transaction and roll back; checks idempotent submissions, approval timestamps, restricted RPC access, and counting more than 1,000 photos.
 - `tests/store-sprint-2.sql`: rollback-only ownership, application, RUC, RLS, visibility, approval, verification/revocation, state-preservation, and cap-boundary checks.
 - `tests/listing-sprint-3.sql`: rollback-only lifecycle, revision isolation/patch approval, sold immutability, relisting, cross-owner RLS, verified-store behavior, and cap-safe restoration checks.
+- `tests/sprint-3-1.sql`: rollback-only amend-in-place, photo preservation/promotion, mixed immediate/moderated edits, empty-proposal cancellation, stale-admin denial, exact price/title behavior, notification events, RLS, and read-state checks.
 - `tests/submissions.integration.cjs`: temporary-user local API flow plus two simultaneous cap-consuming requests from 49 inventory rows.
 - `tests/listing-lifecycle.integration.cjs`: temporary-user local API lifecycle/revision flow plus two simultaneous relists competing for the final store-cap slot.
+- `tests/sprint-3-1.integration.cjs`: explicitly targeted local/production API smoke for exact prices, canonical titles, proposal amendments, stale decisions, notifications, duplicate-RUC messaging, store privileges, and lifecycle behavior; removes and verifies its temporary records and objects.
 - Browser QA: mobile/desktop catalog, image optimization, pagination, product streaming, homepage visibility, anonymous account redirect, and failure/retry behavior.
 
 ## Verification results

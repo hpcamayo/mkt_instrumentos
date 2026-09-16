@@ -174,6 +174,7 @@ Rules:
 
 - Keep semantic HTML: links for navigation, buttons for actions, tables for tabular data.
 - Maintain visible focus states.
+- Page-level success and actionable-error notices must receive programmatic focus and scroll into view when they appear, using the shared notice pattern. Do not apply this global movement to every field-level validation message.
 - Ensure color is not the only state indicator.
 - Use descriptive labels in Spanish.
 - Preserve alt text and honest fallback text for listing images.

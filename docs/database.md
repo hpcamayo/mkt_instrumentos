@@ -163,7 +163,7 @@ Actual columns represented in current code/types:
 
 Important constraints:
 - `slug` must be lowercase URL-safe words separated by hyphens.
-- `price_pen` must be non-negative when present.
+- `price_pen` is stored as exact whole soles and must be positive for publication. Client and server parsing reject fractional, negative, unsafe, or reformatted values rather than applying fees or arithmetic.
 - Individual listings must have `store_id is null`.
 - Store listings must have `store_id is not null`.
 
@@ -211,12 +211,13 @@ Key columns:
 - `owner_user_id uuid references profiles(id)`
 - `store_id uuid references stores(id)`
 - `status text` constrained to `pending`, `approved`, `rejected`, or `cancelled`
+- `version integer not null` incremented whenever the owner amends the active proposal
 - `changed_fields text[]` containing only proposed moderated fields, including condition
 - nullable proposed `title`, `category`, `instrument_type`, dependent `attributes`, `brand`, and `model`; attributes are included only when they must move atomically with a type change
 - `rejection_reason text`
 - submission/review timestamps and `reviewed_by`
 
-A partial unique index on `listing_id` where `status='pending'` prevents a second pending revision. Owners can read only their own revisions; public roles have no access; admin review remains inside trusted RPCs.
+A partial unique index on `listing_id` where `status='pending'` prevents a second pending revision. The owner may amend the locked pending row in place; fields restored to their live value leave the effective proposal, and an empty proposal becomes cancelled history. Owners can read only their own revisions; public roles have no access; admin review remains inside trusted RPCs.
 
 ### `public.listing_revision_photos`
 
@@ -226,6 +227,17 @@ Purpose: ordered proposed photo sets for revisions without mutating `listing_pho
 - `image_url text`, `alt_text text`, and unique non-negative `sort_order`
 
 An accepted revision replaces the live photo rows atomically inside the admin review transaction. Rejected proposals remain historical moderation evidence.
+
+### `public.notifications`
+
+Purpose: reusable in-app account notices for important moderation and store trust-state transitions without coupling core product state to email delivery.
+
+- `user_id uuid references profiles(id) on delete cascade`
+- constrained `event_type text`, Spanish `message text`, and one typed listing/store target
+- `created_at timestamptz` and nullable `read_at timestamptz`
+- listing/store target foreign keys cascade so removed QA/domain targets cannot leave invalid typed notices
+
+Authenticated users have `SELECT` only for `user_id=auth.uid()`. `mark_notification_read(notification_id)` can set only `read_at` on an owned row; clients cannot rewrite ownership, event type, message, or target. A partial `(user_id, created_at)` unread index supports the account badge.
 
 ## Enums
 
@@ -345,6 +357,7 @@ Admin policies:
 `public.update_owned_listing(listing_id, immediate_fields, moderated_fields, photos)`:
 - Locks and validates the owner-bound listing. Price, description, location, and supported attributes apply immediately. Condition joins title, category, instrument type, brand, model, and photos in the moderated proposal for Particular and normal Tienda inventory.
 - For approved Particular/normal-Tienda rows, title, category, instrument type, brand, model, and photos create one pending revision while the live row remains unchanged. Nonpublic rows and eligible verified-store rows apply the complete valid edit directly.
+- If a pending proposal already exists, later moderated field/photo saves merge into that row under the listing lock, increment its version, preserve unchanged proposed values, and cancel it if no difference from live remains.
 - A moderated instrument-type change carries its compatible dynamic attributes inside the same revision, preventing either the old or proposed public version from exposing a mismatched type/attribute pair.
 - Proposed photo sets contain 2–10 unique URLs. Every URL must already belong to the listing or resolve to an existing ≤5 MB JPEG/PNG/WebP object in that owner's listing-edit folder, so direct RPC callers cannot inject arbitrary photos.
 - Store verification alone leaves an existing pending edit revision untouched. If the verified owner later applies a direct moderated/photo edit, that older pending proposal is atomically retained as `cancelled`/superseded so it cannot overwrite the newer live values.
@@ -355,8 +368,8 @@ Admin policies:
 `public.relist_sold_listing(listing_id)`:
 - Creates a new linked copy and copies the live photo references without mutating the sold source. Particular/normal-Tienda copies return to moderation; an eligible verified-store copy can publish directly.
 
-`public.review_listing(listing_id, decision, reason)` and `public.review_listing_revision(revision_id, decision, reason)`:
-- Admin-only, row-locked moderation. Listing reject/hide and revision reject require a reason. Revision approval applies only proposed fields and an optional staged photo set in one transaction, preserving unrelated immediate edits and any current owner-hidden state.
+`public.review_listing(listing_id, decision, reason)` and `public.review_listing_revision(revision_id, decision, expected_version, reason)`:
+- Admin-only, row-locked moderation. Listing reject/hide and revision reject require a reason. Revision approval applies only proposed fields and an optional staged photo set in one transaction, preserving unrelated immediate edits and any current owner-hidden state. The expected version must match the locked pending row, so a stale admin screen cannot resolve an owner-amended proposal.
 
 ## Storage Buckets
 
@@ -411,6 +424,7 @@ Current migrations:
 - `20260516180000_phase_2_accounts.sql`: profiles, store members, ownership columns, lifecycle fields, account RLS helpers, owner/member RLS policies, publication validation RPC, and authenticated owner-folder storage policies.
 - `20260910190000_store_sprint_2.sql`: Store Owner/application ownership, normalized unique RUC, optional store photos, active-parent public visibility, trusted review/verification RPCs, verified direct publication, and serialized 50-item cap.
 - `20260913120000_listing_sprint_3.sql`: listing lifecycle reasons/provenance, immutable sold history and relist lineage, pending revisions and proposed photos, owner/admin moderation RPCs, append-only listing-photo storage, and cap-safe restoration/relisting.
+- `20260916120000_sprint_3_1_acceptance_fixes.sql`: amendable/versioned pending revisions, stale-admin protection, proposal photo reuse, owner notifications/RLS/read state, and lifecycle notification events.
 
 Production history note:
 - The six pre-Phase-2 migrations describe the historical baseline that already existed in production. Earlier schema work was originally applied manually in Supabase SQL Editor, then Supabase migration history was repaired so the CLI would not replay those files.

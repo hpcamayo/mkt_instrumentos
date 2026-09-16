@@ -116,17 +116,7 @@ export function getCategoryLabel(category: string) {
   );
 }
 
-export function formatPrice(price: number | null) {
-  if (price === null) {
-    return "Precio a consultar";
-  }
-
-  return new Intl.NumberFormat("es-PE", {
-    style: "currency",
-    currency: "PEN",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
+export { formatPrice } from "@/lib/price";
 
 export function normalizeStore(listing: ListingCardData) {
   if (Array.isArray(listing.stores)) {
@@ -145,9 +135,16 @@ export function getListingDisplayTitle(listing: {
   model: string | null;
   title: string;
 }) {
-  const productName = [listing.brand, listing.model].filter(Boolean).join(" ");
+  return listing.title;
+}
 
-  return productName || listing.title;
+export function getListingSecondaryTitle(listing: {
+  brand: string | null;
+  model: string | null;
+  title: string;
+}) {
+  const productName = [listing.brand, listing.model].filter(Boolean).join(" ");
+  return productName && productName !== listing.title ? productName : null;
 }
 
 export function buildWhatsAppUrl(listing: ListingDetailData) {

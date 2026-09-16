@@ -15,6 +15,7 @@ import {
   formatPrice,
   getCategoryLabel,
   getListingDisplayTitle,
+  getListingSecondaryTitle,
   getSellerTypeLabel,
   normalizeStore,
   resolveParticularSeller,
@@ -171,6 +172,7 @@ function ListingDetail({
   const sellerName =
     listing.seller_type === "store" ? store?.name : particular.name;
   const displayTitle = getListingDisplayTitle(listing);
+  const secondaryTitle = getListingSecondaryTitle(listing);
   const sellerTypeLabel =
     listing.seller_type === "store" && store?.is_verified === true
       ? "Tienda Verificada"
@@ -219,9 +221,9 @@ function ListingDetail({
               <h1 className="mt-4 text-3xl font-black leading-tight text-laria-ink sm:text-4xl">
                 {displayTitle}
               </h1>
-              {displayTitle !== listing.title ? (
+              {secondaryTitle ? (
                 <p className="mt-2 text-sm font-medium leading-6 text-laria-text-soft">
-                  {listing.title}
+                  {secondaryTitle}
                 </p>
               ) : null}
               <p className="mt-5 text-4xl font-black tracking-tight text-laria-black sm:text-5xl">

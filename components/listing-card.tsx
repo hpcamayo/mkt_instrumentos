@@ -9,6 +9,7 @@ import {
   formatPrice,
   getCategoryLabel,
   getListingDisplayTitle,
+  getListingSecondaryTitle,
   normalizeStore,
   type ListingCardData,
   type ListingPhotoData,
@@ -35,6 +36,7 @@ export function ListingCard({ listing }: ListingCardProps) {
       ? "border-laria-blue/35 bg-laria-blue/10 text-laria-blue"
       : "border-laria-fog bg-laria-cloud text-laria-text-soft";
   const displayTitle = getListingDisplayTitle(listing);
+  const secondaryTitle = getListingSecondaryTitle(listing);
   const categoryLabel = getListingTagLabel(listing);
   const conditionLabel = formatCondition(listing.condition);
   const hasMultiplePhotos = photoCount > 1;
@@ -215,6 +217,10 @@ export function ListingCard({ listing }: ListingCardProps) {
               {sellerLabel}
             </span>
           </div>
+
+          {secondaryTitle ? (
+            <p className="line-clamp-1 text-xs font-semibold text-laria-text-soft">{secondaryTitle}</p>
+          ) : null}
 
           {conditionLabel ? (
             <p className="line-clamp-1 text-xs font-semibold text-laria-muted">

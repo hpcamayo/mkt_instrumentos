@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { PageNotice } from "@/components/page-notice";
 import { upsertSellerProfile, upsertStoreOwnerProfile } from "@/lib/auth/profile";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -61,7 +62,7 @@ export function ProfileEditForm({
       <div className="grid gap-5 sm:grid-cols-2">
         <LocationFields defaultCity={profile.city} defaultRegion={profile.region} />
       </div>
-      {message ? <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{message}</p> : null}
+      {message ? <PageNotice kind="error" message={message} /> : null}
       <button type="submit" disabled={busy} className="laria-button-primary min-h-12 w-full px-5 py-3 text-sm sm:w-auto">{busy ? "Guardando..." : "Guardar perfil"}</button>
     </form>
   );

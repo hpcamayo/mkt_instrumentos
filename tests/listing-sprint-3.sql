@@ -130,9 +130,10 @@ begin
   if (select condition from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Usado - buen estado' then raise exception 'Pending condition leaked to live row'; end if;
   if (select image_url from public.listing_photos where listing_id='43000000-0000-4000-8000-000000000001' order by sort_order limit 1) like '%-1.jpg' then raise exception 'Pending photo order leaked to live row'; end if;
   if not public.listing_is_public('43000000-0000-4000-8000-000000000001') then raise exception 'Pending revision removed the approved live version'; end if;
-  begin perform public.update_owned_listing('43000000-0000-4000-8000-000000000001','{}','{"model":"Segundo cambio"}',null);
-  exception when others then denied := sqlerrm like 'LISTING_REVISION_ALREADY_PENDING%'; end;
-  if not denied then raise exception 'REV-014 second pending revision was accepted'; end if;
+  result := public.update_owned_listing('43000000-0000-4000-8000-000000000001','{}','{"model":"Segundo cambio"}',null);
+  if result->>'mode' <> 'revision_amended' then raise exception 'REV-014 did not amend the existing proposal'; end if;
+  if (select count(*) from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000001' and status='pending') <> 1 then raise exception 'REV-014 created competing pending revisions'; end if;
+  if (select version <> 2 or model <> 'Segundo cambio' from public.listing_revisions where id=revision_id) then raise exception 'REV-014 latest proposal/version was not retained'; end if;
   perform public.set_owned_listing_lifecycle('43000000-0000-4000-8000-000000000001','hide');
   if public.listing_is_public('43000000-0000-4000-8000-000000000001') then raise exception 'Owner hide with a pending revision remained public'; end if;
   if not exists (select 1 from public.listing_revisions where id=revision_id and status='pending') then raise exception 'Owner hide incorrectly resolved the pending revision'; end if;
@@ -152,9 +153,9 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"41000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select public.update_owned_listing('43000000-0000-4000-8000-000000000001','{"price_pen":875}','{}',null);
 select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
-do $$ declare revision_id uuid; begin
-  select id into revision_id from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000001' and status='pending';
-  perform public.review_listing_revision(revision_id,'approve',null);
+do $$ declare revision_id uuid; revision_version integer; begin
+  select id, version into revision_id, revision_version from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000001' and status='pending';
+  perform public.review_listing_revision(revision_id,'approve',revision_version,null);
   if (select title from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Título propuesto' then raise exception 'REV-012 title patch failed'; end if;
   if (select condition from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Usado - con detalles' then raise exception 'Approved condition revision was not promoted'; end if;
   if (select price_pen from public.listings where id='43000000-0000-4000-8000-000000000001') <> 875 then raise exception 'Revision approval overwrote later immediate price'; end if;
@@ -180,7 +181,7 @@ end $$;
 select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
 do $$ declare revision_id uuid; begin
   select id into revision_id from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000001' and status='pending';
-  perform public.review_listing_revision(revision_id,'approve',null);
+  perform public.review_listing_revision(revision_id,'approve',1,null);
   if (select category <> 'basses' or instrument_type <> 'bass' or attributes->>'strings' <> '5' from public.listings where id='43000000-0000-4000-8000-000000000001') then
     raise exception 'Category/type revision did not atomically promote compatible attributes';
   end if;
@@ -190,10 +191,10 @@ select public.update_owned_listing('43000000-0000-4000-8000-000000000001','{}','
 select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
 do $$ declare revision_id uuid; denied boolean := false; begin
   select id into revision_id from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000001' and status='pending';
-  begin perform public.review_listing_revision(revision_id,'reject',''); exception when others then denied := true; end;
+  begin perform public.review_listing_revision(revision_id,'reject',1,''); exception when others then denied := true; end;
   if not denied then raise exception 'REV-013 revision rejection without reason succeeded'; end if;
-  perform public.review_listing_revision(revision_id,'reject','El modelo no coincide con las fotos');
-  if (select model from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Modelo viejo' then raise exception 'Rejected revision mutated live row'; end if;
+  perform public.review_listing_revision(revision_id,'reject',1,'El modelo no coincide con las fotos');
+  if (select model from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Segundo cambio' then raise exception 'Rejected revision mutated live row'; end if;
   if (select condition from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Usado - con detalles' then raise exception 'Rejected condition revision mutated live row'; end if;
 end $$;
 
@@ -211,7 +212,7 @@ do $$ declare revision_id uuid; begin
   select id into revision_id from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000003' and status='pending';
   if revision_id is null then raise exception 'Store verification auto-resolved an existing edit revision'; end if;
   perform public.review_listing('43000000-0000-4000-8000-000000000003','hide','Revisión administrativa de inventario');
-  perform public.review_listing_revision(revision_id,'approve',null);
+  perform public.review_listing_revision(revision_id,'approve',1,null);
   if (select status <> 'hidden' or hidden_source <> 'admin' or title <> 'Normal propuesto' or condition <> 'Usado - buen estado' from public.listings where id='43000000-0000-4000-8000-000000000003') then
     raise exception 'Revision approval undid an administrative hide';
   end if;

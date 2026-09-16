@@ -7,7 +7,6 @@ import {
   type FormEvent,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { LocationFields } from "@/components/location-fields";
@@ -21,6 +20,8 @@ import {
 } from "@/lib/listing-submission";
 import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
+import { PageNotice } from "@/components/page-notice";
+import { parseWholeSolPrice } from "@/lib/price";
 import { createPublicSubmission } from "@/lib/public-submission";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
@@ -48,7 +49,6 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
   );
   const [state, setState] = useState<FormState>("idle");
   const [message, setMessage] = useState("");
-  const statusRef = useRef<HTMLDivElement>(null);
   const [category, setCategory] = useState("");
   const [instrumentType, setInstrumentType] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
@@ -61,12 +61,6 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
     () => () => photoPreviews.forEach((preview) => URL.revokeObjectURL(preview)),
     [photoPreviews],
   );
-
-  useEffect(() => {
-    if (!message || !statusRef.current) return;
-    statusRef.current.focus({ preventScroll: true });
-    statusRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [message, state]);
 
   const instrumentOptions = useMemo(
     () => getInstrumentTypeOptions(category),
@@ -155,7 +149,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
     const brand = readRequired(formData, "brand");
     const model = readRequired(formData, "model");
     const condition = readRequired(formData, "condition");
-    const pricePen = Number(readRequired(formData, "price_pen"));
+    const pricePen = parseWholeSolPrice(readRequired(formData, "price_pen"));
     const city = readRequired(formData, "city");
     const region = normalizePeruRegion(readRequired(formData, "region"));
     const description = readRequired(formData, "description");
@@ -171,8 +165,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
       !city ||
       !region ||
       description.length < 40 ||
-      !Number.isSafeInteger(pricePen) ||
-      pricePen <= 0
+      pricePen === null
     ) {
       setState("error");
       setMessage("Completa los datos obligatorios y escribe una descripción de al menos 40 caracteres.");
@@ -238,7 +231,9 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
       className="grid gap-6 rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6"
     >
       {message ? (
-        <StatusMessage ref={statusRef} state={state} message={message} nextHref={store ? "/mi-cuenta/tienda/inventario" : "/mi-cuenta/publicaciones"} nextLabel={store ? "Ver inventario" : "Ver mis publicaciones"} />
+        <PageNotice kind={state === "success" ? "success" : "error"} message={message}>
+          {state === "success" ? <div className="mt-3 flex flex-wrap gap-3"><Link href="/mi-cuenta" className="font-black underline underline-offset-4">Volver al resumen</Link><Link href={store ? "/mi-cuenta/tienda/inventario" : "/mi-cuenta/publicaciones"} className="font-black underline underline-offset-4">{store ? "Ver inventario" : "Ver mis publicaciones"}</Link></div> : null}
+        </PageNotice>
       ) : null}
 
       <div className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-4 text-sm leading-6 text-laria-text-soft">
@@ -351,28 +346,12 @@ function readAttributes(formData: FormData, instrumentType: string) {
   return attributes;
 }
 
-function StatusMessage({
-  ref,
-  state,
-  message,
-  nextHref,
-  nextLabel,
-}: {
-  ref: React.Ref<HTMLDivElement>;
-  state: FormState;
-  message: string;
-  nextHref: string;
-  nextLabel: string;
-}) {
-  return <div ref={ref} tabIndex={-1} role={state === "success" ? "status" : "alert"} className={state === "success" ? "rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 outline-none focus:ring-2 focus:ring-emerald-600/30" : "rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 outline-none focus:ring-2 focus:ring-red-600/30"}><p>{message}</p>{state === "success" ? <div className="mt-3 flex flex-wrap gap-3"><Link href="/mi-cuenta" className="font-black underline underline-offset-4">Volver al resumen</Link><Link href={nextHref} className="font-black underline underline-offset-4">{nextLabel}</Link></div> : null}</div>;
-}
-
 function TextField({ label, name, required }: { label: string; name: string; required?: boolean }) {
   return <label className="grid gap-2 text-sm font-medium text-laria-text-soft">{label}<input type="text" name={name} required={required} className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/20" /></label>;
 }
 
 function NumberField({ label, name, required }: { label: string; name: string; required?: boolean }) {
-  return <label className="grid gap-2 text-sm font-medium text-laria-text-soft">{label}<input type="number" min="0" name={name} required={required} className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/20" /></label>;
+  return <label className="grid gap-2 text-sm font-medium text-laria-text-soft">{label}<input type="text" inputMode="numeric" pattern="[0-9]+" name={name} required={required} className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/20" /></label>;
 }
 
 function SelectField({ label, name, required, options, value, onChange, disabled }: { label: string; name: string; required?: boolean; options: readonly { value: string; label: string }[]; value?: string; onChange?: (value: string) => void; disabled?: boolean }) {

@@ -421,8 +421,8 @@ To test locally:
 29. Visually confirm the 50/50 dashboard state prevents a new form entry and the database cap error is clear if a stale form attempts submission.
 30. Check the application, dashboard, admin store controls, public badge, and inventory form on a narrow mobile viewport and keyboard navigation.
 31. As a Particular with an approved listing, change price/description plus title and condition in one save. Confirm the immediate values update now, title and condition become a pending revision, and the old public title and condition stay visible.
-32. Try a second moderated change while the first revision is pending; confirm it is refused without losing allowed immediate edits.
-33. As admin, compare and approve the pending revision; confirm only proposed fields/photos change and owner changes made after submission remain intact.
+32. While that revision remains pending, change the proposed title/condition again and add/reorder photos. Confirm the editor loads the current proposal, the save succeeds, and there is still exactly one pending proposal containing the latest changes.
+33. Open the proposal as admin, amend it once more as owner in another browser, then attempt the stale admin decision. Confirm it is refused and the refreshed comparison shows the latest fields/photos. Approve the latest version and confirm only proposed fields/photos change while later immediate values remain intact.
 34. Reject another revision with a reason and confirm the owner sees the reason while the public listing remains unchanged.
 35. Hide an approved listing as owner and restore it. Then hide it as admin with a reason and confirm the owner cannot restore it.
 36. Mark a listing sold. Confirm it disappears from catalog/search, its direct URL shows `Vendido` without WhatsApp, and the source cannot be edited or restored.
@@ -430,12 +430,15 @@ To test locally:
 38. For a normal Tienda, confirm approved edits use revision moderation. Verify the store and confirm later valid edits apply directly; revoke verification and confirm subsequent moderated edits return to review.
 39. At the store cap, attempt owner restore and relist transitions that would consume capacity; confirm they fail without exceeding 50.
 40. Exercise photo add/reorder/replace/remove in the edit form, including a failed upload, and confirm the 2–10 rule, visible focus/error feedback, preserved public photos before approval, and no unexpected orphan object.
+41. Submit and edit a whole-sol price of exactly S/ 1,200; confirm the stored/API value and catalog/detail display remain exactly S/ 1,200.
+42. Trigger listing/revision/store moderation decisions and confirm the owner sees only their own newest-first notices in `Notificaciones`, can mark them read, and can follow rejection notices to the reason.
+43. Trigger a duplicate-RUC application error and confirm the UI says the RUC is already registered without identifying the other store owner.
 
 Valid region values are fixed to Peru regions. City fields show suggestions but can be typed manually when the city is not in the list.
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-The current application does not yet implement several required V1 areas, including favorites, alerts, analytics beyond view count, contact tracking, verified transactions, reviews, reports, centralized lifecycle email delivery, and the remaining full moderation hub. Listing lifecycle and revision moderation are now implemented. See the status matrix in `docs/functional-spec.md`.
+The current application does not yet implement several required V1 areas, including favorites, alerts, analytics beyond view count, contact tracking, verified transactions, reviews, reports, centralized lifecycle email delivery, and the remaining full moderation hub. Listing lifecycle, amendable revision moderation, and in-app lifecycle notifications are implemented. See the status matrix in `docs/functional-spec.md`.
 
 Do not build these post-V1 areas without a new product decision:
 - Payments.

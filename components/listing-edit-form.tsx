@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { LocationFields } from "@/components/location-fields";
+import { PageNotice } from "@/components/page-notice";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import {
   MAX_LISTING_PHOTOS,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/listing-submission";
 import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
+import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 type ExistingPhoto = {
@@ -58,7 +60,6 @@ export function ListingEditForm({
 }) {
   const router = useRouter();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
-  const statusRef = useRef<HTMLDivElement>(null);
   const [category, setCategory] = useState(listing.category);
   const [instrumentType, setInstrumentType] = useState(listing.instrument_type ?? "");
   const [photos, setPhotos] = useState<PhotoItem[]>(
@@ -95,16 +96,14 @@ export function ListingEditForm({
     listing.status === "approved" || listing.status === "hidden"
       ? isVerifiedStore
         ? "Tu Tienda Verificada puede aplicar todos estos cambios directamente."
-        : "Precio, descripción, ubicación y características se actualizan ahora. Título, categoría, tipo, marca, modelo, condición y fotos requieren revisión; la versión pública actual no cambia mientras tanto."
+        : hasPendingRevision
+          ? "Ya hay una propuesta en revisión. Puedes seguir ajustando título, categoría, tipo, marca, modelo, condición o fotos; se actualizará la misma propuesta sin cambiar la versión pública."
+          : "Precio, descripción, ubicación y características se actualizan ahora. Título, categoría, tipo, marca, modelo, condición y fotos requieren revisión; la versión pública actual no cambia mientras tanto."
       : "Los cambios se guardan directamente porque esta publicación todavía no es una versión pública aprobada.";
 
   function showMessage(nextState: "success" | "error", value: string) {
     setState(nextState);
     setMessage(value);
-    requestAnimationFrame(() => {
-      statusRef.current?.focus({ preventScroll: true });
-      statusRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
   }
 
   function addPhotos(event: ChangeEvent<HTMLInputElement>) {
@@ -188,13 +187,13 @@ export function ListingEditForm({
       brand: read(formData, "brand"),
       model: read(formData, "model"),
       condition: read(formData, "condition"),
-      price_pen: Number(read(formData, "price_pen")),
+      price_pen: parseWholeSolPrice(read(formData, "price_pen")),
       city: read(formData, "city"),
       region: normalizePeruRegion(read(formData, "region")),
       description: read(formData, "description"),
       attributes: readAttributes(formData, instrumentType),
     };
-    if (!values.title || !values.category || !values.instrument_type || !values.brand || !values.model || !values.condition || !values.city || !values.region || values.description.length < 40 || !Number.isSafeInteger(values.price_pen) || values.price_pen <= 0) {
+    if (!values.title || !values.category || !values.instrument_type || !values.brand || !values.model || !values.condition || !values.city || !values.region || values.description.length < 40 || values.price_pen === null) {
       return showMessage("error", "Completa los datos obligatorios y usa una descripción de al menos 40 caracteres.");
     }
 
@@ -203,10 +202,6 @@ export function ListingEditForm({
     if (!Object.keys(immediate).length && !Object.keys(moderated).length && !photosChanged) {
       return showMessage("error", "No hay cambios para guardar.");
     }
-    if (hasPendingRevision && (Object.keys(moderated).length || photosChanged) && !isVerifiedStore) {
-      return showMessage("error", "Ya existe una revisión pendiente. Aún puedes cambiar precio, descripción, ubicación o características.");
-    }
-
     setBusy(true);
     setMessage("");
     const uploadedPaths: string[] = [];
@@ -240,9 +235,13 @@ export function ListingEditForm({
       const mode = result?.result?.mode;
       showMessage(
         "success",
-        mode === "revision"
-          ? "Los cambios inmediatos ya se aplicaron. Los cambios principales quedaron en revisión y la versión pública anterior sigue visible."
-          : "Los cambios se guardaron correctamente.",
+        mode === "revision" || mode === "revision_amended"
+          ? mode === "revision_amended"
+            ? "Actualizamos la propuesta pendiente con tus cambios más recientes. La versión pública anterior sigue visible."
+            : "Los cambios inmediatos ya se aplicaron. Los cambios principales quedaron en revisión y la versión pública anterior sigue visible."
+          : mode === "revision_cancelled"
+            ? "Cancelamos la propuesta porque ya coincide con la versión pública aprobada."
+            : "Los cambios se guardaron correctamente.",
       );
       setPhotosChanged(false);
       router.refresh();
@@ -259,10 +258,9 @@ export function ListingEditForm({
   return (
     <form onSubmit={handleSubmit} className="grid gap-6 rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
       {message ? (
-        <div ref={statusRef} tabIndex={-1} role={state === "error" ? "alert" : "status"} className={state === "error" ? "rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700 outline-none" : "rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 outline-none"}>
-          <p>{message}</p>
+        <PageNotice kind={state === "error" ? "error" : "success"} message={message}>
           {state === "success" ? <Link href={returnHref} className="mt-3 inline-block font-black underline underline-offset-4">Volver al inventario</Link> : null}
-        </div>
+        </PageNotice>
       ) : null}
 
       <div className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-4 text-sm leading-6 text-laria-text-soft">{moderatedNote}</div>
@@ -273,7 +271,7 @@ export function ListingEditForm({
         <TextField label="Marca" name="brand" defaultValue={listing.brand ?? ""} />
         <TextField label="Modelo" name="model" defaultValue={listing.model ?? ""} />
         <SelectField label="Condición" name="condition" defaultValue={listing.condition ?? ""} options={conditionOptions.map((condition) => ({ value: condition, label: condition }))} />
-        <label className="grid gap-2 text-sm font-medium text-laria-text-soft">Precio en soles<input type="number" min="1" name="price_pen" required defaultValue={listing.price_pen ?? ""} className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm text-laria-ink outline-none focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/20" /></label>
+        <label className="grid gap-2 text-sm font-medium text-laria-text-soft">Precio en soles<input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" required defaultValue={listing.price_pen ?? ""} className="h-11 rounded-md border border-laria-steel bg-white px-3 text-sm text-laria-ink outline-none focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/20" /></label>
         <LocationFields defaultCity={listing.city} defaultRegion={listing.region} />
       </div>
       {attributeGroup ? (

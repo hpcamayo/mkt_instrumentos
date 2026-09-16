@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
+import { PageNotice } from "@/components/page-notice";
 import { getPasswordValidationMessage } from "@/lib/auth/password";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
@@ -61,4 +62,7 @@ export function PasswordUpdateForm({ mode }: { mode: "reset" | "change" }) {
 function AuthInput({ label, name, type, autoComplete }: { label: string; name: string; type: string; autoComplete: string }) {
   return <label className="grid gap-2 text-sm font-bold text-laria-text-soft">{label}<input name={name} type={type} required minLength={type === "password" ? 8 : undefined} autoComplete={autoComplete} className="h-11 rounded-md border border-laria-steel px-3 text-laria-ink outline-none focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/20" /></label>;
 }
-function Status({ message }: { message: string }) { return message ? <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">{message}</p> : null; }
+function Status({ message }: { message: string }) {
+  if (!message) return null;
+  return <PageNotice kind={message.startsWith("Si el correo") ? "success" : "error"} message={message} />;
+}

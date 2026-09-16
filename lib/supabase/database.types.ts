@@ -129,6 +129,7 @@ export type Database = {
           submitted_at: string
           title: string | null
           updated_at: string
+          version: number
         }
         Insert: {
           attributes?: Json | null
@@ -151,6 +152,7 @@ export type Database = {
           submitted_at?: string
           title?: string | null
           updated_at?: string
+          version?: number
         }
         Update: {
           attributes?: Json | null
@@ -173,6 +175,7 @@ export type Database = {
           submitted_at?: string
           title?: string | null
           updated_at?: string
+          version?: number
         }
         Relationships: [
           {
@@ -322,6 +325,61 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          listing_id: string | null
+          message: string
+          read_at: string | null
+          store_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          listing_id?: string | null
+          message: string
+          read_at?: string | null
+          store_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          listing_id?: string | null
+          message?: string
+          read_at?: string | null
+          store_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -553,6 +611,15 @@ export type Database = {
         Args: { p_fields: Json; p_id: string; p_kind: string; p_photos: Json }
         Returns: string
       }
+      create_account_notification: {
+        Args: {
+          p_event_type: string
+          p_listing_id?: string
+          p_store_id?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       increment_listing_view_count: {
         Args: { p_listing_id: string }
         Returns: number
@@ -594,9 +661,32 @@ export type Database = {
           error: true
         } & "the function public.listing_photo_count with parameter or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache"
       }
+      listing_photo_set_is_valid: {
+        Args: { p_listing_id: string; p_photos: Json }
+        Returns: boolean
+      }
       listing_taxonomy_is_valid: {
         Args: { p_category: string; p_instrument_type: string }
         Returns: boolean
+      }
+      mark_notification_read: {
+        Args: { p_notification_id: string }
+        Returns: {
+          created_at: string
+          event_type: string
+          id: string
+          listing_id: string | null
+          message: string
+          read_at: string | null
+          store_id: string | null
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "notifications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       relist_sold_listing: {
         Args: { p_listing_id: string }
@@ -727,12 +817,18 @@ export type Database = {
         }
       }
       review_listing_revision: {
-        Args: { p_decision: string; p_reason?: string; p_revision_id: string }
+        Args: {
+          p_decision: string
+          p_expected_version: number
+          p_reason?: string
+          p_revision_id: string
+        }
         Returns: {
           attributes: Json | null
           brand: string | null
           category: string | null
           changed_fields: string[]
+          condition: string | null
           created_at: string
           id: string
           instrument_type: string | null
@@ -748,6 +844,7 @@ export type Database = {
           submitted_at: string
           title: string | null
           updated_at: string
+          version: number
         }
         SetofOptions: {
           from: "*"

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Boxes,
+  Bell,
   CircleUserRound,
   FilePlus2,
   LayoutDashboard,
@@ -19,9 +20,11 @@ type AccountType = "seller" | "store_owner";
 export function AccountNavigation({
   accountType,
   hasStore,
+  unreadNotifications,
 }: {
   accountType: AccountType;
   hasStore: boolean;
+  unreadNotifications: number;
 }) {
   const pathname = usePathname();
   const items = getAccountNavigationItems(accountType, hasStore);
@@ -35,7 +38,7 @@ export function AccountNavigation({
           <span aria-hidden="true" className="text-laria-blue">Menú</span>
         </summary>
         <nav aria-label="Menú de cuenta móvil" className="mt-3 grid gap-1 border-t border-laria-fog pt-3">
-          <AccountLinks items={items} pathname={pathname} />
+          <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} />
           <LogoutLink />
         </nav>
       </details>
@@ -53,7 +56,7 @@ export function AccountNavigation({
           </p>
         </div>
         <nav aria-label="Navegación de cuenta" className="mt-4 grid gap-1">
-          <AccountLinks items={items} pathname={pathname} />
+          <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} />
         </nav>
         <div className="mt-4 border-t border-laria-fog pt-4">
           <LogoutLink />
@@ -63,7 +66,7 @@ export function AccountNavigation({
   );
 }
 
-function AccountLinks({ items, pathname }: { items: AccountNavigationItem[]; pathname: string }) {
+function AccountLinks({ items, pathname, unreadNotifications }: { items: AccountNavigationItem[]; pathname: string; unreadNotifications: number }) {
   return items.map((item) => {
     const active = accountItemIsActive(pathname, item);
     return (
@@ -76,7 +79,12 @@ function AccountLinks({ items, pathname }: { items: AccountNavigationItem[]; pat
           : "flex min-h-11 items-center gap-3 rounded-md border border-transparent px-3 py-2 text-sm font-bold text-laria-text-soft hover:border-laria-fog hover:text-laria-blue"}
       >
         <AccountIcon name={item.icon} />
-        {item.label}
+        <span className="min-w-0 flex-1">{item.label}</span>
+        {item.icon === "notifications" && unreadNotifications > 0 ? (
+          <span aria-label={`${unreadNotifications} notificaciones sin leer`} className="min-w-6 rounded-full bg-laria-yellow px-2 py-0.5 text-center text-[11px] font-black text-laria-black">
+            {unreadNotifications > 99 ? "99+" : unreadNotifications}
+          </span>
+        ) : null}
       </Link>
     );
   });
@@ -102,6 +110,7 @@ function AccountIcon({ name }: { name: AccountNavigationItem["icon"] }) {
   if (name === "publish") return <FilePlus2 className={classes} aria-hidden="true" />;
   if (name === "store") return <Store className={classes} aria-hidden="true" />;
   if (name === "inventory") return <Boxes className={classes} aria-hidden="true" />;
+  if (name === "notifications") return <Bell className={classes} aria-hidden="true" />;
   if (name === "profile") return <CircleUserRound className={classes} aria-hidden="true" />;
   return <Settings className={classes} aria-hidden="true" />;
 }

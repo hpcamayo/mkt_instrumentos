@@ -253,7 +253,7 @@ Current behavior:
 - Approved owners can hide; only owner-hidden listings can be restored. Admin-hidden rows stay blocked from owner restoration.
 - Marking sold is irreversible for the historical row and cancels a pending revision. `Relistar` creates a new linked copy with a new slug and keeps the old record intact.
 - Particular and normal-Tienda relists return to moderation; eligible Tienda Verificada copies can publish directly.
-- Price, description, location, and supported attributes apply immediately on approved Particular/normal-Tienda inventory. Title, category, instrument type, brand, model, condition, and photo changes create one pending revision while the old public version remains live. Attributes that depend on a proposed instrument-type change stay inside that revision and are promoted atomically with the type.
+- Price, description, location, and supported attributes apply immediately on approved Particular/normal-Tienda inventory. Title, category, instrument type, brand, model, condition, and photo changes create one pending revision while the old public version remains live. Further moderated edits amend that same versioned proposal, including its isolated photo set; reverted fields leave the proposal and an empty proposal is cancelled. Attributes that depend on a proposed instrument-type change stay inside that revision and are promoted atomically with the type.
 - A Tienda Verificada applies a complete valid edit directly. Revocation immediately returns later edits to revision moderation without altering already-approved inventory.
 - Verification does not auto-approve an older pending edit revision; it remains pending because the store-verification operation applies only to pending inventory listings. Future verified edits are evaluated directly at transaction time, and a later direct moderated/photo edit cancels an older pending proposal as superseded so it cannot overwrite newer live values.
 - Edit uploads use new owner-scoped object paths. Partial client uploads are cleaned on failure, and browser users cannot overwrite or delete historical listing-photo objects.
@@ -289,12 +289,19 @@ Admin behavior:
 - Allows editing listing basics before moderation.
 - Allows inspecting/editing instrument type and supported attributes with labeled controls.
 - Listing actions use trusted review RPCs: `Aprobar`, required-reason `Rechazar`, required-reason administrative `Ocultar`, and `Restaurar` where allowed.
-- Pending revisions show current/proposed moderated fields and current/proposed photo sets; admin can approve or reject them with a required rejection reason. A recent resolved-revision table keeps approved, rejected, and sold-cancelled history inspectable.
+- Pending revisions show current/proposed moderated fields, current/proposed photo sets, proposal version, and latest update time. Admin decisions include the displayed version; an owner amendment makes a stale decision fail and refresh the queue. A recent resolved-revision table keeps approved, rejected, and sold-cancelled history inspectable.
 - Shows RUC, owner ID, razón social, business email, phone, address/location, contact person, links, status, and trust state.
 - Store actions use trusted RPCs: basic approve, reject/hide with mandatory reason, verify, and revoke verification.
 - Verification is atomic with approval of all qualifying pending inventory; the UI reports the transitioned count.
 
 Store and listing/revision moderation are operable, while the full future hub remains a V1 gap: listing/store search and filtering, users, reports, reviews, transactions, lifecycle emails, and legacy ownership linking belong to later scheduled sprints.
+
+## In-App Notifications
+
+- `/mi-cuenta/notificaciones` is available in both role-specific account menus with an accurate unread badge.
+- Typed notices cover listing approve/reject/admin hide, revision approve/reject, store approve/reject, verification, and verification revocation.
+- Notices are newest first, visually distinguish unread rows, link to the relevant listing/store account area, and can be marked read through an owner-constrained RPC.
+- This center is in-app only. Marketplace email delivery/preferences remain unimplemented.
 
 Admin visual refresh:
 - Uses a dark admin sidebar/header area and light operational workspace.
@@ -352,7 +359,7 @@ Behavior:
 - Supabase Auth email template copy is documented in `docs/auth-email-templates.md`. Signup already sends trusted `user_metadata.account_type`, but the production hosted confirmation template still needs the documented conditional body/neutral subject at the release gate; callback/session code does not need a new format.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
-- Sprint 3 owner listing lifecycle management and approved-edit revision behavior are implemented for Particulars and Store Owners. Later analytics, favorites, alerts, and transaction/review functions are still absent.
+- Sprint 3 owner listing lifecycle management and Sprint 3.1 amendable/versioned revision behavior are implemented for Particulars and Store Owners. Later analytics, favorites, alerts, and transaction/review functions are still absent.
 
 Account shell:
 - `app/mi-cuenta/layout.tsx` keeps role-appropriate navigation visible across account subpages: a persistent desktop sidebar and an accessible collapsed mobile menu with active-section state.

@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { PageNotice } from "@/components/page-notice";
 import { normalizePeruRegion } from "@/lib/location";
 import { createPublicSubmission, type SubmissionFile } from "@/lib/public-submission";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -53,13 +54,6 @@ export function StoreRegistrationForm({
   const [currentPhotos, setCurrentPhotos] = useState(photos);
   const [currentLogoUrl, setCurrentLogoUrl] = useState(store?.logo_url ?? null);
   const [currentBannerUrl, setCurrentBannerUrl] = useState(store?.banner_url ?? null);
-  const statusRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!message || !statusRef.current) return;
-    statusRef.current.focus({ preventScroll: true });
-    statusRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [message, state]);
 
   function show(nextState: State, nextMessage: string) {
     setState(nextState);
@@ -166,7 +160,7 @@ export function StoreRegistrationForm({
       show("success", store.status === "rejected" ? "Cambios guardados y solicitud reenviada para revisión." : "Datos de la tienda actualizados.");
     } catch (error) {
       const detail = error instanceof Error ? error.message : "";
-      show("error", detail.includes("stores_ruc_unique_idx") ? "Ya existe una tienda registrada con este RUC." : "No se pudieron guardar los cambios. Intenta nuevamente.");
+      show("error", getStoreSubmissionErrorMessage(detail));
     }
   }
 
@@ -183,7 +177,7 @@ export function StoreRegistrationForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-6 rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
-      {message ? <div ref={statusRef} tabIndex={-1} role={state === "success" ? "status" : "alert"} className={`rounded-md border p-4 text-sm outline-none focus:ring-2 ${state === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800 focus:ring-emerald-600/30" : "border-red-200 bg-red-50 text-red-800 focus:ring-red-600/30"}`}><p>{message}</p>{state === "success" ? <div className="mt-3 flex flex-wrap gap-3"><Link href="/mi-cuenta" className="font-black underline underline-offset-4">Volver al resumen</Link><Link href="/mi-cuenta/tienda" className="font-black underline underline-offset-4">Ver estado de mi tienda</Link>{store ? <Link href="/mi-cuenta/tienda/inventario" className="font-black underline underline-offset-4">Ver inventario</Link> : null}</div> : null}</div> : null}
+      {message ? <PageNotice kind={state === "success" ? "success" : "error"} message={message}>{state === "success" ? <div className="mt-3 flex flex-wrap gap-3"><Link href="/mi-cuenta" className="font-black underline underline-offset-4">Volver al resumen</Link><Link href="/mi-cuenta/tienda" className="font-black underline underline-offset-4">Ver estado de mi tienda</Link>{store ? <Link href="/mi-cuenta/tienda/inventario" className="font-black underline underline-offset-4">Ver inventario</Link> : null}</div> : null}</PageNotice> : null}
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Nombre público de la tienda" name="name" defaultValue={store?.name} />
         <Field label="Razón social" name="razon_social" defaultValue={store?.razon_social} />
@@ -227,3 +221,13 @@ function image(data: FormData, key: string) { const value = data.get(key); retur
 function images(data: FormData, key: string) { return data.getAll(key).filter((value): value is File => value instanceof File && value.size > 0); }
 function allowedImage(file: File) { return ["image/jpeg", "image/png", "image/webp"].includes(file.type); }
 function extension(type: string) { return type === "image/jpeg" ? "jpg" : type === "image/png" ? "png" : "webp"; }
+
+export function getStoreSubmissionErrorMessage(detail: string) {
+  if (
+    detail.includes("stores_ruc_unique_idx") ||
+    /RUC.+registrad|registrad.+RUC/i.test(detail)
+  ) {
+    return "Este RUC ya está registrado en Laria.";
+  }
+  return "No se pudieron guardar los cambios. Intenta nuevamente.";
+}

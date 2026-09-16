@@ -7,6 +7,7 @@ import {
 } from "@/lib/listing-submission";
 import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
+import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import type { Json } from "@/lib/supabase/database.types";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
@@ -69,12 +70,34 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   if (body.action !== "edit") return failure("Acción no compatible.");
 
-  const validation = validateEdit(body.immediate, body.moderated, listing);
+  const { data: pendingRevision, error: pendingRevisionError } = await supabase
+    .from("listing_revisions")
+    .select("changed_fields,category,instrument_type,listing_revision_photos(image_url,alt_text,sort_order)")
+    .eq("listing_id", id)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (pendingRevisionError) {
+    return failure("No se pudo cargar la propuesta pendiente.", 409);
+  }
+
+  const pendingFields = new Set(pendingRevision?.changed_fields ?? []);
+  const validation = validateEdit(body.immediate, body.moderated, {
+    ...listing,
+    category: pendingFields.has("category")
+      ? pendingRevision?.category ?? listing.category
+      : listing.category,
+    instrument_type: pendingFields.has("instrument_type")
+      ? pendingRevision?.instrument_type ?? listing.instrument_type
+      : listing.instrument_type,
+  });
   if (!validation.ok) return failure(validation.message);
 
   const photoResult = await resolvePhotos(
     body.photos,
-    listing.listing_photos ?? [],
+    [
+      ...(listing.listing_photos ?? []),
+      ...(pendingRevision?.listing_revision_photos ?? []),
+    ],
     userData.user.id,
     id,
   );
@@ -113,9 +136,9 @@ function validateEdit(
 
   const immediate: Record<string, Json> = {};
   const moderated: Record<string, Json> = {};
-  const price = optionalInteger(immediateSource.price_pen);
+  const price = parseWholeSolPrice(immediateSource.price_pen);
   if (immediateSource.price_pen !== undefined) {
-    if (!price || price > 2147483647) {
+    if (price === null) {
       return { ok: false as const, message: "Ingresa un precio válido en soles enteros." };
     }
     immediate.price_pen = price;
@@ -244,9 +267,7 @@ function rpcFailure(message: string) {
   if (message.includes("STORE_INVENTORY_LIMIT_REACHED")) {
     return failure("Tu tienda alcanzó el límite de 50 publicaciones concurrentes.", 409);
   }
-  if (message.includes("LISTING_REVISION_ALREADY_PENDING")) {
-    return failure("Ya existe una revisión pendiente para esta publicación.", 409);
-  }
+  if (message.includes("LISTING_REVISION_STALE")) return failure("La propuesta cambió. Recarga la página e intenta nuevamente.", 409);
   if (message.includes("ADMIN_HIDDEN_LISTING")) {
     return failure("Esta publicación fue ocultada por moderación y no puede modificarse.", 409);
   }
@@ -264,11 +285,6 @@ function asObject(value: unknown) {
 
 function readText(value: unknown, maxLength = 500) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
-}
-
-function optionalInteger(value: unknown) {
-  const number = Number(value);
-  return Number.isSafeInteger(number) ? number : null;
 }
 
 function escapeRegExp(value: string) {

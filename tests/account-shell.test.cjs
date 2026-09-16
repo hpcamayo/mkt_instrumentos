@@ -21,16 +21,16 @@ const { getAccountNavigationItems, accountItemIsActive, getHeaderNavigation } = 
 
 test("Particular account navigation exposes only implemented Particular destinations", () => {
   const items = getAccountNavigationItems("seller", false);
-  assert.deepEqual(items.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar instrumento", "Perfil", "Seguridad"]);
+  assert.deepEqual(items.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar instrumento", "Notificaciones", "Perfil", "Seguridad"]);
   assert.equal(items.some((item) => /tienda|inventario/i.test(item.label)), false);
   assert.equal(items.some((item) => /favoritos|alertas/i.test(item.label)), false);
 });
 
 test("Store Owner navigation changes safely when an owner-bound store exists", () => {
   const withoutStore = getAccountNavigationItems("store_owner", false);
-  assert.deepEqual(withoutStore.map((item) => item.label), ["Resumen", "Solicitud de tienda", "Perfil", "Seguridad"]);
+  assert.deepEqual(withoutStore.map((item) => item.label), ["Resumen", "Solicitud de tienda", "Notificaciones", "Perfil", "Seguridad"]);
   const withStore = getAccountNavigationItems("store_owner", true);
-  assert.deepEqual(withStore.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar producto", "Perfil", "Seguridad"]);
+  assert.deepEqual(withStore.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar producto", "Notificaciones", "Perfil", "Seguridad"]);
   assert.equal(withStore.some((item) => /publicaciones|instrumento/i.test(item.label)), false);
 });
 
@@ -60,12 +60,26 @@ test("account shell is protected and retains accessible mobile navigation", () =
 });
 
 test("submission success and validation feedback receive focus and scroll into view", () => {
-  for (const file of ["components/store-registration-form.tsx", "components/sell-listing-form.tsx"]) {
+  const notice = fs.readFileSync("components/page-notice.tsx", "utf8");
+  assert.match(notice, /focus\(\{ preventScroll: true \}\)/);
+  assert.match(notice, /scrollIntoView\(\{ behavior: "smooth", block: "center" \}\)/);
+  assert.match(notice, /role=\{kind === "error" \? "alert" : "status"\}/);
+  for (const file of ["components/store-registration-form.tsx", "components/sell-listing-form.tsx", "components/listing-edit-form.tsx", "components/profile-edit-form.tsx", "components/password-form.tsx", "components/listing-management-table.tsx", "components/admin-panel.tsx"]) {
     const source = fs.readFileSync(file, "utf8");
-    assert.match(source, /focus\(\{ preventScroll: true \}\)/);
-    assert.match(source, /scrollIntoView\(\{ behavior: "smooth", block: "center" \}\)/);
-    assert.match(source, /Volver al resumen/);
+    assert.match(source, /PageNotice/);
   }
+  assert.match(fs.readFileSync("components/store-registration-form.tsx", "utf8"), /Volver al resumen/);
+  assert.match(fs.readFileSync("components/sell-listing-form.tsx", "utf8"), /Ver mis publicaciones/);
+});
+
+test("both account roles expose the real in-app notification center and unread badge", () => {
+  const layout = fs.readFileSync("app/mi-cuenta/layout.tsx", "utf8");
+  const navigation = fs.readFileSync("components/account-navigation.tsx", "utf8");
+  const page = fs.readFileSync("app/mi-cuenta/notificaciones/page.tsx", "utf8");
+  assert.match(layout, /from\("notifications"\)/);
+  assert.match(layout, /\.is\("read_at", null\)/);
+  assert.match(navigation, /unreadNotifications/);
+  assert.match(page, /order\("created_at", \{ ascending: false \}\)/);
 });
 
 test("signup email documentation preserves callback and distinguishes account metadata", () => {

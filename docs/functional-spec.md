@@ -132,9 +132,10 @@ Moderated edits require admin review for a Particular and normal Tienda:
 - Instrument type.
 - Brand.
 - Model.
+- Condition.
 - Photos.
 
-The old approved version must remain public while a moderated revision waits for approval. This is a revision or pending-edit workflow; it must not mutate or remove the approved public version prematurely. A Tienda Verificada can apply edits to an approved listing directly without moderation.
+The old approved version must remain public while a moderated revision waits for approval. This is a revision or pending-edit workflow; it must not mutate or remove the approved public version prematurely. There is at most one active pending revision per listing, but its owner may amend that same proposal before the admin decision. Later moderated field/photo changes merge into the pending proposal, reverting a field to its approved value removes that difference, and a proposal with no remaining differences is cancelled. Admin decisions must reject a stale proposal version and require review of the latest state. A Tienda Verificada can apply edits to an approved listing directly without moderation.
 
 ## Store Account and Application
 
@@ -257,6 +258,10 @@ Centralized application email infrastructure sends listing approval/rejection, s
 
 Supabase Auth may continue sending authentication-related messages.
 
+## In-App Notifications
+
+The authenticated account shell includes an in-app notification center for Particular and Store Owner accounts. It records important listing moderation, listing-revision, store approval/rejection, and store verification changes with a typed event, short Spanish message, timestamp, read state, and relevant account destination. A user can read and mark only their own notifications. This does not replace or prematurely implement the centralized application-email infrastructure.
+
 ## Legal and Safety
 
 V1 has dedicated content or pages for Terms/marketplace rules, Privacy Policy, prohibited-item rules, and marketplace safety guidance.
@@ -303,7 +308,7 @@ See `docs/performance.md` for the implemented behavior and verification details.
 
 ## Implementation Status
 
-Status is based strictly on the repository and the Sprint 3 implementation prepared locally on 2026-09-13. Sprint 1 and Sprint 2 are **CLOSED / ACCEPTED**; `VERIFY-012`, `VERIFY-013`, and `SDASH-001` passed owner production acceptance. Sprint 3 is implemented and locally verified but has not been released to production.
+Status is based strictly on the Sprint 3.1 source prepared and locally verified on 2026-09-16. Sprint 1 and Sprint 2 are **CLOSED / ACCEPTED**. Sprint 3 is deployed; Sprint 3.1 fixes remain subject to production release and owner retest for `LIST-013`, `REV-011`, `REV-012`, and `REV-014`.
 
 - **DONE**: the functional area is materially implemented for its V1 requirement.
 - **MODIFY**: a related implementation exists, but it must change or expand to meet V1.
@@ -323,7 +328,7 @@ Status is based strictly on the repository and the Sprint 3 implementation prepa
 | Seller analytics | BUILD | Dashboard metrics/charts are explicitly placeholders; only raw listing `view_count` exists. |
 | Instrument type/attributes submission | DONE | Seller creation and admin moderation reuse the canonical instrument filter definitions; supported attributes use labeled controls rather than raw JSON. |
 | 2–10 photo handling | DONE | Client/server/RPC validation enforces 2–10 photos; creation supports ordering, replacement, and removal while preserving the minimum. |
-| Revision moderation | DONE | Particular and normal Tienda moderated fields/photos create one pending revision while the approved live version remains public; admin approval patches only proposed fields. Tienda Verificada edits remain direct. |
+| Revision moderation | DONE | Particular and normal Tienda moderated fields/photos create one evolving pending proposal while the approved live version remains public. Owners amend that same versioned proposal; stale admin decisions fail, and approval patches only the latest proposed fields/photos. Tienda Verificada edits remain direct. |
 | Sold/relist flow | DONE | Owners can mark sold, sold records are immutable historical inventory with direct `Vendido` URLs, and relisting creates a linked copy with the correct moderation/verification behavior. |
 | WhatsApp contact event tracking | BUILD | No contact-event table or tracking endpoint exists. |
 | Verified transactions | BUILD | No transaction-confirmation model or workflow exists. |
@@ -333,7 +338,7 @@ Status is based strictly on the repository and the Sprint 3 implementation prepa
 | Price-drop alerts | BUILD | No favorite price history, deduplication, or notification workflow exists. |
 | Store-owner ownership | DONE | Dedicated Store Owner signup/profile repair, one-owner/one-store uniqueness, owner-bound signed submissions, and owner-only RLS are implemented without converting Particular accounts. |
 | Store application | DONE | The authenticated application collects all required business/contact/location fields and supports optional logo, banner, physical-store photos, TikTok, website, and social links. Owners can edit allowed fields and resubmit rejected applications. |
-| RUC uniqueness | DONE | RUC is normalized to 11 digits and protected by a database unique index; migration preflight refuses unsafe historical duplicates. |
+| RUC uniqueness | DONE | RUC is normalized to 11 digits and protected by a database unique index; migration preflight refuses unsafe historical duplicates and the UI reports duplicate RUC without exposing another owner. |
 | Store public approval | DONE | Pending/rejected/hidden stores and their inventory are nonpublic. The trusted admin review RPC requires complete data for approval and a reason for rejection/hiding. |
 | Tienda Verificada direct publication | DONE | Verified stores directly publish qualifying new inventory and apply valid listing edits directly; normal Tienda inventory and moderated edits remain reviewed. |
 | Automatic approval after verification | DONE | The admin-only verification RPC atomically verifies an active eligible store and approves all valid pending inventory while preserving rejected/hidden/sold rows. |
@@ -343,10 +348,11 @@ Status is based strictly on the repository and the Sprint 3 implementation prepa
 | Full admin moderation hub | MODIFY | Secure pending listing/store queues and invites exist, but all-record search/filtering and the required users, revisions, reports, reviews, transactions, ownership, and lifecycle views do not. |
 | Reports | BUILD | No report schema, user flow, or admin queue exists. |
 | Moderation reasons | DONE | Store and listing rejection/administrative hiding persist required owner-visible reasons; revision rejection also requires and preserves a reason. |
+| In-app notifications | DONE | The account shell provides owner-scoped, RLS-protected typed lifecycle notifications with unread state and target navigation. |
 | Application emails | BUILD | Supabase Auth email flows and templates exist, but no centralized marketplace email abstraction or lifecycle/alert emails exist. |
 | Password reset | DONE | Forgot-password, recovery callback, reset, and authenticated password-change flows use Supabase Auth. |
 | Category SEO pages | BUILD | `/instrumentos/[slug]` is currently a listing-detail route; no real category landing flow exists. |
 | Legal/safety pages | BUILD | No dedicated Terms, Privacy, prohibited-item, or marketplace-safety pages exist. |
 | Legacy ownership linking | BUILD | Nullable ownership supports later linkage, but admin has no manual ownership-assignment interface/workflow. |
 
-Summary after the local Sprint 3 implementation: **21 DONE**, **3 MODIFY**, and **13 BUILD** areas. The matrix is an implementation snapshot, not a priority change and not evidence that missing V1 features are optional.
+Summary after the local Sprint 3.1 implementation: **22 DONE**, **3 MODIFY**, and **13 BUILD** areas. The matrix is an implementation snapshot, not a priority change and not evidence that missing V1 features are optional.

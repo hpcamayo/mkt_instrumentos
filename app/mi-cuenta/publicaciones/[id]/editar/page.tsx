@@ -47,10 +47,27 @@ export default async function ListingEditPage({
 
   const { data: pendingRevision } = await supabase
     .from("listing_revisions")
-    .select("id")
+    .select("id,version,changed_fields,title,category,instrument_type,attributes,brand,model,condition,listing_revision_photos(id,image_url,alt_text,sort_order)")
     .eq("listing_id", listing.id)
     .eq("status", "pending")
     .maybeSingle();
+
+  const proposedFields = new Set(pendingRevision?.changed_fields ?? []);
+  const editableListing = pendingRevision
+    ? {
+        ...listing,
+        title: proposedFields.has("title") ? pendingRevision.title ?? listing.title : listing.title,
+        category: proposedFields.has("category") ? pendingRevision.category ?? listing.category : listing.category,
+        instrument_type: proposedFields.has("instrument_type") ? pendingRevision.instrument_type : listing.instrument_type,
+        attributes: proposedFields.has("attributes") ? pendingRevision.attributes : listing.attributes,
+        brand: proposedFields.has("brand") ? pendingRevision.brand : listing.brand,
+        model: proposedFields.has("model") ? pendingRevision.model : listing.model,
+        condition: proposedFields.has("condition") ? pendingRevision.condition : listing.condition,
+        listing_photos: proposedFields.has("photos")
+          ? pendingRevision.listing_revision_photos
+          : listing.listing_photos,
+      }
+    : listing;
 
   return (
     <section className="grid gap-5">
@@ -59,7 +76,7 @@ export default async function ListingEditPage({
         <h1 className="mt-1 text-3xl font-black text-laria-ink">Editar {listing.title}</h1>
       </div>
       <ListingEditForm
-        listing={{ ...listing, attributes: listing.attributes as Record<string, unknown> | null }}
+        listing={{ ...editableListing, attributes: editableListing.attributes as Record<string, unknown> | null }}
         hasPendingRevision={Boolean(pendingRevision)}
         isVerifiedStore={Boolean(listing.store_id && store?.status === "active" && store.is_verified)}
         returnHref={returnHref}

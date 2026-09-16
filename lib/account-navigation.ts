@@ -1,7 +1,7 @@
 export type AccountNavigationItem = {
   href: string;
   label: string;
-  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "profile" | "security";
+  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "notifications" | "profile" | "security";
   exact?: boolean;
 };
 
@@ -14,6 +14,7 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
         { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory" } as const,
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar producto", icon: "publish" } as const,
       ] : []),
+      { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
       { href: "/mi-cuenta/perfil", label: "Perfil", icon: "profile" },
       { href: "/mi-cuenta/seguridad", label: "Seguridad", icon: "security" },
     ];
@@ -22,6 +23,7 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
     { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
     { href: "/mi-cuenta/publicaciones", label: "Mis publicaciones", icon: "listings" },
     { href: "/mi-cuenta/publicar", label: "Publicar instrumento", icon: "publish" },
+    { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
     { href: "/mi-cuenta/perfil", label: "Perfil", icon: "profile" },
     { href: "/mi-cuenta/seguridad", label: "Seguridad", icon: "security" },
   ];

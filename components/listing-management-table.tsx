@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PageNotice } from "@/components/page-notice";
 import { listingStatusLabel } from "@/lib/account-ui";
 import { formatPrice } from "@/lib/listings";
 
@@ -30,6 +31,7 @@ export function ListingManagementTable({
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [messageKind, setMessageKind] = useState<"success" | "error">("success");
 
   async function runAction(listing: ManagedListing, action: string) {
     const confirmations: Record<string, string> = {
@@ -47,10 +49,12 @@ export function ListingManagementTable({
     });
     const result = await response.json().catch(() => null);
     if (!response.ok) {
+      setMessageKind("error");
       setMessage(result?.message ?? "No se pudo completar la acción.");
       setBusyId(null);
       return;
     }
+    setMessageKind("success");
     setMessage(
       action === "relist"
         ? "Se creó una nueva publicación sin modificar el registro vendido."
@@ -69,9 +73,7 @@ export function ListingManagementTable({
   return (
     <div>
       {message ? (
-        <p role="status" className="border-b border-laria-fog bg-laria-blue/10 px-5 py-3 text-sm font-semibold text-laria-ink">
-          {message}
-        </p>
+        <div className="border-b border-laria-fog p-3"><PageNotice kind={messageKind} message={message} /></div>
       ) : null}
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
