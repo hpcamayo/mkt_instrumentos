@@ -15,7 +15,7 @@ Browser
 
 The codebase currently favors server-rendered public pages with small client islands for forms, admin auth/moderation, filters, card photo carousel behavior, and listing detail metadata.
 
-Implementation boundary: Sprint 4 photo, event, and analytics changes below are **local implementation only**, not deployed to production. Sprints 1–2 remain CLOSED / ACCEPTED; Sprint 3/3.1 production acceptance is recorded in the canonical TSV. A separate release gate and owner production retest are required before accepting the new behavior. Sprint 5 has not started.
+Release boundary: Sprint 4 photo, event, and analytics changes below were **production-deployed on 2026-09-17** from application commit `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa`, with both matching migrations applied. Production automated evidence is in `docs/sprint-4-production-verification.md`; required owner production acceptance remains pending. Sprints 1–2 remain CLOSED / ACCEPTED; Sprint 3/3.1 production acceptance is recorded in the canonical TSV. Sprint 5 has not started.
 
 ## Core Responsibilities
 
@@ -114,7 +114,7 @@ app/
   mi-cuenta/tienda/publicar/page.tsx
                                     Store inventory submission
   mi-cuenta/tienda/estadisticas/page.tsx
-                                    Owner-only real store analytics (local Sprint 4)
+                                    Owner-only real store analytics (production Sprint 4)
   publicar/page.tsx                Redirects to /vender
   registrar-tienda/page.tsx        Compatibility gate/redirect to account store area
   registro/vendedor/page.tsx       Individual seller account signup
@@ -158,7 +158,7 @@ Approved Particular and normal-Tienda edits are split by trust boundary. Price, 
 
 If a listing is marked sold while a revision waits, the proposal becomes `cancelled` and cannot be applied to the historical row. Owner or admin hiding leaves the proposal pending; approving it patches content but preserves the current hidden status. Store verification does not auto-approve pending edit revisions, while future edits check current verification state inside the trusted transaction. Revocation therefore restores moderation for later edits immediately.
 
-### Listing-photo editing — local Sprint 4
+### Listing-photo editing — production Sprint 4
 
 New edits receive an owner/listing-bound HMAC capability from `POST /api/listings/[id]/manage` with `action='start_edit'`. Files are appended to the private `listing-edit-photos` bucket at `{ownerId}/listing-edits/{listingId}/{attemptId}/{sortOrder}.{ext}`. Stored URLs use `/api/listing-images/...`, not public bucket URLs. Existing public/legacy objects and initial signed submission paths are unchanged; the public bucket no longer accepts the edit-folder convention.
 
@@ -241,7 +241,7 @@ The listing detail route composes `ListingDetailGallery` in a sticky desktop col
 
 Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/recuperar-contrasena` and `/restablecer-contrasena` use Supabase Auth recovery through the same callback, while `/mi-cuenta/seguridad` performs authenticated password changes. `/registro/vendedor` and `/registro/tienda` create distinct account types with normalized profile metadata. The auth-user trigger persists name, WhatsApp, city, and region immediately. `/auth/callback` accepts PKCE `code` callbacks and server-verifiable `token_hash` callbacks, writes the Supabase session cookies on its returned redirect, and repairs incomplete Particular or Store Owner profiles from trusted Auth metadata when possible.
 
-The local Sprint 4 password form maps only Supabase's safe `same_password` code to `La nueva contraseña debe ser diferente de tu contraseña actual.` Unknown provider failures stay generic. It never retrieves, stores, or manually compares the existing plaintext password; callback/recovery/session behavior is unchanged.
+The production Sprint 4 password form maps only Supabase's safe `same_password` code to `La nueva contraseña debe ser diferente de tu contraseña actual.` Unknown provider failures stay generic. It never retrieves, stores, or manually compares the existing plaintext password; callback/recovery/session behavior is unchanged. Production provider/token-hash/actual-browser verification passed; real-inbox owner acceptance remains separate.
 
 `/vender` is protected in middleware and again in its Server Component, and Store Owner accounts are directed to `/mi-cuenta/tienda/publicar` instead of creating Particular inventory. The browser keeps direct-to-Storage uploads and retry recovery, while all submission capabilities are HMAC-signed and bound to `auth.uid()`. Authenticated uploads use `{userId}/{submissionId}/{sortOrder}.{ext}`; `/api/submissions` revalidates account/store ownership and a service-only idempotent RPC atomically inserts the application/listing plus photo rows. A normal or pending store produces pending inventory; an active verified store may approve a qualifying new listing in the same transaction.
 
@@ -259,7 +259,7 @@ The admin invite endpoint builds Supabase `redirectTo` URLs as `/auth/callback?n
 
 Location onboarding uses `components/location-fields.tsx` with a fixed Peru region list from `lib/location.ts`. Region values are normalized to canonical labels such as `Junín`; city uses suggestions but remains free text after trimming.
 
-## First-party events and owner analytics — local Sprint 4
+## First-party events and owner analytics — production Sprint 4
 
 `marketplace_events` stores typed events with canonical listing/store/seller relations, an optional Auth-verified actor, random session ID, timestamp, allowlisted source, bounded metadata, and replay keys. Raw tables and `record_marketplace_event()` are service-only; ordinary accounts receive aggregate RPC results, never a buyer directory or global event log.
 

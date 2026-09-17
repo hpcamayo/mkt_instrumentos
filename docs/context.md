@@ -13,7 +13,7 @@ Product scope:
 - Store products also appear in `/listados`.
 - Admin curation is central. Particular and normal Tienda listings require moderation; qualifying Tienda Verificada inventory publishes directly. Store pages require basic store approval.
 - Sprint 1 and Sprint 2 are **CLOSED / ACCEPTED**. Sprint 3 and Sprint 3.1 are deployed. Owner manual production retest PASS on 2026-09-16 covers `STORE-018`, `DASH-008`, `NOTIF-001`, `NOTIF-002`, `LIST-013`, `REV-011`, and `REV-012`; canonical evidence is in `acceptance/cases.tsv`. `REV-014` was the photo-amendment failure, not a new text-amendment failure.
-- Sprint 4 is **local implementation only, not production-deployed**: safe same-password guidance, complete private/retryable photo editing, first-party events/contacts, and real Particular/Store analytics. Local photo SQL/API/actual-browser proof exercises `REV-014`; owner production acceptance still awaits the separate release gate and retest. Sprint 5 has not started; favorites, alerts, transactions/reviews, and later hub/email work remain absent.
+- Sprint 4 is **production-deployed, owner acceptance pending** as of 2026-09-17: safe same-password guidance, complete private/retryable photo editing, first-party events/contacts, and real Particular/Store analytics. Application commit `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` and both migrations passed production automated verification; see `docs/sprint-4-production-verification.md`. `REV-014` still needs owner browser retest, and `PHOTO-015`/`SANA-010` remain Blocked. Sprint 5 has not started; favorites, alerts, transactions/reviews, and later hub/email work remain absent.
 - No paid plans are active in V1. Future monetization may start with stores, but the frozen V1 rule is a free 50-concurrent-listing cap.
 - V1 requires buyer/Particular accounts, ownership, seller/store dashboards, favorites, alerts, analytics, reports, verified transactions, and transaction-bound reviews. These are not all implemented yet; see the status matrix in `docs/functional-spec.md`.
 - Payments, checkout, escrow, delivery, subscriptions, commissions, and in-app chat remain post-V1.
@@ -39,7 +39,7 @@ Important current routes:
 - `/mi-cuenta/publicaciones/[id]/editar`: shared owner listing editor with immediate/moderated edit separation.
 - `/mi-cuenta/tienda` and `/mi-cuenta/tienda/inventario`: Store Owner application/profile and inventory views.
 - `/mi-cuenta/tienda/publicar`: Store Owner inventory submission for pending, normal, or verified stores.
-- `/mi-cuenta/tienda/estadisticas`: real owner-only statistics with lifetime/7-day/30-day windows, active locally in Sprint 4.
+- `/mi-cuenta/tienda/estadisticas`: real owner-only statistics with lifetime/7-day/30-day windows, production-deployed in Sprint 4.
 - `/mi-cuenta/perfil`: Particular profile editing.
 - `/mi-cuenta/seguridad`: authenticated password change.
 - `/mi-cuenta/notificaciones`: owner-scoped in-app listing/revision/store lifecycle notifications and read state.
@@ -52,7 +52,7 @@ Important current routes:
 - `/api/listings/[id]/manage`: authenticated owner edit, lifecycle, and relist actions backed by trusted Postgres RPCs.
 - `/api/listings/[id]/photo-cleanup`: owner-bound reference-checked cleanup through a service-only retirement-claim RPC.
 - `/api/listing-images/...`: authorized private edit-photo delivery; unattached/proposed objects are not anonymous public assets.
-- `/api/events/session`, `/api/events`, and `/api/contact`: signed first-party identity bootstrap, bounded typed event batches, and canonical WhatsApp click-intent tracking (local Sprint 4).
+- `/api/events/session`, `/api/events`, and `/api/contact`: signed first-party identity bootstrap, bounded typed event batches, and canonical WhatsApp click-intent tracking (production Sprint 4).
 - `/api/admin/invite-user`: server-only admin invite endpoint using Supabase service role after verifying the current user is admin.
 - `/api/auth/check-email`: server-only duplicate-email precheck for seller signup. It uses a service-only indexed database lookup and returns only availability, never user details.
 
@@ -96,8 +96,8 @@ Key files:
 - `supabase/migrations/20260910190000_store_sprint_2.sql`: Store Owner/application ownership, RUC uniqueness, store-photo RLS, trust/publication RPCs, active-parent visibility, and the concurrent inventory cap.
 - `supabase/migrations/20260913120000_listing_sprint_3.sql`: owner lifecycle, listing/revision moderation, sold immutability, relist lineage, proposed photos, and cap-safe restoration/relisting.
 - `supabase/migrations/20260916120000_sprint_3_1_acceptance_fixes.sql`: amendable/versioned pending revisions, stale-admin protection, notification schema/RLS/events, and read state.
-- `supabase/migrations/20260916180000_sprint_4_photos.sql`: private staging, canonical image validation, cleanup retirement claims, edit receipts, and empty-proposal photo-reference release (local only).
-- `supabase/migrations/20260916200000_sprint_4_events.sql`: service-only typed events, authoritative lifecycle triggers, rolling view/impression dedupe, preserved view cache, and restricted grouped analytics (local only).
+- `supabase/migrations/20260916180000_sprint_4_photos.sql`: private staging, canonical image validation, cleanup retirement claims, edit receipts, and empty-proposal photo-reference release (applied locally and in production).
+- `supabase/migrations/20260916200000_sprint_4_events.sql`: service-only typed events, authoritative lifecycle triggers, rolling view/impression dedupe, preserved view cache, and restricted grouped analytics (applied locally and in production).
 - `supabase/migrations/*`: manual SQL migrations for schema, RLS, storage, metadata, and view count RPC.
 
 Operational rule: Vercel deploys code, but does not apply Supabase SQL migrations. Schema changes must be run manually in Supabase SQL Editor unless migration automation is added later.
@@ -114,4 +114,4 @@ Event identity is a random signed HttpOnly/SameSite=Lax first-party cookie with 
 
 Analytics semantics: Particular summary aggregates all owned inventory, not its recent-five list. Lifetime listing views include the historical cache, 7/30-day views count recorded events, and no synthetic history is generated. CTR = recorded product views / impressions; contact rate = product contacts / recorded product views in one period. Zero denominator is `Sin datos`; failed aggregates are unavailable, not fabricated zero. Active inventory means currently approved/public including active-parent-store eligibility; sold counts mean seller-marked state, not verified paid sales. Store `Estadísticas` defaults to 30 days and supports 0/7/30. Favorites/revenue/transaction metrics and the full admin analytics hub are not implemented.
 
-Acceptance process: `acceptance/cases.tsv` is canonical and `acceptance/sprints.tsv` is the selective retrieval guide. Read only exact current-sprint IDs/domain prefixes, preserve unrelated rows/IDs, and validate TSV changes. Do not read or regenerate XLSX until the final V1 freeze gate. Owner Sprint 4 production QA begins only after the separate release gate; local proof is not manual production acceptance.
+Acceptance process: `acceptance/cases.tsv` is canonical and `acceptance/sprints.tsv` is the selective retrieval guide. Read only exact current-sprint IDs/domain prefixes, preserve unrelated rows/IDs, and validate TSV changes. Do not read or regenerate XLSX until the final V1 freeze gate. Sprint 4 owner production QA can now begin; automated production proof is not manual owner acceptance.

@@ -175,7 +175,7 @@ Current behavior:
 - New self-service Particular listings always set `owner_user_id`, remain `pending`, and copy profile contact values only as a compatibility snapshot. Approved owned listings resolve current seller identity/contact from `profiles`.
 - `created_by_source` tracks `legacy`, `self_service`, `admin_invite`, or `admin`.
 - `published_at` is used for newest sort and detail metadata. If null, detail metadata falls back to `created_at`.
-- `view_count` preserves the historical cache. After the local Sprint 4 events migration, only an accepted, deduplicated detail-view event increments it; SSR/GET/prefetch rendering does not. Historical counts are not converted into fabricated events.
+- `view_count` preserves the historical cache. After the production-applied Sprint 4 events migration, only an accepted, deduplicated detail-view event increments it; SSR/GET/prefetch rendering does not. Historical counts are not converted into fabricated events.
 - Listing detail pages render `attributes` as user-facing specification rows through `lib/listing-specs.ts`, using labels/options from `lib/instrument-filters.ts`. Empty attributes are hidden and raw JSON should not be shown in the UI.
 - Listing detail seller/store trust boxes count approved listings by `store_id` for stores and by `owner_user_id` for account-owned Particular listings; legacy individual listings retain the WhatsApp fallback.
 - Seller and admin forms reuse `lib/instrument-filters.ts` for `instrument_type` and labeled `attributes` controls.
@@ -231,7 +231,7 @@ An accepted revision replaces the live photo rows atomically inside the admin re
 
 ### `public.listing_edit_attempts` and `public.listing_photo_cleanup_claims`
 
-Added by the local-only `20260916180000_sprint_4_photos.sql` migration:
+Added by `20260916180000_sprint_4_photos.sql`, applied locally and in production:
 
 - `listing_edit_attempts` stores an owner/attempt primary key, listing, SHA-256 payload hash, result, and timestamp. The owner-scoped edit RPC serializes the attempt and returns its prior receipt for the same payload without advancing the proposal version again; changed-payload replay fails. Listing/profile deletion cascades receipts.
 - `listing_photo_cleanup_claims` has a `(bucket, path)` primary key and timestamp. The service-only claim RPC locks the owned listing, rejects foreign paths, and excludes every live or historical revision reference across listings before claiming an unreferenced object. The photo validator refuses subsequently claimed paths, closing the reference-check/Storage-delete race. Storage deletion can safely retry a previously claimed path.
@@ -239,7 +239,7 @@ Added by the local-only `20260916180000_sprint_4_photos.sql` migration:
 
 ### `public.marketplace_event_types` and `public.marketplace_events`
 
-Added by the local-only `20260916200000_sprint_4_events.sql` migration. The extensible text/FK taxonomy starts with exactly 16 types:
+Added by `20260916200000_sprint_4_events.sql`, applied locally and in production. The extensible text/FK taxonomy starts with exactly 16 types:
 
 `listing_impression`, `listing_view`, `store_view`, `whatsapp_contact`, `store_contact`, `search`, `filter_applied`, `listing_creation_started`, `listing_submitted`, `listing_approved`, `listing_rejected`, `listing_sold`, `store_application_started`, `store_application_submitted`, `store_approved`, `store_verified`.
 
@@ -346,7 +346,7 @@ Admin policies:
 - Central public predicate: approved Particular inventory, or approved store inventory whose parent store is active.
 
 `public.increment_listing_view_count(p_listing_id uuid)`:
-- Historical compatibility function; the local Sprint 4 migration revokes public/anonymous/authenticated execution so it cannot bypass event dedupe. The HTTP compatibility endpoint uses the trusted event recorder instead.
+- Historical compatibility function; the production-applied Sprint 4 migration revokes public/anonymous/authenticated execution so it cannot bypass event dedupe. The HTTP compatibility endpoint uses the trusted event recorder instead.
 
 `public.record_marketplace_event(event_type, session_id, event_id, actor_user_id, listing_id, store_id, source, metadata, submission_id)`:
 - Service-only trusted write path with canonical attribution, public visibility, owner/admin exclusion, rolling dedupe, and accepted-view cache updates.
@@ -470,7 +470,7 @@ Current migrations:
 - `20260916180000_sprint_4_photos.sql`: private edit bucket, corrected photo-path/admin validation, reference-safe cleanup claims, SHA-256 edit-attempt receipts, and owner-revert photo-reference release.
 - `20260916200000_sprint_4_events.sql`: 16-type trusted event foundation, raw-log RLS, transactional lifecycle events, rolling dedupe/cache compatibility, and grouped private owner/admin analytics.
 
-Sprint 4 release state: these two new migrations and the matching application changes are local implementation/verification only. They have **not** been applied or deployed to production in this task; the production baseline remains Sprint 3.1 until a separate release gate verifies history and deploys compatible code.
+Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
 
 Production history note:
 - The six pre-Phase-2 migrations describe the historical baseline that already existed in production. Earlier schema work was originally applied manually in Supabase SQL Editor, then Supabase migration history was repaired so the CLI would not replay those files.
@@ -490,7 +490,7 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
-Frozen V1 still requires data models/remaining functionality for favorites, exact-state search alerts and delivery deduplication, price-drop delivery, verified transactions, two-way reviews, reports, and centralized marketplace email delivery. Listing revisions are present in Sprint 3; Sprint 4 locally implements marketplace/contact events and the current Particular/store/admin aggregate foundation. Later favorite/alert/transaction/review analytics remain deferred, not satisfied by event scaffolding.
+Frozen V1 still requires data models/remaining functionality for favorites, exact-state search alerts and delivery deduplication, price-drop delivery, verified transactions, two-way reviews, reports, and centralized marketplace email delivery. Listing revisions are present in Sprint 3; Sprint 4 production implements marketplace/contact events and the current Particular/store/admin aggregate foundation. Later favorite/alert/transaction/review analytics remain deferred, not satisfied by event scaffolding.
 
 The existing `profiles` table is the Particular/store-owner identity foundation; do not add a separate seller-only account that would prevent one Particular from buying and selling.
 

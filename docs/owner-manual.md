@@ -4,7 +4,7 @@ This is the practical owner guide for Laria.
 
 `docs/functional-spec.md` is canonical for the frozen V1 product contract. This manual describes operations and current implementation; it must not be used to override that contract.
 
-Release boundary: Sprint 4 photo fixes and event/analytics features described below are **implemented locally, not deployed to production**. Do not expect them on `laria.audio` until a separate production release gate completes. Owner production QA for Sprint 4 follows that release; Sprint 5 has not started.
+Release boundary: Sprint 4 photo fixes and event/analytics features described below are **deployed on `laria.audio` as of 2026-09-17**. Both matching migrations and application commit `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` passed automated production verification. Owner production acceptance can now proceed; it has not been signed off automatically. See `docs/sprint-4-production-verification.md`. Sprint 5 has not started.
 
 ## What Laria Is
 
@@ -165,9 +165,9 @@ Account page `/mi-cuenta`:
 - Store Owner summary shows the application/trust state, rejection reason, pending/approved capacity, and whether new inventory requires moderation or may publish directly.
 - Owned inventory pages now show edit, owner hide/restore, mark-sold, and copied-relist actions according to each listing state. Moderation and administrative-hide reasons are visible to the owner.
 - Rejected rows can be corrected in the editor and returned through `Enviar nuevamente`; Particular and normal Tienda rows return to moderation.
-- Favorites and alerts are not exposed as working sections. Local Sprint 4 adds real Particular metrics inside summary/publications and activates Store Owner `Estadísticas`; production availability still awaits its separate release gate.
+- Favorites and alerts are not exposed as working sections. Production Sprint 4 adds real Particular metrics inside summary/publications and activates Store Owner `Estadísticas`.
 
-Store statistics `/mi-cuenta/tienda/estadisticas` (local Sprint 4):
+Store statistics `/mi-cuenta/tienda/estadisticas` (production Sprint 4):
 - Available only inside the authenticated Store Owner shell when the account owns a store.
 - Offers `Todo el historial`, `7 días`, and `30 días`; the default is 30 days.
 - Shows actual product impressions/views/WhatsApp contacts, store visits/contacts, current public active inventory, and seller-marked sold counts.
@@ -310,7 +310,7 @@ If a listing has more photos, the card shows arrows/dots. Extra photos are loade
 
 Detail pages show all listing photos.
 
-### Editing photos — local Sprint 4
+### Editing photos — production Sprint 4
 
 The owner editor supports add, remove, replace, reorder, and primary-photo changes with 2–10 photos, JPEG/PNG/WebP, and 5 MB per file. New edit uploads are private; proposed photos become visible in the editor/admin comparison without replacing the approved public set before moderation.
 
@@ -320,7 +320,7 @@ After an uncertain final response, retry in the same open editor to reuse the si
 
 Cleanup is a trusted, owner-bound operation, not a manual browser Storage delete. It protects live, sold, relisted/shared, and retained moderation-history references; errors remain visible/retryable. Old public/legacy photo URLs are preserved. Closing a page mid-upload may still leave an unattached private object; this sprint does not add a scheduled orphan sweeper.
 
-### Contact and event semantics — local Sprint 4
+### Contact and event semantics — production Sprint 4
 
 Only visible real browser activity records ordinary views/impressions; SSR, HEAD, and prefetch do not count. A card needs at least 50% viewport intersection. Views/impressions are deduplicated over a rolling 30-minute actor/session-and-target window, distinct from the random anonymous cookie's 24-hour lifetime. Owner/admin commercial activity is excluded.
 
@@ -461,26 +461,24 @@ To test locally:
 42. Trigger listing/revision/store moderation decisions and confirm the owner sees only their own newest-first notices in `Notificaciones`, can mark them read, and can follow rejection notices to the reason.
 43. Trigger a duplicate-RUC application error and confirm the UI says the RUC is already registered without identifying the other store owner.
 
-### Sprint 4 production owner retest — only after its separate release gate
+### Sprint 4 production owner retest — ready now
 
-The owner already accepted `STORE-018`, `DASH-008`, `NOTIF-001`, `NOTIF-002`, `LIST-013`, `REV-011`, and `REV-012` in production on **2026-09-16**. Do not treat them as new unsigned acceptance or overwrite that evidence. The remaining photo amendment defect `REV-014` has strong local SQL/API/browser coverage but still needs a fresh owner production retest after release.
+The owner already accepted `STORE-018`, `DASH-008`, `NOTIF-001`, `NOTIF-002`, `LIST-013`, `REV-011`, and `REV-012` in production on **2026-09-16**. Do not treat them as new unsigned acceptance or overwrite that evidence. The remaining photo amendment defect `REV-014` now has local and production automated SQL/API/actual-browser proof, but still needs the explicit owner production retest below.
 
-After the release owner confirms the matching migrations/application are live:
-- On an approved Particular or normal-Tienda listing, create a text proposal, then add/replace/remove/reorder photos repeatedly. Confirm one pending proposal, retained text changes, private proposed images, and unchanged public photos until approval (`REV-014`).
-- Restore approved photos while keeping a pending title change; then restore every difference and confirm cancellation. Try admin review after an owner amendment and confirm stale-version refusal and the refreshed exact photo order.
-- Confirm latest-version approval/rejection, hidden-state preservation, verified-store direct editing, revoked-verification moderation, immutable sold photos, and relisted-copy isolation. Do not test future transaction/review behavior as if it were implemented.
-- Test same-password recovery/security update: expect `La nueva contraseña debe ser diferente de tu contraseña actual.` Then use a different valid password and check normal login; invalid/expired links must still fail safely. Real inbox/link behavior is manual acceptance, not a local automated claim.
-- Check the Particular full-inventory summary and per-listing views/contacts/publication/sold metadata, including accounts with more than five listings and genuinely empty activity.
-- Check Store `Estadísticas` lifetime/7-day/30-day labels, real and zero activity, `Sin datos` denominators, historical-view explanation, public-active versus concurrent-cap counts, and absence of fake favorites/revenue.
-- On mobile and keyboard, confirm persistent role-appropriate account options, active statistics state, readable photo controls, immediately visible focused save/error notices, and optimized public photos with lazy thumbnails.
-- Confirm normal anonymous/authenticated WhatsApp contact works even when tracking fails. Laria never reads WhatsApp conversations or guarantees an off-platform sale.
+Required owner/manual checks, using real owned listings/stores:
+- `REV-014`: on an approved Particular or normal-Tienda listing, create a pending title/condition proposal, then add and save a photo. Amend/reorder/remove/replace photos and save repeatedly. Confirm exactly one evolving proposal retains text changes; public old photos remain until moderation. As admin, inspect the latest proposal and approve it; confirm the exact latest order/primary is promoted.
+- `PHOTO-015`: close the browser during upload, before finalization, then inspect the public catalog/listing state. PASS requires no finalized/public invalid listing. The exact row permits an orphan-storage limitation; do not invent a requirement for guaranteed background orphan cleanup.
+- `SANA-010`: visually inspect Particular summary/publications and Store `Estadísticas`, including empty activity. Confirm no fabricated revenue or GMV is displayed; off-platform contacts or seller-marked sold listings are not verified paid sales.
+- `AUTH-023`: request a real recovery email and use its link. Submit the current password and expect `La nueva contraseña debe ser diferente de tu contraseña actual.` Then reset to a different valid password and verify login. Automated production recovery used a generated QA token, not real-inbox delivery.
+- `WA-001`, `WA-002`, `WA-003`, `WA-004`: confirm the actual WhatsApp app/web destination launches anonymously and while authenticated, for Particular and store contact. Automated production checks proved canonical URLs, attribution and failure-safe navigation, but intercepted external launch rather than claiming a real conversation.
 
-Use only the exact existing registry IDs when recording results in `acceptance/cases.tsv`, and run `python3 -B acceptance/validate.py`. Never mark a manual production case Pass from this local implementation alone; do not read/regenerate XLSX during active sprints.
+Full-inventory metrics, Store lifetime/7/30 real/zero ratios, null denominators, desktop/mobile active menus, focused photo feedback, optimized decoded cards/detail images and lazy thumbnails already passed deterministic production browser checks. Do not repeat those checks or SQL/RLS/cap stress merely to duplicate automated proof. Optional owner usability feedback is welcome but not represented as a new manual PASS.
 
-Exact browser/manual retest IDs after release:
-- Photo workflow: `REV-014`, `PHOTO-010`, `PHOTO-011`, `PHOTO-012`, `PHOTO-013`, `PHOTO-015`, `PHOTO-016`, `PHOTO-017`, `PHOTO-018`, `PHOTO-019`, `PHOTO-020`, `PHOTO-021`, `PHOTO-022`, `PHOTO-023`, `PHOTO-024`, `PHOTO-025`, `PHOTO-026`, `PHOTO-027`, `PHOTO-030`.
-- Recovery copy: `AUTH-023`.
-- Actual contact/navigation and rendered metrics: `WA-001`, `WA-002`, `WA-003`, `WA-004`, `AN-001`, `AN-002`, `AN-007`, `AN-012`, `AN-013`, `SANA-001`, `SANA-003`, `SANA-004`, `SANA-005`, `SANA-006`, `SANA-008`, `SANA-009`, `SANA-010`, `SDASH-009`.
+Use only the exact existing registry IDs when recording results in `acceptance/cases.tsv`, and run `python3 -B acceptance/validate.py`. Never mark a manual production case Pass from automated release checks; do not read/regenerate XLSX during active sprints.
+
+Exact remaining owner/manual retest IDs: `REV-014`, `PHOTO-015`, `SANA-010`, `AUTH-023`, `WA-001`, `WA-002`, `WA-003`, `WA-004`.
+
+Production entry points: `/mi-cuenta`, `/mi-cuenta/publicaciones`, `/mi-cuenta/publicaciones/{id}/editar`, `/mi-cuenta/tienda/inventario`, `/mi-cuenta/tienda/estadisticas?periodo=0|7|30`, `/recuperar-contrasena`, `/mi-cuenta/seguridad`, and `/admin`. Compare public `/listados`, `/instrumentos/{slug}` and `/tiendas/{slug}` in a separate anonymous browser. Use your own IDs/slugs; temporary release QA accounts and content have been deleted.
 
 Do not repeat deterministic SQL/RLS attacks, raw-event authorization or cap races as manual QA. `SDASH-008` includes favorites, so the complete case cannot pass until that later feature exists. `LIFE-013` remains blocked for the verified-transaction/review sprint.
 
@@ -488,7 +486,7 @@ Valid region values are fixed to Peru regions. City fields show suggestions but 
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-The application does not yet implement required V1 favorites, alerts, verified transactions, reviews, reports, centralized lifecycle email delivery, or the remaining full moderation hub. Listing lifecycle, revision moderation, and in-app notifications are implemented. Sprint 4 completes local private photo editing and adds first-party contact/event tracking plus real owner analytics, pending a separate production release/acceptance gate. See the status matrix in `docs/functional-spec.md`.
+The application does not yet implement required V1 favorites, alerts, verified transactions, reviews, reports, centralized lifecycle email delivery, or the remaining full moderation hub. Listing lifecycle, revision moderation, and in-app notifications are implemented. Sprint 4 private photo editing, first-party contact/event tracking and real owner analytics are production-deployed; required owner acceptance remains pending. See the status matrix in `docs/functional-spec.md`.
 
 Do not build these post-V1 areas without a new product decision:
 - Payments.

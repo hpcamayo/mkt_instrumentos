@@ -2,6 +2,8 @@
 
 Verified 2026-09-17. This is the implementation/local-verification handoff, not a production release or manual production acceptance. Sprints 1–2 remain CLOSED / ACCEPTED. Sprint 5 was not started.
 
+Historical local report: the separate production release subsequently completed on 2026-09-17. Current deployment, hosted migration/security checks, production browser/integration evidence, cleanup audit and remaining owner QA are recorded in [sprint-4-production-verification.md](sprint-4-production-verification.md). Statements below about production not being changed describe this earlier local handoff, not the current release state.
+
 ## A. Acceptance registry
 
 Canonical source: acceptance/cases.tsv. The original 357 Test IDs and existing requirement/expected/steps fields remain unchanged. Updated 53 existing rows only in status/evidence columns (49 status changes; four evidence-only changes); added 16 cases, producing **373** cases.
