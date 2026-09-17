@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { sendBrowsingEvent } from "@/lib/marketplace-events-client";
 
-const VIEW_COUNT_WINDOW_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 type ListingDetailMetadataProps = {
   listingId: string;
@@ -24,44 +25,19 @@ export function ListingDetailMetadata({
   useEffect(() => {
     if (!trackView) return;
 
-    const storageKey = `listing-viewed:${listingId}`;
-    const viewedAt = Number(window.localStorage.getItem(storageKey));
-
-    if (
-      Number.isFinite(viewedAt) &&
-      Date.now() - viewedAt < VIEW_COUNT_WINDOW_MS
-    ) {
-      return;
-    }
-
     let isActive = true;
-
-    async function registerView() {
-      const response = await fetch(`/api/listings/${listingId}/view`, {
-        method: "POST",
+    function registerView() {
+      if (document.visibilityState !== "visible") return;
+      void sendBrowsingEvent({ type: "listing_view", listingId, source: "detail" }, listingId).then((payload) => {
+        if (isActive && typeof payload?.view_count === "number") setViewCount(payload.view_count);
       });
-
-      if (!response.ok) {
-        return;
-      }
-
-      const payload = (await response.json()) as {
-        view_count?: number;
-      };
-
-      window.localStorage.setItem(storageKey, String(Date.now()));
-
-      if (isActive && typeof payload.view_count === "number") {
-        setViewCount(payload.view_count);
-      }
     }
-
-    registerView().catch(() => {
-      // Best-effort metadata; viewing the listing should never fail because of it.
-    });
+    registerView();
+    document.addEventListener("visibilitychange", registerView);
 
     return () => {
       isActive = false;
+      document.removeEventListener("visibilitychange", registerView);
     };
   }, [listingId, trackView]);
 
@@ -85,7 +61,7 @@ function formatPublishedAgo(value: string) {
   }
 
   const diffMs = Date.now() - publishedDate.getTime();
-  const days = Math.max(0, Math.floor(diffMs / VIEW_COUNT_WINDOW_MS));
+  const days = Math.max(0, Math.floor(diffMs / DAY_MS));
 
   return `Publicado hace ${days} ${days === 1 ? "día" : "días"}`;
 }

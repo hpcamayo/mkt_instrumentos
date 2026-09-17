@@ -4,6 +4,7 @@ import { cache, Suspense, type ReactNode } from "react";
 import { ListingCard } from "@/components/listing-card";
 import { ListingDetailGallery } from "@/components/listing-detail-gallery";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
+import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PageContainer } from "@/components/page-container";
 import {
   getFullListingSpecs,
@@ -246,14 +247,13 @@ function ListingDetail({
                 </p>
               ) : (
                 <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
-                  <a
+                  <WhatsAppContactLink
                     href={buildWhatsAppUrl(listing)}
-                    target="_blank"
-                    rel="noreferrer"
+                    listingId={listing.id}
                     className="laria-button-primary min-h-12 w-full px-5 py-3 text-sm uppercase tracking-wide"
                   >
                     Preguntar por WhatsApp
-                  </a>
+                  </WhatsAppContactLink>
                   {listing.seller_type === "store" && store ? (
                     <Link
                       href={`/tiendas/${store.slug}`}
@@ -596,14 +596,14 @@ function SellerTrustBox({
 
       <div className="mt-5 grid gap-3">
         {!isSold ? (
-          <a
+          <WhatsAppContactLink
             href={buildWhatsAppUrl(listing)}
-            target="_blank"
-            rel="noreferrer"
+            listingId={listing.id}
+            source="seller_panel"
             className="laria-button-primary inline-flex w-full items-center justify-center px-4 py-3 text-sm"
           >
             {isStore ? "Escribir por WhatsApp" : "Contactar por WhatsApp"}
-          </a>
+          </WhatsAppContactLink>
         ) : null}
         {isStore && store ? (
           <Link
@@ -693,7 +693,7 @@ function RelatedListingsSection({
       {listings.length > 0 ? (
         <div className="grid grid-cols-1 gap-[18px] min-[460px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
           {listings.map((item) => (
-            <ListingCard key={item.id} listing={item} />
+            <ListingCard key={item.id} listing={item} source="recommendations" />
           ))}
         </div>
       ) : (

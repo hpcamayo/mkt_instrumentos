@@ -5,7 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { PageNotice } from "@/components/page-notice";
-import { getPasswordValidationMessage } from "@/lib/auth/password";
+import {
+  getPasswordUpdateErrorMessage,
+  getPasswordValidationMessage,
+} from "@/lib/auth/password";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 export function ForgotPasswordForm() {
@@ -49,7 +52,7 @@ export function PasswordUpdateForm({ mode }: { mode: "reset" | "change" }) {
     }
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
-    if (error) return setMessage("No se pudo actualizar la contraseña. Solicita un nuevo enlace o intenta nuevamente.");
+    if (error) return setMessage(getPasswordUpdateErrorMessage(error));
     const next = getSafeAuthRedirect(searchParams.get("next"), "/mi-cuenta");
     const destination = new URL(next, window.location.origin);
     destination.searchParams.set("password", "updated");

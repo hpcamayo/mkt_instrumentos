@@ -9,7 +9,7 @@ Supabase is used for:
 - Row Level Security policies.
 - Supabase Auth for admin login and the Phase 2 seller/store-owner account foundation.
 - Storage buckets for listing photos and store images.
-- RPC functions for admin checking, account ownership checks, publication validation, and listing view count increments.
+- RPC functions for admin checking, account ownership checks, publication validation, trusted event recording, and private account/admin aggregates.
 
 Environment variables used in current code:
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -18,7 +18,7 @@ Environment variables used in current code:
 
 Important:
 - `NEXT_PUBLIC_SUPABASE_URL` should be only the base Supabase URL, for example `https://xxxxx.supabase.co`, not `/rest/v1/`.
-- `SUPABASE_SERVICE_ROLE_KEY` is accessed only through `lib/supabase/admin-client.ts` for current trusted invite, email-lookup, and submission server routes and future server actions.
+- `SUPABASE_SERVICE_ROLE_KEY` is accessed through `lib/supabase/admin-client.ts` for trusted invite, email-lookup, submission, private-photo delivery/cleanup, and event-recording routes. The server-only event helper also uses it to sign first-party session and search-receipt HMACs.
 - `SUPABASE_SERVICE_ROLE_KEY` must stay server-only and must never be exposed to browser code or prefixed with `NEXT_PUBLIC_`.
 
 ## Current Tables
@@ -175,7 +175,7 @@ Current behavior:
 - New self-service Particular listings always set `owner_user_id`, remain `pending`, and copy profile contact values only as a compatibility snapshot. Approved owned listings resolve current seller identity/contact from `profiles`.
 - `created_by_source` tracks `legacy`, `self_service`, `admin_invite`, or `admin`.
 - `published_at` is used for newest sort and detail metadata. If null, detail metadata falls back to `created_at`.
-- `view_count` is incremented by an RPC when detail pages are opened.
+- `view_count` preserves the historical cache. After the local Sprint 4 events migration, only an accepted, deduplicated detail-view event increments it; SSR/GET/prefetch rendering does not. Historical counts are not converted into fabricated events.
 - Listing detail pages render `attributes` as user-facing specification rows through `lib/listing-specs.ts`, using labels/options from `lib/instrument-filters.ts`. Empty attributes are hidden and raw JSON should not be shown in the UI.
 - Listing detail seller/store trust boxes count approved listings by `store_id` for stores and by `owner_user_id` for account-owned Particular listings; legacy individual listings retain the WhatsApp fallback.
 - Seller and admin forms reuse `lib/instrument-filters.ts` for `instrument_type` and labeled `attributes` controls.
@@ -200,6 +200,7 @@ Current behavior:
 - Cards fetch additional photos on demand from `/api/listings/[id]/photos`.
 - Detail pages fetch the full relation and render main photo plus additional thumbnails.
 - Existing photo objects are not overwritten or deleted during owner edits. Proposed revision photos use new object paths and become live database photo rows only when the revision is approved.
+- New Sprint 4 edit objects live in the private `listing-edit-photos` bucket and use durable `/api/listing-images/{ownerId}/listing-edits/{listingId}/{attemptId}/{index}.{ext}` references. Existing public/legacy URLs are preserved. Reorder/replacement/removal change the ordered complete photo set, not the bytes of an existing object.
 
 ### `public.listing_revisions`
 
@@ -227,6 +228,28 @@ Purpose: ordered proposed photo sets for revisions without mutating `listing_pho
 - `image_url text`, `alt_text text`, and unique non-negative `sort_order`
 
 An accepted revision replaces the live photo rows atomically inside the admin review transaction. Rejected proposals remain historical moderation evidence.
+
+### `public.listing_edit_attempts` and `public.listing_photo_cleanup_claims`
+
+Added by the local-only `20260916180000_sprint_4_photos.sql` migration:
+
+- `listing_edit_attempts` stores an owner/attempt primary key, listing, SHA-256 payload hash, result, and timestamp. The owner-scoped edit RPC serializes the attempt and returns its prior receipt for the same payload without advancing the proposal version again; changed-payload replay fails. Listing/profile deletion cascades receipts.
+- `listing_photo_cleanup_claims` has a `(bucket, path)` primary key and timestamp. The service-only claim RPC locks the owned listing, rejects foreign paths, and excludes every live or historical revision reference across listings before claiming an unreferenced object. The photo validator refuses subsequently claimed paths, closing the reference-check/Storage-delete race. Storage deletion can safely retry a previously claimed path.
+- Both tables have RLS enabled with no `anon`/`authenticated` table grants. Failed/reverted uploads can be cleaned through the authenticated owner endpoint, not arbitrary browser Storage deletion. Approved, rejected, sold, and superseded history remains referenced; an owner-reverted empty proposal releases its unused photo component. There is no automatic orphan-retention scheduler.
+
+### `public.marketplace_event_types` and `public.marketplace_events`
+
+Added by the local-only `20260916200000_sprint_4_events.sql` migration. The extensible text/FK taxonomy starts with exactly 16 types:
+
+`listing_impression`, `listing_view`, `store_view`, `whatsapp_contact`, `store_contact`, `search`, `filter_applied`, `listing_creation_started`, `listing_submitted`, `listing_approved`, `listing_rejected`, `listing_sold`, `store_application_started`, `store_application_submitted`, `store_approved`, `store_verified`.
+
+Event rows contain UUID `id`, `event_type`, `created_at`, nullable listing/store/seller/actor/session/submission IDs, constrained `source`, bounded object `metadata`, `identity_key`, and unique nullable `dedupe_key`. Listing/store deletion cascades targeted events; deleted profiles null identity references. No historical events are backfilled.
+
+- Raw tables have RLS enabled and no browser-role read/write grants. The service-only recorder checks its service role, validates targets, derives the seller/store relationship, and enforces public eligibility. The HTTP server obtains the actor from Auth and the anonymous identity from a signed random first-party session; payloads cannot supply actor/seller authority.
+- Listing impressions/views and store views use a rolling 30-minute identity/entity window, preferring authenticated identity over session identity. An advisory transaction lock protects concurrent dedupe; the event UUID protects response-loss retries. Owner/admin commercial inspections are excluded. Separate explicit WhatsApp contact actions remain separate events.
+- Search receipts are signed from existing canonical filters and the actual result count. Database validation bounds metadata and derives `zero_results`; there is no parallel search engine or zero-result event type. Contact events never contain WhatsApp messages/drafts, passwords, tokens, IP addresses, or user-agent fingerprints.
+- Listing submission/approval/rejection/sold and store application/approval/verification triggers record real transitions inside their domain transaction. Creation/application-start events come from the trusted signed-submission start path. No favorite/alert/transaction/review behavior is implemented by these event types.
+- Owner reports use one grouped aggregate RPC, not one query per listing. Lifetime views retain the historical `view_count`; 7/30-day views and ratio denominators use recorded events only. Active counts require approved listings with an active parent store where applicable; sold counts describe current owner-marked state, not verified transactions. Null-denominator ratios remain null. Raw buyer identities and future revenue/favorite metrics are not returned.
 
 ### `public.notifications`
 
@@ -277,8 +300,13 @@ RLS is enabled on:
 - `listing_photos`
 - `listing_revisions`
 - `listing_revision_photos`
+- `listing_edit_attempts`
+- `listing_photo_cleanup_claims`
+- `marketplace_event_types`
+- `marketplace_events`
 - `store_members`
 - `store_photos`
+- `notifications`
 
 Public read policies:
 - Active stores are readable by `anon` and `authenticated`.
@@ -318,9 +346,13 @@ Admin policies:
 - Central public predicate: approved Particular inventory, or approved store inventory whose parent store is active.
 
 `public.increment_listing_view_count(p_listing_id uuid)`:
-- Security definer function for public view-count increments.
-- Updates only approved listings.
-- Returns the next `view_count`.
+- Historical compatibility function; the local Sprint 4 migration revokes public/anonymous/authenticated execution so it cannot bypass event dedupe. The HTTP compatibility endpoint uses the trusted event recorder instead.
+
+`public.record_marketplace_event(event_type, session_id, event_id, actor_user_id, listing_id, store_id, source, metadata, submission_id)`:
+- Service-only trusted write path with canonical attribution, public visibility, owner/admin exclusion, rolling dedupe, and accepted-view cache updates.
+
+`public.get_account_analytics(days, owner_id)` and `public.get_marketplace_admin_analytics(days)`:
+- Authenticated owner reports default to `auth.uid()`; only an admin may request another owner's aggregate. Global reports require admin authority. Supported periods are all recorded history (`0`), `7`, and `30` days; raw event/buyer directories remain inaccessible.
 
 `public.is_store_member(store_id)`, `public.is_store_owner(store_id)`, and `public.is_approved_store_member(store_id)`:
 - Security-definer helpers for account and store membership RLS.
@@ -354,12 +386,13 @@ Admin policies:
 `public.enforce_store_inventory_cap()`:
 - Trigger invariant for inserts and counted-state transitions. A per-store advisory transaction lock prevents concurrent over-cap writes.
 
-`public.update_owned_listing(listing_id, immediate_fields, moderated_fields, photos)`:
+`public.update_owned_listing(listing_id, immediate_fields, moderated_fields, photos, attempt_id)`:
 - Locks and validates the owner-bound listing. Price, description, location, and supported attributes apply immediately. Condition joins title, category, instrument type, brand, model, and photos in the moderated proposal for Particular and normal Tienda inventory.
 - For approved Particular/normal-Tienda rows, title, category, instrument type, brand, model, and photos create one pending revision while the live row remains unchanged. Nonpublic rows and eligible verified-store rows apply the complete valid edit directly.
 - If a pending proposal already exists, later moderated field/photo saves merge into that row under the listing lock, increment its version, preserve unchanged proposed values, and cancel it if no difference from live remains.
 - A moderated instrument-type change carries its compatible dynamic attributes inside the same revision, preventing either the old or proposed public version from exposing a mismatched type/attribute pair.
-- Proposed photo sets contain 2–10 unique URLs. Every URL must already belong to the listing or resolve to an existing ≤5 MB JPEG/PNG/WebP object in that owner's listing-edit folder, so direct RPC callers cannot inject arbitrary photos.
+- Proposed photo sets contain 2–10 unique URLs. Every URL must already belong to the live/pending photo set or resolve to an existing owned ≤5 MB JPEG/PNG/WebP private edit object at the exact listing/attempt path, using a literal-dot extension check. Admin promotion validates the retained pending references rather than treating the admin as the uploading owner.
+- Optional `attempt_id` adds an idempotent receipt; existing four-argument calls remain compatible. New HTTP edit attempts use a signed owner/listing-bound token and the private upload folder.
 - Store verification alone leaves an existing pending edit revision untouched. If the verified owner later applies a direct moderated/photo edit, that older pending proposal is atomically retained as `cancelled`/superseded so it cannot overwrite the newer live values.
 
 `public.set_owned_listing_lifecycle(listing_id, action)`:
@@ -379,8 +412,16 @@ Admin policies:
 - Allowed MIME types: JPEG, PNG, WebP.
 - Public select policy for approved listing images; anonymous insert is removed.
 - Particular submissions upload through authenticated owner paths `{auth.uid()}/{submissionId}/{sortOrder}.{ext}`.
-- Listing edit uploads use `{auth.uid()}/listing-edits/{listingId}/{attemptId}/{sortOrder}.{ext}` and are verified against the owner before they can enter a direct edit or pending revision.
+- New edit staging in this public bucket is denied. Existing public/legacy edit URLs already attached to live/pending records remain compatible and are not relocated by the migration.
 - Signed completion and cleanup remain server-controlled and service-role credentials never reach the browser.
+
+`listing-edit-photos`:
+
+- Private bucket, ≤5 MB JPEG/PNG/WebP objects.
+- Authenticated editable-listing owners may append beneath `{auth.uid()}/listing-edits/{listingId}/{attemptId}/{sortOrder}.{ext}`; browser overwrite/delete is not granted.
+- `/api/listing-images/[...path]` checks references before streaming bytes through the server-only Storage client. Approved live inventory or retained sold-history photos are public only with an active parent store where applicable. Owner/admin may read retained nonpublic live/revision references; unrelated and unreferenced uploads return 404, including to their uploader before attachment.
+- Responses are `private, no-store` with `nosniff`. Approval promotes the database references atomically without copying bytes to a public bucket. Rejected/superseded revision objects and sold/relist source references are protected from cleanup.
+- `POST /api/listings/[id]/photo-cleanup` authenticates the exact owner and uses `claim_listing_photo_cleanup` before Storage removal; protected/referenced paths are omitted rather than deleted.
 
 `store-assets`:
 - Public bucket.
@@ -390,8 +431,7 @@ Admin policies:
 - Store applications and profile edits upload optional logo, banner, and physical-store photos under `{auth.uid()}/{submissionOrStoreId}/...`.
 - Authenticated Store Owners can upload/update/delete only beneath their own top-level folder.
 
-Tradeoff: buckets are public. Moderation controls public app visibility through database status, not private object access.
-Database/store visibility controls public discovery. Because the bucket remains public for responsive image delivery, undiscoverable abandoned objects still require operational retention cleanup.
+Legacy limitation: initial listing photos and store assets remain in public buckets for existing URL/image compatibility. Database moderation prevents discovery but cannot make a known existing public Storage URL private. Sprint 4 guarantees private staging/access gating for new listing edit objects; it does not claim to revoke previously public URLs. Abandoned initial uploads still require operational retention cleanup.
 
 ## Indexes and Metadata
 
@@ -412,6 +452,8 @@ Important listing indexes include:
 
 `attributes` uses a GIN index because advanced filters rely on JSONB containment.
 
+Sprint 4 event indexes cover recent timestamps, listing/type/time, store/time, seller/time, and identity/time, plus a partial authenticated buyer/listing contact index for future eligibility without exposing a user directory. The event UUID and unique `dedupe_key` protect retries/funnel uniqueness. Account/admin counts are grouped SQL aggregates; no per-card/per-listing event-count request is introduced.
+
 ## Migrations
 
 Current migrations:
@@ -425,6 +467,10 @@ Current migrations:
 - `20260910190000_store_sprint_2.sql`: Store Owner/application ownership, normalized unique RUC, optional store photos, active-parent public visibility, trusted review/verification RPCs, verified direct publication, and serialized 50-item cap.
 - `20260913120000_listing_sprint_3.sql`: listing lifecycle reasons/provenance, immutable sold history and relist lineage, pending revisions and proposed photos, owner/admin moderation RPCs, append-only listing-photo storage, and cap-safe restoration/relisting.
 - `20260916120000_sprint_3_1_acceptance_fixes.sql`: amendable/versioned pending revisions, stale-admin protection, proposal photo reuse, owner notifications/RLS/read state, and lifecycle notification events.
+- `20260916180000_sprint_4_photos.sql`: private edit bucket, corrected photo-path/admin validation, reference-safe cleanup claims, SHA-256 edit-attempt receipts, and owner-revert photo-reference release.
+- `20260916200000_sprint_4_events.sql`: 16-type trusted event foundation, raw-log RLS, transactional lifecycle events, rolling dedupe/cache compatibility, and grouped private owner/admin analytics.
+
+Sprint 4 release state: these two new migrations and the matching application changes are local implementation/verification only. They have **not** been applied or deployed to production in this task; the production baseline remains Sprint 3.1 until a separate release gate verifies history and deploys compatible code.
 
 Production history note:
 - The six pre-Phase-2 migrations describe the historical baseline that already existed in production. Earlier schema work was originally applied manually in Supabase SQL Editor, then Supabase migration history was repaired so the CLI would not replay those files.
@@ -444,7 +490,7 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
-Frozen V1 still requires data models for favorites, exact-state search alerts and delivery deduplication, price-drop delivery, marketplace/contact events, verified transactions, two-way reviews, reports, analytics, and centralized marketplace email delivery. Listing revisions are now present in the Sprint 3 migration.
+Frozen V1 still requires data models/remaining functionality for favorites, exact-state search alerts and delivery deduplication, price-drop delivery, verified transactions, two-way reviews, reports, and centralized marketplace email delivery. Listing revisions are present in Sprint 3; Sprint 4 locally implements marketplace/contact events and the current Particular/store/admin aggregate foundation. Later favorite/alert/transaction/review analytics remain deferred, not satisfied by event scaffolding.
 
 The existing `profiles` table is the Particular/store-owner identity foundation; do not add a separate seller-only account that would prevent one Particular from buying and selling.
 

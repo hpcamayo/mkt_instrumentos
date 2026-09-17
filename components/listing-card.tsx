@@ -4,6 +4,8 @@ import { MarketplaceImage as Image } from "@/components/marketplace-image";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useListingImpression } from "@/components/marketplace-telemetry";
+import type { EventSource } from "@/lib/marketplace-event-payload";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import {
   formatPrice,
@@ -17,9 +19,11 @@ import {
 
 type ListingCardProps = {
   listing: ListingCardData;
+  source?: EventSource;
 };
 
-export function ListingCard({ listing }: ListingCardProps) {
+export function ListingCard({ listing, source = "catalog" }: ListingCardProps) {
+  const impressionRef = useListingImpression(listing.id, source);
   const store = normalizeStore(listing);
   const initialPhotos = listing.listing_photos;
   const [photos, setPhotos] = useState<ListingPhotoData[]>(initialPhotos);
@@ -128,7 +132,7 @@ export function ListingCard({ listing }: ListingCardProps) {
   }
 
   return (
-    <article className="group overflow-hidden rounded-lg border border-laria-fog bg-white shadow-[0_14px_34px_rgb(16_18_23/0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-laria-blue/35 hover:shadow-[0_22px_48px_rgb(16_18_23/0.11)]">
+    <article ref={impressionRef} className="group overflow-hidden rounded-lg border border-laria-fog bg-white shadow-[0_14px_34px_rgb(16_18_23/0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-laria-blue/35 hover:shadow-[0_22px_48px_rgb(16_18_23/0.11)]">
       <div className="relative aspect-[4/3] bg-laria-cloud">
         {activePhoto ? (
           <Image

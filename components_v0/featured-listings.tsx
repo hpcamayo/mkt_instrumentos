@@ -2,6 +2,7 @@ import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { BadgeCheck, MapPin } from "lucide-react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
+import { ListingImpressionBoundary } from "@/components/marketplace-telemetry";
 
 export type FeaturedListing = {
   id: string;
@@ -88,7 +89,9 @@ export function FeaturedListings({
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {visibleListings.map((listing, index) => (
-            <div key={listing.id}>
+            hasRealListings ? <ListingImpressionBoundary key={listing.id} listingId={listing.id}>
+              <ListingPreviewCard listing={listing} isPlaceholder={false} visualIndex={index} />
+            </ListingImpressionBoundary> : <div key={listing.id}>
               <ListingPreviewCard
                 listing={listing}
                 isPlaceholder={!hasRealListings}

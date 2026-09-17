@@ -118,6 +118,7 @@ const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     assert.match(await soldPage.text(), /Vendido/);
     console.log("PASS: Particular hide/restore/sold URL/relist canonical-title regression");
   } finally {
+    if (users.length) assert.equal((await service.from("marketplace_events").delete().in("actor_user_id", users.map((user) => user.id))).error, null);
     if (listings.length) {
       const revisions = await service.from("listing_revisions").select("id").in("listing_id", listings);
       assert.equal(revisions.error, null);

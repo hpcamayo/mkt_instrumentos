@@ -15,6 +15,8 @@ Browser
 
 The codebase currently favors server-rendered public pages with small client islands for forms, admin auth/moderation, filters, card photo carousel behavior, and listing detail metadata.
 
+Implementation boundary: Sprint 4 photo, event, and analytics changes below are **local implementation only**, not deployed to production. Sprints 1–2 remain CLOSED / ACCEPTED; Sprint 3/3.1 production acceptance is recorded in the canonical TSV. A separate release gate and owner production retest are required before accepting the new behavior. Sprint 5 has not started.
+
 ## Core Responsibilities
 
 Next.js handles:
@@ -23,7 +25,7 @@ Next.js handles:
 - Client interactive components.
 - Public forms.
 - Admin UI.
-- Route handlers for photo loading and view count increments.
+- Route handlers for photo loading, authorized edit-image delivery/cleanup, and trusted first-party event/contact ingestion.
 - Calls to Supabase.
 
 Supabase handles:
@@ -33,9 +35,9 @@ Supabase handles:
 - Pending listing revisions and proposed photo sets.
 - Seller/store-owner account ownership tables.
 - Listing photos.
-- Public image storage buckets.
+- Public initial-submission image buckets and private listing-edit staging.
 - Admin auth through Supabase Auth.
-- RPC helpers such as `is_admin()`, store membership checks, publication validation, owner lifecycle/edit operations, revision review, and `increment_listing_view_count()`.
+- RPC helpers such as `is_admin()`, store membership checks, publication validation, owner lifecycle/edit operations, revision review, trusted event recording, and owner-scoped analytics.
 
 Vercel handles:
 - Production deployments.
@@ -52,7 +54,7 @@ GitHub is the source repository. Supabase schema is managed separately through S
 - Uses `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - Returns `null` if either variable is missing.
 - Uses `persistSession: false`.
-- Used for server/public reads and public form inserts/uploads.
+- Used for server/public reads. Account-bound submission writes/uploads use the authenticated browser/server clients and trusted finalization paths, not anonymous listing inserts.
 
 `lib/supabase/browser-client.ts` exposes `getSupabaseBrowserClient()`:
 - Uses the same public env vars.
@@ -85,8 +87,15 @@ app/
   api/auth/check-email/route.ts    Server-only duplicate-email availability check
   api/listings/[id]/manage/route.ts
                                     Owner listing edit/lifecycle endpoint
+  api/listings/[id]/photo-cleanup/route.ts
+                                    Owner-bound, reference-checked cleanup
+  api/listing-images/[...path]/route.ts
+                                    Authorized delivery of private edit photos
   api/listings/[id]/photos/route.ts
   api/listings/[id]/view/route.ts
+  api/events/session/route.ts       Signed first-party session bootstrap
+  api/events/route.ts               Bounded event batches
+  api/contact/route.ts              Canonical WhatsApp destination + intent event
   confirmacion-correo/page.tsx     Email confirmation success page
   instrumentos/[slug]/page.tsx     Listing detail
   listados/page.tsx                Listings/search page
@@ -104,6 +113,8 @@ app/
                                     Store inventory view
   mi-cuenta/tienda/publicar/page.tsx
                                     Store inventory submission
+  mi-cuenta/tienda/estadisticas/page.tsx
+                                    Owner-only real store analytics (local Sprint 4)
   publicar/page.tsx                Redirects to /vender
   registrar-tienda/page.tsx        Compatibility gate/redirect to account store area
   registro/vendedor/page.tsx       Individual seller account signup
@@ -146,6 +157,18 @@ Sprint 3 adds owner/admin hide provenance and reasons, rejection reasons, sold-t
 Approved Particular and normal-Tienda edits are split by trust boundary. Price, description, location, and supported attributes apply to the live row immediately. Title, category, instrument type, brand, model, condition, and photos are stored in one `listing_revisions` proposal; proposed photos live in `listing_revision_photos`, and the existing approved row/photos remain public until admin approval. A later moderated save locks and amends the same pending row, preserves its other proposed values, replaces the latest photo set, removes reverted differences, and increments `version`. Admin review supplies the version displayed; a mismatch aborts and reloads the latest proposal. When instrument type changes, its dependent attribute set travels with that proposal so incompatible attributes do not leak onto the old public type. Admin approval patches only proposed fields in one transaction and never changes a concurrent owner/admin hide state. A qualifying Tienda Verificada bypasses revision moderation and applies the validated edit directly; if that later direct edit supersedes a pre-verification pending proposal, the old proposal is retained as cancelled history.
 
 If a listing is marked sold while a revision waits, the proposal becomes `cancelled` and cannot be applied to the historical row. Owner or admin hiding leaves the proposal pending; approving it patches content but preserves the current hidden status. Store verification does not auto-approve pending edit revisions, while future edits check current verification state inside the trusted transaction. Revocation therefore restores moderation for later edits immediately.
+
+### Listing-photo editing — local Sprint 4
+
+New edits receive an owner/listing-bound HMAC capability from `POST /api/listings/[id]/manage` with `action='start_edit'`. Files are appended to the private `listing-edit-photos` bucket at `{ownerId}/listing-edits/{listingId}/{attemptId}/{sortOrder}.{ext}`. Stored URLs use `/api/listing-images/...`, not public bucket URLs. Existing public/legacy objects and initial signed submission paths are unchanged; the public bucket no longer accepts the edit-folder convention.
+
+The database validates the complete ordered 2–10-photo set, owner/listing scope, actual Storage metadata, MIME, size, duplicate URLs, and retired cleanup claims. Pending photo amendments reuse the same versioned revision and preserve other pending moderated fields. The editor can explicitly restore the approved photo order, which removes only the photo difference; reverting every difference cancels the empty proposal. Approval atomically promotes the latest set, while rejection, superseded/sold-cancelled proposals, sold source photos, and relisted-copy references retain their audit/history protection.
+
+`listing_edit_attempts` stores a payload SHA-256 and result under a transaction-serialized owner/attempt key. Replaying the identical signed request returns that result without another revision version; changing its payload is rejected. The client retains the prepared token/upload payload in memory after an uncertain final response, avoids duplicate busy submissions, and remounts from refreshed server revision state after success.
+
+`/api/listing-images/...` serves referenced public live/historical photos only when their listing/store eligibility permits it, otherwise requires the owning session or trusted admin. Unattached uploads and other owners' proposals return 404. Private previews bypass the anonymous Next.js image optimizer; public cards/detail keep responsive resizing and lazy thumbnails.
+
+The owner-bound cleanup endpoint calls a service-only claim RPC under the same listing row lock as editing. It checks every live and revision/history reference, records an irrevocable retirement claim before deleting eligible bytes, and prevents a concurrent edit from attaching them afterward. Storage/RPC failures are explicit and retryable, not false empty-success. Browser users never directly delete or overwrite historical objects. This is targeted partial-upload/discard cleanup, not a new scheduled orphan collector.
 
 ### Stores
 
@@ -218,6 +241,8 @@ The listing detail route composes `ListingDetailGallery` in a sticky desktop col
 
 Account UI uses the browser Supabase client for interactive auth. `/login` supports password login and magic-link login; the login magic-link path passes `shouldCreateUser:false` to avoid creating accounts accidentally. `/recuperar-contrasena` and `/restablecer-contrasena` use Supabase Auth recovery through the same callback, while `/mi-cuenta/seguridad` performs authenticated password changes. `/registro/vendedor` and `/registro/tienda` create distinct account types with normalized profile metadata. The auth-user trigger persists name, WhatsApp, city, and region immediately. `/auth/callback` accepts PKCE `code` callbacks and server-verifiable `token_hash` callbacks, writes the Supabase session cookies on its returned redirect, and repairs incomplete Particular or Store Owner profiles from trusted Auth metadata when possible.
 
+The local Sprint 4 password form maps only Supabase's safe `same_password` code to `La nueva contraseña debe ser diferente de tu contraseña actual.` Unknown provider failures stay generic. It never retrieves, stores, or manually compares the existing plaintext password; callback/recovery/session behavior is unchanged.
+
 `/vender` is protected in middleware and again in its Server Component, and Store Owner accounts are directed to `/mi-cuenta/tienda/publicar` instead of creating Particular inventory. The browser keeps direct-to-Storage uploads and retry recovery, while all submission capabilities are HMAC-signed and bound to `auth.uid()`. Authenticated uploads use `{userId}/{submissionId}/{sortOrder}.{ext}`; `/api/submissions` revalidates account/store ownership and a service-only idempotent RPC atomically inserts the application/listing plus photo rows. A normal or pending store produces pending inventory; an active verified store may approve a qualifying new listing in the same transaction.
 
 Approved account-owned Particular detail pages join the seller's profile under RLS and resolve current name, WhatsApp, city, and region dynamically. Legacy `owner_user_id=null` listings continue using their historical contact fields. More-from-seller grouping uses ownership when available and WhatsApp only for legacy rows.
@@ -226,13 +251,27 @@ The sold-listing detail exception is server-only: `app/instrumentos/[slug]/page.
 
 Seller signup checks duplicate emails through `app/api/auth/check-email/route.ts` before calling Supabase `signUp()`. The route uses a service-only indexed Auth email lookup and returns only an availability flag, because `profiles` does not currently store email. Repeated signup attempts show a Spanish error and a link to `/login` instead of a false "check your email" success state.
 
-Signup confirmation emails redirect through `/auth/callback?next=%2Fmi-cuenta%3Fconfirmed%3D1`; the token-hash callback/session behavior is unchanged. The application already supplies trusted signup `account_type` metadata, but the production hosted confirmation template was still static Particular copy when audited on 2026-09-13. The exact required neutral-subject and conditional-body configuration is recorded in `docs/auth-email-templates.md` for the release gate. `/confirmacion-correo` remains a legacy standalone success page.
+Signup confirmation emails redirect through `/auth/callback?next=%2Fmi-cuenta%3Fconfirmed%3D1`; the token-hash callback/session behavior is unchanged. Signup supplies trusted `account_type` metadata for the conditional Particular/Tienda body and neutral subject documented in `docs/auth-email-templates.md`. Sprint 4 does not introduce a hosted-template change or new callback format. `/confirmacion-correo` remains a legacy standalone success page.
 
 Invite setup pages require an authenticated Supabase session after the invite callback. `/registro/vendedor/invitacion` completes a Particular seller profile and continues to `/vender`; `/registro/tienda/invitacion` completes a store-owner profile and continues to `/registrar-tienda` for the store application. Invite routing depends on `account_type` metadata when available. If metadata/profile type does not match the route, the page shows a recovery panel instead of changing account type blindly. Temporary passwords are not used.
 
 The admin invite endpoint builds Supabase `redirectTo` URLs as `/auth/callback?next=/registro/.../invitacion`, so the app callback exchanges the Supabase code before sending the user to the seller/store setup page. Seller invite metadata stores `account_type='seller'` plus `invite_account_type='individual'`; store-owner invite metadata stores `account_type='store_owner'`.
 
 Location onboarding uses `components/location-fields.tsx` with a fixed Peru region list from `lib/location.ts`. Region values are normalized to canonical labels such as `Junín`; city uses suggestions but remains free text after trimming.
+
+## First-party events and owner analytics — local Sprint 4
+
+`marketplace_events` stores typed events with canonical listing/store/seller relations, an optional Auth-verified actor, random session ID, timestamp, allowlisted source, bounded metadata, and replay keys. Raw tables and `record_marketplace_event()` are service-only; ordinary accounts receive aggregate RPC results, never a buyer directory or global event log.
+
+The server obtains actors with Supabase `getUser()` and uses a signed random first-party `laria-marketplace-session` cookie: HttpOnly, SameSite=Lax, Secure in production, and 24-hour expiry. Browser payloads cannot supply actor/seller authority, arbitrary metadata, or administrative lifecycle events. No raw IP, invasive fingerprint, WhatsApp draft/message text, password, or token is product-event data.
+
+Card impressions require at least 50% real viewport intersection and a visible document. Detail/store views are client-visible events, not SSR, HEAD, or prefetch effects. The database serializes a **rolling 30-minute** identity/entity/event window for impressions and views; authenticated identity survives session rotation, while anonymous identity is intentionally session-scoped. Owners and admins are excluded from ordinary commercial view/contact activity. Contacts are separate real click intents with event-ID replay protection, not deduplicated conversations or unique buyers. The WhatsApp UI uses the server's current canonical contact URL and a short bounded tracking deadline; telemetry failure preserves the existing safe destination.
+
+Search/filter events carry a short-lived signed receipt of the existing server-parsed filters and actual result count; pagination is not a new filter. Submission-start receipts and transaction triggers record authoritative submission, approval, rejection, sold, store-application, approval, and verification transitions. Same-attempt transport/finalization retries cannot invent another logical lifecycle event; no historical synthetic events are backfilled.
+
+`get_account_analytics()` checks the authenticated owner (or trusted admin) and performs grouped indexed aggregates. `lib/account-analytics.ts` validates its JSON and caches only within the current server render. Particular summary uses all owned listings, not the latest-five presentation list. Both management tables include real views/contacts, first-publication date, status, and sold date. Store Owners with a store have the real `/mi-cuenta/tienda/estadisticas` destination with lifetime/7-day/30-day windows (default 30).
+
+Lifetime listing views use the preserved `view_count` cache, including pre-event history; new accepted detail events increment that same cache once. Seven/thirty-day views use only events. CTR is recorded detail views / recorded impressions; contact rate is recorded product contacts / recorded detail views in the same window. Zero denominators display `Sin datos`; unavailable RPCs display unavailable, never invented zero. Active inventory means currently approved **and public** (active parent store); sold counts mean current seller-marked state, not verified paid sales. No favorite metrics, revenue, transaction analytics, or full admin analytics hub is implemented in this sprint. `get_marketplace_admin_analytics()` supplies a restricted aggregate RPC foundation only.
 
 ## Styling
 

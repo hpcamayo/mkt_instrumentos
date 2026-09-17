@@ -9,6 +9,8 @@ import {
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { notFound } from "next/navigation";
 import { ListingCard } from "@/components/listing-card";
+import { StoreVisitTelemetry } from "@/components/marketplace-telemetry";
+import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PageContainer } from "@/components/page-container";
 import { buildStoreWhatsAppUrl, type ListingCardData } from "@/lib/listings";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
@@ -154,6 +156,7 @@ function StoreView({
       as="section"
       className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6"
     >
+      <StoreVisitTelemetry storeId={store.id} />
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="relative h-40 bg-slate-100 sm:h-56">
           {store.banner_url ? (
@@ -215,14 +218,14 @@ function StoreView({
             ) : null}
           </div>
 
-          <a
+          <WhatsAppContactLink
             href={buildStoreWhatsAppUrl(store)}
-            target="_blank"
-            rel="noreferrer"
+            storeId={store.id}
+            source="store"
             className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 md:w-auto"
           >
             Escribir a la tienda
-          </a>
+          </WhatsAppContactLink>
         </div>
       </div>
 
@@ -247,7 +250,7 @@ function StoreView({
       ) : listings.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} />
+            <ListingCard key={listing.id} listing={listing} source="store" />
           ))}
         </div>
       ) : (

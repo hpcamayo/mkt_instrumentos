@@ -7,8 +7,10 @@ export const metadata = { title: "Editar publicación" };
 
 export default async function ListingEditPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ guardado?: string }>;
 }) {
   const { id } = await params;
   const { user, profile, store, supabase } = await getAccountContext();
@@ -17,7 +19,7 @@ export default async function ListingEditPage({
   const { data: listing } = await supabase
     .from("listings")
     .select(
-      "id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,region,description,owner_user_id,store_id,hidden_source,listing_photos(id,image_url,alt_text,sort_order)",
+      "id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,region,description,owner_user_id,store_id,hidden_source,updated_at,listing_photos(id,image_url,alt_text,sort_order)",
     )
     .eq("id", id)
     .eq("owner_user_id", user.id)
@@ -53,6 +55,13 @@ export default async function ListingEditPage({
     .maybeSingle();
 
   const proposedFields = new Set(pendingRevision?.changed_fields ?? []);
+  const { guardado } = await searchParams;
+  const notices: Record<string, string> = {
+    revision: "Los cambios inmediatos ya se aplicaron. Los cambios principales quedaron en revisión y la versión pública anterior sigue visible.",
+    revision_amended: "Actualizamos la propuesta pendiente con tus cambios más recientes. La versión pública anterior sigue visible.",
+    revision_cancelled: "Cancelamos la propuesta porque ya coincide con la versión pública aprobada.",
+    direct: "Los cambios se guardaron correctamente.",
+  };
   const editableListing = pendingRevision
     ? {
         ...listing,
@@ -76,7 +85,10 @@ export default async function ListingEditPage({
         <h1 className="mt-1 text-3xl font-black text-laria-ink">Editar {listing.title}</h1>
       </div>
       <ListingEditForm
+        key={`${listing.id}:${listing.updated_at}:${pendingRevision?.id ?? "live"}:${pendingRevision?.version ?? 0}`}
         listing={{ ...editableListing, attributes: editableListing.attributes as Record<string, unknown> | null }}
+        livePhotos={listing.listing_photos}
+        initialNotice={guardado ? notices[guardado] ?? "" : ""}
         hasPendingRevision={Boolean(pendingRevision)}
         isVerifiedStore={Boolean(listing.store_id && store?.status === "active" && store.is_verified)}
         returnHref={returnHref}

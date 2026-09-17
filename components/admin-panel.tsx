@@ -1006,6 +1006,11 @@ function RevisionPhotos({
             alt={photo.alt_text ?? title}
             width={320}
             height={240}
+            // The optimizer fetches anonymously; private moderation previews
+            // must instead use the admin browser's authenticated cookies.
+            unoptimized={photo.image_url.startsWith("/api/listing-images/")}
+            loading="lazy"
+            sizes="(max-width: 1023px) 50vw, 320px"
             className="aspect-[4/3] w-full rounded border border-laria-fog object-cover"
           />
         ))}

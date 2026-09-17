@@ -11,6 +11,7 @@ import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import type { Json } from "@/lib/supabase/database.types";
+import { getMarketplaceSession, recordMarketplaceEvent } from "@/lib/marketplace-events-server";
 import {
   createSubmissionToken,
   readSubmissionToken,
@@ -32,6 +33,9 @@ export async function POST(request: Request) {
         : await getStoreOwnerAccount(body.kind === "store_listing");
     if (!account.ok) return failure(account.message, account.status);
     const started = createSubmissionToken(body.kind, secret, account.userId);
+    try {
+      await recordMarketplaceEvent({ type: body.kind === "store" ? "store_application_started" : "listing_creation_started", eventId: started.id, sessionId: await getMarketplaceSession(), actorId: account.userId, submissionId: started.id, source: "submission" });
+    } catch { /* A telemetry outage must not break signed publication. */ }
     return NextResponse.json({
       ...started,
       folder: `${account.userId}/${started.id}`,

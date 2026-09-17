@@ -58,3 +58,22 @@ function sign(payload: string, secret: string) {
     .update(`marketplace-submission:${payload}`)
     .digest("base64url");
 }
+
+export function createListingEditToken(listingId: string, ownerUserId: string, secret: string) {
+  const attemptId = randomUUID();
+  const payload = Buffer.from(JSON.stringify({ listingId, ownerUserId, attemptId })).toString("base64url");
+  const signature = createHmac("sha256", secret).update(`listing-edit:${payload}`).digest("base64url");
+  return { attemptId, token: `${payload}.${signature}` };
+}
+
+export function readListingEditToken(token: string, listingId: string, ownerUserId: string, secret: string) {
+  try {
+    const [payload, signature, extra] = token.split(".");
+    if (!payload || !signature || extra) return null;
+    const expected = Buffer.from(createHmac("sha256", secret).update(`listing-edit:${payload}`).digest("base64url"));
+    const actual = Buffer.from(signature);
+    if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
+    const value = JSON.parse(Buffer.from(payload, "base64url").toString());
+    return value.listingId === listingId && value.ownerUserId === ownerUserId && /^[0-9a-f-]{36}$/.test(value.attemptId) ? value.attemptId as string : null;
+  } catch { return null; }
+}

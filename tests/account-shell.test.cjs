@@ -30,7 +30,7 @@ test("Store Owner navigation changes safely when an owner-bound store exists", (
   const withoutStore = getAccountNavigationItems("store_owner", false);
   assert.deepEqual(withoutStore.map((item) => item.label), ["Resumen", "Solicitud de tienda", "Notificaciones", "Perfil", "Seguridad"]);
   const withStore = getAccountNavigationItems("store_owner", true);
-  assert.deepEqual(withStore.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar producto", "Notificaciones", "Perfil", "Seguridad"]);
+  assert.deepEqual(withStore.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar producto", "Estadísticas", "Notificaciones", "Perfil", "Seguridad"]);
   assert.equal(withStore.some((item) => /publicaciones|instrumento/i.test(item.label)), false);
 });
 
@@ -40,6 +40,9 @@ test("account navigation keeps a precise active section", () => {
   assert.equal(accountItemIsActive("/mi-cuenta/tienda", items[0]), false);
   assert.equal(accountItemIsActive("/mi-cuenta/tienda/inventario", items[2]), true);
   assert.equal(accountItemIsActive("/mi-cuenta/tienda/publicar", items[2]), false);
+  const statistics = items.find((item) => item.icon === "analytics");
+  assert.equal(accountItemIsActive("/mi-cuenta/tienda/estadisticas", statistics), true);
+  assert.equal(accountItemIsActive("/mi-cuenta/tienda/inventario", statistics), false);
 });
 
 test("header never offers stale store registration to authenticated accounts", () => {

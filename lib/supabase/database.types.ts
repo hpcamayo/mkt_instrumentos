@@ -34,6 +34,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      listing_edit_attempts: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          listing_id: string
+          payload_hash: string
+          result: Json
+          user_id: string
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          listing_id: string
+          payload_hash: string
+          result: Json
+          user_id: string
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          listing_id?: string
+          payload_hash?: string
+          result?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_edit_attempts_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_edit_attempts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_photo_cleanup_claims: {
+        Row: {
+          bucket: string
+          created_at: string
+          path: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          path: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          path?: string
+        }
+        Relationships: []
+      }
       listing_photos: {
         Row: {
           alt_text: string | null
@@ -329,6 +389,105 @@ export type Database = {
           },
         ]
       }
+      marketplace_event_types: {
+        Row: {
+          created_at: string
+          event_type: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+        }
+        Relationships: []
+      }
+      marketplace_events: {
+        Row: {
+          actor_user_id: string | null
+          created_at: string
+          dedupe_key: string | null
+          event_type: string
+          id: string
+          identity_key: string | null
+          listing_id: string | null
+          metadata: Json
+          seller_user_id: string | null
+          session_id: string | null
+          source: string
+          store_id: string | null
+          submission_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          created_at?: string
+          dedupe_key?: string | null
+          event_type: string
+          id?: string
+          identity_key?: string | null
+          listing_id?: string | null
+          metadata?: Json
+          seller_user_id?: string | null
+          session_id?: string | null
+          source: string
+          store_id?: string | null
+          submission_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          created_at?: string
+          dedupe_key?: string | null
+          event_type?: string
+          id?: string
+          identity_key?: string | null
+          listing_id?: string | null
+          metadata?: Json
+          seller_user_id?: string | null
+          session_id?: string | null
+          source?: string
+          store_id?: string | null
+          submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_events_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_events_event_type_fkey"
+            columns: ["event_type"]
+            isOneToOne: false
+            referencedRelation: "marketplace_event_types"
+            referencedColumns: ["event_type"]
+          },
+          {
+            foreignKeyName: "marketplace_events_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_events_seller_user_id_fkey"
+            columns: ["seller_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_events_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -597,6 +756,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_owned_listing_edit: {
+        Args: {
+          p_immediate?: Json
+          p_listing_id: string
+          p_moderated?: Json
+          p_photos?: Json
+        }
+        Returns: Json
+      }
       auth_email_exists: { Args: { p_email: string }; Returns: boolean }
       can_add_listing_photo: {
         Args: { p_listing_id: string }
@@ -606,6 +774,15 @@ export type Database = {
       can_remove_listing_photo: {
         Args: { p_listing_id: string }
         Returns: boolean
+      }
+      claim_listing_photo_cleanup: {
+        Args: {
+          p_bucket: string
+          p_listing_id: string
+          p_paths: string[]
+          p_user_id: string
+        }
+        Returns: string[]
       }
       complete_public_submission: {
         Args: { p_fields: Json; p_id: string; p_kind: string; p_photos: Json }
@@ -619,6 +796,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      get_account_analytics: {
+        Args: { p_days?: number; p_owner_id?: string }
+        Returns: Json
+      }
+      get_marketplace_admin_analytics: {
+        Args: { p_days?: number }
+        Returns: Json
       }
       increment_listing_view_count: {
         Args: { p_listing_id: string }
@@ -687,6 +872,20 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_marketplace_event: {
+        Args: {
+          p_actor_user_id?: string
+          p_event_id: string
+          p_event_type: string
+          p_listing_id?: string
+          p_metadata?: Json
+          p_session_id: string
+          p_source?: string
+          p_store_id?: string
+          p_submission_id?: string
+        }
+        Returns: Json
       }
       relist_sold_listing: {
         Args: { p_listing_id: string }
@@ -987,6 +1186,7 @@ export type Database = {
       }
       update_owned_listing: {
         Args: {
+          p_attempt_id?: string
           p_immediate?: Json
           p_listing_id: string
           p_moderated?: Json

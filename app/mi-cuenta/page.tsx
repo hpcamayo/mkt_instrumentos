@@ -3,6 +3,8 @@ import { AlertTriangle, CheckCircle2, ExternalLink } from "lucide-react";
 import { getAccountContext } from "@/lib/account-context";
 import { listingStatusLabel } from "@/lib/account-ui";
 import { isSellerProfileComplete } from "@/lib/auth/profile";
+import { getAccountAnalytics } from "@/lib/account-analytics";
+import { AccountAnalyticsMetrics } from "@/components/account-analytics";
 
 export const metadata = { title: "Mi cuenta" };
 
@@ -25,15 +27,15 @@ export default async function AccountPage({
     return <StoreOwnerDashboard email={user.email ?? ""} confirmed={status.confirmed === "1"} store={store} inventory={inventory ?? []} />;
   }
 
-  const { data: listings } = supabase
-    ? await supabase
+  const [{ data: listings }, analytics] = await Promise.all([supabase
+    ? supabase
         .from("listings")
         .select("id,title,status,slug,price_pen,created_at")
         .eq("owner_user_id", user.id)
         .is("store_id", null)
         .order("created_at", { ascending: false })
         .limit(5)
-    : { data: [] };
+    : { data: [] }, getAccountAnalytics(0)]);
 
   return (
     <div className="space-y-5">
@@ -53,11 +55,7 @@ export default async function AccountPage({
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-3" aria-label="Resumen de publicaciones">
-        <Metric label="Publicaciones recientes" value={String(listings?.length ?? 0)} />
-        <Metric label="En revisión" value={String(listings?.filter((item) => item.status === "pending").length ?? 0)} />
-        <Metric label="Aprobadas" value={String(listings?.filter((item) => item.status === "approved").length ?? 0)} />
-      </section>
+      <AccountAnalyticsMetrics analytics={analytics} />
 
       <section className="rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
         <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wide text-laria-blue">Publicaciones recientes</p><h2 className="mt-1 text-xl font-black text-laria-ink">Mis publicaciones</h2></div><Link href="/mi-cuenta/publicaciones" className="font-black text-laria-blue">Ver todas</Link></div>

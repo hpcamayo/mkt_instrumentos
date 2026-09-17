@@ -23,6 +23,9 @@ import {
   type ListingFilters as ListingFiltersType,
 } from "@/lib/listings";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { SearchTelemetry } from "@/components/marketplace-telemetry";
+import { createSearchReceipt } from "@/lib/marketplace-events-server";
+import { searchEventMetadata } from "@/lib/marketplace-event-payload";
 
 export const dynamic = "force-dynamic";
 
@@ -164,8 +167,12 @@ export default async function ListingsPage({
   if (redirectPage !== null)
     redirect(pageHref("/listados", resolvedSearchParams, redirectPage));
   const listings = (data ?? []) as ListingCardData[];
+  const searchReceipt = !error && page === 1 ? createSearchReceipt(filters, count ?? 0) : null;
+  const searchState = searchEventMetadata(filters, count ?? 0);
 
   return (
+    <>
+    {searchReceipt ? <SearchTelemetry searchReceipt={searchReceipt} signature={JSON.stringify(searchState.filters)} filtered={Object.keys(searchState.filters).some((key) => key !== "sort") || filters.sort !== "newest"} /> : null}
     <ListingsView
       filters={filters}
       listings={listings}
@@ -174,6 +181,7 @@ export default async function ListingsPage({
       totalCount={count ?? 0}
       errorMessage={error?.message}
     />
+    </>
   );
 }
 

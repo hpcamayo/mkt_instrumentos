@@ -178,6 +178,7 @@ const storeIds = [];
 
     console.log("Sprint 3 integration: lifecycle, revision, sold detail, RLS, relist, and concurrent cap passed.");
   } finally {
+    if (createdUsers.length) assert.equal((await service.from("marketplace_events").delete().in("actor_user_id", createdUsers)).error, null);
     if (listingIds.length) {
       await service.from("listing_revision_photos").delete().in("revision_id", (await service.from("listing_revisions").select("id").in("listing_id", listingIds)).data?.map((row) => row.id) ?? []);
       await service.from("listing_revisions").delete().in("listing_id", listingIds);

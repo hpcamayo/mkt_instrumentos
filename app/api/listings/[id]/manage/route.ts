@@ -11,6 +11,8 @@ import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import type { Json } from "@/lib/supabase/database.types";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
+import { createListingEditToken, readListingEditToken } from "@/lib/submission-token";
+import { cleanupListingEditUploads } from "@/lib/listing-photo-cleanup";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -43,6 +45,14 @@ export async function POST(request: Request, { params }: RouteContext) {
     return failure("No encontramos una publicación administrable.", 404);
   }
 
+  if (body.action === "start_edit") {
+    if (["sold", "archived"].includes(listing.status)) return rpcFailure("SOLD_LISTING_IMMUTABLE");
+    const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!secret) return failure("No se pudieron preparar las fotos.", 503);
+    const capability = createListingEditToken(id, userData.user.id, secret);
+    return NextResponse.json({ ...capability, folder: `${userData.user.id}/listing-edits/${id}/${capability.attemptId}`, bucket: "listing-edit-photos" });
+  }
+
   if (["hide", "restore", "sold"].includes(body.action)) {
     const { data, error } = await supabase.rpc("set_owned_listing_lifecycle", {
       p_listing_id: id,
@@ -69,6 +79,9 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   if (body.action !== "edit") return failure("Acción no compatible.");
+  const attemptId = body.token === undefined ? undefined : typeof body.token === "string"
+    ? readListingEditToken(body.token, id, userData.user.id, process.env.SUPABASE_SERVICE_ROLE_KEY ?? "") : null;
+  if (attemptId === null) return failure("La autorización de edición no es válida.", 403);
 
   const { data: pendingRevision, error: pendingRevisionError } = await supabase
     .from("listing_revisions")
@@ -102,7 +115,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     id,
   );
   if (!photoResult.ok) {
-    await cleanupUploads(photoResult.newPaths);
+    await cleanupListingEditUploads(id, userData.user.id, photoResult.newPaths);
     return failure(photoResult.message);
   }
 
@@ -111,11 +124,18 @@ export async function POST(request: Request, { params }: RouteContext) {
     p_immediate: validation.immediate as Json,
     p_moderated: validation.moderated as Json,
     p_photos: photoResult.photos as Json | null,
+    ...(attemptId ? { p_attempt_id: attemptId } : {}),
   });
   if (error) {
-    await cleanupUploads(photoResult.newPaths);
     return rpcFailure(error.message);
   }
+
+  // Discarded proposal references are now unattached; the database cleanup claim
+  // preserves every live, sold, shared or retained-history reference.
+  await cleanupListingEditUploads(id, userData.user.id,
+    (pendingRevision?.listing_revision_photos ?? []).map((photo) => photo.image_url)
+      .filter((url) => url.startsWith("/api/listing-images/"))
+      .map((url) => url.slice("/api/listing-images/".length)), "listing-edit-photos");
 
   return NextResponse.json({ ok: true, result: data });
 }
@@ -215,7 +235,7 @@ async function resolvePhotos(
   const allowedUrls = new Set(existingPhotos.map((photo) => photo.image_url));
   const admin = getSupabaseAdminClient();
   if (!admin) return { ok: false as const, message: "No se pudieron verificar las fotos.", newPaths: [] as string[] };
-  const photos: { image_url: string; alt_text: string }[] = [];
+  const photos: { image_url: string; alt_text: string | null }[] = [];
   const newPaths: string[] = [];
 
   for (const raw of input as PhotoInput[]) {
@@ -224,29 +244,36 @@ async function resolvePhotos(
     }
     const altText = readText(raw.alt_text) || "Foto de la publicación";
     if (typeof raw.image_url === "string" && allowedUrls.has(raw.image_url)) {
-      photos.push({ image_url: raw.image_url, alt_text: altText });
+      photos.push({ image_url: raw.image_url, alt_text: readText(raw.alt_text) || null });
       continue;
     }
+    const privatePath = typeof raw.image_url === "string" && raw.image_url.startsWith("/api/listing-images/")
+      ? raw.image_url.slice("/api/listing-images/".length) : undefined;
+    const path = privatePath ?? raw.path;
     if (
-      typeof raw.path !== "string" ||
+      typeof path !== "string" ||
       !new RegExp(
         `^${escapeRegExp(userId)}/listing-edits/${escapeRegExp(listingId)}/[0-9a-f-]{36}/(?:[0-9]|[1-9][0-9])\\.(jpg|png|webp)$`,
-      ).test(raw.path)
+      ).test(path)
     ) {
       return { ok: false as const, message: "Foto inválida.", newPaths };
     }
-    const segments = raw.path.split("/");
+    const segments = path.split("/");
     const folder = segments.slice(0, -1).join("/");
     const filename = segments.at(-1)!;
-    const { data: objects, error } = await admin.storage
-      .from("listing-photos")
-      .list(folder, { limit: 20 });
-    if (error || !objects?.some((object) => object.name === filename)) {
+    const result = await admin.storage.from("listing-edit-photos").list(folder, { limit: 20 });
+    const object = result.data?.find((object) => object.name === filename);
+    if (result.error || !object) {
       return { ok: false as const, message: "Falta subir una foto. Intenta nuevamente.", newPaths };
     }
-    newPaths.push(raw.path);
+    const mime = object.metadata?.mimetype ?? "";
+    const size = Number(object.metadata?.size ?? 0);
+    if (!["image/jpeg", "image/png", "image/webp"].includes(mime) || !(size > 0 && size <= 5242880)) {
+      return { ok: false as const, message: "Usa fotos JPEG, PNG o WebP de 5 MB o menos.", newPaths };
+    }
+    newPaths.push(path);
     photos.push({
-      image_url: admin.storage.from("listing-photos").getPublicUrl(raw.path).data.publicUrl,
+      image_url: `/api/listing-images/${path}`,
       alt_text: altText,
     });
   }
@@ -257,13 +284,9 @@ async function resolvePhotos(
   return { ok: true as const, photos, newPaths };
 }
 
-async function cleanupUploads(paths: string[]) {
-  if (!paths.length) return;
-  const admin = getSupabaseAdminClient();
-  if (admin) await admin.storage.from("listing-photos").remove(paths);
-}
-
 function rpcFailure(message: string) {
+  if (message.includes("LISTING_PHOTO_INVALID")) return failure("Revisa las fotos, su orden y su origen.", 409);
+  if (message.includes("LISTING_EDIT_RETRY_CHANGED")) return failure("Los datos de este intento cambiaron. Prepara una nueva edición.", 409);
   if (message.includes("STORE_INVENTORY_LIMIT_REACHED")) {
     return failure("Tu tienda alcanzó el límite de 50 publicaciones concurrentes.", 409);
   }

@@ -14,6 +14,9 @@ export type ManagedListing = {
   slug: string;
   price_pen: number | null;
   created_at: string;
+  published_at?: string | null;
+  sold_at?: string | null;
+  analytics?: { views: number; contacts: number };
   rejection_reason: string | null;
   hidden_source: string | null;
   hidden_reason: string | null;
@@ -82,6 +85,9 @@ export function ListingManagementTable({
               <th className="px-5 py-3">Publicación</th>
               <th className="px-5 py-3">Estado</th>
               <th className="px-5 py-3">Precio</th>
+              <th className="px-5 py-3">Primera publicación</th>
+              <th className="px-5 py-3">Vistas</th>
+              <th className="px-5 py-3">Contactos WhatsApp</th>
               <th className="px-5 py-3">Acciones</th>
             </tr>
           </thead>
@@ -106,8 +112,11 @@ export function ListingManagementTable({
                       <p className="mt-1 max-w-sm text-xs text-red-700">Ocultada por moderación: {listing.hidden_reason}</p>
                     ) : null}
                   </td>
-                  <td className="px-5 py-4">{listingStatusLabel(listing.status)}</td>
+                  <td className="px-5 py-4">{listingStatusLabel(listing.status)}{listing.status === "sold" && listing.sold_at ? <p className="mt-1 whitespace-nowrap text-xs text-laria-text-soft">Marcada vendida: {formatDate(listing.sold_at)}</p> : null}</td>
                   <td className="px-5 py-4">{formatPrice(listing.price_pen)}</td>
+                  <td className="whitespace-nowrap px-5 py-4">{listing.published_at ? formatDate(listing.published_at) : "Aún no publicada"}</td>
+                  <td className="px-5 py-4">{listing.analytics ? numbers.format(listing.analytics.views) : "No disponible"}</td>
+                  <td className="px-5 py-4">{listing.analytics ? numbers.format(listing.analytics.contacts) : "No disponible"}</td>
                   <td className="px-5 py-4">
                     <div className="flex min-w-56 flex-wrap gap-x-4 gap-y-2">
                       {listing.status === "approved" || listing.status === "sold" ? (
@@ -143,6 +152,14 @@ export function ListingManagementTable({
       </div>
     </div>
   );
+}
+
+const numbers = new Intl.NumberFormat("es-PE");
+const dates = new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short", year: "numeric", timeZone: "America/Lima" });
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? dates.format(date) : "No disponible";
 }
 
 function ActionButton({

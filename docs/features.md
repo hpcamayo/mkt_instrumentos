@@ -2,6 +2,8 @@
 
 This file describes current implementation. The frozen V1 requirements live in `docs/functional-spec.md`; missing behavior below is an implementation gap unless that specification marks it post-V1.
 
+Sprint 4 additions described here are **local-only, not production-deployed**. The separate production release gate and owner acceptance remain required. Sprint 5 is not started. Sprints 1–2 remain CLOSED / ACCEPTED.
+
 ## Marketplace Model
 
 Laria supports two seller models.
@@ -135,6 +137,7 @@ Listings page behavior:
 - Cache fetched photos in component state.
 - Render only the active photo.
 - Use lazy loading.
+- Local Sprint 4: record an impression only while at least 50% of the actual card is in the viewport and the document is visible; scrolling back into view does not inflate the rolling deduplicated count.
 
 Implementation:
 - Listing/store/home queries select `id`, `listing_id`, `image_url`, `alt_text`, and `sort_order` for the first embedded photo.
@@ -173,8 +176,8 @@ Features:
   - `Más de este vendedor` / `Más de esta tienda` reads approved listings only, excludes the current listing, uses `store_id` for stores and `whatsapp_phone` for individual sellers, shows up to 4 items, and is hidden when there are no results.
 - `Especificaciones completas` renders clean label/value rows. It includes base fields `Publicado`, `Condición`, `Categoría`, `Marca`, `Modelo`, `Ciudad`, and `Vendedor`/`Tienda`, followed by non-empty `attributes` values.
 - Attribute labels and option values reuse `lib/instrument-filters.ts` through `lib/listing-specs.ts`; raw JSON and snake_case keys should not be exposed to users.
-- Increments `view_count` through `/api/listings/[id]/view`.
-- Uses localStorage to avoid incrementing the same listing repeatedly in the same browser within 24 hours.
+- Local Sprint 4: records visible client detail opens through the first-party event path; SSR, HEAD, prefetch, owner/admin opens, and ineligible inventory do not increment commercial views.
+- Uses a database-serialized rolling 30-minute identity/listing window instead of the old localStorage-only 24-hour rule. Accepted events increment the preserved historical `view_count` cache once; the compatibility view endpoint uses the same trusted writer.
 - Primary CTA opens WhatsApp using a prefilled Spanish message.
 - Sold detail shows `Vendido`, keeps the historical product information, and removes WhatsApp/contact actions.
 - Store listings include a secondary link to the store page.
@@ -200,6 +203,7 @@ Public store pages show:
 - Description.
 - WhatsApp button.
 - Approved listings from that store.
+- Local Sprint 4: visible public store opens and actual WhatsApp click intents are recorded with canonical store ownership; pending/hidden stores are not ordinary public analytics targets.
 
 Layout uses the shared `PageContainer` public width system.
 
@@ -256,7 +260,10 @@ Current behavior:
 - Price, description, location, and supported attributes apply immediately on approved Particular/normal-Tienda inventory. Title, category, instrument type, brand, model, condition, and photo changes create one pending revision while the old public version remains live. Further moderated edits amend that same versioned proposal, including its isolated photo set; reverted fields leave the proposal and an empty proposal is cancelled. Attributes that depend on a proposed instrument-type change stay inside that revision and are promoted atomically with the type.
 - A Tienda Verificada applies a complete valid edit directly. Revocation immediately returns later edits to revision moderation without altering already-approved inventory.
 - Verification does not auto-approve an older pending edit revision; it remains pending because the store-verification operation applies only to pending inventory listings. Future verified edits are evaluated directly at transaction time, and a later direct moderated/photo edit cancels an older pending proposal as superseded so it cannot overwrite newer live values.
-- Edit uploads use new owner-scoped object paths. Partial client uploads are cleaned on failure, and browser users cannot overwrite or delete historical listing-photo objects.
+- Local Sprint 4 completes repeated photo amendments onto the existing pending revision: add/remove/replace/reorder/primary, restoration of the approved photo order while preserving other pending fields, and refreshed persisted form state after saving.
+- New edit uploads are owner/listing/attempt-scoped in the private `listing-edit-photos` bucket and use authorized `/api/listing-images/...` URLs. Pending/unattached bytes are not anonymous public bucket assets; existing legacy/live submission URLs remain compatible.
+- Signed edit attempts persist a request hash/result. Identical uncertain-response retries reuse the uploaded payload and do not increment the revision again; changed retries are rejected. Busy guards prevent duplicate submissions or photo mutations during a save.
+- Cleanup is server-bound and reference-checked under the listing lock, with retired-path claims preventing a check/delete race. Every live, sold/shared, and retained revision-history reference is protected; explicit cleanup failures remain retryable. Browser users cannot overwrite/delete historical objects. A new scheduled orphan sweeper is not implemented.
 
 ## Store Registration
 
@@ -334,6 +341,7 @@ Routes:
 - `/mi-cuenta`: protected role-aware account summary inside the shared account shell.
 - `/mi-cuenta/publicaciones` and `/mi-cuenta/publicar`: Particular owned-listing view and publication form.
 - `/mi-cuenta/tienda`, `/mi-cuenta/tienda/inventario`, and `/mi-cuenta/tienda/publicar`: Store Owner application/profile, inventory, and publication routes.
+- `/mi-cuenta/tienda/estadisticas`: real owner-only Store analytics with lifetime/7-day/30-day periods (local Sprint 4).
 - `/mi-cuenta/perfil`: edits the authenticated Particular or Store Owner contact profile.
 - `/mi-cuenta/seguridad`: authenticated password change.
 - `/auth/callback`: verifies Supabase signup, magic-link, recovery, and invite token hashes (and supports PKCE codes), then sets a server-readable app session on the redirect response.
@@ -348,6 +356,7 @@ Behavior:
 - Signup collects full name, email, WhatsApp, city, region, password, and marketplace rules acceptance.
 - If Supabase email confirmation is enabled, `/auth/callback` repairs an incomplete seller profile from Auth user metadata when needed, then redirects to `/mi-cuenta?confirmed=1`. The dashboard confirms verification explicitly and keeps any genuinely incomplete profile work inside the account experience.
 - Callback redirects only to safe same-site paths.
+- Local Sprint 4 maps Supabase `same_password` to `La nueva contraseña debe ser diferente de tu contraseña actual.` Unknown update errors remain generic; the existing password is never retrieved or manually compared. Secure callback/recovery/session behavior is preserved.
 - Intended invite next paths are `/registro/vendedor/invitacion` and `/registro/tienda/invitacion`.
 - Seller invite flow shows `Activa tu cuenta de vendedor`, completes missing profile fields, confirms the Particular account type, and continues to creating a first listing through `/vender`.
 - Store invite flow shows `Activa la cuenta de tu tienda`, completes store-owner contact profile fields, explains that admin approval is required, and continues to the store application form at `/registrar-tienda`.
@@ -356,19 +365,30 @@ Behavior:
 - Invite pages use `account_type` metadata/profile type when available. If metadata is missing or mismatched, they show a safe recovery panel instead of silently changing account type.
 - Invite flows do not use temporary passwords.
 - Account and invite location forms use a fixed Peru region list and city suggestions with free-text city fallback. Region must normalize to one of: Amazonas, Áncash, Apurímac, Arequipa, Ayacucho, Cajamarca, Callao, Cusco, Huancavelica, Huánuco, Ica, Junín, La Libertad, Lambayeque, Lima, Loreto, Madre de Dios, Moquegua, Pasco, Piura, Puno, San Martín, Tacna, Tumbes, Ucayali.
-- Supabase Auth email template copy is documented in `docs/auth-email-templates.md`. Signup already sends trusted `user_metadata.account_type`, but the production hosted confirmation template still needs the documented conditional body/neutral subject at the release gate; callback/session code does not need a new format.
+- Supabase Auth email template requirements are documented in `docs/auth-email-templates.md`; signup sends trusted `user_metadata.account_type` for conditional Particular/Tienda wording. Sprint 4 changes no hosted template or callback format.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
-- Sprint 3 owner listing lifecycle management and Sprint 3.1 amendable/versioned revision behavior are implemented for Particulars and Store Owners. Later analytics, favorites, alerts, and transaction/review functions are still absent.
+- Sprint 3 owner listing lifecycle management and Sprint 3.1 amendable/versioned revisions are implemented for Particulars and Store Owners. Sprint 4 completes the local photo-amendment behavior and adds real event-backed analytics. Favorites, alerts, transactions, and reviews remain later-sprint work.
 
 Account shell:
 - `app/mi-cuenta/layout.tsx` keeps role-appropriate navigation visible across account subpages: a persistent desktop sidebar and an accessible collapsed mobile menu with active-section state.
-- Particulars see only real Particular routes; Store Owners see store routes only after an owner-bound store exists. Favorites, alerts, analytics, and employee management are not exposed as fake links.
-- Dashboard counts and listing rows come from owner-scoped RLS queries; no analytics are fabricated.
+- Particulars see only real Particular routes; Store Owners see store routes only after an owner-bound store exists. The real `Estadísticas` destination is now active locally for those Store Owners. Favorites, alerts, and employee management are not exposed as fake links.
+- Particular summary aggregates all owned listings through one owner-scoped RPC; the recent-five list is only presentation. Both inventory tables show actual views/WhatsApp contacts, first-publication date, status, and sold metadata. Unavailable aggregates never become estimated zero.
+
+## First-party Marketplace Events and Analytics — Local Sprint 4
+
+- Events cover visible card impressions, detail/store opens, WhatsApp intentions, signed search/filter/zero-result context, and trusted submission/moderation/store transitions. Lifecycle writes run in the authoritative database transaction, not from a browser admin flag.
+- A signed random HttpOnly/SameSite=Lax first-party cookie lasts 24 hours. Authenticated actor IDs come from the server session; listing/store/seller attribution is resolved server/database-side. No raw IP, invasive fingerprint, WhatsApp content, password, or auth token is event payload data.
+- Raw event tables/recording RPC are service-only. Owner aggregate access is enforced in SQL; accounts cannot request another owner's commercial data or a browsable buyer directory.
+- Impressions/detail/store views use a rolling serialized 30-minute anti-refresh window and exclude owner/admin activity. Actual contact clicks remain distinct intents; replaying the same event ID does not duplicate them. Retryable client event batches are bounded and never gate public SSR.
+- Search receipts preserve the existing real server filter/result semantics; client-forged result counts or arbitrary metadata are rejected. Pagination is not a newly applied filter.
+- Lifetime views include the existing historical cache; no event history is fabricated. Seven/thirty-day views and contact counts come from recorded events. Active means current approved/public inventory; sold means current seller-marked state, not verified sales in a date window.
+- Store statistics include product impressions/views/contacts, public store visits/contacts, current active/sold counts, CTR (recorded views / impressions), and contact rate (contacts / recorded views). Ratios use one recorded-event period; zero denominator is `Sin datos`. Historical cache views are not silently used as a conversion denominator.
+- No revenue or fake favorite/transaction/review metrics. The admin aggregate RPC is groundwork, not the full analytics/moderation hub.
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Required V1 features not implemented yet include favorites, search and price-drop alerts, WhatsApp-contact tracking, verified transactions, two-way reviews, reports, seller/store analytics, and marketplace email infrastructure. The complete status is in `docs/functional-spec.md`.
+Required V1 features not implemented yet include favorites, search and price-drop alerts, verified transactions, two-way reviews, reports, and marketplace email infrastructure. Contact/event tracking and real seller/store analytics are implemented locally in Sprint 4 but still require the separate production gate and owner acceptance. The complete status is in `docs/functional-spec.md`.
 
 Post-V1 unless a new product decision is explicit:
 - Payments.

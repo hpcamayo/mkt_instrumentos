@@ -67,9 +67,11 @@ test("account management exposes lifecycle and pending-revision states", () => {
   assert.match(edit, /la versión pública anterior sigue visible/);
   assert.match(edit, /\["title", "category", "instrument_type", "brand", "model", "condition"\]/);
   assert.doesNotMatch(edit, /\["price_pen", "description", "city", "region", "condition", "attributes"\]/);
-  assert.match(edit, /listing-edits/);
+  assert.match(edit, /start_edit/);
+  assert.match(edit, /attempt\.folder/);
   assert.match(edit, /PageNotice/);
-  assert.match(edit, /storage\.from\("listing-photos"\)\.remove\(uploadedPaths\)/);
+  assert.match(edit, /photo-cleanup/);
+  assert.doesNotMatch(edit, /storage\.from\([^)]*\)\.remove/);
   assert.doesNotMatch(edit, /Promise\.all\(photos\.map/);
 });
 
@@ -91,7 +93,7 @@ test("listing edit uploads are owner-scoped and old objects are not deleted", ()
   const route = fs.readFileSync("app/api/listings/[id]/manage/route.ts", "utf8");
   assert.match(route, /listing-edits/);
   assert.match(route, /allowedUrls/);
-  assert.match(route, /cleanupUploads\(photoResult\.newPaths\)/);
+  assert.match(route, /cleanupListingEditUploads/);
   assert.doesNotMatch(route, /remove\(.*existing/i);
   assert.match(migration, /drop policy if exists "Authenticated users can delete listing photos under own folder"/);
 });

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { randomUUID } from "node:crypto";
+import { getMarketplaceActor, getMarketplaceSession, recordMarketplaceEvent, sameOriginEventRequest } from "@/lib/marketplace-events-server";
+import { isUuid } from "@/lib/marketplace-event-payload";
 
 type ListingViewRouteContext = {
   params: Promise<{
@@ -8,29 +10,14 @@ type ListingViewRouteContext = {
 };
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: ListingViewRouteContext,
 ) {
   const { id } = await params;
-  const supabase = getPublicSupabaseClient();
-
-  if (!supabase) {
-    return NextResponse.json(
-      { error: "Supabase no esta configurado." },
-      { status: 503 },
-    );
-  }
-
-  const { data, error } = await supabase.rpc("increment_listing_view_count", {
-    p_listing_id: id,
-  });
-
-  if (error) {
-    return NextResponse.json(
-      { error: "No se pudo registrar la visita." },
-      { status: 500 },
-    );
-  }
-
-  return NextResponse.json({ view_count: data ?? 0 });
+  if (!sameOriginEventRequest(request) || !isUuid(id)) return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
+  try {
+    const [actorId, sessionId] = await Promise.all([getMarketplaceActor(), getMarketplaceSession()]);
+    const result = await recordMarketplaceEvent({ type: "listing_view", listingId: id, eventId: randomUUID(), actorId, sessionId, source: "detail" });
+    return result ? NextResponse.json(result, { headers: { "Cache-Control": "no-store" } }) : NextResponse.json({ error: "No se pudo registrar la visita." }, { status: 503 });
+  } catch { return NextResponse.json({ error: "No se pudo registrar la visita." }, { status: 503 }); }
 }

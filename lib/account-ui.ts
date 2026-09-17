@@ -1,5 +1,6 @@
 export function listingStatusLabel(status: string) {
   return ({
+    draft: "Borrador",
     pending: "En revisión",
     approved: "Aprobada",
     rejected: "Rechazada",

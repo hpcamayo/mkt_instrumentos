@@ -109,6 +109,9 @@ function assertLocalTargetMatches(appBase, supabaseUrl) {
   assert.ok(recoveryCookies.length, 'Recovery callback must establish a server-readable session');
 
   const resetClient = createCookieClient(recoveryCookies);
+  const samePasswordReset = await resetClient.auth.updateUser({ password: qaPassword });
+  assert.equal(samePasswordReset.error?.code, 'same_password', 'Supabase must reject a reset to the current password with its structured code');
+  assert.equal((await resetClient.auth.getUser()).data.user?.id, ownerId, 'A same-password rejection must preserve the recovery session');
   const newPassword = `Qa-reset-${crypto.randomUUID()}`;
   assert.equal((await resetClient.auth.updateUser({ password: newPassword })).error, null);
   const oldPasswordLogin = await fetch(`${base}/api/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: qaEmail, password: qaPassword }) });
@@ -248,6 +251,8 @@ function assertLocalTargetMatches(appBase, supabaseUrl) {
 })().catch(error => { console.error(error.message); process.exitCode = 1; });
 
 async function deleteAuthUser(userId) {
+  const events = await admin.from('marketplace_events').delete().eq('actor_user_id', userId);
+  assert.equal(events.error, null, 'Temporary creation-start events must be removed before deleting their Auth attribution');
   let lastError = null;
   for (let attempt = 0; attempt < 8; attempt++) {
     const result = await admin.auth.admin.deleteUser(userId);

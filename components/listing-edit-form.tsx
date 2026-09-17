@@ -47,36 +47,46 @@ type PhotoItem =
   | { key: string; kind: "existing"; imageUrl: string; altText: string }
   | { key: string; kind: "new"; file: File; previewUrl: string };
 
+type PhotoPayload = { image_url?: string; path?: string; alt_text: string };
+type EditAttempt = {
+  token: string;
+  attemptId: string;
+  folder: string;
+  bucket: "listing-edit-photos";
+  fingerprint: string;
+  uploadedPaths: string[];
+  photoPayload?: PhotoPayload[];
+  prepared: boolean;
+};
+
 export function ListingEditForm({
   listing,
   hasPendingRevision,
   isVerifiedStore,
   returnHref,
+  livePhotos,
+  initialNotice = "",
 }: {
   listing: EditableListing;
   hasPendingRevision: boolean;
   isVerifiedStore: boolean;
   returnHref: string;
+  livePhotos: ExistingPhoto[];
+  initialNotice?: string;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [category, setCategory] = useState(listing.category);
   const [instrumentType, setInstrumentType] = useState(listing.instrument_type ?? "");
-  const [photos, setPhotos] = useState<PhotoItem[]>(
-    [...listing.listing_photos]
-      .sort((a, b) => a.sort_order - b.sort_order)
-      .map((photo) => ({
-        key: photo.id,
-        kind: "existing" as const,
-        imageUrl: photo.image_url,
-        altText: photo.alt_text ?? `Foto de ${listing.title}`,
-      })),
-  );
+  const [photos, setPhotos] = useState<PhotoItem[]>(() => existingPhotoItems(listing.listing_photos));
   const [photosChanged, setPhotosChanged] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [state, setState] = useState<"idle" | "success" | "error">("idle");
-  const [message, setMessage] = useState("");
+  const [state, setState] = useState<"idle" | "success" | "error">(initialNotice ? "success" : "idle");
+  const [message, setMessage] = useState(initialNotice);
+  const [progress, setProgress] = useState("");
   const photosRef = useRef(photos);
+  const busyRef = useRef(false);
+  const attemptRef = useRef<EditAttempt | null>(null);
 
   useEffect(() => {
     photosRef.current = photos;
@@ -107,6 +117,7 @@ export function ListingEditForm({
   }
 
   function addPhotos(event: ChangeEvent<HTMLInputElement>) {
+    if (busyRef.current) return;
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (files.some((file) => !isImageFile(file))) {
@@ -136,6 +147,7 @@ export function ListingEditForm({
   }
 
   function replacePhoto(index: number, event: ChangeEvent<HTMLInputElement>) {
+    if (busyRef.current) return;
     const file = Array.from(event.target.files ?? [])[0];
     event.target.value = "";
     if (!file) return;
@@ -150,6 +162,7 @@ export function ListingEditForm({
   }
 
   function movePhoto(index: number, direction: -1 | 1) {
+    if (busyRef.current) return;
     const destination = index + direction;
     if (destination < 0 || destination >= photos.length) return;
     setPhotos((current) => {
@@ -161,6 +174,7 @@ export function ListingEditForm({
   }
 
   function removePhoto(index: number) {
+    if (busyRef.current) return;
     if (photos.length <= MIN_LISTING_PHOTOS) {
       showMessage("error", `Debes conservar al menos ${MIN_LISTING_PHOTOS} fotos.`);
       return;
@@ -173,8 +187,33 @@ export function ListingEditForm({
     setPhotosChanged(true);
   }
 
+  function restoreLivePhotos() {
+    if (busyRef.current) return;
+    for (const photo of photos) {
+      if (photo.kind === "new") URL.revokeObjectURL(photo.previewUrl);
+    }
+    setPhotos(existingPhotoItems(livePhotos));
+    setPhotosChanged(true);
+    setState("idle");
+    setMessage("");
+  }
+
+  async function cleanupAttempt(attempt: EditAttempt) {
+    if (!attempt.uploadedPaths.length) return;
+    const response = await fetch(`/api/listings/${listing.id}/photo-cleanup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paths: attempt.uploadedPaths, bucket: attempt.bucket }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || result?.ok !== true || !Array.isArray(result.removed)) {
+      throw new Error("No se pudo completar la limpieza segura de las fotos. Intenta nuevamente.");
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busyRef.current) return;
     if (!supabase) return showMessage("error", "No se pudo conectar con Laria.");
     if (photos.length < MIN_LISTING_PHOTOS || photos.length > MAX_LISTING_PHOTOS) {
       return showMessage("error", `Agrega entre ${MIN_LISTING_PHOTOS} y ${MAX_LISTING_PHOTOS} fotos.`);
@@ -202,36 +241,66 @@ export function ListingEditForm({
     if (!Object.keys(immediate).length && !Object.keys(moderated).length && !photosChanged) {
       return showMessage("error", "No hay cambios para guardar.");
     }
+    busyRef.current = true;
     setBusy(true);
     setMessage("");
-    const uploadedPaths: string[] = [];
+    setProgress("Preparando los cambios…");
+    let finalizationStarted = false;
     try {
-      const attemptId = crypto.randomUUID();
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError || !authData.user) throw new Error("Tu sesión ya no es válida. Vuelve a ingresar.");
-      let photoPayload: { image_url?: string; path?: string; alt_text: string }[] | undefined;
-      if (photosChanged) {
-        photoPayload = [];
+      const fingerprint = JSON.stringify({
+        immediate,
+        moderated,
+        photos: photosChanged ? photos.map((photo) => photo.kind === "existing"
+          ? { key: photo.key, imageUrl: photo.imageUrl, altText: photo.altText }
+          : { key: photo.key, name: photo.file.name, size: photo.file.size, type: photo.file.type, lastModified: photo.file.lastModified }) : null,
+      });
+      const previousAttempt = attemptRef.current;
+      if (previousAttempt && (previousAttempt.fingerprint !== fingerprint || !previousAttempt.prepared)) {
+        await cleanupAttempt(previousAttempt);
+        attemptRef.current = null;
+      }
+      if (!attemptRef.current) {
+        const started = await fetch(`/api/listings/${listing.id}/manage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "start_edit" }),
+        });
+        const capability = await started.json().catch(() => null);
+        if (!started.ok) throw new Error(capability?.message ?? "No se pudo preparar el guardado. Vuelve a ingresar o intenta nuevamente.");
+        if (!capability?.token || !capability.attemptId || !capability.folder || capability.bucket !== "listing-edit-photos") {
+          throw new Error("No se pudo preparar la subida segura de fotos.");
+        }
+        attemptRef.current = { ...capability, fingerprint, uploadedPaths: [], prepared: false };
+      }
+      const attempt = attemptRef.current;
+      if (!attempt) throw new Error("No se pudo preparar el intento de guardado.");
+      if (!attempt.prepared && photosChanged) {
+        attempt.photoPayload = [];
         for (const [index, photo] of photos.entries()) {
           if (photo.kind === "existing") {
-            photoPayload.push({ image_url: photo.imageUrl, alt_text: photo.altText });
+            attempt.photoPayload.push({ image_url: photo.imageUrl, alt_text: photo.altText });
             continue;
           }
           const extension = extensionFor(photo.file.type);
-          const path = `${authData.user.id}/listing-edits/${listing.id}/${attemptId}/${index}.${extension}`;
-          const { error } = await supabase.storage.from("listing-photos").upload(path, photo.file, { contentType: photo.file.type, upsert: false });
+          const path = `${attempt.folder}/${index}.${extension}`;
+          // Include uncertain upload responses in server-side, reference-checked cleanup.
+          attempt.uploadedPaths.push(path);
+          setProgress(`Subiendo foto ${index + 1} de ${photos.length}…`);
+          const { error } = await supabase.storage.from(attempt.bucket).upload(path, photo.file, { contentType: photo.file.type, upsert: false });
           if (error) throw new Error("No se pudo subir una de las fotos.");
-          uploadedPaths.push(path);
-          photoPayload.push({ path, alt_text: `Foto de ${values.title}` });
+          attempt.photoPayload.push({ path, alt_text: `Foto de ${values.title}` });
         }
       }
+      attempt.prepared = true;
+      finalizationStarted = true;
+      setProgress("Guardando los cambios…");
       const response = await fetch(`/api/listings/${listing.id}/manage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "edit", immediate, moderated, photos: photoPayload }),
+        body: JSON.stringify({ action: "edit", token: attempt.token, immediate, moderated, photos: attempt.photoPayload }),
       });
       const result = await response.json().catch(() => null);
-      if (!response.ok) throw new Error(result?.message ?? "No se pudieron guardar los cambios.");
+      if (!response.ok || !result) throw new Error(result?.message ?? "No se pudo confirmar el guardado. Reintenta sin cambiar los datos; no volveremos a subir las fotos.");
       const mode = result?.result?.mode;
       showMessage(
         "success",
@@ -243,26 +312,37 @@ export function ListingEditForm({
             ? "Cancelamos la propuesta porque ya coincide con la versión pública aprobada."
             : "Los cambios se guardaron correctamente.",
       );
-      setPhotosChanged(false);
+      // Keep the prepared request until server refresh: an immediate repeat is an exact replay.
+      router.replace(`/mi-cuenta/publicaciones/${listing.id}/editar?guardado=${encodeURIComponent(mode ?? "direct")}`, { scroll: false });
       router.refresh();
     } catch (error) {
-      if (uploadedPaths.length) {
-        await supabase.storage.from("listing-photos").remove(uploadedPaths);
+      let cleanupMessage = "";
+      if (!finalizationStarted && attemptRef.current && !attemptRef.current.prepared) {
+        try {
+          await cleanupAttempt(attemptRef.current);
+          attemptRef.current = null;
+        } catch {
+          cleanupMessage = " No se pudo completar la limpieza segura; vuelve a intentar antes de subir otras fotos.";
+        }
       }
       showMessage("error", error instanceof Error ? error.message : "No se pudieron guardar los cambios.");
+      if (cleanupMessage) setMessage((current) => current + cleanupMessage);
     } finally {
+      busyRef.current = false;
       setBusy(false);
+      setProgress("");
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6 rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
+    <form onSubmit={handleSubmit} aria-busy={busy} className="grid gap-6 rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
       {message ? (
         <PageNotice kind={state === "error" ? "error" : "success"} message={message}>
           {state === "success" ? <Link href={returnHref} className="mt-3 inline-block font-black underline underline-offset-4">Volver al inventario</Link> : null}
         </PageNotice>
       ) : null}
 
+      <fieldset disabled={busy} className="grid min-w-0 gap-6">
       <div className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-4 text-sm leading-6 text-laria-text-soft">{moderatedNote}</div>
       <TextField label="Título" name="title" defaultValue={listing.title} />
       <div className="grid gap-5 sm:grid-cols-2">
@@ -284,24 +364,36 @@ export function ListingEditForm({
 
       <section className="grid gap-4" aria-labelledby="edit-photo-heading">
         <div><h2 id="edit-photo-heading" className="text-sm font-black text-laria-ink">Fotos</h2><p className="mt-1 text-xs text-laria-text-soft">Entre 2 y 10. La primera es la principal. Las fotos propuestas no reemplazan la versión pública antes de aprobarse.</p></div>
-        <label className="laria-button-secondary min-h-11 w-fit cursor-pointer px-4 py-2 text-sm">Agregar fotos<input type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" onChange={addPhotos} /></label>
+        <div className="flex flex-wrap gap-3"><label className="laria-button-secondary min-h-11 w-fit cursor-pointer px-4 py-2 text-sm">Agregar fotos<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} className="sr-only" onChange={addPhotos} /></label>{hasPendingRevision && (listing.status === "approved" || listing.status === "hidden") ? <button type="button" disabled={busy} onClick={restoreLivePhotos} className="laria-button-secondary min-h-11 px-4 py-2 text-sm">Restaurar fotos aprobadas</button> : null}</div>
         <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {photos.map((photo, index) => (
             <li key={photo.key} className="rounded-md border border-laria-fog p-3">
-              <div className="relative aspect-[4/3] overflow-hidden rounded bg-laria-cloud"><Image src={photo.kind === "existing" ? photo.imageUrl : photo.previewUrl} alt={`Foto ${index + 1}`} fill unoptimized={photo.kind === "new"} className="object-contain" />{index === 0 ? <span className="absolute left-2 top-2 rounded bg-laria-black px-2 py-1 text-xs font-black text-white">Principal</span> : null}</div>
+              <div className="relative aspect-[4/3] overflow-hidden rounded bg-laria-cloud"><Image src={photo.kind === "existing" ? photo.imageUrl : photo.previewUrl} alt={`Foto ${index + 1}`} fill sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw" unoptimized={photo.kind === "new" || (photo.kind === "existing" && photo.imageUrl.startsWith("/api/listing-images/"))} className="object-contain" />{index === 0 ? <span className="absolute left-2 top-2 rounded bg-laria-black px-2 py-1 text-xs font-black text-white">Principal</span> : null}</div>
+              <p className="mt-2 text-xs font-bold text-laria-text-soft">Foto {index + 1} de {photos.length}{index === 0 ? " · Principal" : ""}</p>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                <button type="button" disabled={index === 0} onClick={() => movePhoto(index, -1)} className="rounded border border-laria-steel px-2 py-1.5 disabled:opacity-40">Anterior</button>
-                <button type="button" disabled={index === photos.length - 1} onClick={() => movePhoto(index, 1)} className="rounded border border-laria-steel px-2 py-1.5 disabled:opacity-40">Siguiente</button>
-                <label className="cursor-pointer rounded border border-laria-steel px-2 py-1.5 text-center">Reemplazar<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => replacePhoto(index, event)} /></label>
-                <button type="button" onClick={() => removePhoto(index)} className="rounded border border-red-200 px-2 py-1.5 text-red-700">Quitar</button>
+                <button type="button" disabled={busy || index === 0} aria-label={`Mover foto ${index + 1} antes`} onClick={() => movePhoto(index, -1)} className="min-h-11 rounded border border-laria-steel px-2 py-1.5 disabled:opacity-40">Anterior</button>
+                <button type="button" disabled={busy || index === photos.length - 1} aria-label={`Mover foto ${index + 1} después`} onClick={() => movePhoto(index, 1)} className="min-h-11 rounded border border-laria-steel px-2 py-1.5 disabled:opacity-40">Siguiente</button>
+                <label className="flex min-h-11 cursor-pointer items-center justify-center rounded border border-laria-steel px-2 py-1.5 text-center">Reemplazar<input type="file" disabled={busy} aria-label={`Reemplazar foto ${index + 1}`} accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => replacePhoto(index, event)} /></label>
+                <button type="button" disabled={busy} aria-label={`Quitar foto ${index + 1}`} onClick={() => removePhoto(index)} className="min-h-11 rounded border border-red-200 px-2 py-1.5 text-red-700 disabled:opacity-40">Quitar</button>
               </div>
             </li>
           ))}
         </ol>
       </section>
+      </fieldset>
+      {busy ? <p role="status" aria-live="polite" className="text-sm font-bold text-laria-text-soft">{progress}</p> : null}
       <div className="flex flex-wrap gap-3"><button type="submit" disabled={busy} className="laria-button-primary min-h-12 px-5 py-3 text-sm">{busy ? "Guardando…" : "Guardar cambios"}</button><Link href={returnHref} className="laria-button-secondary min-h-12 px-5 py-3 text-sm">Cancelar</Link></div>
     </form>
   );
+}
+
+function existingPhotoItems(photos: ExistingPhoto[]): PhotoItem[] {
+  return [...photos].sort((a, b) => a.sort_order - b.sort_order).map((photo) => ({
+    key: photo.id,
+    kind: "existing" as const,
+    imageUrl: photo.image_url,
+    altText: photo.alt_text ?? "",
+  }));
 }
 
 type AttributeFilter = NonNullable<ReturnType<typeof getInstrumentFilterGroup>>["filters"][number];

@@ -1,7 +1,7 @@
 export type AccountNavigationItem = {
   href: string;
   label: string;
-  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "notifications" | "profile" | "security";
+  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "analytics" | "notifications" | "profile" | "security";
   exact?: boolean;
 };
 
@@ -13,6 +13,7 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
       ...(hasStore ? [
         { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory" } as const,
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar producto", icon: "publish" } as const,
+        { href: "/mi-cuenta/tienda/estadisticas", label: "Estadísticas", icon: "analytics" } as const,
       ] : []),
       { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
       { href: "/mi-cuenta/perfil", label: "Perfil", icon: "profile" },
