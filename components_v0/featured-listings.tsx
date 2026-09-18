@@ -3,6 +3,7 @@ import { BadgeCheck, MapPin } from "lucide-react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
 import { ListingImpressionBoundary } from "@/components/marketplace-telemetry";
+import { FavoriteButton } from "@/components/favorite-button";
 
 export type FeaturedListing = {
   id: string;
@@ -184,9 +185,9 @@ function ListingPreviewCard({
   }
 
   return (
-    <Link href={`/instrumentos/${listing.slug}`} className="block">
+    <div className="relative"><Link href={`/instrumentos/${listing.slug}`} className="block">
       {content}
-    </Link>
+    </Link><div className="absolute right-3 top-3"><FavoriteButton listingId={listing.id} /></div></div>
   );
 }
 

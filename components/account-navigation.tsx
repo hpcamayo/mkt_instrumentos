@@ -6,6 +6,7 @@ import {
   Boxes,
   BarChart3,
   Bell,
+  Heart,
   CircleUserRound,
   FilePlus2,
   LayoutDashboard,
@@ -106,6 +107,7 @@ function LogoutLink() {
 
 function AccountIcon({ name }: { name: AccountNavigationItem["icon"] }) {
   const classes = "h-4 w-4";
+  if (name === "favorites") return <Heart className={classes} aria-hidden="true" />;
   if (name === "summary") return <LayoutDashboard className={classes} aria-hidden="true" />;
   if (name === "listings") return <PackageSearch className={classes} aria-hidden="true" />;
   if (name === "publish") return <FilePlus2 className={classes} aria-hidden="true" />;

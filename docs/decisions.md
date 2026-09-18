@@ -4,6 +4,10 @@ This file records important decisions so future Codex sessions do not accidental
 
 `docs/functional-spec.md` is canonical for the frozen V1 product contract. This file preserves decision rationale and implementation history; where older planning language conflicts with the functional specification, the functional specification wins.
 
+## Sprint 5 Global Navigation and In-App Price Drops
+
+Sprint 5 owner navigation clarification (2026-09-18): marketplace logo, canonical catalog search and the shared category/subtype tree belong in the root site shell across public/auth/account/admin routes. The role-aware account sidebar/mobile menu remains nested. Search reuses the existing brand filter, not a new free-text engine. Sprint 5 price-drop delivery is in-app only; centralized email delivery remains Sprint 7. These changes are local until a separate release gate.
+
 ## Marketplace First, Payments Later
 
 Decision: Laria begins as a discovery marketplace with WhatsApp contact, not a transactional platform.

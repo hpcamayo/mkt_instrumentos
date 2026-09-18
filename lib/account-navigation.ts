@@ -1,7 +1,7 @@
 export type AccountNavigationItem = {
   href: string;
   label: string;
-  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "analytics" | "notifications" | "profile" | "security";
+  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "analytics" | "notifications" | "profile" | "security" | "favorites";
   exact?: boolean;
 };
 
@@ -16,6 +16,7 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
         { href: "/mi-cuenta/tienda/estadisticas", label: "Estadísticas", icon: "analytics" } as const,
       ] : []),
       { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
+      { href: "/mi-cuenta/favoritos", label: "Favoritos", icon: "favorites" },
       { href: "/mi-cuenta/perfil", label: "Perfil", icon: "profile" },
       { href: "/mi-cuenta/seguridad", label: "Seguridad", icon: "security" },
     ];
@@ -25,6 +26,7 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
     { href: "/mi-cuenta/publicaciones", label: "Mis publicaciones", icon: "listings" },
     { href: "/mi-cuenta/publicar", label: "Publicar instrumento", icon: "publish" },
     { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
+    { href: "/mi-cuenta/favoritos", label: "Favoritos", icon: "favorites" },
     { href: "/mi-cuenta/perfil", label: "Perfil", icon: "profile" },
     { href: "/mi-cuenta/seguridad", label: "Seguridad", icon: "security" },
   ];

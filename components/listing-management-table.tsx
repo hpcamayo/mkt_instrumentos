@@ -16,7 +16,7 @@ export type ManagedListing = {
   created_at: string;
   published_at?: string | null;
   sold_at?: string | null;
-  analytics?: { views: number; contacts: number };
+  analytics?: { views: number; contacts: number; favorites: number };
   rejection_reason: string | null;
   hidden_source: string | null;
   hidden_reason: string | null;
@@ -88,6 +88,7 @@ export function ListingManagementTable({
               <th className="px-5 py-3">Primera publicación</th>
               <th className="px-5 py-3">Vistas</th>
               <th className="px-5 py-3">Contactos WhatsApp</th>
+              <th className="px-5 py-3">Favoritos actuales</th>
               <th className="px-5 py-3">Acciones</th>
             </tr>
           </thead>
@@ -117,6 +118,7 @@ export function ListingManagementTable({
                   <td className="whitespace-nowrap px-5 py-4">{listing.published_at ? formatDate(listing.published_at) : "Aún no publicada"}</td>
                   <td className="px-5 py-4">{listing.analytics ? numbers.format(listing.analytics.views) : "No disponible"}</td>
                   <td className="px-5 py-4">{listing.analytics ? numbers.format(listing.analytics.contacts) : "No disponible"}</td>
+                  <td className="px-5 py-4">{listing.analytics ? numbers.format(listing.analytics.favorites) : "No disponible"}</td>
                   <td className="px-5 py-4">
                     <div className="flex min-w-56 flex-wrap gap-x-4 gap-y-2">
                       {listing.status === "approved" || listing.status === "sold" ? (

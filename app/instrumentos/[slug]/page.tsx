@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FavoriteButton } from "@/components/favorite-button";
 import { notFound } from "next/navigation";
 import { cache, Suspense, type ReactNode } from "react";
 import { ListingCard } from "@/components/listing-card";
@@ -150,6 +151,7 @@ export default async function ListingDetailPage({
     notFound();
   }
 
+  if (data.status === "sold" && normalizeStore(data)?.status && normalizeStore(data)?.status !== "active") notFound();
   if (data.status === "approved") {
     const { data: isPublic } = await supabase.rpc("listing_is_public", {
       p_listing_id: data.id,
@@ -196,6 +198,7 @@ function ListingDetail({
     <section className="bg-laria-cloud/70">
       <PageContainer className="py-6 sm:py-8">
         <Breadcrumb listing={listing} displayTitle={displayTitle} />
+        {!isSold ? <div className="mt-3 flex justify-end"><FavoriteButton listingId={listing.id} /></div> : null}
 
         <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] lg:items-start xl:gap-8">
           <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">

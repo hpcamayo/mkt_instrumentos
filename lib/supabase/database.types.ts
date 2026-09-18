@@ -34,6 +34,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      favorites: {
+        Row: {
+          created_at: string
+          listing_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          listing_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          listing_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "favorites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_edit_attempts: {
         Row: {
           attempt_id: string
@@ -125,6 +158,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "listing_photos_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_price_drops: {
+        Row: {
+          created_at: string
+          id: string
+          listing_id: string
+          new_price_pen: number
+          old_price_pen: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          listing_id: string
+          new_price_pen: number
+          old_price_pen: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          listing_id?: string
+          new_price_pen?: number
+          old_price_pen?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_price_drops_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "listings"
@@ -495,6 +560,9 @@ export type Database = {
           id: string
           listing_id: string | null
           message: string
+          new_price_pen: number | null
+          old_price_pen: number | null
+          price_drop_id: string | null
           read_at: string | null
           store_id: string | null
           user_id: string
@@ -505,6 +573,9 @@ export type Database = {
           id?: string
           listing_id?: string | null
           message: string
+          new_price_pen?: number | null
+          old_price_pen?: number | null
+          price_drop_id?: string | null
           read_at?: string | null
           store_id?: string | null
           user_id: string
@@ -515,6 +586,9 @@ export type Database = {
           id?: string
           listing_id?: string | null
           message?: string
+          new_price_pen?: number | null
+          old_price_pen?: number | null
+          price_drop_id?: string | null
           read_at?: string | null
           store_id?: string | null
           user_id?: string
@@ -525,6 +599,13 @@ export type Database = {
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_price_drop_id_fkey"
+            columns: ["price_drop_id"]
+            isOneToOne: false
+            referencedRelation: "listing_price_drops"
             referencedColumns: ["id"]
           },
           {
@@ -801,7 +882,20 @@ export type Database = {
         Args: { p_days?: number; p_owner_id?: string }
         Returns: Json
       }
+      get_account_analytics_before_favorites: {
+        Args: { p_days?: number; p_owner_id?: string }
+        Returns: Json
+      }
+      get_account_favorites: { Args: { p_page?: number }; Returns: Json }
+      get_favorite_destination: {
+        Args: { p_listing_id: string }
+        Returns: string
+      }
       get_marketplace_admin_analytics: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
+      get_marketplace_admin_analytics_before_favorites: {
         Args: { p_days?: number }
         Returns: Json
       }
@@ -862,6 +956,9 @@ export type Database = {
           id: string
           listing_id: string | null
           message: string
+          new_price_pen: number | null
+          old_price_pen: number | null
+          price_drop_id: string | null
           read_at: string | null
           store_id: string | null
           user_id: string
@@ -1089,6 +1186,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_listing_favorite: {
+        Args: { p_listing_id: string; p_saved: boolean }
+        Returns: boolean
       }
       set_owned_listing_lifecycle: {
         Args: { p_action: string; p_listing_id: string }

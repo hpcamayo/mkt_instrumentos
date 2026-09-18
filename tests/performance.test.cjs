@@ -323,6 +323,55 @@ test("changed data cannot silently replace an uncertain submission", async () =>
   }
 });
 
+test("a definitive duplicate RUC rejection permits correction in the same signed form", async () => {
+  const previous = global.fetch;
+  const calls = [];
+  let starts = 0;
+  global.fetch = async (_url, options) => {
+    const body = JSON.parse(options.body); calls.push(body);
+    if (body.action === "start") return mockResponse({ id: `id-${++starts}`, token: `token-${starts}` });
+    if (body.action === "complete" && body.fields.ruc === "20999999999") return mockResponse({ message: "Este RUC ya está registrado en Laria.", rejected: true }, 409);
+    return mockResponse({ ok: true });
+  };
+  try {
+    const uploads = [];
+    const submit = createPublicSubmission({ storage: { from: () => ({ upload: async (path) => { uploads.push(path); return { error: null }; } }) } });
+    const fields = { name: "La misma Tienda", ruc: "20999999999", address: "La misma dirección" };
+    await assert.rejects(submit("store", fields, [{ file, role: "logo" }]), /RUC ya está registrado/);
+    await submit("store", { ...fields, ruc: "20888888888" }, [{ file, role: "logo" }]);
+    assert.deepEqual(calls.map((call) => call.action), ["start", "complete", "cleanup", "start", "complete"]);
+    assert.equal(calls.at(-1).fields.address, fields.address);
+    assert.deepEqual(calls.at(-1).roles, ["logo"]);
+    assert.equal(uploads.length, 2);
+  } finally { global.fetch = previous; }
+});
+
+test("unclassified 409 and malformed responses do not authorize changed uncertain retries", async () => {
+  const previous = global.fetch;
+  global.fetch = async (_url, options) => JSON.parse(options.body).action === "start"
+    ? mockResponse({ id: "id-1", token: "token-1" }) : mockResponse({ message: "Unknown conflict" }, 409);
+  try {
+    const submit = createPublicSubmission({ storage: { from: () => ({ upload: async () => ({ error: null }) }) } });
+    await assert.rejects(submit("store", { ruc: "20999999999" }, []));
+    await assert.rejects(submit("store", { ruc: "20888888888" }, []), /mismos datos/);
+  } finally { global.fetch = previous; }
+});
+
+test("a later preflight rejection cannot clear an earlier uncertain commit", async () => {
+  const previous = global.fetch;
+  let completes = 0;
+  global.fetch = async (_url, options) => JSON.parse(options.body).action === "start"
+    ? mockResponse({ id: "id-1", token: "token-1" })
+    : ++completes === 1 ? mockResponse({ message: "Unknown result" }, 503)
+      : mockResponse({ message: "Profile now incomplete", rejected: true }, 422);
+  try {
+    const submit = createPublicSubmission({ storage: { from: () => ({ upload: async () => ({ error: null }) }) } });
+    await assert.rejects(submit("listing", { title: "Original" }, [file]));
+    await assert.rejects(submit("listing", { title: "Original" }, [file]));
+    await assert.rejects(submit("listing", { title: "Changed" }, [file]), /mismos datos/);
+  } finally { global.fetch = previous; }
+});
+
 test("out-of-range database responses recover without hiding other failures", () => {
   const { getPageRedirect } = load("lib/pagination.ts");
   assert.equal(getPageRedirect(999, null, { code: "PGRST103" }), 1);

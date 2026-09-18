@@ -71,7 +71,11 @@ exports.runAnalyticsBrowserSmoke = async function runAnalyticsBrowserSmoke({ bas
       assert.equal(actual["CTR de productos"], summary.ctr === null ? "Sin datos" : percentages.format(summary.ctr));
       assert.equal(actual["Tasa de contacto"], summary.contact_rate === null ? "Sin datos" : percentages.format(summary.contact_rate));
     }
-    assert.equal(Object.keys(actual).some((label) => /favoritos|ingresos|revenue/i.test(label)), false);
+    assert.equal(actual["Favoritos actuales"], numbers.format(summary.favorites));
+    assert.equal(actual["Guardados en el periodo"], numbers.format(summary.favorite_additions));
+    assert.equal(actual["Retirados en el periodo"], numbers.format(summary.favorite_removals));
+    assert.equal(actual["Tasa de favoritos"], summary.favorite_rate === null ? "Sin datos" : percentages.format(summary.favorite_rate));
+    assert.equal(Object.keys(actual).some((label) => /ingresos|revenue/i.test(label)), false);
   }
   async function detailViews() {
     const result = await service.from("marketplace_events").select("id", { count: "exact", head: true }).eq("listing_id", live.id).eq("actor_user_id", buyerSession.user.id).eq("event_type", "listing_view");
@@ -107,6 +111,7 @@ exports.runAnalyticsBrowserSmoke = async function runAnalyticsBrowserSmoke({ bas
       assert.ok(row, "Owned listing must be visible in management table.");
       assert.equal(row[4], numbers.format(expected.views));
       assert.equal(row[5], numbers.format(expected.contacts));
+      assert.equal(row[6], numbers.format(expected.favorites));
       assert.ok(row[3] && row[3] !== "Aún no publicada", "First-publication date must be present.");
       if (expected.status === "sold") assert.match(row[1], /Vendida.*Marcada vendida:/);
     }
@@ -153,7 +158,7 @@ exports.runAnalyticsBrowserSmoke = async function runAnalyticsBrowserSmoke({ bas
       assertMetrics(metrics(store, "Métricas de tienda"), expected, true);
     }
     store.command("set", "viewport", "390", "844");
-    store.command("click", "details > summary");
+    store.command("find", "text", "Cuenta · Estadísticas", "click");
     const mobile = store.command("snapshot", "-i").snapshot;
     assert.match(mobile, /Estadísticas/);
     assert.equal(store.evaluate("document.querySelector('nav[aria-label=\"Menú de cuenta móvil\"] a[aria-current=page]').textContent.trim()"), "Estadísticas");

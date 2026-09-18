@@ -8,6 +8,10 @@ type ListingMetrics = {
   recorded_views: number;
   impressions: number;
   contacts: number;
+  favorites: number;
+  favorite_additions: number;
+  favorite_removals: number;
+  favorite_rate: number | null;
   ctr: number | null;
   contact_rate: number | null;
 };
@@ -56,8 +60,8 @@ function isDate(value: unknown): value is string | null {
 }
 
 function hasMetrics(value: Record<string, unknown>) {
-  return ["views", "recorded_views", "impressions", "contacts"].every((key) => isCount(value[key]))
-    && isRatio(value.ctr) && isRatio(value.contact_rate);
+  return ["views", "recorded_views", "impressions", "contacts", "favorites", "favorite_additions", "favorite_removals"].every((key) => isCount(value[key]))
+    && isRatio(value.ctr) && isRatio(value.contact_rate) && isRatio(value.favorite_rate);
 }
 
 export function parseAccountAnalytics(value: unknown): AccountAnalytics | null {

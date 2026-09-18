@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
+import { GlobalCategories } from "@/components/global-categories";
+import { MarketplaceAccountProvider } from "@/components/marketplace-account-provider";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://instrumentos-peru.vercel.app"),
@@ -39,11 +41,12 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className="font-sans">
-        <div className="flex min-h-screen flex-col">
+        <MarketplaceAccountProvider><div className="flex min-h-screen flex-col">
           <SiteHeader />
+          <GlobalCategories />
           <main className="flex-1">{children}</main>
           <SiteFooter />
-        </div>
+        </div></MarketplaceAccountProvider>
       </body>
     </html>
   );

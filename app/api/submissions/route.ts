@@ -394,5 +394,7 @@ function escapeRegExp(value: string) {
 }
 
 function failure(message: string, status = 400) {
-  return NextResponse.json({ message }, { status });
+  // 4xx validation/constraint failures are definitive noncommits. Unknown
+  // database/network failures remain 503 and cannot authorize changed retries.
+  return NextResponse.json({ message, rejected: status >= 400 && status < 500 }, { status });
 }

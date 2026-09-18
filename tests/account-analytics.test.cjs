@@ -24,8 +24,8 @@ function aggregate(days = 0) {
   return {
     days,
     tracking_started_at: "2026-09-16T12:00:00Z",
-    summary: { active: 12, sold: 6, views: 321, recorded_views: 30, impressions: 100, contacts: 9, store_views: 11, store_contacts: 2, ctr: 0.3, contact_rate: 0.3 },
-    listings: [{ id: "listing-1", title: "Guitarra", status: "approved", published_at: "2026-09-16T12:00:00Z", sold_at: null, views: 321, recorded_views: 30, impressions: 100, contacts: 9, ctr: 0.3, contact_rate: 0.3 }],
+    summary: { active: 12, sold: 6, views: 321, recorded_views: 30, impressions: 100, contacts: 9, favorites: 2, favorite_additions: 3, favorite_removals: 1, favorite_rate: 0.1, store_views: 11, store_contacts: 2, ctr: 0.3, contact_rate: 0.3 },
+    listings: [{ id: "listing-1", title: "Guitarra", status: "approved", published_at: "2026-09-16T12:00:00Z", sold_at: null, views: 321, recorded_views: 30, impressions: 100, contacts: 9, favorites: 2, favorite_additions: 3, favorite_removals: 1, favorite_rate: 0.1, ctr: 0.3, contact_rate: 0.3 }],
   };
 }
 
@@ -53,7 +53,7 @@ test("analytics periods allow only lifetime, seven and thirty days", () => {
 
 test("aggregate parser accepts genuine zeros and null denominators without inventing data", () => {
   const value = aggregate();
-  for (const key of Object.keys(value.summary)) value.summary[key] = key === "ctr" || key === "contact_rate" ? null : 0;
+  for (const key of Object.keys(value.summary)) value.summary[key] = key === "ctr" || key === "contact_rate" || key === "favorite_rate" ? null : 0;
   value.tracking_started_at = null;
   value.listings = [];
   assert.deepEqual(parseAccountAnalytics(value), value);
@@ -126,7 +126,7 @@ test("Particular cards render all-owned actual metrics, not a truncated recent-l
   assert.match(html, />6</);
   assert.match(html, /incluidas las vistas históricas/);
   assert.match(html, /no mensajes ni ventas/);
-  assert.doesNotMatch(html, /Favoritos|Ingresos|CTR de productos/);
+  assert.doesNotMatch(html, /Ingresos|CTR de productos/);
 });
 
 test("Store metrics distinguish current inventory, recorded events, ratios and historical views", () => {
@@ -144,9 +144,9 @@ test("Store metrics distinguish current inventory, recorded events, ratios and h
 test("undefined rates are not displayed as zero and unavailable is not a zero dashboard", () => {
   const value = aggregate();
   value.summary.ctr = null;
-  value.summary.contact_rate = null;
+  value.summary.contact_rate = null; value.summary.favorite_rate = null;
   const html = renderToStaticMarkup(React.createElement(AccountAnalyticsMetrics, { analytics: value, store: true }));
-  assert.equal((html.match(/>Sin datos</g) ?? []).length, 2);
+  assert.equal((html.match(/>Sin datos</g) ?? []).length, 3);
   const unavailable = renderToStaticMarkup(React.createElement(AccountAnalyticsMetrics, { analytics: null, store: true }));
   assert.match(unavailable, /no están disponibles/);
   assert.doesNotMatch(unavailable, /Publicaciones activas|>0</);
@@ -219,7 +219,7 @@ test("management table renders actual per-listing counts, first publication and 
     "@/lib/account-ui": { listingStatusLabel: (value) => value === "sold" ? "Vendida" : value },
     "@/lib/listings": { formatPrice: () => "S/ 100" },
   });
-  const listing = { id: "one", title: "Historial", status: "sold", slug: "historial", price_pen: 100, created_at: "2026-09-01T12:00:00Z", published_at: "2026-09-02T12:00:00Z", sold_at: "2026-09-16T12:00:00Z", rejection_reason: null, hidden_source: null, hidden_reason: null, revisionStatus: null, revisionReason: null, analytics: { views: 123, contacts: 7 } };
+  const listing = { id: "one", title: "Historial", status: "sold", slug: "historial", price_pen: 100, created_at: "2026-09-01T12:00:00Z", published_at: "2026-09-02T12:00:00Z", sold_at: "2026-09-16T12:00:00Z", rejection_reason: null, hidden_source: null, hidden_reason: null, revisionStatus: null, revisionReason: null, analytics: { views: 123, contacts: 7, favorites: 2 } };
   const html = renderToStaticMarkup(React.createElement(ListingManagementTable, { listings: [listing], emptyMessage: "Vacío" }));
   assert.match(html, /Primera publicación/);
   assert.match(html, /Marcada vendida:/);
@@ -228,7 +228,7 @@ test("management table renders actual per-listing counts, first publication and 
   assert.match(html, /Republicar copia/);
   const missing = renderToStaticMarkup(React.createElement(ListingManagementTable, { listings: [{ ...listing, published_at: null, analytics: undefined }], emptyMessage: "Vacío" }));
   assert.match(missing, /Aún no publicada/);
-  assert.equal((missing.match(/>No disponible</g) ?? []).length, 2);
+  assert.equal((missing.match(/>No disponible</g) ?? []).length, 3);
 });
 
 test("both inventory pages use one grouped owner aggregate rather than per-listing RPCs", () => {

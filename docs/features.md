@@ -2,7 +2,7 @@
 
 This file describes current implementation. The frozen V1 requirements live in `docs/functional-spec.md`; missing behavior below is an implementation gap unless that specification marks it post-V1.
 
-Sprint 4 additions described here were **production-deployed on 2026-09-17** from application commit `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` after both migrations. Production automated verification passed; required owner acceptance remains pending. See `docs/sprint-4-production-verification.md`. Sprint 5 is not started. Sprints 1–2 remain CLOSED / ACCEPTED.
+Sprints 1–4 are **CLOSED / ACCEPTED**; Sprint 4 owner production evidence is dated 2026-09-17. Production remains commit `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa`. Sprint 5 functionality below is local only, awaiting a separate release gate; see `docs/sprint-5-verification.md`.
 
 ## Marketplace Model
 
@@ -368,11 +368,11 @@ Behavior:
 - Supabase Auth email template requirements are documented in `docs/auth-email-templates.md`; signup sends trusted `user_metadata.account_type` for conditional Particular/Tienda wording. Sprint 4 changes no hosted template or callback format.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
-- Sprint 3 owner listing lifecycle management and Sprint 3.1 amendable/versioned revisions are implemented for Particulars and Store Owners. Sprint 4 completes production photo-amendment behavior and adds real event-backed analytics. Favorites, alerts, transactions, and reviews remain later-sprint work.
+- Sprint 3 lifecycle and Sprint 3.1 revisions remain implemented for both account types. Accepted Sprint 4 completes photo amendments and event-backed analytics; Sprint 5 locally adds Favorites and in-app price drops. Saved-search/email alerts, transactions and reviews remain later-sprint work.
 
 Account shell:
 - `app/mi-cuenta/layout.tsx` keeps role-appropriate navigation visible across account subpages: a persistent desktop sidebar and an accessible collapsed mobile menu with active-section state.
-- Particulars see only real Particular routes; Store Owners see store routes only after an owner-bound store exists. The real `Estadísticas` destination is active in production for those Store Owners. Favorites, alerts, and employee management are not exposed as fake links.
+- Particulars see Particular routes; Store Owners see store routes after an owner-bound store exists. `Estadísticas` remains real. Both account types now have a real Favorites destination locally; saved-search alerts and employee management are not exposed as fake links.
 - Particular summary aggregates all owned listings through one owner-scoped RPC; the recent-five list is only presentation. Both inventory tables show actual views/WhatsApp contacts, first-publication date, status, and sold metadata. Unavailable aggregates never become estimated zero.
 
 ## First-party Marketplace Events and Analytics — Production Sprint 4
@@ -388,7 +388,16 @@ Account shell:
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Required V1 features not implemented yet include favorites, search and price-drop alerts, verified transactions, two-way reviews, reports, and marketplace email infrastructure. Contact/event tracking and real seller/store analytics are production-deployed in Sprint 4; required owner acceptance remains pending. The complete status is in `docs/functional-spec.md`.
+Required V1 gaps include saved-search alerts, price-drop email delivery, verified transactions, two-way reviews, reports and marketplace email infrastructure. Favorites/in-app price drops and favorite analytics are implemented locally in Sprint 5 but not released. Accepted Sprint 4 remains production. See `docs/functional-spec.md`.
+
+## Sprint 5 — local implementation, not released
+
+- One global header includes logo, prominent brand search and trusted hydrated account controls on every route. Shared category/subtype links use the existing filter taxonomy; mobile menus preserve access without horizontal overflow. Account navigation remains nested and persistent.
+- Search submits the canonical `/listados?brand=...` filters. Only actual catalog search/filter interactions use the existing signed analytics receipt; typing or rendering a header does not count as a search.
+- Duplicate-RUC application rejection is recoverable by changing only RUC in the same form, keeping business fields and optional assets. Unknown/lost-response commits remain locked to their exact signed retry. Existing accessible notices focus and scroll into view.
+- Private Favorites support both account types on real home/catalog/recommendation/store cards and approved details. Anonymous actions preserve a safe login destination; sellers cannot favorite their own inventory. `/mi-cuenta/favoritos` shows 24 items/page, removable sold history and redacted unavailable entries; copied relists start without favorites.
+- Public live price decreases create one in-app notification per current favorite recipient per transition atomically. Unchanged/increased prices, pending proposals and nonpublic inventory do not alert. Unfavorite stops future alerts; refavorite does not send old drops. Notification links recheck current availability rather than exposing private data.
+- Particular and Store analytics show current favorites, selected-period additions/removals and favorite-add/view rate. Counts/rates are real grouped aggregates with no buyer directory. No revenue, verified sales, email delivery or saved-search UI is fabricated.
 
 Post-V1 unless a new product decision is explicit:
 - Payments.

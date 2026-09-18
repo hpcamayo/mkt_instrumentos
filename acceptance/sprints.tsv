@@ -3,7 +3,7 @@ sprint	prefixes	focus
 2	AUTH,STORE,VERIFY,CAP,RLS,SDASH	Store accounts, applications, verification and inventory cap
 3	LIST,LIFE,REV,DASH,STORE,SDASH,NOTIF	Listing lifecycle and amendable pending revisions; acceptance fixes
 4	PHOTO,REV,AUTH,WA,AN,SANA,SDASH	Photo subsystem repair + events/analytics
-5	FAV,PDA	Favorites + price-drop alerts
+5	FAV,PDA,PUB,STORE,NOTIF,AN,SANA,SDASH,REL	Favorites + in-app price-drop alerts; global navigation/search, same-form RUC retry and relevant aggregate/reliability cases only
 6	TX,REVW,LIFE	Verified transactions + reviews
 7	ALERT,MAIL	Search alerts + marketplace mail
 8	REP,ADMIN	Reports + full Admin Hub

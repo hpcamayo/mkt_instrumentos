@@ -12,6 +12,7 @@ type Attempt = {
   folder: string;
   fingerprint: string;
   commitStarted: boolean;
+  uncertainOutcome: boolean;
 };
 
 // One instance per form preserves the idempotency token across retries, including
@@ -58,6 +59,7 @@ export function createPublicSubmission(client: Client) {
           folder: started.folder ?? `pending/${started.id}`,
           fingerprint,
           commitStarted: false,
+          uncertainOutcome: false,
         };
       }
       const bucket = kind === "store" ? "store-assets" : "listing-photos";
@@ -104,13 +106,25 @@ export function createPublicSubmission(client: Client) {
         }
       }
       attempt.commitStarted = true;
-      await submissionRequest({
-        action: "complete",
-        token: attempt.token,
-        fields,
-        paths,
-        roles: files.map(({ role }) => role ?? null),
-      });
+      try {
+        await submissionRequest({
+          action: "complete",
+          token: attempt.token,
+          fields,
+          paths,
+          roles: files.map(({ role }) => role ?? null),
+        });
+      } catch (error) {
+        // Only an explicit server rollback permits corrected data. Network/5xx
+        // failures retain the immutable attempt: the transaction may have committed.
+        if (error instanceof SubmissionRejected && !attempt.uncertainOutcome) {
+          attempt.commitStarted = false;
+        } else {
+          // A later preflight rejection cannot disprove an earlier lost commit.
+          attempt.uncertainOutcome = true;
+        }
+        throw error;
+      }
       attempt = null;
     } finally {
       busy = false;
@@ -126,11 +140,13 @@ async function submissionRequest(payload: object) {
   });
   const result = await response.json();
   if (!response.ok)
-    throw new Error(
+    throw new (result.rejected === true ? SubmissionRejected : Error)(
       result.message ?? "No se pudo completar el envío. Intenta nuevamente.",
     );
   return result;
 }
+
+class SubmissionRejected extends Error {}
 
 function extension(type: string) {
   if (type === "image/jpeg") return "jpg";

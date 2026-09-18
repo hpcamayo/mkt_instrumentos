@@ -3,6 +3,7 @@
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 
 import Link from "next/link";
+import { FavoriteButton } from "@/components/favorite-button";
 import { useEffect, useState } from "react";
 import { useListingImpression } from "@/components/marketplace-telemetry";
 import type { EventSource } from "@/lib/marketplace-event-payload";
@@ -205,6 +206,7 @@ export function ListingCard({ listing, source = "catalog" }: ListingCardProps) {
       </div>
 
       <div className="space-y-3 p-3.5">
+        <div className="flex justify-end"><FavoriteButton listingId={listing.id} /></div>
         <div className="space-y-1.5">
           <div className="flex items-start justify-between gap-2">
             <h2 className="line-clamp-2 min-w-0 text-sm font-black leading-5 text-laria-ink">

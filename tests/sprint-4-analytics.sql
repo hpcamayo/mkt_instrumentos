@@ -116,7 +116,7 @@ do $$ declare lifetime jsonb; recent jsonb; item jsonb; begin
  select value into item from jsonb_array_elements(lifetime->'listings') where value->>'id'='73000000-0000-4000-8000-000000000001';
  if (item->>'views')::integer <> 10 or (item->>'contacts')::integer <> 3 or item->>'status' <> 'approved' or nullif(item->>'published_at','') is null then raise exception 'Per-listing aggregates/metadata mismatch'; end if;
  if lifetime::text like '%71000000-0000-4000-8000-000000000005%' then raise exception 'Buyer identity directory leaked into analytics'; end if;
- if lifetime::text like '%revenue%' or lifetime::text like '%favorites%' or lifetime::text like '%gmv%' then raise exception 'Future/commercial metrics fabricated'; end if;
+ if lifetime::text like '%revenue%' or lifetime::text like '%gmv%' then raise exception 'Future/commercial metrics fabricated'; end if;
  if (lifetime#>>'{summary,ctr}')::numeric <> 1.5 or (lifetime#>>'{summary,contact_rate}')::numeric <> 1 then raise exception 'Ratios must use recorded views, not incomparable historical cache'; end if;
 end $$;
 

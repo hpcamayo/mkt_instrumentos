@@ -155,12 +155,12 @@ module.exports = async function photoBrowserSmoke({ base, id, session, adminSess
 
     command("set", "viewport", "390", "844");
     snapshot();
-    command("click", "summary");
+    command("find", "text", "Cuenta · Mis publicaciones", "click");
     assert.match(snapshot(), /Menú de cuenta móvil/);
     assert.equal(evaluate("(() => { const menu = document.querySelector('nav[aria-label=\"Menú de cuenta móvil\"]'); return !!menu && menu.getBoundingClientRect().width > 0 && Array.from(menu.querySelectorAll('a')).some((link) => link.getAttribute('aria-current') === 'page'); })()"), true, "Mobile account menu must expose an active real account destination.");
     assert.equal(evaluate("document.documentElement.scrollWidth <= innerWidth"), true, "Photo editor must not overflow the narrow viewport.");
     command("screenshot", path.join(output, "mobile-menu.png"), "--full");
-    command("click", "summary");
+    command("find", "text", "Cuenta · Mis publicaciones", "click");
     command("find", "role", "button", "click", "--name", "Restaurar fotos aprobadas");
     waitFor(`JSON.stringify(${photoSources}) === ${JSON.stringify(JSON.stringify(liveUrls))}`);
     snapshot();

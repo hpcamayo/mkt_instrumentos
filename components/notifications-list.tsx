@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { formatPrice } from "@/lib/price";
 
 type AccountNotification = {
   id: string;
@@ -13,6 +14,8 @@ type AccountNotification = {
   store_id: string | null;
   created_at: string;
   read_at: string | null;
+  old_price_pen?: number | null;
+  new_price_pen?: number | null;
 };
 
 export function NotificationsList({ notifications }: { notifications: AccountNotification[] }) {
@@ -49,7 +52,9 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
     <ol className="grid gap-3">
       {notifications.map((notification) => {
         const unread = !notification.read_at;
-        const href = notification.store_id && notification.event_type.startsWith("store_")
+        const href = notification.event_type === "listing_price_drop" && notification.listing_id
+          ? `/mi-cuenta/favoritos/${notification.listing_id}`
+          : notification.store_id && notification.event_type.startsWith("store_")
           ? "/mi-cuenta/tienda"
           : notification.store_id
             ? "/mi-cuenta/tienda/inventario"
@@ -62,7 +67,7 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
                   <h2 className="font-black text-laria-ink">{notificationLabel(notification.event_type)}</h2>
                   {unread ? <span className="rounded-full bg-laria-yellow px-2 py-0.5 text-[11px] font-black text-laria-black">Nueva</span> : null}
                 </div>
-                <p className="mt-2 text-sm leading-6 text-laria-text-soft">{notification.message}</p>
+                <p className="mt-2 text-sm leading-6 text-laria-text-soft">{notification.event_type === "listing_price_drop" && typeof notification.old_price_pen === "number" && typeof notification.new_price_pen === "number" ? `Una publicación de tus favoritos bajó de ${formatPrice(notification.old_price_pen)} a ${formatPrice(notification.new_price_pen)}.` : notification.message}</p>
                 <time suppressHydrationWarning className="mt-2 block text-xs font-semibold text-laria-muted" dateTime={notification.created_at}>
                   {new Date(notification.created_at).toLocaleString("es-PE")}
                 </time>
@@ -81,6 +86,7 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
 
 function notificationLabel(eventType: string) {
   return ({
+    listing_price_drop: "Bajó de precio un favorito",
     listing_approved: "Publicación aprobada",
     listing_rejected: "Publicación rechazada",
     listing_hidden: "Publicación ocultada",

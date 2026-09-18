@@ -103,7 +103,7 @@ const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAIAAABvFaqvAAAACXBIWXM
     assert.ok(report.listings.find((item) => item.id === live.id).published_at);
     assert.ok(report.listings.find((item) => item.id === sold.id).sold_at);
     assert.ok(!JSON.stringify(report).includes(buyer.id), "Aggregate output cannot expose a buyer directory.");
-    for (const field of ["favorites", "revenue", "gmv"]) assert.ok(!JSON.stringify(report).includes(field), `Inactive ${field} metric must not be fabricated.`);
+    for (const field of ["revenue", "gmv"]) assert.ok(!JSON.stringify(report).includes(field), `Inactive ${field} metric must not be fabricated.`);
     const empty = await rpc(otherSession.client, "get_account_analytics", { p_days: 0 });
     assert.equal(empty.summary.views, 0);
     assert.ok(empty.summary.ctr === null || empty.summary.ctr === 0);
