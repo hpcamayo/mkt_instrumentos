@@ -4,7 +4,7 @@ This is the practical owner guide for Laria.
 
 `docs/functional-spec.md` is canonical for the frozen V1 product contract. This manual describes operations and current implementation; it must not be used to override that contract.
 
-Release boundary: Sprints 1–4 are **CLOSED / ACCEPTED**, including owner production acceptance dated 2026-09-17. Production remains Sprint 4 commit `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa`. Sprint 5 instructions below describe local functionality, not yet available in production; a separate release gate is required. See `docs/sprint-5-verification.md`.
+Release boundary: Sprints 1–4 are **CLOSED / ACCEPTED**, including owner production acceptance dated 2026-09-17. Sprint 5 is deployed from `516bf4591512b99748f14795f384e594143d1268` with its migration applied and automated production verification completed on 2026-09-18. The Sprint 5 owner usability checklist below is now ready; this is not owner sign-off. See `docs/sprint-5-production-verification.md`.
 
 ## What Laria Is
 
@@ -165,7 +165,7 @@ Account page `/mi-cuenta`:
 - Store Owner summary shows the application/trust state, rejection reason, pending/approved capacity, and whether new inventory requires moderation or may publish directly.
 - Owned inventory pages now show edit, owner hide/restore, mark-sold, and copied-relist actions according to each listing state. Moderation and administrative-hide reasons are visible to the owner.
 - Rejected rows can be corrected in the editor and returned through `Enviar nuevamente`; Particular and normal Tienda rows return to moderation.
-- Production Sprint 4 adds real Particular metrics and Store `Estadísticas`. Sprint 5 locally adds a working Favorites section to both account types and in-app price-drop notifications; saved-search/email alerts are not exposed as fake functionality.
+- Production Sprint 4 adds real Particular metrics and Store `Estadísticas`. Sprint 5 adds in production a working Favorites section to both account types and in-app price-drop notifications; saved-search/email alerts are not exposed as fake functionality.
 
 Store statistics `/mi-cuenta/tienda/estadisticas` (production Sprint 4):
 - Available only inside the authenticated Store Owner shell when the account owns a store.
@@ -324,7 +324,7 @@ Cleanup is a trusted, owner-bound operation, not a manual browser Storage delete
 
 Only visible real browser activity records ordinary views/impressions; SSR, HEAD, and prefetch do not count. A card needs at least 50% viewport intersection. Views/impressions are deduplicated over a rolling 30-minute actor/session-and-target window, distinct from the random anonymous cookie's 24-hour lifetime. Owner/admin commercial activity is excluded.
 
-Actual WhatsApp clicks may count separately, but retrying one event ID cannot count twice. Tracking failure must not strand contact navigation. The system stores click intent, target, source/time, and authenticated buyer identity when present, never draft/message content, raw IP or fingerprints. Analytics expose aggregates, not a buyer directory. Sprint 5 locally adds Favorites/in-app price drops; saved-search/email alerts, verified transactions and reviews remain later-sprint work.
+Actual WhatsApp clicks may count separately, but retrying one event ID cannot count twice. Tracking failure must not strand contact navigation. The system stores click intent, target, source/time, and authenticated buyer identity when present, never draft/message content, raw IP or fingerprints. Analytics expose aggregates, not a buyer directory. Sprint 5 adds in production Favorites/in-app price drops; saved-search/email alerts, verified transactions and reviews remain later-sprint work.
 
 ## Listing Detail QA Checklist
 
@@ -465,7 +465,7 @@ To test locally:
 
 Historical checklist below was completed by the owner: all eight cases PASS — 2026-09-17. No additional Sprint 4 owner retest is requested.
 
-The owner already accepted `STORE-018`, `DASH-008`, `NOTIF-001`, `NOTIF-002`, `LIST-013`, `REV-011`, and `REV-012` in production on **2026-09-16**. Do not treat them as new unsigned acceptance or overwrite that evidence. The remaining photo amendment defect `REV-014` now has local and production automated SQL/API/actual-browser proof, but still needs the explicit owner production retest below.
+The owner already accepted `STORE-018`, `DASH-008`, `NOTIF-001`, `NOTIF-002`, `LIST-013`, `REV-011`, and `REV-012` in production on **2026-09-16**. Do not treat them as new unsigned acceptance or overwrite that evidence. The eight Sprint 4 cases below were owner-accepted on 2026-09-17; their archived instructions are not outstanding manual retests.
 
 Required owner/manual checks, using real owned listings/stores:
 - `REV-014`: on an approved Particular or normal-Tienda listing, create a pending title/condition proposal, then add and save a photo. Amend/reorder/remove/replace photos and save repeatedly. Confirm exactly one evolving proposal retains text changes; public old photos remain until moderation. As admin, inspect the latest proposal and approve it; confirm the exact latest order/primary is promoted.
@@ -482,17 +482,17 @@ Exact completed owner/manual IDs: `REV-014`, `PHOTO-015`, `SANA-010`, `AUTH-023`
 
 Production entry points: `/mi-cuenta`, `/mi-cuenta/publicaciones`, `/mi-cuenta/publicaciones/{id}/editar`, `/mi-cuenta/tienda/inventario`, `/mi-cuenta/tienda/estadisticas?periodo=0|7|30`, `/recuperar-contrasena`, `/mi-cuenta/seguridad`, and `/admin`. Compare public `/listados`, `/instrumentos/{slug}` and `/tiendas/{slug}` in a separate anonymous browser. Use your own IDs/slugs; temporary release QA accounts and content have been deleted.
 
-Do not repeat deterministic SQL/RLS attacks, raw-event authorization or cap races as manual QA. Sprint 5 locally completes favorite-dependent `SDASH-008` aggregates. `LIFE-013` remains blocked for the verified-transaction/review sprint.
+Do not repeat deterministic SQL/RLS attacks, raw-event authorization or cap races as manual QA. Sprint 5 completes in production favorite-dependent `SDASH-008` aggregates. `LIFE-013` remains blocked for the verified-transaction/review sprint.
 
 Valid region values are fixed to Peru regions. City fields show suggestions but can be typed manually when the city is not in the list.
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Sprint 5 locally implements Favorites and in-app price drops but is not deployed. V1 gaps remain saved-search alerts, price-drop/lifecycle email delivery, verified transactions, reviews, reports and the remaining full moderation hub. Listing lifecycle, revisions, notifications, private photo editing and contact/event-backed analytics remain implemented; Sprints 1–4 are accepted. See `docs/functional-spec.md`.
+Sprint 5 implements Favorites and in-app price drops in production; owner usability acceptance remains pending. V1 gaps remain saved-search alerts, price-drop/lifecycle email delivery, verified transactions, reviews, reports and the remaining full moderation hub. Listing lifecycle, revisions, notifications, private photo editing and contact/event-backed analytics remain implemented; Sprints 1–4 are accepted. See `docs/functional-spec.md`.
 
-## Sprint 5 owner usability acceptance — after a separate production release
+## Sprint 5 owner usability acceptance — production retest ready
 
-Use your own accounts/listings after the future release gate; local automated PASS is not a manual production sign-off. Do not ask the owner to repeat database/RLS/concurrency attacks.
+Use your own accounts/listings on production now; local and production automated PASS is not a manual owner sign-off. Temporary release fixtures have been removed. Do not repeat database/RLS/concurrency attacks.
 
 - `STORE-019`: submit a duplicate RUC, correct only RUC without reload, and confirm other business fields/logo remain, success is focused/visible and the account shows one existing application.
 - `PUB-008`, `PUB-009`, `PUB-010`: browse home, catalog, detail, store, login and account routes on desktop/narrow mobile. Check logo/search/account layout, category/subtype access, persistent account menu and no horizontal overflow. Enter a known brand and an unknown brand; verify canonical catalog results and filter behavior.
@@ -501,7 +501,7 @@ Use your own accounts/listings after the future release gate; local automated PA
 - `PDA-001`, `PDA-002`, `PDA-004`, `PDA-005`, `NOTIF-003`: favorite an approved item, lower its live price as owner, then open the buyer's in-app notice. Confirm useful price copy/current destination, no duplicate for unchanged price, and a later drop can notify again. No email is promised in Sprint 5; `PDA-009` is deferred to Sprint 7.
 - `SANA-002`, `SANA-007`, `AN-014`, `SDASH-008`: visually check real current favorites versus period actions/rate in Particular/Store analytics. No buyer directory, revenue or guaranteed transaction is shown.
 
-Future production routes: `https://laria.audio/`, `/listados`, `/login`, `/mi-cuenta/favoritos`, `/mi-cuenta/notificaciones`, `/mi-cuenta/publicaciones`, `/mi-cuenta/tienda`, `/mi-cuenta/tienda/inventario`, `/mi-cuenta/tienda/estadisticas`. Use your actual public `/instrumentos/{slug}` and `/tiendas/{slug}`. This task did not release these changes.
+Production routes: `https://laria.audio/`, `/listados`, `/login`, `/mi-cuenta/favoritos`, `/mi-cuenta/notificaciones`, `/mi-cuenta/publicaciones`, `/mi-cuenta/tienda`, `/mi-cuenta/tienda/inventario`, `/mi-cuenta/tienda/estadisticas`. Use your actual public `/instrumentos/{slug}` and `/tiendas/{slug}`. See `docs/sprint-5-production-verification.md` for the exact release/evidence boundary.
 
 Do not build these post-V1 areas without a new product decision:
 - Payments.

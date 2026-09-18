@@ -2,7 +2,7 @@
 
 This file describes current implementation. The frozen V1 requirements live in `docs/functional-spec.md`; missing behavior below is an implementation gap unless that specification marks it post-V1.
 
-Sprints 1–4 are **CLOSED / ACCEPTED**; Sprint 4 owner production evidence is dated 2026-09-17. Production remains commit `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa`. Sprint 5 functionality below is local only, awaiting a separate release gate; see `docs/sprint-5-verification.md`.
+Sprints 1–4 are **CLOSED / ACCEPTED**; Sprint 4 owner production evidence is dated 2026-09-17. Sprint 5 is deployed from `516bf4591512b99748f14795f384e594143d1268` with its matching migration applied on 2026-09-18. Automated production verification passed; owner usability acceptance remains pending. See `docs/sprint-5-production-verification.md`.
 
 ## Marketplace Model
 
@@ -368,11 +368,11 @@ Behavior:
 - Supabase Auth email template requirements are documented in `docs/auth-email-templates.md`; signup sends trusted `user_metadata.account_type` for conditional Particular/Tienda wording. Sprint 4 changes no hosted template or callback format.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
-- Sprint 3 lifecycle and Sprint 3.1 revisions remain implemented for both account types. Accepted Sprint 4 completes photo amendments and event-backed analytics; Sprint 5 locally adds Favorites and in-app price drops. Saved-search/email alerts, transactions and reviews remain later-sprint work.
+- Sprint 3 lifecycle and Sprint 3.1 revisions remain implemented for both account types. Accepted Sprint 4 completes photo amendments and event-backed analytics; Sprint 5 adds in production Favorites and in-app price drops. Saved-search/email alerts, transactions and reviews remain later-sprint work.
 
 Account shell:
 - `app/mi-cuenta/layout.tsx` keeps role-appropriate navigation visible across account subpages: a persistent desktop sidebar and an accessible collapsed mobile menu with active-section state.
-- Particulars see Particular routes; Store Owners see store routes after an owner-bound store exists. `Estadísticas` remains real. Both account types now have a real Favorites destination locally; saved-search alerts and employee management are not exposed as fake links.
+- Particulars see Particular routes; Store Owners see store routes after an owner-bound store exists. `Estadísticas` remains real. Both account types now have a real Favorites destination in production; saved-search alerts and employee management are not exposed as fake links.
 - Particular summary aggregates all owned listings through one owner-scoped RPC; the recent-five list is only presentation. Both inventory tables show actual views/WhatsApp contacts, first-publication date, status, and sold metadata. Unavailable aggregates never become estimated zero.
 
 ## First-party Marketplace Events and Analytics — Production Sprint 4
@@ -388,9 +388,9 @@ Account shell:
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Required V1 gaps include saved-search alerts, price-drop email delivery, verified transactions, two-way reviews, reports and marketplace email infrastructure. Favorites/in-app price drops and favorite analytics are implemented locally in Sprint 5 but not released. Accepted Sprint 4 remains production. See `docs/functional-spec.md`.
+Required V1 gaps include saved-search alerts, price-drop email delivery, verified transactions, two-way reviews, reports and marketplace email infrastructure. Favorites/in-app price drops and favorite analytics are deployed in Sprint 5, with owner usability acceptance pending. See `docs/functional-spec.md`.
 
-## Sprint 5 — local implementation, not released
+## Sprint 5 — deployed, owner acceptance pending
 
 - One global header includes logo, prominent brand search and trusted hydrated account controls on every route. Shared category/subtype links use the existing filter taxonomy; mobile menus preserve access without horizontal overflow. Account navigation remains nested and persistent.
 - Search submits the canonical `/listados?brand=...` filters. Only actual catalog search/filter interactions use the existing signed analytics receipt; typing or rendering a header does not count as a search.

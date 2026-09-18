@@ -1,6 +1,6 @@
 # Sprint 5 — local implementation and verification
 
-Verified 2026-09-18 against loopback Supabase and a production-mode local Next server at `http://localhost:3100`. This is not a production release or owner production sign-off. All final gates passed; no blocking application defect remains from this verification round.
+Verified 2026-09-18 against loopback Supabase and a production-mode local Next server at `http://localhost:3100`. This is the historical pre-release local report, not an owner production sign-off. All final local gates passed. The subsequent production release is recorded separately in `docs/sprint-5-production-verification.md`; sections K/P below describe this earlier local-only task boundary.
 
 ## A. Sprint 4 closure
 

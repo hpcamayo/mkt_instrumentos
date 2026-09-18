@@ -15,7 +15,7 @@ Browser
 
 The codebase currently favors server-rendered public pages with small client islands for forms, admin auth/moderation, filters, card photo carousel behavior, and listing detail metadata.
 
-Release boundary: Sprints 1–4 are **CLOSED / ACCEPTED**, including owner production evidence dated 2026-09-17. Production remains Sprint 4 commit `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa`; see `docs/sprint-4-production-verification.md`. Sprint 5 changes below are local only, awaiting a separate release gate.
+Release boundary: Sprints 1–4 are **CLOSED / ACCEPTED**, including owner production evidence dated 2026-09-17. Sprint 5 is deployed from `516bf4591512b99748f14795f384e594143d1268` with its matching migration applied on 2026-09-18. Automated production verification passed; owner usability acceptance remains pending. See `docs/sprint-5-production-verification.md`.
 
 ## Core Responsibilities
 
@@ -271,9 +271,9 @@ Search/filter events carry a short-lived signed receipt of the existing server-p
 
 `get_account_analytics()` checks the authenticated owner (or trusted admin) and performs grouped indexed aggregates. `lib/account-analytics.ts` validates its JSON and caches only within the current server render. Particular summary uses all owned listings, not the latest-five presentation list. Both management tables include real views/contacts, first-publication date, status, and sold date. Store Owners with a store have the real `/mi-cuenta/tienda/estadisticas` destination with lifetime/7-day/30-day windows (default 30).
 
-Lifetime listing views use the preserved `view_count` cache, including pre-event history; new accepted detail events increment that same cache once. Seven/thirty-day views use only events. CTR is recorded detail views / recorded impressions; contact rate is recorded product contacts / recorded detail views in the same window. Zero denominators display `Sin datos`; unavailable RPCs display unavailable, never invented zero. Active inventory means currently approved **and public** (active parent store); sold counts mean current seller-marked state, not verified paid sales. Sprint 5 locally adds favorite metrics below; revenue, transaction analytics and the full admin analytics hub remain absent. `get_marketplace_admin_analytics()` supplies a restricted aggregate RPC foundation only.
+Lifetime listing views use the preserved `view_count` cache, including pre-event history; new accepted detail events increment that same cache once. Seven/thirty-day views use only events. CTR is recorded detail views / recorded impressions; contact rate is recorded product contacts / recorded detail views in the same window. Zero denominators display `Sin datos`; unavailable RPCs display unavailable, never invented zero. Active inventory means currently approved **and public** (active parent store); sold counts mean current seller-marked state, not verified paid sales. Sprint 5 adds in production favorite metrics below; revenue, transaction analytics and the full admin analytics hub remain absent. `get_marketplace_admin_analytics()` supplies a restricted aggregate RPC foundation only.
 
-## Sprint 5 global shell and Favorites — local only
+## Sprint 5 global shell and Favorites — deployed, owner acceptance pending
 
 The root server layout presents one global header and category tree around all routes, including admin. Header search uses native GET `/listados?brand=...`, the existing catalog parser and its signed search receipt; typing, focus and header rendering record nothing. Category/subtype links reuse `categoryOptions` and `getInstrumentTypeOptions`, including `Otro`. Native mobile details expose the same navigation; the authenticated account layout remains nested rather than replaced.
 

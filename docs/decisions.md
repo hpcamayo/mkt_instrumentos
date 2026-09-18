@@ -6,7 +6,7 @@ This file records important decisions so future Codex sessions do not accidental
 
 ## Sprint 5 Global Navigation and In-App Price Drops
 
-Sprint 5 owner navigation clarification (2026-09-18): marketplace logo, canonical catalog search and the shared category/subtype tree belong in the root site shell across public/auth/account/admin routes. The role-aware account sidebar/mobile menu remains nested. Search reuses the existing brand filter, not a new free-text engine. Sprint 5 price-drop delivery is in-app only; centralized email delivery remains Sprint 7. These changes are local until a separate release gate.
+Sprint 5 owner navigation clarification (2026-09-18): marketplace logo, canonical catalog search and the shared category/subtype tree belong in the root site shell across public/auth/account/admin routes. The role-aware account sidebar/mobile menu remains nested. Search reuses the existing brand filter, not a new free-text engine. Sprint 5 price-drop delivery is in-app only; centralized email delivery remains Sprint 7. These changes were production-released on 2026-09-18; automated evidence is separate from owner usability acceptance.
 
 ## Marketplace First, Payments Later
 

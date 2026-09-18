@@ -308,7 +308,7 @@ See `docs/performance.md` for the implemented behavior and verification details.
 
 ## Implementation Status
 
-Sprints 1–4 are **CLOSED / ACCEPTED**. Sprint 4 production source remains `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` with both matching migrations applied; see `docs/sprint-4-production-verification.md`. Owner manual production acceptance PASS — 2026-09-17: `REV-014`, `PHOTO-015`, `AUTH-023`, `WA-001`–`WA-004`, `SANA-010`. Sprint 5 is authorized for local implementation and verification only, not production release.
+Sprints 1–4 are **CLOSED / ACCEPTED**. Sprint 4 owner manual production acceptance PASS — 2026-09-17: `REV-014`, `PHOTO-015`, `AUTH-023`, `WA-001`–`WA-004`, `SANA-010`. Sprint 5 source `516bf4591512b99748f14795f384e594143d1268` and its matching migration were production-released on 2026-09-18; automated production verification passed and owner usability acceptance remains pending. See `docs/sprint-5-production-verification.md`.
 
 - **DONE**: the functional area is materially implemented for its V1 requirement.
 - **MODIFY**: a related implementation exists, but it must change or expand to meet V1.
@@ -321,11 +321,11 @@ Sprints 1–4 are **CLOSED / ACCEPTED**. Sprint 4 production source remains `427
 | Listing detail | DONE | Approved detail pages work; sold listings remain available only by direct URL with a clear `Vendido` state and no contact CTA. |
 | WhatsApp contact | DONE | Listing/store links use a trusted contact endpoint that records canonical intent before navigation, with bounded failure fallback so telemetry cannot trap contact. |
 | Seller authentication | DONE | Particular signup, confirmation callback, password and magic-link login, logout, forgot/reset password, authenticated password change, and profile editing are implemented. |
-| Buyer/Particular account model | MODIFY | Particular signup, trusted profiles, the persistent account shell and Sprint 5 local Favorites support buying/selling identity; saved-search alerts and verified-transaction buyer features remain later-sprint work. |
+| Buyer/Particular account model | MODIFY | Particular signup, trusted profiles, the persistent account shell and Sprint 5 production Favorites support buying/selling identity; saved-search alerts and verified-transaction buyer features remain later-sprint work. |
 | Account-required listing publication | DONE | `/vender` requires authentication, preserves the login return path, binds signed retries to the current user, and atomically creates owned `pending` Particular listings. |
 | Seller listing ownership | DONE | New Particular listings set `owner_user_id`; owner/public/admin boundaries remain enforced by RLS, while legacy nullable ownership remains supported. |
 | Seller dashboard | DONE | The persistent role-aware `/mi-cuenta` shell exposes real profile/security, publication, owned-listing management, edit, hide/restore, sold, and relist workflows. Analytics remain tracked separately below. |
-| Seller analytics | DONE | Owner-scoped views, contacts, inventory and dates now include real current favorites, period add/remove actions and favorite-add/view rate in Sprint 5 locally. Zero denominators are Sin datos; no buyer directory or fabricated revenue is exposed. |
+| Seller analytics | DONE | Owner-scoped views, contacts, inventory and dates now include real current favorites, period add/remove actions and favorite-add/view rate in production Sprint 5. Zero denominators are Sin datos; no buyer directory or fabricated revenue is exposed. |
 | Instrument type/attributes submission | DONE | Seller creation and admin moderation reuse the canonical instrument filter definitions; supported attributes use labeled controls rather than raw JSON. |
 | 2–10 photo handling | DONE | Creation/edit validation enforces 2–10 valid owned photos, canonical order/primary, replacement/removal and signed retry receipts. Private revision staging, current-proposal amendment, exact atomic promotion, retained historical references and reference-safe cleanup are verified locally and through production automation; required owner acceptance remains separate. |
 | Revision moderation | DONE | Particular and normal Tienda moderated fields/photos create one evolving pending proposal while the approved live version remains public. Owners amend that same versioned proposal; stale admin decisions fail, and approval patches only the latest proposed fields/photos. Tienda Verificada edits remain direct. |
@@ -333,9 +333,9 @@ Sprints 1–4 are **CLOSED / ACCEPTED**. Sprint 4 production source remains `427
 | WhatsApp contact event tracking | DONE | Durable first-party events record exact listing/store/seller, server-verified buyer or random signed anonymous session, timestamp and bounded source. Message/draft content is never accepted as telemetry. Future buyer eligibility UI remains out of Sprint 4. |
 | Verified transactions | BUILD | No transaction-confirmation model or workflow exists. |
 | Two-way reviews | BUILD | No review schema or workflow exists. |
-| Favorites | DONE | Sprint 5 local implementation adds private owner-scoped relations, idempotent mutations, shared card/detail controls, paginated account history, sold/unavailable labels and safe destinations; relist copies do not inherit favorites. |
+| Favorites | DONE | Sprint 5 production implementation adds private owner-scoped relations, idempotent mutations, shared card/detail controls, paginated account history, sold/unavailable labels and safe destinations; relist copies do not inherit favorites. |
 | Search alerts | BUILD | No saved-search/alert schema, scheduler, or UI exists. |
-| Price-drop alerts | MODIFY | Sprint 5 locally implements atomic live-public-price-drop fan-out to current favorites through private in-app Notifications, with transition/recipient dedupe. Centralized email delivery and PDA-009 remain deferred to Sprint 7. |
+| Price-drop alerts | MODIFY | Sprint 5 implements in production atomic live-public-price-drop fan-out to current favorites through private in-app Notifications, with transition/recipient dedupe. Centralized email delivery and PDA-009 remain deferred to Sprint 7. |
 | Store-owner ownership | DONE | Dedicated Store Owner signup/profile repair, one-owner/one-store uniqueness, owner-bound signed submissions, and owner-only RLS are implemented without converting Particular accounts. |
 | Store application | DONE | The authenticated application collects all required business/contact/location fields and supports optional logo, banner, physical-store photos, TikTok, website, and social links. Owners can edit allowed fields and resubmit rejected applications. |
 | RUC uniqueness | DONE | RUC is normalized to 11 digits and protected by a database unique index; migration preflight refuses unsafe historical duplicates and the UI reports duplicate RUC without exposing another owner. |
@@ -344,7 +344,7 @@ Sprints 1–4 are **CLOSED / ACCEPTED**. Sprint 4 production source remains `427
 | Automatic approval after verification | DONE | The admin-only verification RPC atomically verifies an active eligible store and approves all valid pending inventory while preserving rejected/hidden/sold rows. |
 | 50 concurrent listing cap | DONE | A serialized database trigger counts only pending/approved store inventory, permits the 50th row, blocks the 51st and guards future counted-state restoration. |
 | Store dashboard | DONE | The persistent Store Owner shell exposes summary, application/profile, inventory, publication, profile/security, trust/rejection/cap states, real counts, and Sprint 3 lifecycle actions. Analytics remain tracked separately below. |
-| Store analytics | DONE | Grouped owner aggregates include impressions, views, contacts, sold state and Sprint 5 local current favorites/add/remove/rate metrics over lifetime/7/30-day windows. Current relations are separate from period actions; zero denominators show Sin datos. |
+| Store analytics | DONE | Grouped owner aggregates include impressions, views, contacts, sold state and Sprint 5 production current favorites/add/remove/rate metrics over lifetime/7/30-day windows. Current relations are separate from period actions; zero denominators show Sin datos. |
 | Full admin moderation hub | MODIFY | Secure pending listing/store queues and invites exist, but all-record search/filtering and the required users, revisions, reports, reviews, transactions, ownership, and lifecycle views do not. |
 | Reports | BUILD | No report schema, user flow, or admin queue exists. |
 | Moderation reasons | DONE | Store and listing rejection/administrative hiding persist required owner-visible reasons; revision rejection also requires and preserves a reason. |
@@ -355,6 +355,6 @@ Sprints 1–4 are **CLOSED / ACCEPTED**. Sprint 4 production source remains `427
 | Legal/safety pages | BUILD | No dedicated Terms, Privacy, prohibited-item, or marketplace-safety pages exist. |
 | Legacy ownership linking | BUILD | Nullable ownership supports later linkage, but admin has no manual ownership-assignment interface/workflow. |
 
-Summary after Sprint 5 local implementation: **27 DONE**, **3 MODIFY**, and **8 BUILD** areas. Sprint 5 is not deployed or owner-accepted. The matrix is an implementation snapshot, not a priority change, an owner acceptance claim, or evidence that missing V1 features are optional.
+Summary after Sprint 5 production release: **27 DONE**, **3 MODIFY**, and **8 BUILD** areas. Sprint 5 is deployed and automatically verified, not yet owner-accepted. The matrix is an implementation snapshot, not a priority change, an owner acceptance claim, or evidence that missing V1 features are optional.
 
 Sprint 5 owner navigation clarification: the shared site shell provides marketplace category/subtype navigation and canonical catalog search on public, authentication, account and admin pages. Protected account pages retain their nested role-appropriate sidebar/mobile account menu. This clarification does not add category SEO pages or a new search engine.
