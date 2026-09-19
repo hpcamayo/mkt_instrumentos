@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   LogOut,
   PackageSearch,
+  ReceiptText,
   Settings,
   Store,
 } from "lucide-react";
@@ -114,6 +115,7 @@ function AccountIcon({ name }: { name: AccountNavigationItem["icon"] }) {
   if (name === "store") return <Store className={classes} aria-hidden="true" />;
   if (name === "inventory") return <Boxes className={classes} aria-hidden="true" />;
   if (name === "analytics") return <BarChart3 className={classes} aria-hidden="true" />;
+  if (name === "transactions") return <ReceiptText className={classes} aria-hidden="true" />;
   if (name === "notifications") return <Bell className={classes} aria-hidden="true" />;
   if (name === "profile") return <CircleUserRound className={classes} aria-hidden="true" />;
   return <Settings className={classes} aria-hidden="true" />;

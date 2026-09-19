@@ -32,6 +32,8 @@ export type AccountAnalytics = {
     sold: number;
     store_views: number;
     store_contacts: number;
+    verified_transactions: number;
+    contact_to_verified_rate: number | null;
   };
   listings: ListingAnalytics[];
 };
@@ -69,7 +71,8 @@ export function parseAccountAnalytics(value: unknown): AccountAnalytics | null {
     || !isObject(value.summary) || !hasMetrics(value.summary)
     || !Array.isArray(value.listings)) return null;
   const summary = value.summary;
-  if (!["active", "sold", "store_views", "store_contacts"].every((key) => isCount(summary[key]))) return null;
+  if (!["active", "sold", "store_views", "store_contacts", "verified_transactions"].every((key) => isCount(summary[key]))
+    || !isRatio(summary.contact_to_verified_rate)) return null;
 
   const ids = new Set<string>();
   for (const listing of value.listings) {

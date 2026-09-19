@@ -12,6 +12,9 @@ type AccountNotification = {
   message: string;
   listing_id: string | null;
   store_id: string | null;
+  claim_id?: string | null;
+  transaction_id?: string | null;
+  review_id?: string | null;
   created_at: string;
   read_at: string | null;
   old_price_pen?: number | null;
@@ -52,7 +55,10 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
     <ol className="grid gap-3">
       {notifications.map((notification) => {
         const unread = !notification.read_at;
-        const href = notification.event_type === "listing_price_drop" && notification.listing_id
+        const transactionReference = notification.transaction_id ?? notification.claim_id;
+        const href = transactionReference
+          ? `/mi-cuenta/transacciones/${transactionReference}`
+          : notification.event_type === "listing_price_drop" && notification.listing_id
           ? `/mi-cuenta/favoritos/${notification.listing_id}`
           : notification.store_id && notification.event_type.startsWith("store_")
           ? "/mi-cuenta/tienda"
@@ -96,5 +102,10 @@ function notificationLabel(eventType: string) {
     store_rejected: "Solicitud rechazada",
     store_verified: "Tienda Verificada",
     store_verification_revoked: "Verificación revocada",
+    transaction_confirmation_requested: "Confirma una compra",
+    transaction_confirmed: "Transacción confirmada",
+    transaction_declined: "Confirmación rechazada",
+    transaction_cancelled: "Solicitud cancelada",
+    review_revealed: "Reseñas disponibles",
   } as Record<string, string>)[eventType] ?? "Actualización de tu cuenta";
 }

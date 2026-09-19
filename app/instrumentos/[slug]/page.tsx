@@ -7,6 +7,7 @@ import { ListingDetailGallery } from "@/components/listing-detail-gallery";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
 import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PageContainer } from "@/components/page-container";
+import { ReputationSummary } from "@/components/reputation-summary";
 import {
   getFullListingSpecs,
   getKeyListingSpecs,
@@ -26,6 +27,7 @@ import {
 } from "@/lib/listings";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -160,15 +162,25 @@ export default async function ListingDetailPage({
   }
 
   const listing = data as ListingDetailData;
-  return <ListingDetail listing={listing} supabase={supabase} />;
+  const reputationTarget = listing.store_id
+    ? { p_subject_store_id: listing.store_id, p_limit: 5 }
+    : listing.owner_user_id
+      ? { p_subject_user_id: listing.owner_user_id, p_limit: 5 }
+      : null;
+  const { data: reputationData } = reputationTarget
+    ? await supabase.rpc("get_public_reputation", reputationTarget)
+    : { data: null };
+  return <ListingDetail listing={listing} supabase={supabase} reputation={parsePublicReputation(reputationData)} />;
 }
 
 function ListingDetail({
   listing,
   supabase,
+  reputation,
 }: {
   listing: ListingDetailData;
   supabase: PublicSupabaseClient;
+  reputation: PublicReputation;
 }) {
   const store = normalizeStore(listing);
   const particular = resolveParticularSeller(listing);
@@ -287,6 +299,8 @@ function ListingDetail({
                 </Suspense>
               }
             />
+
+            <ReputationSummary reputation={reputation} title={`Reseñas de ${sellerName ?? "este vendedor"}`} />
 
             <DetailSection title="Descripción">
               {listing.description ? (

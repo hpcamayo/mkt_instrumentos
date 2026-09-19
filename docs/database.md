@@ -239,7 +239,7 @@ Added by `20260916180000_sprint_4_photos.sql`, applied locally and in production
 
 ### `public.marketplace_event_types` and `public.marketplace_events`
 
-Added by `20260916200000_sprint_4_events.sql`, applied locally and in production. The extensible text/FK taxonomy starts with exactly 16 types:
+Added by `20260916200000_sprint_4_events.sql`, applied locally and in production. Its original extensible text/FK taxonomy contained 16 types:
 
 `listing_impression`, `listing_view`, `store_view`, `whatsapp_contact`, `store_contact`, `search`, `filter_applied`, `listing_creation_started`, `listing_submitted`, `listing_approved`, `listing_rejected`, `listing_sold`, `store_application_started`, `store_application_submitted`, `store_approved`, `store_verified`.
 
@@ -248,15 +248,28 @@ Event rows contain UUID `id`, `event_type`, `created_at`, nullable listing/store
 - Raw tables have RLS enabled and no browser-role read/write grants. The service-only recorder checks its service role, validates targets, derives the seller/store relationship, and enforces public eligibility. The HTTP server obtains the actor from Auth and the anonymous identity from a signed random first-party session; payloads cannot supply actor/seller authority.
 - Listing impressions/views and store views use a rolling 30-minute identity/entity window, preferring authenticated identity over session identity. An advisory transaction lock protects concurrent dedupe; the event UUID protects response-loss retries. Owner/admin commercial inspections are excluded. Separate explicit WhatsApp contact actions remain separate events.
 - Search receipts are signed from existing canonical filters and the actual result count. Database validation bounds metadata and derives `zero_results`; there is no parallel search engine or zero-result event type. Contact events never contain WhatsApp messages/drafts, passwords, tokens, IP addresses, or user-agent fingerprints.
-- Listing submission/approval/rejection/sold and store application/approval/verification triggers record real transitions inside their domain transaction. Creation/application-start events come from the trusted signed-submission start path. No favorite/alert/transaction/review behavior is implemented by these event types.
-- Owner reports use one grouped aggregate RPC, not one query per listing. Lifetime views retain the historical `view_count`; 7/30-day views and ratio denominators use recorded events only. Active counts require approved listings with an active parent store where applicable; sold counts describe current owner-marked state, not verified transactions. Null-denominator ratios remain null. Raw buyer identities and future revenue/favorite metrics are not returned.
+- Listing submission/approval/rejection/sold and store application/approval/verification triggers record real transitions inside their domain transaction. Creation/application-start events come from the trusted signed-submission start path. Sprint 5 added favorite lifecycle events; Sprint 6 locally adds confirmation requested/confirmed/declined, transaction verified and review submitted, for 23 current types without historical backfill.
+- Owner reports use one grouped aggregate RPC, not one query per listing. Lifetime views retain the historical `view_count`; 7/30-day views and ratio denominators use recorded events only. Active counts require approved listings with an active parent store where applicable. Sprint 6 keeps sold state separate from buyer-confirmed transactions and exposes only labelled counts/rates, never buyer identities, payment, delivery or revenue.
+
+### Sprint 6 transaction, review, and review-report records
+
+Added locally by `20260918120000_sprint_6_transactions_reviews.sql`; not deployed in production in this task.
+
+- `transaction_claims` anchors every attribution attempt to one immutable sold listing, seller user, optional store and optional selected buyer. States are `pending`, `confirmed`, `declined`, `cancelled`, `superseded`, and `external`; a partial unique index permits only one active `pending`/`confirmed`/`external` relation per listing.
+- `verified_transactions` has unique claim and listing references, immutable seller/store/buyer identity, the historical `sold_at`, database `verified_at`, and the exact `verified_at + 10 days` review deadline. Only buyer confirmation creates it, so external, declined, cancelled and unanswered claims never unlock reviews.
+- `transaction_reviews` permits one `buyer_to_seller` and one `seller_to_buyer` row per verified transaction. Subject constraints attach buyer reviews to the Particular or store identity and seller/store reviews to the buyer. Rows are user-immutable; only reasoned admin hide/restore metadata changes, with append-only `review_moderation_actions` audit rows.
+- `review_reports` stores a visible review target, authenticated reporter, fixed reason, optional bounded detail, timestamp and moderation state. Sprint 6 intentionally does not implement Sprint 8 listing/store reports or report resolution/dismissal UI.
+- Browser roles have no table grants. Owner/buyer access enters through guarded security-definer RPCs; public reputation reads only double-blind-revealed, non-admin-hidden buyer-to-seller reviews. The shared private aggregate can also compute seller-to-buyer reputation without creating a public buyer profile.
+- Candidate lookup uses only authenticated `whatsapp_contact` events for the exact listing at or before `sold_at`, excludes the seller and any buyer who already declined/confirmed, and returns display name plus last contact time—never email, phone, raw event payload, or a searchable user directory.
+- `get_admin_review_queue()` returns bounded transaction linkage plus revealed review/report context; an unpaired pre-deadline review is not disclosed to the admin UI. `moderate_review()` allows only hide/restore with a mandatory reason and cannot rewrite stars or comments.
+- Notifications add typed claim/transaction targets for confirmation requests, decline/cancel, verification and paired-review reveal. Existing owner RLS and read-state behavior remain unchanged.
 
 ### `public.notifications`
 
 Purpose: reusable in-app account notices for important moderation and store trust-state transitions without coupling core product state to email delivery.
 
 - `user_id uuid references profiles(id) on delete cascade`
-- constrained `event_type text`, Spanish `message text`, and one typed listing/store target
+- constrained `event_type text`, Spanish `message text`, and typed listing/store/claim/transaction/review targets as required by the event
 - `created_at timestamptz` and nullable `read_at timestamptz`
 - listing/store target foreign keys cascade so removed QA/domain targets cannot leave invalid typed notices
 
@@ -470,6 +483,7 @@ Current migrations:
 - `20260916180000_sprint_4_photos.sql`: private edit bucket, corrected photo-path/admin validation, reference-safe cleanup claims, SHA-256 edit-attempt receipts, and owner-revert photo-reference release.
 - `20260916200000_sprint_4_events.sql`: 16-type trusted event foundation, raw-log RLS, transactional lifecycle events, rolling dedupe/cache compatibility, and grouped private owner/admin analytics.
 - `20260917120000_sprint_5_favorites.sql`: private favorites, trusted add/remove actions, atomic price-drop notifications, safe history/destination RPCs and favorite aggregate extensions. All 16 migrations are applied locally and in production; Sprint 5 production migration history was verified on 2026-09-18.
+- `20260918120000_sprint_6_transactions_reviews.sql`: local-only verified-transaction claims, buyer confirmation, immutable double-blind reviews, review reports/moderation, typed notifications, verified funnel metrics, guarded event transport, RLS and concurrency indexes. A clean local reset applies all 17 migrations; production remains at the accepted Sprint 5 schema until the separate Sprint 6 release gate.
 
 Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
 
@@ -491,7 +505,7 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
-Frozen V1 still requires exact-state search alerts/delivery deduplication, price-drop email delivery, verified transactions, two-way reviews, reports and centralized marketplace email delivery. Sprint 5 implements favorites/in-app price drops and real favorite analytics in production; its automated release gate passed and owner usability acceptance remains pending. Transaction/review analytics are deferred, not satisfied by event scaffolding.
+Frozen V1 still requires exact-state search alerts/delivery deduplication, price-drop email delivery, listing/store reports with resolve/dismiss, the remaining full Admin Hub and centralized marketplace email delivery. Sprint 5 is production-deployed and owner-accepted. Sprint 6 verified transactions, two-way reviews, review reports/moderation and verified funnel metrics are implemented and verified locally only pending a separate production release.
 
 ## Sprint 5 private favorites and price drops — deployed
 

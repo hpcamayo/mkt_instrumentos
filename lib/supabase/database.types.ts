@@ -555,6 +555,7 @@ export type Database = {
       }
       notifications: {
         Row: {
+          claim_id: string | null
           created_at: string
           event_type: string
           id: string
@@ -564,10 +565,13 @@ export type Database = {
           old_price_pen: number | null
           price_drop_id: string | null
           read_at: string | null
+          review_id: string | null
           store_id: string | null
+          transaction_id: string | null
           user_id: string
         }
         Insert: {
+          claim_id?: string | null
           created_at?: string
           event_type: string
           id?: string
@@ -577,10 +581,13 @@ export type Database = {
           old_price_pen?: number | null
           price_drop_id?: string | null
           read_at?: string | null
+          review_id?: string | null
           store_id?: string | null
+          transaction_id?: string | null
           user_id: string
         }
         Update: {
+          claim_id?: string | null
           created_at?: string
           event_type?: string
           id?: string
@@ -590,10 +597,19 @@ export type Database = {
           old_price_pen?: number | null
           price_drop_id?: string | null
           read_at?: string | null
+          review_id?: string | null
           store_id?: string | null
+          transaction_id?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notifications_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_claims"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notifications_listing_id_fkey"
             columns: ["listing_id"]
@@ -609,10 +625,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "notifications_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_reviews"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "notifications_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "verified_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -656,6 +686,109 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      review_moderation_actions: {
+        Row: {
+          action: string
+          admin_user_id: string
+          created_at: string
+          id: string
+          reason: string
+          review_id: string
+        }
+        Insert: {
+          action: string
+          admin_user_id: string
+          created_at?: string
+          id?: string
+          reason: string
+          review_id: string
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string
+          created_at?: string
+          id?: string
+          reason?: string
+          review_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_moderation_actions_admin_user_id_fkey"
+            columns: ["admin_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_moderation_actions_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_reports: {
+        Row: {
+          created_at: string
+          detail: string | null
+          id: string
+          reason: string
+          reporter_user_id: string
+          resolution_reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          review_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason: string
+          reporter_user_id: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason?: string
+          reporter_user_id?: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_reports_reporter_user_id_fkey"
+            columns: ["reporter_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       store_members: {
         Row: {
@@ -832,6 +965,230 @@ export type Database = {
           },
         ]
       }
+      transaction_claims: {
+        Row: {
+          attribution_type: string
+          buyer_user_id: string | null
+          created_at: string
+          ended_at: string | null
+          id: string
+          listing_id: string
+          responded_at: string | null
+          seller_user_id: string
+          status: string
+          store_id: string | null
+        }
+        Insert: {
+          attribution_type: string
+          buyer_user_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          listing_id: string
+          responded_at?: string | null
+          seller_user_id: string
+          status: string
+          store_id?: string | null
+        }
+        Update: {
+          attribution_type?: string
+          buyer_user_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          listing_id?: string
+          responded_at?: string | null
+          seller_user_id?: string
+          status?: string
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_claims_buyer_user_id_fkey"
+            columns: ["buyer_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_claims_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_claims_seller_user_id_fkey"
+            columns: ["seller_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_claims_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_reviews: {
+        Row: {
+          admin_hidden_at: string | null
+          admin_hidden_by: string | null
+          admin_hidden_reason: string | null
+          comment: string | null
+          direction: string
+          id: string
+          rating: number
+          reviewer_user_id: string
+          subject_store_id: string | null
+          subject_user_id: string | null
+          submitted_at: string
+          transaction_id: string
+        }
+        Insert: {
+          admin_hidden_at?: string | null
+          admin_hidden_by?: string | null
+          admin_hidden_reason?: string | null
+          comment?: string | null
+          direction: string
+          id?: string
+          rating: number
+          reviewer_user_id: string
+          subject_store_id?: string | null
+          subject_user_id?: string | null
+          submitted_at?: string
+          transaction_id: string
+        }
+        Update: {
+          admin_hidden_at?: string | null
+          admin_hidden_by?: string | null
+          admin_hidden_reason?: string | null
+          comment?: string | null
+          direction?: string
+          id?: string
+          rating?: number
+          reviewer_user_id?: string
+          subject_store_id?: string | null
+          subject_user_id?: string | null
+          submitted_at?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_reviews_admin_hidden_by_fkey"
+            columns: ["admin_hidden_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_reviews_reviewer_user_id_fkey"
+            columns: ["reviewer_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_reviews_subject_store_id_fkey"
+            columns: ["subject_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_reviews_subject_user_id_fkey"
+            columns: ["subject_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_reviews_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "verified_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      verified_transactions: {
+        Row: {
+          buyer_user_id: string
+          claim_id: string
+          id: string
+          listing_id: string
+          review_deadline: string
+          seller_identity_type: string
+          seller_user_id: string
+          sold_at: string
+          store_id: string | null
+          verified_at: string
+        }
+        Insert: {
+          buyer_user_id: string
+          claim_id: string
+          id?: string
+          listing_id: string
+          review_deadline: string
+          seller_identity_type: string
+          seller_user_id: string
+          sold_at: string
+          store_id?: string | null
+          verified_at?: string
+        }
+        Update: {
+          buyer_user_id?: string
+          claim_id?: string
+          id?: string
+          listing_id?: string
+          review_deadline?: string
+          seller_identity_type?: string
+          seller_user_id?: string
+          sold_at?: string
+          store_id?: string | null
+          verified_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verified_transactions_buyer_user_id_fkey"
+            columns: ["buyer_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verified_transactions_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: true
+            referencedRelation: "transaction_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verified_transactions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verified_transactions_seller_user_id_fkey"
+            columns: ["seller_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verified_transactions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -856,6 +1213,10 @@ export type Database = {
         Args: { p_listing_id: string }
         Returns: boolean
       }
+      cancel_transaction_claim: {
+        Args: { p_claim_id: string }
+        Returns: boolean
+      }
       claim_listing_photo_cleanup: {
         Args: {
           p_bucket: string
@@ -878,6 +1239,10 @@ export type Database = {
         }
         Returns: string
       }
+      create_transaction_claim: {
+        Args: { p_buyer_user_id: string; p_listing_id: string }
+        Returns: string
+      }
       get_account_analytics: {
         Args: { p_days?: number; p_owner_id?: string }
         Returns: Json
@@ -886,7 +1251,16 @@ export type Database = {
         Args: { p_days?: number; p_owner_id?: string }
         Returns: Json
       }
+      get_account_analytics_before_transactions: {
+        Args: { p_days?: number; p_owner_id?: string }
+        Returns: Json
+      }
       get_account_favorites: { Args: { p_page?: number }; Returns: Json }
+      get_admin_review_queue: { Args: never; Returns: Json }
+      get_eligible_transaction_buyers: {
+        Args: { p_listing_id: string }
+        Returns: Json
+      }
       get_favorite_destination: {
         Args: { p_listing_id: string }
         Returns: string
@@ -897,6 +1271,23 @@ export type Database = {
       }
       get_marketplace_admin_analytics_before_favorites: {
         Args: { p_days?: number }
+        Returns: Json
+      }
+      get_marketplace_admin_analytics_before_transactions: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
+      get_public_reputation: {
+        Args: {
+          p_limit?: number
+          p_subject_store_id?: string
+          p_subject_user_id?: string
+        }
+        Returns: Json
+      }
+      get_transaction_center: { Args: never; Returns: Json }
+      get_transaction_detail: {
+        Args: { p_reference_id: string }
         Returns: Json
       }
       increment_listing_view_count: {
@@ -951,6 +1342,7 @@ export type Database = {
       mark_notification_read: {
         Args: { p_notification_id: string }
         Returns: {
+          claim_id: string | null
           created_at: string
           event_type: string
           id: string
@@ -960,7 +1352,9 @@ export type Database = {
           old_price_pen: number | null
           price_drop_id: string | null
           read_at: string | null
+          review_id: string | null
           store_id: string | null
+          transaction_id: string | null
           user_id: string
         }
         SetofOptions: {
@@ -970,6 +1364,11 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      moderate_review: {
+        Args: { p_hidden: boolean; p_reason: string; p_review_id: string }
+        Returns: boolean
+      }
+      record_external_sale: { Args: { p_listing_id: string }; Returns: string }
       record_marketplace_event: {
         Args: {
           p_actor_user_id?: string
@@ -1030,6 +1429,14 @@ export type Database = {
       replace_listing_photos: {
         Args: { p_listing_id: string; p_photos: Json }
         Returns: undefined
+      }
+      report_review: {
+        Args: { p_detail?: string; p_reason: string; p_review_id: string }
+        Returns: string
+      }
+      respond_transaction_claim: {
+        Args: { p_claim_id: string; p_confirmed: boolean }
+        Returns: Json
       }
       resubmit_store_application: {
         Args: { p_store_id: string }
@@ -1284,6 +1691,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      submit_transaction_review: {
+        Args: { p_comment?: string; p_rating: number; p_transaction_id: string }
+        Returns: string
       }
       update_owned_listing: {
         Args: {

@@ -16,6 +16,8 @@ export function AccountAnalyticsMetrics({ analytics, store = false }: { analytic
         <Metric label="Vistas de publicaciones" value={numbers.format(summary.views)} detail={analytics.days === 0 ? "Acumuladas, incluidas las vistas históricas." : `Registradas en los últimos ${analytics.days} días.`} />
         <Metric label="Contactos por WhatsApp" value={numbers.format(summary.contacts)} detail="Aperturas de contacto registradas; no mensajes ni ventas." />
         <Metric label="Publicaciones vendidas" value={numbers.format(summary.sold)} detail="Estado actual marcado por el vendedor; no ventas verificadas." />
+        <Metric label="Transacciones verificadas en Laria" value={numbers.format(summary.verified_transactions)} detail="Compras que comprador y vendedor reconocieron; no confirma pago ni entrega." />
+        <Metric label="Contacto a transacción verificada" value={formatRatio(summary.contact_to_verified_rate)} detail="Relaciones verificadas ÷ aperturas de WhatsApp registradas en el mismo periodo." />
         <Metric label="Favoritos actuales" value={numbers.format(summary.favorites)} detail="Publicaciones guardadas ahora; incluye historial no público. No identifica compradores." />
         <Metric label="Guardados en el periodo" value={numbers.format(summary.favorite_additions)} detail="Acciones de guardar registradas; no compradores únicos ni favoritos actuales." />
         <Metric label="Retirados en el periodo" value={numbers.format(summary.favorite_removals)} detail="Acciones de quitar registradas." />

@@ -57,15 +57,41 @@ export function readSearchReceipt(token: string) {
 }
 export async function recordMarketplaceEvent(event: {
   type: string; sessionId: string; eventId: string; actorId: string | null;
-  listingId?: string; storeId?: string; submissionId?: string; source?: EventSource; metadata?: Json;
+  listingId?: string; storeId?: string; submissionId?: string; source?: EventSource; metadata?: Json; requestId?: string;
 }) {
   const client = getSupabaseAdminClient();
-  if (!client) return null;
-  const { data, error } = await client.rpc("record_marketplace_event", {
-    p_event_type: event.type, p_session_id: event.sessionId, p_event_id: event.eventId,
-    p_actor_user_id: event.actorId ?? undefined, p_listing_id: event.listingId ?? undefined,
-    p_store_id: event.storeId ?? undefined, p_submission_id: event.submissionId ?? undefined,
-    p_source: event.source ?? "other", p_metadata: event.metadata ?? {},
-  }).abortSignal(AbortSignal.timeout(1500));
-  return error ? null : data as { recorded: boolean; view_count?: number };
+  if (!client) {
+    logMarketplaceEventFailure({ requestId: event.requestId, type: event.type, category: "configuration", code: "admin_client_unavailable" });
+    return null;
+  }
+  try {
+    const { data, error } = await client.rpc("record_marketplace_event", {
+      p_event_type: event.type, p_session_id: event.sessionId, p_event_id: event.eventId,
+      p_actor_user_id: event.actorId ?? undefined, p_listing_id: event.listingId ?? undefined,
+      p_store_id: event.storeId ?? undefined, p_submission_id: event.submissionId ?? undefined,
+      p_source: event.source ?? "other", p_metadata: event.metadata ?? {},
+    }).abortSignal(AbortSignal.timeout(1500));
+    if (error) {
+      logMarketplaceEventFailure({ requestId: event.requestId, type: event.type, category: "database_rpc", code: error.code ?? "rpc_error" });
+      return null;
+    }
+    return data as { recorded: boolean; view_count?: number };
+  } catch (error) {
+    logMarketplaceEventFailure({
+      requestId: event.requestId,
+      type: event.type,
+      category: error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "transport",
+      code: error instanceof Error ? error.name : "unknown_error",
+    });
+    return null;
+  }
+}
+
+export function logMarketplaceEventFailure({ requestId, type, category, code }: { requestId?: string; type: string; category: string; code: string }) {
+  console.error("marketplace_event_failure", JSON.stringify({
+    request_id: requestId ?? "unavailable",
+    event_type: type,
+    failure_category: category,
+    failure_code: code.slice(0, 80),
+  }));
 }

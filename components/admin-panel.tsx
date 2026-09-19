@@ -125,6 +125,48 @@ type AdminStore = {
   rejection_reason: string | null;
 };
 
+type AdminReview = {
+  id: string;
+  transaction_id: string;
+  direction: "buyer_to_seller" | "seller_to_buyer";
+  rating: number;
+  comment: string | null;
+  submitted_at: string;
+  hidden_at: string | null;
+  hidden_reason: string | null;
+  listing_id: string;
+  listing_title: string;
+};
+
+type AdminReviewReport = {
+  id: string;
+  review_id: string;
+  reason: string;
+  detail: string | null;
+  status: string;
+  created_at: string;
+};
+
+type AdminTransaction = {
+  claim_id: string;
+  transaction_id: string | null;
+  listing_id: string;
+  listing_title: string;
+  seller_name: string;
+  buyer_name: string | null;
+  attribution_type: "laria" | "external";
+  status: string;
+  created_at: string;
+  responded_at: string | null;
+  verified_at: string | null;
+};
+
+type AdminReviewQueue = {
+  transactions: AdminTransaction[];
+  reviews: AdminReview[];
+  reports: AdminReviewReport[];
+};
+
 export function AdminPanel() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [authState, setAuthState] = useState<AuthState>("checking");
@@ -133,6 +175,7 @@ export function AdminPanel() {
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [revisions, setRevisions] = useState<AdminRevision[]>([]);
   const [stores, setStores] = useState<AdminStore[]>([]);
+  const [reviewQueue, setReviewQueue] = useState<AdminReviewQueue>({ transactions: [], reviews: [], reports: [] });
   const [message, setMessage] = useState("");
   const [inviteMessage, setInviteMessage] = useState("");
   const [inviteResult, setInviteResult] = useState<InviteResponse["invite"] | null>(
@@ -215,6 +258,7 @@ export function AdminPanel() {
     setListings([]);
     setRevisions([]);
     setStores([]);
+    setReviewQueue({ transactions: [], reviews: [], reports: [] });
   }
 
   async function loadAdminQueues() {
@@ -226,6 +270,7 @@ export function AdminPanel() {
       { data: listingRows, error: listingsError },
       { data: revisionRows, error: revisionsError },
       { data: storeRows, error: storesError },
+      { data: reviewQueueData, error: reviewQueueError },
     ] =
       await Promise.all([
         supabase
@@ -248,9 +293,10 @@ export function AdminPanel() {
             "id,name,status,city,region,district,address,whatsapp_phone,instagram_url,facebook_url,tiktok_url,website_url,description,is_verified,created_at,owner_user_id,razon_social,ruc,contact_person,email,rejection_reason",
           )
           .order("created_at", { ascending: true }),
+        supabase.rpc("get_admin_review_queue"),
       ]);
 
-    if (listingsError || revisionsError || storesError) {
+    if (listingsError || revisionsError || storesError || reviewQueueError) {
       setMessage("No pudimos cargar las solicitudes pendientes.");
       return;
     }
@@ -258,6 +304,30 @@ export function AdminPanel() {
     setListings((listingRows ?? []) as AdminListing[]);
     setRevisions((revisionRows ?? []) as AdminRevision[]);
     setStores((storeRows ?? []) as AdminStore[]);
+    const parsedReviewQueue = reviewQueueData as unknown as Partial<AdminReviewQueue> | null;
+    setReviewQueue({
+      transactions: Array.isArray(parsedReviewQueue?.transactions) ? parsedReviewQueue.transactions : [],
+      reviews: Array.isArray(parsedReviewQueue?.reviews) ? parsedReviewQueue.reviews : [],
+      reports: Array.isArray(parsedReviewQueue?.reports) ? parsedReviewQueue.reports : [],
+    });
+  }
+
+  async function moderateReview(review: AdminReview, hidden: boolean) {
+    if (!supabase) return;
+    const reason = window.prompt(hidden ? "Motivo obligatorio para ocultar la reseña" : "Motivo obligatorio para restaurar la reseña");
+    if (!reason?.trim()) {
+      setMessage("Debes indicar un motivo de moderación.");
+      return;
+    }
+    setIsBusy(true);
+    const { error } = await supabase.rpc("moderate_review", {
+      p_review_id: review.id,
+      p_hidden: hidden,
+      p_reason: reason,
+    });
+    setIsBusy(false);
+    setMessage(error ? `No se pudo moderar la reseña: ${error.message}` : hidden ? "Reseña ocultada sin alterar su contenido." : "Reseña restaurada sin alterar su contenido.");
+    if (!error) await loadAdminQueues();
   }
 
   async function updateListingStatus(id: string, status: ListingStatus) {
@@ -868,6 +938,81 @@ export function AdminPanel() {
             </table>
           </div>
         </section>
+
+        <section className="grid gap-4">
+          <SectionHeading title="Transacciones y confirmaciones" count={reviewQueue.transactions.length} onRefresh={loadAdminQueues} />
+          <p className="text-sm leading-6 text-laria-text-soft">
+            Relación entre la publicación vendida, la solicitud de confirmación y la transacción verificada. Esta verificación no acredita pago, entrega ni condición del producto.
+          </p>
+          <div className="overflow-x-auto rounded-lg border border-laria-fog bg-white shadow-sm">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-laria-cloud text-xs font-black uppercase tracking-wide text-laria-text-soft">
+                <tr>
+                  <th className="px-4 py-3">Publicación</th>
+                  <th className="px-4 py-3">Partes</th>
+                  <th className="px-4 py-3">Estado</th>
+                  <th className="px-4 py-3">Referencia</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-laria-fog">
+                {reviewQueue.transactions.map((transaction) => (
+                  <tr key={transaction.claim_id} className="align-top">
+                    <td className="px-4 py-3">
+                      <p className="font-black text-laria-ink">{transaction.listing_title}</p>
+                      <p className="mt-1 text-xs text-laria-muted">Solicitud {new Date(transaction.created_at).toLocaleString("es-PE")}</p>
+                    </td>
+                    <td className="px-4 py-3 text-xs leading-5 text-laria-text-soft">
+                      <p><strong>Vendedor:</strong> {transaction.seller_name}</p>
+                      <p><strong>Comprador:</strong> {transaction.buyer_name ?? (transaction.attribution_type === "external" ? "Fuera de Laria / sin cuenta" : "Sin comprador")}</p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge label={adminTransactionStatusLabel(transaction.status)} tone={transaction.status === "verified" ? "blue" : "neutral"} />
+                      {transaction.verified_at ? <p className="mt-2 text-xs text-laria-muted">Verificada {new Date(transaction.verified_at).toLocaleString("es-PE")}</p> : null}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-laria-muted">
+                      <p>Claim: {transaction.claim_id}</p>
+                      {transaction.transaction_id ? <p className="mt-1">Transacción: {transaction.transaction_id}</p> : null}
+                    </td>
+                  </tr>
+                ))}
+                {!reviewQueue.transactions.length ? <tr><td colSpan={4} className="px-4 py-8 text-center text-laria-text-soft">Todavía no hay ventas atribuidas.</td></tr> : null}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="grid gap-4">
+          <SectionHeading title="Reseñas y reportes" count={reviewQueue.reviews.length} onRefresh={loadAdminQueues} />
+          <p className="text-sm leading-6 text-laria-text-soft">
+            La moderación solo permite ocultar o restaurar con motivo. La calificación y el comentario no se pueden reescribir.
+          </p>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {reviewQueue.reviews.map((review) => {
+              const reports = reviewQueue.reports.filter((report) => report.review_id === review.id);
+              return (
+                <article key={review.id} className="rounded-lg border border-laria-fog bg-white p-5 shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <StatusBadge label={review.hidden_at ? "Oculta" : "Visible o doble ciego"} tone={review.hidden_at ? "neutral" : "blue"} />
+                    <span className="text-sm font-black text-laria-ink">{review.rating}/5 ★</span>
+                  </div>
+                  <h3 className="mt-3 font-black text-laria-ink">{review.listing_title}</h3>
+                  <p className="mt-1 text-xs text-laria-muted">Transacción {review.transaction_id} · {review.direction === "buyer_to_seller" ? "Comprador a vendedor" : "Vendedor a comprador"}</p>
+                  {review.comment ? <p className="mt-3 whitespace-pre-line text-sm leading-6 text-laria-text-soft">{review.comment}</p> : <p className="mt-3 text-sm text-laria-muted">Sin comentario.</p>}
+                  {review.hidden_reason ? <p className="mt-3 text-xs font-bold text-red-700">Motivo de ocultación: {review.hidden_reason}</p> : null}
+                  {reports.length ? (
+                    <ul className="mt-3 grid gap-2 rounded-md bg-laria-cloud p-3 text-xs text-laria-text-soft">
+                      {reports.map((report) => <li key={report.id}><strong>{report.reason}</strong>{report.detail ? `: ${report.detail}` : ""} · {report.status}</li>)}
+                    </ul>
+                  ) : null}
+                  <AdminAction disabled={isBusy} onClick={() => void moderateReview(review, !review.hidden_at)}>
+                    {review.hidden_at ? "Restaurar con motivo" : "Ocultar con motivo"}
+                  </AdminAction>
+                </article>
+              );
+            })}
+            {!reviewQueue.reviews.length ? <p className="rounded-lg border border-laria-fog bg-white p-6 text-sm text-laria-text-soft">No hay reseñas para moderar.</p> : null}
+          </div>
+        </section>
       </div>
     </PanelShell>
   );
@@ -1271,6 +1416,17 @@ function StatusBadge({
       {label}
     </span>
   );
+}
+
+function adminTransactionStatusLabel(status: string) {
+  return ({
+    pending: "Pendiente de confirmación",
+    verified: "Transacción verificada",
+    declined: "Comprador la rechazó",
+    cancelled: "Solicitud cancelada",
+    superseded: "Solicitud reemplazada",
+    external: "Venta fuera de Laria",
+  } as Record<string, string>)[status] ?? "Estado desconocido";
 }
 
 function AdminAction({ children, disabled, onClick }: { children: ReactNode; disabled: boolean; onClick: () => void }) {

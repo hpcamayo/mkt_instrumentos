@@ -12,8 +12,10 @@ import { ListingCard } from "@/components/listing-card";
 import { StoreVisitTelemetry } from "@/components/marketplace-telemetry";
 import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PageContainer } from "@/components/page-container";
+import { ReputationSummary } from "@/components/reputation-summary";
 import { buildStoreWhatsAppUrl, type ListingCardData } from "@/lib/listings";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -126,6 +128,10 @@ export default async function StorePage({
   if (redirectPage !== null)
     redirect(pageHref(`/tiendas/${slug}`, {}, redirectPage));
   const listings = (data ?? []) as ListingCardData[];
+  const { data: reputationData } = await supabase.rpc("get_public_reputation", {
+    p_subject_store_id: store.id,
+    p_limit: 5,
+  });
 
   return (
     <StoreView
@@ -134,6 +140,7 @@ export default async function StorePage({
       page={page}
       total={count ?? 0}
       hasError={Boolean(error)}
+      reputation={parsePublicReputation(reputationData)}
     />
   );
 }
@@ -144,12 +151,14 @@ function StoreView({
   page,
   total,
   hasError,
+  reputation,
 }: {
   store: StoreData;
   listings: ListingCardData[];
   page: number;
   total: number;
   hasError: boolean;
+  reputation: PublicReputation;
 }) {
   return (
     <PageContainer
@@ -228,6 +237,8 @@ function StoreView({
           </WhatsAppContactLink>
         </div>
       </div>
+
+      <ReputationSummary reputation={reputation} title={`Reseñas de ${store.name}`} />
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>

@@ -15,7 +15,7 @@ Browser
 
 The codebase currently favors server-rendered public pages with small client islands for forms, admin auth/moderation, filters, card photo carousel behavior, and listing detail metadata.
 
-Release boundary: Sprints 1–4 are **CLOSED / ACCEPTED**, including owner production evidence dated 2026-09-17. Sprint 5 is deployed from `516bf4591512b99748f14795f384e594143d1268` with its matching migration applied on 2026-09-18. Automated production verification passed; owner usability acceptance remains pending. See `docs/sprint-5-production-verification.md`.
+Release boundary: Sprints 1–5 are **CLOSED / ACCEPTED**. Sprint 5 is deployed from `516bf4591512b99748f14795f384e594143d1268` with its matching migration applied on 2026-09-18 and owner production acceptance recorded the same day. Sprint 6 is implemented and verified locally only; it has not been deployed. See `docs/sprint-6-verification.md`.
 
 ## Core Responsibilities
 
@@ -271,9 +271,9 @@ Search/filter events carry a short-lived signed receipt of the existing server-p
 
 `get_account_analytics()` checks the authenticated owner (or trusted admin) and performs grouped indexed aggregates. `lib/account-analytics.ts` validates its JSON and caches only within the current server render. Particular summary uses all owned listings, not the latest-five presentation list. Both management tables include real views/contacts, first-publication date, status, and sold date. Store Owners with a store have the real `/mi-cuenta/tienda/estadisticas` destination with lifetime/7-day/30-day windows (default 30).
 
-Lifetime listing views use the preserved `view_count` cache, including pre-event history; new accepted detail events increment that same cache once. Seven/thirty-day views use only events. CTR is recorded detail views / recorded impressions; contact rate is recorded product contacts / recorded detail views in the same window. Zero denominators display `Sin datos`; unavailable RPCs display unavailable, never invented zero. Active inventory means currently approved **and public** (active parent store); sold counts mean current seller-marked state, not verified paid sales. Sprint 5 adds in production favorite metrics below; revenue, transaction analytics and the full admin analytics hub remain absent. `get_marketplace_admin_analytics()` supplies a restricted aggregate RPC foundation only.
+Lifetime listing views use the preserved `view_count` cache, including pre-event history; new accepted detail events increment that same cache once. Seven/thirty-day views use only events. CTR is recorded detail views / recorded impressions; contact rate is recorded product contacts / recorded detail views in the same window. Zero denominators display `Sin datos`; unavailable RPCs display unavailable, never invented zero. Active inventory means currently approved **and public** (active parent store); sold counts mean current seller-marked state. Sprint 5 adds production favorite metrics below, while local Sprint 6 adds separately labelled buyer-confirmed transaction counts and contact-to-verified rate. Revenue, payment/delivery inference and the full admin analytics hub remain absent. `get_marketplace_admin_analytics()` supplies a restricted aggregate RPC foundation only.
 
-## Sprint 5 global shell and Favorites — deployed, owner acceptance pending
+## Sprint 5 global shell and Favorites — deployed and owner-accepted
 
 The root server layout presents one global header and category tree around all routes, including admin. Header search uses native GET `/listados?brand=...`, the existing catalog parser and its signed search receipt; typing, focus and header rendering record nothing. Category/subtype links reuse `categoryOptions` and `getInstrumentTypeOptions`, including `Otro`. Native mobile details expose the same navigation; the authenticated account layout remains nested rather than replaced.
 
@@ -286,6 +286,20 @@ Live price UPDATE triggers record trusted OLD/NEW decreases and fan out typed no
 Favorite relation triggers emit trusted add/remove actions, not client-supplied administrative events. Existing guarded aggregate RPCs are extended by grouped queries; renamed internal implementations have no public/anonymous/authenticated execution grant. Current favorite counts are independent of selected period; additions/removals and additions/recorded-view rate use the same 0/7/30-day window. Raw buyer relations/events are never returned to sellers.
 
 The duplicate-RUC carry-over defect began at the client attempt's retained `commitStarted` flag after a known transaction rejection. Explicit trusted `rejected` responses release that flag only before any uncertain outcome; network/unknown failures retain the exact signed retry lock. Correcting RUC safely starts a fresh attempt and cleans old uploads without losing the form's field/file values. Existing `PageNotice` focus and smooth scroll expose success/error feedback.
+
+## Sprint 6 category navigation, transactions, and reviews — local only
+
+`components/global-categories.tsx` remains inside the shared root shell but now renders one canonical major category at a time. Both desktop and mobile derive subtype links from `categoryOptions` plus `getInstrumentTypeOptions`; no duplicate taxonomy exists. Link navigation, pathname changes, another category, outside pointer interaction and Escape close the desktop panel, with focus returned to its trigger after Escape. The mobile menu exposes the same taxonomy as accessible category accordions and closes after selection. This does not implement category SEO landing pages.
+
+The trusted `/api/contact` path remains the only browser route that may record WhatsApp intent. It obtains the actor from the server-readable Auth session and writes through the service-only event recorder. Transaction eligibility uses only that authenticated actor's exact-listing contact at or before the listing's database `sold_at`. Anonymous contacts stay usable for WhatsApp but never enter the candidate list. Structured recorder failures contain only a request ID, event type and bounded category/code; contact navigation remains available when telemetry fails.
+
+`/mi-cuenta/transacciones` and `/mi-cuenta/transacciones/[id]` live inside the existing authenticated shell for both account types. Seller actions call row-locked RPCs to choose an eligible buyer, cancel/change before confirmation, or record an external/no-account sale. Only the selected buyer may answer yes/no. Declines remain historical and cannot be overridden; verified, external and competing-claim constraints prevent a second active/verified relationship. The sold listing is the permanent anchor, while relists receive a new ID and no claims, transaction, buyer or reviews.
+
+Buyer confirmation atomically creates `verified_transactions`, participant notifications and authoritative funnel events. It verifies only that both accounts recognize a Laria-originated relationship—not payment, price, delivery, shipping, authenticity or condition. Account analytics expose this as a separate buyer-confirmed metric and never rename seller-marked sold inventory.
+
+Review submission is RPC-only and derives direction/subject from the verified relationship. The database owns the ten-day deadline and one-row-per-direction constraints. The submitter may see their own final review, but the counterparty, public reputation and admin review queue cannot see a one-sided review before both submissions or deadline. Visible, non-admin-hidden buyer-to-seller reviews aggregate to a Particular or store; seller-to-buyer history aggregates privately to the buyer without adding a public buyer profile. Listing/store pages make zero reviews explicit and never fabricate a score.
+
+Published reviews may be reported with a fixed reason and optional detail. Sprint 6 admin compatibility shows transaction linkage and revealed/reported reviews, and permits only hide/restore with a mandatory audited reason. It provides no rating/comment rewrite path and intentionally leaves the complete report-resolution hub, listing/store reports and global admin search to Sprint 8.
 
 ## Styling
 

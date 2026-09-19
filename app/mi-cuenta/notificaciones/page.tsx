@@ -8,7 +8,7 @@ export default async function NotificationsPage() {
   const { data } = supabase
     ? await supabase
         .from("notifications")
-        .select("id,event_type,message,listing_id,store_id,created_at,read_at,old_price_pen,new_price_pen")
+        .select("id,event_type,message,listing_id,store_id,claim_id,transaction_id,review_id,created_at,read_at,old_price_pen,new_price_pen")
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .limit(100)

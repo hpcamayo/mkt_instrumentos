@@ -24,7 +24,7 @@ function aggregate(days = 0) {
   return {
     days,
     tracking_started_at: "2026-09-16T12:00:00Z",
-    summary: { active: 12, sold: 6, views: 321, recorded_views: 30, impressions: 100, contacts: 9, favorites: 2, favorite_additions: 3, favorite_removals: 1, favorite_rate: 0.1, store_views: 11, store_contacts: 2, ctr: 0.3, contact_rate: 0.3 },
+    summary: { active: 12, sold: 6, verified_transactions: 2, contact_to_verified_rate: 2 / 9, views: 321, recorded_views: 30, impressions: 100, contacts: 9, favorites: 2, favorite_additions: 3, favorite_removals: 1, favorite_rate: 0.1, store_views: 11, store_contacts: 2, ctr: 0.3, contact_rate: 0.3 },
     listings: [{ id: "listing-1", title: "Guitarra", status: "approved", published_at: "2026-09-16T12:00:00Z", sold_at: null, views: 321, recorded_views: 30, impressions: 100, contacts: 9, favorites: 2, favorite_additions: 3, favorite_removals: 1, favorite_rate: 0.1, ctr: 0.3, contact_rate: 0.3 }],
   };
 }
@@ -53,7 +53,7 @@ test("analytics periods allow only lifetime, seven and thirty days", () => {
 
 test("aggregate parser accepts genuine zeros and null denominators without inventing data", () => {
   const value = aggregate();
-  for (const key of Object.keys(value.summary)) value.summary[key] = key === "ctr" || key === "contact_rate" || key === "favorite_rate" ? null : 0;
+  for (const key of Object.keys(value.summary)) value.summary[key] = key === "ctr" || key === "contact_rate" || key === "favorite_rate" || key === "contact_to_verified_rate" ? null : 0;
   value.tracking_started_at = null;
   value.listings = [];
   assert.deepEqual(parseAccountAnalytics(value), value);
@@ -144,9 +144,9 @@ test("Store metrics distinguish current inventory, recorded events, ratios and h
 test("undefined rates are not displayed as zero and unavailable is not a zero dashboard", () => {
   const value = aggregate();
   value.summary.ctr = null;
-  value.summary.contact_rate = null; value.summary.favorite_rate = null;
+  value.summary.contact_rate = null; value.summary.favorite_rate = null; value.summary.contact_to_verified_rate = null;
   const html = renderToStaticMarkup(React.createElement(AccountAnalyticsMetrics, { analytics: value, store: true }));
-  assert.equal((html.match(/>Sin datos</g) ?? []).length, 3);
+  assert.equal((html.match(/>Sin datos</g) ?? []).length, 4);
   const unavailable = renderToStaticMarkup(React.createElement(AccountAnalyticsMetrics, { analytics: null, store: true }));
   assert.match(unavailable, /no están disponibles/);
   assert.doesNotMatch(unavailable, /Publicaciones activas|>0</);

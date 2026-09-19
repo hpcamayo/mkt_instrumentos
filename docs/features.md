@@ -2,7 +2,7 @@
 
 This file describes current implementation. The frozen V1 requirements live in `docs/functional-spec.md`; missing behavior below is an implementation gap unless that specification marks it post-V1.
 
-Sprints 1–4 are **CLOSED / ACCEPTED**; Sprint 4 owner production evidence is dated 2026-09-17. Sprint 5 is deployed from `516bf4591512b99748f14795f384e594143d1268` with its matching migration applied on 2026-09-18. Automated production verification passed; owner usability acceptance remains pending. See `docs/sprint-5-production-verification.md`.
+Sprints 1–5 are **CLOSED / ACCEPTED**. Sprint 5 is deployed from `516bf4591512b99748f14795f384e594143d1268` with its matching migration applied and owner production acceptance recorded on 2026-09-18. Sprint 6 is implemented and verified locally only; it has not been deployed. See `docs/sprint-6-verification.md`.
 
 ## Marketplace Model
 
@@ -186,7 +186,7 @@ Features:
   - Individual listings show `Sobre el vendedor`, seller name when available, `Particular`, location, active approved listing count, visible-since date, WhatsApp contact action, and a short safety note.
   - Store listings show `Sobre la tienda`, store name, verified badge when `stores.is_verified=true`, location, short store description when available, active approved listing count, visible-since date, WhatsApp contact action, and a link to the public store page.
   - Listing counts use approved active listings from the same store or, for individuals, the same WhatsApp contact.
-- Ratings and reviews are not currently implemented. Frozen V1 requires them only for verified Laria transactions; checkout, delivery, payments, and chat remain out of V1.
+- Local Sprint 6 shows only revealed, non-admin-hidden buyer-to-seller reviews for the correct Particular/store identity. Zero reviews show an honest empty state; no score is fabricated. Authenticated users may report a visible review. Checkout, delivery, payments, guarantees, and chat remain out of V1.
 - Layout uses the shared `PageContainer` public width system.
 - Visual refresh keeps the same data and contact behavior while aligning the gallery, detail panels, seller trust box, specs, and recommendation cards with `docs/design-system.md`.
 
@@ -203,6 +203,7 @@ Public store pages show:
 - Description.
 - WhatsApp button.
 - Approved listings from that store.
+- Local Sprint 6 visible verified-transaction review average/count and recent reviews for the store identity, never the Store Owner's personal identity.
 - Production Sprint 4: visible public store opens and actual WhatsApp click intents are recorded with canonical store ownership; pending/hidden stores are not ordinary public analytics targets.
 
 Layout uses the shared `PageContainer` public width system.
@@ -300,13 +301,14 @@ Admin behavior:
 - Shows RUC, owner ID, razón social, business email, phone, address/location, contact person, links, status, and trust state.
 - Store actions use trusted RPCs: basic approve, reject/hide with mandatory reason, verify, and revoke verification.
 - Verification is atomic with approval of all qualifying pending inventory; the UI reports the transitioned count.
+- Local Sprint 6 adds a transaction/confirmation table with listing, safe participant display names, claim state and verified linkage, plus revealed/reported review cards. Review actions are only mandatory-reason hide/restore; no UI can rewrite a rating or comment.
 
-Store and listing/revision moderation are operable, while the full future hub remains a V1 gap: listing/store search and filtering, users, reports, reviews, transactions, lifecycle emails, and legacy ownership linking belong to later scheduled sprints.
+Store and listing/revision moderation are operable, and Sprint 6 supplies only the transaction/review compatibility needed now. The full future hub remains a V1 gap: listing/store search and filtering, users, listing/store reports, report resolve/dismiss, lifecycle emails, and legacy ownership linking belong to later scheduled sprints.
 
 ## In-App Notifications
 
 - `/mi-cuenta/notificaciones` is available in both role-specific account menus with an accurate unread badge.
-- Typed notices cover listing approve/reject/admin hide, revision approve/reject, store approve/reject, verification, and verification revocation.
+- Typed notices cover listing approve/reject/admin hide, revision approve/reject, store approve/reject, verification/revocation and local Sprint 6 transaction confirmation/decline/cancel/verified/review-reveal events.
 - Notices are newest first, visually distinguish unread rows, link to the relevant listing/store account area, and can be marked read through an owner-constrained RPC.
 - This center is in-app only. Marketplace email delivery/preferences remain unimplemented.
 
@@ -368,11 +370,11 @@ Behavior:
 - Supabase Auth email template requirements are documented in `docs/auth-email-templates.md`; signup sends trusted `user_metadata.account_type` for conditional Particular/Tienda wording. Sprint 4 changes no hosted template or callback format.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
-- Sprint 3 lifecycle and Sprint 3.1 revisions remain implemented for both account types. Accepted Sprint 4 completes photo amendments and event-backed analytics; Sprint 5 adds in production Favorites and in-app price drops. Saved-search/email alerts, transactions and reviews remain later-sprint work.
+- Sprint 3 lifecycle and Sprint 3.1 revisions remain implemented for both account types. Accepted Sprint 4 completes photo amendments and event-backed analytics; accepted production Sprint 5 adds Favorites/in-app price drops. Local Sprint 6 adds verified transactions and reviews. Saved-search and marketplace email delivery remain later-sprint work.
 
 Account shell:
 - `app/mi-cuenta/layout.tsx` keeps role-appropriate navigation visible across account subpages: a persistent desktop sidebar and an accessible collapsed mobile menu with active-section state.
-- Particulars see Particular routes; Store Owners see store routes after an owner-bound store exists. `Estadísticas` remains real. Both account types now have a real Favorites destination in production; saved-search alerts and employee management are not exposed as fake links.
+- Particulars see Particular routes; Store Owners see store routes after an owner-bound store exists. `Estadísticas` remains real. Both account types have Favorites in production and local Sprint 6 `Compras y ventas`; saved-search alerts and employee management are not exposed as fake links.
 - Particular summary aggregates all owned listings through one owner-scoped RPC; the recent-five list is only presentation. Both inventory tables show actual views/WhatsApp contacts, first-publication date, status, and sold metadata. Unavailable aggregates never become estimated zero.
 
 ## First-party Marketplace Events and Analytics — Production Sprint 4
@@ -384,13 +386,13 @@ Account shell:
 - Search receipts preserve the existing real server filter/result semantics; client-forged result counts or arbitrary metadata are rejected. Pagination is not a newly applied filter.
 - Lifetime views include the existing historical cache; no event history is fabricated. Seven/thirty-day views and contact counts come from recorded events. Active means current approved/public inventory; sold means current seller-marked state, not verified sales in a date window.
 - Store statistics include product impressions/views/contacts, public store visits/contacts, current active/sold counts, CTR (recorded views / impressions), and contact rate (contacts / recorded views). Ratios use one recorded-event period; zero denominator is `Sin datos`. Historical cache views are not silently used as a conversion denominator.
-- No revenue or fake favorite/transaction/review metrics. The admin aggregate RPC is groundwork, not the full analytics/moderation hub.
+- No revenue or fake transaction/review metrics. Local Sprint 6 adds only real buyer-confirmed transaction totals and contact-to-verified rate, explicitly distinct from payment, delivery and seller-marked sold state. The admin aggregate RPC remains groundwork, not the full analytics/moderation hub.
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Required V1 gaps include saved-search alerts, price-drop email delivery, verified transactions, two-way reviews, reports and marketplace email infrastructure. Favorites/in-app price drops and favorite analytics are deployed in Sprint 5, with owner usability acceptance pending. See `docs/functional-spec.md`.
+Required V1 gaps include saved-search alerts, price-drop email delivery, listing/store reports with complete resolution, the remaining full Admin Hub and marketplace email infrastructure. Favorites/in-app price drops are production-deployed and owner-accepted. Verified transactions, two-way reviews and review-specific reporting/moderation are implemented locally in Sprint 6 but not deployed. See `docs/functional-spec.md`.
 
-## Sprint 5 — deployed, owner acceptance pending
+## Sprint 5 — deployed and owner-accepted
 
 - One global header includes logo, prominent brand search and trusted hydrated account controls on every route. Shared category/subtype links use the existing filter taxonomy; mobile menus preserve access without horizontal overflow. Account navigation remains nested and persistent.
 - Search submits the canonical `/listados?brand=...` filters. Only actual catalog search/filter interactions use the existing signed analytics receipt; typing or rendering a header does not count as a search.
@@ -398,6 +400,15 @@ Required V1 gaps include saved-search alerts, price-drop email delivery, verifie
 - Private Favorites support both account types on real home/catalog/recommendation/store cards and approved details. Anonymous actions preserve a safe login destination; sellers cannot favorite their own inventory. `/mi-cuenta/favoritos` shows 24 items/page, removable sold history and redacted unavailable entries; copied relists start without favorites.
 - Public live price decreases create one in-app notification per current favorite recipient per transition atomically. Unchanged/increased prices, pending proposals and nonpublic inventory do not alert. Unfavorite stops future alerts; refavorite does not send old drops. Notification links recheck current availability rather than exposing private data.
 - Particular and Store analytics show current favorites, selected-period additions/removals and favorite-add/view rate. Counts/rates are real grouped aggregates with no buyer directory. No revenue, verified sales, email delivery or saved-search UI is fabricated.
+
+## Sprint 6 — local implementation pending release
+
+- The global category control is an accessible desktop mega-menu/mobile accordion driven solely by the existing category and instrument-type taxonomy. Only one category branch is open; selection, route navigation, outside interaction and Escape close it.
+- Marking an owned listing sold routes the seller into `/mi-cuenta/transacciones/[listing-id]`. Only authenticated exact-listing WhatsApp contacts recorded no later than `sold_at` appear, with display name/time but no email or phone. A seller can cancel/change before confirmation or record an external/no-account sale.
+- The selected buyer receives an in-app link with exact listing/seller context and answers `Sí, lo compré` or `No, no fui yo`. Only yes creates one verified relationship; decline cannot be overridden and a different eligible buyer may be selected. The interface repeatedly limits verification to mutual recognition, not payment/delivery/product quality.
+- `/mi-cuenta/transacciones` shows the current user's relevant purchase/sale claim history, verified relationships, review window and own submitted state. Unrelated records remain unavailable.
+- Each verified relationship permits one final 1–5 review per direction until the database-owned ten-day deadline. Both reviews reveal together, or a single review reveals only after the deadline. Listing detail/store pages show only visible non-hidden seller/store reputation; buyer review history remains stored/aggregatable without a public buyer profile.
+- Visible reviews can be reported with fixed reason and optional detail. Admin can inspect revealed reviews and transaction linkage, then hide/restore with an audited reason; no rewrite action exists.
 
 Post-V1 unless a new product decision is explicit:
 - Payments.

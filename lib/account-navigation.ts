@@ -1,7 +1,7 @@
 export type AccountNavigationItem = {
   href: string;
   label: string;
-  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "analytics" | "notifications" | "profile" | "security" | "favorites";
+  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites";
   exact?: boolean;
 };
 
@@ -15,6 +15,7 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar producto", icon: "publish" } as const,
         { href: "/mi-cuenta/tienda/estadisticas", label: "Estadísticas", icon: "analytics" } as const,
       ] : []),
+      { href: "/mi-cuenta/transacciones", label: "Compras y ventas", icon: "transactions" },
       { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
       { href: "/mi-cuenta/favoritos", label: "Favoritos", icon: "favorites" },
       { href: "/mi-cuenta/perfil", label: "Perfil", icon: "profile" },
@@ -25,6 +26,7 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
     { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
     { href: "/mi-cuenta/publicaciones", label: "Mis publicaciones", icon: "listings" },
     { href: "/mi-cuenta/publicar", label: "Publicar instrumento", icon: "publish" },
+    { href: "/mi-cuenta/transacciones", label: "Compras y ventas", icon: "transactions" },
     { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
     { href: "/mi-cuenta/favoritos", label: "Favoritos", icon: "favorites" },
     { href: "/mi-cuenta/perfil", label: "Perfil", icon: "profile" },

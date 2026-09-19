@@ -66,6 +66,10 @@ export function ListingManagementTable({
         : "Estado actualizado correctamente.",
     );
     setBusyId(null);
+    if (action === "sold") {
+      router.push(`/mi-cuenta/transacciones/${listing.id}`);
+      return;
+    }
     router.refresh();
   }
 
@@ -137,7 +141,10 @@ export function ListingManagementTable({
                         <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "restore")}>Restaurar</ActionButton>
                       ) : null}
                       {listing.status === "sold" ? (
-                        <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "relist")}>Republicar copia</ActionButton>
+                        <>
+                          <Link href={`/mi-cuenta/transacciones/${listing.id}`} className="font-black text-laria-blue">Atribuir venta</Link>
+                          <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "relist")}>Republicar copia</ActionButton>
+                        </>
                       ) : null}
                       {listing.status === "rejected" ? (
                         <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "resubmit")}>Enviar nuevamente</ActionButton>

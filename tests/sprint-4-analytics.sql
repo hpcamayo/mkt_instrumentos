@@ -34,8 +34,14 @@ where id::text like '73000000-%';
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 do $$ declare denied boolean := false; begin
- if has_function_privilege('authenticated','public.record_marketplace_event(text,uuid,uuid,uuid,uuid,uuid,text,jsonb,uuid)','EXECUTE') then raise exception 'Ordinary user can forge events through trusted recorder'; end if;
- if has_function_privilege('anon','public.increment_listing_view_count(uuid)','EXECUTE') then raise exception 'Legacy public increment bypass still exposed'; end if;
+ if not has_function_privilege('authenticated','public.record_marketplace_event(text,uuid,uuid,uuid,uuid,uuid,text,jsonb,uuid)','EXECUTE') then raise exception 'Guarded event RPC is unavailable for a safe explicit denial'; end if;
+ begin perform public.record_marketplace_event('listing_view',gen_random_uuid(),gen_random_uuid()); exception when insufficient_privilege then denied := true; end;
+ if not denied then raise exception 'Ordinary user bypassed the trusted event recorder guard'; end if;
+ denied := false;
+ if not has_function_privilege('anon','public.increment_listing_view_count(uuid)','EXECUTE') then raise exception 'Legacy counter denial tombstone is unavailable'; end if;
+ begin perform public.increment_listing_view_count('73000000-0000-4000-8000-000000000001'); exception when insufficient_privilege then denied := true; end;
+ if not denied then raise exception 'Legacy public increment bypass still exposed'; end if;
+ denied := false;
  begin perform 1 from public.marketplace_events; exception when insufficient_privilege then denied := true; end;
  if not denied then
   if exists(select 1 from public.marketplace_events) then raise exception 'Global raw events exposed'; end if;
