@@ -308,7 +308,7 @@ See `docs/performance.md` for the implemented behavior and verification details.
 
 ## Implementation Status
 
-Sprints 1–5 are **CLOSED / ACCEPTED**. The owner accepted the remaining Sprint 5 production cases on 2026-09-18; canonical IDs/evidence remain in `acceptance/cases.tsv`. Sprint 6 is implemented and verified locally only. Its migration and application have not been deployed, and its manual browser cases remain owner-release acceptance work. See `docs/sprint-5-production-verification.md` and `docs/sprint-6-verification.md`.
+Sprints 1–5 are **CLOSED / ACCEPTED**. Sprint 6 migration and application source `9ea8e88a342edc4fb54d873e85974d576e42863f` are production-deployed and passed automated production acceptance on 2026-09-19. Canonical evidence remains in `acceptance/cases.tsv`; `TX-013` and `REVW-020` remain blocked for owner wording acceptance. See `docs/sprint-6-verification.md` and `docs/sprint-6-production-verification.md`.
 
 - **DONE**: the functional area is materially implemented for its V1 requirement.
 - **MODIFY**: a related implementation exists, but it must change or expand to meet V1.
@@ -355,7 +355,7 @@ Sprints 1–5 are **CLOSED / ACCEPTED**. The owner accepted the remaining Sprint
 | Legal/safety pages | BUILD | No dedicated Terms, Privacy, prohibited-item, or marketplace-safety pages exist. |
 | Legacy ownership linking | BUILD | Nullable ownership supports later linkage, but admin has no manual ownership-assignment interface/workflow. |
 
-Summary after local Sprint 6 implementation: **30 DONE**, **3 MODIFY**, and **5 BUILD** areas. Sprint 5 is production-deployed and owner-accepted; Sprint 6 is local-only pending its separate release gate and owner browser acceptance. The matrix is an implementation snapshot, not a production claim, priority change, or evidence that missing V1 features are optional.
+Summary after the Sprint 6 production release: **30 DONE**, **3 MODIFY**, and **5 BUILD** areas. Sprint 6 automation is accepted in production; two owner copy/wording checks remain blocked. The matrix is an implementation snapshot, not a priority change or evidence that missing V1 features are optional.
 
 Sprint 5 owner navigation clarification: the shared site shell provides marketplace category/subtype navigation and canonical catalog search on public, authentication, account and admin pages. Protected account pages retain their nested role-appropriate sidebar/mobile account menu. This clarification does not add category SEO pages or a new search engine.
 
