@@ -790,6 +790,59 @@ export type Database = {
           },
         ]
       }
+      saved_search_alerts: {
+        Row: {
+          active_since: string
+          created_at: string
+          deleted_at: string | null
+          frequency: string
+          id: string
+          match_bucket: string
+          paused_at: string | null
+          search_filters: Json
+          search_hash: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active_since?: string
+          created_at?: string
+          deleted_at?: string | null
+          frequency: string
+          id?: string
+          match_bucket: string
+          paused_at?: string | null
+          search_filters: Json
+          search_hash: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active_since?: string
+          created_at?: string
+          deleted_at?: string | null
+          frequency?: string
+          id?: string
+          match_bucket?: string
+          paused_at?: string | null
+          search_filters?: Json
+          search_hash?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_search_alerts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_members: {
         Row: {
           created_at: string
@@ -1226,6 +1279,18 @@ export type Database = {
         }
         Returns: string[]
       }
+      claim_marketplace_email_deliveries: {
+        Args: { p_limit?: number; p_worker_id: string }
+        Returns: Json
+      }
+      complete_marketplace_email_delivery: {
+        Args: {
+          p_delivery_id: string
+          p_provider_message_id: string
+          p_worker_id: string
+        }
+        Returns: boolean
+      }
       complete_public_submission: {
         Args: { p_fields: Json; p_id: string; p_kind: string; p_photos: Json }
         Returns: string
@@ -1239,8 +1304,45 @@ export type Database = {
         }
         Returns: string
       }
+      create_saved_search_alert: {
+        Args: { p_filters: Json; p_frequency: string }
+        Returns: {
+          active_since: string
+          created_at: string
+          deleted_at: string | null
+          frequency: string
+          id: string
+          match_bucket: string
+          paused_at: string | null
+          search_filters: Json
+          search_hash: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "saved_search_alerts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_transaction_claim: {
         Args: { p_buyer_user_id: string; p_listing_id: string }
+        Returns: string
+      }
+      delete_saved_search_alert: {
+        Args: { p_alert_id: string }
+        Returns: boolean
+      }
+      fail_marketplace_email_delivery: {
+        Args: {
+          p_delivery_id: string
+          p_failure_category: string
+          p_failure_code: string
+          p_retryable: boolean
+          p_worker_id: string
+        }
         Returns: string
       }
       get_account_analytics: {
@@ -1277,6 +1379,7 @@ export type Database = {
         Args: { p_days?: number }
         Returns: Json
       }
+      get_pending_buyer_confirmation_count: { Args: never; Returns: number }
       get_public_reputation: {
         Args: {
           p_limit?: number
@@ -1367,6 +1470,10 @@ export type Database = {
       moderate_review: {
         Args: { p_hidden: boolean; p_reason: string; p_review_id: string }
         Returns: boolean
+      }
+      prepare_daily_search_alert_emails: {
+        Args: { p_digest_date: string; p_limit?: number }
+        Returns: number
       }
       record_external_sale: { Args: { p_listing_id: string }; Returns: string }
       record_marketplace_event: {
@@ -1637,6 +1744,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "listings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_saved_search_alert_status: {
+        Args: { p_active: boolean; p_alert_id: string }
+        Returns: {
+          active_since: string
+          created_at: string
+          deleted_at: string | null
+          frequency: string
+          id: string
+          match_bucket: string
+          paused_at: string | null
+          search_filters: Json
+          search_hash: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "saved_search_alerts"
           isOneToOne: true
           isSetofReturn: false
         }

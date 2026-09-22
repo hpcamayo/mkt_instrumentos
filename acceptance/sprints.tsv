@@ -5,6 +5,6 @@ sprint	prefixes	focus
 4	PHOTO,REV,AUTH,WA,AN,SANA,SDASH	Photo subsystem repair + events/analytics
 5	FAV,PDA,PUB,STORE,NOTIF,AN,SANA,SDASH,REL	Favorites + in-app price-drop alerts; global navigation/search, same-form RUC retry and relevant aggregate/reliability cases only
 6	PUB,TX,REVW,LIFE,NOTIF,AN,SANA,SDASH,ADMIN	Category navigation + verified transactions + reviews
-7	ALERT,MAIL	Search alerts + marketplace mail
+7	ALERT,MAIL,PDA-009,TX-018	Search alerts + marketplace mail + price-drop email and Compras carry-over
 8	REP,ADMIN	Reports + full Admin Hub
 9	SEO,LEGAL,REL	Launch completion

@@ -4,7 +4,7 @@ This is the practical owner guide for Laria.
 
 `docs/functional-spec.md` is canonical for the frozen V1 product contract. This manual describes operations and current implementation; it must not be used to override that contract.
 
-Release boundary: Sprints 1–5 are **CLOSED / ACCEPTED**. Sprint 5 is deployed from `516bf4591512b99748f14795f384e594143d1268`, and the owner accepted its remaining production cases on 2026-09-18. Sprint 6 is implemented and verified locally only; do not perform the Sprint 6 checklist against production until its separate release gate deploys the migration and matching application. See `docs/sprint-5-production-verification.md` and `docs/sprint-6-verification.md`.
+Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 6 is deployed from `9ea8e88a342edc4fb54d873e85974d576e42863f`; the owner accepted `TX-013` and `REVW-020` on 2026-09-20. Sprint 7 is implemented and verified locally only. Do not run its owner inbox checklist or configure production mail/cron until the separate release gate applies the migration and matching application/configuration.
 
 ## What Laria Is
 
@@ -165,7 +165,7 @@ Account page `/mi-cuenta`:
 - Store Owner summary shows the application/trust state, rejection reason, pending/approved capacity, and whether new inventory requires moderation or may publish directly.
 - Owned inventory pages now show edit, owner hide/restore, mark-sold, and copied-relist actions according to each listing state. Moderation and administrative-hide reasons are visible to the owner.
 - Rejected rows can be corrected in the editor and returned through `Enviar nuevamente`; Particular and normal Tienda rows return to moderation.
-- Production Sprint 4 adds real Particular metrics and Store `Estadísticas`; accepted Sprint 5 adds Favorites and in-app price-drop notifications. Local Sprint 6 adds `Compras y ventas`, buyer confirmation and review state to both account types. Saved-search/email alerts are not exposed as fake functionality.
+- Production Sprint 4 adds real Particular metrics and Store `Estadísticas`; accepted Sprint 5 adds Favorites and in-app price-drop notifications; accepted Sprint 6 adds buyer confirmation and review state. Local Sprint 7 labels the area `Compras`, prioritizes pending buyer confirmations with an accurate badge, and adds a real `Alertas` area to both account types.
 
 Store statistics `/mi-cuenta/tienda/estadisticas` (production Sprint 4):
 - Available only inside the authenticated Store Owner shell when the account owns a store.
@@ -180,7 +180,7 @@ Admin page `/admin`:
 - Used to control quality.
 - Admin can approve listings, reject/hide them with a required reason, restore eligible listings, and review pending moderated field/photo revisions through trusted database operations.
 - Sprint 2 store actions include basic approval, required-reason rejection/hiding, verification, and revocation. Store application details and owner identity are visible to admin.
-- Local Sprint 6 adds verified-transaction linkage and revealed/reported review cards with mandatory-reason hide/restore. The wider hub still lacks global search/filtering, users, listing/store reports and resolve/dismiss, lifecycle emails, and legacy ownership linking.
+- Accepted Sprint 6 adds verified-transaction linkage and revealed/reported review cards with mandatory-reason hide/restore. Local Sprint 7 sends supported lifecycle email from the durable outbox; the wider hub still lacks global search/filtering, users, listing/store reports and resolve/dismiss, and legacy ownership linking.
 
 ## Daily Admin Workflow
 
@@ -488,15 +488,15 @@ Valid region values are fixed to Peru regions. City fields show suggestions but 
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Sprint 5 Favorites and in-app price drops are production-deployed and owner-accepted. Sprint 6 transactions, reviews and review-specific reporting/moderation are local-only pending release. V1 gaps remain saved-search alerts, price-drop/lifecycle email delivery, listing/store reports with resolution and the remaining full moderation hub. See `docs/functional-spec.md`.
+Sprint 5 Favorites/in-app price drops and Sprint 6 transactions/reviews are production-deployed and owner-accepted. Sprint 7 saved-search alerts plus price-drop/lifecycle marketplace email are local-only pending release. Remaining V1 gaps include listing/store reports with resolution, the remaining full moderation hub, category pages, legal/safety content and legacy ownership linking. See `docs/functional-spec.md`.
 
 ## Sprint 5 owner usability acceptance — closed
 
 The owner reported PASS on 2026-09-18 for `STORE-019`, `PUB-008`–`PUB-010`, `FAV-001`–`FAV-003`, `FAV-005`–`FAV-009`, `PDA-001`, `PDA-002`, `PDA-004`, `PDA-005`, `NOTIF-003`, `SANA-002`, `SANA-007`, `AN-014`, and `SDASH-008`. The canonical evidence is in `acceptance/cases.tsv`; do not repeat this checklist or regenerate XLSX.
 
-## Sprint 6 owner browser acceptance — after release only
+## Sprint 6 owner browser acceptance — CLOSED / ACCEPTED
 
-Use real owner/buyer/admin accounts and a disposable real listing after the Sprint 6 release gate. The deterministic RLS, privacy, deadline, idempotency and race attacks are already automated; do not repeat them manually.
+The production workflow below is retained as historical operating guidance. Owner acceptance, including the exact wording checks `TX-013` and `REVW-020`, closed on 2026-09-20. The deterministic RLS, privacy, deadline, idempotency and race attacks remain automated and should not be repeated manually.
 
 - `PUB-011`, `PUB-013`, `PUB-014`, `PUB-015`: on desktop, open Guitarras then Baterías and confirm only the selected taxonomy appears. Verify subtype navigation closes the panel, another category replaces it, outside click and Escape close it, Escape returns focus, and the 390px mobile accordion navigates/closes without overflow.
 - `TX-001`, `TX-002`, `TX-003`, `TX-004`, `TX-005`, `TX-017`: as seller, mark a listing sold. Verify the flow offers only exact authenticated contacts (no directory search, email or phone), permits the explicit outside-Laria/no-account path, and supports cancel/change before confirmation.
@@ -508,6 +508,19 @@ Use real owner/buyer/admin accounts and a disposable real listing after the Spri
 - `ADMIN-007`, `ADMIN-008`: confirm `/admin` shows revealed review state/target and transaction confirmation linkage without exposing hidden one-sided review content.
 
 After release, use `https://laria.audio/`, `/listados`, `/mi-cuenta/transacciones`, `/mi-cuenta/notificaciones`, `/mi-cuenta/publicaciones`, `/mi-cuenta/tienda/inventario`, `/admin`, and real `/instrumentos/{slug}` / `/tiendas/{slug}` destinations. Record only exact Test IDs in `acceptance/cases.tsv` and run `python3 -B acceptance/validate.py`.
+
+## Sprint 7 owner production acceptance — after the separate release gate
+
+Do not perform these inbox/UI checks against production before Sprint 7 is deployed and the verified sender plus protected-worker secret are configured. Do not repeat SQL/RLS, spoofing, worker-concurrency or replay attacks; those are automated.
+
+PRE-GO-LIVE note: while Laria remains on Vercel Hobby, no automatic marketplace-email cron is registered. QA invokes the protected worker manually, so Immediate alert email has no automatic latency promise. Before real users enter the marketplace, complete the mandatory worker-scheduling steps in `docs/go-live-checklist.md`.
+
+- `TX-018`: on desktop and mobile as both account types, verify `Compras` remains visible, a real pending buyer confirmation shows an actionable count/state and `¿Compraste este artículo?`, then the count clears after yes/no.
+- `PDA-009`: favorite a public listing before a real price decrease. Verify one Spanish email reaches the correct favorite owner, shows old/new PEN price, opens the safe listing, does not repeat on retry, and a later decrease can send a new message.
+- `ALERT-003`, `ALERT-005`, `ALERT-015`: create Immediate and Daily alerts from a filtered real catalog search, verify readable summaries and account/mobile controls, receive only new matching public inventory, receive no empty daily mail, and verify pause/resume/delete behavior without a paused backlog.
+- `MAIL-001`–`MAIL-007`: use disposable listing/store/transaction/review fixtures to verify the selected moderation, store trust, buyer confirmation and revealed-review messages reach the correct real inbox with Spanish Laria copy and authenticated safe destinations. Confirm no message implies verified payment, delivery, authenticity or condition.
+
+Production destinations after release: `https://laria.audio/listados`, `/mi-cuenta/alertas`, `/mi-cuenta/transacciones`, `/mi-cuenta/notificaciones`, `/mi-cuenta/publicaciones`, `/mi-cuenta/tienda`, `/admin`, plus the real listing/store destinations used by the fixtures. Record only exact IDs in `acceptance/cases.tsv`, run `python3 -B acceptance/validate.py`, and remove every disposable user/store/listing/object afterward.
 
 Do not build these post-V1 areas without a new product decision:
 - Payments.

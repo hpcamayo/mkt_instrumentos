@@ -6,6 +6,7 @@ import {
   Boxes,
   BarChart3,
   Bell,
+  BellRing,
   Heart,
   CircleUserRound,
   FilePlus2,
@@ -24,10 +25,12 @@ export function AccountNavigation({
   accountType,
   hasStore,
   unreadNotifications,
+  pendingBuyerConfirmations,
 }: {
   accountType: AccountType;
   hasStore: boolean;
   unreadNotifications: number;
+  pendingBuyerConfirmations: number;
 }) {
   const pathname = usePathname();
   const items = getAccountNavigationItems(accountType, hasStore);
@@ -41,7 +44,7 @@ export function AccountNavigation({
           <span aria-hidden="true" className="text-laria-blue">Menú</span>
         </summary>
         <nav aria-label="Menú de cuenta móvil" className="mt-3 grid gap-1 border-t border-laria-fog pt-3">
-          <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} />
+          <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} pendingBuyerConfirmations={pendingBuyerConfirmations} />
           <LogoutLink />
         </nav>
       </details>
@@ -59,7 +62,7 @@ export function AccountNavigation({
           </p>
         </div>
         <nav aria-label="Navegación de cuenta" className="mt-4 grid gap-1">
-          <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} />
+          <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} pendingBuyerConfirmations={pendingBuyerConfirmations} />
         </nav>
         <div className="mt-4 border-t border-laria-fog pt-4">
           <LogoutLink />
@@ -69,7 +72,7 @@ export function AccountNavigation({
   );
 }
 
-function AccountLinks({ items, pathname, unreadNotifications }: { items: AccountNavigationItem[]; pathname: string; unreadNotifications: number }) {
+function AccountLinks({ items, pathname, unreadNotifications, pendingBuyerConfirmations }: { items: AccountNavigationItem[]; pathname: string; unreadNotifications: number; pendingBuyerConfirmations: number }) {
   return items.map((item) => {
     const active = accountItemIsActive(pathname, item);
     return (
@@ -86,6 +89,11 @@ function AccountLinks({ items, pathname, unreadNotifications }: { items: Account
         {item.icon === "notifications" && unreadNotifications > 0 ? (
           <span aria-label={`${unreadNotifications} notificaciones sin leer`} className="min-w-6 rounded-full bg-laria-yellow px-2 py-0.5 text-center text-[11px] font-black text-laria-black">
             {unreadNotifications > 99 ? "99+" : unreadNotifications}
+          </span>
+        ) : null}
+        {item.icon === "transactions" && pendingBuyerConfirmations > 0 ? (
+          <span aria-label={`${pendingBuyerConfirmations} compras requieren tu confirmación`} className="min-w-6 rounded-full bg-laria-yellow px-2 py-0.5 text-center text-[11px] font-black text-laria-black">
+            {pendingBuyerConfirmations > 99 ? "99+" : pendingBuyerConfirmations}
           </span>
         ) : null}
       </Link>
@@ -116,6 +124,7 @@ function AccountIcon({ name }: { name: AccountNavigationItem["icon"] }) {
   if (name === "inventory") return <Boxes className={classes} aria-hidden="true" />;
   if (name === "analytics") return <BarChart3 className={classes} aria-hidden="true" />;
   if (name === "transactions") return <ReceiptText className={classes} aria-hidden="true" />;
+  if (name === "alerts") return <BellRing className={classes} aria-hidden="true" />;
   if (name === "notifications") return <Bell className={classes} aria-hidden="true" />;
   if (name === "profile") return <CircleUserRound className={classes} aria-hidden="true" />;
   return <Settings className={classes} aria-hidden="true" />;

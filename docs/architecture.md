@@ -15,7 +15,7 @@ Browser
 
 The codebase currently favors server-rendered public pages with small client islands for forms, admin auth/moderation, filters, card photo carousel behavior, and listing detail metadata.
 
-Release boundary: Sprints 1–5 are **CLOSED / ACCEPTED**. Sprint 5 is deployed from `516bf4591512b99748f14795f384e594143d1268` with its matching migration applied on 2026-09-18 and owner production acceptance recorded the same day. Sprint 6 is implemented and verified locally only; it has not been deployed. See `docs/sprint-6-verification.md`.
+Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 6 production source is `9ea8e88a342edc4fb54d873e85974d576e42863f`; owner wording acceptance closed on 2026-09-20. Sprint 7 marketplace email/search-alert work is implemented and verified locally only; neither its migration nor application/configuration has been deployed.
 
 ## Core Responsibilities
 
@@ -25,7 +25,7 @@ Next.js handles:
 - Client interactive components.
 - Public forms.
 - Admin UI.
-- Route handlers for photo loading, authorized edit-image delivery/cleanup, and trusted first-party event/contact ingestion.
+- Route handlers for photo loading, authorized edit-image delivery/cleanup, trusted first-party event/contact ingestion, owner-bound saved-search actions, and the protected marketplace-email worker.
 - Calls to Supabase.
 
 Supabase handles:
@@ -44,6 +44,7 @@ Vercel handles:
 - Preview deployments.
 - Environment variables.
 - Automatic redeploys from GitHub pushes.
+- Cron invocation of the secret-protected bounded email worker once Sprint 7 is released.
 
 GitHub is the source repository. Supabase schema is managed separately through SQL migrations.
 
@@ -71,7 +72,7 @@ GitHub is the source repository. Supabase schema is managed separately through S
 - Server-only.
 - Uses `SUPABASE_SERVICE_ROLE_KEY`.
 - Must never be imported by Client Components or exposed as `NEXT_PUBLIC_*`.
-- Used by the current admin invite and duplicate-email server routes and available for other trusted server actions.
+- Used by the current admin invite, duplicate-email, submission/event, and Sprint 7 email-worker server routes.
 
 `middleware.ts` refreshes Supabase Auth sessions and protects account routes that start with `/mi-cuenta` or `/mis-publicaciones`.
 
@@ -84,7 +85,10 @@ app/
   admin/page.tsx                   Admin panel
   auth/callback/route.ts           Supabase magic-link/invite callback
   api/admin/invite-user/route.ts   Server-only admin invite endpoint
+  api/alerts/route.ts              Session-bound saved-search mutations
   api/auth/check-email/route.ts    Server-only duplicate-email availability check
+  api/internal/email/process/route.ts
+                                    CRON_SECRET-protected bounded outbox worker
   api/listings/[id]/manage/route.ts
                                     Owner listing edit/lifecycle endpoint
   api/listings/[id]/photo-cleanup/route.ts
@@ -104,6 +108,7 @@ app/
   logout/route.ts                  Sign out and redirect to /login
   mi-cuenta/layout.tsx             Protected role-aware account shell
   mi-cuenta/page.tsx               Particular/Store Owner account summary
+  mi-cuenta/alertas/page.tsx       Private saved-search alert management
   mi-cuenta/publicaciones/page.tsx Particular owned-listing view
   mi-cuenta/publicaciones/[id]/editar/page.tsx
                                     Owner listing editor
@@ -287,7 +292,7 @@ Favorite relation triggers emit trusted add/remove actions, not client-supplied 
 
 The duplicate-RUC carry-over defect began at the client attempt's retained `commitStarted` flag after a known transaction rejection. Explicit trusted `rejected` responses release that flag only before any uncertain outcome; network/unknown failures retain the exact signed retry lock. Correcting RUC safely starts a fresh attempt and cleans old uploads without losing the form's field/file values. Existing `PageNotice` focus and smooth scroll expose success/error feedback.
 
-## Sprint 6 category navigation, transactions, and reviews — local only
+## Sprint 6 category navigation, transactions, and reviews — production accepted
 
 `components/global-categories.tsx` remains inside the shared root shell but now renders one canonical major category at a time. Both desktop and mobile derive subtype links from `categoryOptions` plus `getInstrumentTypeOptions`; no duplicate taxonomy exists. Link navigation, pathname changes, another category, outside pointer interaction and Escape close the desktop panel, with focus returned to its trigger after Escape. The mobile menu exposes the same taxonomy as accessible category accordions and closes after selection. This does not implement category SEO landing pages.
 
@@ -300,6 +305,24 @@ Buyer confirmation atomically creates `verified_transactions`, participant notif
 Review submission is RPC-only and derives direction/subject from the verified relationship. The database owns the ten-day deadline and one-row-per-direction constraints. The submitter may see their own final review, but the counterparty, public reputation and admin review queue cannot see a one-sided review before both submissions or deadline. Visible, non-admin-hidden buyer-to-seller reviews aggregate to a Particular or store; seller-to-buyer history aggregates privately to the buyer without adding a public buyer profile. Listing/store pages make zero reviews explicit and never fabricate a score.
 
 Published reviews may be reported with a fixed reason and optional detail. Sprint 6 admin compatibility shows transaction linkage and revealed/reported reviews, and permits only hide/restore with a mandatory audited reason. It provides no rating/comment rewrite path and intentionally leaves the complete report-resolution hub, listing/store reports and global admin search to Sprint 8.
+
+## Sprint 7 Compras, marketplace email, and saved-search alerts — local only
+
+`/mi-cuenta/transacciones` is labelled `Compras` for both account types and groups buyer confirmations first, followed by purchases and sales. The persistent desktop/mobile account menu receives its pending badge from `get_pending_buyer_confirmation_count()`, which counts canonical pending `transaction_claims`; notification read state is unrelated. `Alertas` is a real shared account destination, not a placeholder.
+
+`saved_search_alerts` stores only normalized supported catalog filters, a canonical hash, one of `immediate`/`daily`, lifecycle state and an activation boundary. Owner writes enter through guarded RPCs; RLS exposes only an owner's nondeleted alerts. Category/type match buckets and partial indexes narrow first-public matching before the database applies the same category, type, condition, brand, seller, price, location and JSON attribute semantics as `/listados`.
+
+The private `laria_private` schema owns first-public markers, alert/listing matches and `marketplace_email_deliveries`. Deployment baselines already-public listing identities without creating matches or mail. Later listing publication, verified direct publication, or parent-store activation can capture one `(alert, listing)` match; a hide/restore of the same listing cannot repeat it, while a relist has a new identity. Pause suppresses undelivered work and resets the prospective activation time on resume; soft deletion cancels work without erasing delivery history.
+
+Existing in-app notifications remain canonical lifecycle history. An after-insert trigger derives eligible marketplace email jobs from their trusted typed targets; price-drop mail reuses the authoritative Sprint 5 transition and `(price_drop, recipient)` identity. Domain transactions only append durable jobs, so provider failure never rolls back approval, verification, transaction/review state or price changes. No browser chooses a recipient, address, template or event.
+
+The server worker claims rows with `FOR UPDATE SKIP LOCKED`, snapshots the current Auth email, renders a Spanish Laria template, and calls one Resend adapter with the delivery UUID as provider idempotency key. Success stores the provider ID; retryable failures use 5-minute, 30-minute, 2-hour and 8-hour backoff with at most five attempts. Logs contain correlation/delivery IDs and bounded failure categories/codes, not bodies, tokens or recipient addresses. Templates contain no tracking pixel.
+
+`/api/internal/email/process` is the single protected worker entrypoint. Its `Authorization: Bearer ${CRON_SECRET}` is compared in constant time. After 08:00 `America/Lima`, each invocation idempotently prepares completed daily windows across a bounded seven-day catch-up range, at most 100 alerts per day, then sends at most four batches of 25 with five concurrent provider calls. Immediate and daily dedupe keys make invocation replay/concurrency safe; zero-match digests never become jobs.
+
+PRE-GO-LIVE on Vercel Hobby deliberately registers no automatic cron because Hobby permits only daily cadence and Laria is not open to real marketplace traffic. Release QA invokes the protected worker manually; Immediate email latency therefore has no automatic SLA before launch. Before go-live, provision a supported frequent scheduler at an initial 5–15 minute cadence, rerun protected automatic-worker/retry/digest smoke, and remove this operational limitation. `docs/go-live-checklist.md` makes that a mandatory launch dependency.
+
+Supabase Auth confirmation, magic-link, recovery and invite templates remain separate and unchanged. Production release must apply `20260921120000_sprint_7_marketplace_email_alerts.sql`, configure a verified Resend sender plus server-only provider/base-URL/worker-secret environment variables, and deploy the matching application. No Sprint 7 production action occurred during implementation.
 
 ## Styling
 

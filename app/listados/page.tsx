@@ -24,8 +24,10 @@ import {
 } from "@/lib/listings";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 import { SearchTelemetry } from "@/components/marketplace-telemetry";
+import { CreateSearchAlert } from "@/components/create-search-alert";
 import { createSearchReceipt } from "@/lib/marketplace-events-server";
 import { searchEventMetadata } from "@/lib/marketplace-event-payload";
+import { listingFiltersToSearchAlert } from "@/lib/search-alerts";
 
 export const dynamic = "force-dynamic";
 
@@ -232,6 +234,7 @@ function ListingsView({
 
           <div className="grid min-w-0 gap-4">
             <ActiveFilterChips filters={filters} />
+            <CreateSearchAlert filters={listingFiltersToSearchAlert(filters)} />
 
             {errorMessage ? (
               <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 shadow-sm">

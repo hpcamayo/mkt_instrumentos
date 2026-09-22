@@ -308,7 +308,7 @@ See `docs/performance.md` for the implemented behavior and verification details.
 
 ## Implementation Status
 
-Sprints 1–5 are **CLOSED / ACCEPTED**. Sprint 6 migration and application source `9ea8e88a342edc4fb54d873e85974d576e42863f` are production-deployed and passed automated production acceptance on 2026-09-19. Canonical evidence remains in `acceptance/cases.tsv`; `TX-013` and `REVW-020` remain blocked for owner wording acceptance. See `docs/sprint-6-verification.md` and `docs/sprint-6-production-verification.md`.
+Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 6 migration and application source `9ea8e88a342edc4fb54d873e85974d576e42863f` were production-deployed on 2026-09-19; the owner accepted `TX-013` and `REVW-020` on 2026-09-20. Canonical evidence remains in `acceptance/cases.tsv`. Sprint 7 is implemented and verified locally only and has not been deployed.
 
 - **DONE**: the functional area is materially implemented for its V1 requirement.
 - **MODIFY**: a related implementation exists, but it must change or expand to meet V1.
@@ -321,7 +321,7 @@ Sprints 1–5 are **CLOSED / ACCEPTED**. Sprint 6 migration and application sour
 | Listing detail | DONE | Approved detail pages work; sold listings remain available only by direct URL with a clear `Vendido` state and no contact CTA. |
 | WhatsApp contact | DONE | Listing/store links use a trusted contact endpoint that records canonical intent before navigation, with bounded failure fallback so telemetry cannot trap contact. |
 | Seller authentication | DONE | Particular signup, confirmation callback, password and magic-link login, logout, forgot/reset password, authenticated password change, and profile editing are implemented. |
-| Buyer/Particular account model | DONE | One Particular identity supports buying and selling, Favorites, authenticated exact-listing contact attribution, buyer confirmation, transaction history and two-way verified-transaction reviews. Saved-search alerts remain a separate V1 area. |
+| Buyer/Particular account model | DONE | One Particular identity supports buying and selling, Favorites, authenticated exact-listing contact attribution, buyer confirmation, transaction history, two-way verified-transaction reviews and saved-search alerts. |
 | Account-required listing publication | DONE | `/vender` requires authentication, preserves the login return path, binds signed retries to the current user, and atomically creates owned `pending` Particular listings. |
 | Seller listing ownership | DONE | New Particular listings set `owner_user_id`; owner/public/admin boundaries remain enforced by RLS, while legacy nullable ownership remains supported. |
 | Seller dashboard | DONE | The persistent role-aware `/mi-cuenta` shell exposes real profile/security, publication, owned-listing management, edit, hide/restore, sold, and relist workflows. Analytics remain tracked separately below. |
@@ -334,8 +334,8 @@ Sprints 1–5 are **CLOSED / ACCEPTED**. Sprint 6 migration and application sour
 | Verified transactions | DONE | Seller attribution is bound to an immutable sold listing; only an eligible contacted account can be selected, only that buyer can confirm, declines cannot be overridden, external sales never verify, races remain single-active/single-verified, and relists inherit no relationship. |
 | Two-way reviews | DONE | Verified transactions open one immutable review per direction for 10 days from database `verified_at`. Double-blind visibility, Particular/store/buyer identity, visible-only aggregates, public seller/store reputation, reporting and reasoned admin hide/restore are enforced by trusted RPCs. |
 | Favorites | DONE | Sprint 5 production implementation adds private owner-scoped relations, idempotent mutations, shared card/detail controls, paginated account history, sold/unavailable labels and safe destinations; relist copies do not inherit favorites. |
-| Search alerts | BUILD | No saved-search/alert schema, scheduler, or UI exists. |
-| Price-drop alerts | MODIFY | Sprint 5 implements in production atomic live-public-price-drop fan-out to current favorites through private in-app Notifications, with transition/recipient dedupe. Centralized email delivery and PDA-009 remain deferred to Sprint 7. |
+| Search alerts | DONE | Sprint 7 local implementation stores normalized exact supported filters, matches only first-public eligible listings, provides Immediate/Daily delivery, pause/resume/delete, private account UI, dedupe and a protected Lima-time worker. Pre-go-live Hobby QA invokes it manually; frequent automatic scheduling is mandatory before launch. Production release/manual inbox acceptance remain separate. |
+| Price-drop alerts | DONE | Sprint 5's authoritative live-public price-drop transition now creates one deterministic Sprint 7 email delivery per eligible favorite recipient; retries reuse the same transition/recipient identity and later decreases remain independent. |
 | Store-owner ownership | DONE | Dedicated Store Owner signup/profile repair, one-owner/one-store uniqueness, owner-bound signed submissions, and owner-only RLS are implemented without converting Particular accounts. |
 | Store application | DONE | The authenticated application collects all required business/contact/location fields and supports optional logo, banner, physical-store photos, TikTok, website, and social links. Owners can edit allowed fields and resubmit rejected applications. |
 | RUC uniqueness | DONE | RUC is normalized to 11 digits and protected by a database unique index; migration preflight refuses unsafe historical duplicates and the UI reports duplicate RUC without exposing another owner. |
@@ -349,14 +349,16 @@ Sprints 1–5 are **CLOSED / ACCEPTED**. Sprint 6 migration and application sour
 | Reports | MODIFY | Sprint 6 implements authenticated fixed-reason review reports with optional detail, reporter/time/status, owner isolation and admin review context. Listing/store reports plus resolve/dismiss workflow remain Sprint 8. |
 | Moderation reasons | DONE | Store and listing rejection/administrative hiding persist required owner-visible reasons; revision rejection also requires and preserves a reason. |
 | In-app notifications | DONE | The account shell provides owner-scoped, RLS-protected typed lifecycle notifications with unread state and target navigation. |
-| Application emails | BUILD | Supabase Auth email flows and templates exist, but no centralized marketplace email abstraction or lifecycle/alert emails exist. |
+| Application emails | DONE | Supabase Auth mail remains separate. Sprint 7 adds a centralized durable marketplace outbox, branded Spanish templates, a Resend adapter, bounded retry/idempotency, trusted recipient derivation, moderation/store/transaction/review/price/search event coverage and a protected server worker. Production provider/domain/secrets remain release-gate configuration; pre-go-live Hobby execution is manual until the mandatory launch scheduler is enabled. |
 | Password reset | DONE | Existing token-hash recovery/session behavior is preserved; the safe provider same_password condition now gives specific Spanish guidance while unknown failures remain generic. |
 | Category SEO pages | BUILD | `/instrumentos/[slug]` is currently a listing-detail route; no real category landing flow exists. |
 | Legal/safety pages | BUILD | No dedicated Terms, Privacy, prohibited-item, or marketplace-safety pages exist. |
 | Legacy ownership linking | BUILD | Nullable ownership supports later linkage, but admin has no manual ownership-assignment interface/workflow. |
 
-Summary after the Sprint 6 production release: **30 DONE**, **3 MODIFY**, and **5 BUILD** areas. Sprint 6 automation is accepted in production; two owner copy/wording checks remain blocked. The matrix is an implementation snapshot, not a priority change or evidence that missing V1 features are optional.
+Summary after the Sprint 7 local implementation: **33 DONE**, **2 MODIFY**, and **3 BUILD** areas. Sprint 6 is closed/accepted; Sprint 7 still requires its separate production release and genuine inbox/browser acceptance. The matrix is an implementation snapshot, not a priority change or evidence that missing V1 features are optional.
 
 Sprint 5 owner navigation clarification: the shared site shell provides marketplace category/subtype navigation and canonical catalog search on public, authentication, account and admin pages. Protected account pages retain their nested role-appropriate sidebar/mobile account menu. This clarification does not add category SEO pages or a new search engine.
 
 Sprint 6 implementation clarification: the same category/type source now drives an accessible one-category-at-a-time desktop mega-menu and mobile accordion. This improves global navigation only; it does not implement the separate V1 category SEO pages.
+
+Sprint 7 implementation clarification: both role-specific account menus call the transaction area `Compras`, show an authoritative pending-buyer-confirmation badge from transaction claims, and expose `Alertas`. Search-alert matching never scans historical inventory into a new alert: an existing public catalog baseline plus per-alert activation times make delivery prospective. Daily windows use `America/Lima`, prepare only completed days after 08:00, and replay a bounded seven-day window safely.

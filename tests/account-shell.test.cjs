@@ -21,16 +21,16 @@ const { getAccountNavigationItems, accountItemIsActive, getHeaderNavigation } = 
 
 test("Particular account navigation exposes only implemented Particular destinations", () => {
   const items = getAccountNavigationItems("seller", false);
-  assert.deepEqual(items.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar instrumento", "Compras y ventas", "Notificaciones", "Favoritos", "Perfil", "Seguridad"]);
+  assert.deepEqual(items.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar instrumento", "Compras", "Notificaciones", "Favoritos", "Alertas", "Perfil", "Seguridad"]);
   assert.equal(items.some((item) => /tienda|inventario/i.test(item.label)), false);
-  assert.equal(items.some((item) => /alertas/i.test(item.label)), false);
+  assert.equal(items.filter((item) => item.label === "Alertas").length, 1);
 });
 
 test("Store Owner navigation changes safely when an owner-bound store exists", () => {
   const withoutStore = getAccountNavigationItems("store_owner", false);
-  assert.deepEqual(withoutStore.map((item) => item.label), ["Resumen", "Solicitud de tienda", "Compras y ventas", "Notificaciones", "Favoritos", "Perfil", "Seguridad"]);
+  assert.deepEqual(withoutStore.map((item) => item.label), ["Resumen", "Solicitud de tienda", "Compras", "Notificaciones", "Favoritos", "Alertas", "Perfil", "Seguridad"]);
   const withStore = getAccountNavigationItems("store_owner", true);
-  assert.deepEqual(withStore.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar producto", "Estadísticas", "Compras y ventas", "Notificaciones", "Favoritos", "Perfil", "Seguridad"]);
+  assert.deepEqual(withStore.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar producto", "Estadísticas", "Compras", "Notificaciones", "Favoritos", "Alertas", "Perfil", "Seguridad"]);
   assert.equal(withStore.some((item) => /publicaciones|instrumento/i.test(item.label)), false);
 });
 

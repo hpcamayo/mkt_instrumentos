@@ -2,7 +2,7 @@
 
 This file describes current implementation. The frozen V1 requirements live in `docs/functional-spec.md`; missing behavior below is an implementation gap unless that specification marks it post-V1.
 
-Sprints 1–5 are **CLOSED / ACCEPTED**. Sprint 6 is deployed from `9ea8e88a342edc4fb54d873e85974d576e42863f` with its matching migration applied and automated production acceptance recorded on 2026-09-19. Owner wording acceptance remains pending for `TX-013` and `REVW-020`. See `docs/sprint-6-production-verification.md`.
+Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 6 is deployed from `9ea8e88a342edc4fb54d873e85974d576e42863f`; owner wording acceptance for `TX-013` and `REVW-020` passed on 2026-09-20. Sprint 7 is implemented and verified locally only and is not deployed.
 
 ## Marketplace Model
 
@@ -310,7 +310,7 @@ Store and listing/revision moderation are operable, and Sprint 6 supplies only t
 - `/mi-cuenta/notificaciones` is available in both role-specific account menus with an accurate unread badge.
 - Typed notices cover listing approve/reject/admin hide, revision approve/reject, store approve/reject, verification/revocation and production Sprint 6 transaction confirmation/decline/cancel/verified/review-reveal events.
 - Notices are newest first, visually distinguish unread rows, link to the relevant listing/store account area, and can be marked read through an owner-constrained RPC.
-- This center is in-app only. Marketplace email delivery/preferences remain unimplemented.
+- This center remains canonical in-app history. Sprint 7 locally adds supplemental marketplace email jobs for supported events; Auth mail remains separate and no general marketing-email preferences are introduced.
 
 Admin visual refresh:
 - Uses a dark admin sidebar/header area and light operational workspace.
@@ -370,11 +370,11 @@ Behavior:
 - Supabase Auth email template requirements are documented in `docs/auth-email-templates.md`; signup sends trusted `user_metadata.account_type` for conditional Particular/Tienda wording. Sprint 4 changes no hosted template or callback format.
 - Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
 - Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
-- Sprint 3 lifecycle and Sprint 3.1 revisions remain implemented for both account types. Accepted Sprint 4 completes photo amendments and event-backed analytics; accepted production Sprint 5 adds Favorites/in-app price drops. Production Sprint 6 adds verified transactions and reviews. Saved-search and marketplace email delivery remain later-sprint work.
+- Sprint 3 lifecycle and Sprint 3.1 revisions remain implemented for both account types. Accepted Sprint 4 completes photo amendments and event-backed analytics; accepted production Sprint 5 adds Favorites/in-app price drops; accepted production Sprint 6 adds verified transactions and reviews. Local Sprint 7 adds saved searches and supplemental marketplace email without changing Auth mail.
 
 Account shell:
 - `app/mi-cuenta/layout.tsx` keeps role-appropriate navigation visible across account subpages: a persistent desktop sidebar and an accessible collapsed mobile menu with active-section state.
-- Particulars see Particular routes; Store Owners see store routes after an owner-bound store exists. `Estadísticas` remains real. Both account types have Favorites and Sprint 6 `Compras y ventas` in production; saved-search alerts and employee management are not exposed as fake links.
+- Particulars see Particular routes; Store Owners see store routes after an owner-bound store exists. `Estadísticas` remains real. Both account types have Favorites, `Compras`, Notificaciones and local Sprint 7 `Alertas`; employee management is not exposed as a fake link. `Compras` carries an authoritative pending-confirmation badge on desktop and mobile.
 - Particular summary aggregates all owned listings through one owner-scoped RPC; the recent-five list is only presentation. Both inventory tables show actual views/WhatsApp contacts, first-publication date, status, and sold metadata. Unavailable aggregates never become estimated zero.
 
 ## First-party Marketplace Events and Analytics — Production Sprint 4
@@ -390,7 +390,7 @@ Account shell:
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Required V1 gaps include saved-search alerts, price-drop email delivery, listing/store reports with complete resolution, the remaining full Admin Hub and marketplace email infrastructure. Favorites/in-app price drops are production-deployed and owner-accepted. Verified transactions, two-way reviews and review-specific reporting/moderation are production-deployed in Sprint 6, with only the two owner wording checks still blocked. See `docs/functional-spec.md`.
+Required V1 gaps now include listing/store reports with complete resolution, the remaining full Admin Hub, category pages, final legal/safety content and legacy ownership linking. Saved-search alerts, price-drop email delivery and centralized marketplace email are implemented locally in Sprint 7 but await production release/inbox acceptance. Sprint 6 verified transactions, reviews and owner wording are closed/accepted. See `docs/functional-spec.md`.
 
 ## Sprint 5 — deployed and owner-accepted
 
@@ -399,9 +399,9 @@ Required V1 gaps include saved-search alerts, price-drop email delivery, listing
 - Duplicate-RUC application rejection is recoverable by changing only RUC in the same form, keeping business fields and optional assets. Unknown/lost-response commits remain locked to their exact signed retry. Existing accessible notices focus and scroll into view.
 - Private Favorites support both account types on real home/catalog/recommendation/store cards and approved details. Anonymous actions preserve a safe login destination; sellers cannot favorite their own inventory. `/mi-cuenta/favoritos` shows 24 items/page, removable sold history and redacted unavailable entries; copied relists start without favorites.
 - Public live price decreases create one in-app notification per current favorite recipient per transition atomically. Unchanged/increased prices, pending proposals and nonpublic inventory do not alert. Unfavorite stops future alerts; refavorite does not send old drops. Notification links recheck current availability rather than exposing private data.
-- Particular and Store analytics show current favorites, selected-period additions/removals and favorite-add/view rate. Counts/rates are real grouped aggregates with no buyer directory. No revenue, verified sales, email delivery or saved-search UI is fabricated.
+- Particular and Store analytics show current favorites, selected-period additions/removals and favorite-add/view rate. Counts/rates are real grouped aggregates with no buyer directory. Sprint 7 email and alert delivery state is operational infrastructure, not seller demand, revenue or verified-sale analytics.
 
-## Sprint 6 — production deployed, owner wording acceptance pending
+## Sprint 6 — production deployed and owner-accepted
 
 - The global category control is an accessible desktop mega-menu/mobile accordion driven solely by the existing category and instrument-type taxonomy. Only one category branch is open; selection, route navigation, outside interaction and Escape close it.
 - Marking an owned listing sold routes the seller into `/mi-cuenta/transacciones/[listing-id]`. Only authenticated exact-listing WhatsApp contacts recorded no later than `sold_at` appear, with display name/time but no email or phone. A seller can cancel/change before confirmation or record an external/no-account sale.
@@ -409,6 +409,15 @@ Required V1 gaps include saved-search alerts, price-drop email delivery, listing
 - `/mi-cuenta/transacciones` shows the current user's relevant purchase/sale claim history, verified relationships, review window and own submitted state. Unrelated records remain unavailable.
 - Each verified relationship permits one final 1–5 review per direction until the database-owned ten-day deadline. Both reviews reveal together, or a single review reveals only after the deadline. Listing detail/store pages show only visible non-hidden seller/store reputation; buyer review history remains stored/aggregatable without a public buyer profile.
 - Visible reviews can be reported with fixed reason and optional detail. Admin can inspect revealed reviews and transaction linkage, then hide/restore with an audited reason; no rewrite action exists.
+
+## Sprint 7 — locally implemented, not deployed
+
+- Both account types use `Compras` as the persistent purchase/transaction destination. Pending buyer confirmations are grouped first in the center and reflected by a desktop/mobile badge calculated from pending transaction claims, never unread notices.
+- Authenticated users can create an Immediate or Daily alert from the real `/listados` filters. `/mi-cuenta/alertas` renders readable Spanish summaries and supports open, pause, resume and delete. Duplicate semantic searches fail clearly; anonymous creation preserves a safe login destination.
+- Matching uses normalized existing category, type, condition, brand, seller, price, location and advanced attribute semantics. Existing catalog inventory is baselined; only a first public transition after activation qualifies. Restoring the same listing does not repeat, while a relist is a new identity. Pause periods never backfill.
+- Immediate alerts create one durable job per alert/listing. Daily alerts create at most one useful digest per alert/Lima calendar day and never an empty message. The protected worker begins completed-day preparation after 08:00 Lima, replays a bounded seven-day window and sends bounded batches. During pre-go-live Vercel Hobby QA it is invoked manually; supported frequent 5–15 minute automatic scheduling is a mandatory go-live dependency.
+- The private marketplace outbox supplements, rather than replaces, Notifications. Deterministic dedupe, row-locked claims, provider idempotency, at most five attempts and bounded backoff keep domain transitions independent of Resend availability. Recipient and template context come only from trusted database state.
+- Spanish Laria templates cover supported listing/store moderation and verification events, transaction/review lifecycle events, authoritative favorite price drops, and search alerts. They use safe same-origin destinations, contain no tracking pixel, and do not imply payment, delivery or product guarantees.
 
 Post-V1 unless a new product decision is explicit:
 - Payments.
