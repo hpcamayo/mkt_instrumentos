@@ -15,7 +15,7 @@ Browser
 
 The codebase currently favors server-rendered public pages with small client islands for forms, admin auth/moderation, filters, card photo carousel behavior, and listing detail metadata.
 
-Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 6 production source is `9ea8e88a342edc4fb54d873e85974d576e42863f`; owner wording acceptance closed on 2026-09-20. Sprint 7 marketplace email/search-alert work is implemented and verified locally only; neither its migration nor application/configuration has been deployed.
+Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 production source is `37f7507829193306ddaaa37e80787069308bdffc`; migration, application, verified Resend sender and production-only secrets were deployed on 2026-09-22. Automated production verification passed; owner real-inbox/usability rows remain blocked in `acceptance/cases.tsv`.
 
 ## Core Responsibilities
 
@@ -306,7 +306,7 @@ Review submission is RPC-only and derives direction/subject from the verified re
 
 Published reviews may be reported with a fixed reason and optional detail. Sprint 6 admin compatibility shows transaction linkage and revealed/reported reviews, and permits only hide/restore with a mandatory audited reason. It provides no rating/comment rewrite path and intentionally leaves the complete report-resolution hub, listing/store reports and global admin search to Sprint 8.
 
-## Sprint 7 Compras, marketplace email, and saved-search alerts — local only
+## Sprint 7 Compras, marketplace email, and saved-search alerts — production deployed
 
 `/mi-cuenta/transacciones` is labelled `Compras` for both account types and groups buyer confirmations first, followed by purchases and sales. The persistent desktop/mobile account menu receives its pending badge from `get_pending_buyer_confirmation_count()`, which counts canonical pending `transaction_claims`; notification read state is unrelated. `Alertas` is a real shared account destination, not a placeholder.
 
@@ -322,7 +322,7 @@ The server worker claims rows with `FOR UPDATE SKIP LOCKED`, snapshots the curre
 
 PRE-GO-LIVE on Vercel Hobby deliberately registers no automatic cron because Hobby permits only daily cadence and Laria is not open to real marketplace traffic. Release QA invokes the protected worker manually; Immediate email latency therefore has no automatic SLA before launch. Before go-live, provision a supported frequent scheduler at an initial 5–15 minute cadence, rerun protected automatic-worker/retry/digest smoke, and remove this operational limitation. `docs/go-live-checklist.md` makes that a mandatory launch dependency.
 
-Supabase Auth confirmation, magic-link, recovery and invite templates remain separate and unchanged. Production release must apply `20260921120000_sprint_7_marketplace_email_alerts.sql`, configure a verified Resend sender plus server-only provider/base-URL/worker-secret environment variables, and deploy the matching application. No Sprint 7 production action occurred during implementation.
+Supabase Auth confirmation, magic-link, recovery and invite templates remain separate and unchanged. Production has `20260921120000_sprint_7_marketplace_email_alerts.sql`, the exact matching application commit, verified Resend sender and production-only provider/base-URL/worker-secret variables. The final Vercel deployment deliberately registers no cron on Hobby; protected release QA invoked the worker manually and cleaned every disposable fixture.
 
 ## Styling
 

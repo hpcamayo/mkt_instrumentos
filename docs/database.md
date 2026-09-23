@@ -282,7 +282,7 @@ Authenticated users have `SELECT` only for `user_id=auth.uid()`. `mark_notificat
 
 ### Sprint 7 saved searches and marketplace email records
 
-Added locally by `20260921120000_sprint_7_marketplace_email_alerts.sql`; not deployed:
+Added by production-applied migration `20260921120000_sprint_7_marketplace_email_alerts.sql`:
 
 - `public.saved_search_alerts` owns one normalized JSON filter state, SHA-256 semantic hash, match bucket, `immediate`/`daily` frequency, `active`/`paused`/`deleted` state, prospective `active_since`, and timestamps per authenticated profile. A partial unique `(user_id, search_hash)` index prevents duplicate live alerts; owner SELECT uses RLS and owner mutations use guarded RPCs.
 - `laria_private.listing_alert_publications` records the first time a listing identity is publicly eligible. The migration baselines existing public inventory without generating historical matches or deliveries.
@@ -505,7 +505,7 @@ Current migrations:
 - `20260916200000_sprint_4_events.sql`: 16-type trusted event foundation, raw-log RLS, transactional lifecycle events, rolling dedupe/cache compatibility, and grouped private owner/admin analytics.
 - `20260917120000_sprint_5_favorites.sql`: private favorites, trusted add/remove actions, atomic price-drop notifications, safe history/destination RPCs and favorite aggregate extensions. All 16 migrations are applied locally and in production; Sprint 5 production migration history was verified on 2026-09-18.
 - `20260918120000_sprint_6_transactions_reviews.sql`: verified-transaction claims, buyer confirmation, immutable double-blind reviews, review reports/moderation, typed notifications, verified funnel metrics, guarded event transport, RLS and concurrency indexes. All 17 migrations are synchronized locally and in production; the Sprint 6 release history was verified on 2026-09-19.
-- `20260921120000_sprint_7_marketplace_email_alerts.sql`: normalized owner alerts, prospective first-public matching, private match/outbox records, notification/price-drop email eligibility, service-only daily/claim/complete/fail RPCs and pending-buyer account count. All 18 migrations apply from a clean local reset; Sprint 7 is intentionally not in production.
+- `20260921120000_sprint_7_marketplace_email_alerts.sql`: normalized owner alerts, prospective first-public matching, private match/outbox records, notification/price-drop email eligibility, service-only daily/claim/complete/fail RPCs and pending-buyer account count. All 18 migrations apply from a clean local reset and are synchronized with production; Sprint 7 production history was verified on 2026-09-22.
 
 Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
 
@@ -527,7 +527,7 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
-Frozen V1 still requires listing/store reports with resolve/dismiss, the remaining full Admin Hub, category pages, final legal/safety content and legacy ownership linking. Search alerts and centralized marketplace email delivery are implemented locally in Sprint 7 and await their separate production gate. Sprint 6 verified transactions, two-way reviews, review reports/moderation and verified funnel metrics are production-deployed and owner-accepted.
+Frozen V1 still requires listing/store reports with resolve/dismiss, the remaining full Admin Hub, category pages, final legal/safety content and legacy ownership linking. Search alerts and centralized marketplace email delivery are production-deployed in Sprint 7; exact owner real-inbox/usability acceptance remains pending. Sprint 6 verified transactions, two-way reviews, review reports/moderation and verified funnel metrics are production-deployed and owner-accepted.
 
 ## Sprint 5 private favorites and price drops — deployed
 

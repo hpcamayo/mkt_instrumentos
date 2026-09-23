@@ -4,7 +4,7 @@ This is the practical owner guide for Laria.
 
 `docs/functional-spec.md` is canonical for the frozen V1 product contract. This manual describes operations and current implementation; it must not be used to override that contract.
 
-Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 6 is deployed from `9ea8e88a342edc4fb54d873e85974d576e42863f`; the owner accepted `TX-013` and `REVW-020` on 2026-09-20. Sprint 7 is implemented and verified locally only. Do not run its owner inbox checklist or configure production mail/cron until the separate release gate applies the migration and matching application/configuration.
+Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 migration and exact source `37f7507829193306ddaaa37e80787069308bdffc` were production-deployed on 2026-09-22 with the verified Resend sender and production-only configuration. Automated production verification passed; the exact owner inbox/usability checklist below remains pending. Automatic marketplace-email scheduling remains a mandatory pre-go-live dependency while Laria is on Vercel Hobby.
 
 ## What Laria Is
 
@@ -165,7 +165,7 @@ Account page `/mi-cuenta`:
 - Store Owner summary shows the application/trust state, rejection reason, pending/approved capacity, and whether new inventory requires moderation or may publish directly.
 - Owned inventory pages now show edit, owner hide/restore, mark-sold, and copied-relist actions according to each listing state. Moderation and administrative-hide reasons are visible to the owner.
 - Rejected rows can be corrected in the editor and returned through `Enviar nuevamente`; Particular and normal Tienda rows return to moderation.
-- Production Sprint 4 adds real Particular metrics and Store `Estadísticas`; accepted Sprint 5 adds Favorites and in-app price-drop notifications; accepted Sprint 6 adds buyer confirmation and review state. Local Sprint 7 labels the area `Compras`, prioritizes pending buyer confirmations with an accurate badge, and adds a real `Alertas` area to both account types.
+- Production Sprint 4 adds real Particular metrics and Store `Estadísticas`; accepted Sprint 5 adds Favorites and in-app price-drop notifications; accepted Sprint 6 adds buyer confirmation and review state. Production Sprint 7 labels the area `Compras`, prioritizes pending buyer confirmations with an accurate badge, and adds a real `Alertas` area to both account types.
 
 Store statistics `/mi-cuenta/tienda/estadisticas` (production Sprint 4):
 - Available only inside the authenticated Store Owner shell when the account owns a store.
@@ -180,7 +180,7 @@ Admin page `/admin`:
 - Used to control quality.
 - Admin can approve listings, reject/hide them with a required reason, restore eligible listings, and review pending moderated field/photo revisions through trusted database operations.
 - Sprint 2 store actions include basic approval, required-reason rejection/hiding, verification, and revocation. Store application details and owner identity are visible to admin.
-- Accepted Sprint 6 adds verified-transaction linkage and revealed/reported review cards with mandatory-reason hide/restore. Local Sprint 7 sends supported lifecycle email from the durable outbox; the wider hub still lacks global search/filtering, users, listing/store reports and resolve/dismiss, and legacy ownership linking.
+- Accepted Sprint 6 adds verified-transaction linkage and revealed/reported review cards with mandatory-reason hide/restore. Production Sprint 7 sends supported lifecycle email from the durable outbox; the wider hub still lacks global search/filtering, users, listing/store reports and resolve/dismiss, and legacy ownership linking.
 
 ## Daily Admin Workflow
 
@@ -488,7 +488,7 @@ Valid region values are fixed to Peru regions. City fields show suggestions but 
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Sprint 5 Favorites/in-app price drops and Sprint 6 transactions/reviews are production-deployed and owner-accepted. Sprint 7 saved-search alerts plus price-drop/lifecycle marketplace email are local-only pending release. Remaining V1 gaps include listing/store reports with resolution, the remaining full moderation hub, category pages, legal/safety content and legacy ownership linking. See `docs/functional-spec.md`.
+Sprint 5 Favorites/in-app price drops and Sprint 6 transactions/reviews are production-deployed and owner-accepted. Sprint 7 saved-search alerts plus price-drop/lifecycle marketplace email are production-deployed with automated production verification complete; exact owner inbox/usability cases remain pending. Remaining V1 gaps include listing/store reports with resolution, the remaining full moderation hub, category pages, legal/safety content and legacy ownership linking. See `docs/functional-spec.md`.
 
 ## Sprint 5 owner usability acceptance — closed
 
@@ -509,9 +509,9 @@ The production workflow below is retained as historical operating guidance. Owne
 
 After release, use `https://laria.audio/`, `/listados`, `/mi-cuenta/transacciones`, `/mi-cuenta/notificaciones`, `/mi-cuenta/publicaciones`, `/mi-cuenta/tienda/inventario`, `/admin`, and real `/instrumentos/{slug}` / `/tiendas/{slug}` destinations. Record only exact Test IDs in `acceptance/cases.tsv` and run `python3 -B acceptance/validate.py`.
 
-## Sprint 7 owner production acceptance — after the separate release gate
+## Sprint 7 owner production acceptance — pending
 
-Do not perform these inbox/UI checks against production before Sprint 7 is deployed and the verified sender plus protected-worker secret are configured. Do not repeat SQL/RLS, spoofing, worker-concurrency or replay attacks; those are automated.
+Sprint 7 is deployed and the verified sender plus protected-worker secret are configured. Perform only the owner inbox/UI cases below. Do not repeat SQL/RLS, spoofing, worker-concurrency or replay attacks; those already passed automated production verification.
 
 PRE-GO-LIVE note: while Laria remains on Vercel Hobby, no automatic marketplace-email cron is registered. QA invokes the protected worker manually, so Immediate alert email has no automatic latency promise. Before real users enter the marketplace, complete the mandatory worker-scheduling steps in `docs/go-live-checklist.md`.
 
@@ -520,7 +520,7 @@ PRE-GO-LIVE note: while Laria remains on Vercel Hobby, no automatic marketplace-
 - `ALERT-003`, `ALERT-005`, `ALERT-015`: create Immediate and Daily alerts from a filtered real catalog search, verify readable summaries and account/mobile controls, receive only new matching public inventory, receive no empty daily mail, and verify pause/resume/delete behavior without a paused backlog.
 - `MAIL-001`–`MAIL-007`: use disposable listing/store/transaction/review fixtures to verify the selected moderation, store trust, buyer confirmation and revealed-review messages reach the correct real inbox with Spanish Laria copy and authenticated safe destinations. Confirm no message implies verified payment, delivery, authenticity or condition.
 
-Production destinations after release: `https://laria.audio/listados`, `/mi-cuenta/alertas`, `/mi-cuenta/transacciones`, `/mi-cuenta/notificaciones`, `/mi-cuenta/publicaciones`, `/mi-cuenta/tienda`, `/admin`, plus the real listing/store destinations used by the fixtures. Record only exact IDs in `acceptance/cases.tsv`, run `python3 -B acceptance/validate.py`, and remove every disposable user/store/listing/object afterward.
+Production destinations: `https://laria.audio/listados`, `/mi-cuenta/alertas`, `/mi-cuenta/transacciones`, `/mi-cuenta/notificaciones`, `/mi-cuenta/publicaciones`, `/mi-cuenta/tienda`, `/admin`, plus the real listing/store destinations used by the fixtures. Record only exact IDs in `acceptance/cases.tsv`, run `python3 -B acceptance/validate.py`, and remove every disposable user/store/listing/object afterward.
 
 Do not build these post-V1 areas without a new product decision:
 - Payments.
