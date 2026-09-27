@@ -19,13 +19,11 @@ import {
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/json-ld";
-import { buildOrganizationJsonLd } from "@/lib/seo";
+import { buildHomeMetadata, buildOrganizationJsonLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/" },
-};
+export const metadata: Metadata = buildHomeMetadata();
 
 type StorePreviewData = {
   id: string;

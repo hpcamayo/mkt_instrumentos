@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": 1790527819399,
+    "level": "error",
+    "deploymentId": "dpl_7UNWydkpr6gw3RUuPrAmC4igRQ8p",
+    "requestPath": "/admin/tiendas",
+    "responseStatusCode": 500,
+    "message": "ReferenceError: status is not defined\n    at L (.next/server/app/admin/[section]/page.js:1:30514) {\n  digest: '870188119'\n}"
+  },
+  {
+    "timestamp": 1790527805870,
+    "level": "error",
+    "deploymentId": "dpl_7UNWydkpr6gw3RUuPrAmC4igRQ8p",
+    "requestPath": "/registro/vendedor",
+    "responseStatusCode": 504,
+    "message": "[Error: Your function was stopped as it did not return an initial response within 25s]"
+  }
+]

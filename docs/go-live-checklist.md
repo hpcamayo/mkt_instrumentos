@@ -32,6 +32,10 @@ Sprint 9 final launch acceptance must not close while this section remains incom
 
 ## Legal and safety content — mandatory
 
-1. Configure `NEXT_PUBLIC_CONTACT_EMAIL` with a monitored official address; until then the legal pages show a pre-launch placeholder instead of a contact channel.
+1. Configure `NEXT_PUBLIC_CONTACT_EMAIL` with a monitored official address; until then the legal pages show a pre-launch placeholder instead of a contact channel. The owner supplied `laria.audioperu@gmail.com` (2026-09-27). Set it in the Vercel Production environment before building the next candidate: `NEXT_PUBLIC_*` values are inlined at build time, so an existing deployment will not pick it up.
 2. Owner review of `/terminos`, `/privacidad`, `/articulos-prohibidos` and `/consejos-de-seguridad` against real operations (`LEGAL-005`, `LEGAL-006` are manual).
 3. Recommended: review by a Peruvian lawyer, including operator identity (titular del banco de datos) and any registration duties under Ley N.° 29733 before collecting real-user data at scale. The pages make no regulatory certification claims.
+
+## Sprint 9 release gate — failed, 2026-09-27
+
+The candidate `bcf9e6142a1c86caa3feb8ee24cd23a126a3cc42` was withdrawn and production restored to exact application SHA `bb16e319540a9d6721e990bc1e9900825c7473ac`. Homepage OG metadata, Admin store runtime failure and a signup timeout need resolution/retest before another gate. No scheduler or migration changed. Official contact configuration, full production SEO smoke and owner/manual acceptance remain open; see `docs/sprint-9-production-release-gate.md`.

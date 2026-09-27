@@ -355,6 +355,7 @@ Public listing, store and revealed-review pages share `ContentReport`; anonymous
 - `lib/seo.ts` builds metadata and JSON-LD. Listing detail and store pages use React `cache()` loaders shared by `generateMetadata` and rendering, so metadata adds no queries. Sold listings are `noindex, follow`; Product JSON-LD names stores but never individual sellers; filtered `/listados` URLs are `noindex, follow` and category-only catalog URLs canonicalize to their landing page.
 - Legal pages (`/terminos`, `/privacidad`, `/articulos-prohibidos`, `/consejos-de-seguridad`) are static server components sharing `components/legal-page.tsx`. The contact line uses `NEXT_PUBLIC_CONTACT_EMAIL` and shows a pre-launch placeholder until it is configured.
 - `lib/account-navigation.ts` defines the frozen account order; `Perfil y seguridad` points to `/mi-cuenta/perfil`, stays active on `/mi-cuenta/seguridad`, and both pages render a Perfil/Seguridad switch. Logout remains the Sprint 8 POST form.
+- `next.config.ts` adds Googlebot to Next's HTML-limited bots (`htmlLimitedBots`), so Googlebot receives blocking metadata in `<head>`. Otherwise Next streams it into `<body>` on `/listados`, whose `loading.tsx` flushes `<head>` early. Visitors keep the streamed metadata and the loading skeleton.
 - No migration, RLS, Admin authority, scheduler or analytics-event change.
 
 ## Styling

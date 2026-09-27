@@ -1,0 +1,61 @@
+{
+  "sha": "bcf9e6142a1c86caa3feb8ee24cd23a126a3cc42",
+  "deployment": "dpl_7UNWydkpr6gw3RUuPrAmC4igRQ8p",
+  "url": "https://laria.audio/",
+  "status": 200,
+  "headers": "HTTP/2 200 \nage: 0\ncache-control: private, no-cache, no-store, max-age=0, must-revalidate\ncontent-type: text/html; charset=utf-8\ndate: Sun, 27 Sep 2026 16:49:34 GMT\nlink: </_next/static/media/logo-clear.bea62654.svg>; rel=preload; as=\"image\", </_next/static/css/5ef9183b87f2b2d4.css>; rel=preload; as=\"style\"\nserver: Vercel\nstrict-transport-security: max-age=63072000\nvary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch\nx-matched-path: /\nx-powered-by: Next.js\nx-vercel-cache: MISS\nx-vercel-id: gru1::iad1::drz8g-1790527773667-cc5bf7ba0590\n\n",
+  "canonical": [
+    "https://laria.audio"
+  ],
+  "metadata": {
+    "": [
+      ""
+    ],
+    "viewport": [
+      "width=device-width, initial-scale=1"
+    ],
+    "description": [
+      "Marketplace peruano para comprar y vender instrumentos musicales usados y productos de tiendas. Contacto directo por WhatsApp; Laria no procesa pagos ni envíos."
+    ],
+    "application-name": [
+      "Laria"
+    ],
+    "robots": [
+      "index, follow"
+    ],
+    "og:title": [
+      "Laria | Instrumentos musicales en Perú"
+    ],
+    "og:description": [
+      "Compra y vende guitarras, bajos, baterías, pedales, amplificadores y equipos de audio en Perú. Contacto directo por WhatsApp."
+    ],
+    "og:site_name": [
+      "Laria"
+    ],
+    "og:locale": [
+      "es_PE"
+    ],
+    "og:type": [
+      "website"
+    ],
+    "twitter:card": [
+      "summary"
+    ],
+    "twitter:title": [
+      "Laria | Instrumentos musicales en Perú"
+    ],
+    "twitter:description": [
+      "Marketplace peruano para instrumentos musicales con contacto directo por WhatsApp."
+    ]
+  },
+  "jsonLd": [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Laria",
+      "url": "https://laria.audio/",
+      "logo": "https://laria.audio/icon.svg"
+    }
+  ],
+  "failure": "Required Open Graph og:url is missing; baseline root layout supplied url: /."
+}

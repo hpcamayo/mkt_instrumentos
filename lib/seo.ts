@@ -11,6 +11,8 @@ import {
 import {
   NOINDEX_FOLLOW_ROBOTS,
   OPEN_GRAPH_BASE,
+  SITE_OG_DESCRIPTION,
+  SITE_OG_TITLE,
   SITE_NAME,
   absoluteUrl,
   truncateDescription,
@@ -73,19 +75,34 @@ export function buildCategoryMetadata(landing: CategoryLandingPage, page: number
 
 export function buildCatalogMetadata(searchParams: SearchParams, page: number): Metadata {
   const description = "Explora guitarras, bajos, baterías, pedales, amplificadores y equipos de audio de particulares y tiendas en Perú. Contacto directo por WhatsApp.";
+  const heading = "Instrumentos musicales en venta en Perú";
   const keys = activeFilterKeys(searchParams);
-  const base: Metadata = {
-    title: page > 1 ? `Instrumentos musicales en venta en Perú – Página ${page}` : "Instrumentos musicales en venta en Perú",
-    description,
-    openGraph: { ...OPEN_GRAPH_BASE, title: `Instrumentos musicales en venta en Perú | ${SITE_NAME}`, description, url: "/listados" },
-  };
-  if (keys.length === 0) return { ...base, alternates: { canonical: paged("/listados", page) } };
+  const titled = (text: string) => (page > 1 ? `${text} – Página ${page}` : text);
+  // og:url always names the same page as the canonical (or, when there is none, the page itself).
+  const pageMetadata = (url: string, title: string, pageDescription: string, extra: Metadata = {}): Metadata => ({
+    title: titled(title),
+    description: pageDescription,
+    openGraph: { ...OPEN_GRAPH_BASE, title: `${titled(title)} | ${SITE_NAME}`, description: pageDescription, url },
+    ...extra,
+  });
 
-  const category = values(searchParams.category)[0];
-  const landing = keys.length === 1 && keys[0] === "category" ? getCategoryLandingByValue(category) : null;
-  // A category-only catalog URL duplicates its landing page.
-  if (landing && page === 1) return { ...base, title: landing.heading, alternates: { canonical: `/instrumentos/${landing.slug}` } };
-  return { ...base, robots: NOINDEX_FOLLOW_ROBOTS };
+  if (keys.length === 0) {
+    const canonical = paged("/listados", page);
+    return pageMetadata(canonical, heading, description, { alternates: { canonical } });
+  }
+
+  // A category-only catalog URL duplicates its landing page (including its pagination).
+  const landing = keys.length === 1 && keys[0] === "category" ? getCategoryLandingByValue(values(searchParams.category)[0]) : null;
+  if (landing) {
+    const canonical = paged(`/instrumentos/${landing.slug}`, page);
+    return pageMetadata(canonical, landing.heading, landing.description, { alternates: { canonical } });
+  }
+
+  // Filtered combinations stay out of the index; their og:url is the normalized filtered URL.
+  const params = new URLSearchParams();
+  for (const key of keys) for (const item of values(searchParams[key])) params.append(key, item);
+  if (page > 1) params.set("page", String(page));
+  return pageMetadata(`/listados?${params}`, heading, description, { robots: NOINDEX_FOLLOW_ROBOTS });
 }
 
 function listingImages(listing: ListingDetailData) {
@@ -216,5 +233,14 @@ export function buildOrganizationJsonLd() {
     name: SITE_NAME,
     url: absoluteUrl("/"),
     logo: absoluteUrl("/icon.svg"),
+  };
+}
+
+// Homepage canonical and og:url are the absolute site root (https://laria.audio/).
+export function buildHomeMetadata(): Metadata {
+  const url = absoluteUrl("/");
+  return {
+    alternates: { canonical: url },
+    openGraph: { ...OPEN_GRAPH_BASE, title: SITE_OG_TITLE, description: SITE_OG_DESCRIPTION, url },
   };
 }

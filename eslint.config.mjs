@@ -15,6 +15,14 @@ const eslintConfig = [
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   { files: ["tests/**/*.cjs"], rules: { "@typescript-eslint/no-require-imports": "off" } },
+  {
+    // Server-rendered code must not accidentally read browser-only window globals:
+    // TypeScript's DOM lib types them, but they are undefined in Node (Sprint 9 /admin/tiendas 500).
+    files: ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "components_v0/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-globals": ["error", ...["status", "name", "event", "length", "origin", "top", "parent", "self", "closed", "opener", "stop", "find", "print", "close", "open", "external", "screen"].map((name) => ({ name, message: `Use a local variable or window.${name} explicitly; bare browser globals throw during SSR.` }))],
+    },
+  },
 ];
 
 export default eslintConfig;

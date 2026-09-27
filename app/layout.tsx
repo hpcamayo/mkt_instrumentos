@@ -9,6 +9,8 @@ import {
   OPEN_GRAPH_BASE,
   SITE_DESCRIPTION,
   SITE_NAME,
+  SITE_OG_DESCRIPTION,
+  SITE_OG_TITLE,
   getSiteUrl,
   isIndexableDeployment,
 } from "@/lib/site";
@@ -22,11 +24,11 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   robots: isIndexableDeployment() ? { index: true, follow: true } : NOINDEX_ROBOTS,
+  // No og:url here: every page sets its own through lib/seo.ts so none inherits the homepage URL.
   openGraph: {
     ...OPEN_GRAPH_BASE,
-    title: "Laria | Instrumentos musicales en Perú",
-    description:
-      "Compra y vende guitarras, bajos, baterías, pedales, amplificadores y equipos de audio en Perú. Contacto directo por WhatsApp.",
+    title: SITE_OG_TITLE,
+    description: SITE_OG_DESCRIPTION,
   },
   twitter: {
     card: "summary",

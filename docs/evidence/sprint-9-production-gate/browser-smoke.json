@@ -1,0 +1,237 @@
+{
+  "results": [
+    {
+      "check": "public hydration",
+      "path": "/",
+      "result": "PASS"
+    },
+    {
+      "check": "public hydration",
+      "path": "/listados",
+      "result": "PASS"
+    },
+    {
+      "check": "public hydration",
+      "path": "/instrumentos/guitarras",
+      "result": "PASS"
+    },
+    {
+      "check": "public hydration",
+      "path": "/terminos",
+      "result": "PASS"
+    },
+    {
+      "check": "public hydration",
+      "path": "/privacidad",
+      "result": "PASS"
+    },
+    {
+      "check": "public hydration",
+      "path": "/articulos-prohibidos",
+      "result": "PASS"
+    },
+    {
+      "check": "public hydration",
+      "path": "/consejos-de-seguridad",
+      "result": "PASS"
+    },
+    {
+      "check": "public hydration",
+      "path": "/registro/vendedor",
+      "result": "PASS"
+    },
+    {
+      "check": "public hydration",
+      "path": "/registro/tienda",
+      "result": "PASS"
+    },
+    {
+      "check": "account IA",
+      "labels": [
+        "Resumen",
+        "Mis publicaciones",
+        "Publicar",
+        "Favoritos",
+        "Alertas",
+        "Notificaciones",
+        "Compras",
+        "Perfil y seguridad"
+      ]
+    },
+    {
+      "check": "authenticated route",
+      "role": "seller",
+      "path": "/mi-cuenta",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "seller",
+      "path": "/mi-cuenta/publicaciones",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "seller",
+      "path": "/mi-cuenta/publicar",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "seller",
+      "path": "/mi-cuenta/favoritos",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "seller",
+      "path": "/mi-cuenta/alertas",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "seller",
+      "path": "/mi-cuenta/notificaciones",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "seller",
+      "path": "/mi-cuenta/transacciones",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "seller",
+      "path": "/mi-cuenta/perfil",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "seller",
+      "path": "/mi-cuenta/seguridad",
+      "result": "PASS"
+    },
+    {
+      "check": "POST logout",
+      "result": "PASS"
+    },
+    {
+      "check": "account IA",
+      "labels": [
+        "Resumen",
+        "Mi tienda",
+        "Inventario",
+        "Publicar producto",
+        "Estadísticas",
+        "Favoritos",
+        "Alertas",
+        "Notificaciones",
+        "Compras",
+        "Perfil y seguridad"
+      ]
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta/tienda",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta/tienda/inventario",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta/tienda/publicar",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta/tienda/estadisticas",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta/favoritos",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta/alertas",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta/notificaciones",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta/transacciones",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta/perfil",
+      "result": "PASS"
+    },
+    {
+      "check": "authenticated route",
+      "role": "store_owner",
+      "path": "/mi-cuenta/seguridad",
+      "result": "PASS"
+    },
+    {
+      "check": "POST logout",
+      "result": "PASS"
+    },
+    {
+      "check": "admin hydration",
+      "path": "/admin",
+      "result": "PASS"
+    },
+    {
+      "check": "admin hydration",
+      "path": "/admin/listados",
+      "result": "PASS"
+    },
+    {
+      "check": "admin hydration",
+      "path": "/admin/tiendas",
+      "result": "PASS"
+    },
+    {
+      "check": "admin hydration",
+      "path": "/admin/reportes",
+      "result": "PASS"
+    },
+    {
+      "check": "admin hydration",
+      "path": "/admin/usuarios",
+      "result": "PASS"
+    },
+    {
+      "check": "POST logout",
+      "result": "PASS"
+    }
+  ],
+  "cleanup": "PASS",
+  "usersRemoved": 3,
+  "storesRemoved": 1
+}

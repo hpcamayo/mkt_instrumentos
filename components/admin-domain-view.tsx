@@ -192,6 +192,9 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
   const title = adminString(item, "title") || adminString(item, "listing_title") || adminString(item, "target_title") || adminString(item, "name") || adminString(item, "full_name") || "Registro";
   const id = adminString(item, "id") || adminString(item, "claim_id");
   const created = adminString(item, "created_at") || adminString(item, "submitted_at");
+  // Current record status for the optimistic editors. Must be declared here: a bare
+  // `status` resolves to the browser's window.status and is undefined during SSR.
+  const status = adminString(item, "status");
   const targetType = adminString(item, "target_type");
   const targetId = targetType === "listing"
     ? adminString(item, "listing_id")

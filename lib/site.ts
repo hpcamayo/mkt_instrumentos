@@ -27,6 +27,10 @@ export function isIndexableDeployment() {
   return environment !== "preview" && environment !== "development";
 }
 
+export const SITE_OG_TITLE = "Laria | Instrumentos musicales en Perú";
+export const SITE_OG_DESCRIPTION =
+  "Compra y vende guitarras, bajos, baterías, pedales, amplificadores y equipos de audio en Perú. Contacto directo por WhatsApp.";
+
 export const OPEN_GRAPH_BASE = { siteName: SITE_NAME, locale: "es_PE", type: "website" } as const;
 
 export const NOINDEX_ROBOTS = { index: false, follow: false } as const;

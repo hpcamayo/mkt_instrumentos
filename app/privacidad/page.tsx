@@ -22,7 +22,7 @@ export default function PrivacyPage() {
     >
       <LegalSection title="1. Datos que tratamos">
         <ul>
-          <li><strong>Cuenta</strong>: nombre, correo electrónico, número de WhatsApp, ciudad y región. La contraseña la gestiona nuestro proveedor de autenticación; Laria no la ve en texto plano.</li>
+          <li><strong>Cuenta</strong>: nombre, correo electrónico, número de WhatsApp, ciudad y región. Al crear la cuenta o cambiar la contraseña, esta se envía directamente a nuestro proveedor de autenticación, que no guarda la contraseña en sí, sino solo un hash de ella. Al iniciar sesión, la contraseña pasa por el servidor de Laria solo para reenviarla a ese proveedor; Laria no la guarda ni la registra.</li>
           <li><strong>Tiendas</strong>: RUC, razón social, correo y teléfono comerciales, dirección, ubicación, persona de contacto y, si los agregas, logo, banner, fotos y redes sociales.</li>
           <li><strong>Publicaciones</strong>: fotos, título, descripción, precio, estado, ubicación y características del artículo.</li>
           <li><strong>Actividad en Laria</strong>: publicaciones vistas o mostradas, favoritos, búsquedas y filtros, alertas guardadas, clics en el botón de WhatsApp, reportes, confirmaciones de transacción y reseñas.</li>
