@@ -17,8 +17,15 @@ import {
   type ListingCardData,
 } from "@/lib/listings";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import type { Metadata } from "next";
+import { JsonLd } from "@/components/json-ld";
+import { buildOrganizationJsonLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 type StorePreviewData = {
   id: string;
@@ -105,6 +112,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={buildOrganizationJsonLd()} />
       <HeroSection />
       <CategoriesSection categories={[...categoryOptions]} />
       <FeaturedListings listings={toFeaturedListings(listings)} />

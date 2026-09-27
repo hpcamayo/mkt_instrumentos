@@ -1,3 +1,4 @@
+import { NOINDEX_ROBOTS } from "@/lib/site";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { InviteProfileSetupForm } from "@/components/invite-profile-setup-form";
@@ -11,6 +12,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export const metadata = {
+  robots: NOINDEX_ROBOTS,
   title: "Invitacion de vendedor",
 };
 

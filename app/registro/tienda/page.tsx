@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { NOINDEX_ROBOTS } from "@/lib/site";
 import { PageContainer } from "@/components/page-container";
 import { StoreOwnerSignupForm } from "@/components/store-owner-signup-form";
 
-export const metadata = { title: "Crear cuenta de Tienda" };
+export const metadata = { robots: NOINDEX_ROBOTS, title: "Crear cuenta de Tienda" };
 
 export default function StoreOwnerRegistrationPage() {
   return (

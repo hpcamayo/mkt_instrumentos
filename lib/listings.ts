@@ -151,7 +151,7 @@ export function buildWhatsAppUrl(listing: ListingDetailData) {
   const contact = resolveParticularSeller(listing);
   const phone = String(contact.phone ?? listing.whatsapp_phone).replace(/\D/g, "");
   const message = encodeURIComponent(
-    `Hola, vi tu publicación "${listing.title}" en Instrumentos Perú. ¿Sigue disponible?`,
+    `Hola, vi tu publicación "${listing.title}" en Laria. ¿Sigue disponible?`,
   );
 
   return `https://wa.me/${phone}?text=${message}`;
@@ -163,7 +163,7 @@ export function buildStoreWhatsAppUrl(store: {
 }) {
   const phone = store.whatsapp_phone.replace(/\D/g, "");
   const message = encodeURIComponent(
-    `Hola, vi la tienda "${store.name}" en Instrumentos Perú. Quisiera consultar por sus instrumentos.`,
+    `Hola, vi la tienda "${store.name}" en Laria. Quisiera consultar por sus instrumentos.`,
   );
 
   return `https://wa.me/${phone}?text=${message}`;

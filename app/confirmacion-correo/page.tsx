@@ -1,8 +1,10 @@
+import { NOINDEX_ROBOTS } from "@/lib/site";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export const metadata = {
+  robots: NOINDEX_ROBOTS,
   title: "Correo confirmado",
 };
 

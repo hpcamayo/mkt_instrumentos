@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { Pagination } from "@/components/pagination";
 import {
-  LISTINGS_PAGE_SIZE,
   parsePage,
   pageHref,
   getPageRedirect,
@@ -28,24 +27,19 @@ import { CreateSearchAlert } from "@/components/create-search-alert";
 import { createSearchReceipt } from "@/lib/marketplace-events-server";
 import { searchEventMetadata } from "@/lib/marketplace-event-payload";
 import { listingFiltersToSearchAlert } from "@/lib/search-alerts";
+import { fetchCatalogPage } from "@/lib/catalog";
+import { buildCatalogMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-  title: "Listados",
-  description:
-    "Explora instrumentos musicales aprobados de vendedores particulares y tiendas en Perú.",
-  openGraph: {
-    title: "Listados de instrumentos musicales en Perú",
-    description:
-      "Guitarras, bajos, baterías, pedales, amplificadores y equipos de audio con contacto directo por WhatsApp.",
-    url: "/listados",
-  },
-};
 
 type ListingsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+export async function generateMetadata({ searchParams }: ListingsPageProps): Promise<Metadata> {
+  const resolved = await searchParams;
+  return buildCatalogMetadata(resolved, parsePage(resolved.page));
+}
 
 type ActiveFilterChip = {
   key: string;
@@ -65,106 +59,7 @@ export default async function ListingsPage({
     return <SupabaseSetupMessage filters={filters} />;
   }
 
-  const storeRelation =
-    filters.sellerType === "verified_store" ? "stores!inner" : "stores";
-
-  let query = supabase
-    .from("listings")
-    .select(
-      `
-        id,
-        title,
-        slug,
-        category,
-        brand,
-        model,
-        condition,
-        price_pen,
-        instrument_type,
-        attributes,
-        published_at,
-        view_count,
-        city,
-        region,
-        seller_type,
-        created_at,
-        ${storeRelation} (
-          name,
-          slug,
-          status,
-          is_verified
-        ),
-        photo_count:listing_photo_count,
-        listing_photos (
-          id,
-          listing_id,
-          image_url,
-          alt_text,
-          sort_order
-        )
-      `,
-      { count: "exact" },
-    )
-    .eq("status", "approved");
-
-  if (filters.category) {
-    query = query.eq("category", filters.category);
-  }
-
-  if (filters.city) {
-    query = query.eq("city", filters.city);
-  }
-
-  if (filters.brand) {
-    query = query.ilike("brand", `%${filters.brand}%`);
-  }
-
-  if (filters.condition) {
-    query = query.eq("condition", filters.condition);
-  }
-
-  if (filters.sellerType === "verified_store") {
-    query = query.eq("seller_type", "store").eq("stores.is_verified", true);
-  } else if (filters.sellerType) {
-    query = query.eq("seller_type", filters.sellerType);
-  }
-
-  if (filters.instrumentType) {
-    query = query.eq("instrument_type", filters.instrumentType);
-  }
-
-  if (filters.minPrice !== undefined) {
-    query = query.gte("price_pen", filters.minPrice);
-  }
-
-  if (filters.maxPrice !== undefined) {
-    query = query.lte("price_pen", filters.maxPrice);
-  }
-
-  for (const [key, value] of Object.entries(filters.advanced)) {
-    query = query.contains("attributes", { [key]: value });
-  }
-
-  if (filters.sort === "price_asc") {
-    query = query.order("price_pen", { ascending: true, nullsFirst: false });
-  } else if (filters.sort === "price_desc") {
-    query = query.order("price_pen", { ascending: false, nullsFirst: false });
-  } else {
-    query = query
-      .order("published_at", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false });
-  }
-
-  query = query.order("sort_order", {
-    foreignTable: "listing_photos",
-    ascending: true,
-  });
-  query = query.limit(1, { foreignTable: "listing_photos" });
-
-  const { count, data, error } = await query
-    .order("id")
-    .range((page - 1) * LISTINGS_PAGE_SIZE, page * LISTINGS_PAGE_SIZE - 1)
-    .returns<ListingCardData[]>();
+  const { count, data, error } = await fetchCatalogPage(supabase, filters, page);
   const redirectPage = getPageRedirect(page, count, error);
   if (redirectPage !== null)
     redirect(pageHref("/listados", resolvedSearchParams, redirectPage));

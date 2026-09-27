@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
+import { NOINDEX_ROBOTS } from "@/lib/site";
 import { AdminNavigation } from "@/components/admin-navigation";
 import { getAdminCounts, requireAdmin } from "@/lib/admin-server";
+
+// Private account/Admin surfaces are never indexable.
+export const metadata: Metadata = { robots: NOINDEX_ROBOTS };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const [{ user, profile }, counts] = await Promise.all([

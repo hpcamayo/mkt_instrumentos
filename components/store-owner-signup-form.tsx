@@ -123,6 +123,11 @@ export function StoreOwnerSignupForm() {
           {message}
         </div>
       ) : null}
+      <p className="text-xs leading-5 text-laria-text-soft">
+        Al crear la cuenta aceptas los{" "}
+        <Link href="/terminos" target="_blank" className="font-bold text-laria-blue">términos y reglas del marketplace</Link> y la{" "}
+        <Link href="/privacidad" target="_blank" className="font-bold text-laria-blue">política de privacidad</Link>.
+      </p>
       <button type="submit" disabled={state === "checking" || state === "submitting"} className="laria-button-primary min-h-12 px-5 py-3 text-sm">
         {state === "submitting" ? "Creando cuenta..." : "Crear cuenta de Tienda"}
       </button>

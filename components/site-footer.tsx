@@ -1,16 +1,18 @@
+import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
+import { legalPages } from "@/lib/legal-pages";
 
 const footerLinks = [
   { href: "/", label: "Inicio" },
   { href: "/listados", label: "Listados" },
   { href: "/vender", label: "Vender" },
-  { href: "/registrar-tienda", label: "Registrar tienda" },
+  { href: "/registrar-tienda", label: "Para tiendas" },
 ];
 
 export function SiteFooter() {
   return (
     <footer className="border-t border-white/10 bg-laria-black text-white">
-      <PageContainer className="grid gap-8 py-10 text-sm sm:grid-cols-[1.2fr_0.8fr_1fr] lg:py-12">
+      <PageContainer className="grid gap-8 py-10 text-sm sm:grid-cols-2 lg:grid-cols-[1.2fr_0.7fr_0.8fr_1fr] lg:py-12">
         <div className="space-y-3">
           <p className="text-3xl font-black uppercase tracking-tight text-laria-yellow">
             Laria
@@ -21,35 +23,43 @@ export function SiteFooter() {
           </p>
         </div>
 
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
-            Navega
-          </p>
-          <ul className="mt-4 grid gap-2 text-white/68">
-            {footerLinks.map((item) => (
-              <li key={item.href}>
-                <a className="transition hover:text-laria-blue" href={item.href}>
-                  {item.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <FooterLinks title="Navega" links={footerLinks} />
+        <FooterLinks title="Ayuda y legal" links={legalPages} />
 
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
-            MVP
+            Cómo funciona
           </p>
           <p className="mt-4 max-w-sm leading-6 text-white/64">
-            Contacto directo por WhatsApp. Sin pagos, checkout, envíos ni chat
-            interno.
+            Coordinas directo con cada vendedor. Laria no procesa pagos, no
+            retiene dinero, no gestiona envíos ni garantiza productos o
+            transacciones.
           </p>
         </div>
 
-        <div className="border-t border-white/10 pt-5 text-xs text-white/44 sm:col-span-3">
+        <div className="border-t border-white/10 pt-5 text-xs text-white/44 sm:col-span-2 lg:col-span-4">
           © 2026 Laria. Para músicos, tiendas y compradores en Perú.
         </div>
       </PageContainer>
     </footer>
+  );
+}
+
+function FooterLinks({ title, links }: { title: string; links: readonly { href: string; label: string }[] }) {
+  return (
+    <nav aria-label={title}>
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
+        {title}
+      </p>
+      <ul className="mt-4 grid gap-2 text-white/68">
+        {links.map((item) => (
+          <li key={item.href}>
+            <Link className="inline-flex min-h-8 items-center transition hover:text-laria-blue" href={item.href}>
+              {item.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }

@@ -8,6 +8,11 @@ import {
 } from "@/lib/pagination";
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { cache } from "react";
+import { JsonLd } from "@/components/json-ld";
+import { buildStoreJsonLd, buildStoreMetadata } from "@/lib/seo";
+import { NOINDEX_ROBOTS } from "@/lib/site";
 import { ListingCard } from "@/components/listing-card";
 import { ContentReport } from "@/components/content-report";
 import { StoreVisitTelemetry } from "@/components/marketplace-telemetry";
@@ -40,19 +45,10 @@ type StoreData = {
   is_verified: boolean;
 };
 
-export default async function StorePage({
-  params,
-  searchParams,
-}: StorePageProps) {
-  const { slug } = await params;
-  const page = parsePage((await searchParams).page);
+const loadActiveStore = cache(async (slug: string) => {
   const supabase = getPublicSupabaseClient();
-
-  if (!supabase) {
-    return <SupabaseSetupMessage />;
-  }
-
-  const { data: store, error: storeError } = await supabase
+  if (!supabase) return { data: null, error: null };
+  return supabase
     .from("stores")
     .select(
       `
@@ -70,7 +66,29 @@ export default async function StorePage({
     )
     .eq("status", "active")
     .eq("slug", slug)
-    .maybeSingle();
+    .maybeSingle<StoreData>();
+});
+
+export async function generateMetadata({ params, searchParams }: StorePageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const { data: store } = await loadActiveStore(slug);
+  if (!store) return { title: "Tienda no disponible", robots: NOINDEX_ROBOTS };
+  return buildStoreMetadata(store, parsePage((await searchParams).page));
+}
+
+export default async function StorePage({
+  params,
+  searchParams,
+}: StorePageProps) {
+  const { slug } = await params;
+  const page = parsePage((await searchParams).page);
+  const supabase = getPublicSupabaseClient();
+
+  if (!supabase) {
+    return <SupabaseSetupMessage />;
+  }
+
+  const { data: store, error: storeError } = await loadActiveStore(slug);
 
   if (storeError || !store) {
     notFound();
@@ -135,6 +153,8 @@ export default async function StorePage({
   });
 
   return (
+    <>
+    <JsonLd data={buildStoreJsonLd(store)} />
     <StoreView
       store={store as StoreData}
       listings={listings}
@@ -143,6 +163,7 @@ export default async function StorePage({
       hasError={Boolean(error)}
       reputation={parsePublicReputation(reputationData)}
     />
+    </>
   );
 }
 

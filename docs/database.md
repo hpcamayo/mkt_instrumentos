@@ -20,6 +20,8 @@ Environment variables used in current code:
 - `MARKETPLACE_EMAIL_BASE_URL`
 - `RESEND_API_KEY`
 - `CRON_SECRET`
+- `NEXT_PUBLIC_SITE_URL` (optional; canonical public origin, default `https://laria.audio`)
+- `NEXT_PUBLIC_CONTACT_EMAIL` (official legal/privacy contact shown on legal pages; required before go-live)
 
 Important:
 - `NEXT_PUBLIC_SUPABASE_URL` should be only the base Supabase URL, for example `https://xxxxx.supabase.co`, not `/rest/v1/`.

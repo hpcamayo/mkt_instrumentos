@@ -345,6 +345,18 @@ The same migration adds `admin_audit_actions`, trusted transition triggers/RPC a
 
 Public listing, store and revealed-review pages share `ContentReport`; anonymous visitors receive a safe login path and authenticated eligible reporters receive explicit success/error feedback. Reporting does not add Admin email spam or alter the Sprint 7 email scheduler. Sprint 8 intentionally does not implement Sprint 9 category SEO, legal/safety launch content, or go-live scheduling.
 
+## Sprint 9 public discovery, legal pages and account navigation — local implementation only
+
+- `lib/site.ts` owns the brand name, canonical origin (`NEXT_PUBLIC_SITE_URL`, default `https://laria.audio`), JSON-LD serialization and the private-route prefix list. `isIndexableDeployment()` is false on Vercel `preview`/`development`, which makes the root metadata `noindex`, `robots.txt` disallow everything, the sitemap empty and every response carry `X-Robots-Tag`.
+- `app/robots.ts` disallows account, Admin, API, auth, signup/onboarding (`/registro/vendedor`, `/registro/tienda` and their invitations) and publication utility routes and links `/sitemap.xml`. `next.config.ts` adds `X-Robots-Tag: noindex, nofollow` to the same prefixes; the account and Admin layouts and auth pages also declare `noindex` metadata.
+- `app/sitemap.ts` is dynamic and bounded (1,000-row batches, 20,000 listings, 2,000 stores). It uses the anonymous client, so RLS limits it to publicly eligible approved listings and active stores; sold listings, empty categories and private routes are never listed.
+- `lib/category-pages.ts` maps each existing `categoryOptions` value to a Spanish slug and copy (type-checked against the canonical taxonomy). `/instrumentos/[slug]` resolves reserved category slugs first and otherwise loads the listing detail; generated listing slugs end in `-<uuid>` and relists add a suffix, so no listing can shadow a category.
+- `lib/catalog.ts` is the single public catalog query (filters, deterministic ordering, `.order("id")` tie-breaker, 24-item range) shared by `/listados` and category landings. Landing pages accept only `page`; any catalog filter is forwarded with a redirect to `/listados?category=…`, keeping one URL-driven filter surface. Page 1 records the same signed `search` telemetry as the equivalent catalog URL.
+- `lib/seo.ts` builds metadata and JSON-LD. Listing detail and store pages use React `cache()` loaders shared by `generateMetadata` and rendering, so metadata adds no queries. Sold listings are `noindex, follow`; Product JSON-LD names stores but never individual sellers; filtered `/listados` URLs are `noindex, follow` and category-only catalog URLs canonicalize to their landing page.
+- Legal pages (`/terminos`, `/privacidad`, `/articulos-prohibidos`, `/consejos-de-seguridad`) are static server components sharing `components/legal-page.tsx`. The contact line uses `NEXT_PUBLIC_CONTACT_EMAIL` and shows a pre-launch placeholder until it is configured.
+- `lib/account-navigation.ts` defines the frozen account order; `Perfil y seguridad` points to `/mi-cuenta/perfil`, stays active on `/mi-cuenta/seguridad`, and both pages render a Perfil/Seguridad switch. Logout remains the Sprint 8 POST form.
+- No migration, RLS, Admin authority, scheduler or analytics-event change.
+
 ## Styling
 
 Canonical visual guidance lives in `docs/design-system.md`. Read it before UI/design/frontend visual work.

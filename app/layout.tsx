@@ -4,27 +4,33 @@ import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 import { GlobalCategories } from "@/components/global-categories";
 import { MarketplaceAccountProvider } from "@/components/marketplace-account-provider";
+import {
+  NOINDEX_ROBOTS,
+  OPEN_GRAPH_BASE,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  getSiteUrl,
+  isIndexableDeployment,
+} from "@/lib/site";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://instrumentos-peru.vercel.app"),
+  metadataBase: new URL(getSiteUrl()),
+  applicationName: SITE_NAME,
   title: {
-    default: "Instrumentos Perú | Compra y vende instrumentos musicales",
-    template: "%s | Instrumentos Perú",
+    default: "Laria | Compra y vende instrumentos musicales en Perú",
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "Marketplace peruano para descubrir instrumentos usados y productos de tiendas musicales. Contacta directo por WhatsApp, sin pagos dentro de la plataforma.",
+  description: SITE_DESCRIPTION,
+  robots: isIndexableDeployment() ? { index: true, follow: true } : NOINDEX_ROBOTS,
   openGraph: {
-    title: "Instrumentos Perú",
+    ...OPEN_GRAPH_BASE,
+    title: "Laria | Instrumentos musicales en Perú",
     description:
-      "Compra y vende guitarras, bajos, baterías, pedales, amplificadores y equipos de audio en Perú.",
-    url: "/",
-    siteName: "Instrumentos Perú",
-    locale: "es_PE",
-    type: "website",
+      "Compra y vende guitarras, bajos, baterías, pedales, amplificadores y equipos de audio en Perú. Contacto directo por WhatsApp.",
   },
   twitter: {
     card: "summary",
-    title: "Instrumentos Perú",
+    title: "Laria | Instrumentos musicales en Perú",
     description:
       "Marketplace peruano para instrumentos musicales con contacto directo por WhatsApp.",
   },

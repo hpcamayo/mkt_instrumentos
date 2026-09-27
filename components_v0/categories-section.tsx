@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
+import { categoryLandingPath } from "@/lib/category-pages";
 
 type Category = {
   value: string;
@@ -82,7 +83,7 @@ export function CategoriesSection({ categories }: { categories: Category[] }) {
             return (
               <div key={category.value}>
                 <Link
-                  href={`/listados?category=${encodeURIComponent(category.value)}`}
+                  href={categoryLandingPath(category.value)}
                   className="group block overflow-hidden rounded-lg border border-laria-fog bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-laria-steel hover:shadow-lg"
                 >
                   <div

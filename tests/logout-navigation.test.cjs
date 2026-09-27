@@ -165,6 +165,7 @@ function navigationMocks(pathname) {
     "next/navigation": { usePathname: () => pathname, useRouter: () => ({}) },
     "@/components/logout-button": load("components/logout-button.tsx"),
     "@/lib/account-navigation": load("lib/account-navigation.ts"),
+    "@/lib/site": load("lib/site.ts"),
   };
 }
 

@@ -1,6 +1,11 @@
+import type { Metadata } from "next";
+import { NOINDEX_ROBOTS } from "@/lib/site";
 import { AccountNavigation } from "@/components/account-navigation";
 import { PageContainer } from "@/components/page-container";
 import { getAccountContext } from "@/lib/account-context";
+
+// Private account/Admin surfaces are never indexable.
+export const metadata: Metadata = { robots: NOINDEX_ROBOTS };
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const { profile, store, supabase } = await getAccountContext();

@@ -12,7 +12,7 @@ const features = [
     icon: Store,
     title: "Tiendas activas",
     description:
-      "Productos de tiendas tambien aparecen en la busqueda general.",
+      "Productos de tiendas también aparecen en la búsqueda general.",
   },
   {
     icon: MessageCircle,
@@ -22,7 +22,7 @@ const features = [
   {
     icon: BadgeCheck,
     title: "Marketplace honesto",
-    description: "Laria no procesa pagos, envios, garantias ni comisiones.",
+    description: "Laria no procesa pagos ni envíos, no retiene dinero y no garantiza transacciones.",
   },
 ];
 

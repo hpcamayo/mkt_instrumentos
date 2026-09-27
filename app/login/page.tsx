@@ -1,8 +1,10 @@
+import { NOINDEX_ROBOTS } from "@/lib/site";
 import { Suspense } from "react";
 import { LoginForm } from "@/components/login-form";
 import { PageContainer } from "@/components/page-container";
 
 export const metadata = {
+  robots: NOINDEX_ROBOTS,
   title: "Ingresar",
 };
 

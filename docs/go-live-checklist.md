@@ -18,4 +18,20 @@ Before go-live:
 8. Review Resend sending limits, bounce/complaint handling and current deliverability signals.
 9. Update architecture/operations documentation to remove the pre-go-live manual-worker limitation.
 
+Worker readiness (reviewed in Sprint 9, unchanged): `GET /api/internal/email/process` is `force-dynamic`, `maxDuration = 60`, authorizes only `Authorization: Bearer ${CRON_SECRET}` with a timing-safe comparison, prepares completed Lima daily windows, and processes at most four claimed batches of 25 per invocation. Claims, retries and daily-window preparation are idempotent in Postgres, so a 5–15 minute cadence (for example a Vercel Cron entry on a plan that allows it, or another trusted HTTPS scheduler) needs no code change. Sprint 9 deliberately adds no Supabase Cron, `vercel.json` cron or other interim workaround. `ALERT-005` stays Blocked until the natural daily-window owner test produces real evidence.
+
 Sprint 9 final launch acceptance must not close while this section remains incomplete.
+
+## Public discovery and SEO — mandatory
+
+1. Confirm production `VERCEL_ENV=production` so pages are indexable; previews must keep `robots.txt` = `Disallow: /`, empty sitemap and `X-Robots-Tag: noindex`.
+2. Set `NEXT_PUBLIC_SITE_URL=https://laria.audio` (or leave unset for the same default) and redirect secondary domains (`www.laria.audio`, `laria.pro`, `www.laria.pro`, `*.vercel.app`) to the canonical host.
+3. Before releasing, confirm no existing listing uses a reserved category slug (expected 0 rows): `select slug from public.listings where slug in ('guitarras','bajos','baterias','platillos','microfonos','pedales','amplificadores','interfaces-de-audio');`.
+4. After release, fetch `/robots.txt` and `/sitemap.xml` in production, spot-check a category page, an approved listing, a sold listing (`noindex`) and `/mi-cuenta` (`X-Robots-Tag: noindex`).
+5. Register `laria.audio` in Google Search Console and submit `https://laria.audio/sitemap.xml`.
+
+## Legal and safety content — mandatory
+
+1. Configure `NEXT_PUBLIC_CONTACT_EMAIL` with a monitored official address; until then the legal pages show a pre-launch placeholder instead of a contact channel.
+2. Owner review of `/terminos`, `/privacidad`, `/articulos-prohibidos` and `/consejos-de-seguridad` against real operations (`LEGAL-005`, `LEGAL-006` are manual).
+3. Recommended: review by a Peruvian lawyer, including operator identity (titular del banco de datos) and any registration duties under Ley N.° 29733 before collecting real-user data at scale. The pages make no regulatory certification claims.

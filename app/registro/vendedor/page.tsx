@@ -1,7 +1,9 @@
+import { NOINDEX_ROBOTS } from "@/lib/site";
 import { SellerSignupForm } from "@/components/seller-signup-form";
 import { PageContainer } from "@/components/page-container";
 
 export const metadata = {
+  robots: NOINDEX_ROBOTS,
   title: "Crear cuenta Particular",
 };
 

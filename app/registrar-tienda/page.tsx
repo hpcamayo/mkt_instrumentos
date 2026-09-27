@@ -1,3 +1,4 @@
+import { NOINDEX_ROBOTS } from "@/lib/site";
 import Link from "next/link";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -7,6 +8,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export const metadata: Metadata = {
+  robots: NOINDEX_ROBOTS,
   title: "Solicitud de tienda",
   description: "Crea y administra la solicitud de tu tienda musical en Laria.",
 };

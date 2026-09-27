@@ -301,7 +301,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
 
       <label className="flex gap-3 rounded-md border border-laria-fog bg-laria-cloud p-4 text-sm leading-6 text-laria-text-soft">
         <input type="checkbox" name="marketplace_rules" required className="mt-1 h-4 w-4 rounded border-laria-steel text-laria-blue" />
-        <span>Acepto las reglas del marketplace y confirmo que la información y las fotos son reales. Laria no procesa pagos, envíos ni garantías.</span>
+        <span>Acepto los <a href="/terminos" target="_blank" rel="noopener" className="font-bold text-laria-blue underline-offset-4 hover:underline">términos y reglas del marketplace</a>, confirmo que el artículo no está entre los <a href="/articulos-prohibidos" target="_blank" rel="noopener" className="font-bold text-laria-blue underline-offset-4 hover:underline">artículos prohibidos</a> y que la información y las fotos son reales. Laria no procesa pagos, no gestiona envíos ni garantiza transacciones.</span>
       </label>
 
       <button type="submit" disabled={state === "submitting" || !supabase} className="laria-button-primary min-h-12 w-full px-5 py-3 text-sm uppercase tracking-wide sm:w-auto">

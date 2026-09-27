@@ -7,6 +7,7 @@ import { ChevronDown, X } from "lucide-react";
 import { PageContainer } from "@/components/page-container";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
 import { categoryOptions } from "@/lib/listings";
+import { categoryLandingPath } from "@/lib/category-pages";
 
 export function GlobalCategories() {
   const pathname = usePathname();
@@ -179,7 +180,7 @@ function MobileCategory({
 }
 
 function categoryHref(category: string) {
-  return `/listados?${new URLSearchParams({ category })}`;
+  return categoryLandingPath(category);
 }
 
 function typeHref(category: string, instrumentType: string) {

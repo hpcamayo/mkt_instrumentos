@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { FavoriteButton } from "@/components/favorite-button";
 import { ContentReport } from "@/components/content-report";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { cache, Suspense, type ReactNode } from "react";
 import { ListingCard } from "@/components/listing-card";
+import { CategoryLanding } from "@/components/category-landing";
+import { JsonLd } from "@/components/json-ld";
 import { ListingDetailGallery } from "@/components/listing-detail-gallery";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
 import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
@@ -22,6 +25,7 @@ import {
   getListingSecondaryTitle,
   getSellerTypeLabel,
   normalizeStore,
+  parseListingFilters,
   resolveParticularSeller,
   type ListingCardData,
   type ListingDetailData,
@@ -29,6 +33,22 @@ import {
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
+import { fetchCatalogPage } from "@/lib/catalog";
+import {
+  categoryLandingPath,
+  getCategoryLandingBySlug,
+  type CategoryLandingPage,
+} from "@/lib/category-pages";
+import { createSearchReceipt } from "@/lib/marketplace-events-server";
+import { searchEventMetadata } from "@/lib/marketplace-event-payload";
+import { getPageRedirect, pageHref, parsePage } from "@/lib/pagination";
+import {
+  buildCategoryMetadata,
+  buildListingJsonLd,
+  buildListingMetadata,
+  categoryFilterRedirect,
+} from "@/lib/seo";
+import { NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +56,7 @@ type ListingDetailPageProps = {
   params: Promise<{
     slug: string;
   }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 type PublicSupabaseClient = NonNullable<
@@ -75,15 +96,13 @@ const relatedListingSelect = `
   )
 `;
 
-export default async function ListingDetailPage({
-  params,
-}: ListingDetailPageProps) {
-  const { slug } = await params;
+// Shared by generateMetadata and the page so one request performs one detail lookup.
+const loadPublicListing = cache(async (slug: string) => {
   const supabase = getPublicSupabaseClient();
   const detailClient = getSupabaseAdminClient();
 
   if (!supabase || !detailClient) {
-    return <SupabaseSetupMessage />;
+    return { configured: false as const, listing: null };
   }
 
   const { data, error } = await detailClient
@@ -151,18 +170,64 @@ export default async function ListingDetailPage({
     .returns<ListingDetailData>();
 
   if (error || !data) {
-    notFound();
+    return { configured: true as const, listing: null };
   }
 
-  if (data.status === "sold" && normalizeStore(data)?.status && normalizeStore(data)?.status !== "active") notFound();
+  if (data.status === "sold" && normalizeStore(data)?.status && normalizeStore(data)?.status !== "active") {
+    return { configured: true as const, listing: null };
+  }
   if (data.status === "approved") {
     const { data: isPublic } = await supabase.rpc("listing_is_public", {
       p_listing_id: data.id,
     });
-    if (!isPublic) notFound();
+    if (!isPublic) return { configured: true as const, listing: null };
   }
 
-  const listing = data as ListingDetailData;
+  return { configured: true as const, listing: data as ListingDetailData };
+});
+
+export async function generateMetadata({ params, searchParams }: ListingDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const landing = getCategoryLandingBySlug(slug);
+  if (landing) {
+    const resolvedSearchParams = await searchParams;
+    // Filtered category URLs redirect to /listados; skip the inventory query.
+    if (categoryFilterRedirect(landing, resolvedSearchParams)) {
+      return { title: landing.heading, robots: NOINDEX_FOLLOW_ROBOTS };
+    }
+    const page = parsePage(resolvedSearchParams.page);
+    const { count, error } = await loadCategoryPage(landing.category, page);
+    return buildCategoryMetadata(landing, page, error ? null : count);
+  }
+
+  const { listing } = await loadPublicListing(slug);
+  if (!listing) {
+    return { title: "Publicación no disponible", robots: NOINDEX_ROBOTS };
+  }
+  return buildListingMetadata(listing);
+}
+
+export default async function ListingDetailPage({
+  params,
+  searchParams,
+}: ListingDetailPageProps) {
+  const { slug } = await params;
+  const landing = getCategoryLandingBySlug(slug);
+  if (landing) {
+    return renderCategoryLanding(landing, await searchParams);
+  }
+
+  const supabase = getPublicSupabaseClient();
+  const { configured, listing } = await loadPublicListing(slug);
+
+  if (!configured || !supabase) {
+    return <SupabaseSetupMessage />;
+  }
+
+  if (!listing) {
+    notFound();
+  }
+
   const reputationTarget = listing.store_id
     ? { p_subject_store_id: listing.store_id, p_limit: 5 }
     : listing.owner_user_id
@@ -171,7 +236,54 @@ export default async function ListingDetailPage({
   const { data: reputationData } = reputationTarget
     ? await supabase.rpc("get_public_reputation", reputationTarget)
     : { data: null };
-  return <ListingDetail listing={listing} supabase={supabase} reputation={parsePublicReputation(reputationData)} />;
+  return (
+    <>
+      <JsonLd data={buildListingJsonLd(listing)} />
+      <ListingDetail listing={listing} supabase={supabase} reputation={parsePublicReputation(reputationData)} />
+    </>
+  );
+}
+
+const loadCategoryPage = cache(async (category: string, page: number) => {
+  const supabase = getPublicSupabaseClient();
+  if (!supabase) return { configured: false as const, count: null, data: null, error: null };
+  const filters = parseListingFilters({ category });
+  const result = await fetchCatalogPage(supabase, filters, page);
+  return { configured: true as const, count: result.count, data: result.data, error: result.error };
+});
+
+async function renderCategoryLanding(
+  landing: CategoryLandingPage,
+  searchParams: Record<string, string | string[] | undefined>,
+) {
+  const path = `/instrumentos/${landing.slug}`;
+  // Filtering happens in the canonical catalog; forward filter parameters there.
+  const forwarded = categoryFilterRedirect(landing, searchParams);
+  if (forwarded) redirect(forwarded);
+
+  const page = parsePage(searchParams.page);
+  const filters = parseListingFilters({ category: landing.category });
+  const result = await loadCategoryPage(landing.category, page);
+  if (!result.configured) return <SupabaseSetupMessage />;
+
+  const redirectPage = getPageRedirect(page, result.count, result.error);
+  if (redirectPage !== null) redirect(pageHref(path, {}, redirectPage));
+
+  const searchReceipt = !result.error && page === 1 ? createSearchReceipt(filters, result.count ?? 0) : null;
+  const searchState = searchEventMetadata(filters, result.count ?? 0);
+
+  return (
+    <CategoryLanding
+      landing={landing}
+      filters={filters}
+      listings={(result.data ?? []) as ListingCardData[]}
+      totalCount={result.count ?? 0}
+      page={page}
+      errorMessage={result.error?.message}
+      searchReceipt={searchReceipt}
+      searchSignature={JSON.stringify(searchState.filters)}
+    />
+  );
 }
 
 function ListingDetail({
@@ -282,8 +394,12 @@ function ListingDetail({
               )}
 
               <p className="mt-4 rounded-md border border-laria-blue/25 bg-laria-blue/10 p-3 text-xs font-medium leading-5 text-laria-text-soft">
-                Contacto directo por WhatsApp. Laria no procesa pagos, envíos ni
-                garantías.
+                Contacto directo por WhatsApp. Laria no procesa pagos, no retiene
+                dinero, no gestiona envíos ni garantiza la transacción o el
+                producto.{" "}
+                <Link href="/consejos-de-seguridad" className="font-bold text-laria-blue underline-offset-4 hover:underline">
+                  Consejos de seguridad
+                </Link>
               </p>
               <div className="mt-3">
                 <ContentReport
@@ -507,7 +623,7 @@ function Breadcrumb({
         </li>
         <li>
           <Link
-            href={`/listados?category=${encodeURIComponent(listing.category)}`}
+            href={categoryLandingPath(listing.category)}
             className="underline-offset-4 hover:text-laria-blue hover:underline"
           >
             {categoryLabel}

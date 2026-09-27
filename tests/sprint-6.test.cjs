@@ -61,7 +61,9 @@ test("verified transaction UI uses account shell routes and preserves off-platfo
   const detail = fs.readFileSync("components/transaction-detail.tsx", "utf8");
   const management = fs.readFileSync("components/listing-management-table.tsx", "utf8");
   const notifications = fs.readFileSync("components/notifications-list.tsx", "utf8");
-  assert.equal((navigation.match(/label: "Compras"/g) ?? []).length, 2);
+  // Compras is declared once in the shared account items used by both roles.
+  assert.equal((navigation.match(/label: "Compras"/g) ?? []).length, 1);
+  assert.equal((navigation.match(/\.\.\.sharedAccountItems/g) ?? []).length, 2);
   assert.match(detail, /Sí, lo compré/);
   assert.match(detail, /No, no fui yo/);
   assert.match(detail, /No verifica pago, entrega, envío, autenticidad ni condición/);

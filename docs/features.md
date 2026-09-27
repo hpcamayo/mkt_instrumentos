@@ -390,7 +390,7 @@ Account shell:
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Required V1 gaps after the local Sprint 8 implementation are the Sprint 9 category pages and final legal/safety launch content. Sprint 8 reports, moderation hub and manual legacy ownership are not yet production-released. Sprint 7 saved-search alerts and marketplace email are production-deployed; owner acceptance is recorded for the exercised inbox paths, while `ALERT-005` and `TX-018` remain blocked. See `docs/functional-spec.md`.
+Sprint 9 locally implements the last BUILD areas: category landing pages under `/instrumentos/<categoría>` backed by the real catalog, canonical/robots/sitemap/structured-data SEO, the Terms, Privacy, prohibited-items and safety pages with explicit no-payment/escrow/shipping/guarantee copy, and the frozen account navigation (`Perfil y seguridad`). Sprint 9 is not yet released; go-live dependencies are listed in `docs/go-live-checklist.md`. See `docs/functional-spec.md`.
 
 ## Sprint 5 — deployed and owner-accepted
 

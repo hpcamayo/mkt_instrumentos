@@ -235,9 +235,16 @@ export function SellerSignupForm() {
           className="mt-1 h-4 w-4 rounded border-slate-300 text-ink"
         />
         <span>
-          Acepto publicar informacion real, mantener mis avisos actualizados y
-          contactar compradores por WhatsApp. Laria no procesa pagos, envios ni
-          garantias.
+          Acepto los{" "}
+          <a href="/terminos" target="_blank" rel="noopener" className="font-bold text-laria-blue underline-offset-4 hover:underline">
+            términos y reglas del marketplace
+          </a>{" "}
+          y la{" "}
+          <a href="/privacidad" target="_blank" rel="noopener" className="font-bold text-laria-blue underline-offset-4 hover:underline">
+            política de privacidad
+          </a>
+          , publicar información real y mantener mis avisos actualizados.
+          Laria no procesa pagos, no gestiona envíos ni garantiza transacciones.
         </span>
       </label>
 

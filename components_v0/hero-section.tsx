@@ -66,21 +66,21 @@ export function HeroSection() {
           <div className="mt-4 flex flex-wrap gap-2 text-sm text-white/66">
             <span>Popular:</span>
             <Link
-              href="/listados?category=guitars"
+              href="/instrumentos/guitarras"
               className="font-semibold text-white transition-colors hover:text-laria-yellow"
             >
               Guitarras
             </Link>
             <span>/</span>
             <Link
-              href="/listados?category=drums"
+              href="/instrumentos/baterias"
               className="font-semibold text-white transition-colors hover:text-laria-yellow"
             >
               Baterias
             </Link>
             <span>/</span>
             <Link
-              href="/listados?category=microphones"
+              href="/instrumentos/microfonos"
               className="font-semibold text-white transition-colors hover:text-laria-yellow"
             >
               Microfonos
