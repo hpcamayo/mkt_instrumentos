@@ -1,8 +1,9 @@
-# Sprint 8 failed-gate hotfix
+# Sprint 8 production gate and owner acceptance
 
 Application candidate: `0bda8e07bb811d6aa914c054f76b3d45cd772654`.
-Production remains at `db83a128ab9935dd5f75c990e44708f49c86e3b5`.
-The hotfix is ready for a separate commit and production gate retry. The
+Prior application rollback: `db83a128ab9935dd5f75c990e44708f49c86e3b5`.
+Production hotfix: `bb16e319540a9d6721e990bc1e9900825c7473ac`.
+The reviewed hotfix was committed separately and pushed normally to `main`. The
 already-applied production migration is unchanged. Read-only hosted migration
 verification at this retry confirms all 19 local/remote versions synchronized.
 
@@ -30,7 +31,7 @@ transaction-domain markup, then require identical initial markup in UTC, Lima,
 and Tokyo after the fix. Navigation markup is also compared. This proves a
 deterministic rendering defect; it does not establish that this was the only
 cause of the production React #418 incident. Real production browser hydration
-must be checked at the next release gate.
+passed the production retry described below without a React #418 error.
 
 ## Changed files
 
@@ -57,7 +58,7 @@ must be checked at the next release gate.
 - `supabase migration list --linked`: 19/19 synchronized; no migrations applied.
 - The known migration swap file remains untracked and is excluded by explicit
   staging. No full test, lint, typecheck, build or integration suite was rerun
-  for this retry. Vercel will build the exact committed application.
+  for this retry. Vercel built the exact committed application.
 
 ## Prior local verification (before this retry)
 
@@ -77,7 +78,64 @@ helper was not run because its full flow requires database-backed integration
 fixtures. At that earlier verification, no production browser checks, commits, deployments,
 acceptance-status changes, or Sprint 9 work were performed.
 
-## Next release gate
+## Production retry result — 2026-09-27 UTC
+
+- Exact Git SHA `bb16e319540a9d6721e990bc1e9900825c7473ac` built READY as
+  `dpl_EJDgtZ1utKjtMQeKAFsyGnCTFV9S` and was explicitly promoted. The
+  independent `laria.audio` alias lookup confirms this deployment.
+- Hosted migrations remain 19/19 synchronized. No migration was reapplied,
+  altered, repaired or rolled back.
+- Actual desktop Chromium password login and client navigation passed all nine
+  Admin sections. Transacciones and Reportes loaded without ending the session.
+- All six moderation queues loaded; counts: publicaciones 16, revisiones 0,
+  tiendas 2, verificacion 0, reportes 0, resenas 0.
+- No passive `/logout` requests occurred during Admin navigation. Browser
+  recording and Vercel request logs show exactly four explicit POST logouts;
+  server responses were 303. Admin, Particular, Store Owner and the
+  store-registration Particular gate all reached `/login`; protected routes
+  subsequently redirected to login, confirming session removal.
+- No browser page errors or React hydration #418 appeared throughout navigation.
+- Public homepage/catalog passed browser and HTTP checks. Existing listing and
+  store detail HTTP checks also passed.
+- Final error-level Vercel runtime scan scoped to this deployment returned zero
+  entries. This is bounded release-smoke evidence, not ongoing monitoring.
+- All three disposable QA Auth accounts, their profiles and attributable
+  marketplace events were removed and independently checked absent. Existing
+  listing/photo/store/report/audit/transaction/review counts are unchanged.
+- No moderation decisions, real inventory changes, acceptance-status changes or
+  Sprint 9 work occurred. The known swap file remains untracked and excluded.
+
+The production deployment evidence is recorded with owner acceptance in an
+evidence-only documentation commit. The verified application release SHA is
+the separately committed hotfix above. Browser HAR
+recording omitted redirect response metadata (status 0); actual 303 responses
+were independently verified in Vercel logs, with successful browser redirects
+and protected-route logout checks.
+
+## Owner production QA and Sprint 8 closure — 2026-09-27
+
+The owner explicitly confirmed successful production QA for application SHA
+`bb16e319540a9d6721e990bc1e9900825c7473ac`.
+
+- ADMIN-023: Pass with owner production evidence for mobile/collapsed Admin
+  navigation, keyboard focus/tab navigation, moderation actions and useful
+  state on return from detail.
+- TX-018: Pass with explicit owner production acceptance of Compras UX.
+- ADMIN-005: Pass retained; owner-confirmed Sprint 8 production smoke appended
+  to existing evidence. Pending-revision photo/attribute inspection is
+  conditional on revision availability; the earlier automated retry had none.
+- ALERT-005: unchanged, Blocked pending the natural production daily-email test.
+- Canonical acceptance: 323 Pass / 1 Blocked / 79 Not Run / 403 total.
+
+Sprint 8 is **CLOSED / ACCEPTED**. The remaining ALERT-005 blocker is the
+separate Sprint 7 natural daily-email acceptance gate. This closure records
+owner evidence and the completed deployment; it changes no implementation,
+performs no deployment or Supabase operation, and does not start Sprint 9.
+
+This evidence-only closure runs only `python3 -B acceptance/validate.py` and
+`git diff --check` as verification. The known swap file is excluded from staging.
+
+## How to repeat the hotfix smoke
 
 Use an authenticated Admin browser to open Transacciones and exercise desktop
 and mobile navigation. A passive GET/prefetch of `/logout` must return 405 and
@@ -86,5 +144,5 @@ clear the session, and reach `/login` through a GET. Check the same controls for
 Particular and Tienda accounts and the store-registration account gate. Inspect
 browser logging for React hydration errors, including date-bearing Admin rows.
 
-The next release gate owns the hotfix commit and deployment. No additional
+The hotfix release gate and owner Sprint 8 QA are complete. No additional
 migration is needed for these changes.
