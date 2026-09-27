@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
+import { LogoutButton } from "@/components/logout-button";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -27,7 +28,7 @@ export default async function RegisterStorePage() {
 
   if (profile?.account_type !== "store_owner") {
     return <StoreGate title="Tu cuenta Particular se mantiene separada" body="No convertiremos esta cuenta en una cuenta de Tienda. Cierra sesión y crea una cuenta dedicada usando otro correo.">
-      <Link href="/logout" prefetch={false} className="laria-button-primary min-h-11 px-4 py-3 text-sm">Cerrar sesión</Link>
+      <LogoutButton className="laria-button-primary min-h-11 px-4 py-3 text-sm" />
       <Link href="/mi-cuenta" className="laria-button-secondary min-h-11 px-4 py-3 text-sm">Volver a Mi cuenta</Link>
     </StoreGate>;
   }

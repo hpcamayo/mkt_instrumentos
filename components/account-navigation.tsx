@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogoutButton } from "@/components/logout-button";
 import {
   Boxes,
   BarChart3,
@@ -45,7 +46,7 @@ export function AccountNavigation({
         </summary>
         <nav aria-label="Menú de cuenta móvil" className="mt-3 grid gap-1 border-t border-laria-fog pt-3">
           <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} pendingBuyerConfirmations={pendingBuyerConfirmations} />
-          <LogoutLink />
+          <AccountLogout />
         </nav>
       </details>
 
@@ -65,7 +66,7 @@ export function AccountNavigation({
           <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} pendingBuyerConfirmations={pendingBuyerConfirmations} />
         </nav>
         <div className="mt-4 border-t border-laria-fog pt-4">
-          <LogoutLink />
+          <AccountLogout />
         </div>
       </aside>
     </>
@@ -101,16 +102,14 @@ function AccountLinks({ items, pathname, unreadNotifications, pendingBuyerConfir
   });
 }
 
-function LogoutLink() {
+function AccountLogout() {
   return (
-    <Link
-      href="/logout"
-      prefetch={false}
-      className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm font-bold text-laria-text-soft hover:bg-laria-cloud hover:text-laria-ink"
+    <LogoutButton
+      className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-bold text-laria-text-soft hover:bg-laria-cloud hover:text-laria-ink"
     >
       <LogOut className="h-4 w-4" aria-hidden="true" />
       Cerrar sesión
-    </Link>
+    </LogoutButton>
   );
 }
 

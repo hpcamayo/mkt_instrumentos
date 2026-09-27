@@ -25,6 +25,7 @@ import type { Json } from "@/lib/supabase/database.types";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 
 const ADMIN_DATE_FORMATTER = new Intl.DateTimeFormat("es-PE", {
+  timeZone: "America/Lima",
   dateStyle: "medium",
   timeStyle: "short",
 });

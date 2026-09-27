@@ -119,12 +119,14 @@ test("auth callbacks support server-verifiable email flows and safe destinations
   assert.equal(errorUrl.searchParams.get("error"), "El enlace venció.");
 });
 
-test("account logout is never prefetched as a GET side effect", () => {
+test("account logout requires a POST form submission", () => {
   const accountPage = fs.readFileSync("components/account-navigation.tsx", "utf8");
   assert.match(
     accountPage,
-    /href="\/logout"\s+prefetch=\{false\}/,
+    /<LogoutButton/,
   );
+  assert.doesNotMatch(accountPage, /href="\/logout"/);
+  assert.match(fs.readFileSync("components/logout-button.tsx", "utf8"), /<form action="\/logout" method="post">/);
 });
 
 test("password reset/change validation requires matching 8-character values", () => {

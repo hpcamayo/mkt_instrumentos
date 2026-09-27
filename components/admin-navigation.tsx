@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogoutButton } from "@/components/logout-button";
 import type { AdminCounts } from "@/lib/admin";
 
 const links = [
@@ -75,9 +76,7 @@ export function AdminNavigation({
         </div>
         <div className="mt-5 border-t border-white/10 pt-4">
           <p className="truncate text-xs text-white/60">{userName}</p>
-          <Link href="/logout" className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-md border border-white/20 px-4 py-2 text-sm font-black text-white transition hover:border-laria-blue hover:text-laria-blue">
-            Cerrar sesión
-          </Link>
+          <LogoutButton className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-md border border-white/20 px-4 py-2 text-sm font-black text-white transition hover:border-laria-blue hover:text-laria-blue" />
         </div>
       </aside>
 
@@ -87,9 +86,7 @@ export function AdminNavigation({
         </summary>
         <div className="mt-2 border-t border-laria-fog pt-3">
           <AdminLinks />
-          <Link href="/logout" className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-laria-steel px-4 py-2 text-sm font-black text-laria-ink">
-            Cerrar sesión
-          </Link>
+          <LogoutButton className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-md border border-laria-steel px-4 py-2 text-sm font-black text-laria-ink" />
         </div>
       </details>
     </>

@@ -8,7 +8,7 @@ exports.run=async({base,service,owner,buyer,storeBuyer,live,store,storeIds})=>{
  const wait=code=>command('wait','--fn',`Boolean(${code})`);
  function open(path){command('open',base+path);command('snapshot','-i');wait("document.body.innerText.trim() && !document.querySelector('[data-nextjs-dialog]')");assert.deepEqual(command('errors').errors,[]);assert.equal(evaluate("!!document.querySelector('nav[aria-label=\"Categorías del marketplace\"]') && !!document.querySelector('form[role=search]')"),true);}
  function login(account){open('/login');command('find','label','Correo','fill',account.email);command('find','label','Contraseña','fill',account.password);command('find','role','button','click','--name','Ingresar');command('wait','--url','**/mi-cuenta');command('snapshot','-i');wait("document.querySelector('header').innerText.includes('Mi cuenta') || document.querySelector('header').innerText.includes('Mi tienda')");}
- function logout(){open('/logout');command('wait','--url','**/login**');}
+ function logout(){open('/mi-cuenta');command('click','aside form[action="/logout"] button[type="submit"]');command('wait','--url','**/login**');}
  try{
   for(const path of ['/','/listados','/login','/registro/vendedor','/registro/tienda','/tiendas/casa-musical-grau','/admin']){
    open(path);

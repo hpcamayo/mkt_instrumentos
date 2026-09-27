@@ -59,7 +59,8 @@ test("account shell is protected and retains accessible mobile navigation", () =
   assert.match(navigation, /<details/);
   assert.match(navigation, /Menú de cuenta móvil/);
   assert.match(navigation, /aria-current=\{active \? "page"/);
-  assert.match(navigation, /href="\/logout"\s+prefetch=\{false\}/);
+  assert.match(navigation, /<AccountLogout \/>/);
+  assert.match(fs.readFileSync("components/logout-button.tsx", "utf8"), /<form action="\/logout" method="post">/);
 });
 
 test("submission success and validation feedback receive focus and scroll into view", () => {
