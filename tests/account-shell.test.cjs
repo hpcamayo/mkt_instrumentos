@@ -67,9 +67,14 @@ test("submission success and validation feedback receive focus and scroll into v
   assert.match(notice, /focus\(\{ preventScroll: true \}\)/);
   assert.match(notice, /scrollIntoView\(\{ behavior: "smooth", block: "center" \}\)/);
   assert.match(notice, /role=\{kind === "error" \? "alert" : "status"\}/);
-  for (const file of ["components/store-registration-form.tsx", "components/sell-listing-form.tsx", "components/listing-edit-form.tsx", "components/profile-edit-form.tsx", "components/password-form.tsx", "components/listing-management-table.tsx", "components/admin-panel.tsx"]) {
+  for (const file of ["components/store-registration-form.tsx", "components/sell-listing-form.tsx", "components/listing-edit-form.tsx", "components/profile-edit-form.tsx", "components/password-form.tsx", "components/listing-management-table.tsx"]) {
     const source = fs.readFileSync(file, "utf8");
     assert.match(source, /PageNotice/);
+  }
+  for (const file of ["components/admin-workbench.tsx", "components/admin-domain-view.tsx", "components/content-report.tsx"]) {
+    const source = fs.readFileSync(file, "utf8");
+    assert.match(source, /scrollIntoView\(\{ behavior: "smooth"/);
+    assert.match(source, /\.focus\(\)/);
   }
   assert.match(fs.readFileSync("components/store-registration-form.tsx", "utf8"), /Volver al resumen/);
   assert.match(fs.readFileSync("components/sell-listing-form.tsx", "utf8"), /Ver mis publicaciones/);

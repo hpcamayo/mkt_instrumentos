@@ -2,7 +2,7 @@
 
 This file describes current implementation. The frozen V1 requirements live in `docs/functional-spec.md`; missing behavior below is an implementation gap unless that specification marks it post-V1.
 
-Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 migration and exact application source `37f7507829193306ddaaa37e80787069308bdffc` were production-deployed on 2026-09-22. Automated production verification passed; genuine owner inbox/usability acceptance remains blocked in `acceptance/cases.tsv`.
+Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 is production-deployed and operational; the owner accepted the exercised real-inbox paths on 2026-09-25, while `ALERT-005` and `TX-018` remain blocked for their exact owner checks. Sprint 8 is implemented and verified locally only; its migration and application changes are not deployed.
 
 ## Marketplace Model
 
@@ -187,6 +187,7 @@ Features:
   - Store listings show `Sobre la tienda`, store name, verified badge when `stores.is_verified=true`, location, short store description when available, active approved listing count, visible-since date, WhatsApp contact action, and a link to the public store page.
   - Listing counts use approved active listings from the same store or, for individuals, the same WhatsApp contact.
 - Production Sprint 6 shows only revealed, non-admin-hidden buyer-to-seller reviews for the correct Particular/store identity. Zero reviews show an honest empty state; no score is fabricated. Authenticated users may report a visible review. Checkout, delivery, payments, guarantees, and chat remain out of V1.
+- Local Sprint 8 adds the same restrained report action for the eligible public/sold listing itself. It requires authentication, a fixed reason, and optional detail; self-reporting and nonvisible targets fail without exposing private state.
 - Layout uses the shared `PageContainer` public width system.
 - Visual refresh keeps the same data and contact behavior while aligning the gallery, detail panels, seller trust box, specs, and recommendation cards with `docs/design-system.md`.
 
@@ -205,6 +206,7 @@ Public store pages show:
 - Approved listings from that store.
 - Production Sprint 6 visible verified-transaction review average/count and recent reviews for the store identity, never the Store Owner's personal identity.
 - Production Sprint 4: visible public store opens and actual WhatsApp click intents are recorded with canonical store ownership; pending/hidden stores are not ordinary public analytics targets.
+- Local Sprint 8 lets an authenticated nonowner report the active public store with the shared fixed-reason flow. Report data and reporter identity are never shown on the public store page or to the Store Owner.
 
 Layout uses the shared `PageContainer` public width system.
 
@@ -290,20 +292,18 @@ Current behavior:
 Route: `/admin`
 
 Admin behavior:
-- Uses Supabase Auth email/password login.
-- Calls `is_admin()` to verify `app_metadata.role = "admin"`.
-- Includes an `Invitar usuario` section for fieldwork onboarding.
-- Loads recent listings across lifecycle states, pending revisions, and all store applications/trust states needed for current operation.
-- Allows editing listing basics before moderation.
-- Allows inspecting/editing instrument type and supported attributes with labeled controls.
+- The shared server layout verifies the current Supabase Auth user and `is_admin()` from trusted `app_metadata.role='admin'`; anonymous and nonadmin root/deep links are redirected before domain data is loaded.
+- `/admin` is a moderation-first workbench with stable URL-backed tabs for `Publicaciones`, `Cambios`, `Tiendas`, `Verificación`, `Reportes`, and `Reseñas`. Every tab remains visible, shows a canonical live actionable count, paginates bounded results, and has truthful empty/error state.
+- The workbench defaults to the first nonempty queue. Successful trusted actions refresh the item and count; failed/stale actions remain visible and never become optimistic success.
+- Persistent Admin navigation exposes deeper pages for publications, revisions, stores, users, reports, reviews, transactions and manual legacy linking. Search/status/filter/page state lives in the URL. Mobile retains all destinations in an accessible collapsed menu.
+- Existing invitation plus allowed listing/store editing remains available; protected status, verification, ownership, plan and Auth authority fields are not general edit fields.
 - Listing actions use trusted review RPCs: `Aprobar`, required-reason `Rechazar`, required-reason administrative `Ocultar`, and `Restaurar` where allowed.
-- Pending revisions show current/proposed moderated fields, current/proposed photo sets, proposal version, and latest update time. Admin decisions include the displayed version; an owner amendment makes a stale decision fail and refresh the queue. A recent resolved-revision table keeps approved, rejected, and sold-cancelled history inspectable.
-- Shows RUC, owner ID, razón social, business email, phone, address/location, contact person, links, status, and trust state.
-- Store actions use trusted RPCs: basic approve, reject/hide with mandatory reason, verify, and revoke verification.
-- Verification is atomic with approval of all qualifying pending inventory; the UI reports the transitioned count.
-- Production Sprint 6 adds a transaction/confirmation table with listing, safe participant display names, claim state and verified linkage, plus revealed/reported review cards. Review actions are only mandatory-reason hide/restore; no UI can rewrite a rating or comment.
-
-Store and listing/revision moderation are operable, and Sprint 6 supplies only the transaction/review compatibility needed now. The full future hub remains a V1 gap: listing/store search and filtering, users, listing/store reports, report resolve/dismiss, lifecycle emails, and legacy ownership linking belong to later scheduled sprints.
+- Pending revisions show live/proposed fields, proposal version and photo context; stale decisions fail safely. Resolved revision history remains inspectable.
+- Store pages show full application/owner/trust context. Basic approval, rejection/hiding, verification, and revocation continue through trusted RPCs; verification remains atomic with qualifying pending inventory approval.
+- Revealed reviews retain mandatory-reason hide/restore only; Admin cannot rewrite rating/comment. Transaction pages are read-only operational context and cannot confirm, cancel, or edit a relationship.
+- Reports show individual reporter/target/reason/detail/history context only to Admin. Resolve and dismiss require a reason and close the report without automatically moderating its target; target action remains separate.
+- `Vinculación legacy` requires an explicit eligible listing, explicit Particular account, visible historical evidence, an audit note and confirmation. It links one null owner once; it never infers ownership from phone/email or permits reassignment.
+- Listing, revision, store, verification, report, review and legacy-link mutations have bounded Admin-only audit history backed by `admin_audit_actions`.
 
 ## In-App Notifications
 
@@ -315,8 +315,8 @@ Store and listing/revision moderation are operable, and Sprint 6 supplies only t
 Admin visual refresh:
 - Uses a dark admin sidebar/header area and light operational workspace.
 - Uses white cards, subtle borders, dense readable tables, blue active states, and subtle status badges.
-- Placeholder admin metrics are visual-only and must stay commented in code until real metrics exist.
-- The refresh did not change moderation logic, approval/rejection behavior, invite behavior, or admin authorization.
+- No placeholder operational counts or fake metrics are shown; the workbench counts come from canonical domain state.
+- The Sprint 8 rebuild preserves moderation, invite, and trusted authorization behavior while replacing the fragmented single panel with a shared shell and bounded pages.
 
 Admin invite behavior:
 - Admin can invite a seller or store owner by email.
@@ -390,7 +390,7 @@ Account shell:
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Required V1 gaps now include listing/store reports with complete resolution, the remaining full Admin Hub, category pages, final legal/safety content and legacy ownership linking. Sprint 7 saved-search alerts, price-drop email delivery and centralized marketplace email are production-deployed; exact real-inbox/usability acceptance remains pending. Sprint 6 verified transactions, reviews and owner wording are closed/accepted. See `docs/functional-spec.md`.
+Required V1 gaps after the local Sprint 8 implementation are the Sprint 9 category pages and final legal/safety launch content. Sprint 8 reports, moderation hub and manual legacy ownership are not yet production-released. Sprint 7 saved-search alerts and marketplace email are production-deployed; owner acceptance is recorded for the exercised inbox paths, while `ALERT-005` and `TX-018` remain blocked. See `docs/functional-spec.md`.
 
 ## Sprint 5 — deployed and owner-accepted
 
@@ -410,7 +410,7 @@ Required V1 gaps now include listing/store reports with complete resolution, the
 - Each verified relationship permits one final 1–5 review per direction until the database-owned ten-day deadline. Both reviews reveal together, or a single review reveals only after the deadline. Listing detail/store pages show only visible non-hidden seller/store reputation; buyer review history remains stored/aggregatable without a public buyer profile.
 - Visible reviews can be reported with fixed reason and optional detail. Admin can inspect revealed reviews and transaction linkage, then hide/restore with an audited reason; no rewrite action exists.
 
-## Sprint 7 — production deployed; owner acceptance pending
+## Sprint 7 — production deployed; exercised inbox paths accepted
 
 - Both account types use `Compras` as the persistent purchase/transaction destination. Pending buyer confirmations are grouped first in the center and reflected by a desktop/mobile badge calculated from pending transaction claims, never unread notices.
 - Authenticated users can create an Immediate or Daily alert from the real `/listados` filters. `/mi-cuenta/alertas` renders readable Spanish summaries and supports open, pause, resume and delete. Duplicate semantic searches fail clearly; anonymous creation preserves a safe login destination.
@@ -418,6 +418,17 @@ Required V1 gaps now include listing/store reports with complete resolution, the
 - Immediate alerts create one durable job per alert/listing. Daily alerts create at most one useful digest per alert/Lima calendar day and never an empty message. The protected worker begins completed-day preparation after 08:00 Lima, replays a bounded seven-day window and sends bounded batches. During pre-go-live Vercel Hobby QA it is invoked manually; supported frequent 5–15 minute automatic scheduling is a mandatory go-live dependency.
 - The private marketplace outbox supplements, rather than replaces, Notifications. Deterministic dedupe, row-locked claims, provider idempotency, at most five attempts and bounded backoff keep domain transitions independent of Resend availability. Recipient and template context come only from trusted database state.
 - Spanish Laria templates cover supported listing/store moderation and verification events, transaction/review lifecycle events, authoritative favorite price drops, and search alerts. They use safe same-origin destinations, contain no tracking pixel, and do not imply payment, delivery or product guarantees.
+- Owner production inbox/link acceptance passed for `PDA-009`, `ALERT-003`, `ALERT-015`, and `MAIL-001`–`MAIL-007` on 2026-09-25. The natural daily digest check `ALERT-005` and desktop/mobile Compras usability check `TX-018` remain blocked; automated evidence for both is preserved.
+
+## Sprint 8 — local implementation only
+
+- The Admin landing page is now a moderation workbench with six canonical actionable queues and live counts. Deeper server-protected pages cover publications, revisions, stores, users, reports, reviews, read-only transactions, and manual legacy linking without making them all moderation tabs.
+- General authenticated reports reuse the Sprint 6 review-report history in one `reports` model. Eligible targets are public/sold listings, active stores and revealed reviews. Fixed reasons are `acoso`, `contenido_inapropiado`, `informacion_falsa`, `posible_estafa`, `articulo_prohibido`, `spam`, and `otro`; optional detail is bounded.
+- Raw reports, reporter identity and report counts are private. One open row per reporter/target is enforced by partial unique indexes under concurrency, while different reporters remain independent. Resolve/dismiss and target moderation are separate durable actions.
+- Privileged mutations append an actor/target/action/context record to `admin_audit_actions`; ordinary clients cannot read or write that table. Admin history readers are target-scoped and bounded.
+- Legacy ownership is Admin-manual only. A row-locked RPC accepts only an unowned legacy Particular listing plus a selected existing Particular profile, preserves listing/history/assets, and writes an audit note. It does not match or claim by phone/email and cannot run twice.
+- Admin domain queries are bounded, deterministically ordered and supported by status/filter/order indexes. No user directory secret, Auth token, arbitrary account mutation, transaction edit, or review rewrite is exposed.
+- Migration `20260923120000_sprint_8_admin_reports_legacy.sql` and the matching application are local-only until the separate Sprint 8 production release gate. Sprint 7 worker scheduling remains the unchanged pre-go-live dependency.
 
 Post-V1 unless a new product decision is explicit:
 - Payments.

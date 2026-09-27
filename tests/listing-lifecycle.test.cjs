@@ -76,16 +76,17 @@ test("account management exposes lifecycle and pending-revision states", () => {
 });
 
 test("admin moderation uses trusted lifecycle and revision RPCs", () => {
-  const admin = fs.readFileSync("components/admin-panel.tsx", "utf8");
+  const admin = fs.readFileSync("components/admin-workbench.tsx", "utf8") +
+    fs.readFileSync("components/admin-domain-view.tsx", "utf8");
   assert.match(admin, /rpc\("review_listing"/);
   assert.match(admin, /rpc\("review_listing_revision"/);
-  assert.match(admin, /p_expected_version: revision\.version/);
-  assert.match(admin, /La propuesta cambió mientras la revisabas/);
+  assert.match(admin, /p_expected_version: mutation\.version/);
+  assert.match(admin, /El registro cambió\. Actualiza la bandeja antes de decidir/);
   assert.match(admin, /Motivo obligatorio/);
-  assert.match(admin, /Actual:/);
-  assert.match(admin, /Propuesto:/);
+  assert.match(admin, />Actual</);
+  assert.match(admin, />Propuesto</);
   assert.match(admin, /Fotos propuestas/);
-  assert.match(admin, /Historial reciente de revisiones/);
+  assert.match(admin, /Ver auditoría/);
   assert.match(admin, /resolution_reason/);
 });
 

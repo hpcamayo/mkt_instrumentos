@@ -39,7 +39,10 @@ app/
   tiendas/[slug]/
   vender/
 components/
-  admin-panel.tsx
+  admin-navigation.tsx
+  admin-workbench.tsx
+  admin-domain-view.tsx
+  content-report.tsx
   listing-card.tsx
   listing-filters.tsx
   placeholder-page.tsx

@@ -34,6 +34,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_actions: {
+        Row: {
+          action: string
+          admin_user_id: string
+          created_at: string
+          detail: Json
+          id: string
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          action: string
+          admin_user_id: string
+          created_at?: string
+          detail?: Json
+          id?: string
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          action?: string
+          admin_user_id?: string
+          created_at?: string
+          detail?: Json
+          id?: string
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string
@@ -687,6 +717,90 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          created_at: string
+          detail: string | null
+          id: string
+          listing_id: string | null
+          reason: string
+          reporter_user_id: string
+          resolution_reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          review_id: string | null
+          status: string
+          store_id: string | null
+          target_type: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          listing_id?: string | null
+          reason: string
+          reporter_user_id: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string | null
+          status?: string
+          store_id?: string | null
+          target_type?: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          id?: string
+          listing_id?: string | null
+          reason?: string
+          reporter_user_id?: string
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string | null
+          status?: string
+          store_id?: string | null
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_reporter_user_id_fkey"
+            columns: ["reporter_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_moderation_actions: {
         Row: {
           action: string
@@ -722,67 +836,6 @@ export type Database = {
           },
           {
             foreignKeyName: "review_moderation_actions_review_id_fkey"
-            columns: ["review_id"]
-            isOneToOne: false
-            referencedRelation: "transaction_reviews"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      review_reports: {
-        Row: {
-          created_at: string
-          detail: string | null
-          id: string
-          reason: string
-          reporter_user_id: string
-          resolution_reason: string | null
-          resolved_at: string | null
-          resolved_by: string | null
-          review_id: string
-          status: string
-        }
-        Insert: {
-          created_at?: string
-          detail?: string | null
-          id?: string
-          reason: string
-          reporter_user_id: string
-          resolution_reason?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          review_id: string
-          status?: string
-        }
-        Update: {
-          created_at?: string
-          detail?: string | null
-          id?: string
-          reason?: string
-          reporter_user_id?: string
-          resolution_reason?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-          review_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "review_reports_reporter_user_id_fkey"
-            columns: ["reporter_user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "review_reports_resolved_by_fkey"
-            columns: ["resolved_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "review_reports_review_id_fkey"
             columns: ["review_id"]
             isOneToOne: false
             referencedRelation: "transaction_reviews"
@@ -1244,7 +1297,67 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      review_reports: {
+        Row: {
+          created_at: string | null
+          detail: string | null
+          id: string | null
+          reason: string | null
+          reporter_user_id: string | null
+          resolution_reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          review_id: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          detail?: string | null
+          id?: string | null
+          reason?: string | null
+          reporter_user_id?: string | null
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          detail?: string | null
+          id?: string | null
+          reason?: string | null
+          reporter_user_id?: string | null
+          resolution_reason?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_reports_reporter_user_id_fkey"
+            columns: ["reporter_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "transaction_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       apply_owned_listing_edit: {
@@ -1358,6 +1471,56 @@ export type Database = {
         Returns: Json
       }
       get_account_favorites: { Args: { p_page?: number }; Returns: Json }
+      get_admin_audit_history: {
+        Args: { p_limit?: number; p_target_id: string; p_target_type: string }
+        Returns: Json
+      }
+      get_admin_domain_page: {
+        Args: {
+          p_domain: string
+          p_page?: number
+          p_page_size?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      get_admin_legacy_page: {
+        Args: {
+          p_listing_page?: number
+          p_listing_search?: string
+          p_page_size?: number
+          p_user_page?: number
+          p_user_search?: string
+        }
+        Returns: Json
+      }
+      get_admin_listings_page: {
+        Args: {
+          p_owner_type?: string
+          p_page?: number
+          p_page_size?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      get_admin_moderation_counts: { Args: never; Returns: Json }
+      get_admin_moderation_queue: {
+        Args: { p_page?: number; p_page_size?: number; p_queue: string }
+        Returns: Json
+      }
+      get_admin_reports_page: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_reason?: string
+          p_search?: string
+          p_status?: string
+          p_target_type?: string
+        }
+        Returns: Json
+      }
       get_admin_review_queue: { Args: never; Returns: Json }
       get_eligible_transaction_buyers: {
         Args: { p_listing_id: string }
@@ -1404,6 +1567,49 @@ export type Database = {
       }
       is_store_member: { Args: { p_store_id: string }; Returns: boolean }
       is_store_owner: { Args: { p_store_id: string }; Returns: boolean }
+      link_legacy_listing_owner: {
+        Args: { p_listing_id: string; p_note: string; p_owner_user_id: string }
+        Returns: {
+          archived_at: string | null
+          attributes: Json | null
+          brand: string | null
+          category: string
+          city: string
+          condition: string | null
+          contact_name: string | null
+          created_at: string
+          created_by_source: string
+          description: string | null
+          hidden_at: string | null
+          hidden_reason: string | null
+          hidden_source: string | null
+          id: string
+          instrument_type: string | null
+          marketplace_rules_accepted_at: string | null
+          model: string | null
+          owner_user_id: string | null
+          price_pen: number | null
+          published_at: string | null
+          region: string
+          rejection_reason: string | null
+          relisted_from_listing_id: string | null
+          seller_type: Database["public"]["Enums"]["seller_type"]
+          slug: string
+          sold_at: string | null
+          status: Database["public"]["Enums"]["listing_status"]
+          store_id: string | null
+          title: string
+          updated_at: string
+          view_count: number | null
+          whatsapp_phone: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "listings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       listing_accepts_direct_photo_edits: {
         Args: { p_listing_id: string }
         Returns: boolean
@@ -1463,6 +1669,30 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "notifications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      moderate_report: {
+        Args: { p_reason: string; p_report_id: string; p_status: string }
+        Returns: {
+          created_at: string
+          detail: string | null
+          id: string
+          listing_id: string | null
+          reason: string
+          reporter_user_id: string
+          resolution_reason: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          review_id: string | null
+          status: string
+          store_id: string | null
+          target_type: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reports"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -1778,6 +2008,15 @@ export type Database = {
       store_application_is_complete: {
         Args: { p_store_id: string }
         Returns: boolean
+      }
+      submit_content_report: {
+        Args: {
+          p_detail?: string
+          p_reason: string
+          p_target_id: string
+          p_target_type: string
+        }
+        Returns: string
       }
       submit_listing_for_publication: {
         Args: { p_listing_id: string }

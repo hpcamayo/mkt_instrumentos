@@ -9,6 +9,7 @@ import {
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { notFound } from "next/navigation";
 import { ListingCard } from "@/components/listing-card";
+import { ContentReport } from "@/components/content-report";
 import { StoreVisitTelemetry } from "@/components/marketplace-telemetry";
 import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PageContainer } from "@/components/page-container";
@@ -227,14 +228,21 @@ function StoreView({
             ) : null}
           </div>
 
-          <WhatsAppContactLink
-            href={buildStoreWhatsAppUrl(store)}
-            storeId={store.id}
-            source="store"
-            className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 md:w-auto"
-          >
-            Escribir a la tienda
-          </WhatsAppContactLink>
+          <div className="grid justify-items-start gap-3 md:justify-items-end">
+            <WhatsAppContactLink
+              href={buildStoreWhatsAppUrl(store)}
+              storeId={store.id}
+              source="store"
+              className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 md:w-auto"
+            >
+              Escribir a la tienda
+            </WhatsAppContactLink>
+            <ContentReport
+              targetType="store"
+              targetId={store.id}
+              label="Reportar tienda"
+            />
+          </div>
         </div>
       </div>
 

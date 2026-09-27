@@ -117,13 +117,12 @@ test("event failure telemetry is structured, correlated and excludes event paylo
 });
 
 test("review moderation UI exposes hide/restore but no review rewrite inputs", () => {
-  const source = fs.readFileSync("components/admin-panel.tsx", "utf8");
-  assert.match(source, /Transacciones y confirmaciones/);
-  assert.match(source, /transaction\.transaction_id/);
-  assert.match(source, /adminTransactionStatusLabel/);
-  const section = source.slice(source.indexOf('title="Reseñas y reportes"'));
-  assert.match(section, /Ocultar con motivo/);
-  assert.match(section, /Restaurar con motivo/);
-  assert.match(section, /no se pueden reescribir/);
-  assert.doesNotMatch(section, /updateReview|saveReview/);
+  const source = fs.readFileSync("components/admin-domain-view.tsx", "utf8");
+  assert.match(source, /title: "Transacciones"/);
+  assert.match(source, /adminString\(item, "transaction_id"\)/);
+  assert.match(source, /statusText\(item\)/);
+  assert.match(source, /Ocultar reseña/);
+  assert.match(source, /Restaurar reseña/);
+  assert.match(source, /La calificación y el comentario son inmutables/);
+  assert.doesNotMatch(source, /updateReview|saveReview|name="rating"|name="comment"/);
 });

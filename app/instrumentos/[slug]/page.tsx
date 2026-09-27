@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FavoriteButton } from "@/components/favorite-button";
+import { ContentReport } from "@/components/content-report";
 import { notFound } from "next/navigation";
 import { cache, Suspense, type ReactNode } from "react";
 import { ListingCard } from "@/components/listing-card";
@@ -284,6 +285,13 @@ function ListingDetail({
                 Contacto directo por WhatsApp. Laria no procesa pagos, envíos ni
                 garantías.
               </p>
+              <div className="mt-3">
+                <ContentReport
+                  targetType="listing"
+                  targetId={listing.id}
+                  label="Reportar publicación"
+                />
+              </div>
             </div>
 
             <SellerTrustBox

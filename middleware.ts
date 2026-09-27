@@ -60,7 +60,7 @@ export const config = {
     "/registro/:path*",
     "/login",
     "/logout",
-    "/admin",
+    "/admin/:path*",
     "/api/admin/:path*",
   ],
 };

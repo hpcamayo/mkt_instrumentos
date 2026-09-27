@@ -13,9 +13,9 @@ Browser
   -> Supabase Postgres + Storage + Auth
 ```
 
-The codebase currently favors server-rendered public pages with small client islands for forms, admin auth/moderation, filters, card photo carousel behavior, and listing detail metadata.
+The codebase currently favors server-rendered public and protected page shells with small client islands for forms, moderation actions, filters, card photo carousel behavior, and listing detail metadata.
 
-Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 production source is `37f7507829193306ddaaa37e80787069308bdffc`; migration, application, verified Resend sender and production-only secrets were deployed on 2026-09-22. Automated production verification passed; owner real-inbox/usability rows remain blocked in `acceptance/cases.tsv`.
+Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 is deployed and operational; the owner accepted the exercised real-inbox flows on 2026-09-25, while `ALERT-005` and `TX-018` remain blocked for their exact owner checks. Sprint 8 is implemented and verified locally only. Migration `20260923120000_sprint_8_admin_reports_legacy.sql` and the matching application changes have not been deployed.
 
 ## Core Responsibilities
 
@@ -25,7 +25,7 @@ Next.js handles:
 - Client interactive components.
 - Public forms.
 - Admin UI.
-- Route handlers for photo loading, authorized edit-image delivery/cleanup, trusted first-party event/contact ingestion, owner-bound saved-search actions, and the protected marketplace-email worker.
+- Route handlers for photo loading, authorized edit-image delivery/cleanup, trusted first-party event/contact ingestion, owner-bound saved-search actions, admin invites, and the protected marketplace-email worker.
 - Calls to Supabase.
 
 Supabase handles:
@@ -36,15 +36,15 @@ Supabase handles:
 - Seller/store-owner account ownership tables.
 - Listing photos.
 - Public initial-submission image buckets and private listing-edit staging.
-- Admin auth through Supabase Auth.
-- RPC helpers such as `is_admin()`, store membership checks, publication validation, owner lifecycle/edit operations, revision review, trusted event recording, and owner-scoped analytics.
+- Admin auth through Supabase Auth `app_metadata.role='admin'`.
+- RPC helpers such as `is_admin()`, store membership checks, publication validation, owner lifecycle/edit operations, revision review, content reporting, bounded Admin reads, trusted event recording, and owner-scoped analytics.
 
 Vercel handles:
 - Production deployments.
 - Preview deployments.
 - Environment variables.
 - Automatic redeploys from GitHub pushes.
-- Cron invocation of the secret-protected bounded email worker once Sprint 7 is released.
+- A future supported frequent scheduler for the secret-protected bounded email worker before go-live. Vercel Hobby currently registers no automatic cron.
 
 GitHub is the source repository. Supabase schema is managed separately through SQL migrations.
 
@@ -61,7 +61,7 @@ GitHub is the source repository. Supabase schema is managed separately through S
 - Uses the same public env vars.
 - Caches a browser Supabase client.
 - Uses `@supabase/ssr` `createBrowserClient`.
-- Used by `components/admin-panel.tsx` and account UI because Supabase Auth session persistence is needed in the browser.
+- Used by interactive account, report, and Admin action components because Supabase Auth session persistence is needed in the browser.
 
 `lib/supabase/server-client.ts` exposes `getSupabaseServerClient()`:
 - Uses `@supabase/ssr` `createServerClient`.
@@ -74,7 +74,7 @@ GitHub is the source repository. Supabase schema is managed separately through S
 - Must never be imported by Client Components or exposed as `NEXT_PUBLIC_*`.
 - Used by the current admin invite, duplicate-email, submission/event, and Sprint 7 email-worker server routes.
 
-`middleware.ts` refreshes Supabase Auth sessions and protects account routes that start with `/mi-cuenta` or `/mis-publicaciones`.
+`middleware.ts` refreshes Supabase Auth sessions and protects account routes plus `/admin/:path*`. Every Admin layout/page also verifies the server-readable user and `is_admin()`; middleware is not the authorization boundary by itself.
 
 ## Actual Route Map
 
@@ -82,7 +82,11 @@ GitHub is the source repository. Supabase schema is managed separately through S
 app/
   layout.tsx
   page.tsx                         Homepage
-  admin/page.tsx                   Admin panel
+  admin/layout.tsx                Server-authorized persistent Admin shell
+  admin/page.tsx                  Moderation-first workbench
+  admin/[section]/page.tsx        Bounded domain search/filter/history pages
+  admin/auditoria/[targetType]/[targetId]/page.tsx
+                                    Bounded privileged-action history
   auth/callback/route.ts           Supabase magic-link/invite callback
   api/admin/invite-user/route.ts   Server-only admin invite endpoint
   api/alerts/route.ts              Session-bound saved-search mutations
@@ -195,19 +199,21 @@ The free-store cap is enforced by a trigger, not by UI counts. Capacity-consumin
 
 ### Admin
 
-Admin controls supply quality. The admin panel can:
-- View pending listings.
-- Edit basic listing fields.
-- Approve, reject, hide, or mark listings sold.
-- Inspect the complete Store application and owner identity.
-- Edit allowed business/profile fields.
-- Approve a complete store as Tienda or reject/hide it with a required reason.
-- Verify an active store or revoke verification through admin-only RPCs.
-- Atomically approve the verified store's valid pending inventory.
-- Review all listing lifecycle states with mandatory reasons for rejection or administrative hiding.
-- Compare current and proposed moderated listing fields/photos, then approve or reject a pending revision through admin-only RPCs.
+Admin controls supply quality. `/admin` is a moderation-first workbench answering what requires attention now. It keeps six stable URL-addressable queues—Publicaciones, Cambios, Tiendas, Verificación, Reportes and Reseñas—with canonical live counts, bounded pagination, truthful empty/error states and accessible action feedback. It defaults to the first nonempty queue without hiding zero-count domains.
+
+The persistent Admin shell then exposes deeper bounded management pages for publications, revisions, stores, users, reports, reviews, transactions and manual legacy ownership. These pages answer what exists or requires investigation; transactions are read-only support context, not a moderation queue or editable ledger. Search/filter/order state lives in the URL. Dedicated listing, report and legacy readers avoid unbounded table downloads and preserve deterministic timestamp/ID ordering.
+
+Existing moderation remains available: Admin may edit allowed listing/store business fields, approve/reject/hide/restore or mark an approved listing sold, review versioned revisions, verify/revoke a store, inspect revealed reviews and transaction linkage, and send trusted account invites. Required reasons remain mandatory. Content/profile edits are revalidated in the database whenever the record is already public and are audited; they cannot leave an approved listing or active store below its publication/application invariant. The UI does not expose arbitrary user deletion/suspension, password/email/role changes, impersonation, transaction editing, review rewriting, or protected ownership/status fields.
+
+The Verificación workbench tab remains present but reports zero until V1 has a canonical owner verification-request state. A normal unverified `Tienda` is a valid trust state, so it is not fabricated as pending work and revocation does not create a perpetual queue item. Manual verify/revoke actions remain available in the bounded Tiendas management page.
+
+Authenticated users can report an eligible public/sold listing, active store, or revealed review with one fixed reason plus optional detail. `reports` is the single canonical table; the compatibility `review_reports` security-invoker view preserves Sprint 6 history. Partial unique indexes enforce at most one open report per reporter and target while allowing distinct reporters and a new report after closure. Raw reports and reporter identity remain unavailable to public users and target owners. Admin resolve/dismiss closes only the report; target moderation is a separate auditable action and never erases report history.
+
+Legacy ownership linking is explicitly manual. The Admin chooses one genuinely eligible unowned legacy Particular listing and one existing Particular profile, reviews historical contact evidence, supplies an audit note, and confirms. The row-locked RPC sets `owner_user_id` exactly once while preserving listing ID, status, photos and history. Phone/email similarity never links automatically, and ordinary users cannot claim or reassign legacy rows.
 
 Admin authority remains based on Supabase Auth `app_metadata.role = "admin"`. Profile `account_type` is app metadata only and is not the security boundary.
+
+Privileged listing, revision, store, verification, report, review and legacy-link transitions append trusted records to `admin_audit_actions`. The table is not browser-readable; bounded Admin history is exposed through `get_admin_audit_history()`. Dedicated immutable domain history remains authoritative where it already exists.
 
 Lifecycle moderation RPCs also append typed `notifications` rows inside the same database transaction. Notification RLS exposes rows only to the owning profile; an owner-only RPC changes read state without granting direct update access to event or target metadata. `/mi-cuenta/notificaciones` is shared by both account types and the persistent account navigation computes an RLS-scoped unread count.
 
@@ -226,7 +232,12 @@ Core local components:
 - `components/invite-profile-setup-form.tsx`
 - `components/invite-recovery-panel.tsx`
 - `components/location-fields.tsx`
-- `components/admin-panel.tsx`
+- `components/admin-navigation.tsx`
+- `components/admin-workbench.tsx`
+- `components/admin-domain-view.tsx`
+- `components/admin-invite-user.tsx`
+- `components/admin-record-editors.tsx`
+- `components/content-report.tsx`
 - `components/sell-listing-form.tsx`
 - `components/listing-management-table.tsx`
 - `components/listing-edit-form.tsx`
@@ -304,7 +315,7 @@ Buyer confirmation atomically creates `verified_transactions`, participant notif
 
 Review submission is RPC-only and derives direction/subject from the verified relationship. The database owns the ten-day deadline and one-row-per-direction constraints. The submitter may see their own final review, but the counterparty, public reputation and admin review queue cannot see a one-sided review before both submissions or deadline. Visible, non-admin-hidden buyer-to-seller reviews aggregate to a Particular or store; seller-to-buyer history aggregates privately to the buyer without adding a public buyer profile. Listing/store pages make zero reviews explicit and never fabricate a score.
 
-Published reviews may be reported with a fixed reason and optional detail. Sprint 6 admin compatibility shows transaction linkage and revealed/reported reviews, and permits only hide/restore with a mandatory audited reason. It provides no rating/comment rewrite path and intentionally leaves the complete report-resolution hub, listing/store reports and global admin search to Sprint 8.
+Published reviews may be reported with a fixed reason and optional detail. Sprint 6 admin compatibility shows transaction linkage and revealed/reported reviews, and permits only hide/restore with a mandatory audited reason. It provides no rating/comment rewrite path. The complete report-resolution hub, listing/store reports and global Admin search that it deferred are now consolidated by the local Sprint 8 implementation described below.
 
 ## Sprint 7 Compras, marketplace email, and saved-search alerts — production deployed
 
@@ -323,6 +334,16 @@ The server worker claims rows with `FOR UPDATE SKIP LOCKED`, snapshots the curre
 PRE-GO-LIVE on Vercel Hobby deliberately registers no automatic cron because Hobby permits only daily cadence and Laria is not open to real marketplace traffic. Release QA invokes the protected worker manually; Immediate email latency therefore has no automatic SLA before launch. Before go-live, provision a supported frequent scheduler at an initial 5–15 minute cadence, rerun protected automatic-worker/retry/digest smoke, and remove this operational limitation. `docs/go-live-checklist.md` makes that a mandatory launch dependency.
 
 Supabase Auth confirmation, magic-link, recovery and invite templates remain separate and unchanged. Production has `20260921120000_sprint_7_marketplace_email_alerts.sql`, the exact matching application commit, verified Resend sender and production-only provider/base-URL/worker-secret variables. The final Vercel deployment deliberately registers no cron on Hobby; protected release QA invoked the worker manually and cleaned every disposable fixture.
+
+## Sprint 8 moderation, reports, and legacy ownership — local implementation only
+
+`app/admin/layout.tsx` obtains the authenticated user and trusted Admin role on the server and wraps root/deep Admin routes in one responsive navigation shell. `/admin` calls `get_admin_moderation_counts()` and `get_admin_moderation_queue()`; URL-backed queue/page state and `router.refresh()` keep successful mutations, counts and page clamping aligned with canonical database state. `/admin/[section]` uses bounded domain readers, while `/admin/auditoria/...` reads at most 50 audit entries for one target. Desktop keeps persistent navigation and narrow viewports retain every domain through a collapsed Admin menu.
+
+Migration `20260923120000_sprint_8_admin_reports_legacy.sql` forward-migrates Sprint 6 review reports into the general `reports` model without changing existing IDs or history. Report submission derives the reporter from `auth.uid()`, rechecks target visibility/ownership in the database, blocks self-reporting without disclosing target existence, and relies on partial unique indexes for concurrency-safe open-report dedupe. Admin-only report reads include bounded target/reporter context; no public or target-owner report count is exposed.
+
+The same migration adds `admin_audit_actions`, trusted transition triggers/RPC audit calls, bounded moderation/domain/report/legacy readers, and supporting status/search/order indexes. Manual legacy linking locks and rechecks the row, permits only a null-owned legacy individual listing and an existing Particular profile, then records actor, chosen owner, prior state, historical contact and note. It never infers ownership from contact data.
+
+Public listing, store and revealed-review pages share `ContentReport`; anonymous visitors receive a safe login path and authenticated eligible reporters receive explicit success/error feedback. Reporting does not add Admin email spam or alter the Sprint 7 email scheduler. Sprint 8 intentionally does not implement Sprint 9 category SEO, legal/safety launch content, or go-live scheduling.
 
 ## Styling
 

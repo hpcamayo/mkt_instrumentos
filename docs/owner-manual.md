@@ -4,7 +4,7 @@ This is the practical owner guide for Laria.
 
 `docs/functional-spec.md` is canonical for the frozen V1 product contract. This manual describes operations and current implementation; it must not be used to override that contract.
 
-Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 migration and exact source `37f7507829193306ddaaa37e80787069308bdffc` were production-deployed on 2026-09-22 with the verified Resend sender and production-only configuration. Automated production verification passed; the exact owner inbox/usability checklist below remains pending. Automatic marketplace-email scheduling remains a mandatory pre-go-live dependency while Laria is on Vercel Hobby.
+Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 is production-deployed and operational; exercised owner inbox/link cases passed on 2026-09-25, while `ALERT-005` and `TX-018` remain blocked for their exact checks. Sprint 8 is implemented and verified locally only; do not use its Admin/report/legacy workflows in production until the dedicated release gate. Automatic marketplace-email scheduling remains a mandatory pre-go-live dependency while Laria is on Vercel Hobby.
 
 ## What Laria Is
 
@@ -93,6 +93,7 @@ Laria currently supports:
 - Registering stores.
 - Public store pages.
 - Admin approval of listings/stores.
+- A local-only Sprint 8 moderation workbench, general content reports, bounded Admin domain investigation, audit history, and manual legacy ownership linking.
 - Image uploads.
 - Advanced musician-specific filters.
 - Compact listing cards.
@@ -178,9 +179,15 @@ Store statistics `/mi-cuenta/tienda/estadisticas` (production Sprint 4):
 
 Admin page `/admin`:
 - Used to control quality.
+- Local Sprint 8 opens on a moderation workbench with live tabs/counts for pending publications, changes, stores, verification, reports and reported reviews. It answers what needs attention now; zero-count tabs remain visible and data errors never appear as zero.
+- V1 has no owner verification-request state. Therefore a normal unverified `Tienda` is not counted as pending in `Verificación`; use the Tiendas page for deliberate manual verification or revocation.
+- Persistent desktop/mobile Admin navigation leads to bounded pages for publications, revisions, stores, users, reports, reviews, read-only transactions and manual legacy linking. Search, filters and pagination stay in the URL.
 - Admin can approve listings, reject/hide them with a required reason, restore eligible listings, and review pending moderated field/photo revisions through trusted database operations.
-- Sprint 2 store actions include basic approval, required-reason rejection/hiding, verification, and revocation. Store application details and owner identity are visible to admin.
-- Accepted Sprint 6 adds verified-transaction linkage and revealed/reported review cards with mandatory-reason hide/restore. Production Sprint 7 sends supported lifecycle email from the durable outbox; the wider hub still lacks global search/filtering, users, listing/store reports and resolve/dismiss, and legacy ownership linking.
+- Sprint 2 store actions remain: basic approval, required-reason rejection/hiding, verification, and revocation. Store application details and owner identity are visible.
+- Revealed reviews retain mandatory-reason hide/restore only. Transactions are support/audit context only; Admin cannot edit or confirm them.
+- General reports cover eligible listings, active stores and revealed reviews. Resolve/dismiss closes the report only; hiding/restoring the target is a separate action and report history remains.
+- Legacy ownership is never inferred. Admin explicitly chooses one eligible unowned legacy listing and one existing Particular, reviews the evidence, enters an audit note and confirms a one-time link.
+- Admin actions remain authorized by Supabase Auth `app_metadata.role='admin'` and have bounded audit history. The interface does not expose passwords/tokens, arbitrary account deletion/suspension, role/email/password changes, impersonation, transaction editing, review rewriting or arbitrary ownership changes.
 
 ## Daily Admin Workflow
 
@@ -217,6 +224,23 @@ Review `Solicitudes y tiendas`:
 - `Revocar verificación` leaves the Tienda active and existing approved inventory public; future inventory returns to moderation.
 
 Only `active` stores and their approved inventory appear publicly. Public labels are exactly `Tienda` and `Tienda Verificada`; verification does not promise payment, delivery, product condition, or transaction safety.
+
+### Check Reports
+
+Open the `Reportes` tab on `/admin` for current work, or `/admin/reportes` for filtered history:
+- Confirm the target, fixed reason, optional detail, reporter context and target owner/store before acting.
+- Use `Resolver` when the report was handled, or `Desestimar` when it does not justify action; both require a concise reason.
+- If the target itself needs moderation, open its publication/store/review destination and use that domain's separate trusted action.
+- Do not assume closing a report hides the target, or that hiding a target closes every report. Never share reporter identity with the target owner.
+
+### Link One Legacy Listing Manually
+
+Open `/admin/legacy` only when the owner has supplied reliable offline evidence:
+- Search and select one listing explicitly marked eligible and still without an owner.
+- Search and select the exact existing Particular account; do not use a Store Owner account.
+- Compare listing ID, historical contact name/WhatsApp and selected account details. A matching email or phone is evidence to inspect, never an automatic decision.
+- Enter a meaningful audit note, review the confirmation summary, then link once.
+- The operation preserves the listing ID, status, photos and history. It cannot be replayed or used to move an already-owned listing to someone else.
 
 ### Invite Sellers Or Store Owners
 
@@ -488,7 +512,7 @@ Valid region values are fixed to Peru regions. City fields show suggestions but 
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Sprint 5 Favorites/in-app price drops and Sprint 6 transactions/reviews are production-deployed and owner-accepted. Sprint 7 saved-search alerts plus price-drop/lifecycle marketplace email are production-deployed with automated production verification complete; exact owner inbox/usability cases remain pending. Remaining V1 gaps include listing/store reports with resolution, the remaining full moderation hub, category pages, legal/safety content and legacy ownership linking. See `docs/functional-spec.md`.
+Sprint 5 Favorites/in-app price drops and Sprint 6 transactions/reviews are production-deployed and owner-accepted. Sprint 7 saved-search alerts plus price-drop/lifecycle marketplace email are production-deployed; the exercised real-inbox/link cases are accepted, while `ALERT-005` and `TX-018` remain blocked. Sprint 8 locally implements reports, the moderation-first Admin Hub and manual legacy ownership, but is not yet released. Remaining implementation work is the Sprint 8 production gate plus Sprint 9 category and final legal/safety launch content. See `docs/functional-spec.md`.
 
 ## Sprint 5 owner usability acceptance — closed
 
@@ -509,18 +533,35 @@ The production workflow below is retained as historical operating guidance. Owne
 
 After release, use `https://laria.audio/`, `/listados`, `/mi-cuenta/transacciones`, `/mi-cuenta/notificaciones`, `/mi-cuenta/publicaciones`, `/mi-cuenta/tienda/inventario`, `/admin`, and real `/instrumentos/{slug}` / `/tiendas/{slug}` destinations. Record only exact Test IDs in `acceptance/cases.tsv` and run `python3 -B acceptance/validate.py`.
 
-## Sprint 7 owner production acceptance — pending
+## Sprint 7 owner production acceptance — two checks remain
 
-Sprint 7 is deployed and the verified sender plus protected-worker secret are configured. Perform only the owner inbox/UI cases below. Do not repeat SQL/RLS, spoofing, worker-concurrency or replay attacks; those already passed automated production verification.
+Sprint 7 is deployed and the verified sender plus protected-worker secret are configured. Owner inbox/link acceptance passed on 2026-09-25 for `PDA-009`, `ALERT-003`, `ALERT-015`, and `MAIL-001`–`MAIL-007`. Do not repeat those or the SQL/RLS, spoofing, worker-concurrency and replay checks.
 
 PRE-GO-LIVE note: while Laria remains on Vercel Hobby, no automatic marketplace-email cron is registered. QA invokes the protected worker manually, so Immediate alert email has no automatic latency promise. Before real users enter the marketplace, complete the mandatory worker-scheduling steps in `docs/go-live-checklist.md`.
 
 - `TX-018`: on desktop and mobile as both account types, verify `Compras` remains visible, a real pending buyer confirmation shows an actionable count/state and `¿Compraste este artículo?`, then the count clears after yes/no.
-- `PDA-009`: favorite a public listing before a real price decrease. Verify one Spanish email reaches the correct favorite owner, shows old/new PEN price, opens the safe listing, does not repeat on retry, and a later decrease can send a new message.
-- `ALERT-003`, `ALERT-005`, `ALERT-015`: create Immediate and Daily alerts from a filtered real catalog search, verify readable summaries and account/mobile controls, receive only new matching public inventory, receive no empty daily mail, and verify pause/resume/delete behavior without a paused backlog.
-- `MAIL-001`–`MAIL-007`: use disposable listing/store/transaction/review fixtures to verify the selected moderation, store trust, buyer confirmation and revealed-review messages reach the correct real inbox with Spanish Laria copy and authenticated safe destinations. Confirm no message implies verified payment, delivery, authenticity or condition.
+- `ALERT-005`: allow a natural completed Lima daily window with multiple new matches, invoke the normal protected worker once, and confirm one useful digest reaches the inbox with the eligible new matches and no empty/duplicate message.
 
 Production destinations: `https://laria.audio/listados`, `/mi-cuenta/alertas`, `/mi-cuenta/transacciones`, `/mi-cuenta/notificaciones`, `/mi-cuenta/publicaciones`, `/mi-cuenta/tienda`, `/admin`, plus the real listing/store destinations used by the fixtures. Record only exact IDs in `acceptance/cases.tsv`, run `python3 -B acceptance/validate.py`, and remove every disposable user/store/listing/object afterward.
+
+## Sprint 8 owner usability QA — after production release
+
+Do not run this against production before the dedicated Sprint 8 release gate. Automated SQL/RLS, direct-RPC, role-spoofing and concurrency coverage is already recorded and must not be repeated manually. `ADMIN-023` remains **BLOCKED** for owner mobile/keyboard usability acceptance; the other listed rows already have automated PASS evidence and should change only if the owner finds a real defect.
+
+Moderation workbench:
+- `ADMIN-017`–`ADMIN-023`: open `/admin`, understand the pending workload without hunting through pages, switch among all six tabs including an empty one, confirm counts/selection make sense, complete one safe moderation action, and verify the item/count refreshes. Refresh/deep-link/back navigation should keep understandable context. At a narrow viewport, open every Admin domain and operate one safe action by keyboard with visible focus and readable feedback.
+
+Reports:
+- `REP-001`, `REP-002`, `REP-003`: as authenticated nonowner, report one eligible listing, active store and revealed review with fixed reasons; confirm clear success and duplicate/error wording without exposing private state.
+- `ADMIN-006`, `REP-008`, `REP-009`, `REP-014`: find the reports in the pending queue and history page, inspect context, dismiss one, and resolve another only after any separately justified target moderation. Confirm report closure never silently hides the target and target moderation never erases report history.
+
+Existing moderation compatibility:
+- `ADMIN-005`, `ADMIN-007`, `ADMIN-009`, `ADMIN-010`, `ADMIN-012`, `ADMIN-013`, `ADMIN-030`: inspect a listing revision, revealed review, store verification state and approved listing; exercise one appropriate approve/reject/hide/restore action with required reason, then explicitly confirm one disposable approved listing as sold. Confirm owner-visible behavior remains intact and that mark-sold does not fabricate a buyer or verified transaction.
+
+Manual legacy ownership:
+- `ADMIN-014`: in `/admin/legacy`, search an eligible fixture, manually select the intended Particular, review historical contact evidence, enter the audit note, confirm once, then verify the listing keeps its identity/state/photos and resolves dynamic owner contact. Do not use a real ambiguous listing merely to test the UI.
+
+Production destinations after release: `https://laria.audio/admin`, `/admin/publicaciones`, `/admin/revisiones`, `/admin/tiendas`, `/admin/usuarios`, `/admin/reportes`, `/admin/resenas`, `/admin/transacciones`, and `/admin/legacy`, plus exact public listing/store/review targets. Remove every disposable account/content/object. Record only exact Test IDs in `acceptance/cases.tsv`; do not infer owner PASS from automated evidence.
 
 Do not build these post-V1 areas without a new product decision:
 - Payments.
