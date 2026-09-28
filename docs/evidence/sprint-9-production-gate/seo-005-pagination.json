@@ -1,0 +1,98 @@
+{
+  "case": "SEO-005",
+  "result": "PASS",
+  "verifiedAt": "2026-09-28T00:50:15.886Z",
+  "productionSha": "61365d0edd4f9463d13ac4bd5af8bf9c841c4145",
+  "baseUrl": "https://laria.audio",
+  "category": "guitars",
+  "categoryPath": "/instrumentos/guitarras",
+  "fixture": {
+    "marker": "SEO005_QA_20260928004953568_0bcb57",
+    "originalPublicCount": 4,
+    "temporaryApprovedListings": 21,
+    "peakPublicCount": 25,
+    "temporaryPhotoRows": 63,
+    "temporaryAuthUsers": 1,
+    "storageObjectsCreated": 0
+  },
+  "productionChecks": {
+    "page1": {
+      "url": "https://laria.audio/instrumentos/guitarras",
+      "http": 200,
+      "listingCards": 24,
+      "canonical": "https://laria.audio/instrumentos/guitarras",
+      "listingIds": [
+        "34e3fbb1-b29d-4dc3-b955-0b12093aeaff",
+        "a5651020-c95a-461b-a788-0701aa1da29f",
+        "5688690a-5447-4aad-9faf-a706566bd61a",
+        "84089940-6574-4f95-b70f-30351dfb62c1",
+        "9370d040-dd65-4eca-bd9e-c4a8a08527d7",
+        "e87999a3-fa13-489a-9f27-2658c2bd1fc1",
+        "ffe6fd3c-a3a0-4381-ad07-323044b07b6d",
+        "7ebeafca-2538-40e3-8485-83fbc2e04113",
+        "6ff08ec3-24ed-4b77-8ba8-f6072ed9ec1b",
+        "e4d9b683-e8ca-4510-9d8a-2090273e8d16",
+        "2ecde6e0-16be-433e-b1d4-6220d3be95fa",
+        "6791a50e-3e13-42cd-9ad7-44947538f46b",
+        "5020e6e8-a0c3-4544-a0a4-a3994c41ef0e",
+        "74df2abc-cec0-46dd-b4e6-b6ad5360958d",
+        "a74ed483-00b6-4745-b6d9-ae7021fc02fc",
+        "ee702a84-23a9-453f-8e01-519426db3922",
+        "fafb3273-286e-4c5d-863e-f14938ec2e33",
+        "73b52983-0593-4fd5-99f7-76189e7adf86",
+        "da3c717b-7463-488f-815f-4877be316e68",
+        "a9becbe7-3d88-4d53-8a01-d202085d300c",
+        "cb4c70e3-1cc4-49db-9f4e-2e64e24c8d62",
+        "9c065a3c-fb63-4980-9bc4-7576c339d811",
+        "eea79491-ecce-4600-9fae-8fd1f40fa814",
+        "20000000-0000-0000-0000-000000000001"
+      ]
+    },
+    "page2": {
+      "url": "https://laria.audio/instrumentos/guitarras?page=2",
+      "http": 200,
+      "listingCards": 1,
+      "canonical": "https://laria.audio/instrumentos/guitarras?page=2",
+      "listingIds": ["30000000-0000-0000-0000-000000000001"]
+    },
+    "categoryCorrect": true,
+    "paginationUi": "Página 1 de 2 / Página 2 de 2",
+    "repeatedPage1AndPage2OrderStable": true,
+    "uniqueAndNoOverlap": true,
+    "indexable": true,
+    "ogUrlMatchesCanonical": true,
+    "categoryFilterSelected": "guitars",
+    "typeLinkClickedUrl": "https://laria.audio/listados?category=guitars&instrument_type=electric_guitar",
+    "brandFilterRedirect": "https://laria.audio/instrumentos/guitarras?brand=QA → https://laria.audio/listados?category=guitars&brand=QA (307, then 200)",
+    "malformedPage": "?page=abc returned 200 and rendered page 1",
+    "pageZero": "?page=0 returned 200 and rendered page 1",
+    "outOfRange": "?page=99 redirected to category page 1 (307, then 200)",
+    "redirectLoop": false,
+    "offSiteRedirect": false
+  },
+  "cleanup": {
+    "deletedListings": 21,
+    "deletedPhotoRows": 63,
+    "deletedAuthUsers": 1,
+    "remainingExactIdsAndMarker": {
+      "authUsers": 0,
+      "profiles": 0,
+      "listings": 0,
+      "photos": 0,
+      "events": 0,
+      "adminAuditActions": 0,
+      "reports": 0,
+      "alertPublications": 0,
+      "alertMatches": 0,
+      "emailDeliveries": 0
+    },
+    "independentBothRunsMarkerAudit": {
+      "authUsers": 0,
+      "profiles": 0,
+      "listings": 0,
+      "photos": 0
+    },
+    "restoredPublicCount": 4,
+    "categoryAfterCleanupHttp": 200
+  }
+}
