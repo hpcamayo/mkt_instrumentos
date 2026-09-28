@@ -6,7 +6,7 @@ import { ListingFilters } from "@/components/listing-filters";
 import { SearchTelemetry } from "@/components/marketplace-telemetry";
 import { PageContainer } from "@/components/page-container";
 import { Pagination } from "@/components/pagination";
-import { categoryLandingPages, type CategoryLandingPage } from "@/lib/category-pages";
+import { categoryLandingPages, categoryTypePath, type CategoryLandingPage } from "@/lib/category-pages";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
 import type { ListingCardData, ListingFilters as ListingFiltersType } from "@/lib/listings";
 import { LISTINGS_PAGE_SIZE } from "@/lib/pagination";
@@ -99,7 +99,7 @@ export function CategoryLanding({
                 {types.map((type) => (
                   <Link
                     key={type.value}
-                    href={`/listados?${new URLSearchParams({ category: landing.category, instrument_type: type.value })}`}
+                    href={categoryTypePath(landing.category, type.value)}
                     className="inline-flex min-h-9 items-center rounded-full border border-laria-fog bg-white px-3 py-1.5 text-xs font-bold text-laria-ink hover:border-laria-blue hover:text-laria-blue"
                   >
                     {type.label}

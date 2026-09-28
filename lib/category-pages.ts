@@ -1,3 +1,4 @@
+import { instrumentTypesByCategory } from "@/lib/listing-submission";
 import { categoryOptions } from "@/lib/listings";
 
 type CategoryValue = (typeof categoryOptions)[number]["value"];
@@ -86,4 +87,13 @@ export function getCategoryLandingByValue(category: string | undefined) {
 export function categoryLandingPath(category: string) {
   const page = getCategoryLandingByValue(category);
   return page ? `/instrumentos/${page.slug}` : `/listados?${new URLSearchParams({ category })}`;
+}
+
+// Catalog URL for one instrument type inside a category. When the type is the
+// category's only specific type (e.g. cymbals → cymbals), `instrument_type`
+// adds nothing, so the link goes to the category landing instead.
+export function categoryTypePath(category: string, instrumentType: string) {
+  const specificTypes = (instrumentTypesByCategory[category] ?? []).filter((type) => type !== "other");
+  if (specificTypes.length === 1 && specificTypes[0] === instrumentType) return categoryLandingPath(category);
+  return `/listados?${new URLSearchParams({ category, instrument_type: instrumentType })}`;
 }

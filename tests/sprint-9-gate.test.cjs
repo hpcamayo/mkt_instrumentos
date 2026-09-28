@@ -169,3 +169,53 @@ test("the SEO smoke's category list matches lib/category-pages.ts", () => {
     categoryLandingPages.map((landing) => ({ category: landing.category, slug: landing.slug })),
   );
 });
+
+test("top-level categories link to their Spanish landing and type links never repeat the category", () => {
+  const categories = load("lib/category-pages.ts");
+  const { instrumentTypesByCategory } = load("lib/listing-submission.ts");
+  const expected = {
+    guitars: "guitarras", basses: "bajos", drums: "baterias", cymbals: "platillos",
+    microphones: "microfonos", pedals: "pedales", amplifiers: "amplificadores", "audio interfaces": "interfaces-de-audio",
+  };
+  assert.deepEqual(Object.fromEntries(categories.categoryLandingPages.map((page) => [page.category, page.slug])), expected);
+  for (const [category, slug] of Object.entries(expected)) {
+    assert.equal(categories.categoryLandingPath(category), `/instrumentos/${slug}`);
+  }
+
+  const { CategoriesSection } = load("components_v0/categories-section.tsx", { "next/link": linkMock });
+  const { categoryOptions } = load("lib/listings.ts");
+  const home = renderToStaticMarkup(React.createElement(CategoriesSection, { categories: [...categoryOptions] }));
+  assert.match(home, /href="\/instrumentos\/platillos"/);
+  assert.doesNotMatch(home, /href="\/listados\?/);
+
+  // Mirror types resolve to the landing; narrower types keep instrument_type.
+  assert.equal(categories.categoryTypePath("cymbals", "cymbals"), "/instrumentos/platillos");
+  assert.equal(categories.categoryTypePath("audio interfaces", "audio_interface"), "/instrumentos/interfaces-de-audio");
+  assert.equal(categories.categoryTypePath("guitars", "electric_guitar"), "/listados?category=guitars&instrument_type=electric_guitar");
+  assert.equal(categories.categoryTypePath("cymbals", "other"), "/listados?category=cymbals&instrument_type=other");
+  for (const [category, types] of Object.entries(instrumentTypesByCategory)) {
+    for (const type of types) {
+      const href = categories.categoryTypePath(category, type);
+      if (href.startsWith("/listados?")) {
+        const params = new URLSearchParams(href.split("?")[1]);
+        assert.notEqual(params.get("instrument_type"), params.get("category"), href);
+      }
+    }
+  }
+
+  // The mega-menu and landing type chips build type links only through the shared helper.
+  const nav = fs.readFileSync(path.join(root, "components/global-categories.tsx"), "utf8");
+  const landing = fs.readFileSync(path.join(root, "components/category-landing.tsx"), "utf8");
+  assert.match(nav, /return categoryLandingPath\(category\);/);
+  assert.match(nav, /return categoryTypePath\(category, instrumentType\);/);
+  assert.match(landing, /href=\{categoryTypePath\(landing\.category, type\.value\)\}/);
+  for (const source of [nav, landing]) assert.doesNotMatch(source, /instrument_type:/);
+
+  // Catalog category filtering keeps the internal enum and its canonical/noindex behavior.
+  const seo = load("lib/seo.ts");
+  assert.equal(`/listados?${new URLSearchParams({ category: "cymbals" })}`, "/listados?category=cymbals");
+  assert.equal(seo.buildCatalogMetadata({ category: "cymbals" }, 1).alternates.canonical, "/instrumentos/platillos");
+  const narrowed = seo.buildCatalogMetadata({ category: "guitars", instrument_type: "electric_guitar" }, 1);
+  assert.deepEqual(narrowed.robots, { index: false, follow: true });
+  assert.equal(narrowed.openGraph.url, "/listados?category=guitars&instrument_type=electric_guitar");
+});

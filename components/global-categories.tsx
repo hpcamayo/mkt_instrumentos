@@ -7,7 +7,7 @@ import { ChevronDown, X } from "lucide-react";
 import { PageContainer } from "@/components/page-container";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
 import { categoryOptions } from "@/lib/listings";
-import { categoryLandingPath } from "@/lib/category-pages";
+import { categoryLandingPath, categoryTypePath } from "@/lib/category-pages";
 
 export function GlobalCategories() {
   const pathname = usePathname();
@@ -184,7 +184,7 @@ function categoryHref(category: string) {
 }
 
 function typeHref(category: string, instrumentType: string) {
-  return `/listados?${new URLSearchParams({ category, instrument_type: instrumentType })}`;
+  return categoryTypePath(category, instrumentType);
 }
 
 function slugify(value: string) {
