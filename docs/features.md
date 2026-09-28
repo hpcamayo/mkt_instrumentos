@@ -390,7 +390,7 @@ Account shell:
 
 ## Frozen V1 Gaps and Post-V1 Exclusions
 
-Sprint 9 locally implements the last BUILD areas: category landing pages under `/instrumentos/<categoría>` backed by the real catalog, canonical/robots/sitemap/structured-data SEO, the Terms, Privacy, prohibited-items and safety pages with explicit no-payment/escrow/shipping/guarantee copy, and the frozen account navigation (`Perfil y seguridad`). The Sprint 9 production gate failed on 2026-09-27 and the application was restored to `bb16e319540a9d6721e990bc1e9900825c7473ac`; see `docs/sprint-9-production-release-gate.md`. Go-live dependencies are listed in `docs/go-live-checklist.md`. See `docs/functional-spec.md`.
+Sprint 9 implements the last BUILD areas: category landing pages under `/instrumentos/<categoría>` backed by the real catalog, canonical/robots/sitemap/structured-data SEO, the Terms, Privacy, prohibited-items and safety pages with explicit no-payment/escrow/shipping/guarantee copy, and the frozen account navigation (`Perfil y seguridad`). The first Sprint 9 production gate failed on 2026-09-27; the remediated candidate then passed the automated production re-gate. Owner SEO/legal checks remain open; see `docs/sprint-9-production-release-gate.md`. Go-live dependencies are listed in `docs/go-live-checklist.md`. See `docs/functional-spec.md`.
 
 ## Sprint 5 — deployed and owner-accepted
 

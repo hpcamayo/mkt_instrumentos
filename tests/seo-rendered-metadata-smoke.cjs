@@ -24,9 +24,8 @@ const XMLNS_NS = "http://www.w3.org/2000/xmlns/";
 const STATIC_PAGES = ["/", "/listados", "/terminos", "/privacidad", "/articulos-prohibidos", "/consejos-de-seguridad"];
 const NOINDEX_PAGES = ["/registro/vendedor", "/registro/tienda", "/login"];
 const REQUIRED_SURFACES = ["category", "listing", "store"];
-// Listing slugs embed their UUID (`<title>-<uuid>`, relists add `-republicado-<hex>`);
-// category landing slugs never do.
-const LISTING_ID = /-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:-|$)/;
+// Legacy public listing slugs predate UUID-suffixed slugs. Only the eight
+// reserved landing slugs identify categories; every other detail path is a listing.
 
 class XmlError extends Error {}
 
@@ -334,10 +333,12 @@ function validateSitemapXml(xml, site = DEFAULT_SITE) {
   }
 }
 
-// Classifies a sitemap URL path; samples are chosen by shape, never by a fixed ID.
+// Classifies a sitemap URL path using the reserved category slugs, not an ID shape.
 function classifyPath(path) {
   if (/^\/tiendas\/[^/]+$/.test(path)) return "store";
-  if (/^\/instrumentos\/[^/]+$/.test(path)) return LISTING_ID.test(path) ? "listing" : "category";
+  if (/^\/instrumentos\/[^/]+$/.test(path)) {
+    return CATEGORY_LANDINGS.some((landing) => path === `/instrumentos/${landing.slug}`) ? "category" : "listing";
+  }
   return null;
 }
 
@@ -1240,9 +1241,6 @@ async function runChecks({ base, site = DEFAULT_SITE, crawlers = Object.keys(CRA
   }
   const sitemapSet = new Set(sitemapUrls.map((url) => url.href));
   const sitemapCategories = new Set(sitemapUrls.filter((url) => classifyPath(url.pathname) === "category").map((url) => url.pathname));
-  for (const path of sitemapCategories) {
-    if (!CATEGORY_LANDINGS.some((landing) => `/instrumentos/${landing.slug}` === path)) failures.push(`sitemap.xml lists an unknown category landing ${path}`);
-  }
   const populated = sitemapOk ? CATEGORY_LANDINGS.filter((landing) => sitemapCategories.has(`/instrumentos/${landing.slug}`)) : [];
   const empty = sitemapOk ? CATEGORY_LANDINGS.filter((landing) => !sitemapCategories.has(`/instrumentos/${landing.slug}`)) : [];
 

@@ -622,7 +622,13 @@ test("populated categories are indexable with an ItemList; empty categories are 
   await failsWith({ pages: { "/instrumentos/platillos": page(empty, { jsonLd: [breadcrumb(empty)] }) } }, /empty category \/instrumentos\/platillos: expected a noindex, follow robots meta \(found: none\)/);
   await failsWith({ pages: { "/instrumentos/platillos": page(empty, { robots: "noindex, follow", jsonLd: [breadcrumb(empty), itemList([`${site}${listing}`])] }) } }, /empty category \/instrumentos\/platillos: an empty category must not publish an ItemList/);
   await failsWith({ pages: { "/instrumentos/platillos": page(empty, { robots: "noindex, nofollow", jsonLd: [breadcrumb(empty)] }) } }, /empty category \/instrumentos\/platillos: expected a noindex, follow robots meta/);
-  await failsWith({ sitemapBody: sitemap([...representative, "/instrumentos/tambores"]) }, /sitemap\.xml lists an unknown category landing \/instrumentos\/tambores/, null);
+});
+
+test("legacy listing slugs without UUIDs are sampled as listings", async () => {
+  const legacy = "/instrumentos/guitarra-electrica-squier-stratocaster-usada-lima";
+  assert.equal(classifyPath(legacy), "listing");
+  const result = await run({ sitemapBody: sitemap(["/", "/listados", category, legacy, listing, store]) });
+  assert.equal(result.samples.listing.pathname, legacy);
 });
 
 test("sold listings: reachable, noindex, self canonical, SoldOut, and never in the sitemap", async () => {
