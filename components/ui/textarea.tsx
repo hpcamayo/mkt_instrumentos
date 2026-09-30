@@ -4,7 +4,8 @@ import { useState, type TextareaHTMLAttributes } from "react";
 import { controlClasses } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 
-// Multi-line control. With maxLength it shows a live "n / max" counter under the field.
+// Multi-line control. With maxLength it shows an "n / max" counter under the field.
+// Plain digits (no locale grouping) so server and browser render the same text.
 export function Textarea({ className, maxLength, onChange, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   const [count, setCount] = useState(String(props.value ?? props.defaultValue ?? "").length);
   const textarea = (
@@ -22,8 +23,8 @@ export function Textarea({ className, maxLength, onChange, ...props }: TextareaH
   return (
     <div className="flex min-w-0 flex-col gap-1">
       {textarea}
-      <span className="self-end t-meta tabular-nums" aria-live="polite">
-        {count.toLocaleString("es-PE")} / {maxLength.toLocaleString("es-PE")}
+      <span className="self-end t-meta tabular-nums">
+        {count} / {maxLength}
       </span>
     </div>
   );

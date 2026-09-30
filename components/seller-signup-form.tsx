@@ -10,6 +10,9 @@ import {
   validateSellerProfileInput,
 } from "@/lib/auth/profile";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
 
 type FormState =
   | "idle"
@@ -174,66 +177,27 @@ export function SellerSignupForm() {
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block sm:col-span-2">
-          <span className="text-sm font-semibold text-ink">Nombre completo</span>
-          <input
-            name="fullName"
-            required
-            autoComplete="name"
-            className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
-            placeholder="Tu nombre"
-          />
-        </label>
+        <Field id="signup-full-name" label="Nombre completo" className="sm:col-span-2">
+          <Input name="fullName" required autoComplete="name" placeholder="Tu nombre" />
+        </Field>
 
-        <>
-            <label className="block">
-              <span className="text-sm font-semibold text-ink">Correo</span>
-              <input
-                type="email"
-                name="email"
-                required
-                autoComplete="email"
-                className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
-                placeholder="tu@email.com"
-              />
-            </label>
+        <Field id="signup-email" label="Correo">
+          <Input type="email" name="email" required autoComplete="email" placeholder="tu@email.com" />
+        </Field>
 
-            <label className="block">
-              <span className="text-sm font-semibold text-ink">Contrasena</span>
-              <input
-                type="password"
-                name="password"
-                required
-                minLength={6}
-                autoComplete="new-password"
-                className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
-                placeholder="Minimo 6 caracteres"
-              />
-            </label>
-        </>
+        <Field id="signup-password" label="Contrasena">
+          <Input type="password" name="password" required minLength={6} autoComplete="new-password" placeholder="Minimo 6 caracteres" />
+        </Field>
 
-        <label className="block">
-          <span className="text-sm font-semibold text-ink">WhatsApp</span>
-          <input
-            type="tel"
-            name="phone"
-            required
-            autoComplete="tel"
-            className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
-            placeholder="+51 999 999 999"
-          />
-        </label>
+        <Field id="signup-phone" label="WhatsApp">
+          <Input type="tel" name="phone" required autoComplete="tel" placeholder="+51 999 999 999" />
+        </Field>
 
         <LocationFields />
       </div>
 
-      <label className="flex gap-3 rounded-control border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-700">
-        <input
-          type="checkbox"
-          name="acceptedRules"
-          required
-          className="mt-1 h-4 w-4 rounded border-slate-300 text-ink"
-        />
+      <label className="flex gap-3 rounded-panel bg-canvas p-3 t-ui text-ink-2">
+        <input type="checkbox" name="acceptedRules" required className="mt-0.5 h-5 w-5 shrink-0 accent-ink" />
         <span>
           Acepto los{" "}
           <a href="/terminos" target="_blank" rel="noopener" className="link font-semibold">
@@ -249,37 +213,28 @@ export function SellerSignupForm() {
       </label>
 
       {message ? (
-        <div
-          className={`rounded-control px-3 py-2 text-sm ${
-            state === "sent"
-              ? "bg-accent-tint text-ink"
-              : "bg-amber-50 text-ink"
-          }`}
-        >
+        <Notice tone={state === "sent" ? "success" : "warning"}>
           <p>{message}</p>
           {state === "duplicate" ? (
-            <Link className="mt-2 inline-flex font-semibold text-ink hover:text-brass" href="/login">
+            <Link className="mt-2 inline-flex" href="/login">
               Ir a ingresar
             </Link>
           ) : null}
-        </div>
+        </Notice>
       ) : null}
 
-      <button
+      <Button
         type="submit"
-        disabled={state === "loading" || state === "submitting"}
-        className="inline-flex w-full items-center justify-center rounded-control bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        block
+        loading={state === "loading" || state === "submitting"}
+        loadingLabel={state === "submitting" ? "Creando cuenta..." : "Revisando sesión..."}
       >
-        {state === "submitting"
-          ? "Creando cuenta..."
-          : state === "loading"
-            ? "Revisando sesión..."
-            : "Crear cuenta Particular"}
-      </button>
+        Crear cuenta Particular
+      </Button>
 
-      <p className="text-center text-sm text-ink-2">
+      <p className="text-center t-ui text-ink-2">
         Ya tienes cuenta?{" "}
-        <Link className="font-semibold text-ink hover:text-brass" href="/login">
+        <Link className="link font-semibold" href="/login">
           Ingresa aqui
         </Link>
       </p>

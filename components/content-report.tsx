@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMarketplaceAccount } from "@/components/marketplace-account-provider";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import { buttonClasses } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { Field, Select } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
 
 type ReportTarget = "listing" | "store" | "review";
 
@@ -35,6 +37,7 @@ export function ContentReport({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
+  const fieldId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
   const restoreFocusRef = useRef(false);
@@ -83,7 +86,7 @@ export function ContentReport({
   }
 
   if (!account.ready) {
-    return <span className="text-meta text-ink-2">Comprobando acceso…</span>;
+    return <span className="t-meta">Comprobando acceso…</span>;
   }
 
   if (!account.authenticated) {
@@ -104,7 +107,7 @@ export function ContentReport({
           ref={feedbackRef}
           tabIndex={-1}
           role={failed ? "alert" : "status"}
-          className={failed ? "text-meta font-semibold text-danger" : "text-meta font-semibold text-ink-2"}
+          className={failed ? "t-meta font-semibold text-danger" : "t-meta font-semibold"}
         >
           {message}
         </p>
@@ -123,26 +126,24 @@ export function ContentReport({
           {label}
         </button>
       ) : (
-        <form onSubmit={submit} className="grid max-w-lg gap-3 rounded-control border border-subtle bg-canvas p-3">
-          <label className="grid gap-1 text-meta font-semibold text-ink-2">
-            Motivo
-            <select name="reason" required autoFocus className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
+        <form onSubmit={submit} className="grid max-w-lg gap-3 rounded-panel bg-canvas p-4">
+          <Field id={`${fieldId}-reason`} label="Motivo">
+            <Select name="reason" required autoFocus>
               {reasons.map((reason) => <option key={reason.value} value={reason.value}>{reason.label}</option>)}
-            </select>
-          </label>
-          <label className="grid gap-1 text-meta font-semibold text-ink-2">
-            Detalle opcional
-            <textarea name="detail" maxLength={1000} rows={3} className="rounded-control border border-line-strong bg-white px-3 py-2 text-sm text-ink" />
-          </label>
+            </Select>
+          </Field>
+          <Field id={`${fieldId}-detail`} label="Detalle opcional">
+            <Textarea name="detail" maxLength={1000} rows={3} />
+          </Field>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={busy} className={buttonClasses({ variant: "secondary" })}>
-              {busy ? "Enviando…" : "Enviar reporte"}
-            </button>
+            <Button type="submit" variant="secondary" loading={busy} loadingLabel="Enviando…">
+              Enviar reporte
+            </Button>
             <button type="button" onClick={() => {
               restoreFocusRef.current = true;
               setMessage("");
               setOpen(false);
-            }} className="min-h-10 rounded-control border border-line-strong px-4 py-2 text-meta font-semibold text-ink">
+            }} className={buttonClasses({ variant: "quiet" })}>
               Cancelar
             </button>
           </div>

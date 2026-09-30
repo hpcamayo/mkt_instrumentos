@@ -71,6 +71,21 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return <input className={cn(controlClasses, "h-11", className)} {...props} />;
 }
 
+// Native file picker styled as a control; the picker button reads as a secondary button.
+export function FileInput({ className, ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
+  return (
+    <input
+      type="file"
+      className={cn(
+        controlClasses,
+        "h-auto cursor-pointer py-2 text-[14px] leading-5 file:mr-3 file:h-9 file:cursor-pointer file:rounded-control file:border file:border-solid file:border-line-strong file:bg-surface file:px-3 file:font-semibold file:text-ink hover:file:bg-subtle",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 export function Select({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className="relative min-w-0">

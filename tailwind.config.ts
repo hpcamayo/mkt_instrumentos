@@ -31,25 +31,6 @@ const config: Config = {
         line: { deco: "#C8CDD6", strong: "#7D8694" },
         danger: { DEFAULT: "#B42318", tint: "#FDECEA" },
         warning: { tint: "#FBF8CC" },
-
-        // Legacy palette, removed once every file is on the roles above (UX-1 migration).
-        brass: "#f1ea16",
-        cedar: "#1a1d24",
-        mist: "#f1f3f5",
-        laria: {
-          black: "#050608",
-          ink: "#101217",
-          graphite: "#1a1d24",
-          white: "#ffffff",
-          cloud: "#f1f3f5",
-          fog: "#e9edf3",
-          steel: "#c8cdd6",
-          muted: "#9da3af",
-          text: "#101217",
-          "text-soft": "#4b5563",
-          yellow: "#f1ea16",
-          blue: "#6ba6ff",
-        },
       },
       borderColor: {
         DEFAULT: "#E9EDF3",

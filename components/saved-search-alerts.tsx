@@ -65,7 +65,7 @@ export function SavedSearchAlerts({ alerts }: { alerts: SavedSearchAlert[] }) {
                 <div className="flex flex-wrap gap-2">
                   <Link href={searchAlertPath(alert.search_filters)} className={buttonClasses({ variant: "secondary" })}>Abrir búsqueda</Link>
                   <button type="button" disabled={busy === alert.id} onClick={() => void mutate(alert, "status")} className={buttonClasses({ variant: "secondary" })}>{alert.status === "active" ? "Pausar" : "Reactivar"}</button>
-                  <button type="button" disabled={busy === alert.id} onClick={() => void mutate(alert, "delete")} className="min-h-11 rounded-control border border-danger/40 px-4 py-3 text-sm font-semibold text-danger disabled:opacity-50">Eliminar</button>
+                  <button type="button" disabled={busy === alert.id} onClick={() => void mutate(alert, "delete")} className={buttonClasses({ variant: "danger" })}>Eliminar</button>
                 </div>
               </div>
             </li>

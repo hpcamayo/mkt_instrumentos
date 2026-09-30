@@ -6,6 +6,7 @@ import { isSellerProfileComplete } from "@/lib/auth/profile";
 import { getAccountAnalytics } from "@/lib/account-analytics";
 import { AccountAnalyticsMetrics } from "@/components/account-analytics";
 import { buttonClasses } from "@/components/ui/button";
+import { noticeClassName } from "@/components/ui/notice";
 
 export const metadata = { title: "Mi cuenta" };
 
@@ -102,7 +103,7 @@ function StoreOwnerDashboard({ email, confirmed, store, inventory }: {
 
 function AccountNotices({ confirmed, welcomed, passwordUpdated, storeOwner }: { confirmed: boolean; welcomed: boolean; passwordUpdated: boolean; storeOwner: boolean }) {
   if (!confirmed && !welcomed && !passwordUpdated) return null;
-  return <section role="status" className="flex gap-3 rounded-panel border border-accent/40 bg-accent-tint p-4 text-sm text-ink"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /><div><p className="font-semibold">{passwordUpdated ? "Contraseña actualizada" : confirmed ? "Correo confirmado" : "Cuenta creada"}</p><p className="mt-1 leading-6">{passwordUpdated ? "Tu contraseña se actualizó correctamente." : storeOwner ? "Tu cuenta de Tienda está activa." : "Tu cuenta Particular está activa para comprar y vender."}</p></div></section>;
+  return <section role="status" className={noticeClassName("success")}><CheckCircle2 aria-hidden="true" /><div><p className="font-semibold">{passwordUpdated ? "Contraseña actualizada" : confirmed ? "Correo confirmado" : "Cuenta creada"}</p><p className="mt-1 leading-6">{passwordUpdated ? "Tu contraseña se actualizó correctamente." : storeOwner ? "Tu cuenta de Tienda está activa." : "Tu cuenta Particular está activa para comprar y vender."}</p></div></section>;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

@@ -7,6 +7,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -24,6 +25,9 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import type { Json } from "@/lib/supabase/database.types";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { buttonClasses } from "@/components/ui/button";
+import { noticeClassName } from "@/components/ui/notice";
+import { Field } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
 
 const ADMIN_DATE_FORMATTER = new Intl.DateTimeFormat("es-PE", {
   timeZone: "America/Lima",
@@ -163,6 +167,7 @@ export function AdminMutationControl({
   const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const reasonId = useId();
   const actionButtonRef = useRef<HTMLButtonElement>(null);
   const feedbackRef = useRef<HTMLParagraphElement>(null);
   const restoreFocusRef = useRef(false);
@@ -254,20 +259,11 @@ export function AdminMutationControl({
     return (
       <form
         onSubmit={submit}
-        className="grid gap-2 rounded-control border border-subtle bg-canvas p-3"
+        className="grid gap-2 rounded-panel bg-canvas p-3"
       >
-        <label className="grid gap-1 text-meta font-semibold text-ink-2">
-          {reasonLabel}
-          <textarea
-            name="reason"
-            required
-            minLength={3}
-            maxLength={500}
-            rows={3}
-            autoFocus
-            className="rounded-control border border-line-strong bg-white px-3 py-2 text-sm text-ink"
-          />
-        </label>
+        <Field id={reasonId} label={reasonLabel}>
+          <Textarea name="reason" required minLength={3} maxLength={500} rows={3} autoFocus />
+        </Field>
         {errorMessage ? (
           <p ref={feedbackRef} tabIndex={-1} role="alert" className="text-meta font-semibold text-danger">
             {errorMessage}
@@ -654,7 +650,7 @@ export function AdminWorkbench({
       </header>
 
       {notice ? (
-        <p ref={noticeRef} tabIndex={-1} role="status" className="rounded-control border border-accent/25 bg-accent/10 p-3 text-sm font-semibold text-ink">
+        <p ref={noticeRef} tabIndex={-1} role="status" className={noticeClassName("success", "font-semibold")}>
           {notice}
         </p>
       ) : null}

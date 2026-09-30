@@ -12,10 +12,10 @@ export default function StoreOwnerRegistrationPage() {
         <div className="space-y-4">
           <p className="t-micro text-ink-2">Cuenta de Tienda</p>
           <h1 className="t-page text-ink">Crea una identidad separada para tu negocio</h1>
-          <p className="text-sm leading-6 text-ink-2 sm:text-base">
+          <p className="t-body text-ink-2">
             Esta cuenta administra una sola tienda y su inventario. No convierte ni reemplaza una cuenta Particular existente.
           </p>
-          <div className="rounded-panel border border-subtle bg-white p-4 text-sm leading-6 text-ink-2">
+          <div className="rounded-panel border border-subtle bg-white p-4 t-ui text-ink-2">
             ¿Quieres publicar equipo usado a título personal? <Link href="/registro/vendedor" className="link font-semibold">Crea una cuenta Particular</Link>.
           </div>
         </div>

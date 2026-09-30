@@ -4,6 +4,8 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import { LocationFields } from "@/components/location-fields";
 import { normalizePeruRegion } from "@/lib/location";
 import { buttonClasses } from "@/components/ui/button";
+import { Field, Input, Select } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
 
 type InviteAccountType = "seller" | "store_owner";
 
@@ -41,16 +43,9 @@ function InviteField({
   placeholder?: string;
 }) {
   return (
-    <label className="grid gap-2 text-sm font-semibold text-ink-2">
-      {label}
-      <input
-        type={type}
-        name={name}
-        required={required}
-        placeholder={placeholder}
-        className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm font-semibold text-ink placeholder:text-ink-3"
-      />
-    </label>
+    <Field id={`invitar-${name}`} label={label}>
+      <Input type={type} name={name} required={required} placeholder={placeholder} />
+    </Field>
   );
 }
 
@@ -138,31 +133,19 @@ export function AdminInviteUser() {
         <InviteField label="Correo" name="email" type="email" required placeholder="persona@email.com" />
         <InviteField label="Nombre completo" name="fullName" required placeholder="Nombre de contacto" />
         <InviteField label="WhatsApp" name="phone" required placeholder="+51 999 999 999" />
-        <label className="grid gap-2 text-sm font-semibold text-ink-2">
-          Tipo de cuenta
-          <select
-            value={accountType}
-            onChange={(event) => setAccountType(event.target.value as InviteAccountType)}
-            className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm font-semibold text-ink"
-          >
+        <Field id="invitar-account-type" label="Tipo de cuenta">
+          <Select value={accountType} onChange={(event) => setAccountType(event.target.value as InviteAccountType)}>
             <option value="seller">Particular</option>
             <option value="store_owner">Store Owner</option>
-          </select>
-        </label>
+          </Select>
+        </Field>
         <LocationFields required={false} />
         {accountType === "store_owner" ? (
           <InviteField label="Nombre de tienda" name="storeName" placeholder="Nombre comercial" />
         ) : null}
-        <label className="grid gap-2 text-sm font-semibold text-ink-2 lg:col-span-2">
-          Notas internas
-          <textarea
-            name="notes"
-            rows={3}
-            maxLength={500}
-            placeholder="Origen del contacto o seguimiento pendiente"
-            className="rounded-control border border-line-strong bg-white px-3 py-2 text-sm font-semibold text-ink placeholder:text-ink-3"
-          />
-        </label>
+        <Field id="invitar-notes" label="Notas internas" className="lg:col-span-2">
+          <Textarea name="notes" rows={3} maxLength={500} placeholder="Origen del contacto o seguimiento pendiente" />
+        </Field>
 
         <div className="grid gap-3 lg:col-span-2">
           {message ? (
@@ -171,8 +154,8 @@ export function AdminInviteUser() {
               tabIndex={-1}
               role={failed ? "alert" : "status"}
               className={failed
-                ? "rounded-control bg-danger-tint p-3 text-sm font-semibold text-danger"
-                : "rounded-control border border-accent/25 bg-accent/10 p-3 text-sm font-semibold text-ink"}
+                ? "rounded-panel bg-danger-tint px-4 py-3 t-ui font-semibold text-danger"
+                : "rounded-panel bg-accent-tint px-4 py-3 t-ui font-semibold text-ink"}
             >
               <p>{message}</p>
               {result ? (

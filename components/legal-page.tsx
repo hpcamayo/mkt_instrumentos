@@ -70,7 +70,7 @@ export function LegalSection({ title, children }: { title: string; children: Rea
 // States the platform limitations required by the V1 contract in one place.
 export function MarketplaceLimitations() {
   return (
-    <div className="rounded-control border border-accent/25 bg-accent/10 p-4 text-sm leading-6 text-ink">
+    <div className="rounded-panel bg-accent-tint px-4 py-3 t-ui text-ink">
       <p className="font-semibold">Laria conecta compradores y vendedores. La compraventa se acuerda y se realiza directamente entre ellos.</p>
       <ul className="mt-2 grid list-disc gap-1 pl-5 text-ink-2">
         <li>Laria no procesa pagos ni cobra comisiones por venta.</li>

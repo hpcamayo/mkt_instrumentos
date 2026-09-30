@@ -9,6 +9,9 @@ import {
 } from "@/lib/auth/profile";
 import { normalizePeruRegion } from "@/lib/location";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
 
 type InviteMode = "seller" | "store";
 type FormState = "idle" | "submitting" | "error";
@@ -124,46 +127,31 @@ export function InviteProfileSetupForm({
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
-      <div className="rounded-control border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+      <div className="rounded-panel bg-canvas px-3 py-2 t-ui text-ink-2">
         <span className="font-semibold text-ink">Tipo de cuenta:</span>{" "}
         {content.accountLabel}
         {email ? (
           <>
             {" "}
-            <span className="text-slate-400">/</span> {email}
+            <span className="text-ink-3">/</span> {email}
           </>
         ) : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block sm:col-span-2">
-          <span className="text-sm font-semibold text-ink">
-            {content.nameLabel}
-          </span>
-          <input
+        <Field id="invite-full-name" label={content.nameLabel} className="sm:col-span-2">
+          <Input
             name="fullName"
             required
             autoComplete="name"
             defaultValue={initialValues.fullName}
-            className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
-            placeholder={
-              mode === "store" ? "Nombre de la persona responsable" : "Tu nombre"
-            }
+            placeholder={mode === "store" ? "Nombre de la persona responsable" : "Tu nombre"}
           />
-        </label>
+        </Field>
 
-        <label className="block">
-          <span className="text-sm font-semibold text-ink">WhatsApp</span>
-          <input
-            type="tel"
-            name="phone"
-            required
-            autoComplete="tel"
-            defaultValue={initialValues.phone}
-            className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
-            placeholder="+51 999 999 999"
-          />
-        </label>
+        <Field id="invite-phone" label="WhatsApp">
+          <Input type="tel" name="phone" required autoComplete="tel" defaultValue={initialValues.phone} placeholder="+51 999 999 999" />
+        </Field>
 
         <LocationFields
           defaultCity={initialValues.city}
@@ -171,19 +159,11 @@ export function InviteProfileSetupForm({
         />
       </div>
 
-      {message ? (
-        <p className="rounded-control bg-amber-50 px-3 py-2 text-sm text-ink">
-          {message}
-        </p>
-      ) : null}
+      {message ? <Notice tone="warning">{message}</Notice> : null}
 
-      <button
-        type="submit"
-        disabled={state === "submitting"}
-        className="inline-flex w-full items-center justify-center rounded-control bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {state === "submitting" ? "Guardando..." : content.submitLabel}
-      </button>
+      <Button type="submit" block loading={state === "submitting"} loadingLabel="Guardando...">
+        {content.submitLabel}
+      </Button>
     </form>
   );
 }

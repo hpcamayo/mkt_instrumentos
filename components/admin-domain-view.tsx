@@ -20,6 +20,9 @@ import type {
 import { adminValueLabel } from "@/lib/admin";
 import { buttonClasses } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { Field, Input, Select } from "@/components/ui/field";
+import { noticeClassName } from "@/components/ui/notice";
+import { Textarea } from "@/components/ui/textarea";
 
 const domainCopy: Record<AdminDomain, { title: string; description: string }> = {
   publicaciones: {
@@ -378,17 +381,17 @@ function LegacyLinker({ listings, users, onComplete }: { listings: AdminJsonItem
         </fieldset>
       </div>
       <div className="grid gap-3 rounded-panel bg-warning-tint p-4">
-        {selectedListing && selectedUser ? <p className="text-sm leading-6 text-ink">
+        {selectedListing && selectedUser ? <p className="t-ui text-ink">
           Vincularás <strong>{adminString(selectedListing, "title")}</strong>, cuyo contacto histórico es <strong>{adminString(selectedListing, "historical_contact_name")} · {adminString(selectedListing, "historical_whatsapp")}</strong>, con la cuenta <strong>{adminString(selectedUser, "full_name", "sin nombre")} · {adminString(selectedUser, "id")}</strong>. La publicación conservará su ID, estado, fotos e historial; desde entonces usará la resolución dinámica de contacto de la cuenta.
-        </p> : <p className="text-sm text-ink-2">Selecciona ambos registros para revisar la consecuencia exacta antes de confirmar.</p>}
-        <label className="grid gap-1 text-sm font-semibold text-ink">Nota de auditoría
-          <textarea name="note" required minLength={3} maxLength={500} rows={3} className="rounded-control border border-line-strong bg-white px-3 py-2 font-normal" />
-        </label>
-        <label className="flex gap-2 text-sm font-semibold text-ink">
-          <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+        </p> : <p className="t-ui text-ink-2">Selecciona ambos registros para revisar la consecuencia exacta antes de confirmar.</p>}
+        <Field id="legacy-link-note" label="Nota de auditoría">
+          <Textarea name="note" required minLength={3} maxLength={500} rows={3} />
+        </Field>
+        <label className="flex cursor-pointer items-start gap-2.5 py-1 t-ui font-semibold text-ink">
+          <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-ink" />
           Confirmo que revisé la publicación, el contacto histórico y la cuenta elegida. Esta acción no permite reasignación posterior.
         </label>
-        {message ? <p ref={messageRef} tabIndex={-1} role="alert" className="text-sm font-semibold text-danger">{message}</p> : null}
+        {message ? <p ref={messageRef} tabIndex={-1} role="alert" className="t-ui font-semibold text-danger">{message}</p> : null}
         <button type="submit" disabled={busy || !confirmed || !listingId || !userId} className={buttonClasses({ variant: "secondary", className: "w-fit" })}>
           {busy ? "Vinculando…" : "Vincular propietario"}
         </button>
@@ -477,43 +480,43 @@ export function AdminDomainView({
         <h1 className="mt-2 t-page text-ink">{copy.title}</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-2">{copy.description}</p>
       </header>
-      {notice ? <p ref={noticeRef} tabIndex={-1} role="status" className="rounded-control border border-accent/25 bg-accent/10 p-3 text-sm font-semibold text-ink">{notice}</p> : null}
+      {notice ? <p ref={noticeRef} tabIndex={-1} role="status" className={noticeClassName("success", "font-semibold")}>{notice}</p> : null}
       {loadError ? <p role="alert" className="rounded-control bg-danger-tint p-3 text-sm font-semibold text-danger">{loadError}</p> : null}
 
       {domain === "usuarios" ? <AdminInviteUser /> : null}
 
       <form method="get" className="grid gap-3 rounded-panel border border-subtle bg-white p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_repeat(3,minmax(150px,220px))_auto] xl:items-end">
-        <label className="grid gap-1 text-meta font-semibold text-ink-2">{domain === "legacy" ? "Buscar publicación legacy" : "Buscar"}
-          <input name="buscar" defaultValue={search} maxLength={100} placeholder={domain === "legacy" ? "Título, contacto, teléfono o ID" : "Nombre, título, ID o contexto"} className="min-h-11 rounded-control border border-line-strong px-3 text-sm text-ink" />
-        </label>
-        {domain === "legacy" ? <label className="grid gap-1 text-meta font-semibold text-ink-2">Buscar cuenta Particular
-          <input name="cuenta" defaultValue={userSearch} maxLength={100} placeholder="Nombre, teléfono o ID" className="min-h-11 rounded-control border border-line-strong px-3 text-sm text-ink" />
-        </label> : null}
-        {statusOptions[domain]?.length ? <label className="grid gap-1 text-meta font-semibold text-ink-2">Estado
-          <select name="estado" defaultValue={status} className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
+        <Field id="admin-buscar" label={domain === "legacy" ? "Buscar publicación legacy" : "Buscar"}>
+          <Input type="search" name="buscar" defaultValue={search} maxLength={100} placeholder={domain === "legacy" ? "Título, contacto, teléfono o ID" : "Nombre, título, ID o contexto"} />
+        </Field>
+        {domain === "legacy" ? <Field id="admin-cuenta" label="Buscar cuenta Particular">
+          <Input type="search" name="cuenta" defaultValue={userSearch} maxLength={100} placeholder="Nombre, teléfono o ID" />
+        </Field> : null}
+        {statusOptions[domain]?.length ? <Field id="admin-estado" label="Estado">
+          <Select name="estado" defaultValue={status}>
             <option value="">Todos</option>
             {statusOptions[domain]?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-        </label> : null}
-        {domain === "publicaciones" ? <label className="grid gap-1 text-meta font-semibold text-ink-2">Tipo de propietario
-          <select name="propietario" defaultValue={ownerType} className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
+          </Select>
+        </Field> : null}
+        {domain === "publicaciones" ? <Field id="admin-propietario" label="Tipo de propietario">
+          <Select name="propietario" defaultValue={ownerType}>
             <option value="">Todos</option>
             {ownerTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-        </label> : null}
+          </Select>
+        </Field> : null}
         {domain === "reportes" ? <>
-          <label className="grid gap-1 text-meta font-semibold text-ink-2">Tipo de objetivo
-            <select name="tipo" defaultValue={targetType} className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
+          <Field id="admin-tipo" label="Tipo de objetivo">
+            <Select name="tipo" defaultValue={targetType}>
               <option value="">Todos</option>
               {reportTargetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
-          </label>
-          <label className="grid gap-1 text-meta font-semibold text-ink-2">Motivo
-            <select name="motivo" defaultValue={reason} className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
+            </Select>
+          </Field>
+          <Field id="admin-motivo" label="Motivo">
+            <Select name="motivo" defaultValue={reason}>
               <option value="">Todos</option>
               {reportReasonOptions.map((value) => <option key={value} value={value}>{adminValueLabel(value)}</option>)}
-            </select>
-          </label>
+            </Select>
+          </Field>
         </> : null}
         <button type="submit" className={buttonClasses({ variant: "secondary" })}>Aplicar</button>
       </form>

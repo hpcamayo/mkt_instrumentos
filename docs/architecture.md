@@ -371,12 +371,11 @@ Tailwind includes content paths for:
 - `app/**/*`
 - `components/**/*`
 - `components_v0/**/*`
+- `lib/**/*` (the status dictionary in `lib/ui/status.ts` holds class names)
 
-Custom colors include legacy aliases such as `ink`, `brass`, `cedar`, and `mist`, shadcn-like tokens such as `background`, `foreground`, `card`, `primary`, `muted`, `border`, `input`, and `ring`, plus the current `laria.*` palette. Future UI work should prefer the Laria tokens and the rules in `docs/design-system.md`.
+Colors are named by role, not by hue: `frame`, `action`, `accent`, `ink` / `ink-2` / `ink-3`, `muted-dark`, `surface`, `canvas`, `subtle`, `line-deco` / `line-strong`, and the functional `danger`, `danger-tint` and `warning-tint`. The legacy aliases (`brass`, `cedar`, `mist`, `laria.*`) were removed in UX-1. Type, radius, elevation and focus rules, the shared components in `components/ui/` and the contrast rules are documented in `docs/design-system.md`.
 
-Current Laria visual tokens include `laria.yellow` (`#F1EA16`) for logo/major CTAs, `laria.blue` (`#6BA6FF`) for interface accents, `laria.black` (`#050608`) for header/footer/dark panels, `laria.cloud` (`#F1F3F5`) for light page backgrounds, `laria.fog` (`#E9EDF3`) and `laria.steel` (`#C8CDD6`) for borders, and `laria.muted` (`#9DA3AF`) for low-priority text.
-
-Public page width is centralized in `components/page-container.tsx`. `PageContainer` uses the listings-page rhythm: `max-w-[1600px]` with `px-3 sm:px-4 lg:px-5 xl:px-6`. It is used by the public header/footer, homepage sections, `/listados`, `/instrumentos/[slug]`, `/tiendas/[slug]`, `/vender`, and `/registrar-tienda`. Admin pages remain on their existing admin-specific wrapper.
+Public page width is centralized in `components/page-container.tsx`. `PageContainer` uses `max-w-page` (1440 px) with `px-4 sm:px-6 lg:px-8`. It is used by the public header/footer, homepage sections, `/listados`, `/instrumentos/[slug]`, `/tiendas/[slug]`, `/vender`, and `/registrar-tienda`. Admin pages remain on their existing admin-specific wrapper.
 
 Do not blindly replace working Tailwind 3 global CSS with v0/Tailwind 4 CSS. Merge variables/config deliberately.
 

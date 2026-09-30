@@ -10,7 +10,9 @@ import {
   validateSellerProfileInput,
 } from "@/lib/auth/profile";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import { buttonClasses } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
 
 type State = "checking" | "idle" | "submitting" | "sent" | "error";
 
@@ -113,37 +115,34 @@ export function StoreOwnerSignupForm() {
   return (
     <form onSubmit={handleSubmit} className="grid gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Nombre de la persona responsable" name="fullName" autoComplete="name" />
-        <Field label="Correo exclusivo de la cuenta" name="email" type="email" autoComplete="email" />
-        <Field label="Contraseña" name="password" type="password" autoComplete="new-password" minLength={6} />
-        <Field label="WhatsApp de contacto" name="phone" type="tel" autoComplete="tel" />
+        <SignupField label="Nombre de la persona responsable" name="fullName" autoComplete="name" />
+        <SignupField label="Correo exclusivo de la cuenta" name="email" type="email" autoComplete="email" />
+        <SignupField label="Contraseña" name="password" type="password" autoComplete="new-password" minLength={6} />
+        <SignupField label="WhatsApp de contacto" name="phone" type="tel" autoComplete="tel" />
         <LocationFields />
       </div>
       {message ? (
-        <div role="status" className={`rounded-control p-3 text-sm ${state === "sent" ? "bg-accent-tint text-ink" : "bg-warning-tint text-ink"}`}>
-          {message}
-        </div>
+        <Notice tone={state === "sent" ? "success" : "warning"}>{message}</Notice>
       ) : null}
-      <p className="text-meta leading-5 text-ink-2">
+      <p className="t-meta">
         Al crear la cuenta aceptas los{" "}
         <Link href="/terminos" target="_blank" className="link font-semibold">términos y reglas del marketplace</Link> y la{" "}
         <Link href="/privacidad" target="_blank" className="link font-semibold">política de privacidad</Link>.
       </p>
-      <button type="submit" disabled={state === "checking" || state === "submitting"} className={buttonClasses()}>
-        {state === "submitting" ? "Creando cuenta..." : "Crear cuenta de Tienda"}
-      </button>
-      <p className="text-center text-sm text-ink-2">
+      <Button type="submit" block loading={state === "checking" || state === "submitting"} loadingLabel={state === "submitting" ? "Creando cuenta..." : undefined}>
+        Crear cuenta de Tienda
+      </Button>
+      <p className="text-center t-ui text-ink-2">
         ¿Ya tienes una cuenta de Tienda? <Link href="/login?next=/mi-cuenta" className="link font-semibold">Ingresar</Link>
       </p>
     </form>
   );
 }
 
-function Field({ label, ...props }: { label: string; name: string; type?: string; autoComplete?: string; minLength?: number }) {
+function SignupField({ label, ...props }: { label: string; name: string; type?: string; autoComplete?: string; minLength?: number }) {
   return (
-    <label className="grid gap-2 text-sm font-semibold text-ink">
-      {label}
-      <input required className="h-11 rounded-control border border-line-strong px-3" {...props} />
-    </label>
+    <Field id={`tienda-${props.name}`} label={label}>
+      <Input required {...props} />
+    </Field>
   );
 }

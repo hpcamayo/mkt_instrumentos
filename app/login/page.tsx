@@ -11,13 +11,13 @@ export const metadata = {
 export default function LoginPage() {
   return (
     <PageContainer as="section" className="py-8 sm:py-12">
-      <div className="mx-auto max-w-md rounded-panel border border-slate-200 bg-white p-6">
+      <div className="mx-auto max-w-md rounded-panel border border-subtle bg-white p-6">
         <div className="space-y-2">
-          <p className="text-sm font-semibold uppercase tracking-wide text-brass">
+          <p className="t-micro text-ink-2">
             Cuenta Laria
           </p>
           <h1 className="t-page text-ink">Ingresar</h1>
-          <p className="text-sm leading-6 text-ink-2">
+          <p className="t-ui text-ink-2">
             Ingresa con tu contraseña o solicita un enlace seguro por correo.
           </p>
         </div>

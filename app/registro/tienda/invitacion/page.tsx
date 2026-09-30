@@ -88,13 +88,13 @@ export default async function StoreInvitePage() {
       description="Completa los datos de contacto de la persona responsable. La tienda necesitara aprobacion antes de publicar productos."
     >
       <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-        <div className="space-y-4 text-sm leading-6 text-ink-2">
+        <div className="space-y-4 t-ui text-ink-2">
           <p>
             Despues de activar tu cuenta, completa la solicitud de tienda. El
             equipo de Laria revisara la informacion antes de activar la pagina
             publica o permitir publicaciones de tienda.
           </p>
-          <div className="rounded-panel border border-slate-200 bg-white p-4">
+          <div className="rounded-panel border border-subtle bg-white p-4">
             <p className="font-semibold text-ink">Importante</p>
             <p className="mt-1">
               La activacion de cuenta no aprueba la tienda automaticamente. Un
@@ -103,7 +103,7 @@ export default async function StoreInvitePage() {
           </div>
         </div>
 
-        <div className="rounded-panel border border-slate-200 bg-white p-6">
+        <div className="rounded-panel border border-subtle bg-white p-6">
           <InviteProfileSetupForm
             mode="store"
             email={user.email ?? null}
@@ -145,16 +145,16 @@ function InvitePageShell({
   children: ReactNode;
 }) {
   return (
-    <PageContainer as="main" className="py-8 sm:py-12">
+    <PageContainer as="section" className="py-8 sm:py-12">
       <div className="mx-auto max-w-5xl space-y-8">
         <div className="max-w-2xl space-y-3">
-          <p className="text-sm font-semibold uppercase tracking-wide text-brass">
+          <p className="t-micro text-ink-2">
             {eyebrow}
           </p>
-          <h1 className="t-page text-ink sm:text-4xl">
+          <h1 className="t-page text-ink">
             {title}
           </h1>
-          <p className="text-sm leading-6 text-ink-2 sm:text-base">
+          <p className="t-body text-ink-2">
             {description}
           </p>
         </div>

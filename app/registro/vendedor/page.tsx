@@ -12,24 +12,24 @@ export default function SellerRegistrationPage() {
     <PageContainer as="section" className="py-8 sm:py-12">
       <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-4">
-          <p className="text-sm font-semibold uppercase tracking-wide text-brass">
+          <p className="t-micro text-ink-2">
             Cuenta Particular
           </p>
-          <h1 className="t-page text-ink sm:text-4xl">
+          <h1 className="t-page text-ink">
             Compra y vende con tu cuenta Laria
           </h1>
-          <p className="text-sm leading-6 text-ink-2 sm:text-base">
+          <p className="t-body text-ink-2">
             Guarda tus datos como Particular para comprar, publicar equipos
             usados y recibir contactos directos por WhatsApp.
           </p>
-          <div className="rounded-panel border border-slate-200 bg-white p-4 text-sm leading-6 text-ink-2">
+          <div className="rounded-panel border border-subtle bg-white p-4 t-ui text-ink-2">
             Tu perfil se guarda al registrarte. Después de confirmar el correo,
             entrarás directamente a Mi cuenta; no tendrás que completar los
             mismos datos otra vez.
           </div>
         </div>
 
-        <div className="rounded-panel border border-slate-200 bg-white p-6">
+        <div className="rounded-panel border border-subtle bg-white p-6">
           <SellerSignupForm />
         </div>
       </div>

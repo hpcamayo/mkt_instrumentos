@@ -24,7 +24,10 @@ import { PageNotice } from "@/components/page-notice";
 import { parseWholeSolPrice } from "@/lib/price";
 import { createPublicSubmission } from "@/lib/public-submission";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import { buttonClasses } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox, Field, Input, Select } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
@@ -237,13 +240,13 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
         </PageNotice>
       ) : null}
 
-      <div className="rounded-control border border-accent/25 bg-accent/10 p-4 text-sm leading-6 text-ink-2">
+      <Notice tone="info" role="note">
         {store ? <>
           Publicarás en <strong className="text-ink">{store.name}</strong>. {store.status === "active" && store.isVerified ? "Tu Tienda Verificada puede publicar inventario válido directamente." : "Este inventario quedará pendiente de moderación."}
         </> : <>
           Publicarás como <strong className="text-ink">{profile.fullName}</strong>. Las consultas llegarán al WhatsApp <strong className="text-ink">{profile.phone}</strong>. Puedes cambiar estos datos en <Link href="/mi-cuenta/perfil" className="link font-semibold">tu perfil</Link>.
         </>}
-      </div>
+      </Notice>
 
       <TextField label="Título" name="title" required />
       <div className="grid gap-5 sm:grid-cols-2">
@@ -257,22 +260,20 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
       </div>
 
       {attributeGroup ? (
-        <fieldset className="grid gap-4 rounded-control border border-subtle bg-canvas/60 p-4 sm:grid-cols-2">
-          <legend className="px-2 text-sm font-semibold text-ink">Características del instrumento <span className="font-normal text-ink-2">(opcionales)</span></legend>
+        <fieldset className="grid gap-4 rounded-panel border border-subtle bg-canvas p-4 sm:grid-cols-2">
+          <legend className="px-2 t-ui font-semibold text-ink">Características del instrumento <span className="font-normal text-ink-2">(opcionales)</span></legend>
           {attributeGroup.filters.map((filter) => <AttributeField key={filter.key} filter={filter} />)}
         </fieldset>
       ) : null}
 
-      <label className="grid gap-2 text-sm font-medium text-ink-2">
-        Descripción
-        <textarea name="description" required minLength={40} rows={6} className="rounded-control border border-line-strong bg-white px-3 py-3 text-sm text-ink transition" />
-        <span className="text-meta font-normal">Mínimo 40 caracteres. Describe el estado real, detalles y accesorios incluidos.</span>
-      </label>
+      <Field id="venta-description" label="Descripción" hint="Mínimo 40 caracteres. Describe el estado real, detalles y accesorios incluidos.">
+        <Textarea name="description" required minLength={40} rows={6} />
+      </Field>
 
       <section className="grid gap-4" aria-labelledby="photo-heading">
         <div>
-          <h2 id="photo-heading" className="text-sm font-semibold text-ink">Fotos</h2>
-          <p className="mt-1 text-meta leading-5 text-ink-2">Agrega entre 2 y 10 fotos. La primera será la imagen principal; incluye vistas frontal y posterior.</p>
+          <h2 id="photo-heading" className="t-section text-ink">Fotos</h2>
+          <p className="mt-1 t-meta">Agrega entre 2 y 10 fotos. La primera será la imagen principal; incluye vistas frontal y posterior.</p>
         </div>
         <label className={buttonClasses({ variant: "secondary", className: "w-fit cursor-pointer" })}>
           Agregar fotos
@@ -281,33 +282,33 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
         {photos.length ? (
           <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {photos.map((photo, index) => (
-              <li key={`${photo.name}-${photo.lastModified}-${index}`} className="rounded-control border border-subtle bg-white p-3">
-                <div className="relative aspect-[4/3] overflow-hidden rounded bg-canvas">
+              <li key={`${photo.name}-${photo.lastModified}-${index}`} className="rounded-panel border border-subtle bg-white p-3">
+                <div className="relative aspect-[4/3] overflow-hidden rounded-control bg-canvas">
                   <Image src={photoPreviews[index]} alt={`Vista previa ${index + 1}`} fill unoptimized className="object-contain" />
-                  {index === 0 ? <span className="absolute left-2 top-2 rounded bg-frame px-2 py-1 text-meta font-semibold text-white">Principal</span> : null}
+                  {index === 0 ? <span className="absolute left-2 top-2 rounded-tag bg-frame px-2 py-0.5 t-meta font-semibold text-white">Principal</span> : null}
                 </div>
-                <p className="mt-2 truncate text-meta text-ink-2">{photo.name}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-meta">
-                  <button type="button" disabled={index === 0} onClick={() => movePhoto(index, -1)} className="rounded border border-line-strong px-2 py-1.5 disabled:opacity-40">Anterior</button>
-                  <button type="button" disabled={index === photos.length - 1} onClick={() => movePhoto(index, 1)} className="rounded border border-line-strong px-2 py-1.5 disabled:opacity-40">Siguiente</button>
-                  <label className="cursor-pointer rounded border border-line-strong px-2 py-1.5 text-center">Reemplazar<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => replacePhoto(index, event)} /></label>
-                  <button type="button" disabled={photos.length <= MIN_LISTING_PHOTOS} onClick={() => removePhoto(index)} className="rounded border border-danger/40 px-2 py-1.5 text-danger disabled:opacity-40">Quitar</button>
+                <p className="mt-2 truncate t-meta">{photo.name}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button type="button" disabled={index === 0} onClick={() => movePhoto(index, -1)} className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11" })}>Anterior</button>
+                  <button type="button" disabled={index === photos.length - 1} onClick={() => movePhoto(index, 1)} className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11" })}>Siguiente</button>
+                  <label className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11 cursor-pointer" })}>Reemplazar<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => replacePhoto(index, event)} /></label>
+                  <button type="button" disabled={photos.length <= MIN_LISTING_PHOTOS} onClick={() => removePhoto(index)} className={buttonClasses({ variant: "danger", size: "sm", className: "min-h-11" })}>Quitar</button>
                 </div>
               </li>
             ))}
           </ol>
         ) : null}
-        <p className="text-meta font-semibold text-ink-2">{photos.length} de {MAX_LISTING_PHOTOS} fotos · máximo 5 MB por foto</p>
+        <p className="t-meta font-semibold">{photos.length} de {MAX_LISTING_PHOTOS} fotos · máximo 5 MB por foto</p>
       </section>
 
-      <label className="flex gap-3 rounded-control border border-subtle bg-canvas p-4 text-sm leading-6 text-ink-2">
+      <label className="flex gap-3 rounded-panel bg-canvas p-3 t-ui text-ink-2">
         <input type="checkbox" name="marketplace_rules" required className="mt-0.5 h-5 w-5 shrink-0 accent-ink" />
         <span>Acepto los <a href="/terminos" target="_blank" rel="noopener" className="link font-semibold">términos y reglas del marketplace</a>, confirmo que el artículo no está entre los <a href="/articulos-prohibidos" target="_blank" rel="noopener" className="link font-semibold">artículos prohibidos</a> y que la información y las fotos son reales. Laria no procesa pagos, no gestiona envíos ni garantiza transacciones.</span>
       </label>
 
-      <button type="submit" disabled={state === "submitting" || !supabase} className={buttonClasses({ block: true, className: "sm:w-auto" })}>
-        {state === "submitting" ? "Enviando..." : store?.status === "active" && store.isVerified ? "Publicar inventario" : "Enviar para revisión"}
-      </button>
+      <Button type="submit" block className="sm:w-auto sm:justify-self-start" disabled={!supabase} loading={state === "submitting"} loadingLabel="Enviando...">
+        {store?.status === "active" && store.isVerified ? "Publicar inventario" : "Enviar para revisión"}
+      </Button>
     </form>
   );
 }
@@ -318,10 +319,10 @@ function AttributeField({ filter }: { filter: AttributeFilter }) {
   if (filter.type === "multiselect") {
     return (
       <fieldset className="grid gap-2">
-        <legend className="text-sm font-semibold text-ink-2">{filter.label}</legend>
+        <legend className="t-ui font-semibold text-ink">{filter.label}</legend>
         <div className="grid gap-2">
           {filter.options?.map((option) => (
-            <label key={option.value} className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" name={`attribute:${filter.key}`} value={option.value} />{option.label}</label>
+            <Checkbox key={option.value} name={`attribute:${filter.key}`} value={option.value} label={option.label} className="min-h-0 py-1" />
           ))}
         </div>
       </fieldset>
@@ -347,16 +348,20 @@ function readAttributes(formData: FormData, instrumentType: string) {
   return attributes;
 }
 
+function fieldId(name: string) {
+  return `venta-${name.replace(/[^a-z0-9_-]/gi, "-")}`;
+}
+
 function TextField({ label, name, required }: { label: string; name: string; required?: boolean }) {
-  return <label className="grid gap-2 text-sm font-medium text-ink-2">{label}<input type="text" name={name} required={required} className="h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink transition" /></label>;
+  return <Field id={fieldId(name)} label={label}><Input type="text" name={name} required={required} /></Field>;
 }
 
 function NumberField({ label, name, required }: { label: string; name: string; required?: boolean }) {
-  return <label className="grid gap-2 text-sm font-medium text-ink-2">{label}<input type="text" inputMode="numeric" pattern="[0-9]+" name={name} required={required} className="h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink transition" /></label>;
+  return <Field id={fieldId(name)} label={label}><Input type="text" inputMode="numeric" pattern="[0-9]+" name={name} required={required} /></Field>;
 }
 
 function SelectField({ label, name, required, options, value, onChange, disabled }: { label: string; name: string; required?: boolean; options: readonly { value: string; label: string }[]; value?: string; onChange?: (value: string) => void; disabled?: boolean }) {
-  return <label className="grid gap-2 text-sm font-medium text-ink-2">{label}<select name={name} required={required} value={value} defaultValue={value === undefined ? "" : undefined} disabled={disabled} onChange={onChange ? (event) => onChange(event.target.value) : undefined} className="h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink transition disabled:bg-canvas"><option value="" disabled>Selecciona una opción</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
+  return <Field id={fieldId(name)} label={label}><Select name={name} required={required} value={value} defaultValue={value === undefined ? "" : undefined} disabled={disabled} onChange={onChange ? (event) => onChange(event.target.value) : undefined}><option value="" disabled>Selecciona una opción</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select></Field>;
 }
 
 function readRequired(formData: FormData, key: string) {

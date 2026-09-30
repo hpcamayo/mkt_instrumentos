@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { getInstrumentFilterGroup, type InstrumentFilterConfig } from "@/lib/instrument-filters";
 import {
   getInstrumentTypeOptions,
@@ -12,6 +12,8 @@ import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import type { Database } from "@/lib/supabase/database.types";
 import { buttonClasses } from "@/components/ui/button";
+import { Checkbox, Field, Input, Select } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
 
 type ListingRow = Database["public"]["Tables"]["listings"]["Row"];
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
@@ -92,10 +94,10 @@ function EditorField({
   maxLength?: number;
   autoFocus?: boolean;
 }) {
+  const id = useId();
   return (
-    <label className="grid gap-1 text-meta font-semibold text-ink-2">
-      {label}
-      <input
+    <Field id={id} label={label}>
+      <Input
         type={type}
         value={value}
         required={required}
@@ -103,9 +105,8 @@ function EditorField({
         maxLength={maxLength}
         autoFocus={autoFocus}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm font-semibold text-ink"
       />
-    </label>
+    </Field>
   );
 }
 
@@ -122,41 +123,30 @@ function EditorSelect({
   options: readonly { value: string; label: string }[];
   required?: boolean;
 }) {
+  const id = useId();
   return (
-    <label className="grid gap-1 text-meta font-semibold text-ink-2">
-      {label}
-      <select
-        value={value}
-        required={required}
-        onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm font-semibold text-ink"
-      >
+    <Field id={id} label={label}>
+      <Select value={value} required={required} onChange={(event) => onChange(event.target.value)}>
         <option value="">Selecciona una opción</option>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-      </select>
-    </label>
+      </Select>
+    </Field>
   );
 }
 
 function EditorTextarea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  const id = useId();
   return (
-    <label className="grid gap-1 text-meta font-semibold text-ink-2 sm:col-span-2">
-      {label}
-      <textarea
-        value={value}
-        rows={4}
-        maxLength={5000}
-        onChange={(event) => onChange(event.target.value)}
-        className="rounded-control border border-line-strong bg-white px-3 py-2 text-sm font-semibold text-ink"
-      />
-    </label>
+    <Field id={id} label={label} className="sm:col-span-2">
+      <Textarea value={value} rows={4} maxLength={5000} onChange={(event) => onChange(event.target.value)} />
+    </Field>
   );
 }
 
 function EditorError({ message, errorRef }: { message: string; errorRef: React.RefObject<HTMLParagraphElement | null> }) {
   if (!message) return null;
   return (
-    <p ref={errorRef} tabIndex={-1} role="alert" className="rounded-control bg-danger-tint p-3 text-sm font-semibold text-danger sm:col-span-2">
+    <p ref={errorRef} tabIndex={-1} role="alert" className="rounded-panel bg-danger-tint px-4 py-3 t-ui font-semibold text-danger sm:col-span-2">
       {message}
     </p>
   );
@@ -178,7 +168,7 @@ function ListingAttributeFields({ listing, onChange }: { listing: EditableListin
   }
 
   return (
-    <fieldset className="grid gap-3 rounded-control border border-subtle bg-canvas/60 p-3 sm:col-span-2">
+    <fieldset className="grid gap-3 rounded-panel border border-subtle bg-canvas p-3 sm:col-span-2">
       <legend className="px-1 t-micro text-ink-2">Atributos del instrumento</legend>
       <div className="grid gap-3 sm:grid-cols-2">
         {filters.map((filter) => {
@@ -186,22 +176,21 @@ function ListingAttributeFields({ listing, onChange }: { listing: EditableListin
           if (filter.type === "multiselect") {
             const selected = Array.isArray(raw) ? raw.map(String) : [];
             return (
-              <fieldset key={filter.key} className="grid gap-2 rounded-control border border-subtle bg-white p-3">
-                <legend className="px-1 text-meta font-semibold text-ink-2">{filter.label}</legend>
+              <fieldset key={filter.key} className="grid gap-1 rounded-panel border border-subtle bg-white p-3">
+                <legend className="px-1 t-ui font-semibold text-ink">{filter.label}</legend>
                 {filter.options?.map((option) => (
-                  <label key={option.value} className="flex items-center gap-2 text-meta font-semibold text-ink">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(option.value)}
-                      onChange={(event) => update(
-                        filter.key,
-                        event.target.checked
-                          ? [...selected, option.value]
-                          : selected.filter((value) => value !== option.value),
-                      )}
-                    />
-                    {option.label}
-                  </label>
+                  <Checkbox
+                    key={option.value}
+                    label={option.label}
+                    className="min-h-0 py-1"
+                    checked={selected.includes(option.value)}
+                    onChange={(event) => update(
+                      filter.key,
+                      event.target.checked
+                        ? [...selected, option.value]
+                        : selected.filter((value) => value !== option.value),
+                    )}
+                  />
                 ))}
               </fieldset>
             );
@@ -379,7 +368,7 @@ export function AdminListingEditor({
   }
 
   return (
-    <form onSubmit={save} className="grid gap-3 rounded-control border border-accent/25 bg-accent/5 p-4 sm:grid-cols-2">
+    <form onSubmit={save} className="grid gap-3 rounded-panel border border-subtle bg-canvas p-4 sm:grid-cols-2">
       <h3 className="font-semibold text-ink sm:col-span-2">Editar datos básicos</h3>
       {!record ? <p className="text-sm text-ink-2 sm:col-span-2">{busy ? "Cargando…" : "No hay datos editables disponibles."}</p> : <>
         <EditorField label="Título" value={record.title} required autoFocus onChange={(title) => patch({ title })} />
@@ -541,7 +530,7 @@ export function AdminStoreEditor({
   }
 
   return (
-    <form onSubmit={save} className="grid gap-3 rounded-control border border-accent/25 bg-accent/5 p-4 sm:grid-cols-2">
+    <form onSubmit={save} className="grid gap-3 rounded-panel border border-subtle bg-canvas p-4 sm:grid-cols-2">
       <h3 className="font-semibold text-ink sm:col-span-2">Editar datos de negocio y contacto</h3>
       {!record ? <p className="text-sm text-ink-2 sm:col-span-2">{busy ? "Cargando…" : "No hay datos editables disponibles."}</p> : <>
         <EditorField label="Nombre comercial" value={record.name} required autoFocus onChange={(name) => patch({ name })} />

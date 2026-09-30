@@ -12,7 +12,10 @@ import {
   type TransactionDetail,
   type TransactionReview,
 } from "@/lib/transactions";
-import { buttonClasses } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { Field, Select } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
+import { Textarea } from "@/components/ui/textarea";
 
 export function TransactionDetailView({
   detail,
@@ -100,9 +103,9 @@ export function TransactionDetailView({
           </div>
           <Link href={`/instrumentos/${detail.listing_slug}`} className={buttonClasses({ variant: "secondary" })}>Ver publicación vendida</Link>
         </div>
-        <div className="mt-5 rounded-control border border-accent/25 bg-accent/10 p-4 text-sm leading-6 text-ink-2">
+        <Notice tone="info" role="note" className="mt-5">
           La verificación significa únicamente que vendedor y comprador reconocen una relación originada en Laria. No verifica pago, entrega, envío, autenticidad ni condición.
-        </div>
+        </Notice>
       </section>
 
       {detail.role === "seller" && detail.state !== "verified" ? (
@@ -170,19 +173,18 @@ function SellerAttribution({
         <div className="mt-4 grid gap-5 lg:grid-cols-2">
           <div className="rounded-control border border-subtle p-4">
             <h3 className="font-semibold text-ink">Me contactó por Laria</h3>
-            <p className="mt-2 text-meta leading-5 text-ink-2">Solo se muestran cuentas autenticadas que abrieron WhatsApp desde esta publicación antes de marcarla vendida.</p>
+            <p className="mt-2 t-meta">Solo se muestran cuentas autenticadas que abrieron WhatsApp desde esta publicación antes de marcarla vendida.</p>
             {candidates.length ? (
               <>
-                <label className="mt-4 grid gap-2 text-sm font-semibold text-ink-2">
-                  Contacto elegible
-                  <select value={selectedBuyer} onChange={(event) => onSelect(event.target.value)} className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-ink">
+                <Field id="atribucion-comprador" label="Contacto elegible" className="mt-4">
+                  <Select value={selectedBuyer} onChange={(event) => onSelect(event.target.value)}>
                     {candidates.map((candidate) => (
                       <option key={candidate.buyer_user_id} value={candidate.buyer_user_id}>
                         {candidate.display_name || "Cuenta de Laria"} · contacto {formatDateTime(candidate.last_contact_at)}
                       </option>
                     ))}
-                  </select>
-                </label>
+                  </Select>
+                </Field>
                 <button type="button" disabled={busy || !selectedBuyer} onClick={onCreate} className={buttonClasses({ className: "mt-4" })}>Solicitar confirmación</button>
               </>
             ) : <p className="mt-4 text-sm font-semibold text-ink-2">No hay otros contactos autenticados elegibles para esta publicación.</p>}
@@ -229,27 +231,24 @@ function ReviewSection({
         Plazo: hasta {formatDateTime(detail.review_deadline!)}. Las reseñas son doble ciego: se revelan cuando ambas partes envían o al terminar los 10 días.
       </p>
       {detail.own_review ? (
-        <div className="mt-4 rounded-control border border-accent/25 bg-accent/10 p-4">
-          <p className="link font-semibold">Tu reseña fue enviada</p>
-          <p className="mt-1 text-sm text-ink-2">{stars(detail.own_review.rating)}{detail.own_review.comment ? ` · ${detail.own_review.comment}` : ""}</p>
-          <p className="mt-2 text-meta text-ink-2">No puede editarse ni eliminarse libremente.</p>
-        </div>
+        <Notice tone="success" role="note" title="Tu reseña fue enviada" className="mt-4">
+          <p className="mt-1 text-ink-2">{stars(detail.own_review.rating)}{detail.own_review.comment ? ` · ${detail.own_review.comment}` : ""}</p>
+          <p className="mt-2 t-meta">No puede editarse ni eliminarse libremente.</p>
+        </Notice>
       ) : detail.review_window_open ? (
         <form onSubmit={submitReview} className="mt-5 grid gap-4">
-          <label className="grid max-w-xs gap-2 text-sm font-semibold text-ink-2">
-            Calificación
-            <select name="rating" required defaultValue="" className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-ink">
+          <Field id="resena-rating" label="Calificación" className="max-w-xs">
+            <Select name="rating" required defaultValue="">
               <option value="" disabled>Selecciona 1 a 5</option>
               {[1, 2, 3, 4, 5].map((rating) => <option key={rating} value={rating}>{rating} {rating === 1 ? "estrella" : "estrellas"}</option>)}
-            </select>
-          </label>
-          <label className="grid gap-2 text-sm font-semibold text-ink-2">
-            Comentario opcional
-            <textarea name="comment" maxLength={2000} rows={4} className="rounded-control border border-line-strong bg-white px-3 py-2 text-ink" />
-          </label>
-          <button type="submit" disabled={busy} className={buttonClasses({ className: "w-fit" })}>Enviar reseña final</button>
+            </Select>
+          </Field>
+          <Field id="resena-comment" label="Comentario opcional">
+            <Textarea name="comment" maxLength={2000} rows={4} />
+          </Field>
+          <Button type="submit" className="w-fit" loading={busy}>Enviar reseña final</Button>
         </form>
-      ) : <p className="mt-4 rounded-control border border-subtle bg-canvas p-4 text-sm font-semibold text-ink-2">El plazo para enviar una reseña terminó.</p>}
+      ) : <p className="mt-4 rounded-panel bg-canvas px-4 py-3 t-ui font-semibold text-ink-2">El plazo para enviar una reseña terminó.</p>}
 
       {detail.visible_reviews.length ? (
         <div className="mt-6 grid gap-3">
@@ -293,15 +292,15 @@ function VisibleReview({
       <button type="button" onClick={() => setReportOpen((current) => !current)} className="link mt-3 t-meta font-semibold">Reportar reseña</button>
       {reportOpen ? (
         <form onSubmit={report} className="mt-3 grid gap-3 rounded-control bg-canvas p-3">
-          <label className="grid gap-1 text-meta font-semibold text-ink-2">Motivo
-            <select name="reason" className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
+          <Field id={`reporte-resena-${review.id}-reason`} label="Motivo">
+            <Select name="reason">
               <option value="acoso">Acoso</option><option value="contenido_inapropiado">Contenido inapropiado</option><option value="informacion_falsa">Información falsa</option><option value="spam">Spam</option><option value="otro">Otro</option>
-            </select>
-          </label>
-          <label className="grid gap-1 text-meta font-semibold text-ink-2">Detalle opcional
-            <textarea name="detail" maxLength={1000} rows={2} className="rounded-control border border-line-strong bg-white px-3 py-2 text-sm text-ink" />
-          </label>
-          <button type="submit" disabled={busy} className={buttonClasses({ variant: "secondary", className: "w-fit" })}>Enviar reporte</button>
+            </Select>
+          </Field>
+          <Field id={`reporte-resena-${review.id}-detail`} label="Detalle opcional">
+            <Textarea name="detail" maxLength={1000} rows={2} />
+          </Field>
+          <Button type="submit" variant="secondary" className="w-fit" loading={busy}>Enviar reporte</Button>
         </form>
       ) : null}
     </article>

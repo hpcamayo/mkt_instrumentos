@@ -7,7 +7,8 @@ import { PageNotice } from "@/components/page-notice";
 import { upsertSellerProfile, upsertStoreOwnerProfile } from "@/lib/auth/profile";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import { buttonClasses } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
 
 export function ProfileEditForm({
   userId,
@@ -52,19 +53,17 @@ export function ProfileEditForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-5">
-      <label className="grid gap-2 text-sm font-semibold text-ink-2">
-        Nombre completo
-        <input name="fullName" required defaultValue={profile.fullName} autoComplete="name" className="h-11 rounded-control border border-line-strong px-3 text-ink" />
-      </label>
-      <label className="grid gap-2 text-sm font-semibold text-ink-2">
-        WhatsApp
-        <input name="phone" required defaultValue={profile.phone} inputMode="tel" autoComplete="tel" className="h-11 rounded-control border border-line-strong px-3 text-ink" />
-      </label>
+      <Field id="perfil-full-name" label="Nombre completo">
+        <Input name="fullName" required defaultValue={profile.fullName} autoComplete="name" />
+      </Field>
+      <Field id="perfil-phone" label="WhatsApp">
+        <Input name="phone" required defaultValue={profile.phone} inputMode="tel" autoComplete="tel" />
+      </Field>
       <div className="grid gap-5 sm:grid-cols-2">
         <LocationFields defaultCity={profile.city} defaultRegion={profile.region} />
       </div>
       {message ? <PageNotice kind="error" message={message} /> : null}
-      <button type="submit" disabled={busy} className={buttonClasses({ block: true, className: "sm:w-auto" })}>{busy ? "Guardando..." : "Guardar perfil"}</button>
+      <Button type="submit" block className="sm:w-auto sm:justify-self-start" loading={busy} loadingLabel="Guardando...">Guardar perfil</Button>
     </form>
   );
 }

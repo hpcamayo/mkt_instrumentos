@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 export function VerifiedIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" className={cn("h-4 w-4 shrink-0", className)} aria-hidden focusable="false">
-      <circle cx="10" cy="10" r="10" fill="#6BA6FF" />
-      <path d="M5.8 10.3l2.7 2.7 5.7-6" fill="none" stroke="#101217" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="10" cy="10" r="10" className="fill-accent" />
+      <path d="M5.8 10.3l2.7 2.7 5.7-6" fill="none" className="stroke-ink" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

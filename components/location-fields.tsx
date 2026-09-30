@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 import { citySuggestions, peruRegions } from "@/lib/location";
+import { Field, Input } from "@/components/ui/field";
 
 type LocationFieldsProps = {
   cityName?: string;
@@ -24,41 +25,37 @@ export function LocationFields({
 
   return (
     <>
-      <label className="block">
-        <span className="text-sm font-semibold text-ink">Ciudad</span>
-        <input
+      <Field id={`${id}-city`} label="Ciudad">
+        <Input
           name={cityName}
           required={required}
           autoComplete="address-level2"
           defaultValue={defaultCity}
           list={cityListId}
-          className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
           placeholder="Buscar ciudad o escribir manualmente"
         />
-        <datalist id={cityListId}>
-          {citySuggestions.map((city) => (
-            <option key={city} value={city} />
-          ))}
-        </datalist>
-      </label>
+      </Field>
+      <datalist id={cityListId}>
+        {citySuggestions.map((city) => (
+          <option key={city} value={city} />
+        ))}
+      </datalist>
 
-      <label className="block">
-        <span className="text-sm font-semibold text-ink">Región</span>
-        <input
+      <Field id={`${id}-region`} label="Región">
+        <Input
           name={regionName}
           required={required}
           autoComplete="address-level1"
           defaultValue={defaultRegion}
           list={regionListId}
-          className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
           placeholder="Buscar región"
         />
-        <datalist id={regionListId}>
-          {peruRegions.map((region) => (
-            <option key={region} value={region} />
-          ))}
-        </datalist>
-      </label>
+      </Field>
+      <datalist id={regionListId}>
+        {peruRegions.map((region) => (
+          <option key={region} value={region} />
+        ))}
+      </datalist>
     </>
   );
 }

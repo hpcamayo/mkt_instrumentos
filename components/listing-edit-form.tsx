@@ -18,7 +18,10 @@ import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import { buttonClasses } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { Checkbox, Field, Input, Select } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
+import { Textarea } from "@/components/ui/textarea";
 
 type ExistingPhoto = {
   id: string;
@@ -339,12 +342,12 @@ export function ListingEditForm({
     <form onSubmit={handleSubmit} aria-busy={busy} className="grid gap-6 rounded-panel border border-subtle bg-white p-5 sm:p-6">
       {message ? (
         <PageNotice kind={state === "error" ? "error" : "success"} message={message}>
-          {state === "success" ? <Link href={returnHref} className="mt-3 inline-block font-semibold underline underline-offset-4">Volver al inventario</Link> : null}
+          {state === "success" ? <Link href={returnHref} className="link mt-3 inline-block font-semibold">Volver al inventario</Link> : null}
         </PageNotice>
       ) : null}
 
       <fieldset disabled={busy} className="grid min-w-0 gap-6">
-      <div className="rounded-control border border-accent/25 bg-accent/10 p-4 text-sm leading-6 text-ink-2">{moderatedNote}</div>
+      <Notice tone="info" role="note">{moderatedNote}</Notice>
       <TextField label="Título" name="title" defaultValue={listing.title} />
       <div className="grid gap-5 sm:grid-cols-2">
         <SelectField label="Categoría" name="category" value={category} onChange={(value) => { setCategory(value); const options = getInstrumentTypeOptions(value); if (!options.some((option) => option.value === instrumentType)) setInstrumentType(options[0]?.value ?? ""); }} options={categoryOptions} />
@@ -352,38 +355,38 @@ export function ListingEditForm({
         <TextField label="Marca" name="brand" defaultValue={listing.brand ?? ""} />
         <TextField label="Modelo" name="model" defaultValue={listing.model ?? ""} />
         <SelectField label="Condición" name="condition" defaultValue={listing.condition ?? ""} options={conditionOptions.map((condition) => ({ value: condition, label: condition }))} />
-        <label className="grid gap-2 text-sm font-medium text-ink-2">Precio en soles<input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" required defaultValue={listing.price_pen ?? ""} className="h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink" /></label>
+        <Field id="editar-price_pen" label="Precio en soles"><Input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" required defaultValue={listing.price_pen ?? ""} /></Field>
         <LocationFields defaultCity={listing.city} defaultRegion={listing.region} />
       </div>
       {attributeGroup ? (
-        <fieldset className="grid gap-4 rounded-control border border-subtle bg-canvas/60 p-4 sm:grid-cols-2">
-          <legend className="px-2 text-sm font-semibold text-ink">Características del instrumento</legend>
+        <fieldset className="grid gap-4 rounded-panel border border-subtle bg-canvas p-4 sm:grid-cols-2">
+          <legend className="px-2 t-ui font-semibold text-ink">Características del instrumento</legend>
           {attributeGroup.filters.map((filter) => <AttributeField key={filter.key} filter={filter} value={listing.attributes?.[filter.key]} />)}
         </fieldset>
       ) : null}
-      <label className="grid gap-2 text-sm font-medium text-ink-2">Descripción<textarea name="description" required minLength={40} rows={6} defaultValue={listing.description ?? ""} className="rounded-control border border-line-strong bg-white px-3 py-3 text-sm text-ink" /></label>
+      <Field id="editar-description" label="Descripción" hint="Mínimo 40 caracteres. Describe el estado real, detalles y accesorios incluidos."><Textarea name="description" required minLength={40} rows={6} defaultValue={listing.description ?? ""} /></Field>
 
       <section className="grid gap-4" aria-labelledby="edit-photo-heading">
-        <div><h2 id="edit-photo-heading" className="text-sm font-semibold text-ink">Fotos</h2><p className="mt-1 text-meta text-ink-2">Entre 2 y 10. La primera es la principal. Las fotos propuestas no reemplazan la versión pública antes de aprobarse.</p></div>
+        <div><h2 id="edit-photo-heading" className="t-section text-ink">Fotos</h2><p className="mt-1 t-meta">Entre 2 y 10. La primera es la principal. Las fotos propuestas no reemplazan la versión pública antes de aprobarse.</p></div>
         <div className="flex flex-wrap gap-3"><label className={buttonClasses({ variant: "secondary", className: "w-fit cursor-pointer" })}>Agregar fotos<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} className="sr-only" onChange={addPhotos} /></label>{hasPendingRevision && (listing.status === "approved" || listing.status === "hidden") ? <button type="button" disabled={busy} onClick={restoreLivePhotos} className={buttonClasses({ variant: "secondary" })}>Restaurar fotos aprobadas</button> : null}</div>
         <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {photos.map((photo, index) => (
-            <li key={photo.key} className="rounded-control border border-subtle p-3">
-              <div className="relative aspect-[4/3] overflow-hidden rounded bg-canvas"><Image src={photo.kind === "existing" ? photo.imageUrl : photo.previewUrl} alt={`Foto ${index + 1}`} fill sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw" unoptimized={photo.kind === "new" || (photo.kind === "existing" && photo.imageUrl.startsWith("/api/listing-images/"))} className="object-contain" />{index === 0 ? <span className="absolute left-2 top-2 rounded bg-frame px-2 py-1 text-meta font-semibold text-white">Principal</span> : null}</div>
-              <p className="mt-2 text-meta font-semibold text-ink-2">Foto {index + 1} de {photos.length}{index === 0 ? " · Principal" : ""}</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-meta">
-                <button type="button" disabled={busy || index === 0} aria-label={`Mover foto ${index + 1} antes`} onClick={() => movePhoto(index, -1)} className="min-h-11 rounded border border-line-strong px-2 py-1.5 disabled:opacity-40">Anterior</button>
-                <button type="button" disabled={busy || index === photos.length - 1} aria-label={`Mover foto ${index + 1} después`} onClick={() => movePhoto(index, 1)} className="min-h-11 rounded border border-line-strong px-2 py-1.5 disabled:opacity-40">Siguiente</button>
-                <label className="flex min-h-11 cursor-pointer items-center justify-center rounded border border-line-strong px-2 py-1.5 text-center">Reemplazar<input type="file" disabled={busy} aria-label={`Reemplazar foto ${index + 1}`} accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => replacePhoto(index, event)} /></label>
-                <button type="button" disabled={busy} aria-label={`Quitar foto ${index + 1}`} onClick={() => removePhoto(index)} className="min-h-11 rounded border border-danger/40 px-2 py-1.5 text-danger disabled:opacity-40">Quitar</button>
+            <li key={photo.key} className="rounded-panel border border-subtle bg-white p-3">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-control bg-canvas"><Image src={photo.kind === "existing" ? photo.imageUrl : photo.previewUrl} alt={`Foto ${index + 1}`} fill sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw" unoptimized={photo.kind === "new" || (photo.kind === "existing" && photo.imageUrl.startsWith("/api/listing-images/"))} className="object-contain" />{index === 0 ? <span className="absolute left-2 top-2 rounded-tag bg-frame px-2 py-0.5 t-meta font-semibold text-white">Principal</span> : null}</div>
+              <p className="mt-2 t-meta font-semibold">Foto {index + 1} de {photos.length}{index === 0 ? " · Principal" : ""}</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" disabled={busy || index === 0} aria-label={`Mover foto ${index + 1} antes`} onClick={() => movePhoto(index, -1)} className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11" })}>Anterior</button>
+                <button type="button" disabled={busy || index === photos.length - 1} aria-label={`Mover foto ${index + 1} después`} onClick={() => movePhoto(index, 1)} className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11" })}>Siguiente</button>
+                <label className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11 cursor-pointer" })}>Reemplazar<input type="file" disabled={busy} aria-label={`Reemplazar foto ${index + 1}`} accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => replacePhoto(index, event)} /></label>
+                <button type="button" disabled={busy} aria-label={`Quitar foto ${index + 1}`} onClick={() => removePhoto(index)} className={buttonClasses({ variant: "danger", size: "sm", className: "min-h-11" })}>Quitar</button>
               </div>
             </li>
           ))}
         </ol>
       </section>
       </fieldset>
-      {busy ? <p role="status" aria-live="polite" className="text-sm font-semibold text-ink-2">{progress}</p> : null}
-      <div className="flex flex-wrap gap-3"><button type="submit" disabled={busy} className={buttonClasses()}>{busy ? "Guardando…" : "Guardar cambios"}</button><Link href={returnHref} className={buttonClasses({ variant: "secondary" })}>Cancelar</Link></div>
+      {busy ? <p role="status" aria-live="polite" className="t-ui font-semibold text-ink-2">{progress}</p> : null}
+      <div className="flex flex-wrap gap-3"><Button type="submit" loading={busy} loadingLabel="Guardando…">Guardar cambios</Button><Link href={returnHref} className={buttonClasses({ variant: "secondary" })}>Cancelar</Link></div>
     </form>
   );
 }
@@ -402,17 +405,17 @@ type AttributeFilter = NonNullable<ReturnType<typeof getInstrumentFilterGroup>>[
 function AttributeField({ filter, value }: { filter: AttributeFilter; value: unknown }) {
   if (filter.type === "multiselect") {
     const selected = Array.isArray(value) ? value : [];
-    return <fieldset className="grid gap-2"><legend className="text-sm font-semibold text-ink-2">{filter.label}</legend>{filter.options?.map((option) => <label key={option.value} className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" name={`attribute:${filter.key}`} value={option.value} defaultChecked={selected.includes(option.value)} />{option.label}</label>)}</fieldset>;
+    return <fieldset className="grid gap-1"><legend className="t-ui font-semibold text-ink">{filter.label}</legend>{filter.options?.map((option) => <Checkbox key={option.value} name={`attribute:${filter.key}`} value={option.value} defaultChecked={selected.includes(option.value)} label={option.label} className="min-h-0 py-1" />)}</fieldset>;
   }
   return <SelectField label={filter.label} name={`attribute:${filter.key}`} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} options={filter.options ?? []} required={false} />;
 }
 
 function TextField({ label, name, defaultValue }: { label: string; name: string; defaultValue: string }) {
-  return <label className="grid gap-2 text-sm font-medium text-ink-2">{label}<input type="text" name={name} required defaultValue={defaultValue} className="h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink" /></label>;
+  return <Field id={`editar-${name}`} label={label}><Input type="text" name={name} required defaultValue={defaultValue} /></Field>;
 }
 
 function SelectField({ label, name, options, value, defaultValue, onChange, required = true }: { label: string; name: string; options: readonly { value: string; label: string }[]; value?: string; defaultValue?: string; onChange?: (value: string) => void; required?: boolean }) {
-  return <label className="grid gap-2 text-sm font-medium text-ink-2">{label}<select name={name} required={required} value={value} defaultValue={value === undefined ? defaultValue : undefined} onChange={onChange ? (event) => onChange(event.target.value) : undefined} className="h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink"><option value="">Selecciona una opción</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
+  return <Field id={`editar-${name.replace(/[^a-z0-9_-]/gi, "-")}`} label={label}><Select name={name} required={required} value={value} defaultValue={value === undefined ? defaultValue : undefined} onChange={onChange ? (event) => onChange(event.target.value) : undefined}><option value="">Selecciona una opción</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select></Field>;
 }
 
 function readAttributes(formData: FormData, instrumentType: string) {

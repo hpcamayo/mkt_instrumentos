@@ -6,7 +6,8 @@ import { BellPlus } from "lucide-react";
 import { useMarketplaceAccount } from "@/components/marketplace-account-provider";
 import { PageNotice } from "@/components/page-notice";
 import { searchAlertPath, searchAlertSummary, type SearchAlertFilters, type SearchAlertFrequency } from "@/lib/search-alerts";
-import { buttonClasses } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { Field, Select } from "@/components/ui/field";
 
 export function CreateSearchAlert({ filters }: { filters: SearchAlertFilters }) {
   const { authenticated, ready } = useMarketplaceAccount();
@@ -48,17 +49,17 @@ export function CreateSearchAlert({ filters }: { filters: SearchAlertFilters }) 
           <div className="flex items-center gap-2 text-ink"><BellPlus className="h-5 w-5" aria-hidden="true" /><h2 id="create-search-alert-title" className="t-section">Crear alerta para esta búsqueda</h2></div>
           <p className="mt-2 t-ui text-ink-2">{searchAlertSummary(filters)}. Solo recibirás coincidencias que se vuelvan públicas después de activar la alerta.</p>
         </div>
-        {!ready ? <span className="text-sm font-semibold text-ink-2">Comprobando tu cuenta…</span> : !authenticated ? (
+        {!ready ? <span className="t-ui font-semibold text-ink-2">Comprobando tu cuenta…</span> : !authenticated ? (
           <Link href={loginHref} className={buttonClasses({ variant: "secondary", className: "shrink-0" })}>Ingresar para crear alerta</Link>
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label className="grid gap-1.5 text-sm font-semibold text-ink-2">Frecuencia
-              <select value={frequency} onChange={(event) => setFrequency(event.target.value as SearchAlertFrequency)} className="h-11 rounded-control border border-line-strong bg-white px-3 text-[16px] text-ink">
+            <Field id="alerta-frecuencia" label="Frecuencia">
+              <Select value={frequency} onChange={(event) => setFrequency(event.target.value as SearchAlertFrequency)}>
                 <option value="immediate">Inmediata</option>
                 <option value="daily">Resumen diario</option>
-              </select>
-            </label>
-            <button type="button" disabled={busy} onClick={() => void createAlert()} className={buttonClasses()}>{busy ? "Creando…" : "Crear alerta"}</button>
+              </Select>
+            </Field>
+            <Button onClick={() => void createAlert()} loading={busy} loadingLabel="Creando…">Crear alerta</Button>
           </div>
         )}
       </div>

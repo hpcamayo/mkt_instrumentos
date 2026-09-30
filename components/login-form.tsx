@@ -5,6 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
 
 type FormState = "idle" | "submitting" | "sent" | "error";
 type LoginMode = "password" | "magic-link";
@@ -96,107 +99,72 @@ export function LoginForm() {
     setMessage(null);
   }
 
+  const modeButton = (value: LoginMode, label: string) => (
+    <button
+      type="button"
+      aria-pressed={mode === value}
+      onClick={() => switchMode(value)}
+      className={`h-10 rounded-control px-3 t-ui font-semibold transition-colors duration-120 ${
+        mode === value
+          ? "bg-surface text-ink shadow-[inset_0_0_0_1px_var(--line-strong)]"
+          : "text-ink-2 hover:text-ink"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
     <div className="mt-6 space-y-5">
-      <div className="grid grid-cols-2 rounded-control border border-slate-200 bg-slate-50 p-1">
-        <button
-          type="button"
-          onClick={() => switchMode("password")}
-          className={`rounded px-3 py-2 text-sm font-semibold transition ${
-            mode === "password"
-              ? "bg-white text-ink shadow-sm"
-              : "text-ink-2 hover:text-ink"
-          }`}
-        >
-          Contraseña
-        </button>
-        <button
-          type="button"
-          onClick={() => switchMode("magic-link")}
-          className={`rounded px-3 py-2 text-sm font-semibold transition ${
-            mode === "magic-link"
-              ? "bg-white text-ink shadow-sm"
-              : "text-ink-2 hover:text-ink"
-          }`}
-        >
-          Enlace mágico
-        </button>
+      <div className="grid grid-cols-2 gap-1 rounded-control bg-canvas p-1">
+        {modeButton("password", "Contraseña")}
+        {modeButton("magic-link", "Enlace mágico")}
       </div>
 
       <form className="space-y-4" onSubmit={handleSubmit}>
-        <label className="block">
-          <span className="text-sm font-semibold text-ink">Correo</span>
-          <input
-            type="email"
-            name="email"
-            required
-            autoComplete="email"
-            className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
-            placeholder="tu@email.com"
-          />
-        </label>
+        <Field id="login-email" label="Correo">
+          <Input type="email" name="email" required autoComplete="email" placeholder="tu@email.com" />
+        </Field>
 
         {mode === "password" ? (
-          <label className="block">
-            <span className="text-sm font-semibold text-ink">Contraseña</span>
-            <input
-              type="password"
-              name="password"
-              required
-              autoComplete="current-password"
-              className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
-              placeholder="Tu contraseña"
-            />
-          </label>
+          <Field id="login-password" label="Contraseña">
+            <Input type="password" name="password" required autoComplete="current-password" placeholder="Tu contraseña" />
+          </Field>
         ) : (
-          <p className="text-sm leading-6 text-ink-2">
+          <p className="t-ui text-ink-2">
             Te enviaremos un enlace seguro. Esta opción no crea cuentas nuevas.
           </p>
         )}
 
         {message ? (
-          <p
-            className={`rounded-control px-3 py-2 text-sm ${
-              state === "sent"
-                ? "bg-accent-tint text-ink"
-                : "bg-amber-50 text-ink"
-            }`}
-          >
-            {message}
-          </p>
+          <Notice tone={state === "sent" ? "success" : "warning"}>{message}</Notice>
         ) : null}
 
-        <button
+        <Button
           type="submit"
-          disabled={state === "submitting"}
-          className="inline-flex w-full items-center justify-center rounded-control bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          block
+          loading={state === "submitting"}
+          loadingLabel="Procesando..."
         >
-          {state === "submitting"
-            ? "Procesando..."
-            : mode === "password"
-              ? "Ingresar"
-              : "Enviar enlace"}
-        </button>
+          {mode === "password" ? "Ingresar" : "Enviar enlace"}
+        </Button>
         {mode === "password" ? (
-          <Link
-            href="/recuperar-contrasena"
-            className="block text-center text-sm font-semibold text-laria-blue hover:underline"
-          >
+          <Link href="/recuperar-contrasena" className="link block text-center t-ui font-semibold">
             ¿Olvidaste tu contraseña?
           </Link>
         ) : null}
       </form>
 
-      <div className="space-y-2 border-t border-slate-200 pt-4 text-sm text-ink-2">
+      <div className="space-y-2 border-t border-subtle pt-4 t-ui text-ink-2">
         <p>
           ¿Quieres comprar o vender como Particular?{" "}
-          <Link className="font-semibold text-ink hover:text-brass" href="/registro/vendedor">
+          <Link className="link font-semibold" href="/registro/vendedor">
             Crea tu cuenta
           </Link>
         </p>
         <p>
           ¿Tienes una tienda?{" "}
-          <Link className="font-semibold text-ink hover:text-brass" href="/registrar-tienda">
+          <Link className="link font-semibold" href="/registrar-tienda">
             Registra tu tienda
           </Link>
         </p>

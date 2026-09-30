@@ -24,19 +24,6 @@
   --danger-tint: #fdecea;
   --warning-tint: #fbf8cc;
 
-  /* Legacy names, kept until every file uses the roles above. */
-  --laria-black: var(--frame);
-  --laria-ink: var(--ink);
-  --laria-graphite: var(--frame-2);
-  --laria-white: var(--surface);
-  --laria-cloud: var(--canvas);
-  --laria-fog: var(--subtle);
-  --laria-steel: var(--line-deco);
-  --laria-muted: var(--muted-dark);
-  --laria-text: var(--ink);
-  --laria-text-soft: var(--ink-2);
-  --laria-yellow: var(--action);
-  --laria-blue: var(--accent);
 
   background: var(--surface);
   color: var(--ink);
@@ -75,9 +62,13 @@ a {
   outline-offset: 2px;
 }
 
+/* The skip link moves focus to <main>; the content area itself shows no ring. */
+#contenido:focus {
+  outline: none;
+}
+
 .surface-frame :focus-visible,
-.bg-frame :focus-visible,
-.bg-laria-black :focus-visible {
+.bg-frame :focus-visible {
   outline-color: var(--accent);
 }
 
@@ -207,108 +198,5 @@ a {
   }
   .skip-link:focus {
     top: 12px;
-  }
-
-  .laria-page {
-    min-height: 100vh;
-    background: var(--surface);
-    color: var(--ink);
-  }
-
-  /* Public container: max 1440 px, gutters 16 / 24 / 32. */
-  .laria-container {
-    margin-left: auto;
-    margin-right: auto;
-    width: 100%;
-    max-width: 1440px;
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-
-  /* Legacy component classes, replaced by components/ui during the UX-1 migration. */
-  .laria-card {
-    border: 1px solid var(--laria-fog);
-    background: var(--laria-white);
-    box-shadow: 0 12px 28px rgb(16 18 23 / 0.06);
-  }
-
-  .laria-button-primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.375rem;
-    background: var(--laria-yellow);
-    color: var(--laria-black);
-    font-weight: 800;
-    transition:
-      transform 160ms ease,
-      box-shadow 160ms ease,
-      background-color 160ms ease;
-  }
-
-  .laria-button-primary:hover {
-    background: #fff72d;
-    box-shadow: 0 12px 24px rgb(5 6 8 / 0.16);
-    transform: translateY(-1px);
-  }
-
-  .laria-button-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid var(--laria-steel);
-    border-radius: 0.375rem;
-    background: var(--laria-white);
-    color: var(--laria-ink);
-    font-weight: 700;
-    transition:
-      border-color 160ms ease,
-      color 160ms ease,
-      background-color 160ms ease;
-  }
-
-  .laria-button-secondary:hover {
-    border-color: var(--laria-blue);
-    color: var(--laria-blue);
-    background: rgb(107 166 255 / 0.08);
-  }
-
-  .laria-section-title {
-    color: var(--laria-text);
-    font-weight: 900;
-    letter-spacing: 0;
-  }
-
-  .laria-muted {
-    color: var(--laria-text-soft);
-  }
-
-  .laria-badge {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    background: rgb(107 166 255 / 0.12);
-    color: var(--laria-blue);
-    font-size: 0.75rem;
-    font-weight: 800;
-    line-height: 1;
-  }
-
-  .laria-blue-accent {
-    color: var(--laria-blue);
-  }
-}
-
-@media (min-width: 640px) {
-  .laria-container {
-    padding-left: 24px;
-    padding-right: 24px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .laria-container {
-    padding-left: 32px;
-    padding-right: 32px;
   }
 }
