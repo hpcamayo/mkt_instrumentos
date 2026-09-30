@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { NoticeIcon, noticeBodyClassName, noticeClassName } from "@/components/ui/notice";
 
+// Result of a page action: takes focus and scrolls into view so keyboard and screen-reader users hear it.
 export function PageNotice({
   kind,
   message,
   children,
 }: {
-  kind: "success" | "error" | "info";
+  kind: "success" | "error" | "info" | "warning";
   message: string;
   children?: ReactNode;
 }) {
@@ -19,21 +21,19 @@ export function PageNotice({
     noticeRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [kind, message]);
 
-  const classes = kind === "success"
-    ? "border-emerald-200 bg-emerald-50 text-emerald-800 focus:ring-emerald-600/30"
-    : kind === "error"
-      ? "border-red-200 bg-red-50 text-red-800 focus:ring-red-600/30"
-      : "border-laria-blue/25 bg-laria-blue/10 text-laria-text-soft focus:ring-laria-blue/30";
-
+  const tone = kind === "error" ? "danger" : kind;
   return (
     <div
       ref={noticeRef}
       tabIndex={-1}
       role={kind === "error" ? "alert" : "status"}
-      className={`rounded-md border p-4 text-sm outline-none focus:ring-2 ${classes}`}
+      className={noticeClassName(tone, "outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink")}
     >
-      <p>{message}</p>
-      {children}
+      <NoticeIcon tone={tone} />
+      <div className={noticeBodyClassName}>
+        <p>{message}</p>
+        {children}
+      </div>
     </div>
   );
 }
