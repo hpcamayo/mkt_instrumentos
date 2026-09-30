@@ -1,5 +1,5 @@
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
-import { MapPin } from "lucide-react";
+import { ImageOff, MapPin } from "lucide-react";
 import Link from "next/link";
 import { VerifiedIcon } from "@/components/ui/verified-mark";
 import { PageContainer } from "@/components/page-container";
@@ -84,8 +84,9 @@ function ListingPreviewCard({ listing }: { listing: FeaturedListing }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-canvas px-4 text-center t-ui font-semibold text-ink-2">
-            {listing.imageAlt}
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-canvas px-4 text-center">
+            <ImageOff className="h-8 w-8 text-ink-3" aria-hidden="true" />
+            <span className="t-meta font-semibold">Sin foto</span>
           </div>
         )}
 
