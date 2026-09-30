@@ -21,6 +21,7 @@ import { PageContainer } from "@/components/page-container";
 import { ReputationSummary } from "@/components/reputation-summary";
 import { buildStoreWhatsAppUrl, type ListingCardData } from "@/lib/listings";
 import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
+import { storeInitials } from "@/lib/ui/initials";
 import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
 import { buttonClasses } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
@@ -205,8 +206,8 @@ function StoreView({
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full items-center justify-center t-ui text-ink-2">
-              Banner pendiente
+            <div aria-hidden="true" className="flex h-full items-center justify-center overflow-hidden bg-frame px-6">
+              <span className="truncate t-display text-muted-dark">{store.name}</span>
             </div>
           )}
         </div>
@@ -223,8 +224,8 @@ function StoreView({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full items-center justify-center px-2 text-center t-meta">
-                Logo pendiente
+              <div aria-hidden="true" className="flex h-full items-center justify-center bg-frame-2 t-page text-surface">
+                {storeInitials(store.name)}
               </div>
             )}
           </div>

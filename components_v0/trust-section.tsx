@@ -4,15 +4,15 @@ import { PageContainer } from "@/components/page-container";
 const features = [
   {
     icon: SearchCheck,
-    title: "Publicaciones revisadas",
+    title: "Publicaciones aprobadas",
     description:
-      "Publicaciones revisadas para mantener el marketplace simple y ordenado.",
+      "Cada publicación la revisa Laria o viene de una tienda verificada.",
   },
   {
     icon: Store,
     title: "Tiendas activas",
     description:
-      "Productos de tiendas también aparecen en la búsqueda general.",
+      "Las publicaciones de tiendas también aparecen en la búsqueda general.",
   },
   {
     icon: MessageCircle,
@@ -21,8 +21,8 @@ const features = [
   },
   {
     icon: BadgeCheck,
-    title: "Marketplace honesto",
-    description: "Laria no procesa pagos ni envíos, no retiene dinero y no garantiza transacciones.",
+    title: "Sin comisiones",
+    description: "Laria no cobra comisión ni procesa pagos o envíos. No retiene dinero ni garantiza transacciones.",
   },
 ];
 

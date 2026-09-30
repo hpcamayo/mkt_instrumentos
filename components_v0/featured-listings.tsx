@@ -5,6 +5,8 @@ import { VerifiedIcon } from "@/components/ui/verified-mark";
 import { PageContainer } from "@/components/page-container";
 import { ListingImpressionBoundary } from "@/components/marketplace-telemetry";
 import { FavoriteButton } from "@/components/favorite-button";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export type FeaturedListing = {
   id: string;
@@ -14,73 +16,22 @@ export type FeaturedListing = {
   location: string;
   imageUrl: string | null;
   imageAlt: string;
+  condition: string | null;
   isVerifiedStore: boolean;
 };
-
-// UI placeholder only; replace with real data when feature/data is implemented.
-const placeholderListings: FeaturedListing[] = [
-  {
-    id: "ui-placeholder-1",
-    title: "Fender Stratocaster",
-    slug: "",
-    price: "S/ 3,900",
-    location: "Lima, PE",
-    imageUrl: null,
-    imageAlt: "Guitarra eléctrica",
-    isVerifiedStore: false,
-  },
-  {
-    id: "ui-placeholder-2",
-    title: "Amplificador valvular",
-    slug: "",
-    price: "S/ 2,400",
-    location: "Arequipa, PE",
-    imageUrl: null,
-    imageAlt: "Amplificador",
-    isVerifiedStore: true,
-  },
-  {
-    id: "ui-placeholder-3",
-    title: "Pedal delay digital",
-    slug: "",
-    price: "S/ 520",
-    location: "Cusco, PE",
-    imageUrl: null,
-    imageAlt: "Pedal de efectos",
-    isVerifiedStore: false,
-  },
-  {
-    id: "ui-placeholder-4",
-    title: "Monitor de estudio",
-    slug: "",
-    price: "S/ 1,100",
-    location: "Trujillo, PE",
-    imageUrl: null,
-    imageAlt: "Monitor de estudio",
-    isVerifiedStore: true,
-  },
-];
 
 export function FeaturedListings({
   listings,
 }: {
   listings: FeaturedListing[];
 }) {
-  const hasRealListings = listings.length > 0;
-  const visibleListings = hasRealListings ? listings : placeholderListings;
-
   return (
     <section className="bg-canvas py-10 md:py-14">
       <PageContainer>
         <div className="mb-7 flex items-center justify-between gap-4">
-          <div>
-            <p className="t-micro text-ink-2">
-              Destacados para ti
-            </p>
-            <h2 className="mt-2 t-page text-ink">
-              Instrumentos recientes
-            </h2>
-          </div>
+          <h2 className="t-page text-ink">
+            Recién publicados
+          </h2>
           <Link
             href="/listados"
             className="link hidden t-ui font-semibold md:inline-flex"
@@ -89,24 +40,22 @@ export function FeaturedListings({
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {visibleListings.map((listing) => (
-            hasRealListings ? <ListingImpressionBoundary key={listing.id} listingId={listing.id}>
-              <ListingPreviewCard listing={listing} isPlaceholder={false} />
-            </ListingImpressionBoundary> : <div key={listing.id}>
-              <ListingPreviewCard
-                listing={listing}
-                isPlaceholder={!hasRealListings}
-              />
-            </div>
-          ))}
-        </div>
-
-        {!hasRealListings ? (
-          <p className="mt-4 text-center t-ui text-ink-2">
-            Vista previa visual. Pronto aparecerán publicaciones aprobadas.
-          </p>
-        ) : null}
+        {listings.length ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {listings.map((listing) => (
+              <ListingImpressionBoundary key={listing.id} listingId={listing.id}>
+                <ListingPreviewCard listing={listing} />
+              </ListingImpressionBoundary>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            title="Aún no hay publicaciones"
+            description="Las primeras publicaciones aparecerán aquí."
+            actions={<Button href="/vender" variant="secondary">Publicar un instrumento</Button>}
+            headingLevel={3}
+          />
+        )}
 
         <div className="mt-8 text-center md:hidden">
           <Link
@@ -121,13 +70,7 @@ export function FeaturedListings({
   );
 }
 
-function ListingPreviewCard({
-  listing,
-  isPlaceholder,
-}: {
-  listing: FeaturedListing;
-  isPlaceholder: boolean;
-}) {
+function ListingPreviewCard({ listing }: { listing: FeaturedListing }) {
   const content = (
     <article className="group overflow-hidden rounded-panel border border-subtle bg-white transition-colors duration-120 hover:border-line-strong">
       <div className="relative aspect-[4/3] bg-subtle">
@@ -146,9 +89,11 @@ function ListingPreviewCard({
           </div>
         )}
 
-        <span className="absolute left-3 top-3 rounded-tag bg-white px-2 py-0.5 t-meta font-semibold text-ink">
-          {isPlaceholder ? "Vista previa" : "Nuevo"}
-        </span>
+        {listing.condition ? (
+          <span className="absolute left-3 top-3 max-w-[calc(100%-4.5rem)] truncate rounded-tag bg-white px-2 py-0.5 t-meta font-semibold text-ink">
+            {listing.condition}
+          </span>
+        ) : null}
       </div>
 
       <div className="space-y-3 p-4">
@@ -175,10 +120,6 @@ function ListingPreviewCard({
       </div>
     </article>
   );
-
-  if (isPlaceholder) {
-    return content;
-  }
 
   return (
     <div className="relative"><Link href={`/instrumentos/${listing.slug}`} className="block">

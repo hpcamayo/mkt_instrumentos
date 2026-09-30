@@ -2,7 +2,7 @@
 
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 
-import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
 import type { ListingPhotoData } from "@/lib/listings";
 
@@ -75,11 +75,11 @@ export function ListingDetailGallery({
           </div>
         ) : (
           <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 bg-canvas px-4 text-center t-ui font-semibold text-ink-2">
-            <ImageIcon
+            <ImageOff
               className="h-9 w-9 text-ink-3"
               aria-hidden="true"
             />
-            <span>Foto pendiente</span>
+            <span>Sin foto</span>
           </div>
         )}
 

@@ -10,16 +10,14 @@ export function CTASection() {
           <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="t-micro text-muted-dark">
-                Publica gratis
+                Vender
               </p>
               <h2 className="mt-3 max-w-3xl text-[28px] font-bold leading-[32px] stretch-semicond md:text-[40px] md:leading-[44px]">
-                La música nos conecta.
-                <br />
-                <span className="text-accent">Laria lo hace posible.</span>
+                Publicar es gratis.
               </h2>
               <p className="mt-4 max-w-xl t-body text-muted-dark">
-                Sube tu instrumento, espera la revisión del equipo y recibe
-                consultas directas por WhatsApp.
+                Revisamos tu publicación antes de mostrarla y recibes las
+                consultas directo por WhatsApp.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
@@ -33,7 +31,7 @@ export function CTASection() {
                 href="/listados"
                 className={buttonClasses({ variant: "onDark" })}
               >
-                Explorar productos
+                Ver instrumentos
               </Link>
             </div>
           </div>

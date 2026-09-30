@@ -130,6 +130,16 @@ test("every WhatsApp contact button shares one label and the glyph", () => {
   assert.equal(buttons, 3);
 });
 
+test("buyers see no placeholder copy and the home badge shows the real condition (D11)", () => {
+  const placeholders = /^(Foto|Banner|Logo) pendiente$|Bloque visual temporal|Vista previa visual|Comprar ahora|Destacados para ti|\b(Tienda|Backline|Audio) demo\b|placeholder/i;
+  assert.deepEqual(failures(({ text }) => placeholders.test(text)), []);
+  const featured = fs.readFileSync("components_v0/featured-listings.tsx", "utf8");
+  assert.match(featured, /\{listing\.condition\}/);
+  assert.doesNotMatch(featured, /"Nuevo"/);
+  const store = fs.readFileSync("app/tiendas/[slug]/page.tsx", "utf8");
+  assert.match(store, /storeInitials\(store\.name\)/);
+});
+
 test("status labels come from the one dictionary", () => {
   const { statusLabel } = require(path.resolve("lib/ui/status.ts"));
   assert.equal(statusLabel("listing", "approved"), "Publicada");

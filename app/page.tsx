@@ -134,6 +134,7 @@ function toFeaturedListings(listings: ListingCardData[]): FeaturedListing[] {
       location: `${listing.city}, ${listing.region}`,
       imageUrl: photo?.image_url ?? null,
       imageAlt: photo?.alt_text ?? listing.title,
+      condition: listing.condition ?? null,
       isVerifiedStore:
         listing.seller_type === "store" && store?.is_verified === true,
     };

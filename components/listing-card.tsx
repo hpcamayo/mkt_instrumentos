@@ -1,7 +1,7 @@
 "use client";
 
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
-
+import { ImageOff } from "lucide-react";
 import Link from "next/link";
 import { FavoriteButton } from "@/components/favorite-button";
 import { useEffect, useState } from "react";
@@ -147,13 +147,9 @@ export function ListingCard({ listing, source = "catalog" }: ListingCardProps) {
             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]"
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-canvas px-4 text-center">
-            <div className="grid gap-2">
-              <div className="mx-auto h-10 w-16 rounded-control border border-dashed border-line-strong bg-white/70" />
-              <span className="t-meta font-semibold">
-                Foto pendiente
-              </span>
-            </div>
+          <div className="flex h-full flex-col items-center justify-center gap-2 bg-canvas px-4 text-center">
+            <ImageOff className="h-8 w-8 text-ink-3" aria-hidden="true" />
+            <span className="t-meta font-semibold">Sin foto</span>
           </div>
         )}
 

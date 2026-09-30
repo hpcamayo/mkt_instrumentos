@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/page-container";
 import { buttonClasses } from "@/components/ui/button";
 
 const heroStats = [
-  { icon: BadgeCheck, label: "Publicaciones revisadas" },
+  { icon: BadgeCheck, label: "Publicaciones aprobadas" },
   { icon: Store, label: "Tiendas activas" },
   { icon: MessageCircle, label: "Contacto por WhatsApp" },
   { icon: Zap, label: "Hecho para músicos" },
@@ -26,18 +26,11 @@ export function HeroSection() {
       <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,transparent_0%,rgba(5,6,8,0.74)_100%)]" />
       <PageContainer className="relative">
         <div className="max-w-3xl">
-          <p className="t-micro text-muted-dark">
-            Marketplace musical en Perú
-          </p>
-          <h1 className="mt-5 text-balance text-[36px] font-bold leading-[40px] stretch-semicond text-white sm:text-[46px] sm:leading-[50px]">
-            Tu escenario.
-            <br />
-            Tu sonido.
-            <br />
-            <span className="text-accent">Tu Laria.</span>
+          <h1 className="text-balance text-[36px] font-bold leading-[40px] stretch-semicond text-white sm:text-[46px] sm:leading-[50px]">
+            El mercado de instrumentos del Perú
           </h1>
           <p className="mt-6 max-w-xl text-pretty t-body text-muted-dark md:text-[18px] md:leading-[28px]">
-            Instrumentos de músicos y tiendas de todo el Perú. Contacta
+            Compra y vende con músicos y tiendas de todo el país. Contacta
             directo por WhatsApp y coordina con calma.
           </p>
 
@@ -46,7 +39,7 @@ export function HeroSection() {
               href="/listados"
               className={buttonClasses()}
             >
-              Comprar ahora
+              Ver instrumentos
             </Link>
             <Link
               href="/vender"
