@@ -87,10 +87,12 @@ Use these instead of writing new markup for the same job.
 
 - `Button` / `buttonClasses()`: variants `primary` (yellow, one per view), `secondary`, `quiet`, `danger`, `onDark`; sizes `sm` 36, `md` 44, `lg` 52; `loading` + `loadingLabel` keep the primary yellow; with `href` it renders a link. `IconButton` requires a `label`.
 - `Field` with `Input`, `Select`, `Textarea`, `FileInput`, `Checkbox`, `Radio`: every control has a visible label; `Field` wires `id`, `aria-describedby` (hint and error) and `aria-invalid`. `Textarea` with `maxLength` shows an "n / max" counter. Give each field a unique `id` (use `useId()` in repeated components).
-- `Tag` and `StatusTag`: status labels and tones come from `lib/ui/status.ts`, the single dictionary. `CountBadge` for counts.
-- `Chip`, `ChipLink`, `AppliedChip`: filters and period selectors; selected state has a check and `aria-pressed` or `aria-current`.
-- `Notice` (`info`, `success`, `warning`, `danger`, icon + text): danger is an alert, others a status; use `role="note"` for static explanations. `PageNotice` moves focus to page-level results; do not use that movement for field errors.
-- `EmptyState`, `PageHeader`, `Price` (S/ with tabular figures), `VerifiedMark` / `VerifiedIcon`, `Skeleton`, `WhatsAppGlyph`.
+- `Tag` and `StatusTag`: status labels and tones come from `lib/ui/status.ts`, the single dictionary (domains: `listing`, `revision`, `store`, `claim` for Compras y ventas, `transaction` for the Admin sale records, `report`, `review`, `alert`). `StatusEntryTag` renders a status already resolved to an entry, such as `storeStatusEntry()` ("Tienda verificada" for an active verified store). Admin shows a report's target and the audit history through `adminTargetStatusLabel()`. Never write a second label map. `CountBadge` for counts.
+- `Chip`, `ChipLink`, `AppliedChip`: filters and period selectors; selected state has a check and `aria-pressed` or `aria-current`. `AppliedChip` is a plain link on purpose: the full page load also resets the catalog's uncontrolled filter form.
+- `Notice` (`info`, `success`, `warning`, `danger`, icon + text): danger is an alert, others a status; use `role="note"` for static explanations. Its body underlines every link, so a notice that holds buttons, or that receives focus through a ref, composes `noticeClassName()` + `NoticeIcon` instead (as `PageNotice` does). `PageNotice` moves focus to page-level results; do not use that movement for field errors.
+- `PageHeader`: the page's only `h1`, with an optional eyebrow, a one-line summary (`meta`, 13 px) and the page's actions; a longer 16 px introduction stays a paragraph after it. Light surfaces only: headers on the black frame keep their own markup.
+- `EmptyState` (any list or section with nothing to show; `headingLevel={3}` under a section heading), `Price` (S/ with tabular figures; `card`, `detail`, `inline`), `VerifiedMark` / `VerifiedIcon`, `Skeleton`, `IconButton`, `WhatsAppGlyph`.
+- `tests/ux-primitives.test.cjs` fails when a primitive loses its last consumer or a hand-rolled copy (error box, pulse placeholder, price class, count pill) comes back. `Chip` (toggle) and `Radio` have no consumer yet: the filters are redesigned in UX-3, and the only radios (Admin legacy linking) keep markup that `tests/sprint-8.test.cjs` pins.
 
 WhatsApp contact: every contact button is the primary yellow button with the WhatsApp glyph and the label "Contactar por WhatsApp". No WhatsApp green.
 
@@ -115,7 +117,7 @@ Glossary (one name per concept; `tests/ux-copy.test.cjs` rejects the retired nam
 | Pending edit | Cambios en revisión | propuesta, Cambio de publicación |
 | Account home | Resumen | panel, dashboard, "Mi cuenta" as a page title |
 
-Status labels (from `lib/ui/status.ts`; only the visible label changes, meanings stay as in the functional spec): Borrador, En revisión, Publicada (stored as `approved`), Cambios en revisión, Rechazada, Oculta, Vendida, Archivada.
+Status labels (from `lib/ui/status.ts`; only the visible label changes, meanings stay as in the functional spec): Borrador, En revisión, Publicada (stored as `approved`), Cambios en revisión, Rechazada, Oculta, Vendida, Archivada. A store reads En revisión, Activa, Rechazada, Oculta or Tienda verificada everywhere (account summary, store page and Admin).
 
 Orthography: tildes, ñ and opening ¿ are required; the copy test checks the common misses. No system jargon in the interface: V1, legacy, Store Owner, metadata, Supabase, CTR, "base de datos". Internal errors stay in logs.
 
@@ -145,7 +147,7 @@ Open items (`docs/ux-redesign/decisions.md`): the catalog page is still named "L
 
 ## Checks and tools
 
-- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` for every change. `tests/ux-copy.test.cjs` and `tests/ux-contrast.test.cjs` enforce the content and color rules.
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` for every change. `tests/ux-copy.test.cjs`, `tests/ux-contrast.test.cjs` and `tests/ux-primitives.test.cjs` enforce the content, color and component rules.
 - Screenshots: `node scripts/ux-snapshots.cjs --label <name>` captures the route list at 390 / 768 / 1280 / 1440, anonymous and signed in with local test accounts (see the script header). Local by default; `--allow-remote` for a preview deployment only.
 
 ## Checklist for UI work

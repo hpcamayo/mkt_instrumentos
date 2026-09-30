@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UX-1 vs concepts</title>
+<style>
+  :root { --frame:#050608; --ink:#101217; --ink-2:#4B5563; --canvas:#F1F3F5; --subtle:#E9EDF3; --accent:#6BA6FF; --action:#F1EA16; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); color: var(--ink); font: 15px/1.5 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  header.top { background: var(--frame); color: #fff; padding: 20px 24px; }
+  header.top h1 { margin: 0; font-size: 22px; }
+  header.top p { margin: 6px 0 0; color: #9DA3AF; max-width: 90ch; }
+  nav { position: sticky; top: 0; z-index: 2; background: #fff; border-bottom: 1px solid var(--subtle); padding: 8px 24px; display: flex; flex-wrap: wrap; gap: 6px; }
+  nav a { color: var(--ink); text-decoration: none; font-size: 13px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--subtle); }
+  nav a:hover { border-color: var(--ink); }
+  main { max-width: 1520px; margin: 0 auto; padding: 16px; }
+  .legend { background: #fff; border: 1px solid var(--subtle); border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; }
+  .legend ul { margin: 6px 0 0; padding-left: 20px; }
+  section.pair { background: #fff; border: 1px solid var(--subtle); border-radius: 8px; margin: 0 0 20px; padding: 16px; }
+  section.pair h2 { margin: 0 0 4px; font-size: 19px; }
+  .owner { display: inline-block; font-size: 12px; font-weight: 600; background: var(--subtle); border-radius: 4px; padding: 1px 6px; margin-left: 6px; vertical-align: middle; }
+  section.pair ul { margin: 8px 0 12px; padding-left: 20px; color: var(--ink-2); max-width: 110ch; }
+  section.pair li { margin: 3px 0; }
+  section.pair img { display: block; max-width: 100%; height: auto; border: 1px solid var(--subtle); border-radius: 4px; }
+  a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>UX-1 (ux/redesign) vs page concepts and final home</h1>
+  <p>Left: concept render (docs/ux-redesign/screenshots/page-concepts, home-final). Right: local production build of ux/redesign after the 30 Sep audit fixes (ux-1-acceptance.md, § Audit), same width, cropped to the concept's height. UX-1 changes type, color, components and copy only; every layout difference below belongs to a later sub-sprint.</p>
+</header>
+<nav aria-label="Pares">
+  <a href="#p01">Inicio 1440</a><a href="#p02">Inicio final 1440</a><a href="#p03">Inicio 390</a><a href="#p04">Inicio final 390</a><a href="#p05">Rotación</a>
+  <a href="#p06">Catálogo 1440</a><a href="#p07">Catálogo 390</a><a href="#p08">Filtros 390</a><a href="#p09">Ficha 1440</a><a href="#p10">Ficha 390</a><a href="#p11">Ficha 390 resto</a>
+  <a href="#p12">Tienda 1440</a><a href="#p13">Cuenta 1440</a><a href="#p14">Cuenta 390</a><a href="#p15">Publicar 390</a><a href="#p16">Admin 1440</a>
+</nav>
+<main>
+  <div class="legend">
+    <strong>Read with care</strong>
+    <ul>
+      <li>Local data: listing photos in the local database are placehold.co images; photos below the first screen stay grey because full-page captures do not scroll lazy images into view. The concepts use real photos and richer example data.</li>
+      <li>The Particular test account has no listings, so Cuenta shows the empty state where the concept shows the table.</li>
+      <li>What does match already: Archivo and the type scale, the palette roles, "Contactar por WhatsApp" in yellow with the glyph, status tags, the store monogram, "Sin foto", page titles (PageHeader), empty states, notices and prices.</li>
+      <li>Not in the concept pages: <code>Main.webp</code> is the canvas key (principles and D1–D12), with no page to compare.</li>
+    </ul>
+  </div>
+
+  <section class="pair" id="p01"><h2>Inicio · concepto de página, 1440 <span class="owner">UX-2 · UX-3</span></h2><ul>
+    <li>Concept opens with a compact title band and quick chips, then goes straight to "Recién publicados" (5 columns plus a count tile). The build keeps the full-width photo hero (headline, two buttons, search, stats strip) and category icon tiles before any listing.</li>
+    <li>Header: the concept's yellow action in the frame is "Vender"; the build's is "Buscar", with "Vender" and "Para tiendas" as text links and a separate "Crear cuenta".</li>
+    <li>Home cards: the concept puts the price under the title with a condition · detail line and a photo count; the build puts the price to the right of the title and the condition on the photo.</li>
+  </ul><img src="01-inicio-1440.webp" alt="Inicio 1440: concepto y build"></section>
+
+  <section class="pair" id="p02"><h2>Inicio · versión final, 1440 <span class="owner">UX-3</span></h2><ul>
+    <li>Not built yet: the Diablada art banner with centred headline and "Explorar" search, the "En vitrina" row (newest listing per category, ink price tags, H2/H3), compact category tiles with counts, "Cómo funciona Laria" with the four promises (H4), the "¿Tienes una tienda?" tile and the sell block.</li>
+    <li>Already aligned: the headline "El mercado de instrumentos del Perú" (H6) and the sell-block wording.</li>
+  </ul><img src="02-inicio-final-1440.webp" alt="Inicio final 1440: concepto y build"></section>
+
+  <section class="pair" id="p03"><h2>Inicio · concepto de página, 390 <span class="owner">UX-2 · UX-3</span></h2><ul>
+    <li>The concept's mobile header is one row (logo, search, account); the build stacks the search with "Buscar" and two rows of links, then an "Explorar categorías" disclosure.</li>
+    <li>Same section order differences as at 1440; the build's listing cards are one column at 390 (two from 460 px), the concept's two.</li>
+  </ul><img src="03-inicio-390.webp" alt="Inicio 390: concepto y build"></section>
+
+  <section class="pair" id="p04"><h2>Inicio · versión final, 390 <span class="owner">UX-3</span></h2><ul>
+    <li>Phone banner (780×300 art), vitrina as a horizontal row, compact categories: none built yet.</li>
+  </ul><img src="04-inicio-final-390.webp" alt="Inicio final 390: concepto y build"></section>
+
+  <section class="pair" id="p05"><h2>Banner en rotación <span class="owner">UX-3</span></h2><ul>
+    <li>The nine rotation pieces (art/rotation/, one per visit, H11) are not wired in; the build still shows the stock concert photo behind the hero.</li>
+  </ul><img src="05-rotacion-1440.webp" alt="Rotación: concepto y build"></section>
+
+  <section class="pair" id="p06"><h2>Catálogo, 1440 <span class="owner">UX-3</span></h2><ul>
+    <li>Concept: breadcrumb, category title with the count inline, "Crear alerta" and the sort control at the top right, applied chips in one row. Build: an intro panel (eyebrow, title, paragraph, count) and "Crear alerta" as a full-width panel above the grid.</li>
+    <li>Filters: the concept uses checkbox facets with counts and category-specific facets (piezas, material, bombo); the build uses native selects and a yellow "Aplicar filtros".</li>
+    <li>Concept places an inline "¿No está lo que buscas?" alert tile in the grid; the build's cards carry the seller tag beside the title and the category on the photo.</li>
+  </ul><img src="06-catalogo-1440.webp" alt="Catálogo 1440: concepto y build"></section>
+
+  <section class="pair" id="p07"><h2>Catálogo, 390 <span class="owner">UX-2 · UX-3</span></h2><ul>
+    <li>Concept: category tabs under the header, title with "6 resultados · Recientes", Filtrar with an applied-count badge, the applied chip and a "Crear alerta" chip on one row, two-column grid.</li>
+    <li>Build: large intro panel, Filtrar/Ordenar, alert panel, one-column cards.</li>
+  </ul><img src="07-catalogo-390.webp" alt="Catálogo 390: concepto y build"></section>
+
+  <section class="pair" id="p08"><h2>Filtros (hoja abierta), 390 <span class="owner">UX-3</span></h2><ul>
+    <li>Concept sheet: type as selectable chips with counts, condition checkboxes with counts, price fields with an S/ prefix, collapsible rows and a sticky footer ("Limpiar" + yellow "Ver 6 resultados").</li>
+    <li>Build sheet: native selects, "Limpiar filtros" at the top, "S/." placeholders and "Aplicar filtros" at the end of the scroll. These raw controls are the documented UX-1 exception.</li>
+  </ul><img src="08-filtros-390.webp" alt="Filtros 390: concepto y build"></section>
+
+  <section class="pair" id="p09"><h2>Ficha de publicación, 1440 <span class="owner">UX-4</span></h2><ul>
+    <li>Concept: thumbnail strip, brand eyebrow, condition tag with place and age, a four-cell spec strip, "Guardar" and "Compartir", one payment line, a seller card with rating, confirmed sales and a link to all their listings; then specs, description, a review histogram and related listings.</li>
+    <li>Build: favourite button above the gallery, key specs as a two-column list, a separate "Sobre el vendedor" card with a second WhatsApp button, reviews before the description, a long specs table.</li>
+  </ul><img src="09-ficha-1440.webp" alt="Ficha 1440: concepto y build"></section>
+
+  <section class="pair" id="p10"><h2>Ficha · primera pantalla, 390 <span class="owner">UX-2 · UX-4</span></h2><ul>
+    <li>Concept: back link to the category, sticky bottom bar (favourite + "Contactar por WhatsApp" + "Pagas directo al vendedor"), so the contact action is always in reach.</li>
+    <li>Build: full header and categories disclosure push the photo below the fold; breadcrumb card; no sticky contact bar.</li>
+  </ul><img src="10-ficha-390.webp" alt="Ficha 390: concepto y build"></section>
+
+  <section class="pair" id="p11"><h2>Ficha · resto, 390 <span class="owner">UX-4</span></h2><ul>
+    <li>The build shows two yellow "Contactar por WhatsApp" buttons in one screen (listing card and seller card), against the one-yellow-action rule; the concept has one, in the sticky bar.</li>
+    <li>Concept folds the seller's reviews into the seller card and ends with a related-listings carousel.</li>
+  </ul><img src="11-ficha-390-resto.webp" alt="Ficha 390 resto: concepto y build"></section>
+
+  <section class="pair" id="p12"><h2>Tienda, 1440 <span class="owner">UX-4</span></h2><ul>
+    <li>Concept: compact identity header (logo tile, verified mark with "Qué verificamos", stats row), tabs (Publicaciones, Reseñas, Sobre la tienda), in-store search with category chips and sort, five-column grid, pagination, reviews and store details side by side.</li>
+    <li>Build: a black cover with the store name (no banner uploaded), identity row with the monogram, reviews panel, three-column grid, no in-store search or chips.</li>
+  </ul><img src="12-tienda-1440.webp" alt="Tienda 1440: concepto y build"></section>
+
+  <section class="pair" id="p13"><h2>Cuenta · Mis publicaciones, 1440 <span class="owner">UX-2 · UX-6</span></h2><ul>
+    <li>Concept: light sidebar with the person's name and city, header with a count summary and "+ Publicar", status tabs with counts, table rows with thumbnail, status tags (including "Cambios en revisión"), a rejection reason row and row actions. The site header shows a notifications bell and an avatar.</li>
+    <li>Build: black "Mi cuenta" card in the sidebar, page header in a panel; the test account has no listings, so the empty state shows.</li>
+  </ul><img src="13-cuenta-1440.webp" alt="Cuenta 1440: concepto y build"></section>
+
+  <section class="pair" id="p14"><h2>Cuenta · Mis publicaciones, 390 <span class="owner">UX-2 · UX-6</span></h2><ul>
+    <li>Concept: compact header with "Vender", bell and avatar, an account breadcrumb disclosure, list rows with status tags and actions.</li>
+    <li>Build: full header, "Cuenta · Mis publicaciones / Menú" disclosure, page header panel, empty state.</li>
+  </ul><img src="14-cuenta-390.webp" alt="Cuenta 390: concepto y build"></section>
+
+  <section class="pair" id="p15"><h2>Publicar, 390 <span class="owner">UX-5</span></h2><ul>
+    <li>Concept order: error summary, Fotos first, "Qué vendes" (category, type chips, brand and model side by side, title with a hint), condition as radio cards with definitions, price with S/ prefix and place side by side, optional characteristics as chips, description with counter, terms, Publicar, and the review note.</li>
+    <li>Build order: profile notice, title, category, type, brand, model, condition (select), price, city, region, description, photos (button), terms panel, Publicar. The concept's radio cards and chips are exactly the two primitives that have no consumer yet (Radio, Chip).</li>
+  </ul><img src="15-publicar-390.webp" alt="Publicar 390: concepto y build"></section>
+
+  <section class="pair" id="p16"><h2>Admin · moderación, 1440 <span class="owner">UX-7</span></h2><ul>
+    <li>Concept: Admin has its own full-height black sidebar (no public header) and a master-detail queue: list on the left, the selected item on the right with a photo strip, field grid, description, a "Guía de revisión" checklist and a sticky decision bar ("Aprobar y publicar", "Rechazar con motivo", "Siguiente").</li>
+    <li>Build: public header, Admin sidebar card, page header panel with counts, queue tabs, one full card per item with its actions below.</li>
+  </ul><img src="16-admin-1440.webp" alt="Admin 1440: concepto y build"></section>
+</main>
+</body>
+</html>
