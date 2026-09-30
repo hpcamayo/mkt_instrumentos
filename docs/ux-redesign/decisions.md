@@ -16,17 +16,32 @@ Record who decided and when. A decided item changes only through a new entry.
 | F7 | Admin bulk actions | UX-7 |
 | F8 | Admin-picked home vitrina (only if H2 = Admin) | closed 2026-09-30: H2 = A (automatic), nothing to build |
 
-## Pending — raised during UX-1 implementation (30 Sep)
+## Raised during UX-1 implementation (30 Sep)
 
 | ID | Question | Proposal | Status |
 | --- | --- | --- | --- |
-| G1 | Name of the catalog page `/listados`: header, footer, breadcrumb and SEO title still say "Listados" | The glossary retires "listado". Proposal: "Instrumentos", which matches the page title "Instrumentos disponibles" and the `/instrumentos/…` URLs. It also changes the SEO title and the breadcrumb structured data, so it moves with the UX-2 navigation work | pending (owner, with UX-2) |
+| G1 | Name of the catalog page `/listados`: header, footer, breadcrumb and SEO title still say "Listados" | The glossary retires "listado". Proposal: "Instrumentos", which matches the page title "Instrumentos disponibles" and the `/instrumentos/…` URLs. It also changes the SEO title and the breadcrumb structured data, so it moves with the UX-2 navigation work | decided 2026-09-30 by owner: "Instrumentos" in the header, footer, breadcrumbs and SEO title; the `/listados` URL stays (applied in UX-2) |
 | G2 | Legal pages (Términos, Privacidad, Artículos prohibidos, Consejos de seguridad) keep "anuncios" and the defined term "Tienda Verificada" | Align them with the glossary only after a legal read; UX-1 fixed nothing there | pending (owner or legal) |
 | G3 | Password minimum is 6 characters at sign-up and 8 when resetting or changing it | Product rule, so not changed in UX-1. One number everywhere; 8 recommended | pending (owner) |
 
+## Decided — UX-2 shell and navigation (owner, 2026-09-30)
+
+UX-1 was accepted by the owner on 30 Sep (`ux-1-acceptance.md`). The UX-2 brief (`ux-2-shell.md`) was approved the same day with these decisions; the UX-2 items of `home-visual-audit.md` (1, 1b, 5, 10, 14, 17) were approved with it.
+
+| ID | Decision | Status |
+| --- | --- | --- |
+| N1 | Header "Vender" is the `onDark` outline button (white text, 1 px #4B5563 border, 36 px). Yellow stays for each page's own action (audit item 5) | decided 2026-09-30 by owner |
+| N2 | Remove the stray hairline (the first `<path>`, a 1-unit stroked line at the artboard's left edge) from `app/logo-clear.svg`; the mark does not change. Check `app/icon.svg` and `app/apple-icon.png` for the same line (audit item 1b) | decided 2026-09-30 by owner |
+| N3 | Nothing sticky: the header scrolls with the page on every device | decided 2026-09-30 by owner |
+| N4 | Phone: compact header, no bottom bar (as in the concepts) | decided 2026-09-30 by owner |
+| N5 | Footer: full on the home; slim on every other public and account page; none in Admin | decided 2026-09-30 by owner |
+| G1 | The catalog page is called "Instrumentos" (header, footer, breadcrumbs, SEO title); `/listados` stays; the copy test's "Listados" exception goes | decided 2026-09-30 by owner |
+| N6 | Header data for the bell, the account menu and the avatar: the header's state endpoint (`/api/account-navigation`) also reads the user's name, the existing `is_admin` check and the two counts the account rail already reads (unread notifications, pending buyer confirmations). Same RLS client; no schema or rule change | decided 2026-09-30 by owner (asked during UX-2 implementation) |
+| N7 | "Tiendas verificadas" in the category strip and the footer: no stores directory exists, so it opens the catalog filtered to verified stores (`/listados?seller_type=verified_store`, the existing filter). A stores page would be new (UX-3/UX-4) | decided 2026-09-30 by owner (asked during UX-2 implementation) |
+
 ## Decided — UX-1 foundations (asked 2026-09-27)
 
-Owner, 30 Sep: "the foundations were also all approved except for the homepage, which we closed now with the banners." All twelve are approved as recommended in `ux-1-foundations.md`; the homepage exception is the H series below, now closed.
+UX-1 accepted by the owner on 30 Sep 2026. Owner, 30 Sep: "the foundations were also all approved except for the homepage, which we closed now with the banners." All twelve are approved as recommended in `ux-1-foundations.md`; the homepage exception is the H series below, now closed.
 
 | ID | Question | Recommendation | Status |
 | --- | --- | --- | --- |

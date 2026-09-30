@@ -8,8 +8,8 @@ Read this file first, then only the file your task needs.
 | Sub-sprint | Name | State |
 | --- | --- | --- |
 | UX-0 | Investigation and plan | Done |
-| UX-1 | Foundations: visual + content language, primitives, a11y baseline | **Ready for owner acceptance** (30 Sep): implemented on branch `ux/redesign` (9 Cowork commits + audit commits, not pushed); audited and corrected 30 Sep; evidence in `ux-1-acceptance.md` |
-| UX-2 | Shell and navigation | Not started |
+| UX-1 | Foundations: visual + content language, primitives, a11y baseline | **Accepted** (owner, 30 Sep): implemented on branch `ux/redesign` (9 Cowork commits + audit commits, not pushed); audited and corrected 30 Sep; evidence in `ux-1-acceptance.md` |
+| UX-2 | Shell and navigation | **In implementation** (brief approved by the owner, 30 Sep): `ux-2-shell.md`, with its items from `home-visual-audit.md` |
 | UX-3 | Discovery: home, catalog, category landings, cards, filters | Not started. Home decided: canvas page "Inicio · versión final", banner set in `art/rotation/` |
 | UX-4 | Listing and store pages | Not started |
 | UX-5 | Selling: create, edit, revise | Not started |
@@ -32,6 +32,8 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `roadmap.md` | Sub-sprint sequence, dependencies, owner decisions, parallel-work rules, product-behavior flags |
 | `ux-1-foundations.md` | UX-1 approval package and the proposed foundation spec |
 | `ux-1-acceptance.md` | UX-1 acceptance package: commits, criteria with evidence, performance, changed labels, open items |
+| `ux-2-shell.md` | UX-2 brief (approved 30 Sep): header, category strip, account menu, breadcrumbs, page frames, footers, 404/500, decisions N1–N5 and G1, acceptance criteria |
+| `home-visual-audit.md` | Graphic-design review of the decided home (30 Sep): the numbered items each sub-sprint applies (table "By sub-sprint") and the owner questions still open |
 | `decisions.md` | Decision log (pending and decided). Update it whenever the owner decides |
 | `screenshots/baseline-2026-09-27/` | Live-site baseline captured during the audit |
 | `screenshots/page-concepts/` | Renders of the page-concept canvas (direction only) |

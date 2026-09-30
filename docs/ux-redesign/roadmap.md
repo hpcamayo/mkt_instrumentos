@@ -13,6 +13,8 @@ Eight sub-sprints, grouped by UX system and journey, not by file. Each has an ap
 | UX-7 | **Admin workbench** | Moderation throughput and safety | Queue IA, split list/detail with inline photos and change diffs, dense tables, action hierarchy and confirmations, stores/users/reports/reviews/transactions/legacy linking, audit history | UX-1 (+ table/list primitives from UX-6) | Queue layout, confirmation policy, whether bulk actions are allowed (a behavior change) | Medium-high |
 | UX-8 | **Coherence and hardening** | Nothing inconsistent, inaccessible or slow is left | Cross-product consistency sweep, final microcopy pass, keyboard/screen-reader/200–400% zoom audit, Core Web Vitals on key templates, harness baseline refresh, final docs, Codex handoff | All | Final acceptance | Medium |
 
+Each sub-sprint also applies its items from `home-visual-audit.md` (table "By sub-sprint").
+
 Sequencing: UX-1 → UX-2 → UX-3 → UX-4 → UX-5 → UX-6 → UX-7 → UX-8. Admin (UX-7) could move earlier if moderation volume requires it; that is an owner call.
 
 ## Repo setup (Sprint 9 closed, 30-09)

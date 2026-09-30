@@ -1,6 +1,6 @@
 # UX-1 Foundations — acceptance package
 
-Status: **ready for owner acceptance** (30 Sep 2026), **audited and corrected the same day** (§ Audit, 30 Sep). Nothing is pushed or merged. Codex review pending.
+Status: **Accepted by the owner, 30 Sep** (2026), after the audit and corrections of the same day (§ Audit, 30 Sep). Nothing is pushed or merged. Codex review pending.
 
 Branch `ux/redesign`: the 9 Cowork commits on top of the final Sprint 9 head `49a38e5`, imported into the owner's repository from `laria-ux-redesign-ux1.bundle` as a local branch (checked out in the worktree `../mkt_instrumentos-ux`, so the catalog checkout is untouched), plus the audit commits. `origin/main` has since moved one docs-only commit (`f04e909`, Sprint 9 records; no file overlaps this branch). Rebase and rerun the checks before anything is pushed.
 
