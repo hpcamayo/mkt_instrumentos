@@ -1,201 +1,157 @@
 # Laria Design System
 
-This is the canonical reference for Laria UI work. Read this before changing frontend visuals, layout, Tailwind classes, or reusable UI components.
+The canonical reference for Laria UI work. Read it before changing visuals, layout, Tailwind classes, copy or shared components. It describes what the code implements after UX-1 (Foundations). The decisions behind it (D1–D12), the audit and the roadmap are in `docs/ux-redesign/`.
 
-## Brand Principles
+Product behavior is defined by `docs/functional-spec.md`. Nothing here changes a product rule; visual work keeps listing lifecycle, moderation, verification, reviews, favorites, alerts, authorization and seller contact exactly as specified.
 
-Laria is a focused music-gear marketplace for Peru. The interface should feel commercial, clear, and premium without implying platform payments, checkout, delivery, or buyer protection that the product does not support. V1 ratings/reviews must appear only when backed by the verified-transaction workflow in `docs/functional-spec.md`.
+## Principles
 
-Design should prioritize:
-- Fast browsing and comparison.
-- Clear listing information.
-- Direct WhatsApp contact.
-- Trust through honest available signals.
-- Mobile-first usability with strong desktop layouts.
+- Laria is a marketplace for instruments and pro audio in Peru. Buyers contact sellers directly by WhatsApp; Laria does not process payments, shipping or guarantees, and the interface never implies that it does.
+- Trust comes from honest signals only: moderation, verified stores and reviews backed by a verified transaction. No fake counts, badges or guarantees.
+- Mobile first, with dense but calm desktop layouts.
+- One visual language: every page is composed from the tokens and components below.
 
-## Color Tokens and Usage
+## Color roles
 
-Core palette:
+Colors are named by role, not by hue. Tailwind (`tailwind.config.ts`) and the CSS variables in `app/globals.css` define the same values; `tests/ux-contrast.test.cjs` keeps them in sync and checks the pairs below.
 
-| Role | Hex | Usage |
+| Role | Tailwind | Value | Rule |
+| --- | --- | --- | --- |
+| Frame | `frame`, `frame-2` | #050608, #1A1D24 | Header, footer, Admin chrome, dark covers. Mark frame containers with `surface-frame` so focus rings turn blue |
+| Action | `action` (text `action-ink` #050608) | #F1EA16 | One primary action per view, and the logo. Never text on light surfaces |
+| Accent | `accent` | #6BA6FF | Fills, marks, underlines, selection. As text only on frame (8.2:1) |
+| Ink | `ink`, `ink-2` | #101217, #4B5563 | All text on light surfaces (18.7:1, 7.6:1) |
+| Muted | `muted-dark` | #9DA3AF | Text on frame only (8.0:1), or disabled |
+| Surfaces | `surface`, `canvas`, `subtle` | #FFFFFF, #F1F3F5, #E9EDF3 | Content, app background, dividers and soft fills |
+| Decorative line | `line-deco` | #C8CDD6 | Separators only; never the only boundary of a control |
+
+Derived functional tones (not brand colors):
+
+| Tailwind | Value | Use |
 | --- | --- | --- |
-| Brand action/logo | `#F1EA16` | Laria logo, major CTAs, primary publish/sell actions |
-| Interface accent | `#6BA6FF` | Selected states, links, verification marks, active filters, pagination, dashboard charts |
-| Header/footer black | `#050608` | Site header, footer, dark admin/sidebar panels |
-| Dark ink | `#101217` | Main text and dark buttons |
-| Graphite panel | `#1A1D24` | Secondary dark surfaces |
-| Page white | `#FFFFFF` | Cards, panels, main content surfaces |
-| Light page background | `#F1F3F5` | Page canvas behind white cards |
-| Fog border/background | `#E9EDF3` | Subtle borders, dividers, soft backgrounds |
-| Steel border/icon tone | `#C8CDD6` | Input borders, secondary borders, muted icon structure |
-| Muted text | `#9DA3AF` | Low-priority text only |
-| Main dark text | `#101217` | Primary headings/body text |
-| Soft dark text | `#4B5563` | Supporting body copy and metadata |
+| `action-hover` | #E3DC22 | Primary hover; it is the logo artwork's yellow |
+| `accent-tint` | #E6F0FF | Informational and success tint, selected rows |
+| `line-strong` | #7D8694 | Control borders (3.7:1) |
+| `ink-3` | #6B7280 | Placeholders on white only (4.8:1) |
+| `danger`, `danger-tint` | #B42318, #FDECEA | Errors and destructive actions (6.6:1) |
+| `warning-tint` | #FBF8CC | Pending and attention tint |
 
-Usage rules:
-- Use `#F1EA16` sparingly for major actions, not every badge.
-- Use the blue accent for interface state and guidance, not large brand blocks.
-- Keep page backgrounds white or very light gray.
-- Keep borders subtle and shadows soft.
+Patterns:
+- Links: ink text with a 2 px blue underline (`.link`); on frame, white text (`.link-on-frame` or inside `surface-frame`).
+- Selected chip: blue fill, ink text and a check; state is never shown by color alone.
+- Verified store: blue disc with an ink check plus the words "Tienda verificada" (`VerifiedMark`).
+- Focus: 2 px ink outline with a 2 px offset everywhere (global `:focus-visible`); 2 px blue on frame surfaces. Never remove it.
+- Status tones: neutral; blue for published or positive; yellow tint for pending; red for rejected, errors and destructive actions. No green.
 
-## Current Visual Direction
+Never: yellow or blue text on light surfaces, `muted-dark` on light surfaces, `line-deco` as a control border, off-palette hex values in components, green success colors.
 
-The current Laria UI is a light-background marketplace system:
-- Header and footer use `#050608` or `#101217`.
-- The logo uses `#F1EA16`.
-- `#F1EA16` is the primary brand action color for main CTAs.
-- `#6BA6FF` is the interface accent for selected states, links, verification marks, active filters, pagination, and dashboard charts.
-- Main page backgrounds use `#FFFFFF` or `#F1F3F5`.
-- Borders use `#E9EDF3` or `#C8CDD6`.
-- Dark text uses `#101217`.
-- Soft/muted text uses `#4B5563` or `#9DA3AF`.
-- Cards are white, lightly bordered, softly shadowed only when necessary, and rounded but not bubbly.
-- Product cards prioritize image, title, condition/location/seller metadata, and prominent price.
-- Admin/user panels are utility-first, dense but readable, and use `#6BA6FF` for active/selected/chart states.
-- `#F1EA16` should remain mostly reserved for the logo and major CTAs.
+## Typography
 
-## Completed Visual Refresh Sprint
+Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fonts/archivo-latin-wdth-normal.woff2` through `next/font/local` (variable `--font-archivo`, metric-matched Arial fallback, OFL license in `app/fonts/OFL.txt`).
 
-The visual redesign sprint refreshed:
-- Homepage.
-- Listings/catalog page.
-- Listing detail page.
-- User/seller panel at `/mi-cuenta`.
-- Admin panel at `/admin`.
+- Weights: 400 reading, 600 interface and labels, 700–750 titles and prices (`font-strong` = 750). No 800 or 900.
+- Width: titles, model names and prices are semi-condensed (87.5%); reading text is normal width.
+- Uppercase only for micro labels of three words or fewer. No uppercase buttons or headlines.
+- Inputs and body text are 16 px (no iOS zoom). Keep reading text under about 68 characters per line.
 
-Sprint scope was UI-only:
-- No new backend logic.
-- No schema changes.
-- No new Supabase queries.
-- No new marketplace features.
-- Unsupported visual elements remain placeholder-only.
+| Class | Size / line | Weight, width | Use |
+| --- | --- | --- | --- |
+| `t-micro` | 12/16 | 600, uppercase +0.04em | Eyebrows and labels of ≤3 words |
+| `t-meta` | 13/18 | 400, ink-2 | Metadata, hints, counters |
+| `t-ui` | 14/20 | 400/600 | Controls, table cells, dense copy |
+| `t-body` | 16/24 | 400 | Reading text |
+| `t-card-title` | 15/19 | 700, semi-condensed | Card titles, two lines max |
+| `t-card-price` | 18/22 | 750, semi-condensed, tabular | Card prices |
+| `t-section` | 20/26 | 700, semi-condensed | Section headings |
+| `t-page` | 28/32, 34/38 from 1024 px | 700, semi-condensed | Page titles |
+| `t-price-detail` | 32/36, 40/44 from 1024 px | 750, semi-condensed, tabular | Listing price |
+| `t-display` | 40/44 | 700, semi-condensed | Covers and category heroes only |
 
-## Header Rules
+## Shape, elevation, spacing, motion
 
-- Header stays black/dark.
-- Laria logo stays yellow.
-- Navigation links use white or light gray.
-- Publishing/selling CTA can use yellow when present.
-- Do not add cart or checkout. Favorites and search-alert behavior are frozen V1 requirements but must appear only when backed by their real implementation, not as decorative controls.
+- Radius: `rounded-tag` 4 px, `rounded-control` 6 px, `rounded-panel` 8 px. Circles only for icons and avatars. No pill badges.
+- Elevation: cards are flat with a border. `shadow-level-1` for menus and popovers, `shadow-level-2` for dialogs and sheets. No other shadows, no hover lift.
+- Spacing on a 4 px base. Public pages use `PageContainer` (`max-w-page`, 1440 px, gutters 16 / 24 / 32).
+- Motion: 120 ms for color and opacity (`duration-120`), 200 ms for sheets; nothing moves under `prefers-reduced-motion`.
+- Targets: 44 px for primary controls (`h-11` or `min-h-11`), 36 px for compact desktop controls, never below 24 px.
 
-## Background Rules
+## Layout and page structure
 
-- Public pages use a light canvas, usually `#FFFFFF` or `#F1F3F5`.
-- Main content surfaces are white.
-- Dark full-width areas are reserved for the global header/footer, homepage hero/CTA, and admin/dashboard navigation surfaces.
+- One `<main id="contenido">` per page, in `app/layout.tsx`. Pages and layouts use `section`, `div` or `PageContainer as="section"`, never a second `main`.
+- The first focusable element is the "Saltar al contenido" skip link.
+- Page structure (headers, filters, grids) is being redesigned per template in UX-2 to UX-7; until then keep existing layouts and only use the tokens and components here.
 
-## CTA and Button Rules
+## Components (`components/ui/`)
 
-- Primary CTA: yellow background with black text.
-- Secondary CTA: white/light background with steel border and dark text.
-- Blue buttons are acceptable for admin/status operations where yellow would overstate the action.
-- Destructive or moderation actions must remain visually clear and should not be disguised as normal links.
+Use these instead of writing new markup for the same job.
 
-## Link and Selected-State Rules
+- `Button` / `buttonClasses()`: variants `primary` (yellow, one per view), `secondary`, `quiet`, `danger`, `onDark`; sizes `sm` 36, `md` 44, `lg` 52; `loading` + `loadingLabel` keep the primary yellow; with `href` it renders a link. `IconButton` requires a `label`.
+- `Field` with `Input`, `Select`, `Textarea`, `FileInput`, `Checkbox`, `Radio`: every control has a visible label; `Field` wires `id`, `aria-describedby` (hint and error) and `aria-invalid`. `Textarea` with `maxLength` shows an "n / max" counter. Give each field a unique `id` (use `useId()` in repeated components).
+- `Tag` and `StatusTag`: status labels and tones come from `lib/ui/status.ts`, the single dictionary. `CountBadge` for counts.
+- `Chip`, `ChipLink`, `AppliedChip`: filters and period selectors; selected state has a check and `aria-pressed` or `aria-current`.
+- `Notice` (`info`, `success`, `warning`, `danger`, icon + text): danger is an alert, others a status; use `role="note"` for static explanations. `PageNotice` moves focus to page-level results; do not use that movement for field errors.
+- `EmptyState`, `PageHeader`, `Price` (S/ with tabular figures), `VerifiedMark` / `VerifiedIcon`, `Skeleton`, `WhatsAppGlyph`.
 
-- Links, selected filters, active nav states, selected thumbnails, verification labels, and pagination active states use the blue accent.
-- Keep selected states obvious with a combination of color, border, and background.
-- Avoid using yellow for minor badges or selected filters.
+WhatsApp contact: every contact button is the primary yellow button with the WhatsApp glyph and the label "Contactar por WhatsApp". No WhatsApp green.
 
-## Card Rules
+## Content language
 
-- Cards are white with thin fog/steel borders.
-- Shadows should be soft and minimal.
-- Corners are rounded but not bubbly; prefer `rounded-md` or `rounded-lg`.
-- Do not nest decorative cards inside other cards unless the inner card is a real repeated item, table, or form group.
+Spanish for Peru, tú, short sentences. No exclamation marks and no slogans in the interface. Musician vocabulary is welcome (pastillas, cuerpo sólido, crash de 16", interfaz de audio). Formats: S/ 1,200 · 27 set. 2026 · Miraflores, Lima.
 
-## Product Card Rules
+Glossary (one name per concept; `tests/ux-copy.test.cjs` rejects the retired names):
 
-Product cards prioritize:
-- Image or honest missing-photo placeholder.
-- Title, preferably brand + model when data supports it.
-- Condition.
-- Price.
-- Seller type/store and location when available.
-- Small category/status badge.
+| Concept | Use | Avoid |
+| --- | --- | --- |
+| What is published | publicación | listado, aviso, anuncio, producto, registro |
+| The object | instrumento, equipo | artículo, ítem |
+| Individual account | Particular | vendedor particular, cuenta de vendedor |
+| Business account | Tienda · Tienda verificada | Store Owner, propietario de tienda |
+| Entry point to sell | Vender | "Para tiendas" as a sell entry |
+| Action | Publicar | Agregar inventario, Publicar producto, Publicar inventario, Enviar para revisión |
+| Physical state | Condición | Estado, estado del producto |
+| Publication lifecycle | Estado | Condición |
+| Contact | Contactar por WhatsApp | Preguntar / Escribir por WhatsApp, Escribir a la tienda |
+| Purchases and sales | Compras y ventas | Transacciones, Atribuciones |
+| Pending edit | Cambios en revisión | propuesta, Cambio de publicación |
+| Account home | Resumen | panel, dashboard, "Mi cuenta" as a page title |
 
-Cards should match the catalog style: white card, subtle border, soft shadow, blue hover/active details, prominent dark price.
+Status labels (from `lib/ui/status.ts`; only the visible label changes, meanings stay as in the functional spec): Borrador, En revisión, Publicada (stored as `approved`), Cambios en revisión, Rechazada, Oculta, Vendida, Archivada.
 
-## Listing/Catalog Page Rules
+Orthography: tildes, ñ and opening ¿ are required; the copy test checks the common misses. No system jargon in the interface: V1, legacy, Store Owner, metadata, Supabase, CTR, "base de datos". Internal errors stay in logs.
 
-- Use a light page background.
-- Keep the left filter sidebar white, bordered, and readable.
-- Use blue for selected filters, focus states, and active controls.
-- Keep the product grid spacious enough for browsing.
-- Do not change filter logic, query params, or listing fetch behavior during visual-only tasks.
+Open items (`docs/ux-redesign/decisions.md`): the catalog page is still named "Listados" (G1, with UX-2) and the legal pages keep their approved wording (G2).
 
-## Listing Detail Page Rules
+## Placeholders and empty states
 
-- Use a two-column desktop layout: gallery on the left, listing information on the right.
-- Gallery remains sticky on desktop and non-sticky on mobile.
-- Selected thumbnails use the blue accent.
-- Price is large, dark, and high contrast.
-- WhatsApp contact remains the primary path and uses the yellow CTA.
-- Seller/store trust, description, full specs, similar items, and more-from-seller/store sections use clean white panels.
-- Do not add payments, checkout, shipping, or fake trust metrics. Favorites and verified-transaction ratings/reviews may be added only with their real V1 data and behavior.
+- Prefer omission over a placeholder. Never show fake listings, stores, counts or reviews.
+- A home section with no real content shows an `EmptyState` or is hidden.
+- Missing listing photo: an icon and "Sin foto". Missing store banner or logo: a frame cover with the store name and a two-letter monogram (`storeInitials`).
+- If a placeholder is unavoidable during development, comment it in code and keep it out of buyer-facing pages.
 
-## User/Seller Panel Rules
+## Brand touchpoints
 
-- Use a light workspace with white dashboard cards.
-- Sidebar or dashboard navigation should be clean and use blue active states.
-- Use yellow only for the main action: publish a new listing.
-- Placeholder metrics/charts are allowed only when clearly commented and must not imply working analytics.
-- Do not change auth/session logic or add seller calculations during visual-only work.
+- Logo: `app/logo-clear.svg`, unedited (its yellow is #E3DC22). The canonical interface yellow is #F1EA16.
+- Favicon `app/icon.svg` and `app/apple-icon.png`: the wordmark on the frame color.
+- Emails (`lib/email/templates.ts`): inline styles on the palette (frame header, #F1EA16 button with #050608 text, ink text, blue underline on the fallback link, 8/6 px radii).
 
-## Admin Panel Rules
+## Accessibility
 
-- Keep admin UI operational, dense, and readable.
-- A dark sidebar/header is appropriate when it helps orientation.
-- Main workspace should remain light.
-- Use blue for active navigation, selected rows, links, and chart placeholders.
-- Status badges should be subtle.
-- Do not change moderation, approval, rejection, invite, or authorization behavior during visual-only work.
+- Visible focus on every interactive element; never `outline-none` without a replacement.
+- Color is never the only signal: statuses carry text, selection carries a check, verification carries words.
+- Contrast: text 4.5:1, control boundaries and meaningful marks 3:1 (enforced for the token pairs by `tests/ux-contrast.test.cjs`).
+- Semantic HTML: links navigate, buttons act, tables hold tabular data. Labels and alt text in Spanish; decorative images and icons are hidden from assistive technology.
+- Page-level success and error notices receive focus and scroll into view (`PageNotice`); field errors stay next to their field.
+- No horizontal scroll at 390 px; layouts hold at 200% zoom.
 
-## Placeholder Policy
+## Checks and tools
 
-Placeholders are acceptable for unsupported visual areas only when they do not fake product behavior.
+- `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` for every change. `tests/ux-copy.test.cjs` and `tests/ux-contrast.test.cjs` enforce the content and color rules.
+- Screenshots: `node scripts/ux-snapshots.cjs --label <name>` captures the route list at 390 / 768 / 1280 / 1440, anonymous and signed in with local test accounts (see the script header). Local by default; `--allow-remote` for a preview deployment only.
 
-Rules:
-- Add a code comment such as `// UI placeholder only; replace with real data when feature is implemented.`
-- Do not show fake ratings, fake sales counts, fake revenue, fake reviews, or fake guarantees.
-- Prefer omission over misleading placeholders.
-- Placeholder charts are allowed for layout only and must not drive product decisions.
+## Checklist for UI work
 
-## Tailwind and Component Style Guidance
+Before: read this file, the relevant page and component code, and `docs/functional-spec.md` for the behavior involved. Confirm the task is visual-only or get the product change approved.
 
-- Prefer existing tokens, utilities, and reusable components over one-off class walls.
-- Use `components/page-container.tsx` for public page width.
-- Reuse `ListingCard`, `ListingFilters`, `ListingDetailGallery`, and existing form components where possible.
-- Keep Tailwind class strings readable and grouped by purpose.
-- Do not paste large v0-style CSS blocks blindly.
-- Do not replace working Supabase or business logic while integrating visual changes.
+While: compose from `components/ui/`; roles, not hex values; one yellow action per view; glossary terms; no new product behavior; no changes to queries, filters, routes, auth or business logic in visual tasks.
 
-## Accessibility Basics
-
-- Keep semantic HTML: links for navigation, buttons for actions, tables for tabular data.
-- Maintain visible focus states.
-- Page-level success and actionable-error notices must receive programmatic focus and scroll into view when they appear, using the shared notice pattern. Do not apply this global movement to every field-level validation message.
-- Ensure color is not the only state indicator.
-- Use descriptive labels in Spanish.
-- Preserve alt text and honest fallback text for listing images.
-- Ensure mobile layouts do not overflow horizontally.
-
-## Future UI Work Checklist
-
-Before editing:
-- Read this file and the relevant page/component code.
-- Confirm whether the ticket is visual-only or includes product behavior.
-- Identify existing data, queries, and actions that must be preserved.
-
-While editing:
-- Keep Spanish UI copy.
-- Use yellow only for major CTAs.
-- Use blue for interface state.
-- Keep cards white with subtle borders/shadows.
-- Comment placeholder-only UI.
-- Do not add unsupported marketplace features.
-
-Before finishing:
-- Run `npm run lint`, `npm run typecheck`, and `npm run build` for code changes.
-- Manually check mobile and desktop layouts when practical.
-- Report changed files, checks run, how to test, and known limitations.
+After: run the checks, look at 390 px and desktop, and report changed files, checks run and known limitations.

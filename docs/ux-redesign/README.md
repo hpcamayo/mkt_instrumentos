@@ -8,7 +8,7 @@ Read this file first, then only the file your task needs.
 | Sub-sprint | Name | State |
 | --- | --- | --- |
 | UX-0 | Investigation and plan | Done |
-| UX-1 | Foundations: visual + content language, primitives, a11y baseline | **Approved** (D1–D12, owner). Implementation in progress on branch `ux/redesign` |
+| UX-1 | Foundations: visual + content language, primitives, a11y baseline | **Ready for owner acceptance** (30 Sep): implemented on branch `ux/redesign` (9 commits, not pushed); evidence in `ux-1-acceptance.md` |
 | UX-2 | Shell and navigation | Not started |
 | UX-3 | Discovery: home, catalog, category landings, cards, filters | Not started. Home decided: canvas page "Inicio · versión final", banner set in `art/rotation/` |
 | UX-4 | Listing and store pages | Not started |
@@ -31,6 +31,7 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `references.md` | What Laria learns from Reverb, Discogs, Sweetwater, Thomann, Mercado Libre, classifieds, Chrono24; evidence base |
 | `roadmap.md` | Sub-sprint sequence, dependencies, owner decisions, parallel-work rules, product-behavior flags |
 | `ux-1-foundations.md` | UX-1 approval package and the proposed foundation spec |
+| `ux-1-acceptance.md` | UX-1 acceptance package: commits, criteria with evidence, performance, changed labels, open items |
 | `decisions.md` | Decision log (pending and decided). Update it whenever the owner decides |
 | `screenshots/baseline-2026-09-27/` | Live-site baseline captured during the audit |
 | `screenshots/page-concepts/` | Renders of the page-concept canvas (direction only) |
@@ -50,6 +51,7 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `screenshots/home-decisiones-h/` | The options for home decisions H6, H2, H3, H4 and the H4 promise table (decided 30 Sep) |
 | `screenshots/home-final/` | The home with every decision applied (1440, 390) and the nine rotation banners: the reference for UX-3 |
 | `screenshots/ux1-before/` | Harness captures of the product before UX-1 (selected frames) |
+| `screenshots/ux1-after/` | The same frames after UX-1 (same file names) |
 | `../../scripts/ux-snapshots.cjs` | The screenshot harness (D10): fixed route list at 390 / 768 / 1280 / 1440, anonymous and signed in; output in the gitignored `.ux-snapshots/` |
 | `art/` | Original banner art: SVG (round 2), raster generators and images (`wild/`, `round5/` … `round10/`) |
 
@@ -61,13 +63,13 @@ Visual workspaces (private claude.ai artifacts, owner account; exploratory, not 
 
 ## How the harness captures were made
 
-`screenshots/ux1-before/` comes from `scripts/ux-snapshots.cjs` run on a production build of `main` at `49a38e5`, against a local Postgres 16 with the repo migrations, `supabase/seed.sql` and extra UX data (a Particular, a Store Owner and an Admin account, listings with photos), served through a local stand-in for the Supabase REST, Auth and Storage APIs. No hosted data is involved. Two differences from a Mac: text uses the Linux fallback font (the site had no web font before UX-1), and the home hero photo (Unsplash) does not load offline.
+`screenshots/ux1-before/` and `screenshots/ux1-after/` come from `scripts/ux-snapshots.cjs` run on production builds of `main` at `49a38e5` and of `ux/redesign`, against a local Postgres 16 with the repo migrations, `supabase/seed.sql` and extra UX data (a Particular, a Store Owner and an Admin account, listings with photos), served through a local stand-in for the Supabase REST, Auth and Storage APIs. No hosted data is involved. Two differences from a Mac: before UX-1 the text used the Linux fallback font (the site had no web font; after UX-1 it is Archivo everywhere), and the home hero photo (Unsplash) does not load offline.
 
 ## Working rules for any session
 
 - Palette, logo, name and positioning are immutable. Usage of the palette is not.
 - Do not change product rules (lifecycle, moderation, verification, reviews, favorites, alerts, authority, RLS, seller contact). If a UX idea needs a rule change, log it in `decisions.md` as an owner question.
-- `docs/functional-spec.md` stays canonical for behavior. After UX-1 lands, `docs/design-system.md` is rewritten from `ux-1-foundations.md` and becomes canonical for visuals.
+- `docs/functional-spec.md` stays canonical for behavior. `docs/design-system.md` (rewritten in UX-1) is canonical for visuals.
 - Git in the Cowork device shell: never run plain `git status` (it leaves `.git/index.lock` because the sandbox cannot unlink). Use `GIT_OPTIONAL_LOCKS=0 git --no-optional-locks …` for reads.
 - Tests pin navigation labels and copy (`tests/*.test.cjs`, `acceptance/cases.tsv`). Terminology changes update those deliberately; never weaken an assertion.
 - Run targeted tests per change; the full suite once per integration point. Keep output summaries short.

@@ -1,6 +1,6 @@
 # UX-1 Foundations — pre-implementation package
 
-Status: **approved by the owner** (D1–D12 as recommended; confirmed 2026-09-30). Implementation on branch `ux/redesign`, based on the final Sprint 9 head `49a38e5`. Visual concepts: "Laria Redesign" canvas, page "UX-1 Fundamentos".
+Status: **approved by the owner** (D1–D12 as recommended; confirmed 2026-09-30). Implemented on branch `ux/redesign`, based on the final Sprint 9 head `49a38e5`; acceptance package in `ux-1-acceptance.md`. The implemented system is documented in `docs/design-system.md`. Visual concepts: "Laria Redesign" canvas, page "UX-1 Fundamentos".
 
 ## Sub-sprint
 

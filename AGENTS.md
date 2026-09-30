@@ -78,7 +78,8 @@ Use:
 ## UI And Visual Work
 
 - For any UI/design/frontend visual work, read `docs/design-system.md` before editing.
-- Follow the current Laria visual system.
+- Follow the current Laria visual system: role tokens, the shared components in `components/ui/`, the status dictionary in `lib/ui/status.ts` and the glossary. `tests/ux-copy.test.cjs` and `tests/ux-contrast.test.cjs` enforce the copy and color rules.
+- The UX redesign workspace (decisions, roadmap, audit, screenshots) is `docs/ux-redesign/`. Owner decisions recorded there are binding for UI work.
 - UI work must not add features unless explicitly requested.
 - Do not change Supabase schema, migrations, auth, authorization, listing approval, store approval, or business logic for visual tasks.
 - Prefer reusable components and tokens over huge one-off Tailwind class strings.
