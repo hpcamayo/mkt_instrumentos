@@ -14,7 +14,7 @@ const eslintConfig = [
     ignores: [".next/**", ".vercel/**", "next-env.d.ts"],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
-  { files: ["tests/**/*.cjs"], rules: { "@typescript-eslint/no-require-imports": "off" } },
+  { files: ["tests/**/*.cjs", "scripts/**/*.cjs"], rules: { "@typescript-eslint/no-require-imports": "off" } },
   {
     // Server-rendered code must not accidentally read browser-only window globals:
     // TypeScript's DOM lib types them, but they are undefined in Node (Sprint 9 /admin/tiendas 500).

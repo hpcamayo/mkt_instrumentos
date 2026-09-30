@@ -1,0 +1,218 @@
+{
+ "rule": "one banner per visit, picked at random when the page loads; no carousel, no motion (decisions H7, H11, 30 Sep 2026)",
+ "text": {
+  "h1": "#FFFFFF",
+  "lead_desktop": "#C8CDD6",
+  "lead_phone": "#D5D9E2"
+ },
+ "alt": "",
+ "banners": [
+  {
+   "id": "diablada",
+   "title": "Diablada",
+   "phone_background": "#0B0A1C",
+   "desktop": {
+    "1x": "01-diablada-desktop.webp",
+    "2x": "01-diablada-desktop@2x.webp",
+    "fallback": "01-diablada-desktop@2x.jpg",
+    "size_1x": [
+     1440,
+     300
+    ]
+   },
+   "phone": {
+    "1x": "01-diablada-phone.webp",
+    "2x": "01-diablada-phone@2x.webp",
+    "fallback": "01-diablada-phone@2x.jpg",
+    "size_1x": [
+     390,
+     150
+    ]
+   }
+  },
+  {
+   "id": "trompeta-tuba",
+   "title": "Trompeta y tuba",
+   "phone_background": "#170A1C",
+   "desktop": {
+    "1x": "02-trompeta-tuba-desktop.webp",
+    "2x": "02-trompeta-tuba-desktop@2x.webp",
+    "fallback": "02-trompeta-tuba-desktop@2x.jpg",
+    "size_1x": [
+     1440,
+     300
+    ]
+   },
+   "phone": {
+    "1x": "02-trompeta-tuba-phone.webp",
+    "2x": "02-trompeta-tuba-phone@2x.webp",
+    "fallback": "02-trompeta-tuba-phone@2x.jpg",
+    "size_1x": [
+     390,
+     150
+    ]
+   }
+  },
+  {
+   "id": "bombo-platillos",
+   "title": "Bombo y platillos",
+   "phone_background": "#1E0710",
+   "desktop": {
+    "1x": "03-bombo-platillos-desktop.webp",
+    "2x": "03-bombo-platillos-desktop@2x.webp",
+    "fallback": "03-bombo-platillos-desktop@2x.jpg",
+    "size_1x": [
+     1440,
+     300
+    ]
+   },
+   "phone": {
+    "1x": "03-bombo-platillos-phone.webp",
+    "2x": "03-bombo-platillos-phone@2x.webp",
+    "fallback": "03-bombo-platillos-phone@2x.jpg",
+    "size_1x": [
+     390,
+     150
+    ]
+   }
+  },
+  {
+   "id": "trombon-saxo",
+   "title": "Trombón y saxo",
+   "phone_background": "#06191A",
+   "desktop": {
+    "1x": "04-trombon-saxo-desktop.webp",
+    "2x": "04-trombon-saxo-desktop@2x.webp",
+    "fallback": "04-trombon-saxo-desktop@2x.jpg",
+    "size_1x": [
+     1440,
+     300
+    ]
+   },
+   "phone": {
+    "1x": "04-trombon-saxo-phone.webp",
+    "2x": "04-trombon-saxo-phone@2x.webp",
+    "fallback": "04-trombon-saxo-phone@2x.jpg",
+    "size_1x": [
+     390,
+     150
+    ]
+   }
+  },
+  {
+   "id": "tarola-clarinetes",
+   "title": "Tarola y clarinetes",
+   "phone_background": "#070B1F",
+   "desktop": {
+    "1x": "05-tarola-clarinetes-desktop.webp",
+    "2x": "05-tarola-clarinetes-desktop@2x.webp",
+    "fallback": "05-tarola-clarinetes-desktop@2x.jpg",
+    "size_1x": [
+     1440,
+     300
+    ]
+   },
+   "phone": {
+    "1x": "05-tarola-clarinetes-phone.webp",
+    "2x": "05-tarola-clarinetes-phone@2x.webp",
+    "fallback": "05-tarola-clarinetes-phone@2x.jpg",
+    "size_1x": [
+     390,
+     150
+    ]
+   }
+  },
+  {
+   "id": "waqrapuku-tinya",
+   "title": "Waqrapuku y tinya",
+   "phone_background": "#130A24",
+   "desktop": {
+    "1x": "06-waqrapuku-tinya-desktop.webp",
+    "2x": "06-waqrapuku-tinya-desktop@2x.webp",
+    "fallback": "06-waqrapuku-tinya-desktop@2x.jpg",
+    "size_1x": [
+     1440,
+     300
+    ]
+   },
+   "phone": {
+    "1x": "06-waqrapuku-tinya-phone.webp",
+    "2x": "06-waqrapuku-tinya-phone@2x.webp",
+    "fallback": "06-waqrapuku-tinya-phone@2x.jpg",
+    "size_1x": [
+     390,
+     150
+    ]
+   }
+  },
+  {
+   "id": "siku-quena",
+   "title": "Siku y quena",
+   "phone_background": "#06170D",
+   "desktop": {
+    "1x": "07-siku-quena-desktop.webp",
+    "2x": "07-siku-quena-desktop@2x.webp",
+    "fallback": "07-siku-quena-desktop@2x.jpg",
+    "size_1x": [
+     1440,
+     300
+    ]
+   },
+   "phone": {
+    "1x": "07-siku-quena-phone.webp",
+    "2x": "07-siku-quena-phone@2x.webp",
+    "fallback": "07-siku-quena-phone@2x.jpg",
+    "size_1x": [
+     390,
+     150
+    ]
+   }
+  },
+  {
+   "id": "charango-cajon",
+   "title": "Charango y cajón",
+   "phone_background": "#1E0C06",
+   "desktop": {
+    "1x": "08-charango-cajon-desktop.webp",
+    "2x": "08-charango-cajon-desktop@2x.webp",
+    "fallback": "08-charango-cajon-desktop@2x.jpg",
+    "size_1x": [
+     1440,
+     300
+    ]
+   },
+   "phone": {
+    "1x": "08-charango-cajon-phone.webp",
+    "2x": "08-charango-cajon-phone@2x.webp",
+    "fallback": "08-charango-cajon-phone@2x.jpg",
+    "size_1x": [
+     390,
+     150
+    ]
+   }
+  },
+  {
+   "id": "guitarra-amplificador",
+   "title": "Guitarra y amplificador",
+   "phone_background": "#100A26",
+   "desktop": {
+    "1x": "09-guitarra-amplificador-desktop.webp",
+    "2x": "09-guitarra-amplificador-desktop@2x.webp",
+    "fallback": "09-guitarra-amplificador-desktop@2x.jpg",
+    "size_1x": [
+     1440,
+     300
+    ]
+   },
+   "phone": {
+    "1x": "09-guitarra-amplificador-phone.webp",
+    "2x": "09-guitarra-amplificador-phone@2x.webp",
+    "fallback": "09-guitarra-amplificador-phone@2x.jpg",
+    "size_1x": [
+     390,
+     150
+    ]
+   }
+  }
+ ]
+}

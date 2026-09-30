@@ -25,3 +25,7 @@ pnpm-debug.log*
 Thumbs.db
 .vercel
 supabase/.temp
+
+# UX harness output and local accounts
+.ux-snapshots/
+.ux-accounts.local.json
