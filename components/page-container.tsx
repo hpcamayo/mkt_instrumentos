@@ -15,7 +15,7 @@ export function PageContainer({
   return (
     <Component
       className={cn(
-        "mx-auto w-full max-w-[1600px] px-3 sm:px-4 lg:px-5 xl:px-6",
+        "mx-auto w-full max-w-page px-4 sm:px-6 lg:px-8",
         className,
       )}
       {...props}

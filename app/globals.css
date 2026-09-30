@@ -2,34 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Laria foundations (docs/design-system.md). Roles mirror tailwind.config.ts. */
 :root {
   color-scheme: light;
-  --laria-black: #050608;
-  --laria-ink: #101217;
-  --laria-graphite: #1a1d24;
-  --laria-white: #ffffff;
-  --laria-cloud: #f1f3f5;
-  --laria-fog: #e9edf3;
-  --laria-steel: #c8cdd6;
-  --laria-muted: #9da3af;
-  --laria-text: #101217;
-  --laria-text-soft: #4b5563;
-  --laria-yellow: #f1ea16;
-  --laria-blue: #6ba6ff;
-  background: var(--laria-white);
-  color: var(--laria-text);
+  --frame: #050608;
+  --frame-2: #1a1d24;
+  --action: #f1ea16;
+  --action-hover: #e3dc22;
+  --accent: #6ba6ff;
+  --accent-tint: #e6f0ff;
+  --ink: #101217;
+  --ink-2: #4b5563;
+  --ink-3: #6b7280;
+  --muted-dark: #9da3af;
+  --surface: #ffffff;
+  --canvas: #f1f3f5;
+  --subtle: #e9edf3;
+  --line-deco: #c8cdd6;
+  --line-strong: #7d8694;
+  --danger: #b42318;
+  --danger-tint: #fdecea;
+  --warning-tint: #fbf8cc;
+
+  /* Legacy names, kept until every file uses the roles above. */
+  --laria-black: var(--frame);
+  --laria-ink: var(--ink);
+  --laria-graphite: var(--frame-2);
+  --laria-white: var(--surface);
+  --laria-cloud: var(--canvas);
+  --laria-fog: var(--subtle);
+  --laria-steel: var(--line-deco);
+  --laria-muted: var(--muted-dark);
+  --laria-text: var(--ink);
+  --laria-text-soft: var(--ink-2);
+  --laria-yellow: var(--action);
+  --laria-blue: var(--accent);
+
+  background: var(--surface);
+  color: var(--ink);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   min-height: 100vh;
   margin: 0;
-  background: var(--laria-white);
-  color: var(--laria-text);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -37,22 +69,163 @@ a {
   text-decoration: none;
 }
 
+/* Focus: 2 px ink outline with a 2 px offset; 2 px blue on frame surfaces. */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.surface-frame :focus-visible,
+.bg-frame :focus-visible,
+.bg-laria-black :focus-visible {
+  outline-color: var(--accent);
+}
+
+::selection {
+  background: var(--accent-tint);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @layer components {
-  .laria-page {
-    min-height: 100vh;
-    background: var(--laria-white);
-    color: var(--laria-text);
+  /* Type scale. Titles, model names and prices use the semi-condensed width. */
+  .t-micro {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .t-meta {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    color: var(--ink-2);
+  }
+  .t-ui {
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .t-body {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 400;
+  }
+  .t-card-title {
+    font-size: 15px;
+    line-height: 19px;
+    font-weight: 700;
+    font-stretch: 87.5%;
+  }
+  .t-card-price {
+    font-size: 18px;
+    line-height: 22px;
+    font-weight: 750;
+    font-stretch: 87.5%;
+    font-variant-numeric: tabular-nums;
+  }
+  .t-section {
+    font-size: 20px;
+    line-height: 26px;
+    font-weight: 700;
+    font-stretch: 87.5%;
+  }
+  .t-page {
+    font-size: 28px;
+    line-height: 32px;
+    font-weight: 700;
+    font-stretch: 87.5%;
+  }
+  .t-price-detail {
+    font-size: 32px;
+    line-height: 36px;
+    font-weight: 750;
+    font-stretch: 87.5%;
+    font-variant-numeric: tabular-nums;
+  }
+  .t-display {
+    font-size: 40px;
+    line-height: 44px;
+    font-weight: 700;
+    font-stretch: 87.5%;
+  }
+  @media (min-width: 1024px) {
+    .t-page {
+      font-size: 34px;
+      line-height: 38px;
+    }
+    .t-price-detail {
+      font-size: 40px;
+      line-height: 44px;
+    }
   }
 
+  /* Text links: ink with a 2 px blue underline. */
+  .link {
+    color: var(--ink);
+    text-decoration-line: underline;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+    transition: text-decoration-color 120ms ease;
+  }
+  .link:hover {
+    text-decoration-color: var(--ink);
+  }
+  .surface-frame .link,
+  .link-on-frame {
+    color: var(--surface);
+  }
+  .surface-frame .link:hover,
+  .link-on-frame:hover {
+    text-decoration-color: var(--surface);
+  }
+
+  /* "Saltar al contenido": hidden until it receives keyboard focus. */
+  .skip-link {
+    position: absolute;
+    left: 16px;
+    top: -64px;
+    z-index: 100;
+    border-radius: 6px;
+    background: var(--action);
+    color: var(--frame);
+    padding: 10px 16px;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+  }
+  .skip-link:focus {
+    top: 12px;
+  }
+
+  .laria-page {
+    min-height: 100vh;
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  /* Public container: max 1440 px, gutters 16 / 24 / 32. */
   .laria-container {
     margin-left: auto;
     margin-right: auto;
     width: 100%;
-    max-width: 1600px;
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
+    max-width: 1440px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
+  /* Legacy component classes, replaced by components/ui during the UX-1 migration. */
   .laria-card {
     border: 1px solid var(--laria-fog);
     background: var(--laria-white);
@@ -128,21 +301,14 @@ a {
 
 @media (min-width: 640px) {
   .laria-container {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 24px;
+    padding-right: 24px;
   }
 }
 
 @media (min-width: 1024px) {
   .laria-container {
-    padding-left: 1.25rem;
-    padding-right: 1.25rem;
-  }
-}
-
-@media (min-width: 1280px) {
-  .laria-container {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    padding-left: 32px;
+    padding-right: 32px;
   }
 }

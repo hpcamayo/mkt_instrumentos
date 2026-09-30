@@ -13,7 +13,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ]);
 
   return (
-    <main className="min-h-screen bg-laria-cloud/70">
+    <div className="min-h-screen bg-laria-cloud/70">
       <div className="mx-auto grid w-full max-w-[1600px] gap-4 px-3 py-5 sm:px-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-5 lg:px-5 xl:px-6">
         <AdminNavigation
           counts={counts}
@@ -21,6 +21,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         />
         <div className="min-w-0">{children}</div>
       </div>
-    </main>
+    </div>
   );
 }
