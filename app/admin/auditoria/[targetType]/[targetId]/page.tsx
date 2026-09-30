@@ -80,27 +80,27 @@ export default async function AdminAuditPage({
 
   return (
     <div className="grid gap-5">
-      <header className="rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">Auditoría administrativa</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-laria-ink">Historial de {adminValueLabel(targetType).toLowerCase()}</h1>
-        <p className="mt-2 break-all text-sm text-laria-text-soft">{targetId}</p>
-        <Link href={backHref} className="mt-4 inline-flex text-sm font-black text-laria-blue underline-offset-4 hover:underline">Volver al contexto anterior</Link>
+      <header className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
+        <p className="t-micro text-ink-2">Auditoría administrativa</p>
+        <h1 className="mt-2 t-page text-ink">Historial de {adminValueLabel(targetType).toLowerCase()}</h1>
+        <p className="mt-2 break-all text-sm text-ink-2">{targetId}</p>
+        <Link href={backHref} className="mt-4 inline-flex text-sm link font-semibold">Volver al contexto anterior</Link>
       </header>
 
-      {error ? <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800">No pudimos cargar el historial. No asumiremos que está vacío.</p> : null}
-      {!error && !history.length ? <p className="rounded-lg border border-dashed border-laria-steel bg-white p-8 text-center text-sm text-laria-text-soft">No hay acciones administrativas registradas para este objetivo.</p> : null}
+      {error ? <p role="alert" className="rounded-control bg-danger-tint p-3 text-sm font-semibold text-danger">No pudimos cargar el historial. No asumiremos que está vacío.</p> : null}
+      {!error && !history.length ? <p className="rounded-panel border border-dashed border-line-strong bg-white p-8 text-center text-sm text-ink-2">No hay acciones administrativas registradas para este objetivo.</p> : null}
       <ol className="grid gap-3">
         {history.map((entry) => (
-          <li key={entry.id} className="rounded-lg border border-laria-fog bg-white p-4 shadow-sm">
+          <li key={entry.id} className="rounded-panel border border-subtle bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <strong className="text-laria-ink">{adminValueLabel(entry.action)}</strong>
-              <time className="text-xs text-laria-muted" dateTime={entry.created_at}>{AUDIT_DATE_FORMATTER.format(new Date(entry.created_at))}</time>
+              <strong className="text-ink">{adminValueLabel(entry.action)}</strong>
+              <time className="text-meta text-ink-2" dateTime={entry.created_at}>{AUDIT_DATE_FORMATTER.format(new Date(entry.created_at))}</time>
             </div>
-            <p className="mt-2 text-sm text-laria-text-soft">Admin: {entry.admin_name || entry.admin_user_id}</p>
+            <p className="mt-2 text-sm text-ink-2">Admin: {entry.admin_name || entry.admin_user_id}</p>
             {detailRows(entry.detail).length ? (
-              <dl className="mt-3 grid gap-1 text-xs text-laria-text-soft sm:grid-cols-2">
+              <dl className="mt-3 grid gap-1 text-meta text-ink-2 sm:grid-cols-2">
                 {detailRows(entry.detail).map(([key, value]) => (
-                  <div key={key}><dt className="inline font-black">{adminValueLabel(key)}: </dt><dd className="inline break-words">{typeof value === "string" ? adminValueLabel(value) : JSON.stringify(value)}</dd></div>
+                  <div key={key}><dt className="inline font-semibold">{adminValueLabel(key)}: </dt><dd className="inline break-words">{typeof value === "string" ? adminValueLabel(value) : JSON.stringify(value)}</dd></div>
                 ))}
               </dl>
             ) : null}

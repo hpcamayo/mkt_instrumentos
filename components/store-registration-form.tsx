@@ -9,6 +9,7 @@ import { normalizePeruRegion } from "@/lib/location";
 import { createPublicSubmission, type SubmissionFile } from "@/lib/public-submission";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import type { Database } from "@/lib/supabase/database.types";
+import { buttonClasses } from "@/components/ui/button";
 
 export type StoreApplication = {
   id: string;
@@ -176,8 +177,8 @@ export function StoreRegistrationForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6 rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
-      {message ? <PageNotice kind={state === "success" ? "success" : "error"} message={message}>{state === "success" ? <div className="mt-3 flex flex-wrap gap-3"><Link href="/mi-cuenta" className="font-black underline underline-offset-4">Volver al resumen</Link><Link href="/mi-cuenta/tienda" className="font-black underline underline-offset-4">Ver estado de mi tienda</Link>{store ? <Link href="/mi-cuenta/tienda/inventario" className="font-black underline underline-offset-4">Ver inventario</Link> : null}</div> : null}</PageNotice> : null}
+    <form onSubmit={handleSubmit} className="grid gap-6 rounded-panel border border-subtle bg-white p-5 sm:p-6">
+      {message ? <PageNotice kind={state === "success" ? "success" : "error"} message={message}>{state === "success" ? <div className="mt-3 flex flex-wrap gap-3"><Link href="/mi-cuenta" className="link font-semibold">Volver al resumen</Link><Link href="/mi-cuenta/tienda" className="link font-semibold">Ver estado de mi tienda</Link>{store ? <Link href="/mi-cuenta/tienda/inventario" className="link font-semibold">Ver inventario</Link> : null}</div> : null}</PageNotice> : null}
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Nombre público de la tienda" name="name" defaultValue={store?.name} />
         <Field label="Razón social" name="razon_social" defaultValue={store?.razon_social} />
@@ -189,7 +190,7 @@ export function StoreRegistrationForm({
         <Field label="Distrito (opcional)" name="district" required={false} defaultValue={store?.district} />
         <Field label="Dirección física" name="address" defaultValue={store?.address} />
       </div>
-      <label className="grid gap-2 text-sm font-bold text-laria-ink">Descripción (opcional)<textarea name="description" rows={5} defaultValue={store?.description ?? ""} className="rounded-md border border-laria-steel px-3 py-3 font-normal outline-none focus:border-laria-blue" /></label>
+      <label className="grid gap-2 text-sm font-semibold text-ink">Descripción (opcional)<textarea name="description" rows={5} defaultValue={store?.description ?? ""} className="rounded-control border border-line-strong px-3 py-3 font-normal" /></label>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Instagram (opcional)" name="instagram_url" required={false} defaultValue={store?.instagram_url} />
         <Field label="Facebook (opcional)" name="facebook_url" required={false} defaultValue={store?.facebook_url} />
@@ -200,19 +201,19 @@ export function StoreRegistrationForm({
         <ImageField label="Logo (opcional)" name="logo" currentUrl={currentLogoUrl} />
         <ImageField label="Banner (opcional)" name="banner" currentUrl={currentBannerUrl} />
       </div>
-      <label className="grid gap-2 text-sm font-bold text-laria-ink">Fotos del local (opcionales, hasta 5)<input type="file" name="store_photos" multiple accept="image/jpeg,image/png,image/webp" className="rounded-md border border-laria-steel p-3 font-normal" /></label>
-      {currentPhotos.length ? <ul className="grid gap-3 sm:grid-cols-3">{currentPhotos.map((photo) => <li key={photo.id} className="rounded-md border border-laria-fog p-2"><Image src={photo.image_url} alt={photo.alt_text ?? "Foto del local"} width={320} height={220} className="aspect-[4/3] w-full rounded object-cover" /><button type="button" onClick={() => removeStorePhoto(photo)} className="mt-2 text-xs font-black text-red-700">Quitar foto</button></li>)}</ul> : null}
-      <button type="submit" disabled={state === "submitting"} className="laria-button-primary min-h-12 px-5 py-3 text-sm">{state === "submitting" ? "Guardando..." : store ? "Guardar datos de la tienda" : "Enviar solicitud de tienda"}</button>
+      <label className="grid gap-2 text-sm font-semibold text-ink">Fotos del local (opcionales, hasta 5)<input type="file" name="store_photos" multiple accept="image/jpeg,image/png,image/webp" className="rounded-control border border-line-strong p-3 font-normal" /></label>
+      {currentPhotos.length ? <ul className="grid gap-3 sm:grid-cols-3">{currentPhotos.map((photo) => <li key={photo.id} className="rounded-control border border-subtle p-2"><Image src={photo.image_url} alt={photo.alt_text ?? "Foto del local"} width={320} height={220} className="aspect-[4/3] w-full rounded object-cover" /><button type="button" onClick={() => removeStorePhoto(photo)} className="mt-2 text-meta font-semibold text-danger">Quitar foto</button></li>)}</ul> : null}
+      <button type="submit" disabled={state === "submitting"} className={buttonClasses()}>{state === "submitting" ? "Guardando..." : store ? "Guardar datos de la tienda" : "Enviar solicitud de tienda"}</button>
     </form>
   );
 }
 
 function Field({ label, name, required = true, defaultValue, type = "text", inputMode }: { label: string; name: string; required?: boolean; defaultValue?: string | null; type?: string; inputMode?: "text" | "tel" | "numeric" }) {
-  return <label className="grid gap-2 text-sm font-bold text-laria-ink">{label}<input name={name} type={type} required={required} defaultValue={defaultValue ?? ""} inputMode={inputMode} className="h-11 rounded-md border border-laria-steel px-3 font-normal outline-none focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/20" /></label>;
+  return <label className="grid gap-2 text-sm font-semibold text-ink">{label}<input name={name} type={type} required={required} defaultValue={defaultValue ?? ""} inputMode={inputMode} className="h-11 rounded-control border border-line-strong px-3 font-normal" /></label>;
 }
 
 function ImageField({ label, name, currentUrl }: { label: string; name: string; currentUrl?: string | null }) {
-  return <div className="grid gap-2 text-sm font-bold text-laria-ink"><label htmlFor={name}>{label}</label>{currentUrl ? <><span className="text-xs font-normal text-emerald-700">Imagen actual guardada</span><label className="flex items-center gap-2 text-xs font-normal text-red-700"><input type="checkbox" name={`remove_${name}`} />Quitar la imagen actual</label></> : null}<input id={name} type="file" name={name} accept="image/jpeg,image/png,image/webp" className="rounded-md border border-laria-steel p-3 font-normal" /></div>;
+  return <div className="grid gap-2 text-sm font-semibold text-ink"><label htmlFor={name}>{label}</label>{currentUrl ? <><span className="text-meta font-normal text-ink">Imagen actual guardada</span><label className="flex items-center gap-2 text-meta font-normal text-danger"><input type="checkbox" name={`remove_${name}`} />Quitar la imagen actual</label></> : null}<input id={name} type="file" name={name} accept="image/jpeg,image/png,image/webp" className="rounded-control border border-line-strong p-3 font-normal" /></div>;
 }
 
 function text(data: FormData, key: string) { const value = data.get(key); return typeof value === "string" ? value.trim() : ""; }

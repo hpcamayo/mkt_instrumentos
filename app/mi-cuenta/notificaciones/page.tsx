@@ -17,9 +17,9 @@ export default async function NotificationsPage() {
   return (
     <section className="grid gap-5">
       <div>
-        <p className="text-xs font-black uppercase tracking-wide text-laria-blue">Mi cuenta</p>
-        <h1 className="mt-1 text-3xl font-black text-laria-ink">Notificaciones</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-laria-text-soft">
+        <p className="t-micro text-ink-2">Mi cuenta</p>
+        <h1 className="mt-1 t-page text-ink">Notificaciones</h1>
+        <p className="mt-2 max-w-[68ch] t-ui text-ink-2">
           Revisa decisiones de moderación y cambios importantes de tu tienda o publicaciones.
         </p>
       </div>

@@ -49,7 +49,7 @@ export function GlobalCategories() {
   }
 
   return (
-    <nav aria-label="Categorías del marketplace" className="relative border-b border-laria-fog bg-white">
+    <nav aria-label="Categorías del marketplace" className="relative border-b border-subtle bg-white">
       <div ref={containerRef}>
         <PageContainer className="py-2">
           <div className="lg:hidden">
@@ -61,15 +61,15 @@ export function GlobalCategories() {
                 setMobileOpen((current) => !current);
                 setOpenCategory(null);
               }}
-              className="flex min-h-11 w-full items-center justify-between rounded-md px-3 py-2 text-left font-black text-laria-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-laria-blue"
+              className="flex min-h-11 w-full items-center justify-between rounded-control px-3 py-2 text-left font-semibold text-ink"
             >
               Explorar categorías
               <ChevronDown aria-hidden="true" className={`h-4 w-4 transition ${mobileOpen ? "rotate-180" : ""}`} />
             </button>
             {mobileOpen ? (
-              <div id="mobile-marketplace-categories" className="mt-2 grid gap-1 border-t border-laria-fog pt-2">
+              <div id="mobile-marketplace-categories" className="mt-2 grid gap-1 border-t border-subtle pt-2">
                 <div className="flex justify-end">
-                  <button type="button" onClick={closeAll} className="inline-flex min-h-11 items-center gap-2 rounded-md px-3 text-sm font-bold text-laria-text-soft">
+                  <button type="button" onClick={closeAll} className="inline-flex min-h-11 items-center gap-2 rounded-control px-3 text-sm font-semibold text-ink-2">
                     <X aria-hidden="true" className="h-4 w-4" /> Cerrar
                   </button>
                 </div>
@@ -100,7 +100,7 @@ export function GlobalCategories() {
                     aria-expanded={expanded}
                     aria-controls={`category-panel-${slugify(category.value)}`}
                     onClick={() => toggleCategory(category.value)}
-                    className={`inline-flex min-h-11 items-center gap-1 rounded-md px-3 py-2 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-laria-blue ${expanded ? "bg-laria-blue/10 text-laria-blue" : "text-laria-ink hover:bg-laria-cloud"}`}
+                    className={`inline-flex min-h-11 items-center gap-1 rounded-control px-3 py-2 text-sm font-semibold ${expanded ? "bg-accent-tint text-ink" : "text-ink hover:bg-canvas"}`}
                   >
                     {category.label}
                     <ChevronDown aria-hidden="true" className={`h-3.5 w-3.5 transition ${expanded ? "rotate-180" : ""}`} />
@@ -122,21 +122,21 @@ function DesktopPanel({ categoryValue, onNavigate }: { categoryValue: string; on
   if (!category) return null;
   const types = getInstrumentTypeOptions(category.value);
   return (
-    <div id={`category-panel-${slugify(category.value)}`} className="absolute inset-x-0 top-full z-40 hidden border-y border-laria-fog bg-white shadow-[0_18px_38px_rgb(16_18_23/0.12)] lg:block">
+    <div id={`category-panel-${slugify(category.value)}`} className="absolute inset-x-0 top-full z-40 hidden border-y border-subtle bg-white shadow-level-1 lg:block">
       <PageContainer className="py-6">
         <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-          <div className="border-r border-laria-fog pr-6">
-            <p className="text-xs font-black uppercase tracking-[0.15em] text-laria-blue">{category.label}</p>
-            <Link href={categoryHref(category.value)} onClick={onNavigate} className="mt-3 inline-flex min-h-11 items-center font-black text-laria-ink underline decoration-laria-yellow decoration-2 underline-offset-4">
+          <div className="border-r border-subtle pr-6">
+            <p className="t-micro text-ink-2">{category.label}</p>
+            <Link href={categoryHref(category.value)} onClick={onNavigate} className="mt-3 inline-flex min-h-11 items-center font-semibold text-ink underline decoration-action decoration-2 underline-offset-4">
               Ver todo en {category.label.toLowerCase()}
             </Link>
           </div>
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.15em] text-laria-text-soft">Tipos disponibles</p>
+            <p className="t-micro text-ink-2">Tipos disponibles</p>
             <ul className="mt-3 grid gap-x-6 sm:grid-cols-2 xl:grid-cols-3">
               {types.map((type) => (
                 <li key={type.value}>
-                  <Link href={typeHref(category.value, type.value)} onClick={onNavigate} className="flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-bold text-laria-ink hover:bg-laria-cloud hover:text-laria-blue">
+                  <Link href={typeHref(category.value, type.value)} onClick={onNavigate} className="flex min-h-11 items-center rounded-control px-3 py-2 text-sm font-semibold text-ink hover:bg-canvas hover:text-ink hover:underline hover:decoration-accent hover:decoration-2">
                     {type.label}
                   </Link>
                 </li>
@@ -162,16 +162,16 @@ function MobileCategory({
 }) {
   const panelId = `mobile-category-${slugify(category.value)}`;
   return (
-    <div className="border-b border-laria-fog last:border-b-0">
-      <button type="button" aria-expanded={open} aria-controls={panelId} onClick={onToggle} className="flex min-h-11 w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-black text-laria-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+    <div className="border-b border-subtle last:border-b-0">
+      <button type="button" aria-expanded={open} aria-controls={panelId} onClick={onToggle} className="flex min-h-11 w-full items-center justify-between rounded-control px-3 py-2 text-left text-sm font-semibold text-ink">
         {category.label}
         <ChevronDown aria-hidden="true" className={`h-4 w-4 transition ${open ? "rotate-180" : ""}`} />
       </button>
       {open ? (
-        <ul id={panelId} className="mb-2 grid gap-1 border-l-2 border-laria-blue/20 pl-3">
-          <li><Link href={categoryHref(category.value)} onClick={onNavigate} className="flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-black text-laria-blue">Ver todo</Link></li>
+        <ul id={panelId} className="mb-2 grid gap-1 border-l-2 border-accent/20 pl-3">
+          <li><Link href={categoryHref(category.value)} onClick={onNavigate} className="flex min-h-11 items-center rounded-control px-3 py-2 t-ui font-semibold text-ink underline decoration-accent decoration-2 underline-offset-4">Ver todo</Link></li>
           {getInstrumentTypeOptions(category.value).map((type) => (
-            <li key={type.value}><Link href={typeHref(category.value, type.value)} onClick={onNavigate} className="flex min-h-11 items-center rounded-md px-3 py-2 text-sm font-bold text-laria-ink hover:bg-laria-cloud">{type.label}</Link></li>
+            <li key={type.value}><Link href={typeHref(category.value, type.value)} onClick={onNavigate} className="flex min-h-11 items-center rounded-control px-3 py-2 text-sm font-semibold text-ink hover:bg-canvas">{type.label}</Link></li>
           ))}
         </ul>
       ) : null}

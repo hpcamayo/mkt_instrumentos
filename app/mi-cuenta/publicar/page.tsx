@@ -12,8 +12,8 @@ export default async function PublishParticularPage() {
   const complete = Boolean(profile?.full_name?.trim() && profile.phone?.trim() && profile.city?.trim() && normalizePeruRegion(profile.region));
   return (
     <div className="space-y-6">
-      <div><p className="text-sm font-black uppercase tracking-wide text-laria-blue">Publicar</p><h1 className="mt-2 text-3xl font-black text-laria-ink">Publica tu instrumento usado</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-laria-text-soft">La publicación quedará pendiente de revisión antes de aparecer en el catálogo.</p></div>
-      {complete && profile ? <SellListingForm profile={{ fullName: profile.full_name!, phone: profile.phone!, city: profile.city!, region: profile.region }} /> : <section className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm text-amber-950"><h2 className="font-black">Completa tu perfil Particular</h2><p className="mt-2">Necesitamos tu nombre, WhatsApp y ubicación antes de publicar.</p><Link href="/mi-cuenta/perfil?next=/mi-cuenta/publicar" className="mt-4 inline-flex font-black text-laria-blue">Completar perfil</Link></section>}
+      <div><p className="t-micro text-ink-2">Publicar</p><h1 className="mt-2 t-page text-ink">Publica tu instrumento usado</h1><p className="mt-2 max-w-[68ch] t-ui text-ink-2">La publicación quedará pendiente de revisión antes de aparecer en el catálogo.</p></div>
+      {complete && profile ? <SellListingForm profile={{ fullName: profile.full_name!, phone: profile.phone!, city: profile.city!, region: profile.region }} /> : <section className="rounded-panel bg-warning-tint p-5 text-sm text-ink"><h2 className="font-semibold">Completa tu perfil Particular</h2><p className="mt-2">Necesitamos tu nombre, WhatsApp y ubicación antes de publicar.</p><Link href="/mi-cuenta/perfil?next=/mi-cuenta/publicar" className="link mt-4 inline-flex font-semibold">Completar perfil</Link></section>}
     </div>
   );
 }

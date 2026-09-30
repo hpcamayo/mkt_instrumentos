@@ -18,6 +18,7 @@ import type {
   AdminJsonItem,
 } from "@/lib/admin";
 import { adminValueLabel } from "@/lib/admin";
+import { buttonClasses } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 const domainCopy: Record<AdminDomain, { title: string; description: string }> = {
@@ -232,15 +233,15 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
     ? `/admin/reportes?tipo=store&buscar=${encodeURIComponent(id)}`
     : "";
   return (
-    <article className="grid gap-3 rounded-lg border border-laria-fog bg-white p-4 shadow-sm">
+    <article className="grid gap-3 rounded-panel border border-subtle bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="break-words font-black text-laria-ink">{title}</h2>
-          <p className="mt-1 break-all text-xs text-laria-muted">{id}{created ? ` · ${adminDate(created)}` : ""}</p>
+          <h2 className="break-words font-semibold text-ink">{title}</h2>
+          <p className="mt-1 break-all text-meta text-ink-2">{id}{created ? ` · ${adminDate(created)}` : ""}</p>
         </div>
-        {statusText(item) ? <span className="rounded-full border border-laria-fog bg-laria-cloud px-2.5 py-1 text-xs font-black text-laria-text-soft">{statusText(item)}</span> : null}
+        {statusText(item) ? <span className="rounded-tag bg-subtle px-2 py-0.5 t-meta font-semibold text-ink">{statusText(item)}</span> : null}
       </div>
-      <div className="grid gap-x-5 gap-y-1 text-sm leading-6 text-laria-text-soft sm:grid-cols-2">
+      <div className="grid gap-x-5 gap-y-1 text-sm leading-6 text-ink-2 sm:grid-cols-2">
         <Detail label="Responsable" value={adminString(item, "owner_name")} />
         <Detail label="Tipo" value={adminValueLabel(adminString(item, "seller_type") || adminString(item, "account_type") || targetType)} />
         <Detail label="Categoría" value={adminString(item, "category")} />
@@ -286,12 +287,12 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
         <Detail label="Comentario" value={adminString(item, "comment")} />
         {domain === "revisiones" ? <AdminRevisionComparison item={item} /> : null}
       </div>
-      {targetHref || auditType || publicHref || storeInventoryHref || storeReportsHref ? <div className="flex flex-wrap gap-3 text-xs font-black">
-        {publicHref ? <Link href={publicHref} className="text-laria-blue underline-offset-4 hover:underline">Ver página pública</Link> : null}
-        {storeInventoryHref ? <Link href={storeInventoryHref} className="text-laria-blue underline-offset-4 hover:underline">Ver inventario</Link> : null}
-        {storeReportsHref ? <Link href={storeReportsHref} className="text-laria-blue underline-offset-4 hover:underline">Ver reportes de la tienda</Link> : null}
-        {targetHref ? <Link href={targetHref} className="text-laria-blue underline-offset-4 hover:underline">Inspeccionar objetivo</Link> : null}
-        {auditType && id ? <Link href={`/admin/auditoria/${auditType}/${id}?volver=${encodeURIComponent(`/admin/${domain}`)}`} className="text-laria-blue underline-offset-4 hover:underline">Ver auditoría</Link> : null}
+      {targetHref || auditType || publicHref || storeInventoryHref || storeReportsHref ? <div className="flex flex-wrap gap-3 text-meta font-semibold">
+        {publicHref ? <Link href={publicHref} className="link">Ver página pública</Link> : null}
+        {storeInventoryHref ? <Link href={storeInventoryHref} className="link">Ver inventario</Link> : null}
+        {storeReportsHref ? <Link href={storeReportsHref} className="link">Ver reportes de la tienda</Link> : null}
+        {targetHref ? <Link href={targetHref} className="link">Inspeccionar objetivo</Link> : null}
+        {auditType && id ? <Link href={`/admin/auditoria/${auditType}/${id}?volver=${encodeURIComponent(`/admin/${domain}`)}`} className="link">Ver auditoría</Link> : null}
       </div> : null}
       {domain === "publicaciones" && id ? <AdminListingEditor listingId={id} status={status} onComplete={onComplete} /> : null}
       {domain === "tiendas" && id ? (
@@ -355,40 +356,40 @@ function LegacyLinker({ listings, users, onComplete }: { listings: AdminJsonItem
   return (
     <form onSubmit={submit} className="grid gap-5">
       <div className="grid gap-4 xl:grid-cols-2">
-        <fieldset className="grid gap-2 rounded-lg border border-laria-fog bg-white p-4">
-          <legend className="px-1 text-sm font-black text-laria-ink">1. Publicación legacy elegible</legend>
+        <fieldset className="grid gap-2 rounded-panel border border-subtle bg-white p-4">
+          <legend className="px-1 text-sm font-semibold text-ink">1. Publicación legacy elegible</legend>
           {listings.map((item) => (
-            <label key={adminString(item, "id")} className="flex cursor-pointer gap-3 rounded-md border border-laria-fog p-3 text-sm">
+            <label key={adminString(item, "id")} className="flex cursor-pointer gap-3 rounded-control border border-subtle p-3 text-sm">
               <input type="radio" name="listing" value={adminString(item, "id")} checked={listingId === adminString(item, "id")} onChange={() => setListingId(adminString(item, "id"))} />
-              <span><strong>{adminString(item, "title")}</strong><br /><span className="text-xs text-laria-muted">Contacto histórico: {adminString(item, "historical_contact_name")} · {adminString(item, "historical_whatsapp")}</span></span>
+              <span><strong>{adminString(item, "title")}</strong><br /><span className="text-meta text-ink-2">Contacto histórico: {adminString(item, "historical_contact_name")} · {adminString(item, "historical_whatsapp")}</span></span>
             </label>
           ))}
-          {!listings.length ? <p className="text-sm text-laria-text-soft">No hay publicaciones elegibles en esta página.</p> : null}
+          {!listings.length ? <p className="text-sm text-ink-2">No hay publicaciones elegibles en esta página.</p> : null}
         </fieldset>
-        <fieldset className="grid gap-2 rounded-lg border border-laria-fog bg-white p-4">
-          <legend className="px-1 text-sm font-black text-laria-ink">2. Cuenta Particular seleccionada manualmente</legend>
+        <fieldset className="grid gap-2 rounded-panel border border-subtle bg-white p-4">
+          <legend className="px-1 text-sm font-semibold text-ink">2. Cuenta Particular seleccionada manualmente</legend>
           {users.map((item) => (
-            <label key={adminString(item, "id")} className="flex cursor-pointer gap-3 rounded-md border border-laria-fog p-3 text-sm">
+            <label key={adminString(item, "id")} className="flex cursor-pointer gap-3 rounded-control border border-subtle p-3 text-sm">
               <input type="radio" name="user" value={adminString(item, "id")} checked={userId === adminString(item, "id")} onChange={() => setUserId(adminString(item, "id"))} />
-              <span><strong>{adminString(item, "full_name", "Cuenta sin nombre")}</strong><br /><span className="break-all text-xs text-laria-muted">{adminString(item, "phone", "Sin teléfono")} · {adminString(item, "city")} · {adminString(item, "id")}</span></span>
+              <span><strong>{adminString(item, "full_name", "Cuenta sin nombre")}</strong><br /><span className="break-all text-meta text-ink-2">{adminString(item, "phone", "Sin teléfono")} · {adminString(item, "city")} · {adminString(item, "id")}</span></span>
             </label>
           ))}
-          {!users.length ? <p className="text-sm text-laria-text-soft">No hay cuentas que coincidan con la búsqueda.</p> : null}
+          {!users.length ? <p className="text-sm text-ink-2">No hay cuentas que coincidan con la búsqueda.</p> : null}
         </fieldset>
       </div>
-      <div className="grid gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
-        {selectedListing && selectedUser ? <p className="text-sm leading-6 text-laria-ink">
+      <div className="grid gap-3 rounded-panel bg-warning-tint p-4">
+        {selectedListing && selectedUser ? <p className="text-sm leading-6 text-ink">
           Vincularás <strong>{adminString(selectedListing, "title")}</strong>, cuyo contacto histórico es <strong>{adminString(selectedListing, "historical_contact_name")} · {adminString(selectedListing, "historical_whatsapp")}</strong>, con la cuenta <strong>{adminString(selectedUser, "full_name", "sin nombre")} · {adminString(selectedUser, "id")}</strong>. La publicación conservará su ID, estado, fotos e historial; desde entonces usará la resolución dinámica de contacto de la cuenta.
-        </p> : <p className="text-sm text-laria-text-soft">Selecciona ambos registros para revisar la consecuencia exacta antes de confirmar.</p>}
-        <label className="grid gap-1 text-sm font-bold text-laria-ink">Nota de auditoría
-          <textarea name="note" required minLength={3} maxLength={500} rows={3} className="rounded-md border border-laria-steel bg-white px-3 py-2 font-normal outline-none focus-visible:ring-2 focus-visible:ring-laria-blue" />
+        </p> : <p className="text-sm text-ink-2">Selecciona ambos registros para revisar la consecuencia exacta antes de confirmar.</p>}
+        <label className="grid gap-1 text-sm font-semibold text-ink">Nota de auditoría
+          <textarea name="note" required minLength={3} maxLength={500} rows={3} className="rounded-control border border-line-strong bg-white px-3 py-2 font-normal" />
         </label>
-        <label className="flex gap-2 text-sm font-bold text-laria-ink">
+        <label className="flex gap-2 text-sm font-semibold text-ink">
           <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
           Confirmo que revisé la publicación, el contacto histórico y la cuenta elegida. Esta acción no permite reasignación posterior.
         </label>
-        {message ? <p ref={messageRef} tabIndex={-1} role="alert" className="text-sm font-bold text-red-700 outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">{message}</p> : null}
-        <button type="submit" disabled={busy || !confirmed || !listingId || !userId} className="laria-button-secondary min-h-11 w-fit px-4 py-2 text-sm disabled:opacity-50">
+        {message ? <p ref={messageRef} tabIndex={-1} role="alert" className="text-sm font-semibold text-danger">{message}</p> : null}
+        <button type="submit" disabled={busy || !confirmed || !listingId || !userId} className={buttonClasses({ variant: "secondary", className: "w-fit" })}>
           {busy ? "Vinculando…" : "Vincular propietario"}
         </button>
       </div>
@@ -471,81 +472,81 @@ export function AdminDomainView({
 
   return (
     <div className="grid gap-5">
-      <header className="rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">Administración</p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-laria-ink">{copy.title}</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-laria-text-soft">{copy.description}</p>
+      <header className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
+        <p className="t-micro text-ink-2">Administración</p>
+        <h1 className="mt-2 t-page text-ink">{copy.title}</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-2">{copy.description}</p>
       </header>
-      {notice ? <p ref={noticeRef} tabIndex={-1} role="status" className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-3 text-sm font-bold text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">{notice}</p> : null}
-      {loadError ? <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800">{loadError}</p> : null}
+      {notice ? <p ref={noticeRef} tabIndex={-1} role="status" className="rounded-control border border-accent/25 bg-accent/10 p-3 text-sm font-semibold text-ink">{notice}</p> : null}
+      {loadError ? <p role="alert" className="rounded-control bg-danger-tint p-3 text-sm font-semibold text-danger">{loadError}</p> : null}
 
       {domain === "usuarios" ? <AdminInviteUser /> : null}
 
-      <form method="get" className="grid gap-3 rounded-lg border border-laria-fog bg-white p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_repeat(3,minmax(150px,220px))_auto] xl:items-end">
-        <label className="grid gap-1 text-xs font-bold text-laria-text-soft">{domain === "legacy" ? "Buscar publicación legacy" : "Buscar"}
-          <input name="buscar" defaultValue={search} maxLength={100} placeholder={domain === "legacy" ? "Título, contacto, teléfono o ID" : "Nombre, título, ID o contexto"} className="min-h-11 rounded-md border border-laria-steel px-3 text-sm text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue" />
+      <form method="get" className="grid gap-3 rounded-panel border border-subtle bg-white p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_repeat(3,minmax(150px,220px))_auto] xl:items-end">
+        <label className="grid gap-1 text-meta font-semibold text-ink-2">{domain === "legacy" ? "Buscar publicación legacy" : "Buscar"}
+          <input name="buscar" defaultValue={search} maxLength={100} placeholder={domain === "legacy" ? "Título, contacto, teléfono o ID" : "Nombre, título, ID o contexto"} className="min-h-11 rounded-control border border-line-strong px-3 text-sm text-ink" />
         </label>
-        {domain === "legacy" ? <label className="grid gap-1 text-xs font-bold text-laria-text-soft">Buscar cuenta Particular
-          <input name="cuenta" defaultValue={userSearch} maxLength={100} placeholder="Nombre, teléfono o ID" className="min-h-11 rounded-md border border-laria-steel px-3 text-sm text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue" />
+        {domain === "legacy" ? <label className="grid gap-1 text-meta font-semibold text-ink-2">Buscar cuenta Particular
+          <input name="cuenta" defaultValue={userSearch} maxLength={100} placeholder="Nombre, teléfono o ID" className="min-h-11 rounded-control border border-line-strong px-3 text-sm text-ink" />
         </label> : null}
-        {statusOptions[domain]?.length ? <label className="grid gap-1 text-xs font-bold text-laria-text-soft">Estado
-          <select name="estado" defaultValue={status} className="min-h-11 rounded-md border border-laria-steel bg-white px-3 text-sm text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+        {statusOptions[domain]?.length ? <label className="grid gap-1 text-meta font-semibold text-ink-2">Estado
+          <select name="estado" defaultValue={status} className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
             <option value="">Todos</option>
             {statusOptions[domain]?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </label> : null}
-        {domain === "publicaciones" ? <label className="grid gap-1 text-xs font-bold text-laria-text-soft">Tipo de propietario
-          <select name="propietario" defaultValue={ownerType} className="min-h-11 rounded-md border border-laria-steel bg-white px-3 text-sm text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+        {domain === "publicaciones" ? <label className="grid gap-1 text-meta font-semibold text-ink-2">Tipo de propietario
+          <select name="propietario" defaultValue={ownerType} className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
             <option value="">Todos</option>
             {ownerTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </label> : null}
         {domain === "reportes" ? <>
-          <label className="grid gap-1 text-xs font-bold text-laria-text-soft">Tipo de objetivo
-            <select name="tipo" defaultValue={targetType} className="min-h-11 rounded-md border border-laria-steel bg-white px-3 text-sm text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+          <label className="grid gap-1 text-meta font-semibold text-ink-2">Tipo de objetivo
+            <select name="tipo" defaultValue={targetType} className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
               <option value="">Todos</option>
               {reportTargetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>
-          <label className="grid gap-1 text-xs font-bold text-laria-text-soft">Motivo
-            <select name="motivo" defaultValue={reason} className="min-h-11 rounded-md border border-laria-steel bg-white px-3 text-sm text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+          <label className="grid gap-1 text-meta font-semibold text-ink-2">Motivo
+            <select name="motivo" defaultValue={reason} className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
               <option value="">Todos</option>
               {reportReasonOptions.map((value) => <option key={value} value={value}>{adminValueLabel(value)}</option>)}
             </select>
           </label>
         </> : null}
-        <button type="submit" className="laria-button-secondary min-h-11 px-4 py-2 text-sm">Aplicar</button>
+        <button type="submit" className={buttonClasses({ variant: "secondary" })}>Aplicar</button>
       </form>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm font-bold text-laria-text-soft">{total} registro{total === 1 ? "" : "s"}</p>
-        <Link href="/admin" className="text-sm font-black text-laria-blue">Volver a Moderación</Link>
+        <p className="text-sm font-semibold text-ink-2">{total} registro{total === 1 ? "" : "s"}</p>
+        <Link href="/admin" className="link t-ui font-semibold">Volver a Moderación</Link>
       </div>
 
       {domain === "legacy" ? (
         <div className="grid gap-4">
-          <div className="flex flex-wrap gap-4 text-sm font-bold text-laria-text-soft">
+          <div className="flex flex-wrap gap-4 text-sm font-semibold text-ink-2">
             <span>{total} publicación{total === 1 ? "" : "es"} legacy elegible{total === 1 ? "" : "s"}</span>
             <span>{userTotal} cuenta{userTotal === 1 ? "" : "s"} Particular coincidente{userTotal === 1 ? "" : "s"}</span>
           </div>
           <LegacyLinker listings={items} users={payload?.users ?? []} onComplete={complete} />
-          {userPageCount > 1 ? <nav aria-label="Paginación de cuentas para vinculación" className="flex items-center justify-between rounded-lg border border-laria-fog bg-white p-3 text-sm">
-            {resolvedUserPage > 1 ? <Link className="font-black text-laria-blue" href={pageHref(domain, filters, page, resolvedUserPage - 1)}>Cuentas anteriores</Link> : <span />}
-            <span className="text-laria-text-soft">Cuentas: página {resolvedUserPage} de {userPageCount}</span>
-            {resolvedUserPage < userPageCount ? <Link className="font-black text-laria-blue" href={pageHref(domain, filters, page, resolvedUserPage + 1)}>Más cuentas</Link> : <span />}
+          {userPageCount > 1 ? <nav aria-label="Paginación de cuentas para vinculación" className="flex items-center justify-between rounded-panel border border-subtle bg-white p-3 text-sm">
+            {resolvedUserPage > 1 ? <Link className="link font-semibold" href={pageHref(domain, filters, page, resolvedUserPage - 1)}>Cuentas anteriores</Link> : <span />}
+            <span className="text-ink-2">Cuentas: página {resolvedUserPage} de {userPageCount}</span>
+            {resolvedUserPage < userPageCount ? <Link className="link font-semibold" href={pageHref(domain, filters, page, resolvedUserPage + 1)}>Más cuentas</Link> : <span />}
           </nav> : null}
         </div>
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
           {items.map((item) => <DomainCard key={adminString(item, "id") || adminString(item, "claim_id")} domain={domain} item={item} onComplete={complete} />)}
-          {!items.length && !loadError ? <p className="rounded-lg border border-dashed border-laria-steel bg-white p-8 text-center text-sm text-laria-text-soft xl:col-span-2">No hay registros para estos filtros.</p> : null}
+          {!items.length && !loadError ? <p className="rounded-panel border border-dashed border-line-strong bg-white p-8 text-center text-sm text-ink-2 xl:col-span-2">No hay registros para estos filtros.</p> : null}
         </div>
       )}
 
-      {pageCount > 1 ? <nav aria-label="Paginación administrativa" className="flex items-center justify-between rounded-lg border border-laria-fog bg-white p-3 text-sm">
-        {page > 1 ? <Link className="font-black text-laria-blue" href={pageHref(domain, filters, page - 1)}>Anterior</Link> : <span />}
-        <span className="text-laria-text-soft">Página {page} de {pageCount}</span>
-        {page < pageCount ? <Link className="font-black text-laria-blue" href={pageHref(domain, filters, page + 1)}>Siguiente</Link> : <span />}
+      {pageCount > 1 ? <nav aria-label="Paginación administrativa" className="flex items-center justify-between rounded-panel border border-subtle bg-white p-3 text-sm">
+        {page > 1 ? <Link className="link font-semibold" href={pageHref(domain, filters, page - 1)}>Anterior</Link> : <span />}
+        <span className="text-ink-2">Página {page} de {pageCount}</span>
+        {page < pageCount ? <Link className="link font-semibold" href={pageHref(domain, filters, page + 1)}>Siguiente</Link> : <span />}
       </nav> : null}
     </div>
   );

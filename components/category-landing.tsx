@@ -1,3 +1,4 @@
+import { buttonClasses } from "@/components/ui/button";
 import Link from "next/link";
 import { CreateSearchAlert } from "@/components/create-search-alert";
 import { JsonLd } from "@/components/json-ld";
@@ -70,37 +71,36 @@ export function CategoryLanding({
           }}
         />
       ) : null}
-      <section className="bg-laria-cloud/70">
+      <section className="bg-canvas/70">
         <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
-          <div className="rounded-lg border border-laria-fog bg-white p-4 shadow-[0_18px_48px_rgb(16_18_23/0.06)] sm:p-6">
-            <nav aria-label="Ruta de navegación" className="text-xs font-bold text-laria-text-soft">
+          <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
+            <nav aria-label="Ruta de navegación" className="t-meta font-semibold">
               <ol className="flex flex-wrap items-center gap-1">
-                <li><Link href="/" className="hover:text-laria-blue">Inicio</Link></li>
+                <li><Link href="/" className="underline-offset-4 hover:text-ink hover:underline hover:decoration-accent hover:decoration-2">Inicio</Link></li>
                 <li aria-hidden="true">/</li>
-                <li><Link href="/listados" className="hover:text-laria-blue">Listados</Link></li>
+                <li><Link href="/listados" className="underline-offset-4 hover:text-ink hover:underline hover:decoration-accent hover:decoration-2">Listados</Link></li>
                 <li aria-hidden="true">/</li>
-                <li aria-current="page" className="text-laria-ink">{landing.label}</li>
+                <li aria-current="page" className="text-ink">{landing.label}</li>
               </ol>
             </nav>
             <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">Categoría</p>
-                <h1 className="mt-2 text-3xl font-black leading-tight text-laria-ink sm:text-4xl">{landing.heading}</h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-laria-text-soft sm:text-base">{landing.intro}</p>
+                <p className="t-micro text-ink-2">Categoría</p>
+                <h1 className="mt-2 t-page text-ink">{landing.heading}</h1>
+                <p className="mt-3 max-w-[68ch] t-body text-ink-2">{landing.intro}</p>
               </div>
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-laria-fog bg-laria-cloud px-4 py-2 text-sm font-bold text-laria-ink">
-                <span className="h-2 w-2 rounded-full bg-laria-blue" />
+              <div className="inline-flex w-fit items-center gap-2 t-ui font-semibold text-ink tabular-nums">
                 {totalCount} resultado{totalCount === 1 ? "" : "s"}
               </div>
             </div>
             {types.length > 1 ? (
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-[0.15em] text-laria-text-soft">Tipos</span>
+                <span className="t-micro text-ink-2">Tipos</span>
                 {types.map((type) => (
                   <Link
                     key={type.value}
                     href={categoryTypePath(landing.category, type.value)}
-                    className="inline-flex min-h-9 items-center rounded-full border border-laria-fog bg-white px-3 py-1.5 text-xs font-bold text-laria-ink hover:border-laria-blue hover:text-laria-blue"
+                    className="inline-flex min-h-10 items-center rounded-control border border-line-strong bg-white px-3 py-1.5 t-ui font-semibold text-ink transition-colors duration-120 hover:bg-canvas"
                   >
                     {type.label}
                   </Link>
@@ -116,20 +116,20 @@ export function CategoryLanding({
               <CreateSearchAlert filters={alertFilters} />
 
               {errorMessage ? (
-                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 shadow-sm">
+                <div role="alert" className="rounded-panel bg-danger-tint p-4 t-ui font-semibold text-danger">
                   No se pudieron cargar las publicaciones. Intenta nuevamente en unos minutos.
                 </div>
               ) : null}
 
               {!errorMessage && listings.length === 0 ? (
-                <div className="rounded-lg border border-laria-fog bg-white p-8 text-center text-sm leading-6 text-laria-text-soft shadow-[0_18px_48px_rgb(16_18_23/0.06)]">
-                  <p className="text-lg font-black text-laria-ink">Aún no hay publicaciones de {landing.label.toLowerCase()}</p>
+                <div className="rounded-panel border border-subtle bg-white p-8 text-center t-body text-ink-2">
+                  <p className="t-section text-ink">Aún no hay publicaciones de {landing.label.toLowerCase()}</p>
                   <p className="mx-auto mt-2 max-w-md">
                     Crea una alerta para enterarte cuando aparezca una nueva publicación, o revisa el resto del catálogo.
                   </p>
                   <div className="mt-5 flex flex-wrap justify-center gap-3">
-                    <Link href="/listados" className="laria-button-primary min-h-11 px-5 py-3 text-sm">Ver todo el catálogo</Link>
-                    <Link href="/vender" className="laria-button-secondary min-h-11 px-5 py-3 text-sm">Publicar un instrumento</Link>
+                    <Link href="/listados" className={buttonClasses()}>Ver todo el catálogo</Link>
+                    <Link href="/vender" className={buttonClasses({ variant: "secondary" })}>Publicar un instrumento</Link>
                   </div>
                 </div>
               ) : null}
@@ -145,31 +145,31 @@ export function CategoryLanding({
               {!errorMessage ? <Pagination page={page} total={totalCount} path={path} /> : null}
 
               {!errorMessage && pages > 1 ? (
-                <p className="text-center text-xs text-laria-text-soft">
-                  ¿Buscas algo más específico? <Link href={catalogHref} className="font-bold text-laria-blue">Filtra {landing.label.toLowerCase()} por marca, precio o ubicación</Link>.
+                <p className="text-center t-meta">
+                  ¿Buscas algo más específico? <Link href={catalogHref} className="link font-semibold">Filtra {landing.label.toLowerCase()} por marca, precio o ubicación</Link>.
                 </p>
               ) : null}
             </div>
           </div>
 
-          <div className="grid gap-4 rounded-lg border border-laria-fog bg-white p-4 text-sm shadow-sm sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <div className="grid gap-4 rounded-panel border border-subtle bg-white p-4 t-ui sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
             <div>
-              <h2 className="text-base font-black text-laria-ink">Otras categorías</h2>
+              <h2 className="t-section text-ink">Otras categorías</h2>
               <ul className="mt-3 flex flex-wrap gap-2">
                 {otherCategories.map((item) => (
                   <li key={item.slug}>
-                    <Link href={`/instrumentos/${item.slug}`} className="inline-flex min-h-9 items-center rounded-full border border-laria-fog px-3 py-1.5 text-xs font-bold text-laria-ink hover:border-laria-blue hover:text-laria-blue">
+                    <Link href={`/instrumentos/${item.slug}`} className="inline-flex min-h-10 items-center rounded-control border border-line-strong bg-white px-3 py-1.5 t-ui font-semibold text-ink transition-colors duration-120 hover:bg-canvas">
                       {item.label}
                     </Link>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="text-laria-text-soft">
-              <h2 className="text-base font-black text-laria-ink">Compra con cuidado</h2>
-              <p className="mt-2 leading-6">
+            <div className="text-ink-2">
+              <h2 className="t-section text-ink">Compra con cuidado</h2>
+              <p className="mt-2">
                 Coordinas directamente con cada vendedor por WhatsApp. Laria no procesa pagos, no retiene dinero, no gestiona envíos ni garantiza la transacción.{" "}
-                <Link href="/consejos-de-seguridad" className="font-bold text-laria-blue">Lee los consejos de seguridad</Link>.
+                <Link href="/consejos-de-seguridad" className="link font-semibold">Lee los consejos de seguridad</Link>.
               </p>
             </div>
           </div>

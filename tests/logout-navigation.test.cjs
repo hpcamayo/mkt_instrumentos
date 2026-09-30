@@ -244,7 +244,7 @@ function renderInTimeZone(timeZone, legacyFormatter = false) {
     ${renderAdminFixtures.toString()}
     process.stdout.write(JSON.stringify(renderAdminFixtures(${legacyFormatter})));
   `;
-  const result = spawnSync(process.execPath, ["-e", script], { env: { ...process.env, TZ: timeZone }, encoding: "utf8" });
+  const result = spawnSync(process.execPath, ["--require", path.resolve("tests/setup-alias.cjs"), "-e", script], { env: { ...process.env, TZ: timeZone }, encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   return JSON.parse(result.stdout);
 }

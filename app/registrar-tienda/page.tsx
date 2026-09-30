@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { PageContainer } from "@/components/page-container";
 import { LogoutButton } from "@/components/logout-button";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
+import { buttonClasses } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   robots: NOINDEX_ROBOTS,
@@ -23,15 +24,15 @@ export default async function RegisterStorePage() {
 
   if (!user) {
     return <StoreGate title="Solicita tu tienda" body="Necesitas una cuenta de Tienda separada para vincular correctamente la aplicación y el inventario.">
-      <Link href="/registro/tienda" className="laria-button-primary min-h-11 px-4 py-3 text-sm">Crear cuenta de Tienda</Link>
-      <Link href="/login?next=/registrar-tienda" className="laria-button-secondary min-h-11 px-4 py-3 text-sm">Ingresar</Link>
+      <Link href="/registro/tienda" className={buttonClasses()}>Crear cuenta de Tienda</Link>
+      <Link href="/login?next=/registrar-tienda" className={buttonClasses({ variant: "secondary" })}>Ingresar</Link>
     </StoreGate>;
   }
 
   if (profile?.account_type !== "store_owner") {
     return <StoreGate title="Tu cuenta Particular se mantiene separada" body="No convertiremos esta cuenta en una cuenta de Tienda. Cierra sesión y crea una cuenta dedicada usando otro correo.">
-      <LogoutButton className="laria-button-primary min-h-11 px-4 py-3 text-sm" />
-      <Link href="/mi-cuenta" className="laria-button-secondary min-h-11 px-4 py-3 text-sm">Volver a Mi cuenta</Link>
+      <LogoutButton className={buttonClasses()} />
+      <Link href="/mi-cuenta" className={buttonClasses({ variant: "secondary" })}>Volver a Mi cuenta</Link>
     </StoreGate>;
   }
 
@@ -39,5 +40,5 @@ export default async function RegisterStorePage() {
 }
 
 function StoreGate({ title, body, children }: { title: string; body: string; children: ReactNode }) {
-  return <PageContainer as="section" className="py-10"><div className="mx-auto max-w-2xl rounded-lg border border-laria-fog bg-white p-6"><h1 className="text-2xl font-black text-laria-ink">{title}</h1><p className="mt-3 text-sm leading-6 text-laria-text-soft">{body}</p><div className="mt-5 flex flex-wrap gap-3">{children}</div></div></PageContainer>;
+  return <PageContainer as="section" className="py-10"><div className="mx-auto max-w-2xl rounded-panel border border-subtle bg-white p-6"><h1 className="t-page text-ink">{title}</h1><p className="mt-3 text-sm leading-6 text-ink-2">{body}</p><div className="mt-5 flex flex-wrap gap-3">{children}</div></div></PageContainer>;
 }

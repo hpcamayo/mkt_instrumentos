@@ -6,7 +6,7 @@ const dates = new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short",
 
 export function AccountAnalyticsMetrics({ analytics, store = false }: { analytics: AccountAnalytics | null; store?: boolean }) {
   if (!analytics) {
-    return <section role="status" className="rounded-lg border border-laria-fog bg-white p-5 text-sm text-laria-text-soft">Las métricas no están disponibles en este momento. Intenta nuevamente más tarde.</section>;
+    return <section role="status" className="rounded-panel border border-subtle bg-white p-5 text-sm text-ink-2">Las métricas no están disponibles en este momento. Intenta nuevamente más tarde.</section>;
   }
   const { summary } = analytics;
   return (
@@ -30,7 +30,7 @@ export function AccountAnalyticsMetrics({ analytics, store = false }: { analytic
           <Metric label="Tasa de contacto" value={formatRatio(summary.contact_rate)} detail="Contactos de productos ÷ vistas registradas de productos." />
         </> : null}
       </div>
-      <div className="rounded-lg border border-laria-fog bg-white p-4 text-xs leading-6 text-laria-text-soft">
+      <div className="rounded-panel border border-subtle bg-white p-4 text-meta leading-6 text-ink-2">
         <p>{analytics.days === 0 ? "Periodo: todo el historial disponible." : `Periodo de eventos: últimos ${analytics.days} días.`} Las publicaciones activas y vendidas muestran el estado actual de todo tu inventario, no cambios ocurridos en el periodo.</p>
         <p>{analytics.tracking_started_at ? `Registro de eventos disponible desde el ${dates.format(new Date(analytics.tracking_started_at))}.` : "Todavía no hay eventos registrados."} Los contactos cuentan intención de abrir WhatsApp, no conversaciones, compradores únicos ni transacciones.</p>
         {store ? <p>Las tasas usan solo vistas e impresiones registradas en el mismo periodo; excluyen las vistas históricas sin evento. Sin denominador se muestra «Sin datos». Laria no calcula ingresos ni garantiza pagos, entregas o condición de los productos.</p> : null}
@@ -40,7 +40,7 @@ export function AccountAnalyticsMetrics({ analytics, store = false }: { analytic
 }
 
 function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return <div className="rounded-lg border border-laria-fog bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wide text-laria-text-soft">{label}</p><p className="mt-3 text-2xl font-black text-laria-ink">{value}</p><p className="mt-2 text-xs leading-5 text-laria-text-soft">{detail}</p></div>;
+  return <div className="rounded-panel border border-subtle bg-white p-5"><p className="t-micro text-ink-2">{label}</p><p className="mt-3 text-[28px] font-bold leading-[32px] stretch-semicond tabular-nums text-ink">{value}</p><p className="mt-2 text-meta leading-5 text-ink-2">{detail}</p></div>;
 }
 
 function formatRatio(value: number | null) {

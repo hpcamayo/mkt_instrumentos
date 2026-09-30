@@ -27,7 +27,7 @@ export function PageNotice({
       ref={noticeRef}
       tabIndex={-1}
       role={kind === "error" ? "alert" : "status"}
-      className={noticeClassName(tone, "outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink")}
+      className={noticeClassName(tone, "")}
     >
       <NoticeIcon tone={tone} />
       <div className={noticeBodyClassName}>

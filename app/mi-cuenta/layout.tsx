@@ -18,7 +18,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
     : [{ count: 0 }, { data: 0 }];
 
   return (
-    <div className="min-h-full bg-laria-cloud/70">
+    <div className="min-h-full bg-canvas/70">
       <PageContainer className="py-5 sm:py-7">
         <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)] xl:gap-6">
           <AccountNavigation accountType={accountType} hasStore={Boolean(store)} unreadNotifications={unreadNotifications ?? 0} pendingBuyerConfirmations={pendingBuyerConfirmations ?? 0} />

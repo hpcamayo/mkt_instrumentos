@@ -57,10 +57,10 @@ export function ListingDetailGallery({
       <div
         tabIndex={hasMultiplePhotos ? 0 : -1}
         onKeyDown={handleKeyDown}
-        className="group relative overflow-hidden rounded-lg border border-laria-fog bg-white shadow-[0_18px_48px_rgb(16_18_23/0.08)] focus:outline-none focus:ring-2 focus:ring-laria-blue"
+        className="group relative overflow-hidden rounded-panel border border-subtle bg-white"
       >
         {hasPhotos && activePhoto ? (
-          <div className="flex aspect-[4/3] items-center justify-center bg-[linear-gradient(135deg,#ffffff_0%,#f7fbff_54%,rgba(107,166,255,0.14)_100%)]">
+          <div className="flex aspect-[4/3] items-center justify-center bg-surface">
             <Image
               width={800}
               height={600}
@@ -74,9 +74,9 @@ export function ListingDetailGallery({
             />
           </div>
         ) : (
-          <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 bg-[linear-gradient(135deg,#f7fbff_0%,rgba(107,166,255,0.14)_48%,#f1f3f5_100%)] px-4 text-center text-sm font-bold text-laria-muted">
+          <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 bg-canvas px-4 text-center t-ui font-semibold text-ink-2">
             <ImageIcon
-              className="h-9 w-9 text-laria-blue/65"
+              className="h-9 w-9 text-ink-3"
               aria-hidden="true"
             />
             <span>Foto pendiente</span>
@@ -89,7 +89,7 @@ export function ListingDetailGallery({
               type="button"
               onClick={showPreviousPhoto}
               aria-label="Foto anterior"
-              className="absolute left-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 text-laria-ink shadow-sm ring-1 ring-laria-fog transition hover:bg-laria-blue hover:text-laria-black focus:outline-none focus:ring-2 focus:ring-laria-blue"
+              className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-control border border-line-strong bg-white/95 text-ink transition-colors duration-120 hover:bg-canvas"
             >
               <ChevronLeft className="h-5 w-5" aria-hidden="true" />
             </button>
@@ -97,11 +97,11 @@ export function ListingDetailGallery({
               type="button"
               onClick={showNextPhoto}
               aria-label="Foto siguiente"
-              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/92 text-laria-ink shadow-sm ring-1 ring-laria-fog transition hover:bg-laria-blue hover:text-laria-black focus:outline-none focus:ring-2 focus:ring-laria-blue"
+              className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-control border border-line-strong bg-white/95 text-ink transition-colors duration-120 hover:bg-canvas"
             >
               <ChevronRight className="h-5 w-5" aria-hidden="true" />
             </button>
-            <span className="absolute bottom-3 right-3 rounded-full bg-laria-black/75 px-3 py-1 text-xs font-bold text-white">
+            <span className="absolute bottom-3 right-3 rounded-tag bg-frame/80 px-2 py-0.5 t-meta font-semibold tabular-nums text-white">
               {activeIndex + 1} / {photos.length}
             </span>
           </>
@@ -122,8 +122,8 @@ export function ListingDetailGallery({
               aria-current={index === activeIndex ? "true" : undefined}
               className={
                 index === activeIndex
-                  ? "h-16 w-16 shrink-0 overflow-hidden rounded-md bg-white ring-2 ring-laria-blue ring-offset-2 ring-offset-white focus:outline-none"
-                  : "h-16 w-16 shrink-0 overflow-hidden rounded-md bg-white ring-1 ring-laria-fog transition hover:ring-laria-blue focus:outline-none focus:ring-2 focus:ring-laria-blue focus:ring-offset-2 focus:ring-offset-white"
+                  ? "h-16 w-16 shrink-0 overflow-hidden rounded-control bg-white ring-2 ring-accent ring-offset-2 ring-offset-white"
+                  : "h-16 w-16 shrink-0 overflow-hidden rounded-control bg-white ring-1 ring-subtle transition hover:ring-accent"
               }
             >
               <Image

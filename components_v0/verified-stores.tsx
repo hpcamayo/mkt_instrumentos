@@ -1,7 +1,9 @@
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
-import { BadgeCheck, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import Link from "next/link";
+import { VerifiedIcon } from "@/components/ui/verified-mark";
 import { PageContainer } from "@/components/page-container";
+import { buttonClasses } from "@/components/ui/button";
 
 export type VerifiedStore = {
   id: string;
@@ -55,57 +57,56 @@ export function VerifiedStores({ stores }: { stores: VerifiedStore[] }) {
     <section className="bg-white py-10 md:py-14">
       <PageContainer>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="rounded-lg border border-laria-fog bg-laria-cloud p-5 sm:p-6">
+          <div className="rounded-panel border border-subtle bg-canvas p-5 sm:p-6">
             <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+                <p className="t-micro text-ink-2">
                   Tiendas y musicos
                 </p>
-                <h2 className="laria-section-title mt-2 text-2xl uppercase md:text-3xl">
+                <h2 className="mt-2 t-page text-ink">
                   Que inspiran
                 </h2>
               </div>
               <Link
                 href="/registrar-tienda"
-                className="laria-button-secondary min-h-10 w-fit px-4 py-2 text-xs uppercase tracking-wide"
+                className={buttonClasses({ variant: "secondary", className: "w-fit" })}
               >
                 Registrar tienda
               </Link>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
-              {visibleStores.map((store, index) => (
+              {visibleStores.map((store) => (
                 <div key={store.id}>
                   <StoreCard
                     store={store}
                     isPlaceholder={!hasRealStores}
-                    visualIndex={index}
                   />
                 </div>
               ))}
             </div>
           </div>
 
-          <aside className="rounded-lg border border-laria-fog bg-laria-cloud p-5 sm:p-6">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+          <aside className="rounded-panel border border-subtle bg-canvas p-5 sm:p-6">
+            <p className="t-micro text-ink-2">
               De la comunidad
             </p>
-            <h2 className="laria-section-title mt-2 text-xl uppercase">
+            <h2 className="mt-2 t-section text-ink">
               Ideas para comprar mejor
             </h2>
             <div className="mt-5 grid gap-4">
               {communityItems.map((title, index) => (
                 <div key={title} className="flex gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-laria-black text-sm font-black text-laria-yellow">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-frame t-ui font-semibold text-surface">
                     {index + 1}
                   </div>
-                  <p className="text-sm font-bold leading-5 text-laria-ink">
+                  <p className="t-ui font-semibold text-ink">
                     {title}
                   </p>
                 </div>
               ))}
             </div>
-            <p className="mt-5 text-xs leading-5 text-laria-muted">
+            <p className="mt-5 t-meta">
               Bloque visual temporal. Laria aun no tiene una seccion real de
               comunidad o blog.
             </p>
@@ -119,18 +120,14 @@ export function VerifiedStores({ stores }: { stores: VerifiedStore[] }) {
 function StoreCard({
   store,
   isPlaceholder,
-  visualIndex,
 }: {
   store: VerifiedStore;
   isPlaceholder: boolean;
-  visualIndex: number;
 }) {
   const content = (
-    <article className="group overflow-hidden rounded-lg border border-laria-fog bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-      <div
-        className={`h-28 bg-gradient-to-br ${getStoreGradient(visualIndex)}`}
-      >
-        <div className="flex h-full items-center justify-center text-2xl font-black text-white">
+    <article className="group overflow-hidden rounded-panel border border-subtle bg-white transition-colors duration-120 hover:border-line-strong">
+      <div className="h-28 bg-frame-2">
+        <div className="flex h-full items-center justify-center text-[28px] font-bold stretch-semicond text-surface">
           {store.logoUrl ? (
             <Image
               width={800}
@@ -147,20 +144,20 @@ function StoreCard({
       </div>
       <div className="p-4">
         <div className="flex items-center gap-1">
-          <h3 className="truncate text-sm font-black text-laria-ink transition-colors group-hover:text-laria-blue">
+          <h3 className="truncate t-card-title text-ink underline-offset-4 group-hover:underline group-hover:decoration-accent group-hover:decoration-2">
             {store.name}
           </h3>
-          <BadgeCheck className="h-4 w-4 shrink-0 text-laria-blue" />
+          <VerifiedIcon />
         </div>
-        <span className="mt-2 flex items-center gap-1 text-xs text-laria-muted">
+        <span className="mt-2 flex items-center gap-1 t-meta">
           <MapPin className="h-3.5 w-3.5" />
           {store.location}
         </span>
-        <p className="mt-3 line-clamp-3 text-xs leading-5 text-laria-text-soft">
+        <p className="mt-3 line-clamp-3 t-meta">
           {store.description}
         </p>
         {isPlaceholder ? (
-          <p className="mt-3 text-[11px] font-bold uppercase text-laria-blue">
+          <p className="mt-3 t-micro text-ink-2">
             Vista previa
           </p>
         ) : null}
@@ -177,14 +174,4 @@ function StoreCard({
       {content}
     </Link>
   );
-}
-
-function getStoreGradient(index: number) {
-  const gradients = [
-    "from-laria-black via-slate-800 to-laria-blue",
-    "from-zinc-950 via-zinc-700 to-zinc-500",
-    "from-blue-950 via-blue-700 to-cyan-400",
-  ];
-
-  return gradients[index % gradients.length];
 }

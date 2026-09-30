@@ -32,7 +32,7 @@ export function LocationFields({
           autoComplete="address-level2"
           defaultValue={defaultCity}
           list={cityListId}
-          className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
+          className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
           placeholder="Buscar ciudad o escribir manualmente"
         />
         <datalist id={cityListId}>
@@ -50,7 +50,7 @@ export function LocationFields({
           autoComplete="address-level1"
           defaultValue={defaultRegion}
           list={regionListId}
-          className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
+          className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
           placeholder="Buscar región"
         />
         <datalist id={regionListId}>

@@ -23,6 +23,7 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import type { Json } from "@/lib/supabase/database.types";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
+import { buttonClasses } from "@/components/ui/button";
 
 const ADMIN_DATE_FORMATTER = new Intl.DateTimeFormat("es-PE", {
   timeZone: "America/Lima",
@@ -84,12 +85,12 @@ export function AdminRevisionComparison({ item }: { item: AdminJsonItem }) {
   return (
     <div className="grid gap-4 sm:col-span-2">
       <div className="overflow-x-auto">
-      <table className="w-full min-w-[520px] border-collapse text-left text-xs">
-        <caption className="mb-2 text-left font-black text-laria-ink">Comparación de cambios</caption>
-        <thead><tr className="border-b border-laria-fog"><th className="p-2">Campo</th><th className="p-2">Actual</th><th className="p-2">Propuesto</th></tr></thead>
+      <table className="w-full min-w-[520px] border-collapse text-left text-meta">
+        <caption className="mb-2 text-left font-semibold text-ink">Comparación de cambios</caption>
+        <thead><tr className="border-b border-subtle"><th className="p-2">Campo</th><th className="p-2">Actual</th><th className="p-2">Propuesto</th></tr></thead>
         <tbody>{fields.map((field) => (
-          <tr key={field} className="border-b border-laria-fog/70">
-            <th className="p-2 font-bold">{adminValueLabel(field)}</th>
+          <tr key={field} className="border-b border-subtle/70">
+            <th className="p-2 font-semibold">{adminValueLabel(field)}</th>
             <td className="p-2">{formatRevisionValue(field, current[field], current.instrument_type)}</td>
             <td className="p-2">{formatRevisionValue(field, proposed[field], proposed.instrument_type)}</td>
           </tr>
@@ -124,7 +125,7 @@ function formatRevisionValue(field: string, value: Json | undefined, instrumentT
 function RevisionPhotos({ title, photos }: { title: string; photos: AdminJsonItem[] }) {
   return (
     <div>
-      <p className="text-sm font-black text-laria-ink">{title}</p>
+      <p className="text-sm font-semibold text-ink">{title}</p>
       {photos.length ? <div className="mt-2 grid grid-cols-2 gap-2">
         {photos.slice(0, 10).map((photo, index) => (
           <Image
@@ -137,10 +138,10 @@ function RevisionPhotos({ title, photos }: { title: string; photos: AdminJsonIte
             unoptimized={adminString(photo, "image_url").startsWith("/api/listing-images/")}
             loading="lazy"
             sizes="(max-width: 1023px) 50vw, 320px"
-            className="aspect-[4/3] w-full rounded border border-laria-fog object-cover"
+            className="aspect-[4/3] w-full rounded border border-subtle object-cover"
           />
         ))}
-      </div> : <p className="mt-2 text-xs text-laria-text-soft">Sin fotos</p>}
+      </div> : <p className="mt-2 text-meta text-ink-2">Sin fotos</p>}
     </div>
   );
 }
@@ -253,9 +254,9 @@ export function AdminMutationControl({
     return (
       <form
         onSubmit={submit}
-        className="grid gap-2 rounded-md border border-laria-fog bg-laria-cloud p-3"
+        className="grid gap-2 rounded-control border border-subtle bg-canvas p-3"
       >
-        <label className="grid gap-1 text-xs font-bold text-laria-text-soft">
+        <label className="grid gap-1 text-meta font-semibold text-ink-2">
           {reasonLabel}
           <textarea
             name="reason"
@@ -264,11 +265,11 @@ export function AdminMutationControl({
             maxLength={500}
             rows={3}
             autoFocus
-            className="rounded-md border border-laria-steel bg-white px-3 py-2 text-sm text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue"
+            className="rounded-control border border-line-strong bg-white px-3 py-2 text-sm text-ink"
           />
         </label>
         {errorMessage ? (
-          <p ref={feedbackRef} tabIndex={-1} role="alert" className="text-xs font-bold text-red-700 outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+          <p ref={feedbackRef} tabIndex={-1} role="alert" className="text-meta font-semibold text-danger">
             {errorMessage}
           </p>
         ) : null}
@@ -276,7 +277,7 @@ export function AdminMutationControl({
           <button
             type="submit"
             disabled={busy}
-            className="laria-button-secondary min-h-10 px-3 py-2 text-xs disabled:opacity-50"
+            className={buttonClasses({ variant: "secondary" })}
           >
             {busy ? "Guardando…" : `Confirmar: ${label}`}
           </button>
@@ -286,7 +287,7 @@ export function AdminMutationControl({
               restoreFocusRef.current = true;
               setExpanded(false);
             }}
-            className="min-h-10 rounded-md border border-laria-steel px-3 py-2 text-xs font-black text-laria-ink"
+            className="min-h-10 rounded-control border border-line-strong px-3 py-2 text-meta font-semibold text-ink"
           >
             Cancelar
           </button>
@@ -297,15 +298,15 @@ export function AdminMutationControl({
 
   if (confirmationText && expanded) {
     return (
-      <div className="grid gap-3 rounded-md border border-amber-200 bg-amber-50 p-3">
-        <p className="max-w-xl text-xs font-bold leading-5 text-amber-950">{confirmationText}</p>
+      <div className="grid gap-3 rounded-control bg-warning-tint p-3">
+        <p className="max-w-xl text-meta font-semibold leading-5 text-ink">{confirmationText}</p>
         {errorMessage ? (
-          <p ref={feedbackRef} tabIndex={-1} role="alert" className="text-xs font-bold text-red-700 outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+          <p ref={feedbackRef} tabIndex={-1} role="alert" className="text-meta font-semibold text-danger">
             {errorMessage}
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => void execute()} className="laria-button-secondary min-h-10 px-3 py-2 text-xs disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={() => void execute()} className={buttonClasses({ variant: "secondary" })}>
             {busy ? "Guardando…" : `Confirmar: ${label}`}
           </button>
           <button
@@ -314,7 +315,7 @@ export function AdminMutationControl({
               restoreFocusRef.current = true;
               setExpanded(false);
             }}
-            className="min-h-10 rounded-md border border-laria-steel bg-white px-3 py-2 text-xs font-black text-laria-ink"
+            className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink"
           >
             Cancelar
           </button>
@@ -331,12 +332,12 @@ export function AdminMutationControl({
         aria-label={`${label}: ${mutation.id}`}
         disabled={busy}
         onClick={() => (reasonLabel || confirmationText ? setExpanded(true) : void execute())}
-        className="min-h-10 rounded-md border border-laria-steel bg-white px-3 py-2 text-xs font-black text-laria-ink outline-none transition hover:border-laria-blue hover:text-laria-blue focus-visible:ring-2 focus-visible:ring-laria-blue disabled:opacity-50"
+        className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink transition hover:bg-canvas disabled:opacity-50"
       >
         {busy ? "Procesando…" : label}
       </button>
       {errorMessage ? (
-        <p ref={feedbackRef} tabIndex={-1} role="alert" className="mt-2 max-w-xs text-xs font-bold text-red-700 outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+        <p ref={feedbackRef} tabIndex={-1} role="alert" className="mt-2 max-w-xs text-meta font-semibold text-danger">
           {errorMessage}
         </p>
       ) : null}
@@ -502,27 +503,27 @@ function QueueItem({
   const storePhotos = jsonRecords(item, "store_photos");
 
   return (
-    <article className="grid gap-4 rounded-lg border border-laria-fog bg-white p-4 shadow-sm sm:p-5">
+    <article className="grid gap-4 rounded-panel border border-subtle bg-white p-4 sm:p-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-wide text-laria-blue">
+          <p className="t-micro text-ink-2">
             {ADMIN_QUEUE_LABELS[queue]}
           </p>
-          <h2 className="mt-1 break-words text-lg font-black text-laria-ink">
+          <h2 className="mt-1 break-words t-section text-ink">
             {title}
           </h2>
-          <p className="mt-1 text-xs text-laria-muted">
+          <p className="mt-1 text-meta text-ink-2">
             En espera desde {adminDate(createdAt)} · {id}
           </p>
         </div>
         {adminNumber(item, "open_target_report_count") > 1 ? (
-          <span className="w-fit rounded-full bg-red-50 px-2.5 py-1 text-xs font-black text-red-700">
+          <span className="w-fit rounded-tag bg-danger-tint px-2 py-0.5 t-meta font-semibold text-danger">
             {adminNumber(item, "open_target_report_count")} reportes abiertos
           </span>
         ) : null}
       </div>
 
-      <div className="grid gap-2 text-sm leading-6 text-laria-text-soft sm:grid-cols-2">
+      <div className="grid gap-2 text-sm leading-6 text-ink-2 sm:grid-cols-2">
         {adminString(item, "owner_name") ? (
           <p><strong>Responsable:</strong> {adminString(item, "owner_name")}</p>
         ) : null}
@@ -556,18 +557,18 @@ function QueueItem({
       </div>
 
       {firstPhotoUrl || storePhotos.length || adminString(item, "logo_url") || adminString(item, "banner_url") ? (
-        <div className="flex flex-wrap gap-3 text-xs font-black">
-          {firstPhotoUrl ? <a href={firstPhotoUrl} target="_blank" rel="noreferrer" className="text-laria-blue underline-offset-4 hover:underline">Abrir foto principal</a> : null}
-          {adminString(item, "logo_url") ? <a href={adminString(item, "logo_url")} target="_blank" rel="noreferrer" className="text-laria-blue underline-offset-4 hover:underline">Abrir logo</a> : null}
-          {adminString(item, "banner_url") ? <a href={adminString(item, "banner_url")} target="_blank" rel="noreferrer" className="text-laria-blue underline-offset-4 hover:underline">Abrir banner</a> : null}
-          {storePhotos.map((photo, index) => typeof photo.image_url === "string" ? <a key={String(photo.id ?? photo.image_url)} href={photo.image_url} target="_blank" rel="noreferrer" className="text-laria-blue underline-offset-4 hover:underline">Foto de tienda {index + 1}</a> : null)}
+        <div className="flex flex-wrap gap-3 text-meta font-semibold">
+          {firstPhotoUrl ? <a href={firstPhotoUrl} target="_blank" rel="noreferrer" className="link">Abrir foto principal</a> : null}
+          {adminString(item, "logo_url") ? <a href={adminString(item, "logo_url")} target="_blank" rel="noreferrer" className="link">Abrir logo</a> : null}
+          {adminString(item, "banner_url") ? <a href={adminString(item, "banner_url")} target="_blank" rel="noreferrer" className="link">Abrir banner</a> : null}
+          {storePhotos.map((photo, index) => typeof photo.image_url === "string" ? <a key={String(photo.id ?? photo.image_url)} href={photo.image_url} target="_blank" rel="noreferrer" className="link">Foto de tienda {index + 1}</a> : null)}
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-3 text-xs font-black">
-        <Link href={managementHref} className="text-laria-blue underline-offset-4 hover:underline">Abrir en gestión</Link>
-        {targetHref ? <Link href={targetHref} className="text-laria-blue underline-offset-4 hover:underline">Inspeccionar objetivo</Link> : null}
-        <Link href={auditHref} className="text-laria-blue underline-offset-4 hover:underline">Ver auditoría</Link>
+      <div className="flex flex-wrap gap-3 text-meta font-semibold">
+        <Link href={managementHref} className="link">Abrir en gestión</Link>
+        {targetHref ? <Link href={targetHref} className="link">Inspeccionar objetivo</Link> : null}
+        <Link href={auditHref} className="link">Ver auditoría</Link>
       </div>
 
       <QueueActions queue={queue} item={item} onComplete={onComplete} />
@@ -628,14 +629,14 @@ export function AdminWorkbench({
 
   return (
     <div className="grid gap-5">
-      <header className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_18px_48px_rgb(16_18_23/0.07)] sm:p-6">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+      <header className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
+        <p className="t-micro text-ink-2">
           Moderación
         </p>
-        <h1 className="mt-2 text-3xl font-black tracking-tight text-laria-ink sm:text-4xl">
+        <h1 className="mt-2 t-page text-ink">
           Bandeja de moderación
         </h1>
-        <p className="mt-2 text-sm leading-6 text-laria-text-soft">
+        <p className="mt-2 t-ui text-ink-2">
           {totalPending === null
             ? "Los conteos no están disponibles. Actualiza antes de asumir que no hay trabajo."
             : totalPending > 0
@@ -643,7 +644,7 @@ export function AdminWorkbench({
             : "No hay acciones pendientes."}
         </p>
         <div
-          className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs font-bold text-laria-text-soft"
+          className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-meta font-semibold text-ink-2"
           aria-label="Resumen de pendientes"
         >
           {ADMIN_QUEUES.map((queue) => (
@@ -653,17 +654,17 @@ export function AdminWorkbench({
       </header>
 
       {notice ? (
-        <p ref={noticeRef} tabIndex={-1} role="status" className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-3 text-sm font-bold text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+        <p ref={noticeRef} tabIndex={-1} role="status" className="rounded-control border border-accent/25 bg-accent/10 p-3 text-sm font-semibold text-ink">
           {notice}
         </p>
       ) : null}
       {loadError ? (
-        <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800">
+        <p role="alert" className="rounded-control bg-danger-tint p-3 text-sm font-semibold text-danger">
           {loadError}
         </p>
       ) : null}
 
-      <div className="overflow-x-auto rounded-lg border border-laria-fog bg-white p-2 shadow-sm">
+      <div className="overflow-x-auto rounded-panel border border-subtle bg-white p-2">
         <div role="tablist" aria-label="Colas de moderación" className="flex min-w-max gap-1">
           {ADMIN_QUEUES.map((queue, index) => {
             const active = queue === selectedQueue;
@@ -679,8 +680,8 @@ export function AdminWorkbench({
                 onKeyDown={(event) => moveTab(event, index)}
                 href={`/admin?cola=${queue}`}
                 className={active
-                  ? "rounded-md bg-laria-black px-3 py-2.5 text-sm font-black text-white outline-none focus-visible:ring-2 focus-visible:ring-laria-blue"
-                  : "rounded-md px-3 py-2.5 text-sm font-bold text-laria-text-soft outline-none hover:bg-laria-cloud focus-visible:ring-2 focus-visible:ring-laria-blue"}
+                  ? "rounded-control bg-frame px-3 py-2.5 text-sm font-semibold text-white"
+                  : "rounded-control px-3 py-2.5 text-sm font-semibold text-ink-2 hover:bg-canvas"}
               >
                 {ADMIN_QUEUE_LABELS[queue]} <span aria-label={`${counts?.[queue] ?? "sin conteo"} pendientes`}>{counts?.[queue] ?? "—"}</span>
               </Link>
@@ -697,13 +698,13 @@ export function AdminWorkbench({
       >
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black text-laria-ink">{ADMIN_QUEUE_LABELS[selectedQueue]}</h2>
-            <p className="mt-1 text-sm text-laria-text-soft">{total} pendiente{total === 1 ? "" : "s"} en esta cola.</p>
+            <h2 className="t-section text-ink">{ADMIN_QUEUE_LABELS[selectedQueue]}</h2>
+            <p className="mt-1 text-sm text-ink-2">{total} pendiente{total === 1 ? "" : "s"} en esta cola.</p>
           </div>
           <button
             type="button"
             onClick={() => router.refresh()}
-            className="min-h-10 rounded-md border border-laria-steel bg-white px-3 py-2 text-xs font-black text-laria-ink outline-none hover:border-laria-blue focus-visible:ring-2 focus-visible:ring-laria-blue"
+            className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink hover:border-accent"
           >
             Actualizar
           </button>
@@ -718,17 +719,17 @@ export function AdminWorkbench({
           />
         ))}
         {!items.length && !loadError ? (
-          <div className="rounded-lg border border-dashed border-laria-steel bg-white p-8 text-center">
-            <p className="font-black text-laria-ink">No hay acciones pendientes</p>
-            <p className="mt-1 text-sm text-laria-text-soft">Esta cola está al día.</p>
+          <div className="rounded-panel border border-dashed border-line-strong bg-white p-8 text-center">
+            <p className="font-semibold text-ink">No hay acciones pendientes</p>
+            <p className="mt-1 text-sm text-ink-2">Esta cola está al día.</p>
           </div>
         ) : null}
 
         {pageCount > 1 ? (
-          <nav aria-label="Paginación de la cola" className="flex items-center justify-between gap-3 rounded-lg border border-laria-fog bg-white p-3 text-sm">
-            {page > 1 ? <Link href={`/admin?cola=${selectedQueue}&pagina=${page - 1}`} className="font-black text-laria-blue">Anterior</Link> : <span />}
-            <span className="text-laria-text-soft">Página {page} de {pageCount}</span>
-            {page < pageCount ? <Link href={`/admin?cola=${selectedQueue}&pagina=${page + 1}`} className="font-black text-laria-blue">Siguiente</Link> : <span />}
+          <nav aria-label="Paginación de la cola" className="flex items-center justify-between gap-3 rounded-panel border border-subtle bg-white p-3 text-sm">
+            {page > 1 ? <Link href={`/admin?cola=${selectedQueue}&pagina=${page - 1}`} className="link font-semibold">Anterior</Link> : <span />}
+            <span className="text-ink-2">Página {page} de {pageCount}</span>
+            {page < pageCount ? <Link href={`/admin?cola=${selectedQueue}&pagina=${page + 1}`} className="link font-semibold">Siguiente</Link> : <span />}
           </nav>
         ) : null}
       </section>

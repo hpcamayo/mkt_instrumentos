@@ -41,16 +41,6 @@ const categorySubtitles: Record<string, string> = {
   "audio interfaces": "Estudio y grabacion",
 };
 
-const categoryVisuals: Record<string, string> = {
-  guitars: "from-slate-950 via-slate-800 to-blue-900",
-  basses: "from-black via-zinc-800 to-zinc-600",
-  drums: "from-slate-100 via-white to-slate-300",
-  cymbals: "from-yellow-200 via-amber-300 to-amber-500",
-  microphones: "from-slate-700 via-slate-500 to-slate-200",
-  pedals: "from-blue-900 via-blue-500 to-cyan-300",
-  amplifiers: "from-zinc-900 via-zinc-700 to-zinc-500",
-  "audio interfaces": "from-slate-900 via-blue-900 to-laria-blue",
-};
 
 export function CategoriesSection({ categories }: { categories: Category[] }) {
   return (
@@ -58,14 +48,14 @@ export function CategoriesSection({ categories }: { categories: Category[] }) {
       <PageContainer>
         <div className="mb-7 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+            <p className="t-micro text-ink-2">
               Explora
             </p>
-            <h2 className="laria-section-title mt-2 text-2xl uppercase md:text-3xl">
+            <h2 className="mt-2 t-page text-ink">
               Explora por categoria
             </h2>
           </div>
-          <p className="max-w-md text-sm leading-6 text-laria-text-soft">
+          <p className="max-w-md t-ui text-ink-2">
             Encuentra instrumentos por tipo de equipo, desde guitarras y bajos
             hasta audio profesional.
           </p>
@@ -76,27 +66,21 @@ export function CategoriesSection({ categories }: { categories: Category[] }) {
             const Icon =
               categoryIcons[category.value as keyof typeof categoryIcons] ??
               fallbackIcon;
-            const visual =
-              categoryVisuals[category.value] ??
-              "from-laria-graphite to-laria-blue";
 
             return (
               <div key={category.value}>
                 <Link
                   href={categoryLandingPath(category.value)}
-                  className="group block overflow-hidden rounded-lg border border-laria-fog bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-laria-steel hover:shadow-lg"
+                  className="group block overflow-hidden rounded-panel border border-subtle bg-white transition-colors duration-120 hover:border-line-strong"
                 >
-                  <div
-                    className={`relative aspect-[4/3] bg-gradient-to-br ${visual}`}
-                  >
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_24%,rgba(255,255,255,0.34),transparent_28%)]" />
-                    <Icon className="absolute bottom-3 right-3 h-12 w-12 text-white drop-shadow-lg transition group-hover:scale-105" />
+                  <div className="relative aspect-[4/3] bg-canvas">
+                    <Icon className="absolute bottom-3 right-3 h-12 w-12 text-ink" aria-hidden="true" />
                   </div>
                   <div className="p-3">
-                    <h3 className="text-sm font-black leading-5 text-laria-ink transition-colors group-hover:text-laria-blue">
+                    <h3 className="t-card-title text-ink underline-offset-4 group-hover:underline group-hover:decoration-accent group-hover:decoration-2">
                       {category.label}
                     </h3>
-                    <p className="mt-1 text-xs leading-4 text-laria-muted">
+                    <p className="mt-1 t-meta">
                       {categorySubtitles[category.value] ?? "Ver instrumentos"}
                     </p>
                   </div>

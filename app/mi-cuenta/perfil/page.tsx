@@ -13,9 +13,9 @@ export default async function ProfilePage() {
   return (
     <>
       <AccountSettingsTabs current="/mi-cuenta/perfil" />
-      <div className="max-w-2xl rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
-        <h1 className="text-3xl font-black text-laria-ink">Editar perfil</h1>
-        <p className="mt-2 text-sm leading-6 text-laria-text-soft">Estos datos identifican {accountType === "store_owner" ? "a la persona responsable de la tienda" : "al Particular y se muestran en sus publicaciones"}.</p>
+      <div className="max-w-2xl rounded-panel border border-subtle bg-white p-5 sm:p-6">
+        <h1 className="t-page text-ink">Editar perfil</h1>
+        <p className="mt-2 t-ui text-ink-2">Estos datos identifican {accountType === "store_owner" ? "a la persona responsable de la tienda" : "al Particular y se muestran en sus publicaciones"}.</p>
         <div className="mt-6">
           <Suspense><ProfileEditForm userId={user.id} accountType={accountType} profile={{ fullName: profile?.full_name ?? "", phone: profile?.phone ?? "", city: profile?.city ?? "", region: normalizePeruRegion(profile?.region ?? "") ?? "" }} /></Suspense>
         </div>

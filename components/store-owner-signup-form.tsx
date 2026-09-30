@@ -10,6 +10,7 @@ import {
   validateSellerProfileInput,
 } from "@/lib/auth/profile";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { buttonClasses } from "@/components/ui/button";
 
 type State = "checking" | "idle" | "submitting" | "sent" | "error";
 
@@ -119,20 +120,20 @@ export function StoreOwnerSignupForm() {
         <LocationFields />
       </div>
       {message ? (
-        <div role="status" className={`rounded-md p-3 text-sm ${state === "sent" ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>
+        <div role="status" className={`rounded-control p-3 text-sm ${state === "sent" ? "bg-accent-tint text-ink" : "bg-warning-tint text-ink"}`}>
           {message}
         </div>
       ) : null}
-      <p className="text-xs leading-5 text-laria-text-soft">
+      <p className="text-meta leading-5 text-ink-2">
         Al crear la cuenta aceptas los{" "}
-        <Link href="/terminos" target="_blank" className="font-bold text-laria-blue">términos y reglas del marketplace</Link> y la{" "}
-        <Link href="/privacidad" target="_blank" className="font-bold text-laria-blue">política de privacidad</Link>.
+        <Link href="/terminos" target="_blank" className="link font-semibold">términos y reglas del marketplace</Link> y la{" "}
+        <Link href="/privacidad" target="_blank" className="link font-semibold">política de privacidad</Link>.
       </p>
-      <button type="submit" disabled={state === "checking" || state === "submitting"} className="laria-button-primary min-h-12 px-5 py-3 text-sm">
+      <button type="submit" disabled={state === "checking" || state === "submitting"} className={buttonClasses()}>
         {state === "submitting" ? "Creando cuenta..." : "Crear cuenta de Tienda"}
       </button>
-      <p className="text-center text-sm text-laria-text-soft">
-        ¿Ya tienes una cuenta de Tienda? <Link href="/login?next=/mi-cuenta" className="font-black text-laria-blue">Ingresar</Link>
+      <p className="text-center text-sm text-ink-2">
+        ¿Ya tienes una cuenta de Tienda? <Link href="/login?next=/mi-cuenta" className="link font-semibold">Ingresar</Link>
       </p>
     </form>
   );
@@ -140,9 +141,9 @@ export function StoreOwnerSignupForm() {
 
 function Field({ label, ...props }: { label: string; name: string; type?: string; autoComplete?: string; minLength?: number }) {
   return (
-    <label className="grid gap-2 text-sm font-bold text-laria-ink">
+    <label className="grid gap-2 text-sm font-semibold text-ink">
       {label}
-      <input required className="h-11 rounded-md border border-laria-steel px-3 outline-none focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/20" {...props} />
+      <input required className="h-11 rounded-control border border-line-strong px-3" {...props} />
     </label>
   );
 }

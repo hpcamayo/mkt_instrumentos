@@ -6,6 +6,7 @@ import {
 } from "@/components/listing-management-table";
 import { getAccountContext } from "@/lib/account-context";
 import { getAccountAnalytics } from "@/lib/account-analytics";
+import { buttonClasses } from "@/components/ui/button";
 
 export const metadata = { title: "Inventario de tienda" };
 
@@ -36,10 +37,10 @@ export default async function StoreInventoryPage() {
   }));
   const concurrent = listings?.filter((item) => item.status === "pending" || item.status === "approved").length ?? 0;
   return (
-    <section className="rounded-lg border border-laria-fog bg-white shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-laria-fog p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-xs font-black uppercase tracking-wide text-laria-blue">{store.name}</p><h1 className="mt-1 text-2xl font-black text-laria-ink">Inventario</h1><p className="mt-2 text-sm text-laria-text-soft">{concurrent} de 50 publicaciones concurrentes</p></div>{concurrent < 50 ? <Link href="/mi-cuenta/tienda/publicar" className="laria-button-primary min-h-11 px-4 py-3 text-sm">Publicar producto</Link> : null}</div>
+    <section className="rounded-panel border border-subtle bg-white">
+      <div className="flex flex-col gap-3 border-b border-subtle p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="t-micro text-ink-2">{store.name}</p><h1 className="mt-1 t-page text-ink">Inventario</h1><p className="mt-2 text-sm text-ink-2">{concurrent} de 50 publicaciones concurrentes</p></div>{concurrent < 50 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar producto</Link> : null}</div>
       <ListingManagementTable listings={managedListings} emptyMessage="Aún no hay productos en el inventario." />
-      <p className="border-t border-laria-fog p-5 text-xs leading-6 text-laria-text-soft">{analytics ? "Vistas acumuladas de todo el historial, incluidas las históricas. Contactos por WhatsApp registrados desde el inicio del seguimiento; no equivalen a mensajes ni ventas." : "Las métricas no están disponibles en este momento; no se muestran ceros estimados."} La fecha de publicación corresponde a la primera publicación. <Link href="/mi-cuenta/tienda/estadisticas" className="font-black text-laria-blue">Ver estadísticas por periodo</Link>.</p>
+      <p className="border-t border-subtle p-5 text-meta leading-6 text-ink-2">{analytics ? "Vistas acumuladas de todo el historial, incluidas las históricas. Contactos por WhatsApp registrados desde el inicio del seguimiento; no equivalen a mensajes ni ventas." : "Las métricas no están disponibles en este momento; no se muestran ceros estimados."} La fecha de publicación corresponde a la primera publicación. <Link href="/mi-cuenta/tienda/estadisticas" className="link font-semibold">Ver estadísticas por periodo</Link>.</p>
     </section>
   );
 }

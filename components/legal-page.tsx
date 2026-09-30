@@ -18,11 +18,11 @@ export function LegalPage({
   children: ReactNode;
 }) {
   return (
-    <section className="bg-laria-cloud/70">
+    <section className="bg-canvas/70">
       <PageContainer className="py-6 sm:py-8">
         <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start xl:gap-6">
-          <nav aria-label="Ayuda y legal" className="rounded-lg border border-laria-fog bg-white p-3 shadow-sm lg:sticky lg:top-24">
-            <p className="px-3 pb-2 pt-1 text-xs font-black uppercase tracking-[0.15em] text-laria-text-soft">Ayuda y legal</p>
+          <nav aria-label="Ayuda y legal" className="rounded-panel border border-subtle bg-white p-3 lg:sticky lg:top-24">
+            <p className="px-3 pb-2 pt-1 t-micro text-ink-2">Ayuda y legal</p>
             <ul className="grid gap-1">
               {legalPages.map((page) => {
                 const active = page.href === path;
@@ -32,8 +32,8 @@ export function LegalPage({
                       href={page.href}
                       aria-current={active ? "page" : undefined}
                       className={active
-                        ? "flex min-h-11 items-center rounded-md border border-laria-blue/35 bg-laria-blue/10 px-3 py-2 text-sm font-black text-laria-blue"
-                        : "flex min-h-11 items-center rounded-md border border-transparent px-3 py-2 text-sm font-bold text-laria-text-soft hover:border-laria-fog hover:text-laria-blue"}
+                        ? "flex min-h-11 items-center rounded-control bg-accent-tint px-3 py-2 t-ui font-semibold text-ink shadow-[inset_3px_0_0_var(--accent)]"
+                        : "flex min-h-11 items-center rounded-control px-3 py-2 t-ui font-semibold text-ink-2 hover:bg-canvas hover:text-ink"}
                     >
                       {page.label}
                     </Link>
@@ -43,12 +43,12 @@ export function LegalPage({
             </ul>
           </nav>
 
-          <article className="min-w-0 rounded-lg border border-laria-fog bg-white p-5 shadow-[0_18px_48px_rgb(16_18_23/0.06)] sm:p-8">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">{eyebrow}</p>
-            <h1 className="mt-2 text-3xl font-black leading-tight text-laria-ink sm:text-4xl">{title}</h1>
-            <p className="mt-2 text-xs font-semibold text-laria-muted">Última actualización: {LEGAL_LAST_UPDATED}</p>
-            <div className="mt-4 max-w-3xl text-sm leading-7 text-laria-text-soft sm:text-base">{intro}</div>
-            <div className="mt-6 grid max-w-3xl gap-7">{children}</div>
+          <article className="min-w-0 rounded-panel border border-subtle bg-white p-5 sm:p-8">
+            <p className="t-micro text-ink-2">{eyebrow}</p>
+            <h1 className="mt-2 t-page text-ink">{title}</h1>
+            <p className="mt-2 t-meta">Última actualización: {LEGAL_LAST_UPDATED}</p>
+            <div className="mt-4 max-w-[68ch] t-body text-ink-2">{intro}</div>
+            <div className="mt-6 grid max-w-[68ch] gap-7">{children}</div>
           </article>
         </div>
       </PageContainer>
@@ -59,8 +59,8 @@ export function LegalPage({
 export function LegalSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section>
-      <h2 className="text-lg font-black text-laria-ink sm:text-xl">{title}</h2>
-      <div className="mt-2 grid gap-3 text-sm leading-7 text-laria-text-soft sm:text-base [&_a]:font-bold [&_a]:text-laria-blue [&_li]:pl-1 [&_ul]:grid [&_ul]:list-disc [&_ul]:gap-1.5 [&_ul]:pl-5">
+      <h2 className="t-section text-ink">{title}</h2>
+      <div className="mt-2 grid gap-3 t-body text-ink-2 [&_a]:font-semibold [&_a]:text-ink [&_a]:underline [&_a]:decoration-accent [&_a]:decoration-2 [&_a]:underline-offset-[3px] [&_li]:pl-1 [&_ul]:grid [&_ul]:list-disc [&_ul]:gap-1.5 [&_ul]:pl-5">
         {children}
       </div>
     </section>
@@ -70,9 +70,9 @@ export function LegalSection({ title, children }: { title: string; children: Rea
 // States the platform limitations required by the V1 contract in one place.
 export function MarketplaceLimitations() {
   return (
-    <div className="rounded-md border border-laria-blue/25 bg-laria-blue/10 p-4 text-sm leading-6 text-laria-ink">
-      <p className="font-black">Laria conecta compradores y vendedores. La compraventa se acuerda y se realiza directamente entre ellos.</p>
-      <ul className="mt-2 grid list-disc gap-1 pl-5 text-laria-text-soft">
+    <div className="rounded-control border border-accent/25 bg-accent/10 p-4 text-sm leading-6 text-ink">
+      <p className="font-semibold">Laria conecta compradores y vendedores. La compraventa se acuerda y se realiza directamente entre ellos.</p>
+      <ul className="mt-2 grid list-disc gap-1 pl-5 text-ink-2">
         <li>Laria no procesa pagos ni cobra comisiones por venta.</li>
         <li>Laria no retiene ni custodia dinero (no ofrece escrow).</li>
         <li>Laria no gestiona envíos ni entregas.</li>

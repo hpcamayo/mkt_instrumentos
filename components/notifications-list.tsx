@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { formatPrice } from "@/lib/price";
+import { Tag } from "@/components/ui/tag";
 
 type AccountNotification = {
   id: string;
@@ -44,9 +45,9 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
 
   if (!notifications.length) {
     return (
-      <div className="rounded-lg border border-laria-fog bg-white p-8 text-center shadow-sm">
-        <h2 className="text-lg font-black text-laria-ink">No tienes notificaciones</h2>
-        <p className="mt-2 text-sm text-laria-text-soft">Las decisiones importantes aparecerán aquí.</p>
+      <div className="rounded-panel border border-subtle bg-white p-8 text-center">
+        <h2 className="t-section text-ink">No tienes notificaciones</h2>
+        <p className="mt-2 text-sm text-ink-2">Las decisiones importantes aparecerán aquí.</p>
       </div>
     );
   }
@@ -66,21 +67,21 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
             ? "/mi-cuenta/tienda/inventario"
             : "/mi-cuenta/publicaciones";
         return (
-          <li key={notification.id} className={`rounded-lg border p-5 shadow-sm ${unread ? "border-laria-blue/35 bg-laria-blue/10" : "border-laria-fog bg-white"}`}>
+          <li key={notification.id} className={`rounded-panel border p-5 ${unread ? "border-accent/40 bg-accent-tint" : "border-subtle bg-white"}`}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="font-black text-laria-ink">{notificationLabel(notification.event_type)}</h2>
-                  {unread ? <span className="rounded-full bg-laria-yellow px-2 py-0.5 text-[11px] font-black text-laria-black">Nueva</span> : null}
+                  <h2 className="t-ui font-semibold text-ink">{notificationLabel(notification.event_type)}</h2>
+                  {unread ? <Tag tone="warning">Nueva</Tag> : null}
                 </div>
-                <p className="mt-2 text-sm leading-6 text-laria-text-soft">{notification.event_type === "listing_price_drop" && typeof notification.old_price_pen === "number" && typeof notification.new_price_pen === "number" ? `Una publicación de tus favoritos bajó de ${formatPrice(notification.old_price_pen)} a ${formatPrice(notification.new_price_pen)}.` : notification.message}</p>
-                <time suppressHydrationWarning className="mt-2 block text-xs font-semibold text-laria-muted" dateTime={notification.created_at}>
+                <p className="mt-2 t-ui text-ink-2">{notification.event_type === "listing_price_drop" && typeof notification.old_price_pen === "number" && typeof notification.new_price_pen === "number" ? `Una publicación de tus favoritos bajó de ${formatPrice(notification.old_price_pen)} a ${formatPrice(notification.new_price_pen)}.` : notification.message}</p>
+                <time suppressHydrationWarning className="mt-2 block t-meta" dateTime={notification.created_at}>
                   {new Date(notification.created_at).toLocaleString("es-PE")}
                 </time>
               </div>
-              <div className="flex shrink-0 flex-wrap gap-3 text-sm">
-                <Link href={href} onClick={(event) => { event.preventDefault(); void openNotification(notification, href); }} className="font-black text-laria-blue underline-offset-4 hover:underline">Ver detalle</Link>
-                {unread ? <button type="button" disabled={busyId === notification.id} onClick={() => void markRead(notification)} className="font-black text-laria-text-soft underline-offset-4 hover:underline disabled:opacity-50">{busyId === notification.id ? "Guardando…" : "Marcar como leída"}</button> : null}
+              <div className="flex shrink-0 flex-wrap gap-3 t-ui">
+                <Link href={href} onClick={(event) => { event.preventDefault(); void openNotification(notification, href); }} className="link font-semibold">Ver detalle</Link>
+                {unread ? <button type="button" disabled={busyId === notification.id} onClick={() => void markRead(notification)} className="font-semibold text-ink-2 underline-offset-4 hover:text-ink hover:underline disabled:opacity-50">{busyId === notification.id ? "Guardando…" : "Marcar como leída"}</button> : null}
               </div>
             </div>
           </li>

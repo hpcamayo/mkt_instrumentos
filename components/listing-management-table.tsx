@@ -74,17 +74,17 @@ export function ListingManagementTable({
   }
 
   if (!listings.length) {
-    return <p className="p-6 text-sm text-laria-text-soft">{emptyMessage}</p>;
+    return <p className="p-6 text-sm text-ink-2">{emptyMessage}</p>;
   }
 
   return (
     <div>
       {message ? (
-        <div className="border-b border-laria-fog p-3"><PageNotice kind={messageKind} message={message} /></div>
+        <div className="border-b border-subtle p-3"><PageNotice kind={messageKind} message={message} /></div>
       ) : null}
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">
-          <thead className="bg-laria-cloud text-xs uppercase tracking-wide text-laria-text-soft">
+          <thead className="bg-canvas t-micro text-ink-2">
             <tr>
               <th className="px-5 py-3">Publicación</th>
               <th className="px-5 py-3">Estado</th>
@@ -96,28 +96,28 @@ export function ListingManagementTable({
               <th className="px-5 py-3">Acciones</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-laria-fog">
+          <tbody className="divide-y divide-subtle">
             {listings.map((listing) => {
               const isAdminHidden = listing.status === "hidden" && listing.hidden_source === "admin";
               const canEdit = !["sold", "archived"].includes(listing.status) && !isAdminHidden;
               return (
                 <tr key={listing.id} className="align-top">
                   <td className="px-5 py-4">
-                    <p className="font-bold text-laria-ink">{listing.title}</p>
+                    <p className="font-semibold text-ink">{listing.title}</p>
                     {listing.revisionStatus === "pending" ? (
-                      <p className="mt-1 text-xs font-bold text-amber-700">Cambios en revisión; la versión aprobada sigue pública.</p>
+                      <p className="mt-1 t-meta font-semibold text-ink">Cambios en revisión; la versión aprobada sigue pública.</p>
                     ) : null}
                     {listing.revisionStatus === "rejected" && listing.revisionReason ? (
-                      <p className="mt-1 max-w-sm text-xs text-red-700">Última revisión rechazada: {listing.revisionReason}</p>
+                      <p className="mt-1 max-w-sm text-meta text-danger">Última revisión rechazada: {listing.revisionReason}</p>
                     ) : null}
                     {listing.status === "rejected" && listing.rejection_reason ? (
-                      <p className="mt-1 max-w-sm text-xs text-red-700">Motivo: {listing.rejection_reason}</p>
+                      <p className="mt-1 max-w-sm text-meta text-danger">Motivo: {listing.rejection_reason}</p>
                     ) : null}
                     {isAdminHidden ? (
-                      <p className="mt-1 max-w-sm text-xs text-red-700">Ocultada por moderación: {listing.hidden_reason}</p>
+                      <p className="mt-1 max-w-sm text-meta text-danger">Ocultada por moderación: {listing.hidden_reason}</p>
                     ) : null}
                   </td>
-                  <td className="px-5 py-4">{listingStatusLabel(listing.status)}{listing.status === "sold" && listing.sold_at ? <p className="mt-1 whitespace-nowrap text-xs text-laria-text-soft">Marcada vendida: {formatDate(listing.sold_at)}</p> : null}</td>
+                  <td className="px-5 py-4">{listingStatusLabel(listing.status)}{listing.status === "sold" && listing.sold_at ? <p className="mt-1 whitespace-nowrap text-meta text-ink-2">Marcada vendida: {formatDate(listing.sold_at)}</p> : null}</td>
                   <td className="px-5 py-4">{formatPrice(listing.price_pen)}</td>
                   <td className="whitespace-nowrap px-5 py-4">{listing.published_at ? formatDate(listing.published_at) : "Aún no publicada"}</td>
                   <td className="px-5 py-4">{listing.analytics ? numbers.format(listing.analytics.views) : "No disponible"}</td>
@@ -126,10 +126,10 @@ export function ListingManagementTable({
                   <td className="px-5 py-4">
                     <div className="flex min-w-56 flex-wrap gap-x-4 gap-y-2">
                       {listing.status === "approved" || listing.status === "sold" ? (
-                        <Link href={`/instrumentos/${listing.slug}`} className="font-black text-laria-blue">Abrir</Link>
+                        <Link href={`/instrumentos/${listing.slug}`} className="link font-semibold">Abrir</Link>
                       ) : null}
                       {canEdit ? (
-                        <Link href={`/mi-cuenta/publicaciones/${listing.id}/editar`} className="font-black text-laria-blue">Editar</Link>
+                        <Link href={`/mi-cuenta/publicaciones/${listing.id}/editar`} className="link font-semibold">Editar</Link>
                       ) : null}
                       {listing.status === "approved" ? (
                         <>
@@ -142,7 +142,7 @@ export function ListingManagementTable({
                       ) : null}
                       {listing.status === "sold" ? (
                         <>
-                          <Link href={`/mi-cuenta/transacciones/${listing.id}`} className="font-black text-laria-blue">Atribuir venta</Link>
+                          <Link href={`/mi-cuenta/transacciones/${listing.id}`} className="link font-semibold">Atribuir venta</Link>
                           <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "relist")}>Republicar copia</ActionButton>
                         </>
                       ) : null}
@@ -150,8 +150,8 @@ export function ListingManagementTable({
                         <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "resubmit")}>Enviar nuevamente</ActionButton>
                       ) : null}
                     </div>
-                    {isAdminHidden ? <p className="mt-2 text-xs text-laria-text-soft">Solo administración puede restaurarla.</p> : null}
-                    {listing.status === "sold" ? <p className="mt-2 text-xs text-laria-text-soft">El original es historial inmutable.</p> : null}
+                    {isAdminHidden ? <p className="mt-2 text-meta text-ink-2">Solo administración puede restaurarla.</p> : null}
+                    {listing.status === "sold" ? <p className="mt-2 text-meta text-ink-2">El original es historial inmutable.</p> : null}
                   </td>
                 </tr>
               );
@@ -181,7 +181,7 @@ function ActionButton({
   onClick: () => void;
 }) {
   return (
-    <button type="button" disabled={disabled} onClick={onClick} className="font-black text-laria-blue disabled:opacity-50">
+    <button type="button" disabled={disabled} onClick={onClick} className="link font-semibold disabled:opacity-50">
       {disabled ? "Procesando…" : children}
     </button>
   );

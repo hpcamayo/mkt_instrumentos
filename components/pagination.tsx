@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LISTINGS_PAGE_SIZE, pageHref } from "@/lib/pagination";
+import { buttonClasses } from "@/components/ui/button";
 
 export function Pagination({
   page,
@@ -21,7 +22,7 @@ export function Pagination({
     >
       {page > 1 && (
         <Link
-          className="laria-button-secondary px-4 py-2"
+          className={buttonClasses({ variant: "secondary" })}
           href={pageHref(path, params, Math.min(page - 1, pages))}
         >
           Anterior
@@ -32,7 +33,7 @@ export function Pagination({
       </span>
       {page < pages && (
         <Link
-          className="laria-button-secondary px-4 py-2"
+          className={buttonClasses({ variant: "secondary" })}
           href={pageHref(path, params, page + 1)}
         >
           Siguiente

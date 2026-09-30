@@ -29,6 +29,7 @@ import { searchEventMetadata } from "@/lib/marketplace-event-payload";
 import { listingFiltersToSearchAlert } from "@/lib/search-alerts";
 import { fetchCatalogPage } from "@/lib/catalog";
 import { buildCatalogMetadata } from "@/lib/seo";
+import { buttonClasses } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -100,25 +101,24 @@ function ListingsView({
   errorMessage,
 }: ListingsViewProps) {
   return (
-    <section className="bg-laria-cloud/70">
+    <section className="bg-canvas/70">
       <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
-        <div className="rounded-lg border border-laria-fog bg-white p-4 shadow-[0_18px_48px_rgb(16_18_23/0.06)] sm:p-6">
+        <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+              <p className="t-micro text-ink-2">
                 Catálogo
               </p>
-              <h1 className="mt-2 text-3xl font-black leading-tight text-laria-ink sm:text-4xl">
+              <h1 className="mt-2 t-page text-ink">
                 Instrumentos disponibles
               </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-laria-text-soft sm:text-base">
+              <p className="mt-3 max-w-[68ch] t-body text-ink-2">
                 Explora publicaciones aprobadas de particulares y tiendas.
                 Cuando algo te interese, abre el detalle y conversa directo por
                 WhatsApp.
               </p>
             </div>
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-laria-fog bg-laria-cloud px-4 py-2 text-sm font-bold text-laria-ink">
-              <span className="h-2 w-2 rounded-full bg-laria-blue" />
+            <div className="inline-flex w-fit items-center gap-2 t-ui font-semibold tabular-nums text-ink">
               {totalCount} resultado{totalCount === 1 ? "" : "s"}
             </div>
           </div>
@@ -132,15 +132,15 @@ function ListingsView({
             <CreateSearchAlert filters={listingFiltersToSearchAlert(filters)} />
 
             {errorMessage ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700 shadow-sm">
+              <div className="rounded-panel bg-danger-tint p-4 t-ui font-semibold text-danger">
                 No se pudieron cargar los listados. Revisa la configuración de
                 Supabase e intenta nuevamente.
               </div>
             ) : null}
 
             {!errorMessage && listings.length === 0 ? (
-              <div className="rounded-lg border border-laria-fog bg-white p-8 text-center text-sm leading-6 text-laria-text-soft shadow-[0_18px_48px_rgb(16_18_23/0.06)]">
-                <p className="text-lg font-black text-laria-ink">
+              <div className="rounded-panel border border-subtle bg-white p-8 text-center text-sm leading-6 text-ink-2">
+                <p className="t-section text-ink">
                   No encontramos resultados con esos filtros
                 </p>
                 <p className="mx-auto mt-2 max-w-md">
@@ -149,7 +149,7 @@ function ListingsView({
                 </p>
                 <a
                   href="/listados"
-                  className="laria-button-primary mt-5 min-h-11 px-5 py-3 text-sm"
+                  className={buttonClasses({ className: "mt-5" })}
                 >
                   Limpiar filtros
                 </a>
@@ -191,15 +191,16 @@ function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
         <a
           key={chip.key}
           href={chip.href}
-          className="inline-flex items-center rounded-full border border-laria-blue/35 bg-white px-3 py-1.5 text-xs font-bold text-laria-blue shadow-sm transition hover:border-laria-blue hover:bg-laria-blue/10"
+          aria-label={`Quitar filtro: ${chip.label}`}
+          className="inline-flex h-10 items-center gap-1.5 rounded-control bg-accent-tint px-3 t-ui font-semibold text-ink transition-colors duration-120 hover:bg-accent/30"
         >
           {chip.label}
-          <span className="ml-2 text-laria-blue/55">×</span>
+          <span aria-hidden="true">×</span>
         </a>
       ))}
       <a
         href="/listados"
-        className="inline-flex items-center rounded-full bg-laria-ink px-3 py-1.5 text-xs font-bold text-white transition hover:bg-laria-graphite"
+        className={buttonClasses({ variant: "quiet", size: "sm" })}
       >
         Limpiar filtros
       </a>
@@ -209,16 +210,16 @@ function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
 
 function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
   return (
-    <section className="bg-laria-cloud/70">
+    <section className="bg-canvas/70">
       <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
-        <div className="rounded-lg border border-laria-fog bg-white p-4 shadow-[0_18px_48px_rgb(16_18_23/0.06)] sm:p-6">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-laria-blue">
+        <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
+          <p className="t-micro text-ink-2">
             Catálogo
           </p>
-          <h1 className="mt-2 text-3xl font-black leading-tight text-laria-ink sm:text-4xl">
+          <h1 className="mt-2 t-page text-ink">
             Configura Supabase para ver listados
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-laria-text-soft sm:text-base">
+          <p className="mt-3 max-w-[68ch] t-body text-ink-2">
             Falta definir `NEXT_PUBLIC_SUPABASE_URL` y
             `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local`. Cuando estén
             listas, esta página mostrará solo publicaciones aprobadas.
@@ -226,7 +227,7 @@ function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
         </div>
         <div className="grid gap-5 lg:grid-cols-[286px_minmax(0,1fr)] lg:items-start xl:gap-6">
           <ListingFilters filters={filters} />
-          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm font-medium leading-6 text-laria-ink shadow-sm">
+          <div className="rounded-panel bg-warning-tint p-4 t-ui text-ink">
             Copia `.env.example` a `.env.local`, agrega las credenciales
             públicas de Supabase y reinicia el servidor de desarrollo.
           </div>

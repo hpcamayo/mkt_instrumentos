@@ -180,7 +180,7 @@ export function SellerSignupForm() {
             name="fullName"
             required
             autoComplete="name"
-            className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
+            className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
             placeholder="Tu nombre"
           />
         </label>
@@ -193,7 +193,7 @@ export function SellerSignupForm() {
                 name="email"
                 required
                 autoComplete="email"
-                className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
+                className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
                 placeholder="tu@email.com"
               />
             </label>
@@ -206,7 +206,7 @@ export function SellerSignupForm() {
                 required
                 minLength={6}
                 autoComplete="new-password"
-                className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
+                className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
                 placeholder="Minimo 6 caracteres"
               />
             </label>
@@ -219,7 +219,7 @@ export function SellerSignupForm() {
             name="phone"
             required
             autoComplete="tel"
-            className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
+            className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
             placeholder="+51 999 999 999"
           />
         </label>
@@ -227,7 +227,7 @@ export function SellerSignupForm() {
         <LocationFields />
       </div>
 
-      <label className="flex gap-3 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-700">
+      <label className="flex gap-3 rounded-control border border-slate-200 bg-slate-50 p-3 text-sm leading-6 text-slate-700">
         <input
           type="checkbox"
           name="acceptedRules"
@@ -236,11 +236,11 @@ export function SellerSignupForm() {
         />
         <span>
           Acepto los{" "}
-          <a href="/terminos" target="_blank" rel="noopener" className="font-bold text-laria-blue underline-offset-4 hover:underline">
+          <a href="/terminos" target="_blank" rel="noopener" className="link font-semibold">
             términos y reglas del marketplace
           </a>{" "}
           y la{" "}
-          <a href="/privacidad" target="_blank" rel="noopener" className="font-bold text-laria-blue underline-offset-4 hover:underline">
+          <a href="/privacidad" target="_blank" rel="noopener" className="link font-semibold">
             política de privacidad
           </a>
           , publicar información real y mantener mis avisos actualizados.
@@ -250,10 +250,10 @@ export function SellerSignupForm() {
 
       {message ? (
         <div
-          className={`rounded-md px-3 py-2 text-sm ${
+          className={`rounded-control px-3 py-2 text-sm ${
             state === "sent"
-              ? "bg-emerald-50 text-emerald-700"
-              : "bg-amber-50 text-amber-800"
+              ? "bg-accent-tint text-ink"
+              : "bg-amber-50 text-ink"
           }`}
         >
           <p>{message}</p>
@@ -268,7 +268,7 @@ export function SellerSignupForm() {
       <button
         type="submit"
         disabled={state === "loading" || state === "submitting"}
-        className="inline-flex w-full items-center justify-center rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex w-full items-center justify-center rounded-control bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {state === "submitting"
           ? "Creando cuenta..."
@@ -277,7 +277,7 @@ export function SellerSignupForm() {
             : "Crear cuenta Particular"}
       </button>
 
-      <p className="text-center text-sm text-slate-600">
+      <p className="text-center text-sm text-ink-2">
         Ya tienes cuenta?{" "}
         <Link className="font-semibold text-ink hover:text-brass" href="/login">
           Ingresa aqui

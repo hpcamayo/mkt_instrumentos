@@ -33,16 +33,18 @@ export function Chip({
 export function ChipLink({
   href,
   selected = false,
+  current = "true",
   className,
   children,
 }: {
   href: string;
   selected?: boolean;
+  current?: "page" | "true";
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <Link href={href} aria-current={selected ? "true" : undefined} className={chipClasses(selected ? "selected" : "default", className)}>
+    <Link href={href} aria-current={selected ? current : undefined} className={chipClasses(selected ? "selected" : "default", className)}>
       {selected ? <Check aria-hidden /> : null}
       <span className="truncate">{children}</span>
     </Link>

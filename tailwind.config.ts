@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
 
 // Laria design tokens: see docs/design-system.md. Colors are roles, not raw values: the core palette is
 // fixed, and each role says where a color may be used. The derived tones (action-hover, accent-tint,
@@ -56,6 +57,12 @@ const config: Config = {
       fontFamily: {
         sans: ["var(--font-archivo)", "Arial", "Helvetica", "sans-serif"],
       },
+      fontSize: {
+        micro: ["12px", "16px"],
+        meta: ["13px", "18px"],
+        ui: ["14px", "20px"],
+        body: ["16px", "24px"],
+      },
       fontWeight: {
         strong: "750",
       },
@@ -76,7 +83,15 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Titles, model names and prices use Archivo's semi-condensed width.
+    plugin(({ addUtilities }) => {
+      addUtilities({
+        ".stretch-semicond": { "font-stretch": "87.5%" },
+        ".stretch-normal": { "font-stretch": "100%" },
+      });
+    }),
+  ],
 };
 
 export default config;

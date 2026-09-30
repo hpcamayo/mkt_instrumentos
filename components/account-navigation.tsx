@@ -39,24 +39,24 @@ export function AccountNavigation({
 
   return (
     <>
-      <details className="rounded-lg border border-laria-fog bg-white p-3 shadow-sm lg:hidden">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-md px-2 font-black text-laria-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+      <details className="rounded-panel border border-subtle bg-white p-3 lg:hidden">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-control px-2 font-semibold text-ink">
           <span>Cuenta · {active.label}</span>
-          <span aria-hidden="true" className="text-laria-blue">Menú</span>
+          <span aria-hidden="true" className="t-ui text-ink-2 underline decoration-accent decoration-2 underline-offset-4">Menú</span>
         </summary>
-        <nav aria-label="Menú de cuenta móvil" className="mt-3 grid gap-1 border-t border-laria-fog pt-3">
+        <nav aria-label="Menú de cuenta móvil" className="mt-3 grid gap-1 border-t border-subtle pt-3">
           <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} pendingBuyerConfirmations={pendingBuyerConfirmations} />
           <AccountLogout />
         </nav>
       </details>
 
-      <aside className="hidden rounded-lg border border-laria-fog bg-white p-4 shadow-[0_16px_36px_rgb(16_18_23/0.06)] lg:sticky lg:top-24 lg:block lg:self-start">
-        <div className="rounded-md bg-laria-black p-4 text-white">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-laria-yellow">
+      <aside className="hidden rounded-panel border border-subtle bg-white p-4 lg:sticky lg:top-24 lg:block lg:self-start">
+        <div className="surface-frame rounded-control bg-frame p-4 text-white">
+          <p className="t-micro text-muted-dark">
             {accountType === "store_owner" ? "Cuenta de Tienda" : "Cuenta Particular"}
           </p>
-          <p className="mt-2 text-2xl font-black">Mi cuenta</p>
-          <p className="mt-2 text-sm leading-6 text-white/70">
+          <p className="mt-2 t-section">Mi cuenta</p>
+          <p className="mt-2 t-ui text-muted-dark">
             {accountType === "store_owner"
               ? "Administra tu tienda y su inventario."
               : "Administra tu perfil y tus publicaciones."}
@@ -65,7 +65,7 @@ export function AccountNavigation({
         <nav aria-label="Navegación de cuenta" className="mt-4 grid gap-1">
           <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} pendingBuyerConfirmations={pendingBuyerConfirmations} />
         </nav>
-        <div className="mt-4 border-t border-laria-fog pt-4">
+        <div className="mt-4 border-t border-subtle pt-4">
           <AccountLogout />
         </div>
       </aside>
@@ -82,18 +82,18 @@ function AccountLinks({ items, pathname, unreadNotifications, pendingBuyerConfir
         href={item.href}
         aria-current={active ? "page" : undefined}
         className={active
-          ? "flex min-h-11 items-center gap-3 rounded-md border border-laria-blue/35 bg-laria-blue/10 px-3 py-2 text-sm font-black text-laria-blue"
-          : "flex min-h-11 items-center gap-3 rounded-md border border-transparent px-3 py-2 text-sm font-bold text-laria-text-soft hover:border-laria-fog hover:text-laria-blue"}
+          ? "flex min-h-11 items-center gap-3 rounded-control bg-accent-tint px-3 py-2 t-ui font-semibold text-ink shadow-[inset_3px_0_0_var(--accent)]"
+          : "flex min-h-11 items-center gap-3 rounded-control px-3 py-2 t-ui font-semibold text-ink-2 hover:bg-canvas hover:text-ink"}
       >
         <AccountIcon name={item.icon} />
         <span className="min-w-0 flex-1">{item.label}</span>
         {item.icon === "notifications" && unreadNotifications > 0 ? (
-          <span aria-label={`${unreadNotifications} notificaciones sin leer`} className="min-w-6 rounded-full bg-laria-yellow px-2 py-0.5 text-center text-[11px] font-black text-laria-black">
+          <span aria-label={`${unreadNotifications} notificaciones sin leer`} className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-action px-1.5 text-[12px] font-bold leading-none tabular-nums text-action-ink">
             {unreadNotifications > 99 ? "99+" : unreadNotifications}
           </span>
         ) : null}
         {item.icon === "transactions" && pendingBuyerConfirmations > 0 ? (
-          <span aria-label={`${pendingBuyerConfirmations} compras requieren tu confirmación`} className="min-w-6 rounded-full bg-laria-yellow px-2 py-0.5 text-center text-[11px] font-black text-laria-black">
+          <span aria-label={`${pendingBuyerConfirmations} compras requieren tu confirmación`} className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-action px-1.5 text-[12px] font-bold leading-none tabular-nums text-action-ink">
             {pendingBuyerConfirmations > 99 ? "99+" : pendingBuyerConfirmations}
           </span>
         ) : null}
@@ -105,7 +105,7 @@ function AccountLinks({ items, pathname, unreadNotifications, pendingBuyerConfir
 function AccountLogout() {
   return (
     <LogoutButton
-      className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-bold text-laria-text-soft hover:bg-laria-cloud hover:text-laria-ink"
+      className="flex min-h-11 w-full items-center gap-3 rounded-control px-3 py-2 text-sm font-semibold text-ink-2 hover:bg-canvas hover:text-ink"
     >
       <LogOut className="h-4 w-4" aria-hidden="true" />
       Cerrar sesión

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChipLink } from "@/components/ui/chip";
 import { redirect } from "next/navigation";
 import { AccountAnalyticsMetrics } from "@/components/account-analytics";
 import { getAccountAnalytics, parseAnalyticsWindow } from "@/lib/account-analytics";
@@ -14,12 +15,12 @@ export default async function StoreStatisticsPage({ searchParams }: { searchPara
   const analytics = await getAccountAnalytics(days);
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border border-laria-fog bg-white p-5 shadow-sm sm:p-6">
-        <p className="text-xs font-black uppercase tracking-wide text-laria-blue">{store.name}</p>
-        <h1 className="mt-1 text-2xl font-black text-laria-ink">Estadísticas</h1>
-        <p className="mt-2 text-sm leading-6 text-laria-text-soft">Actividad real registrada en Laria. Consulta las vistas y contactos de cada producto en tu <Link href="/mi-cuenta/tienda/inventario" className="font-black text-laria-blue">inventario</Link>.</p>
+      <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
+        <p className="t-micro text-ink-2">{store.name}</p>
+        <h1 className="mt-1 t-page text-ink">Estadísticas</h1>
+        <p className="mt-2 t-ui text-ink-2">Actividad real registrada en Laria. Consulta las vistas y contactos de cada producto en tu <Link href="/mi-cuenta/tienda/inventario" className="link font-semibold">inventario</Link>.</p>
         <nav aria-label="Periodo de estadísticas" className="mt-4 flex flex-wrap gap-2">
-          {([0, 7, 30] as const).map((period) => <Link key={period} href={`/mi-cuenta/tienda/estadisticas?periodo=${period}`} aria-current={days === period ? "page" : undefined} className={days === period ? "laria-button-primary min-h-11 px-4 py-2 text-sm" : "laria-button-secondary min-h-11 px-4 py-2 text-sm"}>{period === 0 ? "Todo el historial" : `${period} días`}</Link>)}
+          {([0, 7, 30] as const).map((period) => <ChipLink key={period} href={`/mi-cuenta/tienda/estadisticas?periodo=${period}`} selected={days === period} current="page">{period === 0 ? "Todo el historial" : `${period} días`}</ChipLink>)}
         </nav>
       </section>
       <AccountAnalyticsMetrics analytics={analytics} store />

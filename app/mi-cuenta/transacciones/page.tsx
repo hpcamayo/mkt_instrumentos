@@ -14,14 +14,14 @@ export default async function TransactionsPage() {
   return (
     <section className="grid gap-5">
       <div>
-        <p className="text-xs font-black uppercase tracking-wide text-laria-blue">Mi cuenta</p>
-        <h1 className="mt-1 text-3xl font-black text-laria-ink">Compras</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-laria-text-soft">
+        <p className="t-micro text-ink-2">Mi cuenta</p>
+        <h1 className="mt-1 t-page text-ink">Compras</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-2">
           Confirma relaciones originadas en Laria y gestiona reseñas. Laria no confirma pagos, entregas, envíos ni el estado del producto.
         </p>
       </div>
       {error ? (
-        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <p role="alert" className="rounded-panel bg-danger-tint p-4 text-sm text-danger">
           No pudimos cargar tus transacciones. Intenta nuevamente.
         </p>
       ) : <TransactionCenter items={items} />}

@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import logoClear from "@/app/logo-clear.svg";
 import { PageContainer } from "@/components/page-container";
 import { legalPages } from "@/lib/legal-pages";
 
@@ -11,13 +13,11 @@ const footerLinks = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-white/10 bg-laria-black text-white">
-      <PageContainer className="grid gap-8 py-10 text-sm sm:grid-cols-2 lg:grid-cols-[1.2fr_0.7fr_0.8fr_1fr] lg:py-12">
+    <footer className="surface-frame border-t border-white/10 bg-frame text-white">
+      <PageContainer className="grid gap-8 py-10 t-ui sm:grid-cols-2 lg:grid-cols-[1.2fr_0.7fr_0.8fr_1fr] lg:py-12">
         <div className="space-y-3">
-          <p className="text-3xl font-black uppercase tracking-tight text-laria-yellow">
-            Laria
-          </p>
-          <p className="max-w-sm leading-6 text-white/64">
+          <Image src={logoClear} alt="Laria" width={112} height={78} className="h-9 w-auto" />
+          <p className="max-w-sm text-muted-dark">
             Marketplace peruano para descubrir instrumentos musicales y
             contactar vendedores directo por WhatsApp.
           </p>
@@ -27,17 +27,17 @@ export function SiteFooter() {
         <FooterLinks title="Ayuda y legal" links={legalPages} />
 
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
+          <p className="t-micro text-muted-dark">
             Cómo funciona
           </p>
-          <p className="mt-4 max-w-sm leading-6 text-white/64">
+          <p className="mt-4 max-w-sm text-muted-dark">
             Coordinas directo con cada vendedor. Laria no procesa pagos, no
             retiene dinero, no gestiona envíos ni garantiza productos o
             transacciones.
           </p>
         </div>
 
-        <div className="border-t border-white/10 pt-5 text-xs text-white/44 sm:col-span-2 lg:col-span-4">
+        <div className="border-t border-white/10 pt-5 t-meta text-muted-dark sm:col-span-2 lg:col-span-4">
           © 2026 Laria. Para músicos, tiendas y compradores en Perú.
         </div>
       </PageContainer>
@@ -48,13 +48,13 @@ export function SiteFooter() {
 function FooterLinks({ title, links }: { title: string; links: readonly { href: string; label: string }[] }) {
   return (
     <nav aria-label={title}>
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/40">
+      <p className="t-micro text-muted-dark">
         {title}
       </p>
-      <ul className="mt-4 grid gap-2 text-white/68">
+      <ul className="mt-4 grid gap-2 text-surface">
         {links.map((item) => (
           <li key={item.href}>
-            <Link className="inline-flex min-h-8 items-center transition hover:text-laria-blue" href={item.href}>
+            <Link className="inline-flex min-h-8 items-center underline-offset-4 hover:underline hover:decoration-accent hover:decoration-2" href={item.href}>
               {item.label}
             </Link>
           </li>

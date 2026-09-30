@@ -12,6 +12,10 @@ import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
 import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PageContainer } from "@/components/page-container";
 import { ReputationSummary } from "@/components/reputation-summary";
+import { buttonClasses } from "@/components/ui/button";
+import { StatusTag, Tag } from "@/components/ui/tag";
+import { VerifiedMark } from "@/components/ui/verified-mark";
+import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
 import {
   getFullListingSpecs,
   getKeyListingSpecs,
@@ -320,7 +324,7 @@ function ListingDetail({
   const isSold = listing.status === "sold";
 
   return (
-    <section className="bg-laria-cloud/70">
+    <section className="bg-canvas/70">
       <PageContainer className="py-6 sm:py-8">
         <Breadcrumb listing={listing} displayTitle={displayTitle} />
         {!isSold ? <div className="mt-3 flex justify-end"><FavoriteButton listingId={listing.id} /></div> : null}
@@ -334,28 +338,26 @@ function ListingDetail({
           </div>
 
           <aside className="min-w-0 space-y-5">
-            <div className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_18px_48px_rgb(16_18_23/0.07)] sm:p-6">
+            <div className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
               <div className="flex flex-wrap gap-2">
                 <SellerBadge
                   label={sellerTypeLabel}
                   isVerified={store?.is_verified === true}
                 />
                 {isSold ? (
-                  <span className="rounded-full border border-laria-black bg-laria-black px-2.5 py-1 text-xs font-black uppercase tracking-wide text-white">
-                    Vendido
-                  </span>
+                  <StatusTag domain="listing" status="sold" />
                 ) : null}
               </div>
 
-              <h1 className="mt-4 text-3xl font-black leading-tight text-laria-ink sm:text-4xl">
+              <h1 className="mt-4 t-page text-ink">
                 {displayTitle}
               </h1>
               {secondaryTitle ? (
-                <p className="mt-2 text-sm font-medium leading-6 text-laria-text-soft">
+                <p className="mt-2 t-ui text-ink-2">
                   {secondaryTitle}
                 </p>
               ) : null}
-              <p className="mt-5 text-4xl font-black tracking-tight text-laria-black sm:text-5xl">
+              <p className="mt-5 t-price-detail text-ink">
                 {formatPrice(listing.price_pen)}
               </p>
 
@@ -370,7 +372,7 @@ function ListingDetail({
               <KeySpecs specs={keySpecs} />
 
               {isSold ? (
-                <p className="mt-6 rounded-md border border-laria-steel bg-laria-cloud p-4 text-sm font-bold leading-6 text-laria-ink">
+                <p className="mt-6 rounded-panel bg-subtle p-4 t-ui font-semibold text-ink">
                   Este instrumento fue marcado como vendido y ya no está disponible para consultas de compra.
                 </p>
               ) : (
@@ -378,14 +380,15 @@ function ListingDetail({
                   <WhatsAppContactLink
                     href={buildWhatsAppUrl(listing)}
                     listingId={listing.id}
-                    className="laria-button-primary min-h-12 w-full px-5 py-3 text-sm uppercase tracking-wide"
+                    className={buttonClasses({ block: true })}
                   >
+                    <WhatsAppGlyph />
                     Preguntar por WhatsApp
                   </WhatsAppContactLink>
                   {listing.seller_type === "store" && store ? (
                     <Link
                       href={`/tiendas/${store.slug}`}
-                      className="laria-button-secondary min-h-12 w-full px-5 py-3 text-sm sm:w-auto"
+                      className={buttonClasses({ variant: "secondary", block: true, className: "sm:w-auto" })}
                     >
                       Ver tienda
                     </Link>
@@ -393,11 +396,11 @@ function ListingDetail({
                 </div>
               )}
 
-              <p className="mt-4 rounded-md border border-laria-blue/25 bg-laria-blue/10 p-3 text-xs font-medium leading-5 text-laria-text-soft">
+              <p className="mt-4 rounded-panel bg-accent-tint p-3 t-meta text-ink">
                 Contacto directo por WhatsApp. Laria no procesa pagos, no retiene
                 dinero, no gestiona envíos ni garantiza la transacción o el
                 producto.{" "}
-                <Link href="/consejos-de-seguridad" className="font-bold text-laria-blue underline-offset-4 hover:underline">
+                <Link href="/consejos-de-seguridad" className="link font-semibold">
                   Consejos de seguridad
                 </Link>
               </p>
@@ -428,11 +431,11 @@ function ListingDetail({
 
             <DetailSection title="Descripción">
               {listing.description ? (
-                <p className="whitespace-pre-line text-sm leading-7 text-laria-text-soft sm:text-base">
+                <p className="max-w-[68ch] whitespace-pre-line t-body text-ink">
                   {listing.description}
                 </p>
               ) : (
-                <p className="text-sm leading-6 text-laria-muted">
+                <p className="t-body text-ink-2">
                   Este listado aún no tiene descripción.
                 </p>
               )}
@@ -446,7 +449,7 @@ function ListingDetail({
 
         <Suspense
           fallback={
-            <p className="py-6 text-sm text-laria-text-soft">
+            <p className="py-6 t-ui text-ink-2">
               Cargando artículos similares…
             </p>
           }
@@ -607,32 +610,32 @@ function Breadcrumb({
   return (
     <nav
       aria-label="Ruta de navegación"
-      className="rounded-lg border border-laria-fog bg-white px-4 py-3 text-sm font-semibold leading-6 text-laria-text-soft shadow-sm"
+      className="rounded-panel border border-subtle bg-white px-4 py-3 t-ui font-semibold text-ink-2"
     >
       <ol className="flex flex-wrap items-center gap-2">
         <li>
           <Link
             href="/"
-            className="underline-offset-4 hover:text-laria-blue hover:underline"
+            className="underline-offset-4 hover:text-ink hover:underline hover:decoration-accent hover:decoration-2"
           >
             Inicio
           </Link>
         </li>
-        <li aria-hidden="true" className="text-laria-steel">
+        <li aria-hidden="true" className="text-ink-3">
           /
         </li>
         <li>
           <Link
             href={categoryLandingPath(listing.category)}
-            className="underline-offset-4 hover:text-laria-blue hover:underline"
+            className="underline-offset-4 hover:text-ink hover:underline hover:decoration-accent hover:decoration-2"
           >
             {categoryLabel}
           </Link>
         </li>
-        <li aria-hidden="true" className="text-laria-steel">
+        <li aria-hidden="true" className="text-ink-3">
           /
         </li>
-        <li className="min-w-0 break-words text-laria-ink">{displayTitle}</li>
+        <li className="min-w-0 break-words text-ink">{displayTitle}</li>
       </ol>
     </nav>
   );
@@ -645,28 +648,18 @@ function SellerBadge({
   label: string;
   isVerified: boolean;
 }) {
-  return (
-    <span
-      className={
-        isVerified
-          ? "rounded-full border border-laria-blue/35 bg-laria-blue/10 px-2.5 py-1 text-xs font-black text-laria-blue"
-          : "rounded-full border border-laria-fog bg-laria-cloud px-2.5 py-1 text-xs font-black text-laria-text-soft"
-      }
-    >
-      {label}
-    </span>
-  );
+  return isVerified ? <VerifiedMark /> : <Tag>{label}</Tag>;
 }
 
 function KeySpecs({ specs }: { specs: ListingSpec[] }) {
   return (
-    <dl className="mt-6 grid grid-cols-2 gap-x-5 gap-y-4 border-y border-laria-fog py-5 text-sm">
+    <dl className="mt-6 grid grid-cols-2 gap-x-5 gap-y-4 border-y border-subtle py-5">
       {specs.map((spec) => (
         <div key={spec.label} className="min-w-0">
-          <dt className="text-xs font-black uppercase tracking-wide text-laria-blue">
+          <dt className="t-micro text-ink-2">
             {spec.label}
           </dt>
-          <dd className="mt-1 break-words font-bold text-laria-ink">
+          <dd className="mt-1 break-words t-ui font-semibold text-ink">
             {spec.value}
           </dd>
         </div>
@@ -700,28 +693,26 @@ function SellerTrustBox({
       : formatDate(sellerVisibleSince);
 
   return (
-    <section className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_14px_34px_rgb(16_18_23/0.06)] sm:p-6">
+    <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-laria-blue">
+          <p className="t-micro text-ink-2">
             {isStore ? "Sobre la tienda" : "Sobre el vendedor"}
           </p>
-          <h2 className="mt-2 text-xl font-black text-laria-ink">
+          <h2 className="mt-2 t-section text-ink">
             {sellerName || "Vendedor particular"}
           </h2>
-          <p className="mt-1 text-sm font-bold text-laria-text-soft">
+          <p className="mt-1 t-ui font-semibold text-ink-2">
             {sellerTypeLabel}
           </p>
         </div>
         {store?.is_verified === true ? (
-          <span className="rounded-full border border-laria-blue/35 bg-laria-blue/10 px-2.5 py-1 text-xs font-black text-laria-blue">
-            Tienda Verificada
-          </span>
+          <VerifiedMark />
         ) : null}
       </div>
 
       {isStore && store?.description ? (
-        <p className="mt-4 line-clamp-3 text-sm leading-6 text-laria-text-soft">
+        <p className="mt-4 line-clamp-3 t-ui text-ink-2">
           {store.description}
         </p>
       ) : null}
@@ -741,22 +732,23 @@ function SellerTrustBox({
             href={buildWhatsAppUrl(listing)}
             listingId={listing.id}
             source="seller_panel"
-            className="laria-button-primary inline-flex w-full items-center justify-center px-4 py-3 text-sm"
+            className={buttonClasses({ block: true })}
           >
+            <WhatsAppGlyph />
             {isStore ? "Escribir por WhatsApp" : "Contactar por WhatsApp"}
           </WhatsAppContactLink>
         ) : null}
         {isStore && store ? (
           <Link
             href={`/tiendas/${store.slug}`}
-            className="laria-button-secondary inline-flex w-full items-center justify-center px-4 py-3 text-sm"
+            className={buttonClasses({ variant: "secondary", block: true })}
           >
             Ver página de la tienda
           </Link>
         ) : null}
       </div>
 
-      <p className="mt-5 rounded-md border border-laria-fog bg-laria-cloud p-3 text-xs font-medium leading-5 text-laria-text-soft">
+      <p className="mt-5 rounded-panel bg-canvas p-3 t-meta text-ink-2">
         {isSold
           ? "Este registro se conserva como historial. Laria no procesó ni garantizó la transacción."
           : "Coordina por WhatsApp, revisa el instrumento cuando sea posible y evita adelantos si no conoces al vendedor. Laria no procesa pagos, envíos ni garantías."}
@@ -773,8 +765,8 @@ function DetailSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-laria-fog bg-white p-5 shadow-[0_14px_34px_rgb(16_18_23/0.06)] sm:p-6">
-      <h2 className="text-xl font-black text-laria-ink">{title}</h2>
+    <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
+      <h2 className="t-section text-ink">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -783,21 +775,21 @@ function DetailSection({
 function SpecsList({ specs }: { specs: ListingSpec[] }) {
   if (specs.length === 0) {
     return (
-      <p className="text-sm leading-6 text-slate-500">
+      <p className="t-ui text-ink-2">
         No hay especificaciones disponibles para este listado.
       </p>
     );
   }
 
   return (
-    <dl className="divide-y divide-laria-fog rounded-lg border border-laria-fog text-sm">
+    <dl className="divide-y divide-subtle rounded-panel border border-subtle t-ui">
       {specs.map((spec) => (
         <div
           key={spec.label}
-          className="grid gap-1 px-4 py-3 transition even:bg-laria-cloud/55 sm:grid-cols-[minmax(160px,0.42fr)_1fr] sm:gap-6"
+          className="grid gap-1 px-4 py-3 transition even:bg-canvas/55 sm:grid-cols-[minmax(160px,0.42fr)_1fr] sm:gap-6"
         >
-          <dt className="font-bold text-laria-text-soft">{spec.label}</dt>
-          <dd className="break-words font-black text-laria-ink sm:text-right">
+          <dt className="font-semibold text-ink-2">{spec.label}</dt>
+          <dd className="break-words font-semibold text-ink sm:text-right">
             {spec.value}
           </dd>
         </div>
@@ -808,11 +800,11 @@ function SpecsList({ specs }: { specs: ListingSpec[] }) {
 
 function TrustSignal({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-md border border-laria-fog bg-laria-cloud p-3">
-      <p className="text-xs font-black uppercase tracking-wide text-laria-blue">
+    <div className="rounded-control border border-subtle bg-canvas p-3">
+      <p className="t-micro text-ink-2">
         {label}
       </p>
-      <p className="mt-1 text-sm font-bold leading-5 text-laria-ink">{value}</p>
+      <p className="mt-1 t-ui font-semibold text-ink">{value}</p>
     </div>
   );
 }
@@ -829,7 +821,7 @@ function RelatedListingsSection({
   return (
     <section className="mt-8">
       <div className="mb-4 flex items-end justify-between gap-4">
-        <h2 className="text-2xl font-black text-laria-ink">{title}</h2>
+        <h2 className="t-section text-ink">{title}</h2>
       </div>
       {listings.length > 0 ? (
         <div className="grid grid-cols-1 gap-[18px] min-[460px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
@@ -838,7 +830,7 @@ function RelatedListingsSection({
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-laria-fog bg-white p-5 text-sm font-medium text-laria-text-soft shadow-[0_14px_34px_rgb(16_18_23/0.06)]">
+        <div className="rounded-panel border border-subtle bg-white p-5 t-ui text-ink-2">
           {emptyMessage ?? "No hay artículos disponibles por ahora."}
         </div>
       )}
@@ -862,10 +854,10 @@ function formatDate(value: string) {
 
 function SupabaseSetupMessage() {
   return (
-    <section className="bg-laria-cloud/70">
+    <section className="bg-canvas/70">
       <PageContainer className="py-8">
-        <div className="max-w-3xl rounded-lg border border-yellow-200 bg-yellow-50 p-5 text-sm font-medium leading-6 text-laria-ink shadow-sm">
-          <h1 className="text-xl font-black text-laria-ink">
+        <div className="max-w-3xl rounded-panel bg-warning-tint p-5 t-ui text-ink">
+          <h1 className="t-section text-ink">
             Configura Supabase para ver este instrumento
           </h1>
           <p className="mt-2">

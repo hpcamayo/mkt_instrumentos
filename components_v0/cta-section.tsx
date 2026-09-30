@@ -1,23 +1,23 @@
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
+import { buttonClasses } from "@/components/ui/button";
 
 export function CTASection() {
   return (
     <section className="bg-white py-10 md:py-14">
       <PageContainer>
-        <div className="relative overflow-hidden rounded-lg bg-laria-black p-6 text-white shadow-2xl shadow-black/15 sm:p-8 lg:p-10">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(107,166,255,0.34),transparent_34%),linear-gradient(90deg,rgba(5,6,8,1),rgba(16,18,23,0.76))]" />
+        <div className="surface-frame relative overflow-hidden rounded-panel bg-frame p-6 text-white sm:p-8 lg:p-10">
           <div className="relative flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-laria-yellow">
+              <p className="t-micro text-muted-dark">
                 Publica gratis
               </p>
-              <h2 className="mt-3 max-w-3xl text-3xl font-black uppercase leading-tight tracking-tight md:text-5xl">
+              <h2 className="mt-3 max-w-3xl text-[28px] font-bold leading-[32px] stretch-semicond md:text-[40px] md:leading-[44px]">
                 La musica nos conecta.
                 <br />
-                <span className="text-laria-blue">Laria lo hace posible.</span>
+                <span className="text-accent">Laria lo hace posible.</span>
               </h2>
-              <p className="mt-4 max-w-xl text-sm leading-6 text-white/70 md:text-base">
+              <p className="mt-4 max-w-xl t-body text-muted-dark">
                 Sube tu instrumento, espera la revision del equipo y recibe
                 consultas directas por WhatsApp.
               </p>
@@ -25,13 +25,13 @@ export function CTASection() {
             <div className="flex flex-col gap-3 sm:flex-row lg:shrink-0">
               <Link
                 href="/publicar"
-                className="laria-button-primary min-h-12 px-6 py-3 text-sm uppercase tracking-wide"
+                className={buttonClasses()}
               >
                 Publicar mi equipo
               </Link>
               <Link
                 href="/listados"
-                className="inline-flex min-h-12 items-center justify-center rounded-md border border-white/40 px-6 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:border-laria-blue hover:text-laria-blue"
+                className={buttonClasses({ variant: "onDark" })}
               >
                 Explorar productos
               </Link>

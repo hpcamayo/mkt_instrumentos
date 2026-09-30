@@ -98,14 +98,14 @@ export function LoginForm() {
 
   return (
     <div className="mt-6 space-y-5">
-      <div className="grid grid-cols-2 rounded-md border border-slate-200 bg-slate-50 p-1">
+      <div className="grid grid-cols-2 rounded-control border border-slate-200 bg-slate-50 p-1">
         <button
           type="button"
           onClick={() => switchMode("password")}
           className={`rounded px-3 py-2 text-sm font-semibold transition ${
             mode === "password"
               ? "bg-white text-ink shadow-sm"
-              : "text-slate-600 hover:text-ink"
+              : "text-ink-2 hover:text-ink"
           }`}
         >
           Contraseña
@@ -116,7 +116,7 @@ export function LoginForm() {
           className={`rounded px-3 py-2 text-sm font-semibold transition ${
             mode === "magic-link"
               ? "bg-white text-ink shadow-sm"
-              : "text-slate-600 hover:text-ink"
+              : "text-ink-2 hover:text-ink"
           }`}
         >
           Enlace mágico
@@ -131,7 +131,7 @@ export function LoginForm() {
             name="email"
             required
             autoComplete="email"
-            className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
+            className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
             placeholder="tu@email.com"
           />
         </label>
@@ -144,22 +144,22 @@ export function LoginForm() {
               name="password"
               required
               autoComplete="current-password"
-              className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
+              className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
               placeholder="Tu contraseña"
             />
           </label>
         ) : (
-          <p className="text-sm leading-6 text-slate-600">
+          <p className="text-sm leading-6 text-ink-2">
             Te enviaremos un enlace seguro. Esta opción no crea cuentas nuevas.
           </p>
         )}
 
         {message ? (
           <p
-            className={`rounded-md px-3 py-2 text-sm ${
+            className={`rounded-control px-3 py-2 text-sm ${
               state === "sent"
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-amber-50 text-amber-800"
+                ? "bg-accent-tint text-ink"
+                : "bg-amber-50 text-ink"
             }`}
           >
             {message}
@@ -169,7 +169,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={state === "submitting"}
-          className="inline-flex w-full items-center justify-center rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center rounded-control bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {state === "submitting"
             ? "Procesando..."
@@ -187,7 +187,7 @@ export function LoginForm() {
         ) : null}
       </form>
 
-      <div className="space-y-2 border-t border-slate-200 pt-4 text-sm text-slate-600">
+      <div className="space-y-2 border-t border-slate-200 pt-4 text-sm text-ink-2">
         <p>
           ¿Quieres comprar o vender como Particular?{" "}
           <Link className="font-semibold text-ink hover:text-brass" href="/registro/vendedor">

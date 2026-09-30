@@ -13,6 +13,7 @@ import {
   sortOptions,
   type ListingFilters,
 } from "@/lib/listings";
+import { buttonClasses } from "@/components/ui/button";
 
 type ListingFiltersProps = {
   filters: ListingFilters;
@@ -45,14 +46,14 @@ export function ListingFilters({ filters }: ListingFiltersProps) {
         <button
           type="button"
           onClick={() => setIsFilterOpen(true)}
-          className="h-11 rounded-md border border-laria-steel bg-white px-4 text-sm font-bold text-laria-ink shadow-sm transition hover:border-laria-blue hover:text-laria-blue"
+          className="h-11 rounded-control border border-line-strong bg-white px-4 text-sm font-semibold text-ink transition hover:bg-canvas"
         >
           Filtrar
         </button>
         <button
           type="button"
           onClick={() => setIsSortOpen(true)}
-          className="h-11 rounded-md border border-laria-steel bg-white px-4 text-sm font-bold text-laria-ink shadow-sm transition hover:border-laria-blue hover:text-laria-blue"
+          className="h-11 rounded-control border border-line-strong bg-white px-4 text-sm font-semibold text-ink transition hover:bg-canvas"
         >
           Ordenar
         </button>
@@ -72,15 +73,15 @@ export function ListingFilters({ filters }: ListingFiltersProps) {
             type="button"
             aria-label="Cerrar filtros"
             onClick={() => setIsFilterOpen(false)}
-            className="absolute inset-0 bg-laria-black/55"
+            className="absolute inset-0 bg-frame/55"
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-2xl border border-laria-fog bg-white p-4 shadow-2xl">
+          <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-panel border border-subtle bg-white p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-base font-black text-laria-ink">Filtros</h2>
+              <h2 className="text-base font-semibold text-ink">Filtros</h2>
               <button
                 type="button"
                 onClick={() => setIsFilterOpen(false)}
-                className="rounded-md border border-laria-steel px-3 py-2 text-sm font-bold text-laria-text-soft transition hover:border-laria-blue hover:text-laria-blue"
+                className="rounded-control border border-line-strong px-3 py-2 text-sm font-semibold text-ink-2 transition hover:bg-canvas"
               >
                 Cerrar
               </button>
@@ -101,15 +102,15 @@ export function ListingFilters({ filters }: ListingFiltersProps) {
             type="button"
             aria-label="Cerrar orden"
             onClick={() => setIsSortOpen(false)}
-            className="absolute inset-0 bg-laria-black/55"
+            className="absolute inset-0 bg-frame/55"
           />
-          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border border-laria-fog bg-white p-4 shadow-2xl">
+          <div className="absolute inset-x-0 bottom-0 rounded-t-panel border border-subtle bg-white p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-base font-black text-laria-ink">Ordenar</h2>
+              <h2 className="text-base font-semibold text-ink">Ordenar</h2>
               <button
                 type="button"
                 onClick={() => setIsSortOpen(false)}
-                className="rounded-md border border-laria-steel px-3 py-2 text-sm font-bold text-laria-text-soft transition hover:border-laria-blue hover:text-laria-blue"
+                className="rounded-control border border-line-strong px-3 py-2 text-sm font-semibold text-ink-2 transition hover:bg-canvas"
               >
                 Cerrar
               </button>
@@ -121,8 +122,8 @@ export function ListingFilters({ filters }: ListingFiltersProps) {
                   href={buildListingsHref(filters, { sort: option.value })}
                   className={
                     option.value === filters.sort
-                      ? "rounded-md bg-laria-blue px-4 py-3 text-sm font-bold text-laria-black"
-                      : "rounded-md border border-laria-fog px-4 py-3 text-sm font-bold text-laria-text-soft transition hover:border-laria-blue hover:text-laria-blue"
+                      ? "rounded-control bg-accent px-4 py-3 text-sm font-semibold text-frame"
+                      : "rounded-control border border-subtle px-4 py-3 text-sm font-semibold text-ink-2 transition hover:bg-canvas"
                   }
                 >
                   {option.label}
@@ -153,7 +154,7 @@ function FilterForm({
       className={
         isFrameless
           ? ""
-          : "rounded-lg border border-laria-fog bg-white p-4 shadow-[0_16px_36px_rgb(16_18_23/0.06)]"
+          : "rounded-panel border border-subtle bg-white p-4"
       }
     >
       <div
@@ -162,16 +163,16 @@ function FilterForm({
         }
       >
         <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.16em] text-laria-blue">
+          <p className="t-micro text-ink-2">
             Refina
           </p>
-          <h2 className="mt-1 text-base font-black text-laria-ink">
+          <h2 className="mt-1 text-base font-semibold text-ink">
             Filtros
           </h2>
         </div>
         <a
           href="/listados"
-          className="text-sm font-bold text-laria-text-soft underline-offset-4 transition hover:text-laria-blue hover:underline"
+          className="text-sm font-semibold text-ink-2 underline-offset-4 transition hover:underline hover:decoration-accent hover:decoration-2"
         >
           Limpiar filtros
         </a>
@@ -180,7 +181,7 @@ function FilterForm({
       {isFrameless ? (
         <a
           href="/listados"
-          className="mb-4 inline-flex text-sm font-bold text-laria-text-soft underline-offset-4 transition hover:text-laria-blue hover:underline"
+          className="mb-4 inline-flex text-sm font-semibold text-ink-2 underline-offset-4 transition hover:underline hover:decoration-accent hover:decoration-2"
         >
           Limpiar filtros
         </a>
@@ -249,8 +250,8 @@ function FilterForm({
       </div>
 
       {advancedGroup ? (
-        <div className="mt-5 border-t border-laria-fog pt-5">
-          <h3 className="text-sm font-black text-laria-ink">
+        <div className="mt-5 border-t border-subtle pt-5">
+          <h3 className="text-sm font-semibold text-ink">
             Detalles de {advancedGroup.label.toLowerCase()}
           </h3>
           <div className="mt-4 grid gap-4">
@@ -267,7 +268,7 @@ function FilterForm({
 
       <button
         type="submit"
-        className="laria-button-primary mt-5 min-h-11 w-full px-4 py-3 text-sm"
+        className={buttonClasses({ block: true, className: "mt-5" })}
       >
         Aplicar filtros
       </button>
@@ -296,13 +297,13 @@ function SelectField({
   options,
 }: SelectFieldProps) {
   return (
-    <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
+    <label className="grid gap-2 text-sm font-semibold text-ink-2">
       {label}
       <select
         name={name}
         defaultValue={defaultValue ?? ""}
         onChange={(event) => onChange?.(event.target.value)}
-        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
+        className="h-10 w-full rounded-control border border-line-strong bg-white px-3 text-sm font-semibold text-ink transition"
       >
         {includeAllOption ? <option value="">Todos</option> : null}
         {options.map((option) => (
@@ -368,14 +369,14 @@ type TextFieldProps = {
 
 function TextField({ label, name, defaultValue, placeholder }: TextFieldProps) {
   return (
-    <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
+    <label className="grid gap-2 text-sm font-semibold text-ink-2">
       {label}
       <input
         type="text"
         name={name}
         defaultValue={defaultValue}
         placeholder={placeholder}
-        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
+        className="h-10 w-full rounded-control border border-line-strong bg-white px-3 text-sm font-semibold text-ink transition placeholder:text-ink-3"
       />
     </label>
   );
@@ -389,7 +390,7 @@ type NumberFieldProps = {
 
 function NumberField({ label, name, defaultValue }: NumberFieldProps) {
   return (
-    <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
+    <label className="grid gap-2 text-sm font-semibold text-ink-2">
       {label}
       <input
         type="number"
@@ -397,7 +398,7 @@ function NumberField({ label, name, defaultValue }: NumberFieldProps) {
         name={name}
         defaultValue={defaultValue}
         placeholder="S/."
-        className="h-10 w-full rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none transition placeholder:text-laria-muted focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/25"
+        className="h-10 w-full rounded-control border border-line-strong bg-white px-3 text-sm font-semibold text-ink transition placeholder:text-ink-3"
       />
     </label>
   );
@@ -417,21 +418,21 @@ function AdvancedFilterField({
 
     return (
       <fieldset className="grid gap-2">
-        <legend className="text-sm font-bold text-laria-text-soft">
+        <legend className="text-sm font-semibold text-ink-2">
           {filter.label}
         </legend>
         <div className="grid gap-2">
           {(filter.options ?? []).map((option) => (
             <label
               key={option.value}
-              className="flex items-center gap-2 text-sm font-semibold text-laria-text-soft"
+              className="flex items-center gap-2 text-sm font-semibold text-ink-2"
             >
               <input
                 type="checkbox"
                 name={filter.key}
                 value={option.value}
                 defaultChecked={values.has(option.value)}
-                className="h-4 w-4 rounded border-laria-steel text-laria-blue focus:ring-laria-blue"
+                className="h-5 w-5 accent-ink"
               />
               {option.label}
             </label>

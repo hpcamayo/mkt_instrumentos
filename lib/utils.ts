@@ -8,6 +8,7 @@ const twMerge = extendTailwindMerge({
       borderRadius: ["tag", "control", "panel"],
     },
     classGroups: {
+      "font-size": [{ text: ["micro", "meta", "ui", "body"] }],
       shadow: [{ shadow: ["level-1", "level-2"] }],
       "font-weight": [{ font: ["strong"] }],
       "max-w": [{ "max-w": ["page"] }],

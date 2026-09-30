@@ -22,6 +22,10 @@ import { ReputationSummary } from "@/components/reputation-summary";
 import { buildStoreWhatsAppUrl, type ListingCardData } from "@/lib/listings";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
+import { buttonClasses } from "@/components/ui/button";
+import { Tag } from "@/components/ui/tag";
+import { VerifiedMark } from "@/components/ui/verified-mark";
+import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
 
 export const dynamic = "force-dynamic";
 
@@ -188,8 +192,8 @@ function StoreView({
       className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6"
     >
       <StoreVisitTelemetry storeId={store.id} />
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="relative h-40 bg-slate-100 sm:h-56">
+      <div className="overflow-hidden rounded-panel border border-subtle bg-white">
+        <div className="relative h-40 bg-canvas sm:h-56">
           {store.banner_url ? (
             <Image
               width={1600}
@@ -201,14 +205,14 @@ function StoreView({
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+            <div className="flex h-full items-center justify-center t-ui text-ink-2">
               Banner pendiente
             </div>
           )}
         </div>
 
         <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-[auto_1fr_auto] md:items-end">
-          <div className="-mt-16 h-28 w-28 overflow-hidden rounded-lg border-4 border-white bg-slate-100 shadow-sm">
+          <div className="-mt-16 h-28 w-28 overflow-hidden rounded-panel border-4 border-white bg-canvas">
             {store.logo_url ? (
               <Image
                 width={112}
@@ -219,7 +223,7 @@ function StoreView({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full items-center justify-center px-2 text-center text-xs text-slate-500">
+              <div className="flex h-full items-center justify-center px-2 text-center t-meta">
                 Logo pendiente
               </div>
             )}
@@ -227,23 +231,21 @@ function StoreView({
 
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold text-ink sm:text-3xl">
+              <h1 className="t-page text-ink">
                 {store.name}
               </h1>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${store.is_verified ? "bg-emerald-50 text-emerald-700" : "bg-laria-blue/10 text-laria-blue"}`}>
-                {store.is_verified ? "Tienda Verificada" : "Tienda"}
-              </span>
+              {store.is_verified ? <VerifiedMark /> : <Tag>Tienda</Tag>}
             </div>
-            <p className="text-sm font-medium text-slate-500">
+            <p className="t-ui text-ink-2">
               {[store.district, store.city].filter(Boolean).join(", ")}
             </p>
             {store.description ? (
-              <p className="max-w-3xl text-sm leading-6 text-slate-600">
+              <p className="max-w-[68ch] t-body text-ink-2">
                 {store.description}
               </p>
             ) : null}
             {store.is_verified ? (
-              <p className="max-w-3xl text-xs leading-5 text-laria-text-soft">
+              <p className="max-w-[68ch] t-meta">
                 La verificación valida la identidad comercial. Laria no procesa pagos, envíos ni garantiza transacciones o productos.
               </p>
             ) : null}
@@ -254,8 +256,9 @@ function StoreView({
               href={buildStoreWhatsAppUrl(store)}
               storeId={store.id}
               source="store"
-              className="inline-flex w-full items-center justify-center rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 md:w-auto"
+              className={buttonClasses({ block: true, className: "md:w-auto" })}
             >
+              <WhatsAppGlyph />
               Escribir a la tienda
             </WhatsAppContactLink>
             <ContentReport
@@ -271,14 +274,14 @@ function StoreView({
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-brass">
+          <p className="t-micro text-ink-2">
             Productos
           </p>
-          <h2 className="mt-2 text-xl font-bold text-ink">
+          <h2 className="mt-2 t-section text-ink">
             Listados aprobados
           </h2>
         </div>
-        <p className="text-sm font-medium text-slate-500">
+        <p className="t-ui text-ink-2">
           {total} resultado{total === 1 ? "" : "s"}
         </p>
       </div>
@@ -294,11 +297,11 @@ function StoreView({
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-white p-6 text-sm text-slate-600 shadow-sm">
+        <div className="rounded-panel border border-subtle bg-white p-6 t-ui text-ink-2">
           <p className="font-semibold text-ink">
             Esta tienda aún no tiene productos publicados.
           </p>
-          <p className="mt-1 leading-6">
+          <p className="mt-1">
             Vuelve pronto para revisar sus instrumentos aprobados.
           </p>
         </div>
@@ -313,8 +316,8 @@ function StoreView({
 function SupabaseSetupMessage() {
   return (
     <PageContainer as="section" className="py-8">
-      <div className="max-w-3xl rounded-lg border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
-        <h1 className="text-xl font-bold text-ink">
+      <div className="max-w-3xl rounded-panel bg-warning-tint p-5 t-ui text-ink">
+        <h1 className="t-section text-ink">
           Configura Supabase para ver esta tienda
         </h1>
         <p className="mt-2">

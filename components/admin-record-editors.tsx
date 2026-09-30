@@ -11,6 +11,7 @@ import { normalizePeruRegion } from "@/lib/location";
 import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import type { Database } from "@/lib/supabase/database.types";
+import { buttonClasses } from "@/components/ui/button";
 
 type ListingRow = Database["public"]["Tables"]["listings"]["Row"];
 type StoreRow = Database["public"]["Tables"]["stores"]["Row"];
@@ -92,7 +93,7 @@ function EditorField({
   autoFocus?: boolean;
 }) {
   return (
-    <label className="grid gap-1 text-xs font-bold text-laria-text-soft">
+    <label className="grid gap-1 text-meta font-semibold text-ink-2">
       {label}
       <input
         type={type}
@@ -102,7 +103,7 @@ function EditorField({
         maxLength={maxLength}
         autoFocus={autoFocus}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue"
+        className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm font-semibold text-ink"
       />
     </label>
   );
@@ -122,13 +123,13 @@ function EditorSelect({
   required?: boolean;
 }) {
   return (
-    <label className="grid gap-1 text-xs font-bold text-laria-text-soft">
+    <label className="grid gap-1 text-meta font-semibold text-ink-2">
       {label}
       <select
         value={value}
         required={required}
         onChange={(event) => onChange(event.target.value)}
-        className="min-h-11 rounded-md border border-laria-steel bg-white px-3 text-sm font-semibold text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue"
+        className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm font-semibold text-ink"
       >
         <option value="">Selecciona una opción</option>
         {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -139,14 +140,14 @@ function EditorSelect({
 
 function EditorTextarea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
-    <label className="grid gap-1 text-xs font-bold text-laria-text-soft sm:col-span-2">
+    <label className="grid gap-1 text-meta font-semibold text-ink-2 sm:col-span-2">
       {label}
       <textarea
         value={value}
         rows={4}
         maxLength={5000}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-md border border-laria-steel bg-white px-3 py-2 text-sm font-semibold text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue"
+        className="rounded-control border border-line-strong bg-white px-3 py-2 text-sm font-semibold text-ink"
       />
     </label>
   );
@@ -155,7 +156,7 @@ function EditorTextarea({ label, value, onChange }: { label: string; value: stri
 function EditorError({ message, errorRef }: { message: string; errorRef: React.RefObject<HTMLParagraphElement | null> }) {
   if (!message) return null;
   return (
-    <p ref={errorRef} tabIndex={-1} role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800 outline-none focus-visible:ring-2 focus-visible:ring-laria-blue sm:col-span-2">
+    <p ref={errorRef} tabIndex={-1} role="alert" className="rounded-control bg-danger-tint p-3 text-sm font-semibold text-danger sm:col-span-2">
       {message}
     </p>
   );
@@ -177,18 +178,18 @@ function ListingAttributeFields({ listing, onChange }: { listing: EditableListin
   }
 
   return (
-    <fieldset className="grid gap-3 rounded-md border border-laria-fog bg-laria-cloud/60 p-3 sm:col-span-2">
-      <legend className="px-1 text-xs font-black text-laria-blue">Atributos del instrumento</legend>
+    <fieldset className="grid gap-3 rounded-control border border-subtle bg-canvas/60 p-3 sm:col-span-2">
+      <legend className="px-1 t-micro text-ink-2">Atributos del instrumento</legend>
       <div className="grid gap-3 sm:grid-cols-2">
         {filters.map((filter) => {
           const raw = attributes[filter.key];
           if (filter.type === "multiselect") {
             const selected = Array.isArray(raw) ? raw.map(String) : [];
             return (
-              <fieldset key={filter.key} className="grid gap-2 rounded-md border border-laria-fog bg-white p-3">
-                <legend className="px-1 text-xs font-bold text-laria-text-soft">{filter.label}</legend>
+              <fieldset key={filter.key} className="grid gap-2 rounded-control border border-subtle bg-white p-3">
+                <legend className="px-1 text-meta font-semibold text-ink-2">{filter.label}</legend>
                 {filter.options?.map((option) => (
-                  <label key={option.value} className="flex items-center gap-2 text-xs font-semibold text-laria-ink">
+                  <label key={option.value} className="flex items-center gap-2 text-meta font-semibold text-ink">
                     <input
                       type="checkbox"
                       checked={selected.includes(option.value)}
@@ -366,21 +367,21 @@ export function AdminListingEditor({
   }
 
   if (immutable) {
-    return <p className="text-xs font-bold text-laria-muted">Los datos de una publicación vendida o archivada son inmutables.</p>;
+    return <p className="text-meta font-semibold text-ink-2">Los datos de una publicación vendida o archivada son inmutables.</p>;
   }
 
   if (!expanded) {
     return (
-      <button ref={actionRef} type="button" onClick={() => void open()} disabled={busy} className="min-h-10 w-fit rounded-md border border-laria-steel bg-white px-3 py-2 text-xs font-black text-laria-ink outline-none hover:border-laria-blue hover:text-laria-blue focus-visible:ring-2 focus-visible:ring-laria-blue disabled:opacity-50">
+      <button ref={actionRef} type="button" onClick={() => void open()} disabled={busy} className="min-h-10 w-fit rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink hover:bg-canvas disabled:opacity-50">
         {busy ? "Cargando…" : "Editar datos básicos"}
       </button>
     );
   }
 
   return (
-    <form onSubmit={save} className="grid gap-3 rounded-md border border-laria-blue/25 bg-laria-blue/5 p-4 sm:grid-cols-2">
-      <h3 className="font-black text-laria-ink sm:col-span-2">Editar datos básicos</h3>
-      {!record ? <p className="text-sm text-laria-text-soft sm:col-span-2">{busy ? "Cargando…" : "No hay datos editables disponibles."}</p> : <>
+    <form onSubmit={save} className="grid gap-3 rounded-control border border-accent/25 bg-accent/5 p-4 sm:grid-cols-2">
+      <h3 className="font-semibold text-ink sm:col-span-2">Editar datos básicos</h3>
+      {!record ? <p className="text-sm text-ink-2 sm:col-span-2">{busy ? "Cargando…" : "No hay datos editables disponibles."}</p> : <>
         <EditorField label="Título" value={record.title} required autoFocus onChange={(title) => patch({ title })} />
         <EditorSelect label="Categoría" value={record.category} required options={categoryOptions} onChange={(category) => {
           const types = getInstrumentTypeOptions(category);
@@ -400,8 +401,8 @@ export function AdminListingEditor({
       </>}
       <EditorError message={error} errorRef={errorRef} />
       <div className="flex flex-wrap gap-2 sm:col-span-2">
-        <button type="submit" disabled={busy || !record} className="laria-button-secondary min-h-10 px-3 py-2 text-xs disabled:opacity-50">{busy ? "Guardando…" : "Guardar datos"}</button>
-        <button type="button" onClick={() => { restoreFocusRef.current = true; setExpanded(false); setRecord(null); setError(""); }} className="min-h-10 rounded-md border border-laria-steel bg-white px-3 py-2 text-xs font-black text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">Cancelar</button>
+        <button type="submit" disabled={busy || !record} className={buttonClasses({ variant: "secondary" })}>{busy ? "Guardando…" : "Guardar datos"}</button>
+        <button type="button" onClick={() => { restoreFocusRef.current = true; setExpanded(false); setRecord(null); setError(""); }} className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink">Cancelar</button>
       </div>
     </form>
   );
@@ -533,16 +534,16 @@ export function AdminStoreEditor({
 
   if (!expanded) {
     return (
-      <button ref={actionRef} type="button" onClick={() => void open()} disabled={busy} className="min-h-10 w-fit rounded-md border border-laria-steel bg-white px-3 py-2 text-xs font-black text-laria-ink outline-none hover:border-laria-blue hover:text-laria-blue focus-visible:ring-2 focus-visible:ring-laria-blue disabled:opacity-50">
+      <button ref={actionRef} type="button" onClick={() => void open()} disabled={busy} className="min-h-10 w-fit rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink hover:bg-canvas disabled:opacity-50">
         {busy ? "Cargando…" : "Editar perfil de tienda"}
       </button>
     );
   }
 
   return (
-    <form onSubmit={save} className="grid gap-3 rounded-md border border-laria-blue/25 bg-laria-blue/5 p-4 sm:grid-cols-2">
-      <h3 className="font-black text-laria-ink sm:col-span-2">Editar datos de negocio y contacto</h3>
-      {!record ? <p className="text-sm text-laria-text-soft sm:col-span-2">{busy ? "Cargando…" : "No hay datos editables disponibles."}</p> : <>
+    <form onSubmit={save} className="grid gap-3 rounded-control border border-accent/25 bg-accent/5 p-4 sm:grid-cols-2">
+      <h3 className="font-semibold text-ink sm:col-span-2">Editar datos de negocio y contacto</h3>
+      {!record ? <p className="text-sm text-ink-2 sm:col-span-2">{busy ? "Cargando…" : "No hay datos editables disponibles."}</p> : <>
         <EditorField label="Nombre comercial" value={record.name} required autoFocus onChange={(name) => patch({ name })} />
         <EditorField label="Razón social" value={record.razon_social ?? ""} onChange={(razon_social) => patch({ razon_social })} />
         <EditorField label="RUC" value={record.ruc ?? ""} maxLength={11} onChange={(ruc) => patch({ ruc: digits(ruc) })} />
@@ -561,8 +562,8 @@ export function AdminStoreEditor({
       </>}
       <EditorError message={error} errorRef={errorRef} />
       <div className="flex flex-wrap gap-2 sm:col-span-2">
-        <button type="submit" disabled={busy || !record} className="laria-button-secondary min-h-10 px-3 py-2 text-xs disabled:opacity-50">{busy ? "Guardando…" : "Guardar datos"}</button>
-        <button type="button" onClick={() => { restoreFocusRef.current = true; setExpanded(false); setRecord(null); setError(""); }} className="min-h-10 rounded-md border border-laria-steel bg-white px-3 py-2 text-xs font-black text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">Cancelar</button>
+        <button type="submit" disabled={busy || !record} className={buttonClasses({ variant: "secondary" })}>{busy ? "Guardando…" : "Guardar datos"}</button>
+        <button type="button" onClick={() => { restoreFocusRef.current = true; setExpanded(false); setRecord(null); setError(""); }} className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink">Cancelar</button>
       </div>
     </form>
   );

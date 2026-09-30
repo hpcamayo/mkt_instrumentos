@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useMarketplaceAccount } from "@/components/marketplace-account-provider";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { buttonClasses } from "@/components/ui/button";
 
 type ReportTarget = "listing" | "store" | "review";
 
@@ -82,14 +83,14 @@ export function ContentReport({
   }
 
   if (!account.ready) {
-    return <span className="text-xs text-laria-muted">Comprobando acceso…</span>;
+    return <span className="text-meta text-ink-2">Comprobando acceso…</span>;
   }
 
   if (!account.authenticated) {
     return (
       <Link
         href={`/login?next=${encodeURIComponent(pathname)}`}
-        className="text-xs font-black text-laria-blue underline-offset-4 hover:underline"
+        className="link t-meta font-semibold"
       >
         Ingresa para {label.toLowerCase()}
       </Link>
@@ -103,7 +104,7 @@ export function ContentReport({
           ref={feedbackRef}
           tabIndex={-1}
           role={failed ? "alert" : "status"}
-          className={failed ? "text-xs font-bold text-red-700 outline-none focus-visible:ring-2 focus-visible:ring-laria-blue" : "text-xs font-bold text-laria-text-soft outline-none focus-visible:ring-2 focus-visible:ring-laria-blue"}
+          className={failed ? "text-meta font-semibold text-danger" : "text-meta font-semibold text-ink-2"}
         >
           {message}
         </p>
@@ -117,31 +118,31 @@ export function ContentReport({
             setFailed(false);
             setOpen(true);
           }}
-          className="w-fit text-xs font-black text-laria-blue underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-laria-blue"
+          className="link w-fit t-meta font-semibold"
         >
           {label}
         </button>
       ) : (
-        <form onSubmit={submit} className="grid max-w-lg gap-3 rounded-md border border-laria-fog bg-laria-cloud p-3">
-          <label className="grid gap-1 text-xs font-bold text-laria-text-soft">
+        <form onSubmit={submit} className="grid max-w-lg gap-3 rounded-control border border-subtle bg-canvas p-3">
+          <label className="grid gap-1 text-meta font-semibold text-ink-2">
             Motivo
-            <select name="reason" required autoFocus className="min-h-11 rounded-md border border-laria-steel bg-white px-3 text-sm text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue">
+            <select name="reason" required autoFocus className="min-h-11 rounded-control border border-line-strong bg-white px-3 text-sm text-ink">
               {reasons.map((reason) => <option key={reason.value} value={reason.value}>{reason.label}</option>)}
             </select>
           </label>
-          <label className="grid gap-1 text-xs font-bold text-laria-text-soft">
+          <label className="grid gap-1 text-meta font-semibold text-ink-2">
             Detalle opcional
-            <textarea name="detail" maxLength={1000} rows={3} className="rounded-md border border-laria-steel bg-white px-3 py-2 text-sm text-laria-ink outline-none focus-visible:ring-2 focus-visible:ring-laria-blue" />
+            <textarea name="detail" maxLength={1000} rows={3} className="rounded-control border border-line-strong bg-white px-3 py-2 text-sm text-ink" />
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="submit" disabled={busy} className="laria-button-secondary min-h-10 px-4 py-2 text-xs disabled:opacity-50">
+            <button type="submit" disabled={busy} className={buttonClasses({ variant: "secondary" })}>
               {busy ? "Enviando…" : "Enviar reporte"}
             </button>
             <button type="button" onClick={() => {
               restoreFocusRef.current = true;
               setMessage("");
               setOpen(false);
-            }} className="min-h-10 rounded-md border border-laria-steel px-4 py-2 text-xs font-black text-laria-ink">
+            }} className="min-h-10 rounded-control border border-line-strong px-4 py-2 text-meta font-semibold text-ink">
               Cancelar
             </button>
           </div>

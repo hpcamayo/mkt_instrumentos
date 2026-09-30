@@ -13,28 +13,28 @@ export default async function EmailConfirmationPage() {
 
   return (
     <PageContainer as="main" className="py-10 sm:py-14">
-      <div className="mx-auto max-w-2xl rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="mx-auto max-w-2xl rounded-panel border border-slate-200 bg-white p-6 sm:p-8">
         <p className="text-sm font-semibold uppercase tracking-wide text-brass">
           Cuenta Laria
         </p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-ink">
+        <h1 className="mt-3 t-page text-ink">
           Tu correo ha sido confirmado
         </h1>
-        <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base">
+        <p className="mt-4 text-sm leading-6 text-ink-2 sm:text-base">
           Tu cuenta Particular está lista para comprar, vender y administrar tu
           información en Laria.
         </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            className="inline-flex items-center justify-center rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+            className="inline-flex items-center justify-center rounded-control bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
             href={user ? "/mi-cuenta" : "/login"}
           >
             {user ? "Ir a Mi cuenta" : "Ingresar"}
           </Link>
           {user ? (
             <Link
-              className="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-3 text-sm font-semibold text-ink transition hover:border-brass hover:text-brass"
+              className="inline-flex items-center justify-center rounded-control border border-slate-300 px-4 py-3 text-sm font-semibold text-ink transition hover:border-brass hover:text-brass"
               href="/mi-cuenta"
             >
               Abrir el panel

@@ -7,6 +7,7 @@ import { PageNotice } from "@/components/page-notice";
 import { upsertSellerProfile, upsertStoreOwnerProfile } from "@/lib/auth/profile";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { buttonClasses } from "@/components/ui/button";
 
 export function ProfileEditForm({
   userId,
@@ -51,19 +52,19 @@ export function ProfileEditForm({
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-5">
-      <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
+      <label className="grid gap-2 text-sm font-semibold text-ink-2">
         Nombre completo
-        <input name="fullName" required defaultValue={profile.fullName} autoComplete="name" className="h-11 rounded-md border border-laria-steel px-3 text-laria-ink outline-none focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/20" />
+        <input name="fullName" required defaultValue={profile.fullName} autoComplete="name" className="h-11 rounded-control border border-line-strong px-3 text-ink" />
       </label>
-      <label className="grid gap-2 text-sm font-bold text-laria-text-soft">
+      <label className="grid gap-2 text-sm font-semibold text-ink-2">
         WhatsApp
-        <input name="phone" required defaultValue={profile.phone} inputMode="tel" autoComplete="tel" className="h-11 rounded-md border border-laria-steel px-3 text-laria-ink outline-none focus:border-laria-blue focus:ring-2 focus:ring-laria-blue/20" />
+        <input name="phone" required defaultValue={profile.phone} inputMode="tel" autoComplete="tel" className="h-11 rounded-control border border-line-strong px-3 text-ink" />
       </label>
       <div className="grid gap-5 sm:grid-cols-2">
         <LocationFields defaultCity={profile.city} defaultRegion={profile.region} />
       </div>
       {message ? <PageNotice kind="error" message={message} /> : null}
-      <button type="submit" disabled={busy} className="laria-button-primary min-h-12 w-full px-5 py-3 text-sm sm:w-auto">{busy ? "Guardando..." : "Guardar perfil"}</button>
+      <button type="submit" disabled={busy} className={buttonClasses({ block: true, className: "sm:w-auto" })}>{busy ? "Guardando..." : "Guardar perfil"}</button>
     </form>
   );
 }

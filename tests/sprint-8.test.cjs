@@ -228,8 +228,15 @@ test("workbench state is URL-addressable, truthful on load failure, bounded, and
     /ArrowRight/.test(workbench);
   assert.ok(hasNativeQueueLinks || hasRovingKeyboardTabs,
     "Every moderation queue must be reachable from the keyboard");
-  assert.match(workbench, /focus-visible:ring-2/);
+  assertVisibleFocus(workbench);
 });
+
+// UX-1 moved focus styling to one global rule (app/globals.css). A component keeps a visible focus
+// indicator as long as the rule exists and the component never removes the outline.
+function assertVisibleFocus(componentSource) {
+  assert.match(source("app/globals.css"), /:focus-visible \{\s*outline: 2px solid var\(--ink\);\s*outline-offset: 2px;/);
+  assert.doesNotMatch(componentSource, /(^|[\s"'`])(?:[a-z-]+:)*outline-none\b/);
+}
 
 test("persistent Admin navigation covers every operational domain on desktop and mobile", () => {
   const navigation = source("components/admin-navigation.tsx");
@@ -252,7 +259,7 @@ test("persistent Admin navigation covers every operational domain on desktop and
   assert.match(navigation, /<aside[\s\S]*lg:block/);
   assert.match(navigation, /<details[\s\S]*lg:hidden/);
   assert.match(navigation, /<summary[\s\S]*Menú Admin/);
-  assert.match(navigation, /focus-visible:ring-2/);
+  assertVisibleFocus(navigation);
 });
 
 test("Admin moderation clients use only canonical RPCs and expose no generic user mutation powers", () => {

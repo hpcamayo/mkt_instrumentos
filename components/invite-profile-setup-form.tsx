@@ -124,7 +124,7 @@ export function InviteProfileSetupForm({
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
-      <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+      <div className="rounded-control border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
         <span className="font-semibold text-ink">Tipo de cuenta:</span>{" "}
         {content.accountLabel}
         {email ? (
@@ -145,7 +145,7 @@ export function InviteProfileSetupForm({
             required
             autoComplete="name"
             defaultValue={initialValues.fullName}
-            className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
+            className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
             placeholder={
               mode === "store" ? "Nombre de la persona responsable" : "Tu nombre"
             }
@@ -160,7 +160,7 @@ export function InviteProfileSetupForm({
             required
             autoComplete="tel"
             defaultValue={initialValues.phone}
-            className="mt-2 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-ink outline-none transition focus:border-brass focus:ring-2 focus:ring-brass/20"
+            className="mt-2 w-full rounded-control border border-slate-300 px-3 py-2 text-sm text-ink transition"
             placeholder="+51 999 999 999"
           />
         </label>
@@ -172,7 +172,7 @@ export function InviteProfileSetupForm({
       </div>
 
       {message ? (
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">
+        <p className="rounded-control bg-amber-50 px-3 py-2 text-sm text-ink">
           {message}
         </p>
       ) : null}
@@ -180,7 +180,7 @@ export function InviteProfileSetupForm({
       <button
         type="submit"
         disabled={state === "submitting"}
-        className="inline-flex w-full items-center justify-center rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex w-full items-center justify-center rounded-control bg-ink px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {state === "submitting" ? "Guardando..." : content.submitLabel}
       </button>

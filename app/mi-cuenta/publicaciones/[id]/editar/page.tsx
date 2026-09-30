@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ListingEditForm } from "@/components/listing-edit-form";
 import { getAccountContext } from "@/lib/account-context";
+import { buttonClasses } from "@/components/ui/button";
 
 export const metadata = { title: "Editar publicación" };
 
@@ -37,12 +38,12 @@ export default async function ListingEditPage({
     (profile?.account_type !== "store_owner" && listing.store_id !== null)
   ) {
     return (
-      <section className="rounded-lg border border-laria-fog bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-black text-laria-ink">Esta publicación no se puede editar</h1>
-        <p className="mt-3 text-sm leading-6 text-laria-text-soft">
+      <section className="rounded-panel border border-subtle bg-white p-6">
+        <h1 className="t-page text-ink">Esta publicación no se puede editar</h1>
+        <p className="mt-3 text-sm leading-6 text-ink-2">
           Las publicaciones vendidas son historial inmutable. Las ocultadas por moderación solo pueden restaurarse desde administración.
         </p>
-        <Link href={returnHref} className="laria-button-secondary mt-5 min-h-11 px-4 py-3 text-sm">Volver al inventario</Link>
+        <Link href={returnHref} className={buttonClasses({ variant: "secondary", className: "mt-5" })}>Volver al inventario</Link>
       </section>
     );
   }
@@ -81,8 +82,8 @@ export default async function ListingEditPage({
   return (
     <section className="grid gap-5">
       <div>
-        <p className="text-xs font-black uppercase tracking-wide text-laria-blue">Administrar publicación</p>
-        <h1 className="mt-1 text-3xl font-black text-laria-ink">Editar {listing.title}</h1>
+        <p className="t-micro text-ink-2">Administrar publicación</p>
+        <h1 className="mt-1 t-page text-ink">Editar {listing.title}</h1>
       </div>
       <ListingEditForm
         key={`${listing.id}:${listing.updated_at}:${pendingRevision?.id ?? "live"}:${pendingRevision?.version ?? 0}`}

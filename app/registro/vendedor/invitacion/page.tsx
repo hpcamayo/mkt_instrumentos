@@ -88,13 +88,13 @@ export default async function SellerInvitePage() {
       description="Completa tu perfil para administrar tus publicaciones en Laria."
     >
       <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-        <div className="space-y-4 text-sm leading-6 text-slate-600">
+        <div className="space-y-4 text-sm leading-6 text-ink-2">
           <p>
             Desde tu cuenta podras publicar instrumentos, editar tus
             publicaciones, marcarlas como vendidas o retirarlas cuando ya no
             esten disponibles.
           </p>
-          <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-panel border border-slate-200 bg-white p-4">
             <p className="font-semibold text-ink">Despues de activar</p>
             <p className="mt-1">
               Podras crear tu primera publicacion. Laria mantiene el contacto
@@ -103,7 +103,7 @@ export default async function SellerInvitePage() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-panel border border-slate-200 bg-white p-6">
           <InviteProfileSetupForm
             mode="seller"
             email={user.email ?? null}
@@ -147,10 +147,10 @@ function InvitePageShell({
           <p className="text-sm font-semibold uppercase tracking-wide text-brass">
             {eyebrow}
           </p>
-          <h1 className="text-3xl font-bold tracking-tight text-ink sm:text-4xl">
+          <h1 className="t-page text-ink sm:text-4xl">
             {title}
           </h1>
-          <p className="text-sm leading-6 text-slate-600 sm:text-base">
+          <p className="text-sm leading-6 text-ink-2 sm:text-base">
             {description}
           </p>
         </div>

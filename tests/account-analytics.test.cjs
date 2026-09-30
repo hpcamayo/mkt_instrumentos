@@ -181,7 +181,8 @@ test("Store stats render one aggregate and genuine period links with active stat
   const subject = statisticsPage({ profile: { account_type: "store_owner" }, store: { name: "Tienda real" } }, aggregate(7));
   const html = renderToStaticMarkup(await subject.page({ searchParams: Promise.resolve({ periodo: "7" }) }));
   assert.deepEqual(subject.calls, [7]);
-  assert.match(html, /href="\/mi-cuenta\/tienda\/estadisticas\?periodo=7" aria-current="page"/);
+  // The active period is the link to periodo=7 marked as the current page (attribute order is up to next/link).
+  assert.match(html, /<a(?=[^>]*href="\/mi-cuenta\/tienda\/estadisticas\?periodo=7")(?=[^>]*aria-current="page")[^>]*>/);
   assert.match(html, /periodo=0/);
   assert.match(html, /periodo=30/);
   assert.match(html, /href="\/mi-cuenta\/tienda\/inventario"/);

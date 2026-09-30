@@ -66,7 +66,7 @@ export default function RootLayout({
         <MarketplaceAccountProvider><div className="flex min-h-screen flex-col">
           <SiteHeader />
           <GlobalCategories />
-          <main id="contenido" tabIndex={-1} className="flex-1 focus:outline-none">{children}</main>
+          <main id="contenido" tabIndex={-1} className="flex-1">{children}</main>
           <SiteFooter />
         </div></MarketplaceAccountProvider>
       </body>

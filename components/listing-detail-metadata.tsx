@@ -42,14 +42,10 @@ export function ListingDetailMetadata({
   }, [listingId, trackView]);
 
   return (
-    <div className="mt-4 flex flex-wrap gap-2 text-sm font-bold text-laria-text-soft">
-      <span className="inline-flex items-center rounded-full border border-laria-fog bg-laria-cloud px-3 py-1">
-        {formatPublishedAgo(publishedAt ?? createdAt)}
-      </span>
-      <span className="inline-flex items-center rounded-full border border-laria-blue/25 bg-laria-blue/10 px-3 py-1 text-laria-blue">
-        {formatViewCount(viewCount)}
-      </span>
-    </div>
+    <p className="mt-3 flex flex-wrap gap-x-2 t-meta">
+      <span className="after:ml-2 after:content-['·']">{formatPublishedAgo(publishedAt ?? createdAt)}</span>
+      <span>{formatViewCount(viewCount)}</span>
+    </p>
   );
 }
 

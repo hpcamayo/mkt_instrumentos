@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageNotice } from "@/components/page-notice";
 import { searchAlertFrequencyLabel, searchAlertPath, searchAlertSummary, type SavedSearchAlert } from "@/lib/search-alerts";
+import { buttonClasses } from "@/components/ui/button";
+import { StatusTag } from "@/components/ui/tag";
 
 export function SavedSearchAlerts({ alerts }: { alerts: SavedSearchAlert[] }) {
   const router = useRouter();
@@ -42,28 +44,28 @@ export function SavedSearchAlerts({ alerts }: { alerts: SavedSearchAlert[] }) {
     <div className="grid gap-4">
       {notice ? <PageNotice kind={notice.kind} message={notice.message} /> : null}
       {!alerts.length ? (
-        <section className="rounded-lg border border-laria-fog bg-white p-8 text-center shadow-sm">
-          <h2 className="text-lg font-black text-laria-ink">Todavía no tienes alertas</h2>
-          <p className="mt-2 text-sm leading-6 text-laria-text-soft">Aplica filtros en el catálogo y guarda esa búsqueda para recibir publicaciones nuevas.</p>
-          <Link href="/listados" className="laria-button-primary mt-5 min-h-11 px-5 py-3 text-sm">Explorar catálogo</Link>
+        <section className="rounded-panel border border-subtle bg-white p-8 text-center">
+          <h2 className="t-section text-ink">Todavía no tienes alertas</h2>
+          <p className="mt-2 t-ui text-ink-2">Aplica filtros en el catálogo y guarda esa búsqueda para recibir publicaciones nuevas.</p>
+          <Link href="/listados" className={buttonClasses({ className: "mt-5" })}>Explorar catálogo</Link>
         </section>
       ) : (
         <ol className="grid gap-3">
           {alerts.map((alert) => (
-            <li key={alert.id} className="rounded-lg border border-laria-fog bg-white p-5 shadow-sm">
+            <li key={alert.id} className="rounded-panel border border-subtle bg-white p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={alert.status === "active" ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-black text-emerald-800" : "rounded-full bg-laria-cloud px-2.5 py-1 text-xs font-black text-laria-text-soft"}>{alert.status === "active" ? "Activa" : "Pausada"}</span>
-                    <span className="text-xs font-bold text-laria-text-soft">{searchAlertFrequencyLabel(alert.frequency)}</span>
+                    <StatusTag domain="alert" status={alert.status} />
+                    <span className="t-meta">{searchAlertFrequencyLabel(alert.frequency)}</span>
                   </div>
-                  <h2 className="mt-3 text-lg font-black text-laria-ink">{searchAlertSummary(alert.search_filters)}</h2>
-                  <p className="mt-2 text-xs leading-5 text-laria-muted">Al reactivar una alerta no enviamos publicaciones aparecidas durante la pausa.</p>
+                  <h2 className="mt-3 t-section text-ink">{searchAlertSummary(alert.search_filters)}</h2>
+                  <p className="mt-2 t-meta">Al reactivar una alerta no enviamos publicaciones aparecidas durante la pausa.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={searchAlertPath(alert.search_filters)} className="laria-button-secondary min-h-11 px-4 py-3 text-sm">Abrir búsqueda</Link>
-                  <button type="button" disabled={busy === alert.id} onClick={() => void mutate(alert, "status")} className="laria-button-secondary min-h-11 px-4 py-3 text-sm disabled:opacity-50">{alert.status === "active" ? "Pausar" : "Reactivar"}</button>
-                  <button type="button" disabled={busy === alert.id} onClick={() => void mutate(alert, "delete")} className="min-h-11 rounded-md border border-red-200 px-4 py-3 text-sm font-black text-red-700 disabled:opacity-50">Eliminar</button>
+                  <Link href={searchAlertPath(alert.search_filters)} className={buttonClasses({ variant: "secondary" })}>Abrir búsqueda</Link>
+                  <button type="button" disabled={busy === alert.id} onClick={() => void mutate(alert, "status")} className={buttonClasses({ variant: "secondary" })}>{alert.status === "active" ? "Pausar" : "Reactivar"}</button>
+                  <button type="button" disabled={busy === alert.id} onClick={() => void mutate(alert, "delete")} className="min-h-11 rounded-control border border-danger/40 px-4 py-3 text-sm font-semibold text-danger disabled:opacity-50">Eliminar</button>
                 </div>
               </div>
             </li>
