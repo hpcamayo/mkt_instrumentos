@@ -304,7 +304,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
 
       <label className="flex gap-3 rounded-panel bg-canvas p-3 t-ui text-ink-2">
         <input type="checkbox" name="marketplace_rules" required className="mt-0.5 h-5 w-5 shrink-0 accent-ink" />
-        <span>Acepto los <a href="/terminos" target="_blank" rel="noopener" className="link font-semibold">términos y reglas del marketplace</a>, confirmo que el artículo no está entre los <a href="/articulos-prohibidos" target="_blank" rel="noopener" className="link font-semibold">artículos prohibidos</a> y que la información y las fotos son reales. Laria no procesa pagos, no gestiona envíos ni garantiza transacciones.</span>
+        <span>Acepto los <a href="/terminos" target="_blank" rel="noopener" className="link font-semibold">términos y reglas del marketplace</a>, confirmo que el equipo no está entre los <a href="/articulos-prohibidos" target="_blank" rel="noopener" className="link font-semibold">artículos prohibidos</a> y que la información y las fotos son reales. Laria no procesa pagos, no gestiona envíos ni garantiza transacciones.</span>
       </label>
 
       <Button type="submit" block className="sm:w-auto sm:justify-self-start" disabled={!supabase} loading={state === "submitting"} loadingLabel="Enviando...">

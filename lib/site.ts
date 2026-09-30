@@ -2,7 +2,7 @@
 export const SITE_NAME = "Laria";
 export const DEFAULT_SITE_URL = "https://laria.audio";
 export const SITE_DESCRIPTION =
-  "Marketplace peruano para comprar y vender instrumentos musicales usados y productos de tiendas. Contacto directo por WhatsApp; Laria no procesa pagos ni envíos.";
+  "Marketplace peruano para comprar y vender instrumentos musicales usados y equipo de tiendas. Contacto directo por WhatsApp; Laria no procesa pagos ni envíos.";
 
 export function getSiteUrl() {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/, "");

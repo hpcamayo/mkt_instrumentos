@@ -118,6 +118,14 @@ test("glossary terms replace their retired synonyms", () => {
   assert.deepEqual(failures(({ file, text }) => !LEGAL.test(file) && text !== CATALOG_PAGE_NAME && GLOSSARY.test(text)), []);
 });
 
+test("the object is an instrumento or equipo, never an artículo or producto", () => {
+  // "Artículos prohibidos" is the defined name of a legal page (and of the matching report reason); the legal shell's
+  // limitations list keeps the approved legal wording (decisions.md, G2).
+  const DEFINED = /art[ií]culos? prohibidos?|Art[ií]culo o contenido prohibido/gi;
+  const OBJECT = /\b(art[ií]culos?|productos?)\b/i;
+  assert.deepEqual(failures(({ file, text }) => !LEGAL.test(file) && !file.endsWith("legal-page.tsx") && OBJECT.test(text.replace(DEFINED, ""))), []);
+});
+
 test("every WhatsApp contact button shares one label and the glyph", () => {
   let buttons = 0;
   for (const file of ["app/instrumentos/[slug]/page.tsx", "app/tiendas/[slug]/page.tsx"]) {

@@ -194,7 +194,7 @@ export function buildStoreMetadata(store: StoreSeoData, page: number): Metadata 
   const description = truncateDescription(
     store.description?.trim()
       ? store.description
-      : `Productos de ${store.name}${location ? ` en ${location}` : ""}. Revisa su inventario en Laria y contacta a la tienda directo por WhatsApp.`,
+      : `Instrumentos y equipo de ${store.name}${location ? ` en ${location}` : ""}. Revisa su inventario en Laria y contacta a la tienda directo por WhatsApp.`,
   );
   return {
     title,

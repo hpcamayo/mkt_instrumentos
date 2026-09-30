@@ -13,7 +13,7 @@ export function ReputationSummary({ reputation, title = "Reputación en Laria" }
             <p className="mt-1 t-ui font-semibold text-ink">{Number(reputation.average_rating).toFixed(1)} / 5 · {reputation.review_count} reseña{reputation.review_count === 1 ? "" : "s"}</p>
           ) : <p className="mt-1 t-ui text-ink-2">Aún no tiene reseñas verificadas visibles.</p>}
         </div>
-        <p className="max-w-sm t-meta">Solo incluye compras que comprador y vendedor reconocieron. No implica garantía de pago, entrega o producto.</p>
+        <p className="max-w-sm t-meta">Solo incluye compras que comprador y vendedor reconocieron. No implica garantía de pago, de entrega ni del equipo.</p>
       </div>
       {reputation.items.length ? (
         <ol className="mt-4 grid gap-3">

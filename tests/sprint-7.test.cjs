@@ -78,7 +78,7 @@ test("both account roles expose Compras y ventas and Alertas with canonical tran
   assert.match(menu, /compras requieren tu confirmación/);
   assert.match(menu, /Menú de cuenta móvil/);
   assert.match(center, /Requiere tu confirmación/);
-  assert.match(center, /¿Compraste este artículo\?/);
+  assert.match(center, /¿Compraste este equipo\?/);
   assert.match(center, /Tienes una reseña pendiente/);
 });
 
@@ -100,7 +100,7 @@ test("marketplace templates are branded, safe and preserve transaction/review li
   assert.match(review.text, /no procesa pagos|no verifica pago/i);
   assert.doesNotMatch(review.text, /rating|comment|calificación de la otra parte/i);
   const price = templates.renderMarketplaceEmail({ ...base, event_type: "listing_price_drop", context: { old_price_pen: 1200, new_price_pen: 1100 } }, "https://laria.audio");
-  assert.equal(price.subject, "Bajó de precio un producto que guardaste");
+  assert.equal(price.subject, "Bajó de precio una publicación que guardaste");
   assert.equal(price.destination, "https://laria.audio/instrumentos/guitarra-qa");
   assert.throws(() => templates.renderMarketplaceEmail({ ...base, event_type: "search_alert_daily", listing: null, search_alert: { id: "alert", filters: {}, frequency: "daily", matches: [] } }, "https://laria.audio"), /EMAIL_EMPTY_DIGEST/);
 });

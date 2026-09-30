@@ -105,7 +105,7 @@ Glossary (one name per concept; `tests/ux-copy.test.cjs` rejects the retired nam
 | Concept | Use | Avoid |
 | --- | --- | --- |
 | What is published | publicación | listado, aviso, anuncio, producto, registro |
-| The object | instrumento, equipo | artículo, ítem |
+| The object | instrumento, equipo | artículo, ítem, producto (except the defined name "Artículos prohibidos") |
 | Individual account | Particular | vendedor particular, cuenta de vendedor |
 | Business account | Tienda · Tienda verificada | Store Owner, propietario de tienda |
 | Entry point to sell | Vender | "Para tiendas" as a sell entry |

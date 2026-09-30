@@ -401,7 +401,7 @@ function ListingDetail({
               <Notice tone="info" role="note" className="mt-4">
                 Contacto directo por WhatsApp. Laria no procesa pagos, no retiene
                 dinero, no gestiona envíos ni garantiza la transacción o el
-                producto.{" "}
+                equipo.{" "}
                 <Link href="/consejos-de-seguridad" className="link font-semibold">
                   Consejos de seguridad
                 </Link>

@@ -34,7 +34,7 @@ export function AccountAnalyticsMetrics({ analytics, store = false }: { analytic
       <div className="rounded-panel border border-subtle bg-white p-4 text-meta leading-6 text-ink-2">
         <p>{analytics.days === 0 ? "Periodo: todo el historial disponible." : `Periodo de eventos: últimos ${analytics.days} días.`} Las publicaciones activas y vendidas muestran el estado actual de todo tu inventario, no cambios ocurridos en el periodo.</p>
         <p>{analytics.tracking_started_at ? `Registro de eventos disponible desde el ${dates.format(new Date(analytics.tracking_started_at))}.` : "Todavía no hay eventos registrados."} Los contactos cuentan intención de abrir WhatsApp, no conversaciones, compradores únicos ni transacciones.</p>
-        {store ? <p>Las tasas usan solo vistas e impresiones registradas en el mismo periodo; excluyen las vistas históricas sin evento. Sin denominador se muestra «Sin datos». Laria no calcula ingresos ni garantiza pagos, entregas o condición de los productos.</p> : null}
+        {store ? <p>Las tasas usan solo vistas e impresiones registradas en el mismo periodo; excluyen las vistas históricas sin evento. Sin denominador se muestra «Sin datos». Laria no calcula ingresos ni garantiza pagos, entregas o condición del equipo.</p> : null}
       </div>
     </section>
   );

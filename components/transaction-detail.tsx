@@ -121,7 +121,7 @@ export function TransactionDetailView({
 
       {detail.role === "buyer" && detail.state === "pending" ? (
         <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
-          <h2 className="t-section text-ink">¿Compraste este artículo?</h2>
+          <h2 className="t-section text-ink">¿Compraste este equipo?</h2>
           <p className="mt-2 t-ui text-ink-2">Vendedor: {detail.seller_name}. Responde solo si reconoces esta compra.</p>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <button type="button" disabled={busy} onClick={() => void respond(true)} className={buttonClasses()}>Sí, lo compré</button>

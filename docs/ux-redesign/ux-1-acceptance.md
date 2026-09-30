@@ -16,12 +16,13 @@ Branch `ux/redesign`: the 9 Cowork commits on top of the final Sprint 9 head `49
 | 8 | `e639118` fix(ui) | Home cards without a photo get the same "Sin foto" treatment |
 | 9 | `e466bc1` docs(ux) | `docs/design-system.md` rewritten, AGENTS.md pointer, "after" captures, this package |
 | 10 | `f751a1f` fix(ui) | Primitives adopted across pages; one status dictionary for Admin, Compras y ventas and store standing; micro-label case; `tests/ux-primitives.test.cjs` |
-| 11 | this commit, docs(ux) | This package corrected, design-system components section, concept comparisons in `screenshots/ux1-audit/` |
+| 11 | `740c725` docs(ux) | This package corrected, design-system components section, concept comparisons in `screenshots/ux1-audit/` |
+| 12 | this commit, fix(copy) | Owner-approved glossary follow-up: "artículo"/"producto" replaced by the glossary words in UI, emails and SEO descriptions; copy test extended |
 
 ## Checks (after the audit)
 
 - `pnpm lint`, `pnpm typecheck`, `pnpm build`: pass.
-- `pnpm test`: 257/257 (254 before the audit; new: the dictionary test in `tests/ux-copy.test.cjs` and two tests in `tests/ux-primitives.test.cjs`).
+- `pnpm test`: 258/258 (254 before the audit; new: the dictionary and object-word tests in `tests/ux-copy.test.cjs` and two tests in `tests/ux-primitives.test.cjs`).
 - Integration and browser-smoke scripts that name renamed labels were updated in Cowork but not run (they need a hosted or seeded Supabase): `tests/listing-lifecycle.integration.cjs`, `tests/analytics-browser-smoke.cjs`, `tests/photo-browser-smoke.cjs`.
 
 ## Acceptance criteria
@@ -34,7 +35,7 @@ Evidence from the audit: a production build of `ux/redesign` after the fixes, on
 | 2 | Text ≥4.5:1, control boundaries ≥3:1 | Audit: **0** axe violations on all 16 template/width runs. `tests/ux-contrast.test.cjs` checks every declared token pair. Cowork: 381 failing elements before UX-1 | Met |
 | 3 | Visible, consistent focus; skip link works | Audit: **682** focusable elements across the 16 runs, **0** without a 2 px ring (ink on light, blue on the frame). First Tab reaches "Saltar al contenido"; Enter moves focus to `#contenido` | Met |
 | 4 | One implementation of each primitive; legacy styling gone | **Not met before the audit** (the Cowork row overstated it): `PageHeader`, `Price`, `Chip`, `AppliedChip`, `IconButton`, `Radio`, `CountBadge` and `Skeleton` had no consumer, `EmptyState` had one; about 35 page titles, 20 notices, 12 empty states, a pulse skeleton, a count badge (twice) and several tag spans were hand-written. **After:** `PageHeader` in 32 files, `EmptyState` 13, `Notice` (or `noticeClassName` + `NoticeIcon` where a ref moves focus or the notice holds buttons) 26, `Price` 5, `Tag`/`StatusTag` 14, and `CountBadge`, `AppliedChip`, `ChipLink`, `IconButton`, `Skeleton` in use. `tests/ux-primitives.test.cjs` fails if a primitive loses its last consumer or a hand-written copy comes back. Legacy `brass`/`cedar`/`mist`/`laria.*` classes: none | Met, with the exceptions listed below |
-| 5 | One status dictionary; glossary applied; copy test passes | **Partly met before the audit:** three more status vocabularies were live. Admin labelled a report's target and the audit history with `adminValueLabel` ("Pendiente" for a listing in review, "Tienda" for an active store) and printed raw `declined`, `external`, `superseded` and `visible` in the transactions and reviews views; Compras y ventas used its own map (`transactionStateLabel`) while the dictionary's `claim` domain was unused; the store owner saw "Solicitud en revisión", "Tienda no pública". **After:** all read `lib/ui/status.ts` (new domains `transaction` and `review`, `storeStatusEntry`, `statusDomainForTarget`/`adminTargetStatusLabel`); the copy test checks them. Glossary: see the open item on "artículo" and "producto" | Met for status labels; glossary has a known gap |
+| 5 | One status dictionary; glossary applied; copy test passes | **Partly met before the audit:** three more status vocabularies were live. Admin labelled a report's target and the audit history with `adminValueLabel` ("Pendiente" for a listing in review, "Tienda" for an active store) and printed raw `declined`, `external`, `superseded` and `visible` in the transactions and reviews views; Compras y ventas used its own map (`transactionStateLabel`) while the dictionary's `claim` domain was unused; the store owner saw "Solicitud en revisión", "Tienda no pública". **After:** all read `lib/ui/status.ts` (new domains `transaction` and `review`, `storeStatusEntry`, `statusDomainForTarget`/`adminTargetStatusLabel`); the copy test checks them. **Owner-approved follow-up (30 Sep):** "artículo" and "producto" no longer name the object in the interface or the emails ("¿Compraste este equipo?", "Bajó de precio una publicación que guardaste", the trust lines); the defined term "Artículos prohibidos" and the legal pages (G2) keep theirs; a copy test enforces it | Met (two database strings remain, see open items) |
 | 6 | No buyer-facing placeholders; badge never contradicts condition; no "Comprar ahora" | Test-enforced (`tests/ux-copy.test.cjs`); seen on the captures | Met |
 | 7 | Favicon and emails on brand; one WhatsApp style and label | `app/icon.svg`, `app/apple-icon.png`; email template on the palette (muted grey only on the black header). All three WhatsApp buttons: yellow, glyph, "Contactar por WhatsApp" (test-enforced) | Met |
 | 8 | Before/after at 390 / 768 / 1280 / 1440, public and signed in | Cowork's 116 + 116 local captures are not in the bundle; the repo holds 16 + 16 selected frames at 390 and 1440 only, and the "after" frames predate the audit fixes. Audit: 96 "after" captures at all four widths (public, Particular, Admin) in the local, gitignored `.ux-snapshots/ux1-audit/`, and the 16 concept comparisons in `screenshots/ux1-audit/` | Partly evidenced: no "before" set at 768 and 1280 in the repo, and no Store Owner captures |
@@ -60,6 +61,7 @@ The branch was checked against `ux-1-foundations.md` and its 10 criteria, from t
 | Uppercase metric labels of four words | 1 (D6) | Sentence case |
 | Favorites pagination links had no link styling; favorites and store errors were unstyled `<p role="alert">` | 4 | `.link`; `Notice` |
 | Criterion 4 and 5 rows of this package overstated | — | Rewritten above |
+| "artículo" and "producto" still named the object in about a dozen strings; the copy test did not check them | 5 (D8) | Owner approved the change: glossary words in the UI, emails, SEO store description and site description; Sprint 7 pins updated to the new wording; copy test extended |
 
 Nothing in the audit changed a product rule, a query, a route or an open decision in `decisions.md`.
 
@@ -91,6 +93,7 @@ Localhost numbers only show direction: LCP moves within about 150 ms, which is t
 ## Changed labels, tests and acceptance rows
 
 - Labels that tests pinned, updated in Cowork to the new wording without weakening: account navigation ("Compras y ventas", store "Publicar"), header ("Publicar"), Admin navigation ("Publicaciones históricas"), analytics ("Vistas por impresión"), the review filter call `statusText(item, domain)`.
+- Glossary follow-up (owner-approved): "¿Compraste este artículo?" → "¿Compraste este equipo?" (Compras y ventas and its email); the price-drop email subject "Bajó de precio un producto que guardaste" → "Bajó de precio una publicación que guardaste"; trust lines say "el equipo" instead of "productos"; the store SEO description opens "Instrumentos y equipo de …"; the site description says "equipo de tiendas". `tests/sprint-7.test.cjs` follows the new wording with the same assertions.
 - Audit label changes (dictionary only, meanings unchanged): the store owner's standing reads En revisión / Activa / Rechazada / Oculta / Tienda verificada (was "Solicitud en revisión", "Tienda", "Solicitud rechazada", "Tienda no pública"); a sold favorite reads "Vendida" (was "Vendido"); Admin reports and audit history read the dictionary ("En revisión" for a listing in review, "Activa" for a store); Admin transactions read "Rechazada por comprador", "Fuera de Laria", "Reemplazada" instead of raw values.
 - No row of `acceptance/cases.tsv` was edited. Rows whose wording names an old label; the behavior is unchanged: TX-018 ("Compras" navigation), AN-012 ("CTR", now "Vistas por impresión"). Old names used as concepts, not labels: ADMIN-024, ADMIN-025, AN-017, STORE-019 (Store Owner); LIFE-012, REV-016, VERIFY-003, VERIFY-012 ("Tienda Verificada"). ADMIN-008 ("correct transaction confirmation state visible") is better served after the audit: declined and external records no longer show raw values.
 
@@ -111,7 +114,7 @@ Owner questions (in `decisions.md`):
 
 Found in the audit, not fixed (outside UX-1's reach without a layout change, or pinned wording):
 - Photo dots on listing cards are 6 px buttons; the spec says targets are never below 24 px. They cannot grow without the card layout (UX-3). axe did not flag them because the local listings have one photo each.
-- Glossary gap: "artículo" and "producto" still name the object in about a dozen non-legal strings ("¿Compraste este artículo?" in Compras y ventas and its email, pinned by `tests/sprint-7.test.cjs`; the price-drop email; the trust disclaimers "ni garantiza productos"; the store SEO title). The copy test does not check these two words. Changing them touches pinned tests and trust wording, so it waits for an owner go-ahead.
+- Two database strings still say "artículo"/"producto" and need a migration (not a UI change): the in-app notification written when a seller asks for purchase confirmation ("El vendedor indicó que compraste este artículo…", shown verbatim in Notificaciones) and the `LISTING_FIELD_REQUIRED` error text ("estado del producto"). For UX-5/UX-6, with owner approval.
 - Store names appear as uppercase eyebrows on the store inventory and statistics pages; a name longer than three words breaks D6 (UX-6).
 - The frame's yellow action is "Buscar" and the header keeps "Para tiendas" as an entry (UX-2, with G1).
 - The listing page shows two yellow WhatsApp buttons in one phone screen (UX-4).
@@ -120,7 +123,6 @@ Found during UX-1 in Cowork, present on `49a38e5` too, not fixed (outside UX-1 s
 - Listing detail logs an intermittent React hydration error (#418) in the browser.
 - Admin and purchase dates can hydrate differently between Node and Chromium (ICU spacing in "12:29 a. m.").
 - `/api/events` answers 400 on a local `http://` production build because the session cookie is `Secure`; production uses HTTPS.
-- The price-drop email subject says "producto"; a Sprint 7 test pins it. For UX-6.
 
 ## How to review
 

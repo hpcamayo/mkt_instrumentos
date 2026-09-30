@@ -32,8 +32,8 @@ export function SiteFooter() {
           </p>
           <p className="mt-4 max-w-sm text-muted-dark">
             Coordinas directo con cada vendedor. Laria no procesa pagos, no
-            retiene dinero, no gestiona envíos ni garantiza productos o
-            transacciones.
+            retiene dinero, no gestiona envíos ni garantiza el equipo ni
+            las transacciones.
           </p>
         </div>
 

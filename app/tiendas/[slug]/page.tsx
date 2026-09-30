@@ -249,7 +249,7 @@ function StoreView({
             ) : null}
             {store.is_verified ? (
               <p className="max-w-[68ch] t-meta">
-                La verificación valida la identidad comercial. Laria no procesa pagos, envíos ni garantiza transacciones o productos.
+                La verificación valida la identidad comercial. Laria no procesa pagos, envíos ni garantiza las transacciones ni el equipo.
               </p>
             ) : null}
           </div>
