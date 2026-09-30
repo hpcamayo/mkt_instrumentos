@@ -1,10 +1,12 @@
-# Sprint 9 production gate — failed and restored
+# Sprint 9 production gate and follow-up
+
+The first gate failed and was rolled back. The remediation passed the automated production re-gate; the later SEO-005 pagination check and category URL follow-up are recorded at the end. Earlier sections preserve the state observed at each gate.
 
 **2026-09-27: release gate FAILED.** Sprint 9 was committed and pushed as `bcf9e6142a1c86caa3feb8ee24cd23a126a3cc42` (`feat: complete Sprint 9 launch readiness`). Vercel built it READY as `dpl_7UNWydkpr6gw3RUuPrAmC4igRQ8p` and briefly served it at `laria.audio`. No Sprint 10/JEV work was started.
 
 ## Restored production
 
-The application now serves the requested baseline **`bb16e319540a9d6721e990bc1e9900825c7473ac`**, rebuilt READY as **`dpl_Fg23SKBd8fjfxKyiXuXGvrdXfZMB`** (`mkt-instrumentos-jnmsjobst-henri-camayos-projects.vercel.app`). Independent alias and deployment API lookups confirm this exact SHA. `/` and `/listados` responded 200 after restoration; a deployment-scoped error scan returned zero records in its first 15-minute window. This is a bounded observation, not a full authenticated retest. See [rollback evidence](evidence/sprint-9-production-gate/rollback.json).
+Immediately after rollback, the application served the requested baseline **`bb16e319540a9d6721e990bc1e9900825c7473ac`**, rebuilt READY as **`dpl_Fg23SKBd8fjfxKyiXuXGvrdXfZMB`** (`mkt-instrumentos-jnmsjobst-henri-camayos-projects.vercel.app`). Independent alias and deployment API lookups confirmed this exact SHA at that time. `/` and `/listados` responded 200 after restoration; a deployment-scoped error scan returned zero records in its first 15-minute window. This is a bounded observation, not a full authenticated retest. See [rollback evidence](evidence/sprint-9-production-gate/rollback.json).
 
 Before Sprint 9, the actual alias served documentation commit `29d7261503aa4d35586f6e01f2963403cbf9b856`, whose application retained the `bb16e31` baseline. The rollback targets the exact application SHA requested by the user.
 
@@ -48,7 +50,7 @@ After the failed gate, canonical TSV validation passed: **328 Pass / 1 Blocked /
 
 Use `vercel curl / --deployment https://mkt-instrumentos-7eo7jpham-henri-camayos-projects.vercel.app` to inspect the retired candidate and search for `property="og:url"`. Keep deployment protection enabled. The saved runtime records preserve the two failures.
 
-Fix homepage OG metadata, address the Admin `status` error and investigate the signup timeout before repeating the full HTTP/category/legal/runtime gate on a corrected exact SHA. Retain owner/manual checks. This report and its evidence remain local and uncommitted: pushing documentation on `main` would automatically redeploy the failed Sprint 9 application tree.
+At that point, the next gate needed to fix homepage OG metadata, address the Admin `status` error and investigate the signup timeout before repeating the full HTTP/category/legal/runtime checks on a corrected exact SHA. Owner/manual checks remained separate. The report and its evidence were then local and uncommitted because pushing documentation on `main` would have redeployed the failed Sprint 9 application tree.
 
 ## Remediation (local, uncommitted — 2026-09-27)
 
@@ -98,4 +100,14 @@ With real production records, all six moderation queues loaded; `/admin/publicac
 
 All four legal/safety routes returned 200 and no pre-launch placeholder. The official email rendered on the contact-bearing Terms and Privacy pages, and the corrected Privacy password wording rendered. Footer, signup, publishing and listing-contact safety links were present. Particular `Mi cuenta`, `Perfil`, `Seguridad` and publishing pages loaded with the frozen navigation. All disposable QA Auth users were removed; a hosted exact-prefix query returned zero remaining accounts.
 
-Canonical acceptance advances only `SEO-002`–`SEO-004` from Not Run to Pass on live category inventory evidence. `SEO-005` remains Not Run because live categories do not have enough inventory to exercise category pagination; `SEO-006`, `SEO-007`, `LEGAL-005` and `LEGAL-006` await owner review. `ALERT-005` remains Blocked until the natural daily test. The release remains pending those owner checks and other go-live dependencies in `docs/go-live-checklist.md`.
+At this re-gate, canonical acceptance advanced only `SEO-002`–`SEO-004` from Not Run to Pass on live category inventory evidence. `SEO-005` still lacked enough inventory to exercise category pagination; its later production acceptance is recorded below. `SEO-006`, `SEO-007`, `LEGAL-005` and `LEGAL-006` await owner review. `ALERT-005` remains Blocked until the natural daily test. Launch acceptance remains pending those owner checks and other go-live dependencies in `docs/go-live-checklist.md`.
+
+## SEO-005 and category URL follow-up (2026-09-27)
+
+`SEO-005` passed an automated check on the real `laria.audio` application at SHA `61365d0edd4f9463d13ac4bd5af8bf9c841c4145`. Guitars had four publicly eligible approved listings, so the run created 21 marked, disposable approved Particular listings to reach 25. The rendered category pages returned 200 with 24 cards on page 1 and one on page 2. Listing links were mapped to their database IDs: no duplicates or page overlap appeared, all belonged to guitars, and both page orders stayed stable on a repeat. Canonical and `og:url` values matched each page; both were indexable. Category/type navigation preserved `category=guitars` in `/listados`; a category brand refinement also redirected there with its filter. Malformed page values rendered page 1 and an out-of-range page redirected to page 1 without a loop or off-site hop.
+
+The run deleted all 21 QA listings, 63 photo rows and the single QA Auth user/profile. Exact-ID and marker audits found zero remaining users, profiles, listings, photos, events, alerts, reports or email deliveries. An independent marker check covered both the successful run and an earlier harness-only retry; the public guitar count returned to four and the category still returned 200. The [SEO-005 evidence](evidence/sprint-9-production-gate/seo-005-pagination.json) records the live IDs and cleanup. Only the SEO-005 acceptance row changed, leaving **332 Pass / 70 Not Run / 1 Blocked / 403 total**.
+
+The later four-file category URL cleanup, commit `49a38e5be7b6e195617a841fe1c572420769dab0`, routes global top-level category links and single-type links that cover a whole category to the existing Spanish `/instrumentos/<slug>` landing. This includes `cymbals` → `/instrumentos/platillos` and `audio interfaces` + `audio_interface` → `/instrumentos/interfaces-de-audio`. Narrower types such as `guitars` + `electric_guitar`, and every `other` choice, retain `/listados?category=…&instrument_type=…`. The helper reuses the existing category pages and `instrumentTypesByCategory`; the catalog form and SEO metadata code were unchanged. The focused Sprint 9 gate tests passed 8/8. Vercel deployment `dpl_6TwxfiFvinP8LYUgwrVM8UJ6pnGA` is READY, and the `laria.audio` alias still identifies this exact SHA as of 2026-09-30. The guitar filter URL, platillos landing and audio-interface landing each returned 200 after deployment. No Sprint 10/11 catalog foundation or database migration was included in that application commit.
+
+Owner checks `SEO-006`, `SEO-007`, `LEGAL-005` and `LEGAL-006` remain Not Run; `ALERT-005` remains Blocked pending its natural daily-window test. This follow-up does not close the V1 launch gate or enable a scheduler.
