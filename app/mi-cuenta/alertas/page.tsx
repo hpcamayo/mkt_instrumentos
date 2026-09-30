@@ -1,4 +1,6 @@
 import { SavedSearchAlerts } from "@/components/saved-search-alerts";
+import { Notice } from "@/components/ui/notice";
+import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 import { parseSavedSearchAlerts } from "@/lib/search-alerts";
 
@@ -12,12 +14,12 @@ export default async function AlertsPage() {
   const alerts = error ? [] : parseSavedSearchAlerts(data);
   return (
     <section className="grid gap-5">
-      <div>
-        <p className="t-micro text-ink-2">Mi cuenta</p>
-        <h1 className="mt-1 t-page text-ink">Alertas</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-2">Guarda búsquedas exactas y recibe publicaciones nuevas de inmediato o en un resumen diario. Nunca enviamos correos vacíos.</p>
-      </div>
-      {error ? <p role="alert" className="rounded-panel bg-danger-tint p-4 text-sm text-danger">No pudimos cargar tus alertas. Intenta nuevamente.</p> : <SavedSearchAlerts alerts={alerts} />}
+      <PageHeader
+        eyebrow="Mi cuenta"
+        title="Alertas"
+        meta={<p className="max-w-3xl">Guarda búsquedas exactas y recibe publicaciones nuevas de inmediato o en un resumen diario. Nunca enviamos correos vacíos.</p>}
+      />
+      {error ? <Notice tone="danger" role="alert">No pudimos cargar tus alertas. Intenta nuevamente.</Notice> : <SavedSearchAlerts alerts={alerts} />}
     </section>
   );
 }

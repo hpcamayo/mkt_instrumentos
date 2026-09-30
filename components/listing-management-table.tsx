@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageNotice } from "@/components/page-notice";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Price } from "@/components/ui/price";
 import { StatusTag } from "@/components/ui/tag";
-import { formatPrice } from "@/lib/listings";
 
 export type ManagedListing = {
   id: string;
@@ -74,7 +75,8 @@ export function ListingManagementTable({
   }
 
   if (!listings.length) {
-    return <p className="p-6 text-sm text-ink-2">{emptyMessage}</p>;
+    // Inside the page's own panel, so the empty state drops its border.
+    return <EmptyState className="rounded-none border-0" title={emptyMessage} />;
   }
 
   return (
@@ -118,7 +120,7 @@ export function ListingManagementTable({
                     ) : null}
                   </td>
                   <td className="px-5 py-4"><StatusTag domain="listing" status={listing.status} />{listing.status === "sold" && listing.sold_at ? <p className="mt-1 whitespace-nowrap text-meta text-ink-2">Marcada vendida: {formatDate(listing.sold_at)}</p> : null}</td>
-                  <td className="px-5 py-4">{formatPrice(listing.price_pen)}</td>
+                  <td className="whitespace-nowrap px-5 py-4"><Price value={listing.price_pen} size="inline" /></td>
                   <td className="whitespace-nowrap px-5 py-4">{listing.published_at ? formatDate(listing.published_at) : "Aún no publicada"}</td>
                   <td className="px-5 py-4">{listing.analytics ? numbers.format(listing.analytics.views) : "No disponible"}</td>
                   <td className="px-5 py-4">{listing.analytics ? numbers.format(listing.analytics.contacts) : "No disponible"}</td>

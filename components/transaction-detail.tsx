@@ -7,7 +7,6 @@ import { PageNotice } from "@/components/page-notice";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import {
   transactionErrorMessage,
-  transactionStateLabel,
   type EligibleBuyer,
   type TransactionDetail,
   type TransactionReview,
@@ -15,6 +14,8 @@ import {
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusTag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
 
 export function TransactionDetailView({
@@ -94,15 +95,12 @@ export function TransactionDetailView({
     <div className="grid gap-5">
       {message ? <PageNotice kind={messageKind} message={message} /> : null}
       <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="t-micro text-ink-2">{detail.role === "buyer" ? "Compra" : "Venta"}</p>
-            <h1 className="mt-1 t-page text-ink">{detail.listing_title}</h1>
-            <p className="mt-2 text-sm font-semibold text-ink-2">{transactionStateLabel(detail.state)}</p>
-            <p className="mt-1 text-meta text-ink-2">Marcada vendida: {formatDateTime(detail.sold_at)}</p>
-          </div>
-          <Link href={`/instrumentos/${detail.listing_slug}`} className={buttonClasses({ variant: "secondary" })}>Ver publicación vendida</Link>
-        </div>
+        <PageHeader
+          eyebrow={detail.role === "buyer" ? "Compra" : "Venta"}
+          title={detail.listing_title}
+          meta={<><StatusTag domain="claim" status={detail.state} className="mt-1" /><p className="mt-2">Marcada vendida: {formatDateTime(detail.sold_at)}</p></>}
+          actions={<Link href={`/instrumentos/${detail.listing_slug}`} className={buttonClasses({ variant: "secondary" })}>Ver publicación vendida</Link>}
+        />
         <Notice tone="info" role="note" className="mt-5">
           La verificación significa únicamente que vendedor y comprador reconocen una relación originada en Laria. No verifica pago, entrega, envío, autenticidad ni condición.
         </Notice>

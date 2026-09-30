@@ -15,6 +15,7 @@ import {
 import {
   ADMIN_QUEUE_LABELS,
   ADMIN_QUEUES,
+  adminTargetStatusLabel,
   adminValueLabel,
   type AdminCounts,
   type AdminJsonItem,
@@ -24,9 +25,12 @@ import {
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import type { Json } from "@/lib/supabase/database.types";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
-import { buttonClasses } from "@/components/ui/button";
-import { noticeClassName } from "@/components/ui/notice";
+import { Button, buttonClasses } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Notice, noticeClassName } from "@/components/ui/notice";
 import { Field } from "@/components/ui/field";
+import { PageHeader } from "@/components/ui/page-header";
+import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
 
 const ADMIN_DATE_FORMATTER = new Intl.DateTimeFormat("es-PE", {
@@ -513,9 +517,9 @@ function QueueItem({
           </p>
         </div>
         {adminNumber(item, "open_target_report_count") > 1 ? (
-          <span className="w-fit rounded-tag bg-danger-tint px-2 py-0.5 t-meta font-semibold text-danger">
+          <Tag tone="danger" className="w-fit">
             {adminNumber(item, "open_target_report_count")} reportes abiertos
-          </span>
+          </Tag>
         ) : null}
       </div>
 
@@ -528,7 +532,7 @@ function QueueItem({
         ) : null}
         {adminString(item, "ruc") ? <p><strong>RUC:</strong> {adminString(item, "ruc")}</p> : null}
         {targetType ? <p><strong>Objetivo:</strong> {adminValueLabel(targetType)}</p> : null}
-        {adminString(item, "target_status") ? <p><strong>Estado del objetivo:</strong> {adminValueLabel(adminString(item, "target_status"))}</p> : null}
+        {adminString(item, "target_status") ? <p><strong>Estado del objetivo:</strong> {adminTargetStatusLabel(targetType, adminString(item, "target_status"))}</p> : null}
         {adminString(item, "reason") ? <p><strong>Motivo:</strong> {adminValueLabel(adminString(item, "reason"))}</p> : null}
         {adminString(item, "detail") ? <p className="sm:col-span-2"><strong>Detalle:</strong> {adminString(item, "detail")}</p> : null}
         {adminString(item, "reporter_name") ? <p><strong>Reportado por:</strong> {adminString(item, "reporter_name")}</p> : null}
@@ -625,20 +629,16 @@ export function AdminWorkbench({
 
   return (
     <div className="grid gap-5">
-      <header className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
-        <p className="t-micro text-ink-2">
-          Moderación
-        </p>
-        <h1 className="mt-2 t-page text-ink">
-          Bandeja de moderación
-        </h1>
-        <p className="mt-2 t-ui text-ink-2">
-          {totalPending === null
+      <div className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
+        <PageHeader
+          eyebrow="Moderación"
+          title="Bandeja de moderación"
+          meta={totalPending === null
             ? "Los conteos no están disponibles. Actualiza antes de asumir que no hay trabajo."
             : totalPending > 0
             ? `${totalPending} ${totalPending === 1 ? "acción requiere" : "acciones requieren"} atención.`
             : "No hay acciones pendientes."}
-        </p>
+        />
         <div
           className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-meta font-semibold text-ink-2"
           aria-label="Resumen de pendientes"
@@ -647,18 +647,14 @@ export function AdminWorkbench({
             <span key={queue}>{ADMIN_QUEUE_LABELS[queue]}: {counts?.[queue] ?? "—"}</span>
           ))}
         </div>
-      </header>
+      </div>
 
       {notice ? (
         <p ref={noticeRef} tabIndex={-1} role="status" className={noticeClassName("success", "font-semibold")}>
           {notice}
         </p>
       ) : null}
-      {loadError ? (
-        <p role="alert" className="rounded-control bg-danger-tint p-3 text-sm font-semibold text-danger">
-          {loadError}
-        </p>
-      ) : null}
+      {loadError ? <Notice tone="danger" role="alert">{loadError}</Notice> : null}
 
       <div className="overflow-x-auto rounded-panel border border-subtle bg-white p-2">
         <div role="tablist" aria-label="Colas de moderación" className="flex min-w-max gap-1">
@@ -697,13 +693,9 @@ export function AdminWorkbench({
             <h2 className="t-section text-ink">{ADMIN_QUEUE_LABELS[selectedQueue]}</h2>
             <p className="mt-1 text-sm text-ink-2">{total} pendiente{total === 1 ? "" : "s"} en esta cola.</p>
           </div>
-          <button
-            type="button"
-            onClick={() => router.refresh()}
-            className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink hover:border-accent"
-          >
+          <Button variant="secondary" size="sm" onClick={() => router.refresh()}>
             Actualizar
-          </button>
+          </Button>
         </div>
 
         {items.map((item) => (
@@ -715,10 +707,7 @@ export function AdminWorkbench({
           />
         ))}
         {!items.length && !loadError ? (
-          <div className="rounded-panel border border-dashed border-line-strong bg-white p-8 text-center">
-            <p className="font-semibold text-ink">No hay acciones pendientes</p>
-            <p className="mt-1 text-sm text-ink-2">Esta cola está al día.</p>
-          </div>
+          <EmptyState headingLevel={3} title="No hay acciones pendientes" description="Esta cola está al día." />
         ) : null}
 
         {pageCount > 1 ? (

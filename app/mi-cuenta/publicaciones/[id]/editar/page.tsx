@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ListingEditForm } from "@/components/listing-edit-form";
 import { getAccountContext } from "@/lib/account-context";
 import { buttonClasses } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata = { title: "Editar publicación" };
 
@@ -39,10 +40,10 @@ export default async function ListingEditPage({
   ) {
     return (
       <section className="rounded-panel border border-subtle bg-white p-6">
-        <h1 className="t-page text-ink">Esta publicación no se puede editar</h1>
-        <p className="mt-3 text-sm leading-6 text-ink-2">
-          Las publicaciones vendidas son historial inmutable. Las ocultadas por moderación solo pueden restaurarse desde administración.
-        </p>
+        <PageHeader
+          title="Esta publicación no se puede editar"
+          meta="Las publicaciones vendidas son historial inmutable. Las ocultadas por moderación solo pueden restaurarse desde administración."
+        />
         <Link href={returnHref} className={buttonClasses({ variant: "secondary", className: "mt-5" })}>Volver al inventario</Link>
       </section>
     );
@@ -81,10 +82,7 @@ export default async function ListingEditPage({
 
   return (
     <section className="grid gap-5">
-      <div>
-        <p className="t-micro text-ink-2">Administrar publicación</p>
-        <h1 className="mt-1 t-page text-ink">Editar {listing.title}</h1>
-      </div>
+      <PageHeader eyebrow="Administrar publicación" title={`Editar ${listing.title}`} />
       <ListingEditForm
         key={`${listing.id}:${listing.updated_at}:${pendingRevision?.id ?? "live"}:${pendingRevision?.version ?? 0}`}
         listing={{ ...editableListing, attributes: editableListing.attributes as Record<string, unknown> | null }}

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { InviteProfileSetupForm } from "@/components/invite-profile-setup-form";
 import { InviteRecoveryPanel } from "@/components/invite-recovery-panel";
 import { PageContainer } from "@/components/page-container";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   STORE_OWNER_ACCOUNT_TYPE,
@@ -148,12 +149,7 @@ function InvitePageShell({
     <PageContainer as="section" className="py-8 sm:py-12">
       <div className="mx-auto max-w-5xl space-y-8">
         <div className="max-w-2xl space-y-3">
-          <p className="t-micro text-ink-2">
-            {eyebrow}
-          </p>
-          <h1 className="t-page text-ink">
-            {title}
-          </h1>
+          <PageHeader eyebrow={eyebrow} title={title} />
           <p className="t-body text-ink-2">
             {description}
           </p>

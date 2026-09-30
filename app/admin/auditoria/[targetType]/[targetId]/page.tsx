@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { adminValueLabel } from "@/lib/admin";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Notice } from "@/components/ui/notice";
+import { PageHeader } from "@/components/ui/page-header";
+import { adminTargetStatusLabel, adminValueLabel } from "@/lib/admin";
 import { requireAdmin } from "@/lib/admin-server";
 import type { Json } from "@/lib/supabase/database.types";
 
@@ -80,15 +83,17 @@ export default async function AdminAuditPage({
 
   return (
     <div className="grid gap-5">
-      <header className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
-        <p className="t-micro text-ink-2">Auditoría administrativa</p>
-        <h1 className="mt-2 t-page text-ink">Historial de {adminValueLabel(targetType).toLowerCase()}</h1>
-        <p className="mt-2 break-all text-sm text-ink-2">{targetId}</p>
+      <div className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
+        <PageHeader
+          eyebrow="Auditoría administrativa"
+          title={`Historial de ${adminValueLabel(targetType).toLowerCase()}`}
+          meta={<span className="break-all">{targetId}</span>}
+        />
         <Link href={backHref} className="mt-4 inline-flex text-sm link font-semibold">Volver al contexto anterior</Link>
-      </header>
+      </div>
 
-      {error ? <p role="alert" className="rounded-control bg-danger-tint p-3 text-sm font-semibold text-danger">No pudimos cargar el historial. No asumiremos que está vacío.</p> : null}
-      {!error && !history.length ? <p className="rounded-panel border border-dashed border-line-strong bg-white p-8 text-center text-sm text-ink-2">No hay acciones administrativas registradas para este objetivo.</p> : null}
+      {error ? <Notice tone="danger" role="alert">No pudimos cargar el historial. No asumiremos que está vacío.</Notice> : null}
+      {!error && !history.length ? <EmptyState title="No hay acciones administrativas registradas para este objetivo" /> : null}
       <ol className="grid gap-3">
         {history.map((entry) => (
           <li key={entry.id} className="rounded-panel border border-subtle bg-white p-4">
@@ -100,7 +105,7 @@ export default async function AdminAuditPage({
             {detailRows(entry.detail).length ? (
               <dl className="mt-3 grid gap-1 text-meta text-ink-2 sm:grid-cols-2">
                 {detailRows(entry.detail).map(([key, value]) => (
-                  <div key={key}><dt className="inline font-semibold">{adminValueLabel(key)}: </dt><dd className="inline break-words">{typeof value === "string" ? adminValueLabel(value) : JSON.stringify(value)}</dd></div>
+                  <div key={key}><dt className="inline font-semibold">{adminValueLabel(key)}: </dt><dd className="inline break-words">{typeof value === "string" ? (key === "from" || key === "to" ? adminTargetStatusLabel(targetType, value) : adminValueLabel(value)) : JSON.stringify(value)}</dd></div>
                 ))}
               </dl>
             ) : null}

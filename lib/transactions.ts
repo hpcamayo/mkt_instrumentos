@@ -1,3 +1,5 @@
+import { statusLabel } from "@/lib/ui/status";
+
 export type TransactionRole = "buyer" | "seller";
 export type TransactionState =
   | "unattributed"
@@ -134,17 +136,9 @@ export function parsePublicReputation(value: unknown): PublicReputation {
   return { review_count: value.review_count, average_rating: value.average_rating, items };
 }
 
+// Labels come from the one status dictionary (lib/ui/status.ts, domain "claim").
 export function transactionStateLabel(state: TransactionState) {
-  return ({
-    unattributed: "Venta sin atribuir",
-    pending: "Comprador pendiente de confirmar",
-    confirmed: "Compra confirmada",
-    verified: "Transacción verificada por ambas partes",
-    declined: "El contacto indicó que no fue comprador",
-    cancelled: "Solicitud cancelada",
-    superseded: "Solicitud reemplazada",
-    external: "Venta fuera de Laria",
-  } as const)[state];
+  return statusLabel("claim", state);
 }
 
 export function transactionErrorMessage(message: string) {

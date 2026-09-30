@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
 import { SellListingForm } from "@/components/sell-listing-form";
+import { Notice } from "@/components/ui/notice";
+import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 
 export const metadata = { title: "Publicar" };
@@ -13,17 +14,13 @@ export default async function StoreInventoryPage() {
 
   return (
       <div className="grid w-full max-w-4xl gap-6">
-        <div><p className="t-micro text-ink-2">Inventario</p><h1 className="mt-2 t-page text-ink">Publicar en tu tienda</h1></div>
-        {!eligible ? <Notice>Necesitas una cuenta de Tienda con una solicitud pendiente o aprobada.</Notice>
-        : (count ?? 0) >= 50 ? <Notice>Tu tienda alcanzó el límite de 50 publicaciones concurrentes. Cuando una deje de estar en revisión o publicada, podrás publicar otra.</Notice>
+        <PageHeader eyebrow="Inventario" title="Publicar en tu tienda" />
+        {!eligible ? <Notice tone="warning" role="note">Necesitas una cuenta de Tienda con una solicitud pendiente o aprobada.</Notice>
+        : (count ?? 0) >= 50 ? <Notice tone="warning" role="note">Tu tienda alcanzó el límite de 50 publicaciones concurrentes. Cuando una deje de estar en revisión o publicada, podrás publicar otra.</Notice>
         : <SellListingForm
             profile={{ fullName: store.contact_person ?? store.name, phone: store.whatsapp_phone, city: store.city, region: store.region }}
             store={{ id: store.id, name: store.name, status: store.status as "pending" | "active", isVerified: store.is_verified }}
           />}
       </div>
   );
-}
-
-function Notice({ children }: { children: ReactNode }) {
-  return <div className="rounded-panel bg-warning-tint p-5 text-sm leading-6 text-ink">{children}</div>;
 }

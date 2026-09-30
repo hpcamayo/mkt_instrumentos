@@ -13,6 +13,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import type { Database } from "@/lib/supabase/database.types";
 import { buttonClasses } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
+import { NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { Textarea } from "@/components/ui/textarea";
 
 type ListingRow = Database["public"]["Tables"]["listings"]["Row"];
@@ -146,8 +147,9 @@ function EditorTextarea({ label, value, onChange }: { label: string; value: stri
 function EditorError({ message, errorRef }: { message: string; errorRef: React.RefObject<HTMLParagraphElement | null> }) {
   if (!message) return null;
   return (
-    <p ref={errorRef} tabIndex={-1} role="alert" className="rounded-panel bg-danger-tint px-4 py-3 t-ui font-semibold text-danger sm:col-span-2">
-      {message}
+    <p ref={errorRef} tabIndex={-1} role="alert" className={noticeClassName("danger", "font-semibold sm:col-span-2")}>
+      <NoticeIcon tone="danger" />
+      <span>{message}</span>
     </p>
   );
 }

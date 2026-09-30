@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/logout-button";
+import { CountBadge } from "@/components/ui/tag";
 import {
   Boxes,
   BarChart3,
@@ -87,15 +88,11 @@ function AccountLinks({ items, pathname, unreadNotifications, pendingBuyerConfir
       >
         <AccountIcon name={item.icon} />
         <span className="min-w-0 flex-1">{item.label}</span>
-        {item.icon === "notifications" && unreadNotifications > 0 ? (
-          <span aria-label={`${unreadNotifications} notificaciones sin leer`} className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-action px-1.5 text-[12px] font-bold leading-none tabular-nums text-action-ink">
-            {unreadNotifications > 99 ? "99+" : unreadNotifications}
-          </span>
+        {item.icon === "notifications" ? (
+          <CountBadge count={unreadNotifications} label={`${unreadNotifications} notificaciones sin leer`} />
         ) : null}
-        {item.icon === "transactions" && pendingBuyerConfirmations > 0 ? (
-          <span aria-label={`${pendingBuyerConfirmations} compras requieren tu confirmación`} className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-action px-1.5 text-[12px] font-bold leading-none tabular-nums text-action-ink">
-            {pendingBuyerConfirmations > 99 ? "99+" : pendingBuyerConfirmations}
-          </span>
+        {item.icon === "transactions" ? (
+          <CountBadge count={pendingBuyerConfirmations} label={`${pendingBuyerConfirmations} compras requieren tu confirmación`} />
         ) : null}
       </Link>
     );

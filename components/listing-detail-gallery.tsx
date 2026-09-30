@@ -4,6 +4,7 @@ import { MarketplaceImage as Image } from "@/components/marketplace-image";
 
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { type KeyboardEvent, useState } from "react";
+import { IconButton } from "@/components/ui/button";
 import type { ListingPhotoData } from "@/lib/listings";
 
 type ListingDetailGalleryProps = {
@@ -85,22 +86,18 @@ export function ListingDetailGallery({
 
         {hasMultiplePhotos ? (
           <>
-            <button
-              type="button"
+            <IconButton
+              label="Foto anterior"
+              icon={<ChevronLeft aria-hidden="true" />}
               onClick={showPreviousPhoto}
-              aria-label="Foto anterior"
-              className="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-control border border-line-strong bg-white/95 text-ink transition-colors duration-120 hover:bg-canvas"
-            >
-              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
+              className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/95"
+            />
+            <IconButton
+              label="Foto siguiente"
+              icon={<ChevronRight aria-hidden="true" />}
               onClick={showNextPhoto}
-              aria-label="Foto siguiente"
-              className="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-control border border-line-strong bg-white/95 text-ink transition-colors duration-120 hover:bg-canvas"
-            >
-              <ChevronRight className="h-5 w-5" aria-hidden="true" />
-            </button>
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/95"
+            />
             <span className="absolute bottom-3 right-3 rounded-tag bg-frame/80 px-2 py-0.5 t-meta font-semibold tabular-nums text-white">
               {activeIndex + 1} / {photos.length}
             </span>

@@ -21,6 +21,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
 
 type ExistingPhoto = {
@@ -372,7 +373,7 @@ export function ListingEditForm({
         <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {photos.map((photo, index) => (
             <li key={photo.key} className="rounded-panel border border-subtle bg-white p-3">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-control bg-canvas"><Image src={photo.kind === "existing" ? photo.imageUrl : photo.previewUrl} alt={`Foto ${index + 1}`} fill sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw" unoptimized={photo.kind === "new" || (photo.kind === "existing" && photo.imageUrl.startsWith("/api/listing-images/"))} className="object-contain" />{index === 0 ? <span className="absolute left-2 top-2 rounded-tag bg-frame px-2 py-0.5 t-meta font-semibold text-white">Principal</span> : null}</div>
+              <div className="relative aspect-[4/3] overflow-hidden rounded-control bg-canvas"><Image src={photo.kind === "existing" ? photo.imageUrl : photo.previewUrl} alt={`Foto ${index + 1}`} fill sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw" unoptimized={photo.kind === "new" || (photo.kind === "existing" && photo.imageUrl.startsWith("/api/listing-images/"))} className="object-contain" />{index === 0 ? <Tag tone="solid" className="absolute left-2 top-2">Principal</Tag> : null}</div>
               <p className="mt-2 t-meta font-semibold">Foto {index + 1} de {photos.length}{index === 0 ? " · Principal" : ""}</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button type="button" disabled={busy || index === 0} aria-label={`Mover foto ${index + 1} antes`} onClick={() => movePhoto(index, -1)} className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11" })}>Anterior</button>

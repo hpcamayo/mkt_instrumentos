@@ -12,7 +12,6 @@ import {
 } from "@/components_v0/verified-stores";
 import {
   categoryOptions,
-  formatPrice,
   normalizeStore,
   type ListingCardData,
 } from "@/lib/listings";
@@ -130,7 +129,7 @@ function toFeaturedListings(listings: ListingCardData[]): FeaturedListing[] {
       id: listing.id,
       title: listing.title,
       slug: listing.slug,
-      price: formatPrice(listing.price_pen),
+      pricePen: listing.price_pen,
       location: `${listing.city}, ${listing.region}`,
       imageUrl: photo?.image_url ?? null,
       imageAlt: photo?.alt_text ?? listing.title,

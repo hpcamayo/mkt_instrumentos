@@ -7,6 +7,7 @@ import {
 import { getAccountContext } from "@/lib/account-context";
 import { getAccountAnalytics } from "@/lib/account-analytics";
 import { buttonClasses } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata = { title: "Mis publicaciones" };
 
@@ -36,8 +37,13 @@ export default async function ParticularListingsPage() {
   }));
   return (
     <section className="rounded-panel border border-subtle bg-white">
-      <div className="flex flex-col gap-3 border-b border-subtle p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="t-micro text-ink-2">Cuenta Particular</p><h1 className="mt-1 t-page text-ink">Mis publicaciones</h1></div><Link href="/mi-cuenta/publicar" className={buttonClasses()}>Publicar instrumento</Link></div>
-      <ListingManagementTable listings={managedListings} emptyMessage="Aún no tienes publicaciones." />
+      <PageHeader
+        className="border-b border-subtle p-5"
+        eyebrow="Cuenta Particular"
+        title="Mis publicaciones"
+        actions={<Link href="/mi-cuenta/publicar" className={buttonClasses()}>Publicar instrumento</Link>}
+      />
+      <ListingManagementTable listings={managedListings} emptyMessage="Aún no tienes publicaciones" />
       <p className="border-t border-subtle p-5 text-meta leading-6 text-ink-2">{analytics ? "Vistas acumuladas de todo el historial, incluidas las históricas. Contactos por WhatsApp registrados desde el inicio del seguimiento; no equivalen a mensajes ni ventas." : "Las métricas no están disponibles en este momento; no se muestran ceros estimados."} La fecha de publicación corresponde a la primera publicación.</p>
     </section>
   );

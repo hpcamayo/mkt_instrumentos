@@ -7,12 +7,13 @@ import { ListingImpressionBoundary } from "@/components/marketplace-telemetry";
 import { FavoriteButton } from "@/components/favorite-button";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Price } from "@/components/ui/price";
 
 export type FeaturedListing = {
   id: string;
   title: string;
   slug: string;
-  price: string;
+  pricePen: number | null;
   location: string;
   imageUrl: string | null;
   imageAlt: string;
@@ -102,9 +103,7 @@ function ListingPreviewCard({ listing }: { listing: FeaturedListing }) {
           <h3 className="line-clamp-2 t-card-title text-ink underline-offset-4 group-hover:underline group-hover:decoration-accent group-hover:decoration-2">
             {listing.title}
           </h3>
-          <span className="shrink-0 text-right t-card-price text-ink">
-            {listing.price}
-          </span>
+          <Price value={listing.pricePen} className="shrink-0 justify-end text-right" />
         </div>
         <div className="flex flex-wrap items-center gap-3 t-meta">
           <span className="flex items-center gap-1">

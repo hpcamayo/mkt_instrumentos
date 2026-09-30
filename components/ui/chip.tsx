@@ -51,12 +51,13 @@ export function ChipLink({
   );
 }
 
-// An applied filter: pressing it removes the filter.
+// An applied filter: pressing it removes the filter. A plain link on purpose: the full page load also resets
+// the filter form, whose fields are uncontrolled (components/listing-filters.tsx).
 export function AppliedChip({ href, label, className }: { href: string; label: string; className?: string }) {
   return (
-    <Link href={href} aria-label={`Quitar filtro: ${label}`} className={chipClasses("applied", className)}>
+    <a href={href} aria-label={`Quitar filtro: ${label}`} className={chipClasses("applied", className)}>
       <span className="truncate">{label}</span>
       <X aria-hidden />
-    </Link>
+    </a>
   );
 }

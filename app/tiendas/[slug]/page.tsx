@@ -24,6 +24,8 @@ import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/
 import { storeInitials } from "@/lib/ui/initials";
 import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
 import { buttonClasses } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
 import { VerifiedMark } from "@/components/ui/verified-mark";
 import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
@@ -288,9 +290,9 @@ function StoreView({
       </div>
 
       {hasError ? (
-        <p role="alert">
+        <Notice tone="danger" role="alert">
           No se pudieron cargar las publicaciones. Intenta nuevamente.
-        </p>
+        </Notice>
       ) : listings.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {listings.map((listing) => (
@@ -298,14 +300,11 @@ function StoreView({
           ))}
         </div>
       ) : (
-        <div className="rounded-panel border border-subtle bg-white p-6 t-ui text-ink-2">
-          <p className="font-semibold text-ink">
-            Esta tienda aún no tiene publicaciones.
-          </p>
-          <p className="mt-1">
-            Vuelve pronto para revisar sus instrumentos aprobados.
-          </p>
-        </div>
+        <EmptyState
+          headingLevel={3}
+          title="Esta tienda aún no tiene publicaciones"
+          description="Vuelve pronto para revisar sus instrumentos aprobados."
+        />
       )}
       {!hasError && (
         <Pagination page={page} total={total} path={`/tiendas/${store.slug}`} />
@@ -318,13 +317,16 @@ function SupabaseSetupMessage() {
   warnMissingSupabaseEnv();
   return (
     <PageContainer as="section" className="py-8">
-      <div className="max-w-3xl rounded-panel bg-warning-tint p-5 t-ui text-ink">
-        <h1 className="t-section text-ink">
-          Esta tienda no está disponible por ahora
-        </h1>
-        <p className="mt-2">
-          Intenta nuevamente en unos minutos.
-        </p>
+      <div className={noticeClassName("warning", "max-w-3xl p-5")}>
+        <NoticeIcon tone="warning" />
+        <div>
+          <h1 className="t-section text-ink">
+            Esta tienda no está disponible por ahora
+          </h1>
+          <p className="mt-2">
+            Intenta nuevamente en unos minutos.
+          </p>
+        </div>
       </div>
     </PageContainer>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChipLink } from "@/components/ui/chip";
+import { PageHeader } from "@/components/ui/page-header";
 import { redirect } from "next/navigation";
 import { AccountAnalyticsMetrics } from "@/components/account-analytics";
 import { getAccountAnalytics, parseAnalyticsWindow } from "@/lib/account-analytics";
@@ -16,9 +17,11 @@ export default async function StoreStatisticsPage({ searchParams }: { searchPara
   return (
     <div className="space-y-5">
       <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
-        <p className="t-micro text-ink-2">{store.name}</p>
-        <h1 className="mt-1 t-page text-ink">Estadísticas</h1>
-        <p className="mt-2 t-ui text-ink-2">Actividad real registrada en Laria. Consulta las vistas y contactos de cada publicación en tu <Link href="/mi-cuenta/tienda/inventario" className="link font-semibold">inventario</Link>.</p>
+        <PageHeader
+          eyebrow={store.name}
+          title="Estadísticas"
+          meta={<p>Actividad real registrada en Laria. Consulta las vistas y contactos de cada publicación en tu <Link href="/mi-cuenta/tienda/inventario" className="link font-semibold">inventario</Link>.</p>}
+        />
         <nav aria-label="Periodo de estadísticas" className="mt-4 flex flex-wrap gap-2">
           {([0, 7, 30] as const).map((period) => <ChipLink key={period} href={`/mi-cuenta/tienda/estadisticas?periodo=${period}`} selected={days === period} current="page">{period === 0 ? "Todo el historial" : `${period} días`}</ChipLink>)}
         </nav>

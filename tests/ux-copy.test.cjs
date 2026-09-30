@@ -153,5 +153,36 @@ test("status labels come from the one dictionary", () => {
   const admin = fs.readFileSync("components/admin-domain-view.tsx", "utf8");
   assert.match(admin, /publicaciones: dictionaryOptions\("listing"/);
   assert.match(admin, /revisiones: dictionaryOptions\("revision"/);
+  assert.match(admin, /resenas: dictionaryOptions\("review"/);
   assert.doesNotMatch(admin, /label: "Aprobada"/);
+});
+
+test("Admin, Compras y ventas and store standing read their statuses from the same dictionary", () => {
+  const { statusLabel, storeStatusEntry } = require(path.resolve("lib/ui/status.ts"));
+  // Compras y ventas: every state the RPC returns has a dictionary label.
+  const { transactionStateLabel } = require(path.resolve("lib/transactions.ts"));
+  for (const state of ["unattributed", "pending", "confirmed", "verified", "declined", "cancelled", "superseded", "external"]) {
+    assert.equal(transactionStateLabel(state), statusLabel("claim", state));
+    assert.notEqual(transactionStateLabel(state), state);
+  }
+  // Admin: a report's target and the audit history use the target's own domain, never a second vocabulary.
+  const { adminTargetStatusLabel } = require(path.resolve("lib/admin.ts"));
+  assert.equal(adminTargetStatusLabel("listing", "pending"), "En revisión");
+  assert.equal(adminTargetStatusLabel("store", "active"), "Activa");
+  assert.equal(adminTargetStatusLabel("review", "visible"), "Visible");
+  assert.equal(adminTargetStatusLabel("listing_revision", "approved"), "Cambios aprobados");
+  // Admin transactions: the filter labels (pinned by tests/sprint-8.test.cjs) match the status tags.
+  const admin = fs.readFileSync("components/admin-domain-view.tsx", "utf8");
+  const filters = admin.slice(admin.indexOf("  transacciones: ["), admin.indexOf("  ],", admin.indexOf("  transacciones: [")));
+  const options = [...filters.matchAll(/value: "(\w+)", label: "([^"]+)"/g)];
+  assert.ok(options.length >= 5);
+  for (const [, value, label] of options) assert.equal(statusLabel("transaction", value), label);
+  assert.match(admin, /transacciones: "transaction"/);
+  for (const status of ["declined", "external", "superseded"]) assert.notEqual(statusLabel("transaction", status), status);
+  // Store standing (account summary, store page, Admin) comes from one helper.
+  assert.equal(storeStatusEntry("active", true).label, "Tienda verificada");
+  assert.equal(storeStatusEntry("pending", false).label, statusLabel("store", "pending"));
+  for (const file of ["app/mi-cuenta/page.tsx", "app/mi-cuenta/tienda/page.tsx", "components/admin-domain-view.tsx"]) {
+    assert.match(fs.readFileSync(file, "utf8"), /storeStatusEntry\(/, file);
+  }
 });

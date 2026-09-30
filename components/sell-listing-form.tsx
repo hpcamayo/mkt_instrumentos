@@ -25,6 +25,7 @@ import { parseWholeSolPrice } from "@/lib/price";
 import { createPublicSubmission } from "@/lib/public-submission";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Button, buttonClasses } from "@/components/ui/button";
+import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
@@ -285,7 +286,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
               <li key={`${photo.name}-${photo.lastModified}-${index}`} className="rounded-panel border border-subtle bg-white p-3">
                 <div className="relative aspect-[4/3] overflow-hidden rounded-control bg-canvas">
                   <Image src={photoPreviews[index]} alt={`Vista previa ${index + 1}`} fill unoptimized className="object-contain" />
-                  {index === 0 ? <span className="absolute left-2 top-2 rounded-tag bg-frame px-2 py-0.5 t-meta font-semibold text-white">Principal</span> : null}
+                  {index === 0 ? <Tag tone="solid" className="absolute left-2 top-2">Principal</Tag> : null}
                 </div>
                 <p className="mt-2 truncate t-meta">{photo.name}</p>
                 <div className="mt-3 grid grid-cols-2 gap-2">

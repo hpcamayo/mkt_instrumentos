@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { PageContainer } from "@/components/page-container";
+import { Notice } from "@/components/ui/notice";
+import { PageHeader } from "@/components/ui/page-header";
 import { LEGAL_LAST_UPDATED, getLegalContactEmail, legalPages } from "@/lib/legal-pages";
 
 // Shared shell for Terms, Privacy, prohibited items and safety guidance.
@@ -44,9 +46,7 @@ export function LegalPage({
           </nav>
 
           <article className="min-w-0 rounded-panel border border-subtle bg-white p-5 sm:p-8">
-            <p className="t-micro text-ink-2">{eyebrow}</p>
-            <h1 className="mt-2 t-page text-ink">{title}</h1>
-            <p className="mt-2 t-meta">Última actualización: {LEGAL_LAST_UPDATED}</p>
+            <PageHeader eyebrow={eyebrow} title={title} meta={`Última actualización: ${LEGAL_LAST_UPDATED}`} />
             <div className="mt-4 max-w-[68ch] t-body text-ink-2">{intro}</div>
             <div className="mt-6 grid max-w-[68ch] gap-7">{children}</div>
           </article>
@@ -70,7 +70,7 @@ export function LegalSection({ title, children }: { title: string; children: Rea
 // States the platform limitations required by the V1 contract in one place.
 export function MarketplaceLimitations() {
   return (
-    <div className="rounded-panel bg-accent-tint px-4 py-3 t-ui text-ink">
+    <Notice tone="info" role="note">
       <p className="font-semibold">Laria conecta compradores y vendedores. La compraventa se acuerda y se realiza directamente entre ellos.</p>
       <ul className="mt-2 grid list-disc gap-1 pl-5 text-ink-2">
         <li>Laria no procesa pagos ni cobra comisiones por venta.</li>
@@ -79,7 +79,7 @@ export function MarketplaceLimitations() {
         <li>Laria no garantiza la autenticidad, el estado ni el funcionamiento de los productos.</li>
         <li>Laria no garantiza que una transacción se concrete ni resuelve disputas entre las partes.</li>
       </ul>
-    </div>
+    </Notice>
   );
 }
 

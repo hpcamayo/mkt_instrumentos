@@ -17,12 +17,15 @@ import type {
   AdminDomainPayload,
   AdminJsonItem,
 } from "@/lib/admin";
-import { adminValueLabel } from "@/lib/admin";
+import { adminTargetStatusLabel, adminValueLabel } from "@/lib/admin";
 import { buttonClasses } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Field, Input, Select } from "@/components/ui/field";
-import { noticeClassName } from "@/components/ui/notice";
-import { statusLabel, type StatusDomain } from "@/lib/ui/status";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Notice, noticeClassName } from "@/components/ui/notice";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusEntryTag } from "@/components/ui/tag";
+import { statusEntry, statusLabel, storeStatusEntry, type StatusDomain, type StatusEntry } from "@/lib/ui/status";
 import { Textarea } from "@/components/ui/textarea";
 
 const domainCopy: Record<AdminDomain, { title: string; description: string }> = {
@@ -75,10 +78,7 @@ const statusOptions: Partial<Record<AdminDomain, { value: string; label: string 
     { value: "store_owner", label: "Tienda" },
   ],
   reportes: dictionaryOptions("report", ["open", "resolved", "dismissed"]),
-  resenas: [
-    { value: "visible", label: "Visible" },
-    { value: "hidden", label: "Oculta" },
-  ],
+  resenas: dictionaryOptions("review", ["visible", "hidden"]),
   transacciones: [
     { value: "pending", label: "Pendiente" },
     { value: "verified", label: "Verificada" },
@@ -114,16 +114,17 @@ const statusDomains: Partial<Record<AdminDomain, StatusDomain>> = {
   revisiones: "revision",
   tiendas: "store",
   reportes: "report",
+  resenas: "review",
+  transacciones: "transaction",
 };
 
-function statusText(item: AdminJsonItem, domain: AdminDomain) {
-  if (item.is_verified === true && adminString(item, "status") === "active") {
-    return "Tienda verificada";
-  }
+// The record's status from the one dictionary; an active verified store reads "Tienda verificada".
+function statusText(item: AdminJsonItem, domain: AdminDomain): StatusEntry | null {
   const status = adminString(item, "status");
-  if (!status) return "";
+  if (!status) return null;
+  if (domain === "tiendas") return storeStatusEntry(status, item.is_verified === true);
   const dictionary = statusDomains[domain];
-  return dictionary ? statusLabel(dictionary, status) : adminValueLabel(status);
+  return dictionary ? statusEntry(dictionary, status) : { label: adminValueLabel(status), tone: "neutral" };
 }
 
 function Detail({ label, value }: { label: string; value: string | number | null | undefined }) {
@@ -229,6 +230,7 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
   const storeReportsHref = domain === "tiendas" && id
     ? `/admin/reportes?tipo=store&buscar=${encodeURIComponent(id)}`
     : "";
+  const statusTag = statusText(item, domain);
   return (
     <article className="grid gap-3 rounded-panel border border-subtle bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -236,7 +238,7 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
           <h2 className="break-words font-semibold text-ink">{title}</h2>
           <p className="mt-1 break-all text-meta text-ink-2">{id}{created ? ` · ${adminDate(created)}` : ""}</p>
         </div>
-        {statusText(item, domain) ? <span className="rounded-tag bg-subtle px-2 py-0.5 t-meta font-semibold text-ink">{statusText(item, domain)}</span> : null}
+        {statusTag ? <StatusEntryTag entry={statusTag} /> : null}
       </div>
       <div className="grid gap-x-5 gap-y-1 text-sm leading-6 text-ink-2 sm:grid-cols-2">
         <Detail label="Responsable" value={adminString(item, "owner_name")} />
@@ -276,7 +278,7 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
         <Detail label="Reportes abiertos" value={item.open_report_count as number | undefined} />
         <Detail label="Reportes abiertos para el objetivo" value={item.open_target_report_count as number | undefined} />
         <Detail label="Reportes históricos para el objetivo" value={item.target_report_count as number | undefined} />
-        <Detail label="Estado del objetivo" value={adminValueLabel(adminString(item, "target_status"))} />
+        <Detail label="Estado del objetivo" value={adminTargetStatusLabel(targetType, adminString(item, "target_status"))} />
         <Detail label="Responsable del objetivo" value={adminString(item, "target_owner_name")} />
         <Detail label="Campos" value={Array.isArray(item.changed_fields) ? item.changed_fields.filter((value): value is string => typeof value === "string").map(adminValueLabel).join(", ") : ""} />
         <Detail label="Motivo previo" value={adminString(item, "rejection_reason") || adminString(item, "hidden_reason")} />
@@ -469,13 +471,14 @@ export function AdminDomainView({
 
   return (
     <div className="grid gap-5">
-      <header className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
-        <p className="t-micro text-ink-2">Administración</p>
-        <h1 className="mt-2 t-page text-ink">{copy.title}</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-2">{copy.description}</p>
-      </header>
+      <PageHeader
+        className="rounded-panel border border-subtle bg-white p-5 sm:p-6"
+        eyebrow="Administración"
+        title={copy.title}
+        meta={<p className="max-w-3xl">{copy.description}</p>}
+      />
       {notice ? <p ref={noticeRef} tabIndex={-1} role="status" className={noticeClassName("success", "font-semibold")}>{notice}</p> : null}
-      {loadError ? <p role="alert" className="rounded-control bg-danger-tint p-3 text-sm font-semibold text-danger">{loadError}</p> : null}
+      {loadError ? <Notice tone="danger" role="alert">{loadError}</Notice> : null}
 
       {domain === "usuarios" ? <AdminInviteUser /> : null}
 
@@ -536,7 +539,7 @@ export function AdminDomainView({
       ) : (
         <div className="grid gap-3 xl:grid-cols-2">
           {items.map((item) => <DomainCard key={adminString(item, "id") || adminString(item, "claim_id")} domain={domain} item={item} onComplete={complete} />)}
-          {!items.length && !loadError ? <p className="rounded-panel border border-dashed border-line-strong bg-white p-8 text-center text-sm text-ink-2 xl:col-span-2">No hay registros para estos filtros.</p> : null}
+          {!items.length && !loadError ? <EmptyState className="xl:col-span-2" title="No hay registros para estos filtros" /> : null}
         </div>
       )}
 

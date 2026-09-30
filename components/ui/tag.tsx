@@ -1,6 +1,6 @@
 import { Archive, Check, Clock, EyeOff, Pause, Pencil, Tag as TagIcon, X } from "lucide-react";
 import type { ReactNode } from "react";
-import { statusEntry, type StatusDomain, type StatusIcon, type StatusTone } from "@/lib/ui/status";
+import { statusEntry, type StatusDomain, type StatusEntry, type StatusIcon, type StatusTone } from "@/lib/ui/status";
 import { cn } from "@/lib/utils";
 
 // Rectangular tags with always-readable text; state is never told by color alone (icon + word).
@@ -50,7 +50,11 @@ export function Tag({
 }
 
 export function StatusTag({ domain, status, className }: { domain: StatusDomain; status: string | null | undefined; className?: string }) {
-  const entry = statusEntry(domain, status);
+  return <StatusEntryTag entry={statusEntry(domain, status)} className={className} />;
+}
+
+// For a status already resolved to a dictionary entry (or a derived one such as "Tienda verificada").
+export function StatusEntryTag({ entry, className }: { entry: StatusEntry; className?: string }) {
   return (
     <Tag tone={entry.tone} icon={entry.icon ? ICONS[entry.icon] : undefined} className={className}>
       {entry.label}

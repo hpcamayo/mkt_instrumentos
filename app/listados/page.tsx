@@ -30,6 +30,10 @@ import { listingFiltersToSearchAlert } from "@/lib/search-alerts";
 import { fetchCatalogPage } from "@/lib/catalog";
 import { buildCatalogMetadata } from "@/lib/seo";
 import { buttonClasses } from "@/components/ui/button";
+import { AppliedChip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Notice } from "@/components/ui/notice";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -106,12 +110,7 @@ function ListingsView({
         <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <p className="t-micro text-ink-2">
-                Catálogo
-              </p>
-              <h1 className="mt-2 t-page text-ink">
-                Instrumentos disponibles
-              </h1>
+              <PageHeader eyebrow="Catálogo" title="Instrumentos disponibles" />
               <p className="mt-3 max-w-[68ch] t-body text-ink-2">
                 Explora publicaciones aprobadas de particulares y tiendas.
                 Cuando algo te interese, abre el detalle y conversa directo por
@@ -132,27 +131,17 @@ function ListingsView({
             <CreateSearchAlert filters={listingFiltersToSearchAlert(filters)} />
 
             {errorMessage ? (
-              <div className="rounded-panel bg-danger-tint p-4 t-ui font-semibold text-danger">
+              <Notice tone="danger" role="alert">
                 No se pudieron cargar las publicaciones. Intenta nuevamente.
-              </div>
+              </Notice>
             ) : null}
 
             {!errorMessage && listings.length === 0 ? (
-              <div className="rounded-panel border border-subtle bg-white p-8 text-center text-sm leading-6 text-ink-2">
-                <p className="t-section text-ink">
-                  No encontramos resultados con esos filtros
-                </p>
-                <p className="mx-auto mt-2 max-w-md">
-                  Prueba ampliar la búsqueda, cambiar la ciudad o revisar otra
-                  categoría de instrumentos.
-                </p>
-                <a
-                  href="/listados"
-                  className={buttonClasses({ className: "mt-5" })}
-                >
-                  Limpiar filtros
-                </a>
-              </div>
+              <EmptyState
+                title="No encontramos resultados con esos filtros"
+                description="Prueba ampliar la búsqueda, cambiar la ciudad o revisar otra categoría de instrumentos."
+                actions={<a href="/listados" className={buttonClasses()}>Limpiar filtros</a>}
+              />
             ) : null}
 
             {listings.length > 0 ? (
@@ -187,15 +176,7 @@ function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {chips.map((chip) => (
-        <a
-          key={chip.key}
-          href={chip.href}
-          aria-label={`Quitar filtro: ${chip.label}`}
-          className="inline-flex h-10 items-center gap-1.5 rounded-control bg-accent-tint px-3 t-ui font-semibold text-ink transition-colors duration-120 hover:bg-accent/30"
-        >
-          {chip.label}
-          <span aria-hidden="true">×</span>
-        </a>
+        <AppliedChip key={chip.key} href={chip.href} label={chip.label} />
       ))}
       <a
         href="/listados"
@@ -213,21 +194,14 @@ function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
     <section className="bg-canvas/70">
       <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
         <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
-          <p className="t-micro text-ink-2">
-            Catálogo
-          </p>
-          <h1 className="mt-2 t-page text-ink">
-            El catálogo no está disponible por ahora
-          </h1>
+          <PageHeader eyebrow="Catálogo" title="El catálogo no está disponible por ahora" />
           <p className="mt-3 max-w-[68ch] t-body text-ink-2">
             Intenta nuevamente en unos minutos.
           </p>
         </div>
         <div className="grid gap-5 lg:grid-cols-[286px_minmax(0,1fr)] lg:items-start xl:gap-6">
           <ListingFilters filters={filters} />
-          <div className="rounded-panel bg-warning-tint p-4 t-ui text-ink">
-            No pudimos conectar con el catálogo.
-          </div>
+          <Notice tone="warning">No pudimos conectar con el catálogo.</Notice>
         </div>
       </PageContainer>
     </section>

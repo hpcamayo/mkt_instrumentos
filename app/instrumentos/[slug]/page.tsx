@@ -13,6 +13,9 @@ import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PageContainer } from "@/components/page-container";
 import { ReputationSummary } from "@/components/reputation-summary";
 import { buttonClasses } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
+import { Price } from "@/components/ui/price";
 import { StatusTag, Tag } from "@/components/ui/tag";
 import { VerifiedMark } from "@/components/ui/verified-mark";
 import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
@@ -23,7 +26,6 @@ import {
 } from "@/lib/listing-specs";
 import {
   buildWhatsAppUrl,
-  formatPrice,
   getCategoryLabel,
   getListingDisplayTitle,
   getListingSecondaryTitle,
@@ -357,8 +359,8 @@ function ListingDetail({
                   {secondaryTitle}
                 </p>
               ) : null}
-              <p className="mt-5 t-price-detail text-ink">
-                {formatPrice(listing.price_pen)}
+              <p className="mt-5">
+                <Price value={listing.price_pen} size="detail" />
               </p>
 
               <ListingDetailMetadata
@@ -396,14 +398,14 @@ function ListingDetail({
                 </div>
               )}
 
-              <p className="mt-4 rounded-panel bg-accent-tint p-3 t-meta text-ink">
+              <Notice tone="info" role="note" className="mt-4">
                 Contacto directo por WhatsApp. Laria no procesa pagos, no retiene
                 dinero, no gestiona envíos ni garantiza la transacción o el
                 producto.{" "}
                 <Link href="/consejos-de-seguridad" className="link font-semibold">
                   Consejos de seguridad
                 </Link>
-              </p>
+              </Notice>
               <div className="mt-3">
                 <ContentReport
                   targetType="listing"
@@ -830,9 +832,7 @@ function RelatedListingsSection({
           ))}
         </div>
       ) : (
-        <div className="rounded-panel border border-subtle bg-white p-5 t-ui text-ink-2">
-          {emptyMessage ?? "No hay publicaciones disponibles por ahora."}
-        </div>
+        <EmptyState headingLevel={3} title={emptyMessage ?? "No hay publicaciones disponibles por ahora"} />
       )}
     </section>
   );
@@ -857,13 +857,16 @@ function SupabaseSetupMessage() {
   return (
     <section className="bg-canvas/70">
       <PageContainer className="py-8">
-        <div className="max-w-3xl rounded-panel bg-warning-tint p-5 t-ui text-ink">
-          <h1 className="t-section text-ink">
-            Esta publicación no está disponible por ahora
-          </h1>
-          <p className="mt-2">
-            Intenta nuevamente en unos minutos.
-          </p>
+        <div className={noticeClassName("warning", "max-w-3xl p-5")}>
+          <NoticeIcon tone="warning" />
+          <div>
+            <h1 className="t-section text-ink">
+              Esta publicación no está disponible por ahora
+            </h1>
+            <p className="mt-2">
+              Intenta nuevamente en unos minutos.
+            </p>
+          </div>
         </div>
       </PageContainer>
     </section>
@@ -881,7 +884,7 @@ async function SimilarListings({
   return (
     <RelatedListingsSection
       title="Publicaciones similares"
-      emptyMessage="Todavía no hay publicaciones similares."
+      emptyMessage="Todavía no hay publicaciones similares"
       listings={result.listings}
     />
   );

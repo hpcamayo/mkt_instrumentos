@@ -5,6 +5,7 @@ import { LocationFields } from "@/components/location-fields";
 import { normalizePeruRegion } from "@/lib/location";
 import { buttonClasses } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
+import { NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { Textarea } from "@/components/ui/textarea";
 
 type InviteAccountType = "seller" | "store_owner";
@@ -153,20 +154,21 @@ export function AdminInviteUser() {
               ref={feedbackRef}
               tabIndex={-1}
               role={failed ? "alert" : "status"}
-              className={failed
-                ? "rounded-panel bg-danger-tint px-4 py-3 t-ui font-semibold text-danger"
-                : "rounded-panel bg-accent-tint px-4 py-3 t-ui font-semibold text-ink"}
+              className={noticeClassName(failed ? "danger" : "success")}
             >
-              <p>{message}</p>
-              {result ? (
-                <div className="mt-2 text-ink-2">
-                  <p>{result.fullName} · {result.email}</p>
-                  <p>Tipo: {result.accountType === "seller" ? "Particular" : "Tienda"}</p>
-                  <p>Destino: {result.finalInvitePath}</p>
-                  {result.storeName ? <p>Tienda: {result.storeName}</p> : null}
-                  {result.notes ? <p>Notas: {result.notes}</p> : null}
-                </div>
-              ) : null}
+              <NoticeIcon tone={failed ? "danger" : "success"} />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">{message}</p>
+                {result ? (
+                  <div className="mt-2 text-ink-2">
+                    <p>{result.fullName} · {result.email}</p>
+                    <p>Tipo: {result.accountType === "seller" ? "Particular" : "Tienda"}</p>
+                    <p>Destino: {result.finalInvitePath}</p>
+                    {result.storeName ? <p>Tienda: {result.storeName}</p> : null}
+                    {result.notes ? <p>Notas: {result.notes}</p> : null}
+                  </div>
+                ) : null}
+              </div>
             </div>
           ) : null}
           <button type="submit" disabled={busy} className={buttonClasses({ variant: "secondary", className: "w-fit" })}>

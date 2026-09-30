@@ -1,4 +1,6 @@
 import { TransactionCenter } from "@/components/transaction-center";
+import { Notice } from "@/components/ui/notice";
+import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 import { parseTransactionCenter } from "@/lib/transactions";
 
@@ -13,17 +15,13 @@ export default async function TransactionsPage() {
 
   return (
     <section className="grid gap-5">
-      <div>
-        <p className="t-micro text-ink-2">Mi cuenta</p>
-        <h1 className="mt-1 t-page text-ink">Compras y ventas</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-2">
-          Confirma relaciones originadas en Laria y gestiona reseñas. Laria no confirma pagos, entregas, envíos ni la condición del instrumento.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Mi cuenta"
+        title="Compras y ventas"
+        meta={<p className="max-w-3xl">Confirma relaciones originadas en Laria y gestiona reseñas. Laria no confirma pagos, entregas, envíos ni la condición del instrumento.</p>}
+      />
       {error ? (
-        <p role="alert" className="rounded-panel bg-danger-tint p-4 text-sm text-danger">
-          No pudimos cargar tus transacciones. Intenta nuevamente.
-        </p>
+        <Notice tone="danger" role="alert">No pudimos cargar tus transacciones. Intenta nuevamente.</Notice>
       ) : <TransactionCenter items={items} />}
     </section>
   );

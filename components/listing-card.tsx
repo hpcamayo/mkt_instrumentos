@@ -8,8 +8,9 @@ import { useEffect, useState } from "react";
 import { useListingImpression } from "@/components/marketplace-telemetry";
 import type { EventSource } from "@/lib/marketplace-event-payload";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
+import { Price } from "@/components/ui/price";
+import { Tag } from "@/components/ui/tag";
 import {
-  formatPrice,
   getCategoryLabel,
   getListingDisplayTitle,
   getListingSecondaryTitle,
@@ -36,10 +37,7 @@ export function ListingCard({ listing, source = "catalog" }: ListingCardProps) {
   const photoCount = listing.photo_count ?? photos.length;
   const activePhoto = photos[activePhotoIndex] ?? photos[0];
   const sellerLabel = getSellerBadgeLabel(listing, store);
-  const sellerBadgeClass =
-    sellerLabel === "Tienda verificada"
-      ? "bg-accent-tint text-ink"
-      : "bg-subtle text-ink";
+  const sellerBadgeTone = sellerLabel === "Tienda verificada" ? "accent" : "neutral";
   const displayTitle = getListingDisplayTitle(listing);
   const secondaryTitle = getListingSecondaryTitle(listing);
   const categoryLabel = getListingTagLabel(listing);
@@ -213,11 +211,9 @@ export function ListingCard({ listing, source = "catalog" }: ListingCardProps) {
                 {displayTitle}
               </Link>
             </h2>
-            <span
-              className={`shrink-0 rounded-tag px-2 py-0.5 t-meta font-semibold ${sellerBadgeClass}`}
-            >
+            <Tag tone={sellerBadgeTone} className="shrink-0">
               {sellerLabel}
-            </span>
+            </Tag>
           </div>
 
           {secondaryTitle ? (
@@ -232,8 +228,8 @@ export function ListingCard({ listing, source = "catalog" }: ListingCardProps) {
         </div>
 
         <div className="space-y-1">
-          <p className="t-card-price text-ink">
-            {formatPrice(listing.price_pen)}
+          <p>
+            <Price value={listing.price_pen} />
           </p>
           <div className="flex items-center justify-between gap-2 t-meta">
             <p className="min-w-0 truncate">

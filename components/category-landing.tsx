@@ -1,4 +1,8 @@
 import { buttonClasses } from "@/components/ui/button";
+import { ChipLink } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Notice } from "@/components/ui/notice";
+import { PageHeader } from "@/components/ui/page-header";
 import Link from "next/link";
 import { CreateSearchAlert } from "@/components/create-search-alert";
 import { JsonLd } from "@/components/json-ld";
@@ -85,8 +89,7 @@ export function CategoryLanding({
             </nav>
             <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
-                <p className="t-micro text-ink-2">Categoría</p>
-                <h1 className="mt-2 t-page text-ink">{landing.heading}</h1>
+                <PageHeader eyebrow="Categoría" title={landing.heading} />
                 <p className="mt-3 max-w-[68ch] t-body text-ink-2">{landing.intro}</p>
               </div>
               <div className="inline-flex w-fit items-center gap-2 t-ui font-semibold text-ink tabular-nums">
@@ -97,13 +100,9 @@ export function CategoryLanding({
               <div className="mt-4 flex flex-wrap items-center gap-2">
                 <span className="t-micro text-ink-2">Tipos</span>
                 {types.map((type) => (
-                  <Link
-                    key={type.value}
-                    href={categoryTypePath(landing.category, type.value)}
-                    className="inline-flex min-h-10 items-center rounded-control border border-line-strong bg-white px-3 py-1.5 t-ui font-semibold text-ink transition-colors duration-120 hover:bg-canvas"
-                  >
+                  <ChipLink key={type.value} href={categoryTypePath(landing.category, type.value)}>
                     {type.label}
-                  </Link>
+                  </ChipLink>
                 ))}
               </div>
             ) : null}
@@ -116,22 +115,20 @@ export function CategoryLanding({
               <CreateSearchAlert filters={alertFilters} />
 
               {errorMessage ? (
-                <div role="alert" className="rounded-panel bg-danger-tint p-4 t-ui font-semibold text-danger">
+                <Notice tone="danger" role="alert">
                   No se pudieron cargar las publicaciones. Intenta nuevamente en unos minutos.
-                </div>
+                </Notice>
               ) : null}
 
               {!errorMessage && listings.length === 0 ? (
-                <div className="rounded-panel border border-subtle bg-white p-8 text-center t-body text-ink-2">
-                  <p className="t-section text-ink">Aún no hay publicaciones de {landing.label.toLowerCase()}</p>
-                  <p className="mx-auto mt-2 max-w-md">
-                    Crea una alerta para enterarte cuando aparezca una nueva publicación, o revisa el resto del catálogo.
-                  </p>
-                  <div className="mt-5 flex flex-wrap justify-center gap-3">
+                <EmptyState
+                  title={`Aún no hay publicaciones de ${landing.label.toLowerCase()}`}
+                  description="Crea una alerta para enterarte cuando aparezca una nueva publicación, o revisa el resto del catálogo."
+                  actions={<>
                     <Link href="/listados" className={buttonClasses()}>Ver todo el catálogo</Link>
                     <Link href="/vender" className={buttonClasses({ variant: "secondary" })}>Publicar un instrumento</Link>
-                  </div>
-                </div>
+                  </>}
+                />
               ) : null}
 
               {listings.length > 0 ? (

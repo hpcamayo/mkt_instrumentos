@@ -1,4 +1,5 @@
 import type { Json } from "@/lib/supabase/database.types";
+import { statusDomainForTarget, statusLabel } from "@/lib/ui/status";
 
 export const ADMIN_QUEUES = [
   "publicaciones",
@@ -100,6 +101,13 @@ const ADMIN_VALUE_LABELS: Record<string, string> = {
 
 export function adminValueLabel(value: string) {
   return ADMIN_VALUE_LABELS[value] ?? value.replaceAll("_", " ");
+}
+
+// A status of a listing, revision, store, report or review reads from the one status dictionary
+// (lib/ui/status.ts), so Admin shows the same words as the rest of the product.
+export function adminTargetStatusLabel(targetType: string, status: string) {
+  const domain = statusDomainForTarget(targetType);
+  return domain && status ? statusLabel(domain, status) : adminValueLabel(status);
 }
 
 export const ADMIN_DOMAINS = [

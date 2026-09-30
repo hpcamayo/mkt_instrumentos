@@ -3,6 +3,7 @@ import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
 import { getCurrentUser } from "@/lib/auth/session";
 import { buttonClasses } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata = {
   robots: NOINDEX_ROBOTS,
@@ -15,12 +16,7 @@ export default async function EmailConfirmationPage() {
   return (
     <PageContainer as="section" className="py-10 sm:py-14">
       <div className="mx-auto max-w-2xl rounded-panel border border-subtle bg-white p-6 sm:p-8">
-        <p className="t-micro text-ink-2">
-          Cuenta Laria
-        </p>
-        <h1 className="mt-3 t-page text-ink">
-          Tu correo ha sido confirmado
-        </h1>
+        <PageHeader eyebrow="Cuenta Laria" title="Tu correo ha sido confirmado" />
         <p className="mt-4 t-body text-ink-2">
           Tu cuenta Particular está lista para comprar, vender y administrar tu
           información en Laria.

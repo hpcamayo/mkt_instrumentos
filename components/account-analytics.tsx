@@ -1,3 +1,4 @@
+import { Notice } from "@/components/ui/notice";
 import type { AccountAnalytics } from "@/lib/account-analytics";
 
 const numbers = new Intl.NumberFormat("es-PE");
@@ -6,7 +7,7 @@ const dates = new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short",
 
 export function AccountAnalyticsMetrics({ analytics, store = false }: { analytics: AccountAnalytics | null; store?: boolean }) {
   if (!analytics) {
-    return <section role="status" className="rounded-panel border border-subtle bg-white p-5 text-sm text-ink-2">Las métricas no están disponibles en este momento. Intenta nuevamente más tarde.</section>;
+    return <Notice tone="warning">Las métricas no están disponibles en este momento. Intenta nuevamente más tarde.</Notice>;
   }
   const { summary } = analytics;
   return (
@@ -39,8 +40,9 @@ export function AccountAnalyticsMetrics({ analytics, store = false }: { analytic
   );
 }
 
+// Labels are sentence case: uppercase is only for micro labels of three words or fewer (D6).
 function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return <div className="rounded-panel border border-subtle bg-white p-5"><p className="t-micro text-ink-2">{label}</p><p className="mt-3 text-[28px] font-bold leading-[32px] stretch-semicond tabular-nums text-ink">{value}</p><p className="mt-2 text-meta leading-5 text-ink-2">{detail}</p></div>;
+  return <div className="rounded-panel border border-subtle bg-white p-5"><p className="t-ui font-semibold text-ink-2">{label}</p><p className="mt-3 text-[28px] font-bold leading-[32px] stretch-semicond tabular-nums text-ink">{value}</p><p className="mt-2 text-meta leading-5 text-ink-2">{detail}</p></div>;
 }
 
 function formatRatio(value: number | null) {

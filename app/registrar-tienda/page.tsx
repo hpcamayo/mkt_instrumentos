@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/page-container";
 import { LogoutButton } from "@/components/logout-button";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import { buttonClasses } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const metadata: Metadata = {
   robots: NOINDEX_ROBOTS,
@@ -40,5 +41,5 @@ export default async function RegisterStorePage() {
 }
 
 function StoreGate({ title, body, children }: { title: string; body: string; children: ReactNode }) {
-  return <PageContainer as="section" className="py-10"><div className="mx-auto max-w-2xl rounded-panel border border-subtle bg-white p-6"><h1 className="t-page text-ink">{title}</h1><p className="mt-3 text-sm leading-6 text-ink-2">{body}</p><div className="mt-5 flex flex-wrap gap-3">{children}</div></div></PageContainer>;
+  return <PageContainer as="section" className="py-10"><div className="mx-auto max-w-2xl rounded-panel border border-subtle bg-white p-6"><PageHeader title={title} meta={body} /><div className="mt-5 flex flex-wrap gap-3">{children}</div></div></PageContainer>;
 }

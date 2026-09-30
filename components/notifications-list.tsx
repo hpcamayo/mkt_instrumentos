@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { formatPrice } from "@/lib/price";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Tag } from "@/components/ui/tag";
 
 type AccountNotification = {
@@ -44,12 +46,7 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
   }
 
   if (!notifications.length) {
-    return (
-      <div className="rounded-panel border border-subtle bg-white p-8 text-center">
-        <h2 className="t-section text-ink">No tienes notificaciones</h2>
-        <p className="mt-2 text-sm text-ink-2">Las decisiones importantes aparecerán aquí.</p>
-      </div>
-    );
+    return <EmptyState title="No tienes notificaciones" description="Las decisiones importantes aparecerán aquí." />;
   }
 
   return (
@@ -81,7 +78,7 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
               </div>
               <div className="flex shrink-0 flex-wrap gap-3 t-ui">
                 <Link href={href} onClick={(event) => { event.preventDefault(); void openNotification(notification, href); }} className="link font-semibold">Ver detalle</Link>
-                {unread ? <button type="button" disabled={busyId === notification.id} onClick={() => void markRead(notification)} className="font-semibold text-ink-2 underline-offset-4 hover:text-ink hover:underline disabled:opacity-50">{busyId === notification.id ? "Guardando…" : "Marcar como leída"}</button> : null}
+                {unread ? <Button variant="quiet" size="sm" loading={busyId === notification.id} loadingLabel="Guardando…" onClick={() => void markRead(notification)}>Marcar como leída</Button> : null}
               </div>
             </div>
           </li>

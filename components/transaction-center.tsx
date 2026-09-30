@@ -1,17 +1,16 @@
 import Link from "next/link";
-import { transactionStateLabel, type TransactionCenterItem } from "@/lib/transactions";
+import type { TransactionCenterItem } from "@/lib/transactions";
 import { buttonClasses } from "@/components/ui/button";
-import { Tag } from "@/components/ui/tag";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusTag, Tag } from "@/components/ui/tag";
 
 export function TransactionCenter({ items }: { items: TransactionCenterItem[] }) {
   if (!items.length) {
     return (
-      <div className="rounded-panel border border-subtle bg-white p-8 text-center">
-        <h2 className="t-section text-ink">Aún no tienes compras o ventas vinculadas</h2>
-        <p className="mt-2 t-ui text-ink-2">
-          Aquí aparecerán las solicitudes de confirmación y las transacciones que ambas partes reconozcan.
-        </p>
-      </div>
+      <EmptyState
+        title="Aún no tienes compras o ventas vinculadas"
+        description="Aquí aparecerán las solicitudes de confirmación y las transacciones que ambas partes reconozcan."
+      />
     );
   }
 
@@ -36,7 +35,7 @@ function TransactionSection({ title, description, items, action = false }: { tit
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <Tag tone="accent">{item.role === "buyer" ? "Compra" : "Venta"}</Tag>
-                <span className="t-meta font-semibold">{transactionStateLabel(item.status)}</span>
+                <StatusTag domain="claim" status={item.status} />
               </div>
               <h2 className="mt-3 t-section text-ink">{item.title}</h2>
               {action ? <p className="mt-2 font-semibold text-ink">¿Compraste este artículo?</p> : null}

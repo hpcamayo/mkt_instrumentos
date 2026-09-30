@@ -6,6 +6,7 @@ import { useState } from "react";
 import { PageNotice } from "@/components/page-notice";
 import { searchAlertFrequencyLabel, searchAlertPath, searchAlertSummary, type SavedSearchAlert } from "@/lib/search-alerts";
 import { buttonClasses } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { StatusTag } from "@/components/ui/tag";
 
 export function SavedSearchAlerts({ alerts }: { alerts: SavedSearchAlert[] }) {
@@ -44,11 +45,11 @@ export function SavedSearchAlerts({ alerts }: { alerts: SavedSearchAlert[] }) {
     <div className="grid gap-4">
       {notice ? <PageNotice kind={notice.kind} message={notice.message} /> : null}
       {!alerts.length ? (
-        <section className="rounded-panel border border-subtle bg-white p-8 text-center">
-          <h2 className="t-section text-ink">Todavía no tienes alertas</h2>
-          <p className="mt-2 t-ui text-ink-2">Aplica filtros en el catálogo y guarda esa búsqueda para recibir publicaciones nuevas.</p>
-          <Link href="/listados" className={buttonClasses({ className: "mt-5" })}>Explorar catálogo</Link>
-        </section>
+        <EmptyState
+          title="Todavía no tienes alertas"
+          description="Aplica filtros en el catálogo y guarda esa búsqueda para recibir publicaciones nuevas."
+          actions={<Link href="/listados" className={buttonClasses()}>Explorar catálogo</Link>}
+        />
       ) : (
         <ol className="grid gap-3">
           {alerts.map((alert) => (

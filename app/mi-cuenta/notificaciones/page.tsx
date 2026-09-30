@@ -1,4 +1,5 @@
 import { NotificationsList } from "@/components/notifications-list";
+import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 
 export const metadata = { title: "Notificaciones" };
@@ -16,13 +17,11 @@ export default async function NotificationsPage() {
 
   return (
     <section className="grid gap-5">
-      <div>
-        <p className="t-micro text-ink-2">Mi cuenta</p>
-        <h1 className="mt-1 t-page text-ink">Notificaciones</h1>
-        <p className="mt-2 max-w-[68ch] t-ui text-ink-2">
-          Revisa decisiones de moderación y cambios importantes de tu tienda o publicaciones.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Mi cuenta"
+        title="Notificaciones"
+        meta={<p className="max-w-[68ch]">Revisa decisiones de moderación y cambios importantes de tu tienda o publicaciones.</p>}
+      />
       <NotificationsList notifications={data ?? []} />
     </section>
   );
