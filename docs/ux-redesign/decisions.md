@@ -16,6 +16,14 @@ Record who decided and when. A decided item changes only through a new entry.
 | F7 | Admin bulk actions | UX-7 |
 | F8 | Admin-picked home vitrina (only if H2 = Admin) | closed 2026-09-30: H2 = A (automatic), nothing to build |
 
+## Pending — raised during UX-1 implementation (30 Sep)
+
+| ID | Question | Proposal | Status |
+| --- | --- | --- | --- |
+| G1 | Name of the catalog page `/listados`: header, footer, breadcrumb and SEO title still say "Listados" | The glossary retires "listado". Proposal: "Instrumentos", which matches the page title "Instrumentos disponibles" and the `/instrumentos/…` URLs. It also changes the SEO title and the breadcrumb structured data, so it moves with the UX-2 navigation work | pending (owner, with UX-2) |
+| G2 | Legal pages (Términos, Privacidad, Artículos prohibidos, Consejos de seguridad) keep "anuncios" and the defined term "Tienda Verificada" | Align them with the glossary only after a legal read; UX-1 fixed nothing there | pending (owner or legal) |
+| G3 | Password minimum is 6 characters at sign-up and 8 when resetting or changing it | Product rule, so not changed in UX-1. One number everywhere; 8 recommended | pending (owner) |
+
 ## Decided — UX-1 foundations (asked 2026-09-27)
 
 Owner, 30 Sep: "the foundations were also all approved except for the homepage, which we closed now with the banners." All twelve are approved as recommended in `ux-1-foundations.md`; the homepage exception is the H series below, now closed.

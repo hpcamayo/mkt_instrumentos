@@ -224,7 +224,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
     setState("success");
     setMessage(
       store?.status === "active" && store.isVerified
-        ? "Inventario publicado por tu Tienda Verificada."
+        ? "Tu publicación ya está en el catálogo."
         : "Publicación enviada. Un administrador la revisará antes de hacerla pública.",
     );
   }
@@ -242,7 +242,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
 
       <Notice tone="info" role="note">
         {store ? <>
-          Publicarás en <strong className="text-ink">{store.name}</strong>. {store.status === "active" && store.isVerified ? "Tu Tienda Verificada puede publicar inventario válido directamente." : "Este inventario quedará pendiente de moderación."}
+          Publicarás en <strong className="text-ink">{store.name}</strong>. {store.status === "active" && store.isVerified ? "Como Tienda verificada, tus publicaciones aparecen directamente si cumplen las reglas." : "Tu publicación quedará en revisión antes de aparecer."}
         </> : <>
           Publicarás como <strong className="text-ink">{profile.fullName}</strong>. Las consultas llegarán al WhatsApp <strong className="text-ink">{profile.phone}</strong>. Puedes cambiar estos datos en <Link href="/mi-cuenta/perfil" className="link font-semibold">tu perfil</Link>.
         </>}
@@ -307,7 +307,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
       </label>
 
       <Button type="submit" block className="sm:w-auto sm:justify-self-start" disabled={!supabase} loading={state === "submitting"} loadingLabel="Enviando...">
-        {store?.status === "active" && store.isVerified ? "Publicar inventario" : "Enviar para revisión"}
+        Publicar
       </Button>
     </form>
   );

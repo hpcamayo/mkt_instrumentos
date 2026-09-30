@@ -249,7 +249,7 @@ test("persistent Admin navigation covers every operational domain on desktop and
     ["/admin/reportes", "Reportes"],
     ["/admin/resenas", "Reseñas"],
     ["/admin/transacciones", "Transacciones"],
-    ["/admin/legacy", "Vinculación legacy"],
+    ["/admin/legacy", "Publicaciones históricas"],
   ]);
   for (const [href, label] of expected) {
     assert.match(navigation, new RegExp(`href: "${href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}", label: "${label}"`));

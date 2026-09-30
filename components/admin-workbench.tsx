@@ -535,7 +535,7 @@ function QueueItem({
         {adminString(item, "target_owner_name") ? <p><strong>Responsable del objetivo:</strong> {adminString(item, "target_owner_name")}</p> : null}
         {adminString(item, "category") ? <p><strong>Categoría:</strong> {adminString(item, "category")}</p> : null}
         {adminString(item, "brand") || adminString(item, "model") ? <p><strong>Marca / modelo:</strong> {[adminString(item, "brand"), adminString(item, "model")].filter(Boolean).join(" ")}</p> : null}
-        {adminString(item, "condition") ? <p><strong>Estado:</strong> {adminString(item, "condition")}</p> : null}
+        {adminString(item, "condition") ? <p><strong>Condición:</strong> {adminString(item, "condition")}</p> : null}
         {adminNumber(item, "price_pen") ? <p><strong>Precio:</strong> S/ {adminNumber(item, "price_pen").toLocaleString("es-PE")}</p> : null}
         {adminString(item, "description") ? <p className="sm:col-span-2"><strong>Descripción:</strong> {adminString(item, "description")}</p> : null}
         {stringList(item, "changed_fields").length ? <p className="sm:col-span-2"><strong>Cambios:</strong> {stringList(item, "changed_fields").map(adminValueLabel).join(", ")}</p> : null}

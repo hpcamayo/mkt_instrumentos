@@ -61,13 +61,13 @@ test("alert parsing rejects malformed/private shapes", () => {
   assert.deepEqual(searchAlerts.parseSavedSearchAlerts([{ ...valid, search_filters: { external_url: "https://evil.invalid" } }]), []);
 });
 
-test("both account roles expose Compras and Alertas with canonical transaction badge state", () => {
+test("both account roles expose Compras y ventas and Alertas with canonical transaction badge state", () => {
   const navigation = load("lib/account-navigation.ts");
   for (const [role, hasStore] of [["seller", false], ["store_owner", false], ["store_owner", true]]) {
     const items = navigation.getAccountNavigationItems(role, hasStore);
-    assert.equal(items.filter((item) => item.label === "Compras").length, 1);
+    assert.equal(items.filter((item) => item.label === "Compras y ventas").length, 1);
     assert.equal(items.filter((item) => item.label === "Alertas").length, 1);
-    assert.equal(items.find((item) => item.label === "Compras").href, "/mi-cuenta/transacciones");
+    assert.equal(items.find((item) => item.label === "Compras y ventas").href, "/mi-cuenta/transacciones");
     assert.equal(items.find((item) => item.label === "Alertas").href, "/mi-cuenta/alertas");
   }
   const layout = fs.readFileSync("app/mi-cuenta/layout.tsx", "utf8");

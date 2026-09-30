@@ -111,7 +111,7 @@ const storeIds = [];
     assert.match(soldHtml, /ya no está disponible/);
     assert.match(soldHtml, /0 listados activos/);
     assert.doesNotMatch(soldHtml, /Coordina por WhatsApp/);
-    assert.doesNotMatch(soldHtml, /<a[^>]*>Preguntar por WhatsApp<\/a>/);
+    assert.doesNotMatch(soldHtml, /<a[^>]*>(?:(?!<\/a>)[\s\S])*Contactar por WhatsApp(?:(?!<\/a>)[\s\S])*<\/a>/);
     assert.equal((await createClient(url, anonKey).from("listings").select("id").eq("id", liveId)).data.length, 0);
 
     const relistResponse = await manage(liveId, cookie, "relist");

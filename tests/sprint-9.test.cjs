@@ -367,9 +367,9 @@ test("public footer, forms and navigation link to legal/safety pages and categor
 test("account navigation follows the frozen IA on desktop and mobile with precise active states", () => {
   const navigation = load("lib/account-navigation.ts");
   const particular = navigation.getAccountNavigationItems("seller", false);
-  assert.deepEqual(particular.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Favoritos", "Alertas", "Notificaciones", "Compras", "Perfil y seguridad"]);
+  assert.deepEqual(particular.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   const store = navigation.getAccountNavigationItems("store_owner", true);
-  assert.deepEqual(store.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar producto", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras", "Perfil y seguridad"]);
+  assert.deepEqual(store.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   for (const items of [particular, store, navigation.getAccountNavigationItems("store_owner", false)]) {
     const hrefs = items.map((item) => item.href);
     assert.equal(new Set(hrefs).size, hrefs.length);

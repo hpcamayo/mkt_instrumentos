@@ -377,7 +377,7 @@ export function AdminListingEditor({
           patch({ category, instrument_type: types.length === 1 ? types[0].value : null, attributes: {} });
         }} />
         <EditorSelect label="Tipo de instrumento" value={record.instrument_type ?? ""} required options={getInstrumentTypeOptions(record.category)} onChange={(instrument_type) => patch({ instrument_type, attributes: {} })} />
-        <EditorSelect label="Estado del producto" value={record.condition ?? ""} options={conditionOptions.map((value) => ({ value, label: value }))} onChange={(condition) => patch({ condition })} />
+        <EditorSelect label="Condición" value={record.condition ?? ""} options={conditionOptions.map((value) => ({ value, label: value }))} onChange={(condition) => patch({ condition })} />
         <EditorField label="Marca" value={record.brand ?? ""} onChange={(brand) => patch({ brand })} />
         <EditorField label="Modelo" value={record.model ?? ""} onChange={(model) => patch({ model })} />
         <EditorField label="Precio (S/)" type="number" min={0} value={record.price_pen === null ? "" : String(record.price_pen)} onChange={(value) => patch({ price_pen: value === "" ? null : Number(value) })} />

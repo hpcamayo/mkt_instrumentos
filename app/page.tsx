@@ -149,6 +149,6 @@ function toVerifiedStores(stores: StorePreviewData[]): VerifiedStore[] {
     location: [store.district, store.city].filter(Boolean).join(", "),
     description:
       store.description ??
-      "Tienda activa con productos revisados dentro del marketplace.",
+      "Tienda activa con publicaciones revisadas.",
   }));
 }

@@ -20,7 +20,7 @@ import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PageContainer } from "@/components/page-container";
 import { ReputationSummary } from "@/components/reputation-summary";
 import { buildStoreWhatsAppUrl, type ListingCardData } from "@/lib/listings";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
 import { buttonClasses } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
@@ -259,7 +259,7 @@ function StoreView({
               className={buttonClasses({ block: true, className: "md:w-auto" })}
             >
               <WhatsAppGlyph />
-              Escribir a la tienda
+              Contactar por WhatsApp
             </WhatsAppContactLink>
             <ContentReport
               targetType="store"
@@ -275,10 +275,10 @@ function StoreView({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="t-micro text-ink-2">
-            Productos
+            En venta
           </p>
           <h2 className="mt-2 t-section text-ink">
-            Listados aprobados
+            Publicaciones de la tienda
           </h2>
         </div>
         <p className="t-ui text-ink-2">
@@ -288,7 +288,7 @@ function StoreView({
 
       {hasError ? (
         <p role="alert">
-          No se pudieron cargar los productos. Intenta nuevamente.
+          No se pudieron cargar las publicaciones. Intenta nuevamente.
         </p>
       ) : listings.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -299,7 +299,7 @@ function StoreView({
       ) : (
         <div className="rounded-panel border border-subtle bg-white p-6 t-ui text-ink-2">
           <p className="font-semibold text-ink">
-            Esta tienda aún no tiene productos publicados.
+            Esta tienda aún no tiene publicaciones.
           </p>
           <p className="mt-1">
             Vuelve pronto para revisar sus instrumentos aprobados.
@@ -314,16 +314,15 @@ function StoreView({
 }
 
 function SupabaseSetupMessage() {
+  warnMissingSupabaseEnv();
   return (
     <PageContainer as="section" className="py-8">
       <div className="max-w-3xl rounded-panel bg-warning-tint p-5 t-ui text-ink">
         <h1 className="t-section text-ink">
-          Configura Supabase para ver esta tienda
+          Esta tienda no está disponible por ahora
         </h1>
         <p className="mt-2">
-          Falta definir `NEXT_PUBLIC_SUPABASE_URL` y
-          `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local`. Agrega las
-          credenciales públicas y reinicia el servidor de desarrollo.
+          Intenta nuevamente en unos minutos.
         </p>
       </div>
     </PageContainer>

@@ -101,7 +101,7 @@ function notificationLabel(eventType: string) {
     listing_revision_rejected: "Cambios rechazados",
     store_approved: "Tienda aprobada",
     store_rejected: "Solicitud rechazada",
-    store_verified: "Tienda Verificada",
+    store_verified: "Tienda verificada",
     store_verification_revoked: "Verificación revocada",
     transaction_confirmation_requested: "Confirma una compra",
     transaction_confirmed: "Transacción confirmada",

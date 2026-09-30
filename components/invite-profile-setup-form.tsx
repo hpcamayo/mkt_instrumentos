@@ -76,7 +76,7 @@ export function InviteProfileSetupForm({
 
     if (!supabase) {
       setState("error");
-      setMessage("Supabase no esta configurado.");
+      setMessage("No se pudo conectar con Laria. Intenta nuevamente.");
       return;
     }
 
@@ -88,7 +88,7 @@ export function InviteProfileSetupForm({
 
     if (!region) {
       setState("error");
-      setMessage("Selecciona una region valida de Peru.");
+      setMessage("Selecciona una región válida de Perú.");
       return;
     }
 
@@ -96,7 +96,7 @@ export function InviteProfileSetupForm({
 
     if (userError || !data.user) {
       setState("error");
-      setMessage("Tu sesion expiro. Vuelve a abrir el enlace de invitacion.");
+      setMessage("Tu sesión expiró. Vuelve a abrir el enlace de invitación.");
       return;
     }
 

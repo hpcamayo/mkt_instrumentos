@@ -35,7 +35,7 @@ import {
   type ListingDetailData,
 } from "@/lib/listings";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
 import { fetchCatalogPage } from "@/lib/catalog";
 import {
@@ -307,7 +307,7 @@ function ListingDetail({
   const secondaryTitle = getListingSecondaryTitle(listing);
   const sellerTypeLabel =
     listing.seller_type === "store" && store?.is_verified === true
-      ? "Tienda Verificada"
+      ? "Tienda verificada"
       : getSellerTypeLabel(listing.seller_type);
   const sellerLocation =
     listing.seller_type === "store"
@@ -383,7 +383,7 @@ function ListingDetail({
                     className={buttonClasses({ block: true })}
                   >
                     <WhatsAppGlyph />
-                    Preguntar por WhatsApp
+                    Contactar por WhatsApp
                   </WhatsAppContactLink>
                   {listing.seller_type === "store" && store ? (
                     <Link
@@ -436,7 +436,7 @@ function ListingDetail({
                 </p>
               ) : (
                 <p className="t-body text-ink-2">
-                  Este listado aún no tiene descripción.
+                  Esta publicación aún no tiene descripción.
                 </p>
               )}
             </DetailSection>
@@ -450,7 +450,7 @@ function ListingDetail({
         <Suspense
           fallback={
             <p className="py-6 t-ui text-ink-2">
-              Cargando artículos similares…
+              Cargando publicaciones similares…
             </p>
           }
         >
@@ -700,7 +700,7 @@ function SellerTrustBox({
             {isStore ? "Sobre la tienda" : "Sobre el vendedor"}
           </p>
           <h2 className="mt-2 t-section text-ink">
-            {sellerName || "Vendedor particular"}
+            {sellerName || "Particular"}
           </h2>
           <p className="mt-1 t-ui font-semibold text-ink-2">
             {sellerTypeLabel}
@@ -722,7 +722,7 @@ function SellerTrustBox({
           label="Ubicación"
           value={sellerLocation || "No indicada"}
         />
-        <TrustSignal label="Inventario" value={sellerPublishedCount} />
+        <TrustSignal label="Publicaciones" value={sellerPublishedCount} />
         <TrustSignal label="Visible desde" value={visibleSince} />
       </div>
 
@@ -735,7 +735,7 @@ function SellerTrustBox({
             className={buttonClasses({ block: true })}
           >
             <WhatsAppGlyph />
-            {isStore ? "Escribir por WhatsApp" : "Contactar por WhatsApp"}
+            Contactar por WhatsApp
           </WhatsAppContactLink>
         ) : null}
         {isStore && store ? (
@@ -776,7 +776,7 @@ function SpecsList({ specs }: { specs: ListingSpec[] }) {
   if (specs.length === 0) {
     return (
       <p className="t-ui text-ink-2">
-        No hay especificaciones disponibles para este listado.
+        No hay especificaciones disponibles para esta publicación.
       </p>
     );
   }
@@ -831,7 +831,7 @@ function RelatedListingsSection({
         </div>
       ) : (
         <div className="rounded-panel border border-subtle bg-white p-5 t-ui text-ink-2">
-          {emptyMessage ?? "No hay artículos disponibles por ahora."}
+          {emptyMessage ?? "No hay publicaciones disponibles por ahora."}
         </div>
       )}
     </section>
@@ -853,17 +853,16 @@ function formatDate(value: string) {
 }
 
 function SupabaseSetupMessage() {
+  warnMissingSupabaseEnv();
   return (
     <section className="bg-canvas/70">
       <PageContainer className="py-8">
         <div className="max-w-3xl rounded-panel bg-warning-tint p-5 t-ui text-ink">
           <h1 className="t-section text-ink">
-            Configura Supabase para ver este instrumento
+            Esta publicación no está disponible por ahora
           </h1>
           <p className="mt-2">
-            Falta definir `NEXT_PUBLIC_SUPABASE_URL` y
-            `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local`. Agrega las
-            credenciales públicas y reinicia el servidor de desarrollo.
+            Intenta nuevamente en unos minutos.
           </p>
         </div>
       </PageContainer>
@@ -881,8 +880,8 @@ async function SimilarListings({
   const result = await getSimilarListings(supabase, listing);
   return (
     <RelatedListingsSection
-      title="Artículos similares"
-      emptyMessage="Todavía no hay artículos similares publicados."
+      title="Publicaciones similares"
+      emptyMessage="Todavía no hay publicaciones similares."
       listings={result.listings}
     />
   );
@@ -918,5 +917,5 @@ async function SellerInventory({
   const { publishedCount } = await getMoreFromSellerListings(supabase, listing);
   return publishedCount === null
     ? "No disponible"
-    : `${publishedCount} ${publishedCount === 1 ? "listado activo" : "listados activos"}`;
+    : `${publishedCount} ${publishedCount === 1 ? "publicación activa" : "publicaciones activas"}`;
 }

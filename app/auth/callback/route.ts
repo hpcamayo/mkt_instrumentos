@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
   if (!supabaseUrl || !supabaseAnonKey) {
     return NextResponse.redirect(
-      getAuthCallbackErrorUrl(origin, "Supabase no está configurado."),
+      getAuthCallbackErrorUrl(origin, "No se pudo conectar con Laria. Intenta nuevamente."),
     );
   }
 

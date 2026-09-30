@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   const supabase = await getSupabaseServerClient();
 
   if (!supabase) {
-    return jsonError("Supabase no esta configurado.", 500);
+    return jsonError("No se pudo conectar con Laria. Intenta nuevamente.", 500);
   }
 
   const { data: isAdmin, error: adminError } = await supabase.rpc("is_admin");
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   const notes = readText(payload, "notes");
 
   if (!isValidEmail(email)) {
-    return jsonError("Ingresa un correo valido.", 400);
+    return jsonError("Ingresa un correo válido.", 400);
   }
 
   if (!fullName) {
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   }
 
   if (phone.replace(/\D/g, "").length < 9) {
-    return jsonError("Ingresa un WhatsApp valido.", 400);
+    return jsonError("Ingresa un WhatsApp válido.", 400);
   }
 
   if (!accountType) {
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   }
 
   if (regionInput && !normalizedRegion) {
-    return jsonError("Selecciona una region valida de Peru.", 400);
+    return jsonError("Selecciona una región válida de Perú.", 400);
   }
 
   const adminClient = getSupabaseAdminClient();
@@ -91,12 +91,12 @@ export async function POST(request: Request) {
 
   if (error) {
     return jsonError(
-      "No se pudo enviar la invitacion. Revisa si el usuario ya existe o si Supabase Auth esta configurado.",
+      "No se pudo enviar la invitación. Revisa si el usuario ya existe e intenta nuevamente.",
       400,
     );
   }
 
-  console.info("[admin-invite] Invitacion enviada", {
+  console.info("[admin-invite] Invitación enviada", {
     email,
     accountType,
     finalInvitePath,
@@ -105,7 +105,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    message: "Invitacion enviada correctamente.",
+    message: "Invitación enviada.",
     invite: {
       email,
       userId: data.user?.id ?? null,

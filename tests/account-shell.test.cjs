@@ -21,16 +21,16 @@ const { getAccountNavigationItems, accountItemIsActive, getHeaderNavigation } = 
 
 test("Particular account navigation exposes only implemented Particular destinations", () => {
   const items = getAccountNavigationItems("seller", false);
-  assert.deepEqual(items.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Favoritos", "Alertas", "Notificaciones", "Compras", "Perfil y seguridad"]);
+  assert.deepEqual(items.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.equal(items.some((item) => /tienda|inventario/i.test(item.label)), false);
   assert.equal(items.filter((item) => item.label === "Alertas").length, 1);
 });
 
 test("Store Owner navigation changes safely when an owner-bound store exists", () => {
   const withoutStore = getAccountNavigationItems("store_owner", false);
-  assert.deepEqual(withoutStore.map((item) => item.label), ["Resumen", "Solicitud de tienda", "Favoritos", "Alertas", "Notificaciones", "Compras", "Perfil y seguridad"]);
+  assert.deepEqual(withoutStore.map((item) => item.label), ["Resumen", "Solicitud de tienda", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   const withStore = getAccountNavigationItems("store_owner", true);
-  assert.deepEqual(withStore.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar producto", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras", "Perfil y seguridad"]);
+  assert.deepEqual(withStore.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.equal(withStore.some((item) => /publicaciones|instrumento/i.test(item.label)), false);
 });
 
@@ -49,7 +49,7 @@ test("header never offers stale store registration to authenticated accounts", (
   assert.deepEqual(getHeaderNavigation({ authenticated: false, storeOwner: false, hasStore: false }).map((item) => item.label), ["Inicio", "Listados", "Vender", "Para tiendas"]);
   assert.deepEqual(getHeaderNavigation({ authenticated: true, storeOwner: false, hasStore: false }).map((item) => item.label), ["Inicio", "Listados", "Vender"]);
   assert.deepEqual(getHeaderNavigation({ authenticated: true, storeOwner: true, hasStore: false }).map((item) => item.label), ["Inicio", "Listados", "Solicitud de tienda"]);
-  assert.deepEqual(getHeaderNavigation({ authenticated: true, storeOwner: true, hasStore: true }).map((item) => item.label), ["Inicio", "Listados", "Publicar producto"]);
+  assert.deepEqual(getHeaderNavigation({ authenticated: true, storeOwner: true, hasStore: true }).map((item) => item.label), ["Inicio", "Listados", "Publicar"]);
 });
 
 test("account shell is protected and retains accessible mobile navigation", () => {

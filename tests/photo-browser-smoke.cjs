@@ -63,7 +63,7 @@ module.exports = async function photoBrowserSmoke({ base, id, session, adminSess
       const box = notice?.getBoundingClientRect();
       return box && box.top >= 0 && box.bottom <= innerHeight;
     })()`);
-    assert.match(evaluate("document.activeElement.textContent"), /Actualizamos la propuesta pendiente/);
+    assert.match(evaluate("document.activeElement.textContent"), /Actualizamos tus cambios en revisión/);
     assertHealthy();
     snapshot();
     return pending(id);

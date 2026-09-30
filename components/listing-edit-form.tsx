@@ -109,9 +109,9 @@ export function ListingEditForm({
   const moderatedNote =
     listing.status === "approved" || listing.status === "hidden"
       ? isVerifiedStore
-        ? "Tu Tienda Verificada puede aplicar todos estos cambios directamente."
+        ? "Como Tienda verificada, tus cambios se aplican directamente."
         : hasPendingRevision
-          ? "Ya hay una propuesta en revisión. Puedes seguir ajustando título, categoría, tipo, marca, modelo, condición o fotos; se actualizará la misma propuesta sin cambiar la versión pública."
+          ? "Ya tienes cambios en revisión. Puedes seguir ajustando título, categoría, tipo, marca, modelo, condición o fotos; se actualizarán esos mismos cambios sin modificar la versión pública."
           : "Precio, descripción, ubicación y características se actualizan ahora. Título, categoría, tipo, marca, modelo, condición y fotos requieren revisión; la versión pública actual no cambia mientras tanto."
       : "Los cambios se guardan directamente porque esta publicación todavía no es una versión pública aprobada.";
 
@@ -310,10 +310,10 @@ export function ListingEditForm({
         "success",
         mode === "revision" || mode === "revision_amended"
           ? mode === "revision_amended"
-            ? "Actualizamos la propuesta pendiente con tus cambios más recientes. La versión pública anterior sigue visible."
+            ? "Actualizamos tus cambios en revisión con la edición más reciente. La versión pública anterior sigue visible."
             : "Los cambios inmediatos ya se aplicaron. Los cambios principales quedaron en revisión y la versión pública anterior sigue visible."
           : mode === "revision_cancelled"
-            ? "Cancelamos la propuesta porque ya coincide con la versión pública aprobada."
+            ? "Cancelamos los cambios en revisión porque ya coinciden con la versión publicada."
             : "Los cambios se guardaron correctamente.",
       );
       // Keep the prepared request until server refresh: an immediate repeat is an exact replay.

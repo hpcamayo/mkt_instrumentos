@@ -38,8 +38,8 @@ export default async function StoreInventoryPage() {
   const concurrent = listings?.filter((item) => item.status === "pending" || item.status === "approved").length ?? 0;
   return (
     <section className="rounded-panel border border-subtle bg-white">
-      <div className="flex flex-col gap-3 border-b border-subtle p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="t-micro text-ink-2">{store.name}</p><h1 className="mt-1 t-page text-ink">Inventario</h1><p className="mt-2 text-sm text-ink-2">{concurrent} de 50 publicaciones concurrentes</p></div>{concurrent < 50 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar producto</Link> : null}</div>
-      <ListingManagementTable listings={managedListings} emptyMessage="Aún no hay productos en el inventario." />
+      <div className="flex flex-col gap-3 border-b border-subtle p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="t-micro text-ink-2">{store.name}</p><h1 className="mt-1 t-page text-ink">Inventario</h1><p className="mt-2 text-sm text-ink-2">{concurrent} de 50 publicaciones concurrentes</p></div>{concurrent < 50 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar</Link> : null}</div>
+      <ListingManagementTable listings={managedListings} emptyMessage="Aún no hay publicaciones en el inventario." />
       <p className="border-t border-subtle p-5 text-meta leading-6 text-ink-2">{analytics ? "Vistas acumuladas de todo el historial, incluidas las históricas. Contactos por WhatsApp registrados desde el inicio del seguimiento; no equivalen a mensajes ni ventas." : "Las métricas no están disponibles en este momento; no se muestran ceros estimados."} La fecha de publicación corresponde a la primera publicación. <Link href="/mi-cuenta/tienda/estadisticas" className="link font-semibold">Ver estadísticas por periodo</Link>.</p>
     </section>
   );

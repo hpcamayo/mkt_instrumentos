@@ -16,7 +16,7 @@ export type VerifiedStore = {
 
 // UI placeholder only; replace with real community/content data when feature is implemented.
 const communityItems = [
-  "Guia rapida para comprar tu primera guitarra usada",
+  "Guía rápida para comprar tu primera guitarra usada",
   "Como revisar un amplificador antes de cerrar trato",
   "Checklist para publicar mejores fotos de tu instrumento",
 ];
@@ -61,7 +61,7 @@ export function VerifiedStores({ stores }: { stores: VerifiedStore[] }) {
             <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="t-micro text-ink-2">
-                  Tiendas y musicos
+                  Tiendas y músicos
                 </p>
                 <h2 className="mt-2 t-page text-ink">
                   Que inspiran
@@ -107,7 +107,7 @@ export function VerifiedStores({ stores }: { stores: VerifiedStore[] }) {
               ))}
             </div>
             <p className="mt-5 t-meta">
-              Bloque visual temporal. Laria aun no tiene una seccion real de
+              Bloque visual temporal. Laria aún no tiene una sección real de
               comunidad o blog.
             </p>
           </aside>

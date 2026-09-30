@@ -13,7 +13,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export const metadata = {
   robots: NOINDEX_ROBOTS,
-  title: "Invitacion de tienda",
+  title: "Invitación de Tienda",
 };
 
 export default async function StoreInvitePage() {
@@ -22,7 +22,7 @@ export default async function StoreInvitePage() {
   if (!user) {
     redirect(
       `/login?next=${encodeURIComponent("/registro/tienda/invitacion")}&error=${encodeURIComponent(
-        "Inicia sesion desde tu enlace de invitacion para continuar.",
+        "Inicia sesión desde tu enlace de invitación para continuar.",
       )}`,
     );
   }
@@ -43,17 +43,17 @@ export default async function StoreInvitePage() {
   ) {
     return (
       <InvitePageShell
-        eyebrow="Invitacion"
-        title="Esta cuenta parece ser de vendedor particular"
-        description="Para evitar cambiar el tipo de perfil por error, usa el flujo de vendedor o solicita una nueva invitacion de tienda."
+        eyebrow="Invitación"
+        title="Esta cuenta parece ser Particular"
+        description="Para no cambiar el tipo de cuenta por error, continúa como Particular o pide una nueva invitación de Tienda."
       >
         <InviteRecoveryPanel
-          title="No pudimos confirmar una invitacion de tienda"
-          message="La metadata de la invitacion o el perfil actual indican vendedor particular. Si necesitas registrar una tienda, pide al equipo de Laria una invitacion de tienda con account_type store_owner."
+          title="No pudimos confirmar una invitación de Tienda"
+          message="La invitación o el perfil actual corresponden a una cuenta Particular. Si necesitas registrar una tienda, pide al equipo de Laria una invitación de Tienda."
           primaryHref="/registro/vendedor/invitacion"
-          primaryLabel="Ir a invitacion de vendedor"
+          primaryLabel="Continuar como Particular"
           secondaryHref="/registrar-tienda"
-          secondaryLabel="Registrar tienda sin invitacion"
+          secondaryLabel="Registrar tienda sin invitación"
         />
       </InvitePageShell>
     );
@@ -65,15 +65,15 @@ export default async function StoreInvitePage() {
   ) {
     return (
       <InvitePageShell
-        eyebrow="Invitacion"
-        title="Falta informacion de la invitacion"
-        description="No encontramos metadata suficiente para confirmar que este enlace sea de tienda."
+        eyebrow="Invitación"
+        title="Falta información de la invitación"
+        description="No encontramos datos suficientes para confirmar que este enlace sea de una Tienda."
       >
         <InviteRecoveryPanel
           title="Elige un camino seguro"
-          message="Si vendes como particular, usa el flujo de vendedor. Si representas una tienda, puedes enviar una solicitud publica o pedir una nueva invitacion de tienda."
+          message="Si vendes como Particular, continúa con esa cuenta. Si representas una tienda, envía una solicitud o pide una nueva invitación de Tienda."
           primaryHref="/registro/vendedor/invitacion"
-          primaryLabel="Soy vendedor particular"
+          primaryLabel="Vendo como Particular"
           secondaryHref="/registrar-tienda"
           secondaryLabel="Enviar solicitud de tienda"
         />
@@ -85,19 +85,19 @@ export default async function StoreInvitePage() {
     <InvitePageShell
       eyebrow="Cuenta de tienda"
       title="Activa la cuenta de tu tienda"
-      description="Completa los datos de contacto de la persona responsable. La tienda necesitara aprobacion antes de publicar productos."
+      description="Completa los datos de contacto de la persona responsable. La tienda necesitará aprobación antes de publicar."
     >
       <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <div className="space-y-4 t-ui text-ink-2">
           <p>
-            Despues de activar tu cuenta, completa la solicitud de tienda. El
-            equipo de Laria revisara la informacion antes de activar la pagina
-            publica o permitir publicaciones de tienda.
+            Después de activar tu cuenta, completa la solicitud de tienda. El
+            equipo de Laria revisará la información antes de activar la página
+            pública o permitir publicaciones.
           </p>
           <div className="rounded-panel border border-subtle bg-white p-4">
             <p className="font-semibold text-ink">Importante</p>
             <p className="mt-1">
-              La activacion de cuenta no aprueba la tienda automaticamente. Un
+              Activar la cuenta no aprueba la tienda automáticamente. Un
               administrador debe revisar y aprobar la solicitud.
             </p>
           </div>

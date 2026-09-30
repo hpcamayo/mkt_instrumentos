@@ -126,7 +126,7 @@ test("Particular cards render all-owned actual metrics, not a truncated recent-l
   assert.match(html, />6</);
   assert.match(html, /incluidas las vistas históricas/);
   assert.match(html, /no mensajes ni ventas/);
-  assert.doesNotMatch(html, /Ingresos|CTR de productos/);
+  assert.doesNotMatch(html, /Ingresos|Vistas por impresión/);
 });
 
 test("Store metrics distinguish current inventory, recorded events, ratios and historical views", () => {
@@ -134,7 +134,7 @@ test("Store metrics distinguish current inventory, recorded events, ratios and h
   assert.match(html, /últimos 30 días/);
   assert.match(html, /estado actual de todo tu inventario/);
   assert.match(html, /30/);
-  assert.match(html, /CTR de productos/);
+  assert.match(html, /Vistas por impresión/);
   assert.match(html, /Tasa de contacto/);
   assert.match(html, /excluyen las vistas históricas sin evento/);
   assert.match(html, /no conversaciones, compradores únicos ni transacciones/);

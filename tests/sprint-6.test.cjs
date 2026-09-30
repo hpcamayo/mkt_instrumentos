@@ -61,8 +61,8 @@ test("verified transaction UI uses account shell routes and preserves off-platfo
   const detail = fs.readFileSync("components/transaction-detail.tsx", "utf8");
   const management = fs.readFileSync("components/listing-management-table.tsx", "utf8");
   const notifications = fs.readFileSync("components/notifications-list.tsx", "utf8");
-  // Compras is declared once in the shared account items used by both roles.
-  assert.equal((navigation.match(/label: "Compras"/g) ?? []).length, 1);
+  // Compras y ventas is declared once in the shared account items used by both roles.
+  assert.equal((navigation.match(/label: "Compras y ventas"/g) ?? []).length, 1);
   assert.equal((navigation.match(/\.\.\.sharedAccountItems/g) ?? []).length, 2);
   assert.match(detail, /Sí, lo compré/);
   assert.match(detail, /No, no fui yo/);
@@ -122,7 +122,7 @@ test("review moderation UI exposes hide/restore but no review rewrite inputs", (
   const source = fs.readFileSync("components/admin-domain-view.tsx", "utf8");
   assert.match(source, /title: "Transacciones"/);
   assert.match(source, /adminString\(item, "transaction_id"\)/);
-  assert.match(source, /statusText\(item\)/);
+  assert.match(source, /statusText\(item, domain\)/);
   assert.match(source, /Ocultar reseña/);
   assert.match(source, /Restaurar reseña/);
   assert.match(source, /La calificación y el comentario son inmutables/);

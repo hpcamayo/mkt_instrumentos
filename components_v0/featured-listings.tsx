@@ -26,7 +26,7 @@ const placeholderListings: FeaturedListing[] = [
     price: "S/ 3,900",
     location: "Lima, PE",
     imageUrl: null,
-    imageAlt: "Guitarra electrica",
+    imageAlt: "Guitarra eléctrica",
     isVerifiedStore: false,
   },
   {
@@ -104,7 +104,7 @@ export function FeaturedListings({
 
         {!hasRealListings ? (
           <p className="mt-4 text-center t-ui text-ink-2">
-            Vista previa visual. Pronto apareceran publicaciones aprobadas.
+            Vista previa visual. Pronto aparecerán publicaciones aprobadas.
           </p>
         ) : null}
 
@@ -113,7 +113,7 @@ export function FeaturedListings({
             href="/listados"
             className="link inline-flex t-ui font-semibold"
           >
-            Ver todos los anuncios
+            Ver todas las publicaciones
           </Link>
         </div>
       </PageContainer>

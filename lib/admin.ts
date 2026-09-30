@@ -33,7 +33,7 @@ export const ADMIN_QUEUE_LABELS: Record<AdminQueue, string> = {
 
 const ADMIN_VALUE_LABELS: Record<string, string> = {
   active: "Tienda",
-  approved: "Aprobada",
+  approved: "Publicada",
   archived: "Archivada",
   cancelled: "Cancelada",
   confirmed: "Confirmada",
@@ -41,7 +41,7 @@ const ADMIN_VALUE_LABELS: Record<string, string> = {
   hidden: "Oculta",
   individual: "Particular",
   listing: "Publicación",
-  listing_revision: "Cambio de publicación",
+  listing_revision: "Cambios de publicación",
   open: "Abierto",
   pending: "Pendiente",
   rejected: "Rechazada",
@@ -51,7 +51,7 @@ const ADMIN_VALUE_LABELS: Record<string, string> = {
   seller: "Particular",
   sold: "Vendida",
   store: "Tienda",
-  store_owner: "Propietario de tienda",
+  store_owner: "Tienda",
   verified: "Verificada",
   acoso: "Acoso",
   articulo_prohibido: "Artículo o contenido prohibido",
@@ -66,7 +66,7 @@ const ADMIN_VALUE_LABELS: Record<string, string> = {
   instrument_type: "tipo de instrumento",
   brand: "marca",
   model: "modelo",
-  condition: "estado del producto",
+  condition: "condición",
   price_pen: "precio",
   description: "descripción",
   photos: "fotos",
@@ -83,8 +83,8 @@ const ADMIN_VALUE_LABELS: Record<string, string> = {
   listing_hidden: "Publicación ocultada",
   listing_sold: "Publicación marcada vendida",
   listing_content_updated: "Contenido de publicación actualizado",
-  listing_revision_approved: "Cambio de publicación aprobado",
-  listing_revision_rejected: "Cambio de publicación rechazado",
+  listing_revision_approved: "Cambios aprobados",
+  listing_revision_rejected: "Cambios rechazados",
   store_active: "Tienda aprobada",
   store_rejected: "Tienda rechazada",
   store_hidden: "Tienda ocultada",
@@ -95,7 +95,7 @@ const ADMIN_VALUE_LABELS: Record<string, string> = {
   report_dismissed: "Reporte desestimado",
   review_hidden: "Reseña ocultada",
   review_restored: "Reseña restaurada",
-  legacy_owner_linked: "Propiedad legacy vinculada",
+  legacy_owner_linked: "Publicación histórica vinculada",
 };
 
 export function adminValueLabel(value: string) {

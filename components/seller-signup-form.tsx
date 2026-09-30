@@ -35,7 +35,7 @@ export function SellerSignupForm() {
       if (!supabase) {
         if (isMounted) {
           setState("error");
-          setMessage("Supabase no esta configurado.");
+          setMessage("No se pudo conectar con Laria. Intenta nuevamente.");
         }
         return;
       }
@@ -75,7 +75,7 @@ export function SellerSignupForm() {
 
     if (!supabase) {
       setState("error");
-      setMessage("Supabase no esta configurado.");
+      setMessage("No se pudo conectar con Laria. Intenta nuevamente.");
       return;
     }
 
@@ -101,7 +101,7 @@ export function SellerSignupForm() {
 
     if (!email || password.length < 6) {
       setState("error");
-      setMessage("Ingresa un correo y una contrasena de al menos 6 caracteres.");
+      setMessage("Ingresa un correo y una contraseña de al menos 6 caracteres.");
       return;
     }
 
@@ -185,8 +185,8 @@ export function SellerSignupForm() {
           <Input type="email" name="email" required autoComplete="email" placeholder="tu@email.com" />
         </Field>
 
-        <Field id="signup-password" label="Contrasena">
-          <Input type="password" name="password" required minLength={6} autoComplete="new-password" placeholder="Minimo 6 caracteres" />
+        <Field id="signup-password" label="Contraseña">
+          <Input type="password" name="password" required minLength={6} autoComplete="new-password" placeholder="Mínimo 6 caracteres" />
         </Field>
 
         <Field id="signup-phone" label="WhatsApp">
@@ -207,7 +207,7 @@ export function SellerSignupForm() {
           <a href="/privacidad" target="_blank" rel="noopener" className="link font-semibold">
             política de privacidad
           </a>
-          , publicar información real y mantener mis avisos actualizados.
+          , publicar información real y mantener mis publicaciones actualizadas.
           Laria no procesa pagos, no gestiona envíos ni garantiza transacciones.
         </span>
       </label>
@@ -233,9 +233,9 @@ export function SellerSignupForm() {
       </Button>
 
       <p className="text-center t-ui text-ink-2">
-        Ya tienes cuenta?{" "}
+        ¿Ya tienes cuenta?{" "}
         <Link className="link font-semibold" href="/login">
-          Ingresa aqui
+          Ingresa aquí
         </Link>
       </p>
     </form>

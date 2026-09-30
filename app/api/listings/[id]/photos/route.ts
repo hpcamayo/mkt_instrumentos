@@ -16,7 +16,7 @@ export async function GET(
 
   if (!supabase) {
     return NextResponse.json(
-      { error: "Supabase no esta configurado." },
+      { error: "No se pudo conectar con Laria. Intenta nuevamente." },
       { status: 503 },
     );
   }

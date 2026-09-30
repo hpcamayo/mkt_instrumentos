@@ -4,7 +4,7 @@ export default function ListingsLoading() {
   return (
     <section className="bg-canvas/70">
       <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
-        <span className="sr-only">Cargando listados</span>
+        <span className="sr-only">Cargando publicaciones</span>
 
         <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">

@@ -22,6 +22,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Field, Input, Select } from "@/components/ui/field";
 import { noticeClassName } from "@/components/ui/notice";
+import { statusLabel, type StatusDomain } from "@/lib/ui/status";
 import { Textarea } from "@/components/ui/textarea";
 
 const domainCopy: Record<AdminDomain, { title: string; description: string }> = {
@@ -35,7 +36,7 @@ const domainCopy: Record<AdminDomain, { title: string; description: string }> = 
   },
   tiendas: {
     title: "Tiendas",
-    description: "Solicitudes, Tiendas, Tiendas Verificadas y estados no públicos.",
+    description: "Solicitudes, Tiendas, Tiendas verificadas y estados no públicos.",
   },
   usuarios: {
     title: "Usuarios",
@@ -54,42 +55,26 @@ const domainCopy: Record<AdminDomain, { title: string; description: string }> = 
     description: "Vista de soporte y auditoría; Admin no confirma ni altera relaciones verificadas.",
   },
   legacy: {
-    title: "Vinculación legacy",
+    title: "Publicaciones históricas",
     description: "Vinculación manual, explícita y de una sola vez. Nunca se infiere propiedad por teléfono, correo o nombre.",
   },
 };
 
+const dictionaryOptions = (domain: StatusDomain, values: string[]) => values.map((value) => ({ value, label: statusLabel(domain, value) }));
+
 const statusOptions: Partial<Record<AdminDomain, { value: string; label: string }[]>> = {
-  publicaciones: [
-    { value: "pending", label: "Pendiente" },
-    { value: "approved", label: "Aprobada" },
-    { value: "rejected", label: "Rechazada" },
-    { value: "hidden", label: "Oculta" },
-    { value: "sold", label: "Vendida" },
-    { value: "archived", label: "Archivada" },
-  ],
-  revisiones: [
-    { value: "pending", label: "Pendiente" },
-    { value: "approved", label: "Aprobada" },
-    { value: "rejected", label: "Rechazada" },
-    { value: "cancelled", label: "Cancelada" },
-  ],
+  publicaciones: dictionaryOptions("listing", ["pending", "approved", "rejected", "hidden", "sold", "archived"]),
+  revisiones: dictionaryOptions("revision", ["pending", "approved", "rejected", "cancelled"]),
   tiendas: [
-    { value: "pending", label: "Pendiente" },
-    { value: "active", label: "Tienda" },
-    { value: "verified", label: "Tienda Verificada" },
-    { value: "rejected", label: "Rechazada" },
-    { value: "hidden", label: "Oculta" },
+    ...dictionaryOptions("store", ["pending", "active"]),
+    { value: "verified", label: "Tienda verificada" },
+    ...dictionaryOptions("store", ["rejected", "hidden"]),
   ],
   usuarios: [
     { value: "seller", label: "Particular" },
-    { value: "store_owner", label: "Store Owner" },
+    { value: "store_owner", label: "Tienda" },
   ],
-  reportes: [
-    { value: "open", label: "Abierto" },
-    { value: "resolved", label: "Resuelto" },
-    { value: "dismissed", label: "Desestimado" },
-  ],
+  reportes: dictionaryOptions("report", ["open", "resolved", "dismissed"]),
   resenas: [
     { value: "visible", label: "Visible" },
     { value: "hidden", label: "Oculta" },
@@ -124,12 +109,21 @@ const reportReasonOptions = [
   "otro",
 ] as const;
 
-function statusText(item: AdminJsonItem) {
+const statusDomains: Partial<Record<AdminDomain, StatusDomain>> = {
+  publicaciones: "listing",
+  revisiones: "revision",
+  tiendas: "store",
+  reportes: "report",
+};
+
+function statusText(item: AdminJsonItem, domain: AdminDomain) {
   if (item.is_verified === true && adminString(item, "status") === "active") {
-    return "Tienda Verificada";
+    return "Tienda verificada";
   }
   const status = adminString(item, "status");
-  return status ? adminValueLabel(status) : "";
+  if (!status) return "";
+  const dictionary = statusDomains[domain];
+  return dictionary ? statusLabel(dictionary, status) : adminValueLabel(status);
 }
 
 function Detail({ label, value }: { label: string; value: string | number | null | undefined }) {
@@ -242,7 +236,7 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
           <h2 className="break-words font-semibold text-ink">{title}</h2>
           <p className="mt-1 break-all text-meta text-ink-2">{id}{created ? ` · ${adminDate(created)}` : ""}</p>
         </div>
-        {statusText(item) ? <span className="rounded-tag bg-subtle px-2 py-0.5 t-meta font-semibold text-ink">{statusText(item)}</span> : null}
+        {statusText(item, domain) ? <span className="rounded-tag bg-subtle px-2 py-0.5 t-meta font-semibold text-ink">{statusText(item, domain)}</span> : null}
       </div>
       <div className="grid gap-x-5 gap-y-1 text-sm leading-6 text-ink-2 sm:grid-cols-2">
         <Detail label="Responsable" value={adminString(item, "owner_name")} />
@@ -250,7 +244,7 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
         <Detail label="Categoría" value={adminString(item, "category")} />
         <Detail label="Tipo de instrumento" value={adminString(item, "instrument_type")} />
         <Detail label="Marca / modelo" value={[adminString(item, "brand"), adminString(item, "model")].filter(Boolean).join(" ")} />
-        <Detail label="Estado del producto" value={adminString(item, "condition")} />
+        <Detail label="Condición" value={adminString(item, "condition")} />
         <Detail label="Precio" value={adminNumber(item, "price_pen") ? `S/ ${adminNumber(item, "price_pen").toLocaleString("es-PE")}` : ""} />
         <Detail label="Descripción" value={adminString(item, "description")} />
         <Detail label="Fotos" value={item.photo_count as number | undefined} />
@@ -353,14 +347,14 @@ function LegacyLinker({ listings, users, onComplete }: { listings: AdminJsonItem
     setListingId("");
     setUserId("");
     setConfirmed(false);
-    onComplete("Propiedad legacy vinculada una sola vez y registrada en auditoría.");
+    onComplete("Publicación histórica vinculada una sola vez y registrada en auditoría.");
   }
 
   return (
     <form onSubmit={submit} className="grid gap-5">
       <div className="grid gap-4 xl:grid-cols-2">
         <fieldset className="grid gap-2 rounded-panel border border-subtle bg-white p-4">
-          <legend className="px-1 text-sm font-semibold text-ink">1. Publicación legacy elegible</legend>
+          <legend className="px-1 text-sm font-semibold text-ink">1. Publicación histórica elegible</legend>
           {listings.map((item) => (
             <label key={adminString(item, "id")} className="flex cursor-pointer gap-3 rounded-control border border-subtle p-3 text-sm">
               <input type="radio" name="listing" value={adminString(item, "id")} checked={listingId === adminString(item, "id")} onChange={() => setListingId(adminString(item, "id"))} />
@@ -486,7 +480,7 @@ export function AdminDomainView({
       {domain === "usuarios" ? <AdminInviteUser /> : null}
 
       <form method="get" className="grid gap-3 rounded-panel border border-subtle bg-white p-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_repeat(3,minmax(150px,220px))_auto] xl:items-end">
-        <Field id="admin-buscar" label={domain === "legacy" ? "Buscar publicación legacy" : "Buscar"}>
+        <Field id="admin-buscar" label={domain === "legacy" ? "Buscar publicación histórica" : "Buscar"}>
           <Input type="search" name="buscar" defaultValue={search} maxLength={100} placeholder={domain === "legacy" ? "Título, contacto, teléfono o ID" : "Nombre, título, ID o contexto"} />
         </Field>
         {domain === "legacy" ? <Field id="admin-cuenta" label="Buscar cuenta Particular">
@@ -529,7 +523,7 @@ export function AdminDomainView({
       {domain === "legacy" ? (
         <div className="grid gap-4">
           <div className="flex flex-wrap gap-4 text-sm font-semibold text-ink-2">
-            <span>{total} publicación{total === 1 ? "" : "es"} legacy elegible{total === 1 ? "" : "s"}</span>
+            <span>{total} publicación{total === 1 ? "" : "es"} histórica{total === 1 ? "" : "s"} elegible{total === 1 ? "" : "s"}</span>
             <span>{userTotal} cuenta{userTotal === 1 ? "" : "s"} Particular coincidente{userTotal === 1 ? "" : "s"}</span>
           </div>
           <LegacyLinker listings={items} users={payload?.users ?? []} onComplete={complete} />

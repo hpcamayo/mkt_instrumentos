@@ -83,7 +83,7 @@ function getBaseListingSpecs(
       value:
         listing.seller_type === "store"
           ? store?.name || sellerName || "Tienda"
-          : sellerName || "Vendedor particular",
+          : sellerName || "Particular",
     },
   ];
 }

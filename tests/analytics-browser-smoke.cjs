@@ -65,10 +65,10 @@ exports.runAnalyticsBrowserSmoke = async function runAnalyticsBrowserSmoke({ bas
     assert.equal(actual["Contactos por WhatsApp"], numbers.format(summary.contacts));
     assert.equal(actual["Publicaciones vendidas"], numbers.format(summary.sold));
     if (store) {
-      assert.equal(actual["Impresiones de productos"], numbers.format(summary.impressions));
+      assert.equal(actual["Impresiones de publicaciones"], numbers.format(summary.impressions));
       assert.equal(actual["Visitas a la tienda"], numbers.format(summary.store_views));
       assert.equal(actual["Contactos a la tienda"], numbers.format(summary.store_contacts));
-      assert.equal(actual["CTR de productos"], summary.ctr === null ? "Sin datos" : percentages.format(summary.ctr));
+      assert.equal(actual["Vistas por impresión"], summary.ctr === null ? "Sin datos" : percentages.format(summary.ctr));
       assert.equal(actual["Tasa de contacto"], summary.contact_rate === null ? "Sin datos" : percentages.format(summary.contact_rate));
     }
     assert.equal(actual["Favoritos actuales"], numbers.format(summary.favorites));

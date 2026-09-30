@@ -5,10 +5,10 @@ import { PageContainer } from "@/components/page-container";
 import { buttonClasses } from "@/components/ui/button";
 
 const heroStats = [
-  { icon: BadgeCheck, label: "Listados revisados" },
+  { icon: BadgeCheck, label: "Publicaciones revisadas" },
   { icon: Store, label: "Tiendas activas" },
   { icon: MessageCircle, label: "Contacto por WhatsApp" },
-  { icon: Zap, label: "Hecho para musicos" },
+  { icon: Zap, label: "Hecho para músicos" },
 ];
 
 export function HeroSection() {
@@ -27,7 +27,7 @@ export function HeroSection() {
       <PageContainer className="relative">
         <div className="max-w-3xl">
           <p className="t-micro text-muted-dark">
-            Marketplace musical en Peru
+            Marketplace musical en Perú
           </p>
           <h1 className="mt-5 text-balance text-[36px] font-bold leading-[40px] stretch-semicond text-white sm:text-[46px] sm:leading-[50px]">
             Tu escenario.
@@ -37,8 +37,8 @@ export function HeroSection() {
             <span className="text-accent">Tu Laria.</span>
           </h1>
           <p className="mt-6 max-w-xl text-pretty t-body text-muted-dark md:text-[18px] md:leading-[28px]">
-            Explora instrumentos usados de musicos y productos de tiendas
-            pequenas. Contacta directo por WhatsApp y coordina con calma.
+            Instrumentos de músicos y tiendas de todo el Perú. Contacta
+            directo por WhatsApp y coordina con calma.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -61,7 +61,7 @@ export function HeroSection() {
           <Link href="/listados" className="relative block">
             <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink" aria-hidden="true" />
             <span className="flex h-14 w-full items-center rounded-control bg-white pl-14 pr-6 t-body text-ink-3 transition-colors duration-120 hover:text-ink md:h-16">
-              Que instrumento estas buscando?
+              ¿Qué instrumento buscas?
             </span>
           </Link>
           <div className="mt-4 flex flex-wrap gap-2 t-ui text-muted-dark">
@@ -77,14 +77,14 @@ export function HeroSection() {
               href="/instrumentos/baterias"
               className="font-semibold text-white underline-offset-4 hover:underline hover:decoration-accent hover:decoration-2"
             >
-              Baterias
+              Baterías
             </Link>
             <span>/</span>
             <Link
               href="/instrumentos/microfonos"
               className="font-semibold text-white underline-offset-4 hover:underline hover:decoration-accent hover:decoration-2"
             >
-              Microfonos
+              Micrófonos
             </Link>
           </div>
         </div>

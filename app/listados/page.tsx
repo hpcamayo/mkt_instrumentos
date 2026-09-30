@@ -21,7 +21,7 @@ import {
   type ListingCardData,
   type ListingFilters as ListingFiltersType,
 } from "@/lib/listings";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { SearchTelemetry } from "@/components/marketplace-telemetry";
 import { CreateSearchAlert } from "@/components/create-search-alert";
 import { createSearchReceipt } from "@/lib/marketplace-events-server";
@@ -133,8 +133,7 @@ function ListingsView({
 
             {errorMessage ? (
               <div className="rounded-panel bg-danger-tint p-4 t-ui font-semibold text-danger">
-                No se pudieron cargar los listados. Revisa la configuración de
-                Supabase e intenta nuevamente.
+                No se pudieron cargar las publicaciones. Intenta nuevamente.
               </div>
             ) : null}
 
@@ -209,6 +208,7 @@ function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
 }
 
 function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
+  warnMissingSupabaseEnv();
   return (
     <section className="bg-canvas/70">
       <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
@@ -217,19 +217,16 @@ function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
             Catálogo
           </p>
           <h1 className="mt-2 t-page text-ink">
-            Configura Supabase para ver listados
+            El catálogo no está disponible por ahora
           </h1>
           <p className="mt-3 max-w-[68ch] t-body text-ink-2">
-            Falta definir `NEXT_PUBLIC_SUPABASE_URL` y
-            `NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local`. Cuando estén
-            listas, esta página mostrará solo publicaciones aprobadas.
+            Intenta nuevamente en unos minutos.
           </p>
         </div>
         <div className="grid gap-5 lg:grid-cols-[286px_minmax(0,1fr)] lg:items-start xl:gap-6">
           <ListingFilters filters={filters} />
           <div className="rounded-panel bg-warning-tint p-4 t-ui text-ink">
-            Copia `.env.example` a `.env.local`, agrega las credenciales
-            públicas de Supabase y reinicia el servidor de desarrollo.
+            No pudimos conectar con el catálogo.
           </div>
         </div>
       </PageContainer>

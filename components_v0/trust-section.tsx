@@ -6,7 +6,7 @@ const features = [
     icon: SearchCheck,
     title: "Publicaciones revisadas",
     description:
-      "Listados aprobados para mantener el marketplace simple y ordenado.",
+      "Publicaciones revisadas para mantener el marketplace simple y ordenado.",
   },
   {
     icon: Store,

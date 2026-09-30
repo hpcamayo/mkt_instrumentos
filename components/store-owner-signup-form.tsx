@@ -25,7 +25,7 @@ export function StoreOwnerSignupForm() {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
       setState("error");
-      setMessage("Supabase no está configurado.");
+      setMessage("No se pudo conectar con Laria. Intenta nuevamente.");
       return;
     }
     supabase.auth.getUser().then(({ data }) => {

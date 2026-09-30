@@ -61,7 +61,7 @@ export default async function AccountPage({
 
       <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3"><div><p className="t-micro text-ink-2">Publicaciones recientes</p><h2 className="mt-1 t-section text-ink">Mis publicaciones</h2></div><Link href="/mi-cuenta/publicaciones" className="link font-semibold">Ver todas</Link></div>
-        {listings?.length ? <ul className="mt-4 divide-y divide-subtle">{listings.map((listing) => <li key={listing.id} className="flex items-center justify-between gap-3 py-3 text-sm"><span className="font-semibold text-ink">{listing.title}</span><span className="text-ink-2">{listingStatusLabel(listing.status)}</span></li>)}</ul> : <p className="mt-4 text-sm text-ink-2">Aún no tienes publicaciones. Puedes crear la primera desde este panel.</p>}
+        {listings?.length ? <ul className="mt-4 divide-y divide-subtle">{listings.map((listing) => <li key={listing.id} className="flex items-center justify-between gap-3 py-3 text-sm"><span className="font-semibold text-ink">{listing.title}</span><span className="text-ink-2">{listingStatusLabel(listing.status)}</span></li>)}</ul> : <p className="mt-4 text-sm text-ink-2">Aún no tienes publicaciones. Crea la primera desde Publicar.</p>}
       </section>
     </div>
   );
@@ -85,16 +85,16 @@ function StoreOwnerDashboard({ email, confirmed, store, inventory }: {
         <p className="mt-2 t-ui text-muted-dark">{store?.razon_social ?? email}</p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Link href="/mi-cuenta/tienda" className={buttonClasses()}>{store ? "Administrar mi tienda" : "Iniciar solicitud"}</Link>
-          {store ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses({ variant: "onDark" })}>Publicar producto</Link> : null}
+          {store ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses({ variant: "onDark" })}>Publicar</Link> : null}
           {store ? <Link href="/mi-cuenta/tienda/inventario" className={buttonClasses({ variant: "onDark" })}>Ver inventario</Link> : null}
         </div>
       </section>
       {store?.status === "rejected" ? <section className="rounded-panel bg-danger-tint p-4 text-sm text-ink"><h2 className="font-semibold">Solicitud rechazada</h2><p className="mt-1">{store.rejection_reason || "La solicitud necesita correcciones antes de volver a revisión."}</p><Link href="/mi-cuenta/tienda" className="mt-3 inline-flex font-semibold underline">Corregir y reenviar</Link></section> : null}
-      <section className="grid gap-4 sm:grid-cols-3"><Metric label="Estado" value={storeTrustLabel(store)} /><Metric label="Inventario concurrente" value={`${concurrent} / 50`} /><Metric label="Pendientes" value={String(pending)} /></section>
+      <section className="grid gap-4 sm:grid-cols-3"><Metric label="Estado" value={storeTrustLabel(store)} /><Metric label="Inventario concurrente" value={`${concurrent} / 50`} /><Metric label="En revisión" value={String(pending)} /></section>
       {concurrent >= 50 ? <section className="rounded-panel bg-warning-tint p-4 text-sm text-ink"><h2 className="font-semibold">Límite de inventario alcanzado</h2><p className="mt-1">Las 50 posiciones concurrentes están ocupadas.</p></section> : null}
       <section className="rounded-panel border border-subtle bg-white p-5 text-sm leading-6 text-ink-2 sm:p-6">
-        <h2 className="t-section text-ink">Publicación de inventario</h2>
-        {!store ? <p className="mt-2">Presenta la solicitud para vincular una tienda a esta cuenta. La base de datos permite una sola tienda por propietario.</p> : store.status === "active" && store.is_verified ? <p className="mt-2"><strong className="text-ink">Tienda Verificada:</strong> el inventario válido nuevo puede publicarse directamente. La verificación no implica garantías de pago, entrega o condición.</p> : <p className="mt-2">El inventario nuevo requiere moderación. {store.status === "pending" ? "La tienda y sus productos siguen ocultos al público hasta la aprobación básica." : "Las publicaciones aprobadas aparecen cuando la tienda está activa."}</p>}
+        <h2 className="t-section text-ink">Cómo publica tu tienda</h2>
+        {!store ? <p className="mt-2">Presenta la solicitud para vincular una tienda a esta cuenta. Cada cuenta puede tener una tienda.</p> : store.status === "active" && store.is_verified ? <p className="mt-2"><strong className="text-ink">Tienda verificada:</strong> tus publicaciones nuevas aparecen directamente si cumplen las reglas. La verificación no implica garantías de pago, entrega o condición.</p> : <p className="mt-2">Tus publicaciones nuevas pasan por revisión antes de aparecer. {store.status === "pending" ? "La tienda y sus publicaciones siguen ocultas al público hasta que se apruebe la solicitud." : "Las publicaciones aprobadas aparecen cuando la tienda está activa."}</p>}
         {store?.status === "active" ? <Link href={`/tiendas/${store.slug}`} className="mt-3 link inline-flex items-center gap-2 font-semibold">Ver tienda pública <ExternalLink className="h-4 w-4" aria-hidden="true" /></Link> : null}
       </section>
     </div>
@@ -112,8 +112,8 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 function storeTrustLabel(store: Awaited<ReturnType<typeof getAccountContext>>["store"]) {
   if (!store) return "Sin solicitud";
-  if (store.status === "pending") return "Solicitud pendiente";
+  if (store.status === "pending") return "Solicitud en revisión";
   if (store.status === "rejected") return "Solicitud rechazada";
   if (store.status === "hidden") return "Tienda no pública";
-  return store.is_verified ? "Tienda Verificada" : "Tienda";
+  return store.is_verified ? "Tienda verificada" : "Tienda";
 }

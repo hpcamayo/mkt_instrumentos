@@ -16,18 +16,18 @@ export function AccountAnalyticsMetrics({ analytics, store = false }: { analytic
         <Metric label="Vistas de publicaciones" value={numbers.format(summary.views)} detail={analytics.days === 0 ? "Acumuladas, incluidas las vistas históricas." : `Registradas en los últimos ${analytics.days} días.`} />
         <Metric label="Contactos por WhatsApp" value={numbers.format(summary.contacts)} detail="Aperturas de contacto registradas; no mensajes ni ventas." />
         <Metric label="Publicaciones vendidas" value={numbers.format(summary.sold)} detail="Estado actual marcado por el vendedor; no ventas verificadas." />
-        <Metric label="Transacciones verificadas en Laria" value={numbers.format(summary.verified_transactions)} detail="Compras que comprador y vendedor reconocieron; no confirma pago ni entrega." />
-        <Metric label="Contacto a transacción verificada" value={formatRatio(summary.contact_to_verified_rate)} detail="Relaciones verificadas ÷ aperturas de WhatsApp registradas en el mismo periodo." />
+        <Metric label="Ventas verificadas en Laria" value={numbers.format(summary.verified_transactions)} detail="Compras que comprador y vendedor reconocieron; no confirma pago ni entrega." />
+        <Metric label="Contacto a venta verificada" value={formatRatio(summary.contact_to_verified_rate)} detail="Relaciones verificadas ÷ aperturas de WhatsApp registradas en el mismo periodo." />
         <Metric label="Favoritos actuales" value={numbers.format(summary.favorites)} detail="Publicaciones guardadas ahora; incluye historial no público. No identifica compradores." />
         <Metric label="Guardados en el periodo" value={numbers.format(summary.favorite_additions)} detail="Acciones de guardar registradas; no compradores únicos ni favoritos actuales." />
         <Metric label="Retirados en el periodo" value={numbers.format(summary.favorite_removals)} detail="Acciones de quitar registradas." />
         <Metric label="Tasa de favoritos" value={formatRatio(summary.favorite_rate)} detail="Acciones de guardar ÷ vistas registradas, en el mismo periodo." />
         {store ? <>
-          <Metric label="Impresiones de productos" value={numbers.format(summary.impressions)} detail="Apariciones registradas en tarjetas visibles." />
+          <Metric label="Impresiones de publicaciones" value={numbers.format(summary.impressions)} detail="Apariciones registradas en tarjetas visibles." />
           <Metric label="Visitas a la tienda" value={numbers.format(summary.store_views)} detail="Aperturas registradas de la página pública." />
           <Metric label="Contactos a la tienda" value={numbers.format(summary.store_contacts)} detail="Contactos desde la página pública de la tienda." />
-          <Metric label="CTR de productos" value={formatRatio(summary.ctr)} detail="Vistas registradas de productos ÷ impresiones." />
-          <Metric label="Tasa de contacto" value={formatRatio(summary.contact_rate)} detail="Contactos de productos ÷ vistas registradas de productos." />
+          <Metric label="Vistas por impresión" value={formatRatio(summary.ctr)} detail="Vistas registradas de publicaciones ÷ impresiones." />
+          <Metric label="Tasa de contacto" value={formatRatio(summary.contact_rate)} detail="Contactos ÷ vistas registradas de publicaciones." />
         </> : null}
       </div>
       <div className="rounded-panel border border-subtle bg-white p-4 text-meta leading-6 text-ink-2">

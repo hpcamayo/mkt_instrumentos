@@ -37,7 +37,7 @@ export function ListingCard({ listing, source = "catalog" }: ListingCardProps) {
   const activePhoto = photos[activePhotoIndex] ?? photos[0];
   const sellerLabel = getSellerBadgeLabel(listing, store);
   const sellerBadgeClass =
-    sellerLabel === "Tienda Verificada"
+    sellerLabel === "Tienda verificada"
       ? "bg-accent-tint text-ink"
       : "bg-subtle text-ink";
   const displayTitle = getListingDisplayTitle(listing);
@@ -274,7 +274,7 @@ function getSellerBadgeLabel(
   store: ReturnType<typeof normalizeStore>,
 ) {
   if (listing.seller_type === "store" && store?.is_verified === true) {
-    return "Tienda Verificada";
+    return "Tienda verificada";
   }
 
   return listing.seller_type === "store" ? "Tienda" : "Particular";

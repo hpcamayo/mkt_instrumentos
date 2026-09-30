@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PageNotice } from "@/components/page-notice";
-import { listingStatusLabel } from "@/lib/account-ui";
+import { StatusTag } from "@/components/ui/tag";
 import { formatPrice } from "@/lib/listings";
 
 export type ManagedListing = {
@@ -117,7 +117,7 @@ export function ListingManagementTable({
                       <p className="mt-1 max-w-sm text-meta text-danger">Ocultada por moderación: {listing.hidden_reason}</p>
                     ) : null}
                   </td>
-                  <td className="px-5 py-4">{listingStatusLabel(listing.status)}{listing.status === "sold" && listing.sold_at ? <p className="mt-1 whitespace-nowrap text-meta text-ink-2">Marcada vendida: {formatDate(listing.sold_at)}</p> : null}</td>
+                  <td className="px-5 py-4"><StatusTag domain="listing" status={listing.status} />{listing.status === "sold" && listing.sold_at ? <p className="mt-1 whitespace-nowrap text-meta text-ink-2">Marcada vendida: {formatDate(listing.sold_at)}</p> : null}</td>
                   <td className="px-5 py-4">{formatPrice(listing.price_pen)}</td>
                   <td className="whitespace-nowrap px-5 py-4">{listing.published_at ? formatDate(listing.published_at) : "Aún no publicada"}</td>
                   <td className="px-5 py-4">{listing.analytics ? numbers.format(listing.analytics.views) : "No disponible"}</td>

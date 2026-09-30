@@ -355,7 +355,7 @@ async function getStoreOwnerAccount(requireStore: boolean, allowedStoreId?: stri
     return {
       ok: false as const,
       message: store?.status === "rejected"
-        ? "Corrige la solicitud rechazada antes de enviar inventario."
+        ? "Corrige la solicitud rechazada antes de publicar."
         : "Necesitas una solicitud de tienda pendiente o aprobada.",
       status: 422,
     };

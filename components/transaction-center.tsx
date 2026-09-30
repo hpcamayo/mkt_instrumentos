@@ -21,7 +21,7 @@ export function TransactionCenter({ items }: { items: TransactionCenterItem[] })
   return <div className="grid gap-6">
     {pendingBuyer.length ? <TransactionSection title="Requiere tu confirmación" description="Responde desde la relación exacta que indicó el vendedor." items={pendingBuyer} action /> : null}
     <TransactionSection title="Compras" description="Compras confirmadas, rechazadas o canceladas vinculadas a tu cuenta." items={purchases} />
-    <TransactionSection title="Ventas" description="Atribuciones y ventas que administras como Particular o Tienda." items={sales} />
+    <TransactionSection title="Ventas" description="Ventas en las que pediste confirmación al comprador, como Particular o Tienda." items={sales} />
   </div>;
 }
 

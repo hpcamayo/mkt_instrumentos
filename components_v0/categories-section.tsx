@@ -31,14 +31,14 @@ const categoryIcons = {
 const fallbackIcon = Piano;
 
 const categorySubtitles: Record<string, string> = {
-  guitars: "Electricas y acusticas",
-  basses: "Bajos electricos",
-  drums: "Baterias y percusion",
-  cymbals: "Platillos",
+  guitars: "Eléctricas y acústicas",
+  basses: "Bajos eléctricos",
+  drums: "Baterías y percusión",
+  cymbals: "Crash, ride y hi-hat",
   microphones: "Audio profesional",
   pedals: "Efectos y pedales",
-  amplifiers: "Amplificadores",
-  "audio interfaces": "Estudio y grabacion",
+  amplifiers: "Combos y cabezales",
+  "audio interfaces": "Estudio y grabación",
 };
 
 
@@ -48,11 +48,8 @@ export function CategoriesSection({ categories }: { categories: Category[] }) {
       <PageContainer>
         <div className="mb-7 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="t-micro text-ink-2">
-              Explora
-            </p>
-            <h2 className="mt-2 t-page text-ink">
-              Explora por categoria
+            <h2 className="t-page text-ink">
+              Categorías
             </h2>
           </div>
           <p className="max-w-md t-ui text-ink-2">

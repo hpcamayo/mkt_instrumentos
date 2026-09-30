@@ -13,7 +13,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export const metadata = {
   robots: NOINDEX_ROBOTS,
-  title: "Invitacion de vendedor",
+  title: "Invitación de cuenta Particular",
 };
 
 export default async function SellerInvitePage() {
@@ -22,7 +22,7 @@ export default async function SellerInvitePage() {
   if (!user) {
     redirect(
       `/login?next=${encodeURIComponent("/registro/vendedor/invitacion")}&error=${encodeURIComponent(
-        "Inicia sesion desde tu enlace de invitacion para continuar.",
+        "Inicia sesión desde tu enlace de invitación para continuar.",
       )}`,
     );
   }
@@ -43,15 +43,15 @@ export default async function SellerInvitePage() {
   ) {
     return (
       <InvitePageShell
-        eyebrow="Invitacion"
-        title="Esta invitacion parece ser para una tienda"
-        description="Te llevamos al flujo correcto para activar la cuenta de tienda."
+        eyebrow="Invitación"
+        title="Esta invitación parece ser para una Tienda"
+        description="Te llevamos al paso correcto para activar la cuenta de Tienda."
       >
         <InviteRecoveryPanel
-          title="Flujo de tienda"
-          message="Esta cuenta tiene metadata de tienda. Usa la configuracion de tienda para completar el perfil correcto."
+          title="Cuenta de Tienda"
+          message="Esta cuenta está registrada como Tienda. Completa el perfil desde la invitación de Tienda."
           primaryHref="/registro/tienda/invitacion"
-          primaryLabel="Ir a invitacion de tienda"
+          primaryLabel="Ir a la invitación de Tienda"
           secondaryHref="/mi-cuenta"
           secondaryLabel="Ver mi cuenta"
         />
@@ -65,13 +65,13 @@ export default async function SellerInvitePage() {
   ) {
     return (
       <InvitePageShell
-        eyebrow="Invitacion"
-        title="No pudimos confirmar esta invitacion"
+        eyebrow="Invitación"
+        title="No pudimos confirmar esta invitación"
         description="La cuenta ya tiene otro tipo de perfil. Revisa que hayas abierto el enlace correcto."
       >
         <InviteRecoveryPanel
           title="Cuenta con tipo distinto"
-          message="Para evitar duplicar o cambiar perfiles por error, vuelve a iniciar sesion con el enlace correcto o contacta al equipo de Laria."
+          message="Para evitar duplicar o cambiar perfiles por error, vuelve a iniciar sesión con el enlace correcto o contacta al equipo de Laria."
           primaryHref="/login"
           primaryLabel="Volver a ingresar"
           secondaryHref="/mi-cuenta"
@@ -83,22 +83,22 @@ export default async function SellerInvitePage() {
 
   return (
     <InvitePageShell
-      eyebrow="Cuenta de vendedor"
-      title="Activa tu cuenta de vendedor"
+      eyebrow="Cuenta Particular"
+      title="Activa tu cuenta Particular"
       description="Completa tu perfil para administrar tus publicaciones en Laria."
     >
       <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <div className="space-y-4 t-ui text-ink-2">
           <p>
-            Desde tu cuenta podras publicar instrumentos, editar tus
+            Desde tu cuenta podrás publicar instrumentos, editar tus
             publicaciones, marcarlas como vendidas o retirarlas cuando ya no
-            esten disponibles.
+            estén disponibles.
           </p>
           <div className="rounded-panel border border-subtle bg-white p-4">
-            <p className="font-semibold text-ink">Despues de activar</p>
+            <p className="font-semibold text-ink">Después de activar</p>
             <p className="mt-1">
-              Podras crear tu primera publicacion. Laria mantiene el contacto
-              con compradores por WhatsApp y no procesa pagos ni envios.
+              Podrás crear tu primera publicación. Los compradores te
+              contactarán por WhatsApp; Laria no procesa pagos ni envíos.
             </p>
           </div>
         </div>

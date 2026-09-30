@@ -100,7 +100,7 @@ export async function upsertSellerProfile(
   ) {
     return {
       ok: false,
-      message: "Esta cuenta ya esta registrada con otro tipo de perfil.",
+      message: "Esta cuenta ya está registrada con otro tipo de perfil.",
     };
   }
 
@@ -155,7 +155,7 @@ export async function upsertStoreOwnerProfile(
     return {
       ok: false,
       message:
-        "Esta cuenta no esta marcada como tienda. Revisa que hayas abierto el enlace de invitacion correcto.",
+        "Esta cuenta no está registrada como Tienda. Revisa que hayas abierto el enlace de invitación correcto.",
     };
   }
 
@@ -193,14 +193,14 @@ function validateProfileLocation(city: string, region: string) {
   if (!trimmedCity) {
     return {
       ok: false as const,
-      message: "Ingresa una ciudad valida.",
+      message: "Ingresa una ciudad válida.",
     };
   }
 
   if (!normalizedRegion) {
     return {
       ok: false as const,
-      message: "Selecciona una region valida de Peru.",
+      message: "Selecciona una región válida de Perú.",
     };
   }
 

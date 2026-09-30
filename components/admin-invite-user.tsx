@@ -125,7 +125,7 @@ export function AdminInviteUser() {
         <p className="t-micro text-ink-2">Acceso</p>
         <h2 className="mt-1 t-section text-ink">Invitar usuario</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-ink-2">
-          Envía el flujo de activación existente para una cuenta Particular o Store Owner. Laria no crea ni muestra contraseñas temporales.
+          Envía el flujo de activación existente para una cuenta Particular o de Tienda. Laria no crea ni muestra contraseñas temporales.
         </p>
       </div>
 
@@ -136,7 +136,7 @@ export function AdminInviteUser() {
         <Field id="invitar-account-type" label="Tipo de cuenta">
           <Select value={accountType} onChange={(event) => setAccountType(event.target.value as InviteAccountType)}>
             <option value="seller">Particular</option>
-            <option value="store_owner">Store Owner</option>
+            <option value="store_owner">Tienda</option>
           </Select>
         </Field>
         <LocationFields required={false} />
@@ -161,7 +161,7 @@ export function AdminInviteUser() {
               {result ? (
                 <div className="mt-2 text-ink-2">
                   <p>{result.fullName} · {result.email}</p>
-                  <p>Tipo: {result.accountType === "seller" ? "Particular" : "Store Owner"}</p>
+                  <p>Tipo: {result.accountType === "seller" ? "Particular" : "Tienda"}</p>
                   <p>Destino: {result.finalInvitePath}</p>
                   {result.storeName ? <p>Tienda: {result.storeName}</p> : null}
                   {result.notes ? <p>Notas: {result.notes}</p> : null}

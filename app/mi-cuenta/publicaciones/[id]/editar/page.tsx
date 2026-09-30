@@ -59,8 +59,8 @@ export default async function ListingEditPage({
   const { guardado } = await searchParams;
   const notices: Record<string, string> = {
     revision: "Los cambios inmediatos ya se aplicaron. Los cambios principales quedaron en revisión y la versión pública anterior sigue visible.",
-    revision_amended: "Actualizamos la propuesta pendiente con tus cambios más recientes. La versión pública anterior sigue visible.",
-    revision_cancelled: "Cancelamos la propuesta porque ya coincide con la versión pública aprobada.",
+    revision_amended: "Actualizamos tus cambios en revisión con la edición más reciente. La versión pública anterior sigue visible.",
+    revision_cancelled: "Cancelamos los cambios en revisión porque ya coinciden con la versión publicada.",
     direct: "Los cambios se guardaron correctamente.",
   };
   const editableListing = pendingRevision

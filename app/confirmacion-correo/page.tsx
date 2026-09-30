@@ -33,14 +33,6 @@ export default async function EmailConfirmationPage() {
           >
             {user ? "Ir a Mi cuenta" : "Ingresar"}
           </Link>
-          {user ? (
-            <Link
-              className={buttonClasses({ variant: "secondary" })}
-              href="/mi-cuenta"
-            >
-              Abrir el panel
-            </Link>
-          ) : null}
         </div>
       </div>
     </PageContainer>

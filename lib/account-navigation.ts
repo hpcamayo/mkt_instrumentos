@@ -7,12 +7,12 @@ export type AccountNavigationItem = {
   activePaths?: readonly string[];
 };
 
-// Frozen V1 account information architecture, shared by desktop and mobile menus.
+// Frozen account information architecture, shared by desktop and mobile menus. Labels follow the UX-1 glossary.
 const sharedAccountItems: AccountNavigationItem[] = [
   { href: "/mi-cuenta/favoritos", label: "Favoritos", icon: "favorites" },
   { href: "/mi-cuenta/alertas", label: "Alertas", icon: "alerts" },
   { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
-  { href: "/mi-cuenta/transacciones", label: "Compras", icon: "transactions" },
+  { href: "/mi-cuenta/transacciones", label: "Compras y ventas", icon: "transactions" },
   { href: "/mi-cuenta/perfil", label: "Perfil y seguridad", icon: "profile", activePaths: ["/mi-cuenta/seguridad"] },
 ];
 
@@ -23,7 +23,7 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
       { href: "/mi-cuenta/tienda", label: hasStore ? "Mi tienda" : "Solicitud de tienda", icon: "store", exact: true },
       ...(hasStore ? [
         { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory" } as const,
-        { href: "/mi-cuenta/tienda/publicar", label: "Publicar producto", icon: "publish" } as const,
+        { href: "/mi-cuenta/tienda/publicar", label: "Publicar", icon: "publish" } as const,
         { href: "/mi-cuenta/tienda/estadisticas", label: "Estadísticas", icon: "analytics" } as const,
       ] : []),
       ...sharedAccountItems,
@@ -55,7 +55,7 @@ export function getHeaderNavigation({ authenticated, storeOwner, hasStore }: { a
     { href: "/", label: "Inicio", primary: false },
     { href: "/listados", label: "Listados", primary: false },
     ...(storeOwner
-      ? [{ href: hasStore ? "/mi-cuenta/tienda/publicar" : "/mi-cuenta/tienda", label: hasStore ? "Publicar producto" : "Solicitud de tienda", primary: hasStore }]
+      ? [{ href: hasStore ? "/mi-cuenta/tienda/publicar" : "/mi-cuenta/tienda", label: hasStore ? "Publicar" : "Solicitud de tienda", primary: hasStore }]
       : [{ href: authenticated ? "/mi-cuenta/publicar" : "/vender", label: "Vender", primary: true }]),
     ...(!authenticated ? [{ href: "/registro/tienda", label: "Para tiendas", primary: false }] : []),
   ];

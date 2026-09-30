@@ -13,12 +13,12 @@ export function CTASection() {
                 Publica gratis
               </p>
               <h2 className="mt-3 max-w-3xl text-[28px] font-bold leading-[32px] stretch-semicond md:text-[40px] md:leading-[44px]">
-                La musica nos conecta.
+                La música nos conecta.
                 <br />
                 <span className="text-accent">Laria lo hace posible.</span>
               </h2>
               <p className="mt-4 max-w-xl t-body text-muted-dark">
-                Sube tu instrumento, espera la revision del equipo y recibe
+                Sube tu instrumento, espera la revisión del equipo y recibe
                 consultas directas por WhatsApp.
               </p>
             </div>
