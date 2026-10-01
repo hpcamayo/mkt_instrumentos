@@ -25,7 +25,7 @@ Verdict: the structure holds. The issues are calibration (sizes and gaps off the
 - **5 · Two yellow buttons in the first screen.** Header "Vender" and "Explorar" sit about 180 px apart, against the rule of one yellow action per view; on listing pages Vender would sit beside the yellow WhatsApp button. → Decided 30 Sep (N1): "Vender" becomes the outline button on dark (white text, #4B5563 border).
 - **10 · Header margins.** The logo sits on the 32 px gutter; "Ingresar" ends 42 px from the right edge because of its link padding. → pull the last item's padding out so both ends sit on the gutter.
 - **14 · Widows.** Phone: "…de todo el / país.", "…confirmaron en / Laria."; desktop: "…de una tienda / verificada." → global rule: `text-wrap: balance` on headings and leads, `text-wrap: pretty` on paragraphs.
-- **17 · Two search placeholders.** Desktop "Busca marca, modelo o instrumento", phone "Instrumento, marca o modelo". → "Marca, modelo o instrumento" in the header search (UX-2) and the banner (UX-3).
+- **17 · Two search placeholders.** Desktop "Busca marca, modelo o instrumento", phone "Instrumento, marca o modelo". → "Marca, modelo o instrumento" in the header search (UX-2) and the banner (UX-3). *Superseded 30 Sep by decision N8 (`decisions.md`): the search matches the brand only, so the one placeholder is "Busca por marca: Yamaha, Fender…", in the header (UX-2) and the banner (UX-3).*
 
 ## UX-3 · Discovery (home)
 

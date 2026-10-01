@@ -38,6 +38,9 @@ UX-1 was accepted by the owner on 30 Sep (`ux-1-acceptance.md`). The UX-2 brief 
 | G1 | The catalog page is called "Instrumentos" (header, footer, breadcrumbs, SEO title); `/listados` stays; the copy test's "Listados" exception goes | decided 2026-09-30 by owner |
 | N6 | Header data for the bell, the account menu and the avatar: the header's state endpoint (`/api/account-navigation`) also reads the user's name, the existing `is_admin` check and the two counts the account rail already reads (unread notifications, pending buyer confirmations). Same RLS client; no schema or rule change | decided 2026-09-30 by owner (asked during UX-2 implementation) |
 | N7 | "Tiendas verificadas" in the category strip and the footer: no stores directory exists, so it opens the catalog filtered to verified stores (`/listados?seller_type=verified_store`, the existing filter). A stores page would be new (UX-3/UX-4) | decided 2026-09-30 by owner (asked during UX-2 implementation) |
+| N8 | Search placeholder. The header search matches the brand only (`brand ILIKE '%text%'`), so audit item 17's "Marca, modelo o instrumento" would promise model and instrument search that returns nothing. One honest placeholder instead, "Busca por marca: Yamaha, Fender…", in the header now and the home banner in UX-3; brand-only search stays as it is | decided 2026-09-30 by owner (asked during UX-2 implementation); supersedes the placeholder text of audit item 17 |
+
+Raised by N8, for UX-3: free-text search over brand, model and title (a query change touching the catalog filters, search alerts and SEO) — owner question.
 
 ## Decided — UX-1 foundations (asked 2026-09-27)
 

@@ -3,13 +3,13 @@
 Durable memory for the UX/web-design engagement. Chat history is not memory; this folder is.
 Read this file first, then only the file your task needs.
 
-## Status (2026-09-30)
+## Status (2026-10-01)
 
 | Sub-sprint | Name | State |
 | --- | --- | --- |
 | UX-0 | Investigation and plan | Done |
 | UX-1 | Foundations: visual + content language, primitives, a11y baseline | **Accepted** (owner, 30 Sep): implemented on branch `ux/redesign` (9 Cowork commits + audit commits, not pushed); audited and corrected 30 Sep; evidence in `ux-1-acceptance.md` |
-| UX-2 | Shell and navigation | **In implementation** (brief approved by the owner, 30 Sep): `ux-2-shell.md`, with its items from `home-visual-audit.md` |
+| UX-2 | Shell and navigation | **Ready for owner acceptance** (1 Oct): brief `ux-2-shell.md` (approved 30 Sep) implemented on `ux/redesign` (not pushed) and audited; evidence and the deviations to decide in `ux-2-acceptance.md` |
 | UX-3 | Discovery: home, catalog, category landings, cards, filters | Not started. Home decided: canvas page "Inicio · versión final", banner set in `art/rotation/` |
 | UX-4 | Listing and store pages | Not started |
 | UX-5 | Selling: create, edit, revise | Not started |
@@ -33,6 +33,7 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `ux-1-foundations.md` | UX-1 approval package and the proposed foundation spec |
 | `ux-1-acceptance.md` | UX-1 acceptance package: commits, criteria with evidence, performance, changed labels, open items |
 | `ux-2-shell.md` | UX-2 brief (approved 30 Sep): header, category strip, account menu, breadcrumbs, page frames, footers, 404/500, decisions N1–N5 and G1, acceptance criteria |
+| `ux-2-acceptance.md` | UX-2 acceptance package: commits, criteria with evidence, measurements, layout shift, deviations for the owner, spec and acceptance rows affected, changed tests |
 | `home-visual-audit.md` | Graphic-design review of the decided home (30 Sep): the numbered items each sub-sprint applies (table "By sub-sprint") and the owner questions still open |
 | `decisions.md` | Decision log (pending and decided). Update it whenever the owner decides |
 | `screenshots/baseline-2026-09-27/` | Live-site baseline captured during the audit |
@@ -54,11 +55,13 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `screenshots/home-final/` | The home with every decision applied (1440, 390) and the nine rotation banners: the reference for UX-3 |
 | `screenshots/ux1-before/` | Harness captures of the product before UX-1 (selected frames) |
 | `screenshots/ux1-after/` | The same frames after UX-1 (same file names; taken before the 30 Sep audit fixes) |
+| `screenshots/ux2-before/` | Harness captures before UX-2 (selected frames, `<width>-<group>-<route>.webp`) |
+| `screenshots/ux2-after/` | The same frames after UX-2, plus the new 500 page |
 | `screenshots/ux1-audit/` | Concept vs build, side by side (16 pairs) after the audit fixes; `index.html` lists the layout differences per pair |
 | `../../scripts/ux-snapshots.cjs` | The screenshot harness (D10): fixed route list at 390 / 768 / 1280 / 1440, anonymous and signed in; output in the gitignored `.ux-snapshots/` |
 | `art/` | Original banner art: SVG (round 2), raster generators and images (`wild/`, `round5/` … `round10/`) |
 
-In the repo, `screenshots/` keeps only the baseline, the page and UX-1 concepts, the final home and the harness captures, as WebP. The banner explorations (rounds 1–10 and their renders) stay on the Laria Page Concepts canvas; `art/rotation/src/` keeps the generators of the nine decided pieces.
+In the repo, `screenshots/` keeps only the baseline, the page and UX-1 concepts, the final home and the harness captures (UX-1, UX-2), as WebP. The banner explorations (rounds 1–10 and their renders) stay on the Laria Page Concepts canvas; `art/rotation/src/` keeps the generators of the nine decided pieces.
 
 Visual workspaces (private claude.ai artifacts, owner account; exploratory, not specs):
 - **Laria Redesign** canvas: pages "UX-1 Fundamentos" (type, color, components, scale, language) and "Línea base 27-09" (annotated live-site captures).
