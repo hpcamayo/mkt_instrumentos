@@ -1,65 +1,112 @@
-import Image from "next/image";
 import Link from "next/link";
-import logoClear from "@/app/logo-clear.svg";
+import { BrandLogo } from "@/components/brand-logo";
 import { PageContainer } from "@/components/page-container";
+import { categoryLandingPath } from "@/lib/category-pages";
 import { legalPages } from "@/lib/legal-pages";
+import { CATALOG_PATH, VERIFIED_STORES_PATH } from "@/lib/shell";
+import { cn } from "@/lib/utils";
 
-const footerLinks = [
-  { href: "/", label: "Inicio" },
-  { href: "/listados", label: "Listados" },
-  { href: "/vender", label: "Vender" },
-  { href: "/registrar-tienda", label: "Para tiendas" },
+type FooterLink = { href: string; label: string };
+
+// Footers link only to pages that exist (docs/ux-redesign/ux-2-shell.md).
+const legal = (href: string) => legalPages.find((page) => page.href === href)!;
+const exploreLinks: FooterLink[] = [
+  { href: CATALOG_PATH, label: "Instrumentos" },
+  { href: categoryLandingPath("guitars"), label: "Guitarras" },
+  { href: categoryLandingPath("drums"), label: "Baterías" },
+  { href: categoryLandingPath("pedals"), label: "Pedales" },
+  { href: VERIFIED_STORES_PATH, label: "Tiendas verificadas" },
 ];
+// /registrar-tienda sends a signed-out visitor to /registro/tienda and tells a signed-in Particular that a
+// store needs its own account.
+const sellLinks: FooterLink[] = [
+  { href: "/vender", label: "Publicar un instrumento" },
+  { href: "/registrar-tienda", label: "Registrar mi tienda" },
+];
+const helpLinks: FooterLink[] = ["/consejos-de-seguridad", "/articulos-prohibidos", "/terminos", "/privacidad"].map(legal);
+const phoneLinks: FooterLink[] = [
+  exploreLinks[0], sellLinks[1], legal("/terminos"),
+  legal("/consejos-de-seguridad"), legal("/articulos-prohibidos"), legal("/privacidad"),
+];
+const slimLinks: FooterLink[] = ["/consejos-de-seguridad", "/terminos", "/privacidad"].map(legal);
 
-export function SiteFooter() {
+const PROMISE = "No cobramos comisiones ni procesamos pagos.";
+// The footer's small print: 12 px on phones so the promise line fits one line at 390 px, 13 px from 640 px.
+const FOOTER_SMALL = "text-[12px] leading-4 sm:text-[13px] sm:leading-[18px]";
+
+// Full footer on the home (N5): brand and promise, Explora, Vende, Ayuda y legal. Phones show the logo, the links
+// in two columns and the promise line.
+export function SiteFooter({ variant = "slim" }: { variant?: "full" | "slim" }) {
+  if (variant === "slim") return <SlimFooter />;
   return (
-    <footer className="surface-frame border-t border-white/10 bg-frame text-white">
-      <PageContainer className="grid gap-8 py-10 t-ui sm:grid-cols-2 lg:grid-cols-[1.2fr_0.7fr_0.8fr_1fr] lg:py-12">
-        <div className="space-y-3">
-          <Image src={logoClear} alt="Laria" width={112} height={78} className="h-9 w-auto" />
-          <p className="max-w-sm text-muted-dark">
-            Marketplace peruano para descubrir instrumentos musicales y
-            contactar vendedores directo por WhatsApp.
-          </p>
+    <footer className="surface-frame bg-frame text-surface">
+      <PageContainer className="pb-6 pt-8 md:pt-12">
+        <div className="grid gap-6 md:grid-cols-2 md:gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          <div>
+            <Link href="/" aria-label="Laria inicio" className="inline-flex w-fit">
+              <BrandLogo size="footer" />
+            </Link>
+            <p className="mt-4 hidden max-w-xs t-ui text-muted-dark md:block">
+              El mercado de instrumentos y audio profesional del Perú. Laria no cobra comisiones, no procesa pagos, no
+              retiene dinero, no gestiona envíos ni garantiza el equipo ni las transacciones.
+            </p>
+          </div>
+          <FooterColumn title="Explora" links={exploreLinks} />
+          <FooterColumn title="Vende" links={sellLinks} />
+          <FooterColumn title="Ayuda y legal" links={helpLinks} />
+          <nav aria-label="Pie de página" className="md:hidden">
+            <ul className="grid grid-flow-col grid-cols-2 grid-rows-3 gap-x-4">
+              {phoneLinks.map((item) => <li key={item.href}><FooterLinkItem {...item} /></li>)}
+            </ul>
+          </nav>
         </div>
-
-        <FooterLinks title="Navega" links={footerLinks} />
-        <FooterLinks title="Ayuda y legal" links={legalPages} />
-
-        <div>
-          <p className="t-micro text-muted-dark">
-            Cómo funciona
-          </p>
-          <p className="mt-4 max-w-sm text-muted-dark">
-            Coordinas directo con cada vendedor. Laria no procesa pagos, no
-            retiene dinero, no gestiona envíos ni garantiza el equipo ni
-            las transacciones.
-          </p>
-        </div>
-
-        <div className="border-t border-white/10 pt-5 t-meta text-muted-dark sm:col-span-2 lg:col-span-4">
-          © 2026 Laria. Para músicos, tiendas y compradores en Perú.
+        <div className={cn("mt-8 flex flex-col gap-1 border-t border-white/10 pt-5 text-muted-dark md:mt-12 md:flex-row md:justify-between", FOOTER_SMALL)}>
+          <p>© 2026 Laria<span className="md:hidden"> · {PROMISE}</span></p>
+          <p className="hidden md:block">Hecho en Perú</p>
         </div>
       </PageContainer>
     </footer>
   );
 }
 
-function FooterLinks({ title, links }: { title: string; links: readonly { href: string; label: string }[] }) {
+// Slim footer on every other public and account page: one row, two lines on phones.
+function SlimFooter() {
   return (
-    <nav aria-label={title}>
-      <p className="t-micro text-muted-dark">
-        {title}
-      </p>
-      <ul className="mt-4 grid gap-2 text-surface">
-        {links.map((item) => (
-          <li key={item.href}>
-            <Link className="inline-flex min-h-8 items-center underline-offset-4 hover:underline hover:decoration-accent hover:decoration-2" href={item.href}>
-              {item.label}
-            </Link>
-          </li>
-        ))}
+    <footer className="surface-frame bg-frame text-surface">
+      <PageContainer className={cn("flex flex-col gap-2 py-5 md:flex-row md:items-center md:justify-between md:gap-6", FOOTER_SMALL)}>
+        <p className="text-muted-dark">© 2026 Laria · {PROMISE}</p>
+        <nav aria-label="Ayuda y legal" className="text-surface">
+          <ul className="flex flex-wrap items-center gap-x-1.5">
+            {slimLinks.map((item, index) => (
+              <li key={item.href} className="flex items-center gap-1.5">
+                {index > 0 ? <span aria-hidden="true" className="text-muted-dark">·</span> : null}
+                <Link href={item.href} className="inline-flex min-h-6 items-center underline-offset-4 hover:underline hover:decoration-accent hover:decoration-2">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </PageContainer>
+    </footer>
+  );
+}
+
+function FooterColumn({ title, links }: { title: string; links: FooterLink[] }) {
+  return (
+    <nav aria-label={title} className="hidden md:block">
+      <p className="t-micro text-muted-dark">{title}</p>
+      <ul className="mt-3 grid gap-1">
+        {links.map((item) => <li key={item.href}><FooterLinkItem {...item} /></li>)}
       </ul>
     </nav>
+  );
+}
+
+function FooterLinkItem({ href, label }: FooterLink) {
+  return (
+    <Link className="inline-flex min-h-8 items-center t-ui underline-offset-4 hover:underline hover:decoration-accent hover:decoration-2" href={href}>
+      {label}
+    </Link>
   );
 }

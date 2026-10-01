@@ -35,7 +35,7 @@ const adminCookie = "sb-access-token=admin-session";
 const coverageOptions = { soldListing, adminCookie };
 const breadcrumb = (url) => ld("BreadcrumbList", { itemListElement: [
   { "@type": "ListItem", position: 1, name: "Inicio", item: `${site}/` },
-  { "@type": "ListItem", position: 2, name: "Listados", item: `${site}/listados` },
+  { "@type": "ListItem", position: 2, name: "Instrumentos", item: `${site}/listados` },
   { "@type": "ListItem", position: 3, name: "Categoría", item: url },
 ] });
 const itemList = (urls) => ld("ItemList", { name: "Lista", numberOfItems: urls.length, itemListElement: urls.map((url, index) => ({ "@type": "ListItem", position: index + 1, url, name: "Item" })) });
@@ -400,7 +400,7 @@ const listadosUrl = `${site}/listados`;
 const streamedListados = (ua) => (/Googlebot/.test(ua)
   ? `<html><head></head><body><main></main>${page(listadosUrl).match(/<link[\s\S]*?og:url"[^>]*>/)[0]}</body></html>`
   : page(listadosUrl));
-const renderedHead = (overrides = {}) => ({ canonical: [listadosUrl], ogUrl: [listadosUrl], ogTitle: ["Listados | Laria"], robots: ["index, follow"], ...overrides });
+const renderedHead = (overrides = {}) => ({ canonical: [listadosUrl], ogUrl: [listadosUrl], ogTitle: ["Instrumentos musicales en venta en Perú | Laria"], robots: ["index, follow"], ...overrides });
 function fakeRenderer(result) {
   const calls = [];
   return { calls, close: async () => {}, render: async (url, userAgent) => { calls.push({ url, userAgent }); return typeof result === "function" ? result(url) : result; } };

@@ -87,8 +87,9 @@ test("CSS variables mirror the Tailwind roles", () => {
   }
 });
 
-// Components that only render inside the header frame (components/site-header.tsx).
-const FRAME_CHILDREN = new Set([path.join("components", "site-header-controls.tsx")]);
+// Components that only render inside a frame surface without declaring it themselves. None since UX-2: the header,
+// footer and Admin navigation each carry surface-frame.
+const FRAME_CHILDREN = new Set();
 
 test("light-on-dark text roles are only used on frame surfaces", () => {
   const files = ["app", "components", "components_v0"].flatMap(function walk(dir) {

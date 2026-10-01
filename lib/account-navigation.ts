@@ -50,13 +50,18 @@ export const accountSettingsTabs = [
   { href: "/mi-cuenta/seguridad", label: "Seguridad" },
 ] as const;
 
-export function getHeaderNavigation({ authenticated, storeOwner, hasStore }: { authenticated: boolean; storeOwner: boolean; hasStore: boolean }) {
-  return [
-    { href: "/", label: "Inicio", primary: false },
-    { href: "/listados", label: "Listados", primary: false },
-    ...(storeOwner
-      ? [{ href: hasStore ? "/mi-cuenta/tienda/publicar" : "/mi-cuenta/tienda", label: hasStore ? "Publicar" : "Solicitud de tienda", primary: hasStore }]
-      : [{ href: authenticated ? "/mi-cuenta/publicar" : "/vender", label: "Vender", primary: true }]),
-    ...(!authenticated ? [{ href: "/registro/tienda", label: "Para tiendas", primary: false }] : []),
-  ];
+// Glossary names of the two account types (docs/design-system.md).
+export function accountRoleLabel(accountType: "seller" | "store_owner") {
+  return accountType === "store_owner" ? "Tienda" : "Particular";
+}
+
+// The header's sell entry (decision N1: the outline button on dark). Store owners keep their own labels:
+// "Publicar" once the store exists, "Solicitud de tienda" before. Stores reach store registration from the footer.
+export function getSellEntry({ authenticated, storeOwner, hasStore }: { authenticated: boolean; storeOwner: boolean; hasStore: boolean }) {
+  if (storeOwner) {
+    return hasStore
+      ? { href: "/mi-cuenta/tienda/publicar", label: "Publicar" }
+      : { href: "/mi-cuenta/tienda", label: "Solicitud de tienda" };
+  }
+  return { href: authenticated ? "/mi-cuenta/publicar" : "/vender", label: "Vender" };
 }

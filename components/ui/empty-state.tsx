@@ -19,7 +19,7 @@ export function EmptyState({
   return (
     <div className={cn("flex flex-col items-start gap-2 rounded-panel border border-subtle bg-surface p-6", className)}>
       <Heading className="t-section text-ink">{title}</Heading>
-      {description ? <div className="max-w-[68ch] t-body text-ink-2">{description}</div> : null}
+      {description ? <div className="text-lead max-w-[68ch] t-body text-ink-2">{description}</div> : null}
       {actions ? <div className="mt-2 flex flex-wrap gap-2">{actions}</div> : null}
     </div>
   );

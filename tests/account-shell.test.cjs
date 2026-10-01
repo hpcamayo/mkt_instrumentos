@@ -17,7 +17,7 @@ function load(source) {
   return mod.exports;
 }
 
-const { getAccountNavigationItems, accountItemIsActive, getHeaderNavigation } = load("lib/account-navigation.ts");
+const { getAccountNavigationItems, accountItemIsActive, getSellEntry } = load("lib/account-navigation.ts");
 
 test("Particular account navigation exposes only implemented Particular destinations", () => {
   const items = getAccountNavigationItems("seller", false);
@@ -45,18 +45,24 @@ test("account navigation keeps a precise active section", () => {
   assert.equal(accountItemIsActive("/mi-cuenta/tienda/inventario", statistics), false);
 });
 
-test("header never offers stale store registration to authenticated accounts", () => {
-  assert.deepEqual(getHeaderNavigation({ authenticated: false, storeOwner: false, hasStore: false }).map((item) => item.label), ["Inicio", "Listados", "Vender", "Para tiendas"]);
-  assert.deepEqual(getHeaderNavigation({ authenticated: true, storeOwner: false, hasStore: false }).map((item) => item.label), ["Inicio", "Listados", "Vender"]);
-  assert.deepEqual(getHeaderNavigation({ authenticated: true, storeOwner: true, hasStore: false }).map((item) => item.label), ["Inicio", "Listados", "Solicitud de tienda"]);
-  assert.deepEqual(getHeaderNavigation({ authenticated: true, storeOwner: true, hasStore: true }).map((item) => item.label), ["Inicio", "Listados", "Publicar"]);
+test("header never offers stale store registration and keeps each account's sell destination", () => {
+  assert.deepEqual(getSellEntry({ authenticated: false, storeOwner: false, hasStore: false }), { href: "/vender", label: "Vender" });
+  assert.deepEqual(getSellEntry({ authenticated: true, storeOwner: false, hasStore: false }), { href: "/mi-cuenta/publicar", label: "Vender" });
+  assert.deepEqual(getSellEntry({ authenticated: true, storeOwner: true, hasStore: false }), { href: "/mi-cuenta/tienda", label: "Solicitud de tienda" });
+  assert.deepEqual(getSellEntry({ authenticated: true, storeOwner: true, hasStore: true }), { href: "/mi-cuenta/tienda/publicar", label: "Publicar" });
+  // UX-2: "Para tiendas" left the header for everyone (glossary D8); stores reach registration from the footer.
+  const header = fs.readFileSync("components/site-header.tsx", "utf8");
+  assert.doesNotMatch(header, /Para tiendas|registro\/tienda|registrar-tienda|Crear cuenta/);
+  assert.match(header, /getSellEntry\(account\)/);
 });
 
 test("account shell is protected and retains accessible mobile navigation", () => {
   const layout = fs.readFileSync("app/mi-cuenta/layout.tsx", "utf8");
   const navigation = fs.readFileSync("components/account-navigation.tsx", "utf8");
   assert.match(layout, /getAccountContext\(\)/);
-  assert.match(navigation, /<details/);
+  // UX-2: the phone switcher is a disclosure button whose list stays in the markup while closed.
+  assert.match(navigation, /aria-expanded=\{switcher\.open\}/);
+  assert.match(navigation, /hidden=\{!switcher\.open\}/);
   assert.match(navigation, /Menú de cuenta móvil/);
   assert.match(navigation, /aria-current=\{active \? "page"/);
   assert.match(navigation, /<AccountLogout \/>/);

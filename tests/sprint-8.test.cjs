@@ -256,9 +256,10 @@ test("persistent Admin navigation covers every operational domain on desktop and
   }
   assert.match(navigation, /aria-label="Navegación administrativa"/);
   assert.match(navigation, /aria-current=\{active \? "page" : undefined\}/);
-  assert.match(navigation, /<aside[\s\S]*lg:block/);
-  assert.match(navigation, /<details[\s\S]*lg:hidden/);
-  assert.match(navigation, /<summary[\s\S]*Menú Admin/);
+  // UX-2 Admin frame: a sidebar from 1024 px, and below it a black bar whose menu button discloses the same links.
+  assert.match(navigation, /<aside className="[^"]*hidden[^"]*lg:block/);
+  assert.match(navigation, /lg:hidden[\s\S]*aria-expanded=\{menu\.open\}/);
+  assert.match(navigation, /aria-controls="menu-admin"[\s\S]*Menú/);
   assertVisibleFocus(navigation);
 });
 

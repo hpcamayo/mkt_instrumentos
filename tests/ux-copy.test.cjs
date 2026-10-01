@@ -12,8 +12,6 @@ const SKIP_FILES = [/lib\/supabase\/database\.types\.ts$/, /\.d\.ts$/];
 const LEGAL = /^app\/(terminos|privacidad|articulos-prohibidos|consejos-de-seguridad)\//;
 // Proper names that look like Spanish words without a tilde.
 const PROPER_NAMES = new Set(["Precision"]);
-// "Listados" stays the name of the catalog page until the UX-2 navigation decision (docs/ux-redesign/decisions.md, G1).
-const CATALOG_PAGE_NAME = "Listados";
 
 const ORTHOGRAPHY = new RegExp(`\\b(${[
   "contrasena", "minimo", "maximo", "aqui", "alli", "despues", "tambien", "ademas", "todavia", "segun",
@@ -27,7 +25,9 @@ const ORTHOGRAPHY = new RegExp(`\\b(${[
 const SINGULAR_CION = /\b[a-zñ]+(cion|sion)\b/i;
 const INTERROGATIVE = /¿\s*(que|como|donde|cuando|cual|cuales|cuanto|cuanta|cuantos|cuantas|quien|quienes)\b/i;
 const JARGON = /\b(V1|legacy|Store Owner|metadata|Supabase|CTR|base de datos|dashboard)\b/i;
-const GLOSSARY = /\b(listados?|anuncios?|[ií]tems?|vendedor particular|cuenta de vendedor|propietario de tienda|Publicar producto|Publicar inventario|Agregar inventario|Agregar producto|Enviar para revisi[oó]n|Preguntar por WhatsApp|Escribir por WhatsApp|Escribir a la tienda|Tienda Verificada|Tiendas Verificadas)\b/;
+// The catalog page is "Instrumentos" since UX-2 (decisions.md, G1), so "Listado" is retired in any case; "Para
+// tiendas" is no longer a sell entry (D8).
+const GLOSSARY = /\b([Ll]istados?|[Aa]nuncios?|Para tiendas|[ií]tems?|vendedor particular|cuenta de vendedor|propietario de tienda|Publicar producto|Publicar inventario|Agregar inventario|Agregar producto|Enviar para revisi[oó]n|Preguntar por WhatsApp|Escribir por WhatsApp|Escribir a la tienda|Tienda Verificada|Tiendas Verificadas)\b/;
 
 function files(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -115,7 +115,7 @@ test("no system jargon reaches the interface", () => {
 });
 
 test("glossary terms replace their retired synonyms", () => {
-  assert.deepEqual(failures(({ file, text }) => !LEGAL.test(file) && text !== CATALOG_PAGE_NAME && GLOSSARY.test(text)), []);
+  assert.deepEqual(failures(({ file, text }) => !LEGAL.test(file) && GLOSSARY.test(text)), []);
 });
 
 test("the object is an instrumento or equipo, never an artículo or producto", () => {

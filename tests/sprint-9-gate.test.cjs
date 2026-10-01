@@ -203,13 +203,27 @@ test("top-level categories link to their Spanish landing and type links never re
     }
   }
 
-  // The mega-menu and landing type chips build type links only through the shared helper.
+  // The category strip (UX-2), the listing breadcrumbs and the landing type chips build category and type links
+  // only through the shared helpers.
+  const shell = load("lib/shell.ts");
+  for (const option of categoryOptions) {
+    assert.equal(shell.stripItems.find((item) => item.key === option.value).href, categories.categoryLandingPath(option.value), option.value);
+  }
+  assert.deepEqual(
+    shell.listingBreadcrumbs({ category: "guitars", instrument_type: "electric_guitar" }, "Fender Stratocaster").map((crumb) => crumb.href ?? null),
+    ["/", "/listados", "/instrumentos/guitarras", "/listados?category=guitars&instrument_type=electric_guitar", null],
+  );
+  // A type that mirrors its category (or "other") adds no level that would repeat the category.
+  for (const [category, type] of [["cymbals", "cymbals"], ["drums", "drums"], ["guitars", "other"]]) {
+    assert.deepEqual(shell.listingBreadcrumbs({ category, instrument_type: type }, "X").length, 4, `${category}/${type}`);
+  }
   const nav = fs.readFileSync(path.join(root, "components/global-categories.tsx"), "utf8");
+  const shellSource = fs.readFileSync(path.join(root, "lib/shell.ts"), "utf8");
   const landing = fs.readFileSync(path.join(root, "components/category-landing.tsx"), "utf8");
-  assert.match(nav, /return categoryLandingPath\(category\);/);
-  assert.match(nav, /return categoryTypePath\(category, instrumentType\);/);
+  assert.match(shellSource, /categoryTypePath\(listing\.category, type\)/);
   assert.match(landing, /href=\{categoryTypePath\(landing\.category, type\.value\)\}/);
-  for (const source of [nav, landing]) assert.doesNotMatch(source, /instrument_type:/);
+  for (const source of [nav, shellSource]) assert.doesNotMatch(source, /URLSearchParams|instrument_type=/);
+  assert.doesNotMatch(landing, /instrument_type:/);
 
   // Catalog category filtering keeps the internal enum and its canonical/noindex behavior.
   const seo = load("lib/seo.ts");

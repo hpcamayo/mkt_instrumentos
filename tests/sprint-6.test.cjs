@@ -42,18 +42,28 @@ test("public reputation parser never fabricates a default rating", () => {
   assert.equal(transactions.parsePublicReputation({ ...value, items: [{ ...value.items[0], rating: 8 }] }).review_count, 0);
 });
 
-test("mega-menu is driven by canonical taxonomy and closes on every required interaction", () => {
-  const source = fs.readFileSync("components/global-categories.tsx", "utf8");
-  assert.match(source, /categoryOptions/);
-  assert.match(source, /getInstrumentTypeOptions\(category\.value\)/);
-  assert.match(source, /usePathname\(\)/);
-  assert.match(source, /\[pathname\]/);
-  assert.match(source, /pointerdown/);
-  assert.match(source, /event\.key !== "Escape"/);
-  assert.match(source, /onClick=\{onNavigate\}/);
-  assert.match(source, /aria-expanded/);
-  assert.match(source, /mobile-marketplace-categories/);
-  assert.doesNotMatch(source, /Popular|Recomendad|Colecciones/);
+test("category navigation is driven by canonical taxonomy and shell menus close on every required interaction", () => {
+  // UX-2 replaced the mega-menu with a category strip of links (docs/ux-redesign/ux-2-shell.md); the instrument
+  // types stay on each category page. The strip reads the canonical categories through lib/shell.ts.
+  const strip = fs.readFileSync("components/global-categories.tsx", "utf8");
+  const shell = fs.readFileSync("lib/shell.ts", "utf8");
+  assert.match(strip, /stripItems/);
+  assert.match(shell, /categoryOptions\.map\(\(category\) => \(\{ key: category\.value, label: category\.label, href: categoryLandingPath\(category\.value\) \}\)\)/);
+  assert.match(strip, /aria-current=\{isCurrent \? "page" : undefined\}/);
+  assert.doesNotMatch(strip, /Popular|Recomendad|Colecciones/);
+  // Every shell menu (account menu, phone search, account switcher, Admin menu) uses one disclosure: it closes on
+  // route change, outside press and Escape, which returns focus to its button.
+  const disclosure = fs.readFileSync("components/use-disclosure.ts", "utf8");
+  assert.match(disclosure, /usePathname\(\)/);
+  assert.match(disclosure, /\[pathname\]/);
+  assert.match(disclosure, /pointerdown/);
+  assert.match(disclosure, /event\.key === "Escape"\) close\(true\)/);
+  assert.match(disclosure, /buttonRef\.current\?\.focus\(\)/);
+  for (const file of ["components/site-header.tsx", "components/account-navigation.tsx", "components/admin-navigation.tsx"]) {
+    const source = fs.readFileSync(file, "utf8");
+    assert.match(source, /useDisclosure\(/, file);
+    assert.match(source, /aria-expanded=/, file);
+  }
 });
 
 test("verified transaction UI uses account shell routes and preserves off-platform limitation", () => {

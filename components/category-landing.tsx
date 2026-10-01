@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import Link from "next/link";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CreateSearchAlert } from "@/components/create-search-alert";
 import { JsonLd } from "@/components/json-ld";
 import { ListingCard } from "@/components/listing-card";
@@ -54,7 +55,7 @@ export function CategoryLanding({
           "@type": "BreadcrumbList",
           itemListElement: [
             { "@type": "ListItem", position: 1, name: "Inicio", item: absoluteUrl("/") },
-            { "@type": "ListItem", position: 2, name: "Listados", item: absoluteUrl("/listados") },
+            { "@type": "ListItem", position: 2, name: "Instrumentos", item: absoluteUrl("/listados") },
             { "@type": "ListItem", position: 3, name: landing.label, item: absoluteUrl(path) },
           ],
         }}
@@ -78,19 +79,11 @@ export function CategoryLanding({
       <section className="bg-canvas/70">
         <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
           <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
-            <nav aria-label="Ruta de navegación" className="t-meta font-semibold">
-              <ol className="flex flex-wrap items-center gap-1">
-                <li><Link href="/" className="underline-offset-4 hover:text-ink hover:underline hover:decoration-accent hover:decoration-2">Inicio</Link></li>
-                <li aria-hidden="true">/</li>
-                <li><Link href="/listados" className="underline-offset-4 hover:text-ink hover:underline hover:decoration-accent hover:decoration-2">Listados</Link></li>
-                <li aria-hidden="true">/</li>
-                <li aria-current="page" className="text-ink">{landing.label}</li>
-              </ol>
-            </nav>
-            <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <Breadcrumbs items={[{ label: "Inicio", href: "/" }, { label: "Instrumentos", href: "/listados" }, { label: landing.label }]} className="mb-3" />
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
                 <PageHeader eyebrow="Categoría" title={landing.heading} />
-                <p className="mt-3 max-w-[68ch] t-body text-ink-2">{landing.intro}</p>
+                <p className="text-lead mt-3 max-w-[68ch] t-body text-ink-2">{landing.intro}</p>
               </div>
               <div className="inline-flex w-fit items-center gap-2 t-ui font-semibold text-ink tabular-nums">
                 {totalCount} resultado{totalCount === 1 ? "" : "s"}

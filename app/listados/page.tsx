@@ -6,6 +6,7 @@ import {
   getPageRedirect,
 } from "@/lib/pagination";
 import type { Metadata } from "next";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { ListingCard } from "@/components/listing-card";
 import { ListingFilters } from "@/components/listing-filters";
 import { PageContainer } from "@/components/page-container";
@@ -108,10 +109,11 @@ function ListingsView({
     <section className="bg-canvas/70">
       <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
         <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
+          <Breadcrumbs items={[{ label: "Inicio", href: "/" }, { label: "Instrumentos" }]} className="mb-3" />
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
               <PageHeader eyebrow="Catálogo" title="Instrumentos disponibles" />
-              <p className="mt-3 max-w-[68ch] t-body text-ink-2">
+              <p className="text-lead mt-3 max-w-[68ch] t-body text-ink-2">
                 Explora publicaciones aprobadas de particulares y tiendas.
                 Cuando algo te interese, abre el detalle y conversa directo por
                 WhatsApp.
@@ -195,7 +197,7 @@ function SupabaseSetupMessage({ filters }: { filters: ListingFiltersType }) {
       <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
         <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
           <PageHeader eyebrow="Catálogo" title="El catálogo no está disponible por ahora" />
-          <p className="mt-3 max-w-[68ch] t-body text-ink-2">
+          <p className="text-lead mt-3 max-w-[68ch] t-body text-ink-2">
             Intenta nuevamente en unos minutos.
           </p>
         </div>

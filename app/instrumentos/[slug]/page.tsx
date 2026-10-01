@@ -4,6 +4,7 @@ import { ContentReport } from "@/components/content-report";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { cache, Suspense, type ReactNode } from "react";
+import { Breadcrumbs } from "@/components/breadcrumbs";
 import { ListingCard } from "@/components/listing-card";
 import { CategoryLanding } from "@/components/category-landing";
 import { JsonLd } from "@/components/json-ld";
@@ -26,7 +27,6 @@ import {
 } from "@/lib/listing-specs";
 import {
   buildWhatsAppUrl,
-  getCategoryLabel,
   getListingDisplayTitle,
   getListingSecondaryTitle,
   getSellerTypeLabel,
@@ -41,7 +41,6 @@ import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/
 import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
 import { fetchCatalogPage } from "@/lib/catalog";
 import {
-  categoryLandingPath,
   getCategoryLandingBySlug,
   type CategoryLandingPage,
 } from "@/lib/category-pages";
@@ -54,6 +53,7 @@ import {
   buildListingMetadata,
   categoryFilterRedirect,
 } from "@/lib/seo";
+import { listingBreadcrumbs } from "@/lib/shell";
 import { NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -328,7 +328,7 @@ function ListingDetail({
   return (
     <section className="bg-canvas/70">
       <PageContainer className="py-6 sm:py-8">
-        <Breadcrumb listing={listing} displayTitle={displayTitle} />
+        <Breadcrumbs items={listingBreadcrumbs(listing, displayTitle)} />
         {!isSold ? <div className="mt-3 flex justify-end"><FavoriteButton listingId={listing.id} /></div> : null}
 
         <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] lg:items-start xl:gap-8">
@@ -599,49 +599,6 @@ const getMoreFromSellerListings = cache(
     };
   },
 );
-
-function Breadcrumb({
-  listing,
-  displayTitle,
-}: {
-  listing: ListingDetailData;
-  displayTitle: string;
-}) {
-  const categoryLabel = getCategoryLabel(listing.category);
-
-  return (
-    <nav
-      aria-label="Ruta de navegación"
-      className="rounded-panel border border-subtle bg-white px-4 py-3 t-ui font-semibold text-ink-2"
-    >
-      <ol className="flex flex-wrap items-center gap-2">
-        <li>
-          <Link
-            href="/"
-            className="underline-offset-4 hover:text-ink hover:underline hover:decoration-accent hover:decoration-2"
-          >
-            Inicio
-          </Link>
-        </li>
-        <li aria-hidden="true" className="text-ink-3">
-          /
-        </li>
-        <li>
-          <Link
-            href={categoryLandingPath(listing.category)}
-            className="underline-offset-4 hover:text-ink hover:underline hover:decoration-accent hover:decoration-2"
-          >
-            {categoryLabel}
-          </Link>
-        </li>
-        <li aria-hidden="true" className="text-ink-3">
-          /
-        </li>
-        <li className="min-w-0 break-words text-ink">{displayTitle}</li>
-      </ol>
-    </nav>
-  );
-}
 
 function SellerBadge({
   label,

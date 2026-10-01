@@ -2,79 +2,97 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 import { LogoutButton } from "@/components/logout-button";
+import { PageContainer } from "@/components/page-container";
+import { useDisclosure } from "@/components/use-disclosure";
 import { CountBadge } from "@/components/ui/tag";
-import {
-  Boxes,
-  BarChart3,
-  Bell,
-  BellRing,
-  Heart,
-  CircleUserRound,
-  FilePlus2,
-  LayoutDashboard,
-  LogOut,
-  PackageSearch,
-  ReceiptText,
-  Settings,
-  Store,
-} from "lucide-react";
-import { accountItemIsActive, getAccountNavigationItems, type AccountNavigationItem } from "@/lib/account-navigation";
+import { accountItemIsActive, accountRoleLabel, getAccountNavigationItems, type AccountNavigationItem } from "@/lib/account-navigation";
+import { cn } from "@/lib/utils";
 
 type AccountType = "seller" | "store_owner";
+export type AccountCounts = { unreadNotifications: number; pendingBuyerConfirmations: number };
 
+// The account frame (docs/ux-redesign/ux-2-shell.md): a 248 px rail on desktop; on phones and tablets a switcher
+// row under the header ("Mi cuenta · <section>") that opens the same list. Page content is UX-6.
 export function AccountNavigation({
   accountType,
   hasStore,
   unreadNotifications,
   pendingBuyerConfirmations,
+  name,
+  city,
+  children,
 }: {
   accountType: AccountType;
   hasStore: boolean;
   unreadNotifications: number;
   pendingBuyerConfirmations: number;
+  name?: string;
+  city?: string | null;
+  children?: ReactNode;
 }) {
   const pathname = usePathname();
   const items = getAccountNavigationItems(accountType, hasStore);
   const active = items.find((item) => accountItemIsActive(pathname, item)) ?? items[0];
+  const counts = { unreadNotifications, pendingBuyerConfirmations };
+  const switcher = useDisclosure("account-switcher");
 
   return (
     <>
-      <details className="rounded-panel border border-subtle bg-white p-3 lg:hidden">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-control px-2 font-semibold text-ink">
-          <span>Cuenta · {active.label}</span>
-          <span aria-hidden="true" className="t-ui text-ink-2 underline decoration-accent decoration-2 underline-offset-4">Menú</span>
-        </summary>
-        <nav aria-label="Menú de cuenta móvil" className="mt-3 grid gap-1 border-t border-subtle pt-3">
-          <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} pendingBuyerConfirmations={pendingBuyerConfirmations} />
-          <AccountLogout />
-        </nav>
-      </details>
+      <div className="border-b border-line-deco bg-surface lg:hidden">
+        <PageContainer>
+          <button
+            ref={switcher.buttonRef}
+            type="button"
+            aria-expanded={switcher.open}
+            aria-controls="menu-cuenta-movil"
+            onClick={switcher.toggle}
+            className="flex min-h-12 w-full items-center justify-between gap-3 text-left t-ui"
+          >
+            <span className="min-w-0 truncate">
+              <span className="text-ink-2">Mi cuenta · </span>
+              <span className="font-semibold text-ink">{active.label}</span>
+            </span>
+            <ChevronDown aria-hidden="true" className={cn("h-4 w-4 shrink-0 text-ink-2", switcher.open && "rotate-180")} />
+          </button>
+        </PageContainer>
+        <div ref={switcher.panelRef} id="menu-cuenta-movil" hidden={!switcher.open} className="menu-fade border-t border-subtle">
+          <PageContainer className="py-2">
+            <nav aria-label="Menú de cuenta móvil" className="grid">
+              <AccountSectionLinks items={items} pathname={pathname} counts={counts} />
+              <div className="my-2 border-t border-subtle" />
+              <AccountLogout />
+            </nav>
+          </PageContainer>
+        </div>
+      </div>
 
-      <aside className="hidden rounded-panel border border-subtle bg-white p-4 lg:sticky lg:top-24 lg:block lg:self-start">
-        <div className="surface-frame rounded-control bg-frame p-4 text-white">
-          <p className="t-micro text-muted-dark">
-            {accountType === "store_owner" ? "Cuenta de Tienda" : "Cuenta Particular"}
-          </p>
-          <p className="mt-2 t-section">Mi cuenta</p>
-          <p className="mt-2 t-ui text-muted-dark">
-            {accountType === "store_owner"
-              ? "Administra tu tienda y su inventario."
-              : "Administra tu perfil y tus publicaciones."}
-          </p>
+      <PageContainer className="py-6 lg:py-8">
+        <div className="lg:grid lg:grid-cols-[248px_minmax(0,1fr)] lg:gap-10">
+          <div className="hidden lg:block">
+            <div className="px-3">
+              <p className="break-words t-ui font-semibold text-ink">{name || "Mi cuenta"}</p>
+              <p className="t-meta">{[accountRoleLabel(accountType), city].filter(Boolean).join(" · ")}</p>
+            </div>
+            <nav aria-label="Navegación de cuenta" className="mt-4 grid gap-0.5">
+              <AccountSectionLinks items={items} pathname={pathname} counts={counts} />
+            </nav>
+            <div className="mt-3 border-t border-subtle pt-3">
+              <AccountLogout />
+            </div>
+          </div>
+          <div className="min-w-0">{children}</div>
         </div>
-        <nav aria-label="Navegación de cuenta" className="mt-4 grid gap-1">
-          <AccountLinks items={items} pathname={pathname} unreadNotifications={unreadNotifications} pendingBuyerConfirmations={pendingBuyerConfirmations} />
-        </nav>
-        <div className="mt-4 border-t border-subtle pt-4">
-          <AccountLogout />
-        </div>
-      </aside>
+      </PageContainer>
     </>
   );
 }
 
-function AccountLinks({ items, pathname, unreadNotifications, pendingBuyerConfirmations }: { items: AccountNavigationItem[]; pathname: string; unreadNotifications: number; pendingBuyerConfirmations: number }) {
+// The account sections with their counts, shared by the rail, the phone switcher and the header's account menu.
+// `compact` rows are 36 px from 768 px (the header menu); 44 px everywhere on phones.
+export function AccountSectionLinks({ items, pathname, counts, compact = false }: { items: AccountNavigationItem[]; pathname: string; counts: AccountCounts; compact?: boolean }) {
   return items.map((item) => {
     const active = accountItemIsActive(pathname, item);
     return (
@@ -82,46 +100,28 @@ function AccountLinks({ items, pathname, unreadNotifications, pendingBuyerConfir
         key={item.href}
         href={item.href}
         aria-current={active ? "page" : undefined}
-        className={active
-          ? "flex min-h-11 items-center gap-3 rounded-control bg-accent-tint px-3 py-2 t-ui font-semibold text-ink shadow-[inset_3px_0_0_var(--accent)]"
-          : "flex min-h-11 items-center gap-3 rounded-control px-3 py-2 t-ui font-semibold text-ink-2 hover:bg-canvas hover:text-ink"}
+        className={cn(
+          "flex min-h-11 items-center gap-3 rounded-control px-3 t-ui font-semibold text-ink",
+          compact && "md:min-h-9",
+          active ? "bg-canvas shadow-[inset_3px_0_0_var(--accent)]" : "transition-colors duration-120 hover:bg-canvas",
+        )}
       >
-        <AccountIcon name={item.icon} />
         <span className="min-w-0 flex-1">{item.label}</span>
         {item.icon === "notifications" ? (
-          <CountBadge count={unreadNotifications} label={`${unreadNotifications} notificaciones sin leer`} />
+          <CountBadge count={counts.unreadNotifications} label={`${counts.unreadNotifications} notificaciones sin leer`} />
         ) : null}
         {item.icon === "transactions" ? (
-          <CountBadge count={pendingBuyerConfirmations} label={`${pendingBuyerConfirmations} compras requieren tu confirmación`} />
+          <CountBadge count={counts.pendingBuyerConfirmations} label={`${counts.pendingBuyerConfirmations} compras requieren tu confirmación`} />
         ) : null}
       </Link>
     );
   });
 }
 
-function AccountLogout() {
+export function AccountLogout({ compact = false }: { compact?: boolean }) {
   return (
-    <LogoutButton
-      className="flex min-h-11 w-full items-center gap-3 rounded-control px-3 py-2 text-sm font-semibold text-ink-2 hover:bg-canvas hover:text-ink"
-    >
-      <LogOut className="h-4 w-4" aria-hidden="true" />
+    <LogoutButton className={cn("flex min-h-11 w-full items-center rounded-control px-3 text-left t-ui font-semibold text-ink-2 transition-colors duration-120 hover:bg-canvas hover:text-ink", compact && "md:min-h-9")}>
       Cerrar sesión
     </LogoutButton>
   );
-}
-
-function AccountIcon({ name }: { name: AccountNavigationItem["icon"] }) {
-  const classes = "h-4 w-4";
-  if (name === "favorites") return <Heart className={classes} aria-hidden="true" />;
-  if (name === "summary") return <LayoutDashboard className={classes} aria-hidden="true" />;
-  if (name === "listings") return <PackageSearch className={classes} aria-hidden="true" />;
-  if (name === "publish") return <FilePlus2 className={classes} aria-hidden="true" />;
-  if (name === "store") return <Store className={classes} aria-hidden="true" />;
-  if (name === "inventory") return <Boxes className={classes} aria-hidden="true" />;
-  if (name === "analytics") return <BarChart3 className={classes} aria-hidden="true" />;
-  if (name === "transactions") return <ReceiptText className={classes} aria-hidden="true" />;
-  if (name === "alerts") return <BellRing className={classes} aria-hidden="true" />;
-  if (name === "notifications") return <Bell className={classes} aria-hidden="true" />;
-  if (name === "profile") return <CircleUserRound className={classes} aria-hidden="true" />;
-  return <Settings className={classes} aria-hidden="true" />;
 }

@@ -29,7 +29,7 @@ export function HeroSection() {
           <h1 className="text-balance text-[36px] font-bold leading-[40px] stretch-semicond text-white sm:text-[46px] sm:leading-[50px]">
             El mercado de instrumentos del Perú
           </h1>
-          <p className="mt-6 max-w-xl text-pretty t-body text-muted-dark md:text-[18px] md:leading-[28px]">
+          <p className="text-lead mt-6 max-w-xl t-body text-muted-dark md:text-[18px] md:leading-[28px]">
             Compra y vende con músicos y tiendas de todo el país. Contacta
             directo por WhatsApp y coordina con calma.
           </p>

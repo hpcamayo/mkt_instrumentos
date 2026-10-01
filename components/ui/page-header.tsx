@@ -24,7 +24,7 @@ export function PageHeader({
         <h1 id={titleId} className="t-page text-ink">
           {title}
         </h1>
-        {meta ? <div className="t-meta">{meta}</div> : null}
+        {meta ? <div className="text-lead t-meta">{meta}</div> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </header>

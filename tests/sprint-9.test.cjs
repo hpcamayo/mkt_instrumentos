@@ -346,21 +346,30 @@ test("LEGAL-005/LEGAL-006: safety and trust copy states the limitations and neve
   ];
   const forbidden = /(garantizamos|te garantiza|compra (protegida|segura) con laria|pago (protegido|seguro) (en|con) laria|protección al comprador|devolución garantizada|autenticidad garantizada|envío gratis)/i;
   for (const file of trustSurfaces) assert.doesNotMatch(source(file), forbidden, file);
-  assert.match(source("components/site-footer.tsx"), /Laria no procesa pagos, no\s+retiene dinero, no gestiona envíos ni garantiza/);
+  // UX-2: the full footer (home) keeps the whole limitation next to "no cobra comisiones"; the slim footer states
+  // commissions and payments on every other page (docs/ux-redesign/ux-2-shell.md).
+  assert.match(source("components/site-footer.tsx"), /Laria no cobra comisiones, no procesa pagos, no\s+retiene dinero, no gestiona envíos ni garantiza el equipo ni las transacciones/);
+  assert.match(source("components/site-footer.tsx"), /No cobramos comisiones ni procesamos pagos\./);
   assert.match(source("app/instrumentos/[slug]/page.tsx"), /href="\/consejos-de-seguridad"/);
 });
 
 test("public footer, forms and navigation link to legal/safety pages and category landings", () => {
   const { SiteFooter } = load("components/site-footer.tsx", { "next/link": linkMock });
-  const footer = renderToStaticMarkup(React.createElement(SiteFooter));
-  for (const href of ["/terminos", "/privacidad", "/articulos-prohibidos", "/consejos-de-seguridad", "/listados", "/registrar-tienda"]) assert.match(footer, new RegExp(`href="${href}"`), href);
+  // UX-2 (N5): the full footer on the home, the slim footer on every other public and account page.
+  const footer = renderToStaticMarkup(React.createElement(SiteFooter, { variant: "full" }));
+  for (const href of ["/terminos", "/privacidad", "/articulos-prohibidos", "/consejos-de-seguridad", "/listados", "/registrar-tienda", "/instrumentos/guitarras"]) assert.match(footer, new RegExp(`href="${href}"`), href);
+  const slim = renderToStaticMarkup(React.createElement(SiteFooter, { variant: "slim" }));
+  for (const href of ["/terminos", "/privacidad", "/consejos-de-seguridad"]) assert.match(slim, new RegExp(`href="${href}"`), href);
+  assert.match(slim, /No cobramos comisiones ni procesamos pagos\./);
   assert.match(source("components/sell-listing-form.tsx"), /href="\/terminos"[\s\S]*href="\/articulos-prohibidos"/);
   assert.match(source("components/seller-signup-form.tsx"), /href="\/terminos"[\s\S]*href="\/privacidad"/);
   assert.match(source("components/store-owner-signup-form.tsx"), /href="\/terminos"[\s\S]*href="\/privacidad"/);
-  assert.match(source("components/global-categories.tsx"), /return categoryLandingPath\(category\);/);
+  assert.match(source("components/global-categories.tsx"), /stripItems/);
+  assert.match(source("lib/shell.ts"), /href: categoryLandingPath\(category\.value\)/);
   assert.match(source("components_v0/categories-section.tsx"), /href=\{categoryLandingPath\(category\.value\)\}/);
   assert.doesNotMatch(source("components_v0/hero-section.tsx"), /\/listados\?category=/);
-  assert.match(source("app/instrumentos/[slug]/page.tsx"), /href=\{categoryLandingPath\(listing\.category\)\}/);
+  assert.match(source("app/instrumentos/[slug]/page.tsx"), /<Breadcrumbs items=\{listingBreadcrumbs\(listing, displayTitle\)\} \/>/);
+  assert.match(source("lib/shell.ts"), /href: categoryLandingPath\(listing\.category\)|const categoryHref = categoryLandingPath\(listing\.category\)/);
   assert.doesNotMatch(source("lib/listings.ts"), /Instrumentos Perú/);
 });
 

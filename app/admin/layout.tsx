@@ -6,6 +6,8 @@ import { getAdminCounts, requireAdmin } from "@/lib/admin-server";
 // Private account/Admin surfaces are never indexable.
 export const metadata: Metadata = { robots: NOINDEX_ROBOTS };
 
+// The Admin frame (docs/ux-redesign/ux-2-shell.md): no site header or footer; a 240 px black sidebar on
+// desktop, a black bar with a menu button below 1024 px, content on canvas. The workbench itself is UX-7.
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const [{ user, profile }, counts] = await Promise.all([
     requireAdmin(),
@@ -13,14 +15,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ]);
 
   return (
-    <div className="min-h-screen bg-canvas/70">
-      <div className="mx-auto grid w-full max-w-[1600px] gap-4 px-3 py-5 sm:px-4 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-5 lg:px-5 xl:px-6">
-        <AdminNavigation
-          counts={counts}
-          userName={profile?.full_name || user.email || "Administración"}
-        />
-        <div className="min-w-0">{children}</div>
-      </div>
+    <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
+      <AdminNavigation
+        counts={counts}
+        userName={profile?.full_name || user.email || "Administración"}
+      />
+      <main id="contenido" tabIndex={-1} className="min-w-0 px-4 py-5 sm:px-6 lg:px-8 lg:py-8">{children}</main>
     </div>
   );
 }

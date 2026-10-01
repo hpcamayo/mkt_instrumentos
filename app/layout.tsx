@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { SiteFooter } from "@/components/site-footer";
-import { SiteHeader } from "@/components/site-header";
+import { SiteShell } from "@/components/site-shell";
 import "./globals.css";
-import { GlobalCategories } from "@/components/global-categories";
 import { MarketplaceAccountProvider } from "@/components/marketplace-account-provider";
 import {
   NOINDEX_ROBOTS,
@@ -64,12 +63,10 @@ export default function RootLayout({
     <html lang="es" className={archivo.variable}>
       <body className="font-sans">
         <a href="#contenido" className="skip-link">Saltar al contenido</a>
-        <MarketplaceAccountProvider><div className="flex min-h-screen flex-col">
-          <SiteHeader />
-          <GlobalCategories />
-          <main id="contenido" tabIndex={-1} className="flex-1">{children}</main>
-          <SiteFooter />
-        </div></MarketplaceAccountProvider>
+        <MarketplaceAccountProvider>
+          {/* One <main id="contenido"> per page: in the shell, or in app/admin/layout.tsx for Admin. */}
+          <SiteShell fullFooter={<SiteFooter variant="full" />} slimFooter={<SiteFooter variant="slim" />}>{children}</SiteShell>
+        </MarketplaceAccountProvider>
       </body>
     </html>
   );

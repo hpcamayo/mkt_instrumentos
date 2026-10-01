@@ -3,15 +3,27 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
-type HeaderState = { authenticated: boolean; storeOwner: boolean; hasStore: boolean };
+export type HeaderState = {
+  authenticated: boolean;
+  storeOwner: boolean;
+  hasStore: boolean;
+  admin: boolean;
+  name: string | null;
+  unreadNotifications: number;
+  pendingBuyerConfirmations: number;
+};
 type FavoriteState = Record<string, boolean | undefined>;
-type ContextValue = HeaderState & { ready: boolean; favorites: FavoriteState; register: (id: string) => () => void; setFavorite: (id: string, saved: boolean) => Promise<void> };
+// `settled` turns true after the first account check (success or failure) and stays true, so the header's
+// account entry appears once instead of flashing "Ingresar" for a signed-in visitor.
+type ContextValue = HeaderState & { ready: boolean; settled: boolean; favorites: FavoriteState; register: (id: string) => () => void; setFavorite: (id: string, saved: boolean) => Promise<void> };
+const SIGNED_OUT: HeaderState = { authenticated: false, storeOwner: false, hasStore: false, admin: false, name: null, unreadNotifications: 0, pendingBuyerConfirmations: 0 };
 const Context = createContext<ContextValue | null>(null);
 
 export function MarketplaceAccountProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [header, setHeader] = useState<HeaderState>({ authenticated: false, storeOwner: false, hasStore: false });
+  const [header, setHeader] = useState<HeaderState>(SIGNED_OUT);
   const [ready, setReady] = useState(false);
+  const [settled, setSettled] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteState>({});
   const ids = useRef(new Map<string, number>());
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,11 +58,13 @@ export function MarketplaceAccountProvider({ children }: { children: ReactNode }
       try {
         const response = await fetch("/api/account-navigation", { cache: "no-store" });
         if (!response.ok || !active || version !== generation.current) return;
-        const state: HeaderState = await response.json();
+        const state: HeaderState = { ...SIGNED_OUT, ...(await response.json()) };
         if (!active || version !== generation.current) return;
         setHeader(state); setReady(true);
         if (state.authenticated) loadStates();
-      } catch { /* Header links are navigation, never an authorization boundary. */ }
+      } catch { /* Header links are navigation, never an authorization boundary. */ } finally {
+        if (active) setSettled(true);
+      }
     };
     void refresh();
     // Keep the global shell independent of the large browser Auth SDK. Route,
@@ -78,7 +92,7 @@ export function MarketplaceAccountProvider({ children }: { children: ReactNode }
     } finally { busy.current.delete(id); loadStates(); }
   }, [loadStates]);
 
-  return <Context.Provider value={{ ...header, ready, favorites, register, setFavorite }}>{children}</Context.Provider>;
+  return <Context.Provider value={{ ...header, ready, settled, favorites, register, setFavorite }}>{children}</Context.Provider>;
 }
 
 export function useMarketplaceAccount() {

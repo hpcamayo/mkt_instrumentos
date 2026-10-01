@@ -77,7 +77,10 @@ function routeList({ listing, store }) {
       ["seguridad", "/consejos-de-seguridad"],
       ["no-encontrada", "/pagina-que-no-existe"],
     ],
+    // Each signed-in group also opens the catalog, so the signed-in header is captured on a public page (UX-2).
     particular: [
+      ["catalogo", "/listados"],
+      ...(listing ? [["publicacion", listing]] : []),
       ["resumen", "/mi-cuenta"],
       ["publicaciones", "/mi-cuenta/publicaciones"],
       ["publicar", "/mi-cuenta/publicar"],
@@ -88,6 +91,7 @@ function routeList({ listing, store }) {
       ["transacciones", "/mi-cuenta/transacciones"],
     ],
     store: [
+      ["catalogo", "/listados"],
       ["resumen", "/mi-cuenta"],
       ["tienda", "/mi-cuenta/tienda"],
       ["inventario", "/mi-cuenta/tienda/inventario"],
@@ -95,6 +99,7 @@ function routeList({ listing, store }) {
       ["estadisticas", "/mi-cuenta/tienda/estadisticas"],
     ],
     admin: [
+      ["catalogo", "/listados"],
       ["inicio", "/admin"],
       ["publicaciones", "/admin/publicaciones"],
       ["revisiones", "/admin/revisiones"],

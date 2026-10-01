@@ -72,9 +72,52 @@ a {
   outline-color: var(--accent);
 }
 
+/* Light panels inside the frame (the account menu, the search button) keep the ink ring. */
+.surface-light :focus-visible,
+.surface-light:focus-visible {
+  outline-color: var(--ink);
+}
+
+/* Headings and lead paragraphs balance their lines; reading paragraphs avoid a last-line widow.
+   Progressive enhancement: browsers without text-wrap keep normal wrapping. */
+h1,
+h2,
+h3,
+h4,
+.t-page,
+.t-section,
+.t-display,
+.text-lead {
+  text-wrap: balance;
+}
+p,
+li,
+dd,
+figcaption {
+  text-wrap: pretty;
+}
+
 ::selection {
   background: var(--accent-tint);
   color: var(--ink);
+}
+
+/* Shell menus appear with a 120 ms opacity change and never move. */
+.menu-fade {
+  animation: menu-fade 120ms ease-out;
+}
+@keyframes menu-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Sideways-scrolling rows (the category strip) scroll without a visible bar. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
