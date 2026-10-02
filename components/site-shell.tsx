@@ -20,3 +20,12 @@ export function SiteShell({ children, fullFooter, slimFooter }: { children: Reac
     </div>
   );
 }
+
+// Admin pages get their <main> from app/admin/layout.tsx. A 404 or an error that Next renders outside that layout
+// (an unmatched /admin/… URL, or a crash in the Admin layout itself) would have none, so the root not-found and error
+// pages wrap their body in this; everywhere else the shell already provides the <main>.
+export function FallbackMain({ children }: { children: ReactNode }) {
+  const layout = getShellLayout(usePathname());
+  if (layout.header !== "none") return <>{children}</>;
+  return <main id="contenido" tabIndex={-1} className="min-h-screen">{children}</main>;
+}

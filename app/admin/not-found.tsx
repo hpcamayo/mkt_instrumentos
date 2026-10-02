@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { ErrorPage, NOT_FOUND_COPY } from "@/components/error-page";
-import { FallbackMain } from "@/components/site-shell";
 import { NOINDEX_ROBOTS } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -8,10 +7,7 @@ export const metadata: Metadata = {
   robots: NOINDEX_ROBOTS,
 };
 
-export default function NotFound() {
-  return (
-    <FallbackMain>
-      <ErrorPage {...NOT_FOUND_COPY} searchId="busqueda-no-encontrada" />
-    </FallbackMain>
-  );
+// A 404 inside Admin keeps the Admin frame (sidebar and <main> from app/admin/layout.tsx).
+export default function AdminNotFound() {
+  return <ErrorPage {...NOT_FOUND_COPY} searchId="busqueda-no-encontrada" />;
 }

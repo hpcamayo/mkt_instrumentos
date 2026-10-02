@@ -3,6 +3,15 @@ import { Suspense } from "react";
 import { GlobalSearch } from "@/components/global-search";
 import { PageContainer } from "@/components/page-container";
 
+export const NOT_FOUND_COPY = {
+  title: "No encontramos esta página",
+  message: "Puede que la dirección esté mal o que la publicación ya no esté disponible.",
+};
+export const SERVER_ERROR_COPY = {
+  title: "Algo salió mal",
+  message: "Vuelve a intentarlo en unos minutos.",
+};
+
 // The 404 and 500 body (docs/ux-redesign/ux-2-shell.md): a centred 560 px column with the title, one line, the
 // search field and two links. No illustration.
 export function ErrorPage({ title, message, searchId }: { title: string; message: string; searchId: string }) {

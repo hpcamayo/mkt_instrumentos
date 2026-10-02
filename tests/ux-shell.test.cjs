@@ -219,10 +219,25 @@ test("404 and 500 share one body: title, one line, the search and two links", ()
   assert.match(notFound, /role="search"[\s\S]*id="busqueda-no-encontrada"/);
   assert.match(notFound, /href="\/"[^>]*>Ir al inicio<[\s\S]*href="\/listados"[^>]*>Ver instrumentos</);
   assert.doesNotMatch(notFound, /<img|<svg(?![^>]*aria-hidden)/);
-  const errorPage = source("app/error.tsx");
-  assert.match(errorPage, /^"use client";/);
-  assert.match(errorPage, /title="Algo salió mal"/);
-  assert.match(errorPage, /message="Vuelve a intentarlo en unos minutos\."/);
+  const { SERVER_ERROR_COPY } = load("components/error-page.tsx", mocks);
+  assert.deepEqual(SERVER_ERROR_COPY, { title: "Algo salió mal", message: "Vuelve a intentarlo en unos minutos." });
+  for (const file of ["app/error.tsx", "app/admin/error.tsx"]) {
+    assert.match(source(file), /^"use client";/, file);
+    assert.match(source(file), /<ErrorPage \{\.\.\.SERVER_ERROR_COPY\}/, file);
+  }
+});
+
+test("404 and 500 always have exactly one <main>, inside Admin too", () => {
+  // Inside Admin, the 404 and error boundaries render within app/admin/layout.tsx and its <main>.
+  for (const file of ["app/admin/not-found.tsx", "app/admin/error.tsx"]) assert.doesNotMatch(source(file), /<FallbackMain>|<main id=/, file);
+  // The root ones render outside it; on an /admin path the shell has no <main>, so they bring one.
+  for (const file of ["app/not-found.tsx", "app/error.tsx"]) assert.match(source(file), /<FallbackMain>/, file);
+  const render = (pathname) => {
+    const { default: NotFound } = load("app/not-found.tsx", { "next/link": linkMock, "next/navigation": navigationMock(pathname) });
+    return renderToStaticMarkup(React.createElement(NotFound));
+  };
+  assert.equal((render("/admin/no-existe/de-verdad").match(/<main id="contenido"/g) ?? []).length, 1);
+  for (const pathname of ["/pagina-que-no-existe", "/mi-cuenta/no-existe", "/instrumentos/x"]) assert.doesNotMatch(render(pathname), /<main/, pathname);
 });
 
 test("the logo file has no stray hairline and the header and footer use the decided sizes (N2, audit items 1 and 1b)", () => {
