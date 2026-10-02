@@ -78,7 +78,7 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 
 ## Layout and page structure
 
-- One `<main id="contenido">` per page: `components/site-shell.tsx` renders it for public and account pages, `app/admin/layout.tsx` for Admin (so the skip link lands after the Admin sidebar). Pages and layouts use `section`, `div` or `PageContainer as="section"`, never a second `main`.
+- One `<main id="contenido">` per page: `components/site-shell.tsx` renders it for public and account pages, `app/admin/layout.tsx` for Admin (so the skip link lands after the Admin sidebar). A 404 or error that renders outside the Admin layout (an unmatched `/admin/…` URL, a crash in the layout) gets its `<main>` from `FallbackMain`. Pages and layouts use `section`, `div` or `PageContainer as="section"`, never a second `main`.
 - The first focusable element is the "Saltar al contenido" skip link.
 - Page content (filters, grids, listing and store pages, account and Admin content) is redesigned per template in UX-3 to UX-7; until then keep existing layouts and only use the tokens and components here.
 
@@ -143,7 +143,8 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 ### 404 and 500
 
 - `ErrorPage` (`components/error-page.tsx`) inside the standard header and slim footer: a centred 560 px column with a `t-page` title, one line, the search field and "Ir al inicio" · "Ver instrumentos". No illustration.
-- 404 (`app/not-found.tsx`): "No encontramos esta página" / "Puede que la dirección esté mal o que la publicación ya no esté disponible." 500 (`app/error.tsx`): "Algo salió mal" / "Vuelve a intentarlo en unos minutos."; the error goes to the console, never to the page.
+- 404 (`app/not-found.tsx`): "No encontramos esta página" / "Puede que la dirección esté mal o que la publicación ya no esté disponible." 500 (`app/error.tsx`): "Algo salió mal" / "Vuelve a intentarlo en unos minutos."; the error goes to the console, never to the page. The copy lives once in `NOT_FOUND_COPY` / `SERVER_ERROR_COPY`.
+- Inside Admin, `app/admin/not-found.tsx` and `app/admin/error.tsx` render the same body within the Admin frame.
 
 ## Components (`components/ui/`)
 
@@ -215,6 +216,8 @@ Open items (`docs/ux-redesign/decisions.md`): the legal pages keep their approve
 
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` for every change. `tests/ux-copy.test.cjs`, `tests/ux-contrast.test.cjs`, `tests/ux-primitives.test.cjs` and `tests/ux-shell.test.cjs` enforce the content, color, component and shell rules.
 - Screenshots: `node scripts/ux-snapshots.cjs --label <name>` captures the route list at 390 / 768 / 1280 / 1440, anonymous and signed in with local test accounts (see the script header). Local by default; `--allow-remote` for a preview deployment only.
+- Local test accounts: `node scripts/ux-local-accounts.cjs` creates the Particular, Store Owner (with a store) and Admin on a local Supabase and writes `.ux-accounts.local.json`.
+- Audit: `node scripts/ux-audit.cjs --axe <axe.min.js>` runs axe-core (WCAG 2.1 A/AA), the focus sweep, the skip link, shell Tab order, one `<main>` and `<h1>`, overflow (also at 200% zoom), axe with each menu open, and layout shift. How to set all of this up: `docs/ux-redesign/review-guide.md`.
 
 ## Checklist for UI work
 

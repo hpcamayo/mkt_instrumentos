@@ -1,0 +1,201 @@
+# External review guide — Laria UX redesign (`ux/redesign`)
+
+For an independent reviewer, person or agent, with no access to the design chats or canvases. Everything needed is in this repository: the specs, the owner's decisions, the concept renders, the code, the tests and the scripts that reproduce the evidence. Written 2 Oct 2026; the setup in § 4–6 was run that day on a clean local stack built only from this branch (§ 6.4 says exactly how).
+
+## 1. What is under review
+
+Branch `ux/redesign`, cut from `main` at `49a38e5` (the close of Sprint 9). Not pushed; nothing is merged or deployed.
+
+| Sub-sprint | Commits | State | What the review should do |
+| --- | --- | --- | --- |
+| UX-1 Foundations | `06f0d42` … `3da7afa` (12) | Accepted by the owner, 30 Sep. External review still pending | Check the foundations against `ux-1-foundations.md` and `ux-1-acceptance.md`; findings feed UX-8 or a fix-up |
+| UX-2 Shell and navigation | `645d51e`, `0813138`, `2d06b7e`, `37d441b` (fix found in review preparation), `cde9c5a` (review scripts), `1a96bf5` (browser-smoke correction) and the review-docs commit after them | Ready for owner acceptance | **Main focus.** Check the build against the brief `ux-2-shell.md` and the claims in `ux-2-acceptance.md` |
+
+```bash
+git log --oneline 49a38e5..ux/redesign          # all redesign commits
+git diff 3da7afa..ux/redesign -- app components components_v0 lib scripts tests   # UX-2 code and tests
+git diff 49a38e5..3da7afa                        # UX-1
+```
+
+Relation to `main`: as of the last fetch (30 Sep), `origin/main` is one docs-only commit ahead (`f04e909`: `docs/context.md`, `docs/functional-spec.md`, `docs/go-live-checklist.md`, `docs/sprint-9-production-release-gate.md`; Sprint 9 records). No file overlaps this branch. The branch has not been rebased; the roadmap asks for a rebase before merge, which is the owner's call.
+
+Out of scope: page content owned by later sub-sprints (home UX-3, listing and store UX-4, selling UX-5, account pages UX-6, the Admin workbench UX-7), the catalog branch `catalog/canonical-catalog`, Supabase schema and any hosted environment.
+
+## 2. Rules the work follows
+
+Review against these; they are binding for this branch.
+
+- `AGENTS.md`: Spanish interface, mobile first, no product behaviour, schema, auth or authorization changes in visual work, the acceptance registry rules (`acceptance/cases.tsv` is canonical and was not edited).
+- `docs/functional-spec.md` is canonical for behaviour; `docs/design-system.md` is canonical for visuals (rewritten in UX-1, extended in UX-2).
+- Owner decisions in `docs/ux-redesign/decisions.md` are binding. Decided items (D1–D12, H1–H11, N1–N8, G1) are not defects, though the review may say if one causes a problem. Open items are listed in § 8.
+- The UX-2 brief: where it and the concept renders differ, the brief wins.
+
+## 3. Reading order
+
+1. `AGENTS.md`
+2. `docs/ux-redesign/README.md` (workspace map and status)
+3. `docs/ux-redesign/ux-2-shell.md` (the UX-2 spec, with its acceptance criteria) and the UX-2 items of `docs/ux-redesign/home-visual-audit.md`
+4. `docs/ux-redesign/decisions.md` (N1–N12, G1, F9)
+5. `docs/design-system.md`, section "Shell and navigation"
+6. `docs/ux-redesign/ux-2-acceptance.md` (the claims, evidence, measurements and deviations)
+7. Visual references: `docs/ux-redesign/screenshots/page-concepts/` (Catalogo, Ficha, Cuenta, Publicar, Admin) and `screenshots/home-final/` (header and footer of the home)
+
+For UX-1: `ux-1-foundations.md`, `ux-1-acceptance.md`, `screenshots/ux1-audit/index.html`.
+
+Not in the repository, and not needed: the design canvases ("Laria Redesign", "Laria Page Concepts"), whose renders are in `screenshots/`, and the redline and logo-size sheets mentioned in `home-visual-audit.md`, whose numbers are in its text. The brief, the decisions and the design system are the specification.
+
+## 4. Local environment
+
+Never point the app at a hosted Supabase project for this review; the scripts refuse non-local URLs.
+
+Prerequisites (versions used): Node 24.15, pnpm 11.0.9 (corepack), Docker, Supabase CLI 2.98.2, and for the screenshots and the audit the `agent-browser` CLI (Chromium) plus a copy of `axe-core` 4.11.x (`axe.min.js`, from npm; not a project dependency, by decision D10).
+
+```bash
+git checkout ux/redesign
+pnpm install                     # the lockfile is committed
+supabase init                    # this branch ships no supabase/config.toml
+supabase start                   # applies the 19 migrations in supabase/migrations, then supabase/seed.sql
+supabase status -o env           # API_URL, ANON_KEY, SERVICE_ROLE_KEY
+```
+
+The start log must show 19 "Applying migration" lines (`20260427195000` … `20260923120000`) and "Seeding data from supabase/seed.sql". If the default ports are taken, raise the `port` values in `supabase/config.toml`; the services the app does not use (Studio, Inbucket, analytics, realtime, edge runtime) can be disabled there. The files `supabase init` generates are local setup; do not commit them. The Supabase CLI also rewrites the tracked `supabase/.temp/cli-latest` when it checks for updates; restore it with `git checkout -- supabase/.temp/cli-latest`.
+
+Create `.env.local` (gitignored):
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=<API_URL>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<ANON_KEY>
+SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY>
+NEXT_PUBLIC_SITE_URL=http://localhost:3100
+```
+
+Test accounts and the app:
+
+```bash
+node scripts/ux-local-accounts.cjs   # Particular, Store Owner (+ an active verified store), Admin; writes .ux-accounts.local.json
+pnpm build && pnpm start -p 3100
+```
+
+`.ux-accounts.local.json` holds generated passwords for `ux-particular@laria.test`, `ux-tienda@laria.test` and `admin@laria.test` (Admin = `app_metadata.role = "admin"`); sign in at `/login`. Rerunning the script resets the passwords and keeps the accounts. The seed gives 20 listings (14 approved) and 3 stores (2 active); the accounts script adds the Store Owner's store. Local photos are placeholder images.
+
+## 5. Checks
+
+```bash
+pnpm lint && pnpm typecheck && pnpm test && pnpm build
+```
+
+Expected: no lint or type errors, **271/271** tests, a clean build. `typecheck` also reads the generated `.next/types`; after removing a route, delete `.next` and build again before typechecking. The integration and browser-smoke scripts (`tests/*.integration.cjs`, `tests/*-browser-smoke.cjs`) need their own seeded fixtures and were not run for UX-2 (`tests/favorites-browser-smoke.cjs` was updated to the new shell).
+
+## 6. Reproduce the evidence
+
+### 6.1 Screenshots
+
+```bash
+LARIA_AGENT_BROWSER_BIN=<path to agent-browser> node scripts/ux-snapshots.cjs --base http://localhost:3100 --label review
+```
+
+33 routes × 390 / 768 / 1280 / 1440 px: public pages signed out; the Particular, Store Owner and Admin, each also on the catalog. Output in `.ux-snapshots/review/` (gitignored). Compare with `docs/ux-redesign/screenshots/ux2-after/` (selected frames, same names) and `ux2-before/`.
+
+### 6.2 Accessibility and shell audit
+
+```bash
+node scripts/ux-audit.cjs --base http://localhost:3100 --axe <path>/axe.min.js --label review [--error-route /ux2-prueba-error]
+```
+
+Per template (home, catalog, category, listing, store, sign-in, 404, 500; Particular Resumen, catalog, Publicar; Store Owner Resumen; Admin, plus a 404 for an unknown Admin section and one for an unmatched deeper Admin path) at 390 and 1440: axe-core with WCAG 2.1 A/AA tags, a focus sweep (every visible focusable element must show a 2 px outline), the skip link (first Tab, lands on `<main>`), Tab order in the header and the strip, one `<main>` and one `<h1>`, horizontal overflow. Then axe with each shell menu open, overflow at 640 and 720 px (200% zoom of 1280 and 1440), and layout shift. Report: `.ux-snapshots/review/audit.json`, summary on the last lines.
+
+Stop a `next start` server by its port (`lsof -tiTCP:3100 -sTCP:LISTEN | xargs kill`), not by its command line: the `next-server` process outlives its wrapper, and an old server over a rebuilt `.next` gives mixed results.
+
+To include the 500 page, add a route that throws, build, run the audit with `--error-route`, then delete the route and build again. Never commit it:
+
+```tsx
+// app/ux2-prueba-error/page.tsx — temporary, local only
+export const dynamic = "force-dynamic";
+export default function Page() {
+  throw new Error("Prueba local del error 500");
+}
+```
+
+### 6.3 Layout shift before and after UX-2
+
+Build the commit before the UX-2 code (`645d51e`) in a separate directory (for example `git worktree add ../laria-before 645d51e`, then `pnpm install` and its own `.env.local` there), start it on another port, and run `scripts/ux-audit.cjs` against both. Compare the `cls` lines (signed-out and Particular, 390 and 1440).
+
+### 6.4 Results on a clean stack (2 Oct)
+
+The numbers in `ux-2-acceptance.md` were first produced (1 Oct) on a local database that also carried 17 later migrations from the catalog branch (`20260927…` to `20261013…`). UX-2 reads none of their tables, but to rule it out the setup above was rerun on 2 Oct from an archive of this branch, on a separate stack with only this branch's 19 migrations and the seed, with accounts from `scripts/ux-local-accounts.cjs`:
+
+| Check | 1 Oct (shared local DB) | 2 Oct, clean stack, before the fix (`2d06b7e`) | 2 Oct, clean stack, after the fix (`cde9c5a`) |
+| --- | --- | --- | --- |
+| Unit tests | 270/270 | 270/270 | 271/271 |
+| Template runs (390 and 1440) | 26 | 26 | 30 (+ two Admin 404s × 2 widths) |
+| axe violations, menus closed / open (5 menus) | 0 / 0 | 0 / 0 | 0 / 0 |
+| Focusable elements without a 2 px ring | 0 of 852 | 0 of 852 | 0 of 885 |
+| The 8 UX-1 templates: runs, focusables, without a ring, axe | 16, 541, 0, 0 | 16, 541, 0, 0 | 16, 541, 0, 0 |
+| Skip link, shell Tab order, one `<main>` and `<h1>` | no problems | no problems | no problems |
+| Horizontal overflow (templates; 12 checks at 640 / 720 px) | none | none | none |
+| Layout shift, signed out / signed in 390 / signed in 1440 | 0 / 0.0012–0.0016 / 0.0004 | 0 / 0.0012–0.0016 / 0.0004 | 0 / 0.0012–0.0016 / 0.0004 |
+
+How it was run: the branch was exported with `git archive` into a separate directory (a stand-in for a fresh clone), `supabase init` with every port raised by 100 and the unused services off, `supabase start` (19 migrations and the seed applied, nothing else), `.env.local` from `supabase status -o env`, accounts from `scripts/ux-local-accounts.cjs` (run twice to check reruns), `next build` and `next start` on port 3102, the unit suite, then `scripts/ux-audit.cjs` with `--error-route`. Differences from § 4: the copy reused an existing `node_modules` (so `pnpm install` was not exercised there) and called `next build`/`next start` directly.
+
+The same pass found one defect, fixed in `37d441b` before the last column: a 404 for an unknown Admin section rendered with no `<main>` (`ux-2-acceptance.md` § Review preparation).
+
+## 7. Traceability: brief → code → tests
+
+| Brief item (`ux-2-shell.md`) | Code | Tests (`tests/…`) |
+| --- | --- | --- |
+| Frame per route: header, strip, phone search, footer (N3–N5) | `lib/shell.ts` `getShellLayout`; `components/site-shell.tsx`; `app/layout.tsx` | `ux-shell` "each route gets its frame", "nothing in the shell is sticky" |
+| Header desktop / tablet / phone; "Vender" (N1); last item on the gutter (item 10) | `components/site-header.tsx`; `lib/account-navigation.ts` `getSellEntry` | `ux-shell` header tests; `account-shell` "header never offers stale store registration…" |
+| Search (N8 placeholder, brand only, no suggestions) | `components/global-search.tsx` | `ux-shell` header test; `favorites` (form contract: `/listados`, `brand`, no `q`, no events on render) |
+| Account menu (sections, counts, Admin, Cerrar sesión) | `site-header.tsx` `AccountMenu`; `components/account-navigation.tsx` `AccountSectionLinks` | `ux-shell` "bell, avatar and an account menu…"; `logout-navigation` |
+| Header data (N6) | `app/api/account-navigation/route.ts`; `components/marketplace-account-provider.tsx` | `ux-shell` "header state endpoint…" |
+| Menus: disclosure, Esc returns focus, one open at a time, 120 ms opacity | `components/use-disclosure.ts`; `.menu-fade` in `app/globals.css` | `sprint-6` "category navigation … shell menus close…" |
+| Category strip (G1 label, N7 destination) | `components/global-categories.tsx`; `lib/shell.ts` `stripItems`, `currentStripKey` | `ux-shell` strip test; `sprint-6`; `sprint-9-gate` "top-level categories…" |
+| Breadcrumbs; structured data name (G1) | `components/breadcrumbs.tsx`; `lib/shell.ts` `listingBreadcrumbs`; `app/listados/page.tsx`, `components/category-landing.tsx`, `app/instrumentos/[slug]/page.tsx` | `ux-shell` breadcrumbs test; `sprint-9-gate`; `sprint-9`; `seo-smoke` |
+| Account frame (rail, phone switcher) | `components/account-navigation.tsx`; `app/mi-cuenta/layout.tsx` | `account-shell`; `sprint-7`; `logout-navigation`; `performance` |
+| Admin frame (sidebar, phone bar, own `<main>`) | `components/admin-navigation.tsx`; `app/admin/layout.tsx` | `sprint-8` "persistent Admin navigation…"; `logout-navigation`; `ux-shell` frame test |
+| Footers full / slim / none (N5) | `components/site-footer.tsx` | `ux-shell` footers test; `sprint-9` LEGAL tests |
+| 404 and 500, one `<main>` everywhere | `components/error-page.tsx`; `app/not-found.tsx`, `app/error.tsx` (with `FallbackMain` from `components/site-shell.tsx`); `app/admin/not-found.tsx`, `app/admin/error.tsx` | `ux-shell` "404 and 500 share one body…", "404 and 500 always have exactly one <main>…"; `sprint-9` (404 noindex); audit runs `admin/no-encontrada*` |
+| Logo hairline (N2) and sizes (item 1) | `app/logo-clear.svg`; `components/brand-logo.tsx` | `ux-shell` logo test |
+| Text-wrap rule (item 14) | `app/globals.css`; `.text-lead` in `components/ui/page-header.tsx`, `components/ui/empty-state.tsx` | `ux-shell` text-wrap test |
+| "Listados" and "Para tiendas" retired (G1, D8) | copy across `app`, `components`, `lib` | `ux-copy` "glossary terms replace their retired synonyms" |
+| Focus ring on light panels inside the frame | `.surface-light` in `app/globals.css` | Audit focus sweep (§ 6.2); no unit test |
+
+## 8. Decided and open
+
+Decided by the owner (binding): D1–D12 (foundations), H1–H11 (home), N1–N8 and G1 (shell). Open, where the review's opinion is welcome:
+
+| ID | Topic | Where |
+| --- | --- | --- |
+| N9–N12 | UX-2 deviations from the brief: "Vender" border colour, the footer's store-registration link, phone back links on browse pages, rewording the spec and acceptance rows that describe the old shell | `decisions.md`, `ux-2-acceptance.md` § Deviations |
+| F9 | Free-text search (brand, model, title) | `decisions.md` |
+| G2, G3 | Legal-page wording; password minimum (6 vs 8) | `decisions.md` |
+| F1–F7 | Product-behaviour flags for later sub-sprints | `decisions.md` |
+| Audit items 4 and 13 | Denser home feed; phone banner fade | `home-visual-audit.md` |
+
+## 9. Where to look hardest
+
+- **Header data endpoint (N6).** `GET /api/account-navigation` now returns the signed-in user's name, an admin flag and two counts. It runs on every navigation and on window focus, with the RLS-scoped server client and `Cache-Control: private, no-store`; a failed count or admin check degrades to none. Check for leakage, caching and error handling.
+- **Frame selection on the client.** `SiteShell` picks the frame from `usePathname()`; for `/admin…` it renders no header and no `<main>`, and `app/admin/layout.tsx` renders the `<main>`. This split produced the one defect found in review preparation (a 404 under `/admin` without `<main>`, fixed in `37d441b` with Admin's own `not-found`/`error` and `FallbackMain`). Check there is exactly one `<main>` on every route and state, including 404s and errors under `/admin` and `/mi-cuenta` and errors thrown by a layout.
+- **Account entry before hydration.** Until the first account check settles, the entry is rendered invisible (with a `<noscript>` "Ingresar"), so signed-in visitors never see "Ingresar". The remaining layout shift for them is 0.0004–0.0016 (it was 0.0357 on phones before UX-2). Removing it would need the session at server render.
+- **Two search forms in the header markup** (inline from 768 px; a phone row after the bar's actions), never displayed together, so Tab follows the visual order at both sizes. Distinct ids.
+- **`useDisclosure`** coordinates "one menu open at a time" through a window event (`laria:disclosure-open`).
+- **Tests rewritten with the shell** (§ 7 and `ux-2-acceptance.md` § Tests): check that none lost strength.
+- **Known limitations** (`ux-2-acceptance.md`): no current strip item on listing and store pages; no breadcrumbs on store pages yet (UX-4); on phones the home's old hero (UX-3) shows a search-looking link under the header search.
+
+Not covered by the internal audit: Safari/WebKit and Firefox (the tooling is Chromium), real screen readers (VoiceOver, NVDA, TalkBack), real touch devices, network performance on a deployment (Core Web Vitals), hosted Supabase, the integration and browser-smoke scripts.
+
+## 10. Reporting
+
+Please write findings to `docs/ux-redesign/reviews/<sub-sprint>-external-review.md` (or deliver them as a separate document), one entry per finding:
+
+| Field | Content |
+| --- | --- |
+| ID | e.g. UX2-R01 |
+| Severity | blocker / major / minor / note |
+| Area | header, strip, menus, breadcrumbs, frames, footers, 404/500, accessibility, tests, docs, … |
+| Where | `file:line`, or URL + width + account |
+| Expected | with its source (brief section, spec line, design-system rule, decision ID) |
+| Actual | what happens, with a screenshot or the audit JSON entry |
+| Kind | defect / already-listed deviation (N9–N12) / disagreement with a decision |
+
+Do not edit `acceptance/cases.tsv` or `docs/functional-spec.md`; the owner records acceptance changes.

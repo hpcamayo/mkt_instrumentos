@@ -1,15 +1,15 @@
 # Laria UX redesign — workspace
 
 Durable memory for the UX/web-design engagement. Chat history is not memory; this folder is.
-Read this file first, then only the file your task needs.
+Read this file first, then only the file your task needs. **External reviewers: start at `review-guide.md`.**
 
-## Status (2026-10-01)
+## Status (2026-10-02)
 
 | Sub-sprint | Name | State |
 | --- | --- | --- |
 | UX-0 | Investigation and plan | Done |
 | UX-1 | Foundations: visual + content language, primitives, a11y baseline | **Accepted** (owner, 30 Sep): implemented on branch `ux/redesign` (9 Cowork commits + audit commits, not pushed); audited and corrected 30 Sep; evidence in `ux-1-acceptance.md` |
-| UX-2 | Shell and navigation | **Ready for owner acceptance** (1 Oct): brief `ux-2-shell.md` (approved 30 Sep) implemented on `ux/redesign` (not pushed) and audited; evidence and the deviations to decide in `ux-2-acceptance.md` |
+| UX-2 | Shell and navigation | **Ready for owner acceptance** (1 Oct): brief `ux-2-shell.md` (approved 30 Sep) implemented on `ux/redesign` (not pushed) and audited; evidence and the deviations to decide (N9–N12) in `ux-2-acceptance.md`; re-verified 2 Oct on a clean local stack for the external review (`review-guide.md`) |
 | UX-3 | Discovery: home, catalog, category landings, cards, filters | Not started. Home decided: canvas page "Inicio · versión final", banner set in `art/rotation/` |
 | UX-4 | Listing and store pages | Not started |
 | UX-5 | Selling: create, edit, revise | Not started |
@@ -33,6 +33,7 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `ux-1-foundations.md` | UX-1 approval package and the proposed foundation spec |
 | `ux-1-acceptance.md` | UX-1 acceptance package: commits, criteria with evidence, performance, changed labels, open items |
 | `ux-2-shell.md` | UX-2 brief (approved 30 Sep): header, category strip, account menu, breadcrumbs, page frames, footers, 404/500, decisions N1–N5 and G1, acceptance criteria |
+| `review-guide.md` | For an independent external review: scope and commit ranges, reading order, local setup (Supabase, test accounts), checks, how to reproduce every piece of evidence, traceability from the brief to code and tests, decided vs open, risk areas, report format |
 | `ux-2-acceptance.md` | UX-2 acceptance package: commits, criteria with evidence, measurements, layout shift, deviations for the owner, spec and acceptance rows affected, changed tests |
 | `home-visual-audit.md` | Graphic-design review of the decided home (30 Sep): the numbered items each sub-sprint applies (table "By sub-sprint") and the owner questions still open |
 | `decisions.md` | Decision log (pending and decided). Update it whenever the owner decides |
@@ -58,7 +59,9 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `screenshots/ux2-before/` | Harness captures before UX-2 (selected frames, `<width>-<group>-<route>.webp`) |
 | `screenshots/ux2-after/` | The same frames after UX-2, plus the new 500 page |
 | `screenshots/ux1-audit/` | Concept vs build, side by side (16 pairs) after the audit fixes; `index.html` lists the layout differences per pair |
-| `../../scripts/ux-snapshots.cjs` | The screenshot harness (D10): fixed route list at 390 / 768 / 1280 / 1440, anonymous and signed in; output in the gitignored `.ux-snapshots/` |
+| `../../scripts/ux-snapshots.cjs` | The screenshot harness (D10): fixed route list at 390 / 768 / 1280 / 1440, anonymous and signed in (each signed-in group also on the catalog); output in the gitignored `.ux-snapshots/` |
+| `../../scripts/ux-local-accounts.cjs` | Creates the local Particular, Store Owner (with a store) and Admin test accounts; local Supabase only; writes the gitignored `.ux-accounts.local.json` |
+| `../../scripts/ux-audit.cjs` | Accessibility and shell audit: axe-core WCAG 2.1 A/AA, focus sweep, skip link, shell Tab order, one `<main>`/`<h1>`, overflow and 200% zoom, menus open, layout shift; output `.ux-snapshots/<label>/audit.json` |
 | `art/` | Original banner art: SVG (round 2), raster generators and images (`wild/`, `round5/` … `round10/`) |
 
 In the repo, `screenshots/` keeps only the baseline, the page and UX-1 concepts, the final home and the harness captures (UX-1, UX-2), as WebP. The banner explorations (rounds 1–10 and their renders) stay on the Laria Page Concepts canvas; `art/rotation/src/` keeps the generators of the nine decided pieces.
@@ -70,6 +73,10 @@ Visual workspaces (private claude.ai artifacts, owner account; exploratory, not 
 ## How the harness captures were made
 
 `screenshots/ux1-before/` and `screenshots/ux1-after/` come from `scripts/ux-snapshots.cjs` run on production builds of `main` at `49a38e5` and of `ux/redesign`, against a local Postgres 16 with the repo migrations, `supabase/seed.sql` and extra UX data (a Particular, a Store Owner and an Admin account, listings with photos), served through a local stand-in for the Supabase REST, Auth and Storage APIs. No hosted data is involved. Two differences from a Mac: before UX-1 the text used the Linux fallback font (the site had no web font; after UX-1 it is Archivo everywhere), and the home hero photo (Unsplash) does not load offline.
+
+### UX-2 evidence
+
+`screenshots/ux2-before/` and `ux2-after/` come from `scripts/ux-snapshots.cjs` run on production builds (`next start`) of `645d51e` (before the UX-2 code) and of the UX-2 code, on the owner's Mac, against a local Supabase stack, signed out and as a local Particular, Store Owner and Admin. That database also carried 17 later migrations from the catalog branch, which UX-2 does not read; on 2 Oct the build was re-checked on a clean stack built only from this branch's migrations and seed, with accounts from `scripts/ux-local-accounts.cjs` (`review-guide.md` § 6.4). The accessibility numbers and layout shift come from the checks now in `scripts/ux-audit.cjs`.
 
 ## Working rules for any session
 

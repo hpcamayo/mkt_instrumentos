@@ -1,6 +1,6 @@
 # UX-1 Foundations — acceptance package
 
-Status: **Accepted by the owner, 30 Sep** (2026), after the audit and corrections of the same day (§ Audit, 30 Sep). Nothing is pushed or merged. Codex review pending.
+Status: **Accepted by the owner, 30 Sep** (2026), after the audit and corrections of the same day (§ Audit, 30 Sep). Nothing is pushed or merged. External review pending: see `review-guide.md`.
 
 Branch `ux/redesign`: the 9 Cowork commits on top of the final Sprint 9 head `49a38e5`, imported into the owner's repository from `laria-ux-redesign-ux1.bundle` as a local branch (checked out in the worktree `../mkt_instrumentos-ux`, so the catalog checkout is untouched), plus the audit commits. `origin/main` has since moved one docs-only commit (`f04e909`, Sprint 9 records; no file overlaps this branch). Rebase and rerun the checks before anything is pushed.
 
@@ -108,7 +108,7 @@ Localhost numbers only show direction: LCP moves within about 150 ms, which is t
 ## Open items and findings
 
 Owner questions (in `decisions.md`):
-- **G1** Catalog page name: "Listados" stays in the header, footer, breadcrumb and SEO title until UX-2. Proposal: "Instrumentos".
+- **G1** Catalog page name: "Listados" stays in the header, footer, breadcrumb and SEO title until UX-2. Proposal: "Instrumentos". *Resolved in UX-2 (decided 30 Sep, applied in `0813138`).*
 - **G2** Legal pages keep "anuncios" and the defined term "Tienda Verificada" until a legal read.
 - **G3** Password minimum is 6 at sign-up and 8 when resetting. Product rule, unchanged.
 
@@ -116,7 +116,7 @@ Found in the audit, not fixed (outside UX-1's reach without a layout change, or 
 - Photo dots on listing cards are 6 px buttons; the spec says targets are never below 24 px. They cannot grow without the card layout (UX-3). axe did not flag them because the local listings have one photo each.
 - Two database strings still say "artículo"/"producto" and need a migration (not a UI change): the in-app notification written when a seller asks for purchase confirmation ("El vendedor indicó que compraste este artículo…", shown verbatim in Notificaciones) and the `LISTING_FIELD_REQUIRED` error text ("estado del producto"). For UX-5/UX-6, with owner approval.
 - Store names appear as uppercase eyebrows on the store inventory and statistics pages; a name longer than three words breaks D6 (UX-6).
-- The frame's yellow action is "Buscar" and the header keeps "Para tiendas" as an entry (UX-2, with G1).
+- The frame's yellow action is "Buscar" and the header keeps "Para tiendas" as an entry (UX-2, with G1). *Resolved in UX-2: the header has no yellow action ("Vender" is the outline button, N1) and no "Para tiendas".*
 - The listing page shows two yellow WhatsApp buttons in one phone screen (UX-4).
 
 Found during UX-1 in Cowork, present on `49a38e5` too, not fixed (outside UX-1 scope):

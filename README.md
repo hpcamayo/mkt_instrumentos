@@ -27,6 +27,10 @@ Fuera de V1:
 - Suscripciones
 - Chat interno
 
+## Rediseño UX (rama `ux/redesign`)
+
+El rediseño de la interfaz vive en la rama `ux/redesign` y se documenta en [`docs/ux-redesign/`](docs/ux-redesign/README.md). La referencia visual canónica es [`docs/design-system.md`](docs/design-system.md). Para una revisión externa independiente, empieza por [`docs/ux-redesign/review-guide.md`](docs/ux-redesign/review-guide.md): alcance, entorno local con Supabase local y cuentas de prueba, verificaciones y cómo reproducir la evidencia.
+
 ## Estructura
 
 ```txt
@@ -54,17 +58,19 @@ components/
 
 ## Primeros pasos
 
-Instala dependencias:
+Instala dependencias (pnpm; el lockfile está en el repositorio):
 
 ```bash
-npm install
+pnpm install
 ```
 
 Levanta el servidor local:
 
 ```bash
-npm run dev
+pnpm dev
 ```
+
+Verificaciones: `pnpm lint`, `pnpm typecheck`, `pnpm test` y `pnpm build`.
 
 Abre `http://localhost:3000`.
 
