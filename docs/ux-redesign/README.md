@@ -3,13 +3,13 @@
 Durable memory for the UX/web-design engagement. Chat history is not memory; this folder is.
 Read this file first, then only the file your task needs. **External reviewers: start at `review-guide.md`.**
 
-## Status (2026-10-02)
+## Status (2026-10-03)
 
 | Sub-sprint | Name | State |
 | --- | --- | --- |
 | UX-0 | Investigation and plan | Done |
 | UX-1 | Foundations: visual + content language, primitives, a11y baseline | **Accepted** (owner, 30 Sep): implemented on branch `ux/redesign` (9 Cowork commits + audit commits, not pushed); audited and corrected 30 Sep; evidence in `ux-1-acceptance.md` |
-| UX-2 | Shell and navigation | **Ready for owner acceptance** (1 Oct): brief `ux-2-shell.md` (approved 30 Sep) implemented on `ux/redesign` (not pushed) and audited; evidence and the deviations to decide (N9–N12) in `ux-2-acceptance.md`; re-verified 2 Oct on a clean local stack for the external review (`review-guide.md`) |
+| UX-2 | Shell and navigation | **Ready for owner acceptance, as amended 3 Oct** (brief `ux-2-shell.md`, approved 30 Sep): implemented on `ux/redesign` (not pushed), audited, externally reviewed 3 Oct (`reviews/ux-2-external-review.md`, fixes verified); the owner then asked for the mega-menu's category and type access back inside the UX-2 design (N12 hybrid, `ux-2-shell.md` § Amendment). What the owner still has to accept or reconcile: `ux-2-acceptance.md` § What still needs owner acceptance |
 | UX-3 | Discovery: home, catalog, category landings, cards, filters | Not started. Home decided: canvas page "Inicio · versión final", banner set in `art/rotation/` |
 | UX-4 | Listing and store pages | Not started |
 | UX-5 | Selling: create, edit, revise | Not started |
@@ -33,6 +33,7 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `ux-1-foundations.md` | UX-1 approval package and the proposed foundation spec |
 | `ux-1-acceptance.md` | UX-1 acceptance package: commits, criteria with evidence, performance, changed labels, open items |
 | `ux-2-shell.md` | UX-2 brief (approved 30 Sep): header, category strip, account menu, breadcrumbs, page frames, footers, 404/500, decisions N1–N5 and G1, acceptance criteria |
+| `reviews/ux-2-external-review.md` | The independent review of UX-2 (3 Oct): findings UX2-R01–R03, fixes and their verification |
 | `review-guide.md` | For an independent external review: scope and commit ranges, reading order, local setup (Supabase, test accounts), checks, how to reproduce every piece of evidence, traceability from the brief to code and tests, decided vs open, risk areas, report format |
 | `ux-2-acceptance.md` | UX-2 acceptance package: commits, criteria with evidence, measurements, layout shift, deviations for the owner, spec and acceptance rows affected, changed tests |
 | `home-visual-audit.md` | Graphic-design review of the decided home (30 Sep): the numbered items each sub-sprint applies (table "By sub-sprint") and the owner questions still open |

@@ -40,7 +40,7 @@ UX-1 was accepted by the owner on 30 Sep (`ux-1-acceptance.md`). The UX-2 brief 
 | N7 | "Tiendas verificadas" in the category strip and the footer: no stores directory exists, so it opens the catalog filtered to verified stores (`/listados?seller_type=verified_store`, the existing filter). A stores page would be new (UX-3/UX-4) | decided 2026-09-30 by owner (asked during UX-2 implementation) |
 | N8 | Search placeholder. The header search matches the brand only (`brand ILIKE '%text%'`), so audit item 17's "Marca, modelo o instrumento" would promise model and instrument search that returns nothing. One honest placeholder instead, "Busca por marca: Yamaha, Fender…", in the header now and the home banner in UX-3; brand-only search stays as it is | decided 2026-09-30 by owner (asked during UX-2 implementation); supersedes the placeholder text of audit item 17 |
 
-## Pending — raised at the UX-2 acceptance gate (1 Oct)
+## Pending — raised at the UX-2 acceptance gate (1 Oct; N12 updated 3 Oct)
 
 Deviations from the approved brief, explained in `ux-2-acceptance.md` § Deviations. Until the owner answers, the implementation stays as built.
 
@@ -49,7 +49,7 @@ Deviations from the approved brief, explained in `ux-2-acceptance.md` § Deviati
 | N9 | Header "Vender" border: N1 names #4B5563, which is 2.6:1 on the frame black, below the design system's 3:1 rule for control boundaries | The `onDark` variant's border (white at 40%, about 3.7:1) | pending (owner) |
 | N10 | Footer "Registrar mi tienda": the brief names `/registro/tienda` | `/registrar-tienda`, the existing gate (signed out: create a store account or sign in; signed-in Particular: told a store needs its own account; store owner: their store) | pending (owner) |
 | N11 | Phone breadcrumbs: the brief's rule (only a back link to the parent) also applies to the catalog and the category landings, where the Catalogo-390 concept shows none | Back link on the catalog ("‹ Inicio"), the category landings ("‹ Instrumentos") and listings | pending (owner) |
-| N12 | Reword the rows and spec lines that describe the replaced shell: PUB-008, PUB-011 to PUB-015, functional-spec "Sprint 5 owner navigation clarification" and "Sprint 6 implementation clarification", and the "linked from the global footer" wording for the legal pages | Not edited; proposed wording in `ux-2-acceptance.md` | pending (owner) |
+| N12 | The shell that UX-2 replaced (mega-menu, categories and search on account and Admin pages) is still what the canonical V1 record describes: functional-spec "Sprint 5 owner navigation clarification" and "Sprint 6 implementation clarification", rows PUB-008 and PUB-010 to PUB-015, and the legal pages "linked from the global footer" | **Preference decided 3 Oct by the owner:** restore the mega-menu's category and type access inside the UX-2 design. Built as the hybrid in `ux-2-shell.md` § Amendment: strip categories open "Ver todos" + canonical types, "Instrumentos" and "Tiendas verificadas" stay links, a compact panel on phones, the strip on account pages, "Explorar categorías" in the Admin navigation | **Preference: decided** (owner, 3 Oct). **V1 reconciliation: pending (owner).** Nothing in `docs/functional-spec.md` or `acceptance/cases.tsv` was changed and no Pass was inferred for the new build; the rows' current Pass rests on the Sprint 6 evidence of the old menu. Exact list in `ux-2-acceptance.md` § What still needs owner acceptance |
 
 ## Pending — product-behavior flags raised in UX-2
 

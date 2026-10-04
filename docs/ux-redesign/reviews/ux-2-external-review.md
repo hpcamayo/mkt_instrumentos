@@ -44,3 +44,11 @@ Scope: `ux/redesign` through `15e689f`, with UX-2 code and tests reviewed from `
 - The production build, ESLint and TypeScript passed; the configured Node test command passed **271/271**. The anonymous deeper Admin URL now returns a 307 to the Admin login gate. Signed-in browser checks show the Admin frame on both shallow and deeper 404s at 390 and 1440 px.
 - `.ux-snapshots/ux2-fix-final/audit.json` in the isolated verification copy: **28 template runs**, **0** axe violations (also with five menus open), **0/840** focusables without a 2 px ring, **0** Tab-order and skip-link failures, **0** pages with horizontal overflow or wrong `<main>`/`<h1>` counts, **0** frame failures, **0** strip failures and maximum layout shift **0.0016**. The 390 and 768 px strip checks both passed. This pass did not inject the temporary 500 route; its earlier evidence remains in `ux-2-acceptance.md`.
 - **Still open:** UX2-R02 / N12 is an owner decision about canonical V1 wording and acceptance evidence. No `acceptance/cases.tsv` status, owner decision or `docs/functional-spec.md` text was changed. Safari, Firefox, screen readers, physical touch and the integration/browser-smoke scripts were not run.
+
+## Follow-up — 3 Oct 2026 (Claude Code)
+
+Added after this review, for traceability; the findings above are unchanged.
+
+- **UX2-R03, related instance.** The client transition that stalled on "Tiendas verificadas" also stalled on "Instrumentos" from a filtered catalog (`/listados?seller_type=verified_store` → `/listados`). Every shell link into `/listados` is now a native link (`components/shell-link.tsx`); the "Tiendas verificadas" destination is unchanged. The root cause (a `/listados` → `/listados?…` transition that fetches the page data but never commits) is not identified; the catalog's pagination may share it (UX-3).
+- **UX2-R02 / N12.** The owner decided the preference on 3 Oct: the mega-menu's category and type access returns inside the UX-2 design (`ux-2-shell.md` § Amendment, `decisions.md` N12). The canonical reconciliation this finding asks for is still the owner's: `ux-2-acceptance.md` § What still needs owner acceptance lists each row and spec line with its gap. `acceptance/cases.tsv` and `docs/functional-spec.md` remain unchanged.
+

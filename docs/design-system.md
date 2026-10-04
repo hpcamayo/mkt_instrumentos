@@ -88,13 +88,15 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 
 | Route | Header | Category strip | Phone search | Footer |
 | --- | --- | --- | --- | --- |
-| Home `/` | standard (until the UX-3 banner search) | none | row | full |
+| Home `/` | standard (until the UX-3 banner search) | every width (until the UX-3 home header) | row | full |
 | Browse: `/listados`, category landings, `/tiendas/…` | standard | every width | row | slim |
-| Listing `/instrumentos/<listing>` | standard | 768 px and up | icon that opens the row | slim |
-| Other public pages (legal, sign-in, 404) | standard | 768 px and up | none | slim |
-| Account `/mi-cuenta…` | standard | none | none | slim |
-| Publishing `/mi-cuenta/publicar`, `/mi-cuenta/tienda/publicar` | phones: logo and account only | none | none | slim |
-| Admin `/admin…` | none (Admin frame) | none | none | none |
+| Listing `/instrumentos/<listing>` | standard | every width | icon that opens the row | slim |
+| Other public pages (legal, sign-in, 404, 500) | standard | every width | none | slim |
+| Account `/mi-cuenta…` | standard | every width | none | slim |
+| Publishing `/mi-cuenta/publicar`, `/mi-cuenta/tienda/publicar` | phones: logo and account only | 768 px and up | none | slim |
+| Admin `/admin…` | none (Admin frame) | none ("Explorar categorías" in the Admin navigation) | none | none |
+
+The strip column follows the 3 Oct amendment (N12): the strip with its category menus sits under the public header everywhere except the publishing pages on phones; the UX-2 brief had it on public pages only, and only on browse pages on phones.
 
 ### Logo
 
@@ -112,15 +114,18 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 
 ### Menus
 
-- Disclosure buttons (`aria-expanded`, `aria-controls`), not ARIA menus, through `useDisclosure` (`components/use-disclosure.ts`): Enter and Space open them, Esc closes and returns focus to the button, an outside press or a route change closes them, and opening one closes any other.
+- Disclosure buttons (`aria-expanded`, `aria-controls`), not ARIA menus, through `useDisclosure` (`components/use-disclosure.ts`): Enter and Space open them, Esc closes and returns focus to the button, an outside press or a route change closes them, and opening one closes any other. `useDisclosureGroup` does the same for a row of buttons sharing one panel (the category strip). A component nested inside a menu that handles Esc itself (the Admin category accordion) calls `preventDefault`, and the menu then leaves Esc to it: React and the menus listen on `document`, so `stopPropagation` alone cannot separate them.
 - Account menu (header): the rail's sections, order and counts (`AccountSectionLinks`), "Admin" for admins, a divider and "Cerrar sesión". White panel with `surface-light` (ink focus ring inside the dark frame), `rounded-panel`, `shadow-level-1`, 44 px rows on phones and 36 px from 768 px.
 - Closed panels stay in the markup with `hidden`.
 
 ### Category strip
 
-- `components/global-categories.tsx`, built from `stripItems` in `lib/shell.ts`: "Instrumentos" (`/listados`), the top-level categories in taxonomy order (their landing pages), and "Tiendas verificadas" (the catalog filtered to verified stores, N7; at the right on desktop). Links only; the instrument types live on each category page.
+- `components/global-categories.tsx`, built from `stripItems` and `categoryMenus` in `lib/shell.ts`: "Instrumentos" (`/listados`), the eight categories in taxonomy order, and "Tiendas verificadas" (the catalog filtered to verified stores, N7; at the right on desktop).
+- "Instrumentos" and "Tiendas verificadas" are links. Each category is a disclosure button (with a 12 px chevron) that opens its menu panel (the hybrid of the 3 Oct amendment, N12).
 - White, 48 px from 768 px and 44 px on phones, 1 px `line-deco` bottom border. 14 px / 600; 26 px apart from 768 px, 20 px on phones. It scrolls sideways (no visible bar) when it does not fit.
-- Current item: a 3 px blue underline (`shadow-[inset_0_-3px_0_var(--accent)]`) and `aria-current="page"`, in ink; on phones the other items are ink-2. Focus rings are inset so the scroll container does not clip them.
+- Current item: a 3 px blue underline (`shadow-[inset_0_-3px_0_var(--accent)]`) in ink, with `aria-current="page"` on a link and `aria-current="true"` on a category button; an open category has a 3 px ink underline. On phones the other items are ink-2. Focus rings are inset so the scroll container does not clip them.
+- Category panel (`CategoryPanel`): "Ver todos" (the category landing) and "Tipos", every canonical instrument type of the category (`categoryMenus`: the listing form's and catalog filters' values through `categoryTypePath`). It renders after its button, positioned across the page under the strip, with `shadow-level-1`, a `line-deco` border and `.menu-fade`. From 768 px: the category as a micro label, types in 180–220 px columns, 36 px rows. Phones: a stacked list with 44 px rows. One panel at a time; the closing rules of every shell menu.
+- Links into the catalog (`/listados`, with or without a query) are native links that load the page (`ShellLink`, `isCatalogHref`): a client transition between two catalog URLs does not complete, and the catalog's filter form is uncontrolled. Category landings stay client links.
 
 ### Breadcrumbs
 
@@ -132,7 +137,7 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 
 - Public: `PageContainer` (1440 px, gutters 16 / 24 / 32).
 - Account (`AccountNavigation`): from 1024 px a 248 px rail, 40 px gap, content on the right, on white. The rail holds the name, "role · city", the sections (`aria-current`; the active row on `canvas` with a 3 px blue bar; counts with `CountBadge`), a divider and "Cerrar sesión". Below 1024 px a switcher row under the header ("Mi cuenta · <section>") opens the same list. Account page content is UX-6.
-- Admin (`AdminNavigation`): from 1024 px a 240 px black sidebar with the logo at 28 px and an "ADMIN" micro label, the sections ("Moderación" carries the pending total), and the admin's name and role at the bottom of the first screen; below 1024 px a black bar with a "Menú" button that discloses the same list. Content on `canvas`. The workbench is UX-7.
+- Admin (`AdminNavigation`): from 1024 px a 240 px black sidebar with the logo at 28 px and an "ADMIN" micro label, the sections ("Moderación" carries the pending total), and the admin's name and role at the bottom of the first screen; below 1024 px a black bar with a "Menú" button that discloses the same list. After the sections, "Explorar categorías" (`CategoryAccordion`) expands in place to "Instrumentos", each category ("Ver todos" and its types) and "Tiendas verificadas", in white on the frame; Esc closes the innermost open level and returns focus to its button. Admin never shows the public header or footer. Content on `canvas`. The workbench is UX-7.
 
 ### Footers
 
@@ -157,7 +162,7 @@ Use these instead of writing new markup for the same job.
 - `Notice` (`info`, `success`, `warning`, `danger`, icon + text): danger is an alert, others a status; use `role="note"` for static explanations. Its body underlines every link, so a notice that holds buttons, or that receives focus through a ref, composes `noticeClassName()` + `NoticeIcon` instead (as `PageNotice` does). `PageNotice` moves focus to page-level results; do not use that movement for field errors.
 - `PageHeader`: the page's only `h1`, with an optional eyebrow, a one-line summary (`meta`, 13 px) and the page's actions; a longer 16 px introduction stays a paragraph after it. Light surfaces only: headers on the black frame keep their own markup.
 - `EmptyState` (any list or section with nothing to show; `headingLevel={3}` under a section heading), `Price` (S/ with tabular figures; `card`, `detail`, `inline`), `VerifiedMark` / `VerifiedIcon`, `Skeleton`, `IconButton`, `WhatsAppGlyph`.
-- Shell components (UX-2): `BrandLogo`, `Breadcrumbs`, `ErrorPage`, `AccountSectionLinks`, `useDisclosure`; see "Shell and navigation".
+- Shell components (UX-2): `BrandLogo`, `Breadcrumbs`, `ErrorPage`, `AccountSectionLinks`, `CategoryPanel`, `CategoryAccordion`, `ShellLink`, `useDisclosure`, `useDisclosureGroup`; see "Shell and navigation".
 - `tests/ux-primitives.test.cjs` fails when a primitive loses its last consumer or a hand-rolled copy (error box, pulse placeholder, price class, count pill) comes back. `Chip` (toggle) and `Radio` have no consumer yet: the filters are redesigned in UX-3, and the only radios (Admin legacy linking) keep markup that `tests/sprint-8.test.cjs` pins.
 
 WhatsApp contact: every contact button is the primary yellow button with the WhatsApp glyph and the label "Contactar por WhatsApp". No WhatsApp green.

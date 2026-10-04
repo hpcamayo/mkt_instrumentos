@@ -1,6 +1,6 @@
 # UX-2 Shell and navigation — acceptance package
 
-Status: **ready for owner acceptance** (1 Oct 2026; built 30 Sep–1 Oct). Implemented and audited by Claude Code on `ux/redesign` against the approved brief `ux-2-shell.md`. Prepared for an independent external review on 2 Oct (`review-guide.md`): re-verified on a clean local stack, one defect found and fixed (§ Review preparation). The 3 Oct external-review fixes are verified below; N12 remains an owner acceptance decision. Nothing is pushed or merged.
+Status: **ready for owner acceptance** (1 Oct 2026; built 30 Sep–1 Oct). Implemented and audited by Claude Code on `ux/redesign` against the approved brief `ux-2-shell.md`. Prepared for an independent external review on 2 Oct (`review-guide.md`): re-verified on a clean local stack, one defect found and fixed (§ Review preparation). The 3 Oct external-review fixes are verified below. **Amended 3 Oct (owner, N12): the mega-menu's category and type access is restored inside the UX-2 design** (§ Hybrid category navigation); the canonical V1 reconciliation stays with the owner (§ What still needs owner acceptance). Nothing is pushed or merged.
 
 | # | Commit | Content |
 | --- | --- | --- |
@@ -10,13 +10,16 @@ Status: **ready for owner acceptance** (1 Oct 2026; built 30 Sep–1 Oct). Imple
 | 4 | `37d441b` fix(ui) | One `<main>` on 404 and error pages under `/admin` (found while preparing the external review) |
 | 5 | `cde9c5a` chore(ux) | `scripts/ux-local-accounts.cjs` and `scripts/ux-audit.cjs`, to reproduce the evidence |
 | 6 | `1a96bf5` test | The favorites browser smoke's Admin check (page titles use `<header>`; the signal is the missing header search) |
-| 7 | docs(ux), after `1a96bf5` | `review-guide.md`; this package, the decision log (N9–N12, F9), README, design system, roadmap and UX-1 package brought up to date; reviewer pointers in `AGENTS.md` and the root README |
+| 7 | `15e689f` docs(ux) | `review-guide.md`; this package, the decision log (N9–N12, F9), README, design system, roadmap and UX-1 package brought up to date; reviewer pointers in `AGENTS.md` and the root README |
+| 8 | `b6614e0` fix(ux) | The external review's fixes, as the reviewer (Codex) left them: the deeper Admin 404 catch-all (UX2-R01), the "Tiendas verificadas" native link and the audit's frame and strip checks (UX2-R03), the review report |
+| 9 | `424c13c` feat(ui) | Hybrid category navigation (owner, N12): strip menus, Admin "Explorar categorías", catalog links as native links, the Esc rule for nested menus; tests and audit checks |
+| 10 | docs(ux), after `424c13c` | The brief's amendment, N12 in the decision log, this package (§ Hybrid, § What still needs owner acceptance), the review guide, the design system, the README and a follow-up note in the review report |
 
 ## What changed
 
 - **Header** (`components/site-header.tsx`): black bar, 64 px from 768 px and 56 px on phones; logo 68×36 / 61×32; brand search 44 px (up to 680 px, 28 px after the logo) with a 36 px icon button; "Vender" as the 36 px outline button on dark; "Ingresar", or the bell with the unread count and the avatar with "Mi cuenta" that opens the account menu; labels become icons below 900 px; the last item's visible edge on the gutter. On phones the search is a row under the bar on browse pages and the home, behind an icon on listing pages, and absent elsewhere; while publishing only the logo and the account entry remain.
 - **Account menu**: the rail's sections, order and counts, "Admin" for admins, a divider, "Cerrar sesión".
-- **Category strip** (`components/global-categories.tsx`, replaces the mega-menu): "Instrumentos", the eight categories, "Tiendas verificadas"; current item underlined in blue with `aria-current`; scrolls sideways when it does not fit; on public pages except the home (phones: browse pages only). After the 3 Oct fix, the verified-store item uses a native anchor to apply its filter reliably from the unfiltered catalog.
+- **Category strip** (`components/global-categories.tsx`, replaces the mega-menu): "Instrumentos", the eight categories, "Tiendas verificadas"; current item underlined in blue with `aria-current`; scrolls sideways when it does not fit; on public pages except the home (phones: browse pages only). After the 3 Oct fix, the verified-store item uses a native anchor to apply its filter reliably from the unfiltered catalog. *Amended 3 Oct (N12): the categories open menus again and the strip sits on every page with the public header; see § Hybrid category navigation.*
 - **Breadcrumbs** (`components/breadcrumbs.tsx`): catalog, category landings and listing page; the full trail from 768 px, a back link to the parent on phones.
 - **Frames**: the account rail (248 px) and the phone switcher; the Admin sidebar (240 px, black) and the phone bar with "Menú"; Admin has no site header or footer and owns its `<main>`.
 - **Footers**: full on the home (four columns), slim everywhere else, none in Admin.
@@ -31,7 +34,7 @@ No product rule, route, query of product data, schema or authorization changed. 
 ## Checks
 
 - `pnpm lint`, `pnpm typecheck`, `pnpm build`: pass (final run on a clean `.next`, without the temporary 500 route).
-- `pnpm test`: 271/271 (258 before UX-2; new: `tests/ux-shell.test.cjs`, 13 tests, one of them added with the 2 Oct fix).
+- `pnpm test`: 274/274 (258 before UX-2; 271 after the 2 Oct fix; 274 with the 3 Oct hybrid). `tests/ux-shell.test.cjs` now has 16 tests.
 - First-load JS unchanged: 101 kB shared, 113 kB on the home, 135 kB on the catalog (same as before UX-2).
 
 ## Evidence setup
@@ -92,6 +95,8 @@ The remaining shift for a signed-in visitor is the actions group moving left whe
 
 ## Spec and acceptance rows touched (not edited; open: N12)
 
+*As written on 1–2 Oct, before the hybrid. For the current state, row by row, see § What still needs owner acceptance.*
+
 No row of `acceptance/cases.tsv` and no line of `docs/functional-spec.md` was edited. These describe the shell UX-2 replaced; the owner decides whether to reword and re-run them:
 
 - **PUB-008** (shared header and categories on public, auth, account and Admin routes) and functional-spec "Sprint 5 owner navigation clarification": after UX-2 the category strip is not on account or Admin pages, and Admin has its own frame without the header search (brief: page frames). Search stays on public and account pages (and on phones on browse pages, the home and behind an icon on listings).
@@ -127,6 +132,11 @@ Harness: `scripts/ux-snapshots.cjs` also opens the catalog in each signed-in gro
 - Integration and browser-smoke scripts that need a hosted or seeded Supabase (`tests/*.integration.cjs`, `*-browser-smoke.cjs`) were not run. One drove the old shell and was updated (see Tests); the others do not touch it.
 - Local seed photos are placeholders, so full-page captures show grey or lettered photo areas.
 - Tested in Chromium only (agent-browser); not on Safari/WebKit or Firefox, not with a screen reader, not on touch devices, not on a deployment (network performance).
+- 3 Oct, hybrid:
+  - **Client transitions between catalog URLs.** A transition between two `/listados` URLs does not complete (root cause not identified). The shell avoids it with native links; the catalog's pagination still uses client links (UX-3).
+  - **The pre-existing #418** on listing pages (§ Hybrid) keeps the strict browser smoke from passing end to end; it passes when only that error is tolerated.
+  - **The root `FallbackMain`** (an error thrown by the Admin layout itself) has not been induced; Admin page errors and both Admin 404 depths were.
+  - **The home shows the strip** until the UX-3 home header brings its own "Categorías" menu. On phones the publishing pages keep their focused frame without the strip.
 
 ## Review preparation (2 Oct)
 
@@ -143,6 +153,91 @@ Everything below was done to make the evidence reproducible by someone outside t
 - The mobile-strip coverage gap (UX2-R03) is closed in `scripts/ux-audit.cjs`: at 390 and 768 px it verifies sideways overflow, actual movement, reachability of the last item, no page overflow and the "Tiendas verificadas" destination. This surfaced a stalled client transition from unfiltered `/listados`; `components/global-categories.tsx` now uses a native anchor for that item. Both widths passed after the fix.
 - Verification on an isolated production copy on port 3105, with the local Supabase stack and UX accounts: Next build, ESLint, TypeScript and the configured Node suite (**271/271**) pass. Final browser audit: **28 template runs**, zero axe violations (including five menus open), zero missing focus rings among **840** visible focusables, zero Tab-order/skip-link failures, zero overflow, zero wrong `<main>`/`<h1>` counts, zero frame failures and zero strip failures; maximum measured layout shift **0.0016**. The temporary 500 route was not used in this pass. The report is `.ux-snapshots/ux2-fix-final/audit.json` in the isolated verification copy; it is gitignored.
 - UX2-R02 / N12 remains for the owner. No V1 functional-spec wording or acceptance TSV status/evidence was edited. No commit, push or merge was made.
+
+## Hybrid category navigation (3 Oct, owner N12)
+
+The owner asked for the mega-menu's functionality back inside the UX-2 design. The amendment is in `ux-2-shell.md` § Amendment; the pre-UX-2 menu (Sprint 6) was the behavioural reference.
+
+**What changed**
+- `lib/shell.ts`:
+  - `stripItems` marks "Instrumentos" and "Tiendas verificadas" as links and the eight categories as menus.
+  - `categoryMenus` gives each category "Ver todos" (its landing) and its canonical types through `categoryTypePath`.
+  - `isCatalogHref` marks catalog URLs.
+  - `getShellLayout` puts the strip on every page with the public header (home, listing, legal, sign-in, 404/500 and account pages, every width), on the publishing pages from 768 px, and never in Admin.
+- `components/global-categories.tsx`:
+  - Category disclosure buttons and `CategoryPanel`, which renders after its button and is positioned across the page under the strip.
+  - A stacked list with 44 px rows on phones.
+- `components/use-disclosure.ts`: `useDisclosureGroup`, the same closing rules for a row of buttons sharing one panel.
+- `components/shell-link.tsx`: catalog URLs as native links, other routes as client links.
+- `components/category-accordion.tsx` and `components/admin-navigation.tsx`: "Explorar categorías" in the Admin sidebar and phone "Menú", with an in-place accordion that handles Esc level by level.
+- Tests: `tests/ux-shell.test.cjs` (frames per route, strip buttons and links, panel destinations, Admin entry); `tests/sprint-6.test.cjs` (pins the mega-menu again: one panel, canonical taxonomy, closing rules); `tests/sprint-9-gate.test.cjs` (every type link through `categoryTypePath`); `tests/favorites-browser-smoke.cjs` (the strip's menu on every non-Admin page, the phone panel and Esc).
+- `scripts/ux-audit.cjs`: category-menu checks at 390 / 768 / 1440, on account pages and in Admin (below).
+- The browser smoke (`tests/favorites-browser-smoke.cjs`, run through `tests/favorites.integration.cjs` with `LARIA_FAVORITES_BROWSER=1`) was run on a separate local stack built from this branch, with its own fixtures, removed afterwards; the shared local database was not used.
+
+**Found while building it**
+- **A second instance of the stalled link (UX2-R03):** "Instrumentos" clicked on a filtered catalog (`/listados?seller_type=verified_store`) never left it. A client transition between two `/listados` URLs fetches the page data (HTTP 200) but never commits; reproduced in both directions.
+  - All shell links into the catalog are now native links (`ShellLink`), the same rule as the applied-filter chips. That covers "Instrumentos", "Tiendas verificadas" and every type link; Codex's working destination for "Tiendas verificadas" is unchanged.
+  - The root cause is not identified. The catalog's own pagination uses client links to `/listados?page=N` and may have the same problem. That code is UX-3's and was not changed.
+- **Panel placement:** a panel placed after the whole strip would have made a keyboard user Tab through the remaining categories before reaching it. Each panel now follows its own button.
+- **A hydration error that predates UX-2** stops the browser smoke at its sign-in step. A listing page for a freshly created listing with two Storage photos logs React error #418 in production builds:
+  - this build: 4 of 4 sessions; the pre-UX-2 build `645d51e`: 3 of 4, against the same fixture on the isolated stack;
+  - none in `next dev`, none on the seed listings (16 sessions);
+  - UX-1 recorded the same error as pre-existing on listing pages. The cause sits in the listing page content (UX-4) and is not fixed here.
+- **Esc in Admin's phone "Menú" closed too much.** Esc inside "Explorar categorías" closed the whole phone "Menú" as well as the inner level (found by the audit at 390).
+  - Cause: Next.js hydrates React on `document`, so React's handler and the menu's own Esc listener sit on the same node, and `stopPropagation` cannot separate them.
+  - Fix: the accordion marks its Esc handled (`preventDefault`), and every shell menu ignores an Esc already handled inside it.
+  - Checked by hand at 390: each Esc closes one level, with focus back on that level's button, the third closing "Menú".
+- **A behaviour of the browser tool, not the app:** a few seconds after a run of Esc, Enter and Tab presses, agent-browser navigates its tab to `about:blank`; reproduced on a bare HTML page with no app code. This explained intermittent audit failures (a hung click, a blank page after "Ver todos"); by hand, the same steps work. `scripts/ux-audit.cjs` now runs the keyboard checks in their own browser sessions. If a menu-button click still hangs, it retries once as a DOM click after 30 s and records that (none needed in the final run).
+- **Two stale assertions in the browser smoke, corrected:**
+  - it expected an anonymous visit to `/admin` to stay there; since Sprint 8 the server sends it to sign-in, and the smoke now asserts that redirect with `next=/admin`;
+  - it expected a sold favorite to read "Vendido"; UX-1's status dictionary says "Vendida".
+
+**Evidence** (production build, local Supabase, the local Particular, Store Owner and Admin):
+
+- **Checks:** `pnpm lint`, `pnpm typecheck` and `pnpm build` pass on a clean `.next`; `pnpm test` **274/274** (271 before the hybrid; 3 new tests in `tests/ux-shell.test.cjs`, and the sprint-6 and sprint-9-gate tests pin the restored menu). First-load JS: 101 kB shared, home 113 kB and catalog 135 kB as before; Admin 196 kB (+1 kB for the accordion).
+- **`scripts/ux-audit.cjs`** (report `.ux-snapshots/hybrid/audit.json`, gitignored), production build on the shared local stack with the local Particular, Store Owner and Admin, the 500 page through the temporary route:
+  - **Templates (30 runs at 390 and 1440):** home, catalog, category, listing, store, sign-in, 404, 500, Particular Resumen / catalog / Publicar, Store Owner Resumen, Admin and both Admin 404 depths.
+    - 0 axe violations; 1,011 focusables, 0 without a ring; 0 Tab-order and 0 skip-link problems; one `<main>` and `<h1>` everywhere; 0 frame failures; no page overflow.
+    - The 8 UX-1 templates: 16 runs, 612 focusables, 0 without a ring, 0 axe.
+  - **Strip sideways access** (Codex's check) at 390 and 768: pass, including the "Tiendas verificadas" destination.
+  - **Category menus, 34 checks, 0 failures, no fallback clicks:**
+    - At 390, 768 and 1440: opens with "Ver todos" and its 3 types (axe 0 with it open); Esc returns focus to the button; Tab goes from the button to "Ver todos"; one panel at a time; an outside press closes it; "Ver todos" reaches the landing; a type link reaches `/listados?category=guitars&instrument_type=electric_guitar` with the filter applied; "Instrumentos" leaves a filtered catalog.
+    - Account pages, 390 and 1440: the panel closes when the account menu opens, and reaches its destination.
+    - Admin, 390 and 1440: "Explorar categorías" opens without the public header or footer, with 26+ category and type links and axe 0; "Ver todos" reaches the landing; Esc closes one level at a time.
+  - **Other shell menus open** (account menu at 390 and 1440, account switcher, Admin "Menú", phone search): 0 axe violations.
+  - **200% zoom:** 12 page loads at 640 and 720 px, no overflow.
+  - **Layout shift:** 0 signed out; 0.0012–0.0016 signed in at 390 and 0.0004 at 1440, as before the hybrid.
+- **Admin after hydration** (isolated stack, by hand, 390 and 1440): both 404 depths (`/admin/no-existe`, `/admin/no-existe/de-verdad`) and an error thrown in an Admin page (temporary route in the scratch copy) show one `<main>`, the Admin navigation with "Explorar categorías", and no public header or footer.
+- **Browser smoke** (`tests/favorites.integration.cjs` with `LARIA_FAVORITES_BROWSER=1`, isolated stack, fixtures removed afterwards):
+  - Strict (as committed): stops at its sign-in step on the pre-existing #418 (§ Found while building).
+  - With only that error tolerated, in a scratch copy: passes end to end. That covers the shell check on every page it opens, the phone category panel with its Esc, the account switcher, the search steps, both favourite-history checks and the integration assertions.
+  - On a separate stack the 3 Oct audit was not repeated; the 2 Oct clean-stack results are in `review-guide.md` § 6.4.
+
+## What still needs owner acceptance
+
+Nothing below was decided or marked by the build. `acceptance/cases.tsv` and `docs/functional-spec.md` are unchanged, and no owner or manual Pass was inferred.
+
+1. **UX-2 as amended.**
+   - Accept or reject the shell against `ux-2-shell.md`, its criteria 1–7 and the 3 Oct amendment.
+   - New placements to look at: the strip on the home (until the UX-3 home header), on listing, legal and sign-in pages and on account pages at every width, while the publishing pages show it from 768 px only. Admin's "Explorar categorías" entry.
+2. **Open deviations:** N9 ("Vender" border), N10 ("Registrar mi tienda" link), N11 (phone back link on browse pages).
+3. **N12, V1 reconciliation.** The preference is decided; the canonical record is not. For each item: reword it, re-run it on this build, and record the result (the owner's acceptance process):
+
+| Canonical item | What it says | What this build does | Gap |
+| --- | --- | --- | --- |
+| functional-spec, Sprint 5 navigation clarification | Category/subtype navigation **and catalog search** on public, auth, account and Admin pages | Categories and subtypes: public, auth and account pages (strip) and Admin ("Explorar categorías"). Search: public and account pages from 768 px; on phones only on the home, browse pages and (behind an icon) listings | **No search in Admin; no search on phone account, legal or sign-in pages** (UX-2 brief) |
+| functional-spec, Sprint 6 implementation clarification | One-category-at-a-time desktop mega-menu **and mobile accordion** | Desktop: one panel per category. Phones: the same panel as a stacked list under the strip (a compact menu). Admin: an accordion | Wording only ("accordion"), unless the owner wants the phone form to be an accordion |
+| PUB-008 (Pass, Sprint 5/6 evidence) | One root shell with logo, search, account controls and categories across public, auth, account and **Admin** routes | Root shell on public, auth and account routes; **Admin has its own frame** (no root header, search or footer) with category access in its navigation | Admin differs by design (brief + owner instruction); needs rewording and a new run |
+| PUB-009 (Pass) | Header search submits the brand to `/listados`, one search receipt | Unchanged behaviour (placeholder text per N8) | Re-run optional |
+| PUB-010 (Pass) | Search, categories, subtypes and account options in a narrow viewport, no overflow | Categories, subtypes and account options on phones on every public and account page; no overflow (audit). **Search** only on the home, browse pages and listings | **Search on phone account pages** (UX-2 brief) |
+| PUB-011 (Pass) | Open panel shows only the selected category's types | Same (audit: one panel, its "Ver todos" and types) | Re-run on this build |
+| PUB-012 (Pass) | Destinations use the canonical category and `instrument_type` values | Same helpers (unit tests; audit destinations) | Re-run on this build |
+| PUB-013 (Pass) | Closes after a destination and on route change | Same (audit: closes after "Ver todos", a type, a route change) | Re-run on this build |
+| PUB-014 (Pass) | Closes on outside press and Escape, focus returns to the trigger | Same (audit) | Re-run on this build |
+| PUB-015 (Pass) | Mobile menu with category-specific **accordions**, no overflow, collapses after a choice or close | Compact per-category panel under the strip, no overflow, closes after a choice, Esc or an outside press | Wording ("accordions"); re-run on this build |
+| LEGAL-001–004 (Pass), LEGAL-005/006 (Not Run) | Legal pages linked from the global footer; limitations stated | Unchanged since 2 Oct: the home footer links all four and states every limitation; the slim footer links three and states commissions and payments | Unchanged; see § Spec and acceptance rows touched |
+
+4. **Checks only the owner (or a human tester) can do:** Safari/iOS and Android browsers, a screen reader (VoiceOver, TalkBack, NVDA), real touch and a deployment. The build was tested in Chromium only.
 
 ## How to review
 

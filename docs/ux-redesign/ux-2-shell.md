@@ -2,6 +2,8 @@
 
 Approved by the owner on 30 Sep 2026, after UX-1 was accepted. Claude Code implements and audits it on `ux/redesign`. No product rule, route or query changes. Where this brief and the concept screenshots differ, this brief wins.
 
+**Amended 3 Oct 2026 (owner, N12):** the mega-menu's category and type access comes back inside this design. The amendment at the end of this brief replaces the parts it names (the strip as links only, the strip's placement, Admin without category access); everything else stands.
+
 Visual reference (page concepts accepted 27 Sep), in `screenshots/page-concepts/`:
 - `Catalogo-1440`, `Catalogo-390`: public header, category strip, breadcrumbs, slim footer.
 - `Ficha-390`: phone header on a listing page.
@@ -126,6 +128,42 @@ Headings and lead paragraphs use `text-wrap: balance`; body paragraphs use `text
 5. Before/after captures with `scripts/ux-snapshots.cjs`; selected frames in `screenshots/ux2-before/` and `screenshots/ux2-after/`.
 6. `pnpm lint`, `typecheck`, `test` and `build` pass.
 7. `docs/design-system.md` is updated (logo sizes, header button rule, category strip, breadcrumbs, frames, footers, text-wrap rule) and `ux-2-acceptance.md` is written.
+
+## Amendment, 3 Oct 2026: category menus restored (owner, N12)
+
+The owner wants the mega-menu's functionality back while keeping this design: the black header, the white category strip, its typography and spacing, and the distinct Admin frame. This replaces the strip's link-only behaviour, its placement rules and "Not on account or Admin pages"; the pre-UX-2 menu (Sprint 6) is the behavioural reference, not its styling.
+
+**Strip items**
+- "Instrumentos" and "Tiendas verificadas" stay direct links (`/listados`, `/listados?seller_type=verified_store`).
+- Each of the eight categories is a disclosure button (`aria-expanded`, `aria-controls`) with a small chevron. It opens that category's panel; the current category keeps the 3 px blue underline (`aria-current="true"`), an open one shows a 3 px ink underline.
+
+**Panel**
+- "Ver todos" (the category landing, `/instrumentos/<slug>`), then "Tipos": every canonical instrument type of that category (the listing form's and catalog filters' values; a type that mirrors its category resolves to the landing, as before UX-2).
+- From 768 px: a white panel across the page under the strip (`shadow-level-1`, 1 px `line-deco` border), the category name as a micro label, "Ver todos" as a text link, the types in 180–220 px columns, 36 px rows.
+- Phones: the same strip scrolls sideways and the same buttons open the panel as a stacked list under it, 44 px rows (the "compact menu").
+- The panel follows its button in the markup, so Tab goes from the button into the panel.
+
+**Behaviour** (as for every shell menu)
+- One panel at a time, and never together with another shell menu.
+- Enter and Space open it; Esc closes it and returns focus to its button; an outside press, choosing a destination or a route change closes it; a 120 ms opacity change only.
+
+**Where the strip appears**
+- Under the public header on every page that has it: the home (until the UX-3 home header brings its own "Categorías" menu), browse, listing, legal and sign-in pages, 404/500 and account pages, at every width.
+- The two publishing pages show it from 768 px only, keeping their focused phone frame.
+
+**Admin**
+- No public header or footer. An "Explorar categorías" entry in the Admin navigation (sidebar and phone "Menú") expands in place to "Instrumentos", each category ("Ver todos" and its types) and "Tiendas verificadas".
+- Esc closes the innermost open level and returns focus to its button.
+
+**Catalog links**
+- Every shell link into `/listados` ("Instrumentos", "Tiendas verificadas", type links) is a native link that loads the page. A client transition between two catalog URLs does not complete, and the catalog's filter form is uncontrolled; this is the same rule as the applied-filter chips.
+- Category landings stay client links.
+
+**Unchanged:** the header, search, account menu, breadcrumbs, frames, footers, 404/500, nothing sticky (N3), no bottom bar (N4).
+
+**Acceptance for this amendment**
+- The criteria above, plus the restored behaviours of `PUB-011`–`PUB-015`, checked by `scripts/ux-audit.cjs` at 390 / 768 / 1440 and by the unit tests.
+- The canonical wording and status of `PUB-008`, `PUB-010`–`PUB-015` and the functional-spec Sprint 5/6 clarifications are reconciled only by the owner (`ux-2-acceptance.md` § What still needs owner acceptance).
 
 ## Doc updates (first commit)
 
