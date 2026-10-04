@@ -1,6 +1,6 @@
 # External review guide — Laria UX redesign (`ux/redesign`)
 
-For an independent reviewer, person or agent, with no access to the design chats or canvases. Everything needed is in this repository: the specs, the owner's decisions, the concept renders, the code, the tests and the scripts that reproduce the evidence. Written 2 Oct 2026; the setup in § 4–6 was run that day on a clean local stack built only from this branch (§ 6.4 says exactly how).
+For an independent reviewer, person or agent, with no access to the design chats or canvases. Everything needed is in this repository: the specs, the owner's decisions, the concept renders, the code, the tests and the scripts that reproduce the evidence. Written 2 Oct 2026; the setup in § 4–6 was run that day on a clean local stack built only from this branch (§ 6.4 says exactly how). External-review fixes and a fresh browser pass were completed on 3 Oct (§ 6.5; `reviews/ux-2-external-review.md`).
 
 ## 1. What is under review
 
@@ -102,7 +102,7 @@ LARIA_AGENT_BROWSER_BIN=<path to agent-browser> node scripts/ux-snapshots.cjs --
 node scripts/ux-audit.cjs --base http://localhost:3100 --axe <path>/axe.min.js --label review [--error-route /ux2-prueba-error]
 ```
 
-Per template (home, catalog, category, listing, store, sign-in, 404, 500; Particular Resumen, catalog, Publicar; Store Owner Resumen; Admin, plus a 404 for an unknown Admin section and one for an unmatched deeper Admin path) at 390 and 1440: axe-core with WCAG 2.1 A/AA tags, a focus sweep (every visible focusable element must show a 2 px outline), the skip link (first Tab, lands on `<main>`), Tab order in the header and the strip, one `<main>` and one `<h1>`, horizontal overflow. Then axe with each shell menu open, overflow at 640 and 720 px (200% zoom of 1280 and 1440), and layout shift. Report: `.ux-snapshots/review/audit.json`, summary on the last lines.
+Per template (home, catalog, category, listing, store, sign-in, 404, 500; Particular Resumen, catalog, Publicar; Store Owner Resumen; Admin, plus a 404 for an unknown Admin section and one for an unmatched deeper Admin path) at 390 and 1440: axe-core with WCAG 2.1 A/AA tags, a focus sweep (every visible focusable element must show a 2 px outline), the skip link (first Tab, lands on `<main>`), Tab order in the header and the strip, one `<main>` and one `<h1>`, horizontal overflow, and the correct public or Admin frame. The audit also scrolls the category strip at 390 and 768 px, verifies the last link is reachable and opens the verified-store catalog. Then axe with each shell menu open, overflow at 640 and 720 px (200% zoom of 1280 and 1440), and layout shift. Report: `.ux-snapshots/review/audit.json`, summary on the last lines; frame and strip failures set a nonzero exit code.
 
 Stop a `next start` server by its port (`lsof -tiTCP:3100 -sTCP:LISTEN | xargs kill`), not by its command line: the `next-server` process outlives its wrapper, and an old server over a rebuilt `.next` gives mixed results.
 
@@ -139,6 +139,10 @@ How it was run: the branch was exported with `git archive` into a separate direc
 
 The same pass found one defect, fixed in `37d441b` before the last column: a 404 for an unknown Admin section rendered with no `<main>` (`ux-2-acceptance.md` § Review preparation).
 
+### 6.5 External-review fix pass (3 Oct)
+
+On `ux/redesign` at `15e689f` plus the uncommitted fixes, an isolated production copy on port 3105 used the local Supabase stack and existing UX accounts. Next build, ESLint, TypeScript and the configured Node suite passed (271/271). The audit without the temporary 500 route ran 28 templates: zero axe violations, missing focus rings (840 focusables), Tab-order or skip-link failures, wrong `<main>`/`<h1>` counts, page overflow, frame failures or strip failures. The strip checks at 390 and 768 px both reached the verified-store filter. Maximum measured layout shift was 0.0016. The report is `.ux-snapshots/ux2-fix-final/audit.json` in that gitignored isolated copy. The deeper Admin URL redirects anonymous visitors through the Admin login gate; signed-in 404s use the Admin frame. The 500 and induced Admin-layout-failure paths were not rerun in this pass. N12 remains an owner acceptance decision.
+
 ## 7. Traceability: brief → code → tests
 
 | Brief item (`ux-2-shell.md`) | Code | Tests (`tests/…`) |
@@ -149,12 +153,12 @@ The same pass found one defect, fixed in `37d441b` before the last column: a 404
 | Account menu (sections, counts, Admin, Cerrar sesión) | `site-header.tsx` `AccountMenu`; `components/account-navigation.tsx` `AccountSectionLinks` | `ux-shell` "bell, avatar and an account menu…"; `logout-navigation` |
 | Header data (N6) | `app/api/account-navigation/route.ts`; `components/marketplace-account-provider.tsx` | `ux-shell` "header state endpoint…" |
 | Menus: disclosure, Esc returns focus, one open at a time, 120 ms opacity | `components/use-disclosure.ts`; `.menu-fade` in `app/globals.css` | `sprint-6` "category navigation … shell menus close…" |
-| Category strip (G1 label, N7 destination) | `components/global-categories.tsx`; `lib/shell.ts` `stripItems`, `currentStripKey` | `ux-shell` strip test; `sprint-6`; `sprint-9-gate` "top-level categories…" |
+| Category strip (G1 label, N7 destination) | `components/global-categories.tsx`; `lib/shell.ts` `stripItems`, `currentStripKey` | `ux-shell` strip test; `sprint-6`; `sprint-9-gate` "top-level categories…"; `ux-audit` sideways scroll and destination at 390 / 768 |
 | Breadcrumbs; structured data name (G1) | `components/breadcrumbs.tsx`; `lib/shell.ts` `listingBreadcrumbs`; `app/listados/page.tsx`, `components/category-landing.tsx`, `app/instrumentos/[slug]/page.tsx` | `ux-shell` breadcrumbs test; `sprint-9-gate`; `sprint-9`; `seo-smoke` |
 | Account frame (rail, phone switcher) | `components/account-navigation.tsx`; `app/mi-cuenta/layout.tsx` | `account-shell`; `sprint-7`; `logout-navigation`; `performance` |
 | Admin frame (sidebar, phone bar, own `<main>`) | `components/admin-navigation.tsx`; `app/admin/layout.tsx` | `sprint-8` "persistent Admin navigation…"; `logout-navigation`; `ux-shell` frame test |
 | Footers full / slim / none (N5) | `components/site-footer.tsx` | `ux-shell` footers test; `sprint-9` LEGAL tests |
-| 404 and 500, one `<main>` everywhere | `components/error-page.tsx`; `app/not-found.tsx`, `app/error.tsx` (with `FallbackMain` from `components/site-shell.tsx`); `app/admin/not-found.tsx`, `app/admin/error.tsx` | `ux-shell` "404 and 500 share one body…", "404 and 500 always have exactly one <main>…"; `sprint-9` (404 noindex); audit runs `admin/no-encontrada*` |
+| 404 and 500, one `<main>` everywhere | `components/error-page.tsx`; `app/not-found.tsx`, `app/error.tsx` (with `FallbackMain` from `components/site-shell.tsx`); `app/admin/not-found.tsx`, `app/admin/error.tsx`; `app/admin/[section]/[...rest]/page.tsx` for unmatched deeper Admin paths | `ux-shell` "404 and 500 share one body…", "404 and 500 always have exactly one <main>…"; `sprint-9` (404 noindex); audit runs `admin/no-encontrada*` and asserts the Admin frame |
 | Logo hairline (N2) and sizes (item 1) | `app/logo-clear.svg`; `components/brand-logo.tsx` | `ux-shell` logo test |
 | Text-wrap rule (item 14) | `app/globals.css`; `.text-lead` in `components/ui/page-header.tsx`, `components/ui/empty-state.tsx` | `ux-shell` text-wrap test |
 | "Listados" and "Para tiendas" retired (G1, D8) | copy across `app`, `components`, `lib` | `ux-copy` "glossary terms replace their retired synonyms" |
@@ -175,7 +179,7 @@ Decided by the owner (binding): D1–D12 (foundations), H1–H11 (home), N1–N8
 ## 9. Where to look hardest
 
 - **Header data endpoint (N6).** `GET /api/account-navigation` now returns the signed-in user's name, an admin flag and two counts. It runs on every navigation and on window focus, with the RLS-scoped server client and `Cache-Control: private, no-store`; a failed count or admin check degrades to none. Check for leakage, caching and error handling.
-- **Frame selection on the client.** `SiteShell` picks the frame from `usePathname()`; for `/admin…` it renders no header and no `<main>`, and `app/admin/layout.tsx` renders the `<main>`. This split produced the one defect found in review preparation (a 404 under `/admin` without `<main>`, fixed in `37d441b` with Admin's own `not-found`/`error` and `FallbackMain`). Check there is exactly one `<main>` on every route and state, including 404s and errors under `/admin` and `/mi-cuenta` and errors thrown by a layout.
+- **Frame selection on the client.** `SiteShell` picks the frame from `usePathname()`; for `/admin…` it renders no header and no `<main>`, and `app/admin/layout.tsx` renders the `<main>`. This split produced the review-preparation defect (a 404 under `/admin` without `<main>`, fixed in `37d441b` with Admin's own `not-found`/`error` and `FallbackMain`) and the deeper unmatched-path defect fixed on 3 Oct by `app/admin/[section]/[...rest]/page.tsx`. Check both the frame and one `<main>` on every route and state, including 404s and errors under `/admin` and `/mi-cuenta` and errors thrown by a layout.
 - **Account entry before hydration.** Until the first account check settles, the entry is rendered invisible (with a `<noscript>` "Ingresar"), so signed-in visitors never see "Ingresar". The remaining layout shift for them is 0.0004–0.0016 (it was 0.0357 on phones before UX-2). Removing it would need the session at server render.
 - **Two search forms in the header markup** (inline from 768 px; a phone row after the bar's actions), never displayed together, so Tab follows the visual order at both sizes. Distinct ids.
 - **`useDisclosure`** coordinates "one menu open at a time" through a window event (`laria:disclosure-open`).

@@ -6,8 +6,9 @@
 //
 // Per template (including 404s inside Admin), width and account: axe-core (WCAG 2.1 A/AA tags), a focus sweep (every visible focusable element
 // must show a 2 px outline when focused after a keyboard event), the skip link (first Tab, lands on <main>), Tab order
-// inside the header and the category strip (left to right, row by row), one <main> and one <h1>, and horizontal
-// overflow. Then axe with each shell menu open, overflow at 640 / 720 px (200% zoom of 1280 / 1440), and layout shift.
+// inside the header and the category strip (left to right, row by row), one <main> and one <h1>, the correct
+// public or Admin frame, and horizontal overflow. The phone/tablet strip check verifies sideways access and the
+// final link destination. Then axe with each shell menu open, overflow at 640 / 720 px (200% zoom), and layout shift.
 //
 // Options:
 //   --base <url>          App origin (default http://localhost:3000)
@@ -72,7 +73,12 @@ const SWEEP = `(() => {
     const sameRow = Math.abs((a.top + a.bottom) / 2 - (b.top + b.bottom) / 2) < 12;
     if ((sameRow && b.left < a.left) || (!sameRow && b.top < a.top)) order.push(name(shell[i - 1]) + ' -> ' + name(shell[i]));
   }
-  return JSON.stringify({ focusables: items.length, missing, order, overflow: document.documentElement.scrollWidth > innerWidth, mains: document.querySelectorAll('main').length, h1: document.querySelectorAll('h1').length });
+  const adminPath = location.pathname === '/admin' || location.pathname.startsWith('/admin/');
+  const adminNavigation = [...document.querySelectorAll('aside nav[aria-label="Navegación administrativa"], button[aria-controls="menu-admin"]')].some(visible);
+  const publicHeader = !!document.querySelector('header.surface-frame');
+  const footer = !!document.querySelector('footer.surface-frame');
+  const frameOk = adminPath ? adminNavigation && !publicHeader && !footer : publicHeader && footer;
+  return JSON.stringify({ focusables: items.length, missing, order, overflow: document.documentElement.scrollWidth > innerWidth, mains: document.querySelectorAll('main').length, h1: document.querySelectorAll('h1').length, frameOk });
 })()`;
 const CLS = "new Promise((resolve) => { let total = 0; new PerformanceObserver((list) => { for (const e of list.getEntries()) if (!e.hadRecentInput) total += e.value; }).observe({ type: 'layout-shift', buffered: true }); setTimeout(() => resolve(Number(total.toFixed(4))), 1500); })";
 
@@ -93,10 +99,10 @@ async function discover() {
       ...(store ? [["tienda", store]] : []), ["login", "/login"], ["no-encontrada", "/pagina-que-no-existe"], ...(errorRoute ? [["error", errorRoute]] : [])],
     particular: [["resumen", "/mi-cuenta"], ["catalogo", "/listados"], ["publicar", "/mi-cuenta/publicar"]],
     store: [["resumen", "/mi-cuenta"]],
-    // An Admin section that does not exist (Admin's own 404) and an unmatched deeper path (the root 404).
+    // Both unknown Admin paths must use Admin's 404 inside its frame, including the deeper catch-all.
     admin: [["admin", "/admin"], ["no-encontrada", "/admin/no-existe"], ["no-encontrada-profunda", "/admin/no-existe/de-verdad"]],
   };
-  const report = { base, templates: [], menus: [], zoom: [], cls: [] };
+  const report = { base, templates: [], menus: [], strip: [], zoom: [], cls: [] };
   const log = (line) => console.log(line);
 
   for (const [group, routes] of Object.entries(groups)) {
@@ -117,7 +123,31 @@ async function discover() {
           run(session, "press", "Tab");
           const sweep = JSON.parse(evaluate(session, SWEEP));
           report.templates.push({ group, name, width, skipFirst, skipToMain, violations, ...sweep });
-          log(`${group}/${name}@${width}: axe ${violations.length}, focusables ${sweep.focusables}, no ring ${sweep.missing.length}, tab order ${sweep.order.length}, overflow ${sweep.overflow}, skip ${skipFirst && skipToMain}`);
+          log(`${group}/${name}@${width}: axe ${violations.length}, focusables ${sweep.focusables}, no ring ${sweep.missing.length}, tab order ${sweep.order.length}, overflow ${sweep.overflow}, frame ${sweep.frameOk}, skip ${skipFirst && skipToMain}`);
+        }
+      }
+      if (group === "public") {
+        for (const width of [390, 768]) {
+          run(session, "set", "viewport", String(width), "900");
+          load(session, "/listados");
+          const metrics = JSON.parse(evaluate(session, `(() => {
+            const row = document.querySelector('nav[aria-label="Categorías"] ul');
+            const last = row?.querySelector('li:last-child a');
+            const before = row?.scrollLeft ?? 0;
+            if (row) row.scrollLeft = row.scrollWidth;
+            const rowRect = row?.getBoundingClientRect();
+            const lastRect = last?.getBoundingClientRect();
+            return JSON.stringify({ hasStrip: !!row, overflows: !!row && row.scrollWidth > row.clientWidth,
+              moved: !!row && row.scrollLeft > before,
+              lastVisible: !!rowRect && !!lastRect && lastRect.left >= rowRect.left - 1 && lastRect.right <= rowRect.right + 1,
+              pageOverflow: document.documentElement.scrollWidth > innerWidth });
+          })()`));
+          run(session, "click", 'nav[aria-label="Categorías"] li:last-child a');
+          run(session, "wait", "--load", "networkidle");
+          const destination = evaluate(session, "new URL(location.href).searchParams.get('seller_type') === 'verified_store'");
+          const passed = metrics.hasStrip && metrics.overflows && metrics.moved && metrics.lastVisible && !metrics.pageOverflow && destination;
+          report.strip.push({ width, ...metrics, destination, passed });
+          log(`strip@${width}: overflow ${metrics.overflows}, moved ${metrics.moved}, last visible ${metrics.lastVisible}, destination ${destination}, page overflow ${metrics.pageOverflow}`);
         }
       }
       if (group === "admin" || (group === "particular" && !accounts.admin)) {
@@ -170,6 +200,8 @@ async function discover() {
     skipLinkFailures: t.filter((r) => !r.skipFirst || !r.skipToMain).length,
     pagesWithOverflow: t.filter((r) => r.overflow).length + report.zoom.filter((r) => r.overflow).length,
     pagesWithoutOneMainAndH1: t.filter((r) => r.mains !== 1 || r.h1 !== 1).length,
+    frameFailures: t.filter((r) => !r.frameOk).length,
+    stripFailures: report.strip.filter((r) => !r.passed).length,
     maxCls: Math.max(0, ...report.cls.map((r) => r.cls)),
   };
   report.summary = summary;
@@ -178,6 +210,7 @@ async function discover() {
   fs.writeFileSync(path.join(out, "audit.json"), JSON.stringify(report, null, 2));
   log(`summary ${JSON.stringify(summary)}`);
   log(`report: ${path.relative(process.cwd(), path.join(out, "audit.json"))}`);
+  if (summary.frameFailures || summary.stripFailures) process.exitCode = 1;
 })().catch((error) => {
   console.error(error.message);
   process.exitCode = 1;

@@ -144,7 +144,7 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 
 - `ErrorPage` (`components/error-page.tsx`) inside the standard header and slim footer: a centred 560 px column with a `t-page` title, one line, the search field and "Ir al inicio" · "Ver instrumentos". No illustration.
 - 404 (`app/not-found.tsx`): "No encontramos esta página" / "Puede que la dirección esté mal o que la publicación ya no esté disponible." 500 (`app/error.tsx`): "Algo salió mal" / "Vuelve a intentarlo en unos minutos."; the error goes to the console, never to the page. The copy lives once in `NOT_FOUND_COPY` / `SERVER_ERROR_COPY`.
-- Inside Admin, `app/admin/not-found.tsx` and `app/admin/error.tsx` render the same body within the Admin frame.
+- Inside Admin, `app/admin/not-found.tsx` and `app/admin/error.tsx` render the same body within the Admin frame. An unmatched deeper `/admin/…` URL reaches that 404 through `app/admin/[section]/[...rest]/page.tsx`; the root fallback still covers errors above the Admin layout.
 
 ## Components (`components/ui/`)
 

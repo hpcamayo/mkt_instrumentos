@@ -61,7 +61,7 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `screenshots/ux1-audit/` | Concept vs build, side by side (16 pairs) after the audit fixes; `index.html` lists the layout differences per pair |
 | `../../scripts/ux-snapshots.cjs` | The screenshot harness (D10): fixed route list at 390 / 768 / 1280 / 1440, anonymous and signed in (each signed-in group also on the catalog); output in the gitignored `.ux-snapshots/` |
 | `../../scripts/ux-local-accounts.cjs` | Creates the local Particular, Store Owner (with a store) and Admin test accounts; local Supabase only; writes the gitignored `.ux-accounts.local.json` |
-| `../../scripts/ux-audit.cjs` | Accessibility and shell audit: axe-core WCAG 2.1 A/AA, focus sweep, skip link, shell Tab order, one `<main>`/`<h1>`, overflow and 200% zoom, menus open, layout shift; output `.ux-snapshots/<label>/audit.json` |
+| `../../scripts/ux-audit.cjs` | Accessibility and shell audit: axe-core WCAG 2.1 A/AA, focus sweep, skip link, shell Tab order, one `<main>`/`<h1>`, public/Admin frame, strip sideways access and destination at 390 / 768, overflow and 200% zoom, menus open, layout shift; output `.ux-snapshots/<label>/audit.json` |
 | `art/` | Original banner art: SVG (round 2), raster generators and images (`wild/`, `round5/` … `round10/`) |
 
 In the repo, `screenshots/` keeps only the baseline, the page and UX-1 concepts, the final home and the harness captures (UX-1, UX-2), as WebP. The banner explorations (rounds 1–10 and their renders) stay on the Laria Page Concepts canvas; `art/rotation/src/` keeps the generators of the nine decided pieces.
@@ -76,7 +76,7 @@ Visual workspaces (private claude.ai artifacts, owner account; exploratory, not 
 
 ### UX-2 evidence
 
-`screenshots/ux2-before/` and `ux2-after/` come from `scripts/ux-snapshots.cjs` run on production builds (`next start`) of `645d51e` (before the UX-2 code) and of the UX-2 code, on the owner's Mac, against a local Supabase stack, signed out and as a local Particular, Store Owner and Admin. That database also carried 17 later migrations from the catalog branch, which UX-2 does not read; on 2 Oct the build was re-checked on a clean stack built only from this branch's migrations and seed, with accounts from `scripts/ux-local-accounts.cjs` (`review-guide.md` § 6.4). The accessibility numbers and layout shift come from the checks now in `scripts/ux-audit.cjs`.
+`screenshots/ux2-before/` and `ux2-after/` come from `scripts/ux-snapshots.cjs` run on production builds (`next start`) of `645d51e` (before the UX-2 code) and of the UX-2 code, on the owner's Mac, against a local Supabase stack, signed out and as a local Particular, Store Owner and Admin. That database also carried 17 later migrations from the catalog branch, which UX-2 does not read; on 2 Oct the build was re-checked on a clean stack built only from this branch's migrations and seed, with accounts from `scripts/ux-local-accounts.cjs` (`review-guide.md` § 6.4). The accessibility numbers and layout shift come from the checks now in `scripts/ux-audit.cjs`. On 3 Oct, the external-review fixes passed a new isolated production-build audit (28 routes, zero frame or strip failures); see `ux-2-acceptance.md` § External-review fixes.
 
 ## Working rules for any session
 

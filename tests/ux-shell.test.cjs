@@ -228,9 +228,11 @@ test("404 and 500 share one body: title, one line, the search and two links", ()
 });
 
 test("404 and 500 always have exactly one <main>, inside Admin too", () => {
-  // Inside Admin, the 404 and error boundaries render within app/admin/layout.tsx and its <main>.
+  // Unknown nested Admin routes call notFound inside the Admin layout, which owns the frame and <main>.
+  assert.match(source("app/admin/[section]/[...rest]/page.tsx"), /notFound\(\)/);
+  assert.match(source("app/admin/layout.tsx"), /<AdminNavigation/);
   for (const file of ["app/admin/not-found.tsx", "app/admin/error.tsx"]) assert.doesNotMatch(source(file), /<FallbackMain>|<main id=/, file);
-  // The root ones render outside it; on an /admin path the shell has no <main>, so they bring one.
+  // A failure in the Admin layout itself can still reach the root boundary; its fallback supplies one <main>.
   for (const file of ["app/not-found.tsx", "app/error.tsx"]) assert.match(source(file), /<FallbackMain>/, file);
   const render = (pathname) => {
     const { default: NotFound } = load("app/not-found.tsx", { "next/link": linkMock, "next/navigation": navigationMock(pathname) });

@@ -1,6 +1,6 @@
 # UX-2 Shell and navigation — acceptance package
 
-Status: **ready for owner acceptance** (1 Oct 2026; built 30 Sep–1 Oct). Implemented and audited by Claude Code on `ux/redesign` against the approved brief `ux-2-shell.md`. Prepared for an independent external review on 2 Oct (`review-guide.md`): re-verified on a clean local stack, one defect found and fixed (§ Review preparation). Nothing is pushed or merged.
+Status: **ready for owner acceptance** (1 Oct 2026; built 30 Sep–1 Oct). Implemented and audited by Claude Code on `ux/redesign` against the approved brief `ux-2-shell.md`. Prepared for an independent external review on 2 Oct (`review-guide.md`): re-verified on a clean local stack, one defect found and fixed (§ Review preparation). The 3 Oct external-review fixes are verified below; N12 remains an owner acceptance decision. Nothing is pushed or merged.
 
 | # | Commit | Content |
 | --- | --- | --- |
@@ -16,7 +16,7 @@ Status: **ready for owner acceptance** (1 Oct 2026; built 30 Sep–1 Oct). Imple
 
 - **Header** (`components/site-header.tsx`): black bar, 64 px from 768 px and 56 px on phones; logo 68×36 / 61×32; brand search 44 px (up to 680 px, 28 px after the logo) with a 36 px icon button; "Vender" as the 36 px outline button on dark; "Ingresar", or the bell with the unread count and the avatar with "Mi cuenta" that opens the account menu; labels become icons below 900 px; the last item's visible edge on the gutter. On phones the search is a row under the bar on browse pages and the home, behind an icon on listing pages, and absent elsewhere; while publishing only the logo and the account entry remain.
 - **Account menu**: the rail's sections, order and counts, "Admin" for admins, a divider, "Cerrar sesión".
-- **Category strip** (`components/global-categories.tsx`, replaces the mega-menu): "Instrumentos", the eight categories, "Tiendas verificadas"; current item underlined in blue with `aria-current`; scrolls sideways when it does not fit; on public pages except the home (phones: browse pages only).
+- **Category strip** (`components/global-categories.tsx`, replaces the mega-menu): "Instrumentos", the eight categories, "Tiendas verificadas"; current item underlined in blue with `aria-current`; scrolls sideways when it does not fit; on public pages except the home (phones: browse pages only). After the 3 Oct fix, the verified-store item uses a native anchor to apply its filter reliably from the unfiltered catalog.
 - **Breadcrumbs** (`components/breadcrumbs.tsx`): catalog, category landings and listing page; the full trail from 768 px, a back link to the parent on phones.
 - **Frames**: the account rail (248 px) and the phone switcher; the Admin sidebar (240 px, black) and the phone bar with "Menú"; Admin has no site header or footer and owns its `<main>`.
 - **Footers**: full on the home (four columns), slim everywhere else, none in Admin.
@@ -136,6 +136,13 @@ Everything below was done to make the evidence reproducible by someone outside t
 - **Defect found and fixed (`37d441b`).** A 404 for an unknown Admin section (`/admin/no-existe`) rendered with no `<main>`, no header and no sidebar: Next renders the root `not-found` outside the Admin layout, and on `/admin` paths the shell leaves `<main>` to that layout. Errors thrown in Admin pages had the same gap. Now `app/admin/not-found.tsx` and `app/admin/error.tsx` render the 404/500 body inside the Admin frame, and the root `not-found` and `error` add a `<main>` (`FallbackMain`) only where the shell has none (an unmatched deeper `/admin/…` URL, a crash in the Admin layout). Covered by a new test in `tests/ux-shell.test.cjs` and by the Admin 404 runs in `scripts/ux-audit.cjs`. 404s under `/mi-cuenta` and public paths were already correct (shell header, one `<main>`).
 - **Reproducibility.** `scripts/ux-local-accounts.cjs` (the three local accounts and the store) and `scripts/ux-audit.cjs` (all accessibility and layout-shift checks) replace the one-off scripts used on 1 Oct. `scripts/ux-snapshots.cjs` is unchanged.
 - **Open decisions** moved into `decisions.md`: N9–N12 (the deviations below) and F9 (free-text search).
+
+## External-review fixes (3 Oct)
+
+- The external report `reviews/ux-2-external-review.md` identified a deeper Admin 404 that lost the Admin frame (UX2-R01). `app/admin/[section]/[...rest]/page.tsx` now calls `notFound()` inside the Admin layout. The route-level audit asserts Admin navigation and the absence of the public header/footer, in addition to one `<main>` and `<h1>`. Anonymous access redirects to `/login?next=%2Fadmin`; authenticated shallow and deeper 404s pass at 390 and 1440 px. The root `FallbackMain` still handles failures above that layout; an induced Admin-layout failure was not tested on 3 Oct.
+- The mobile-strip coverage gap (UX2-R03) is closed in `scripts/ux-audit.cjs`: at 390 and 768 px it verifies sideways overflow, actual movement, reachability of the last item, no page overflow and the "Tiendas verificadas" destination. This surfaced a stalled client transition from unfiltered `/listados`; `components/global-categories.tsx` now uses a native anchor for that item. Both widths passed after the fix.
+- Verification on an isolated production copy on port 3105, with the local Supabase stack and UX accounts: Next build, ESLint, TypeScript and the configured Node suite (**271/271**) pass. Final browser audit: **28 template runs**, zero axe violations (including five menus open), zero missing focus rings among **840** visible focusables, zero Tab-order/skip-link failures, zero overflow, zero wrong `<main>`/`<h1>` counts, zero frame failures and zero strip failures; maximum measured layout shift **0.0016**. The temporary 500 route was not used in this pass. The report is `.ux-snapshots/ux2-fix-final/audit.json` in the isolated verification copy; it is gitignored.
+- UX2-R02 / N12 remains for the owner. No V1 functional-spec wording or acceptance TSV status/evidence was edited. No commit, push or merge was made.
 
 ## How to review
 

@@ -37,16 +37,30 @@ function StripList({ current }: { current: string | null }) {
         const isCurrent = item.key === current;
         return (
           <li key={item.key} className={cn("flex shrink-0", item.key === "verified_stores" && "md:ml-auto")}>
-            <Link
-              href={item.href}
-              aria-current={isCurrent ? "page" : undefined}
-              className={cn(
-                "inline-flex items-center whitespace-nowrap px-1 text-[14px] font-semibold leading-5 transition-colors duration-120 focus-visible:outline-offset-[-2px]",
-                isCurrent ? "text-ink shadow-[inset_0_-3px_0_var(--accent)]" : "text-ink-2 hover:text-ink md:text-ink",
-              )}
-            >
-              {item.label}
-            </Link>
+            {item.key === "verified_stores" ? (
+              // A full navigation applies this query on the current catalog route reliably.
+              <a
+                href={item.href}
+                aria-current={isCurrent ? "page" : undefined}
+                className={cn(
+                  "inline-flex items-center whitespace-nowrap px-1 text-[14px] font-semibold leading-5 transition-colors duration-120 focus-visible:outline-offset-[-2px]",
+                  isCurrent ? "text-ink shadow-[inset_0_-3px_0_var(--accent)]" : "text-ink-2 hover:text-ink md:text-ink",
+                )}
+              >
+                {item.label}
+              </a>
+            ) : (
+              <Link
+                href={item.href}
+                aria-current={isCurrent ? "page" : undefined}
+                className={cn(
+                  "inline-flex items-center whitespace-nowrap px-1 text-[14px] font-semibold leading-5 transition-colors duration-120 focus-visible:outline-offset-[-2px]",
+                  isCurrent ? "text-ink shadow-[inset_0_-3px_0_var(--accent)]" : "text-ink-2 hover:text-ink md:text-ink",
+                )}
+              >
+                {item.label}
+              </Link>
+            )}
           </li>
         );
       })}
