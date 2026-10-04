@@ -6,7 +6,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const OPEN_EVENT = "laria:disclosure-open";
 
 // Shell menus are disclosure buttons (aria-expanded), not ARIA menus. Enter and Space open them natively; Esc
-// closes and returns focus to the button; an outside press or a route change closes them; opening one closes
+// closes and returns focus to the button, unless a component inside already handled it (preventDefault, as the Admin
+// category accordion does); an outside press or a route change closes them; opening one closes
 // any other, so only one menu is open at a time.
 export function useDisclosure(id: string) {
   const pathname = usePathname();
@@ -41,7 +42,7 @@ export function useDisclosure(id: string) {
       if (!panelRef.current?.contains(target) && !buttonRef.current?.contains(target)) setOpen(false);
     }
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") close(true);
+      if (event.key === "Escape" && !event.defaultPrevented) close(true);
     }
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
@@ -52,4 +53,63 @@ export function useDisclosure(id: string) {
   }, [open, close]);
 
   return { open, toggle, close, buttonRef, panelRef };
+}
+
+// A row of disclosure buttons that share one panel (the category strip): the same rules as useDisclosure, with at
+// most one key open. Esc returns focus to the button of the key that was open.
+export function useDisclosureGroup(id: string) {
+  const pathname = usePathname();
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const openRef = useRef<string | null>(null);
+  openRef.current = openKey;
+  const buttons = useRef(new Map<string, HTMLButtonElement>());
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const close = useCallback((returnFocus = false) => {
+    const key = openRef.current;
+    setOpenKey(null);
+    if (returnFocus && key) buttons.current.get(key)?.focus();
+  }, []);
+
+  const toggle = useCallback((key: string) => {
+    if (openRef.current === key) {
+      setOpenKey(null);
+      return;
+    }
+    if (!openRef.current) window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: id }));
+    setOpenKey(key);
+  }, [id]);
+
+  const buttonRef = useCallback((key: string) => (node: HTMLButtonElement | null) => {
+    if (node) buttons.current.set(key, node);
+    else buttons.current.delete(key);
+  }, []);
+
+  useEffect(() => { setOpenKey(null); }, [pathname]);
+
+  useEffect(() => {
+    function onOtherOpen(event: Event) {
+      if ((event as CustomEvent<string>).detail !== id) setOpenKey(null);
+    }
+    window.addEventListener(OPEN_EVENT, onOtherOpen);
+    return () => window.removeEventListener(OPEN_EVENT, onOtherOpen);
+  }, [id]);
+
+  useEffect(() => {
+    if (!openKey) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!containerRef.current?.contains(event.target as Node)) setOpenKey(null);
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !event.defaultPrevented) close(true);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openKey, close]);
+
+  return { openKey, toggle, close, buttonRef, containerRef };
 }

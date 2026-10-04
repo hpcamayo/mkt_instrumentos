@@ -9,6 +9,9 @@
 // inside the header and the category strip (left to right, row by row), one <main> and one <h1>, the correct
 // public or Admin frame, and horizontal overflow. The phone/tablet strip check verifies sideways access and the
 // final link destination. Then axe with each shell menu open, overflow at 640 / 720 px (200% zoom), and layout shift.
+// Category menus (N12 hybrid) at 390 / 768 / 1440: a category opens its panel ("Ver todos" and the canonical types), axe with
+// it open, Tab into the panel, Esc back to the button, one panel at a time, outside press, both destination kinds,
+// "Instrumentos" from a filtered catalog; on account pages, and next to the account menu; Admin's "Explorar categorías".
 //
 // Options:
 //   --base <url>          App origin (default http://localhost:3000)
@@ -39,7 +42,10 @@ const accountsFile = process.env.LARIA_UX_ACCOUNTS ?? path.join(process.cwd(), "
 const accounts = fs.existsSync(accountsFile) ? JSON.parse(fs.readFileSync(accountsFile, "utf8")) : {};
 
 function run(session, ...command) {
-  const result = spawnSync(browser, ["--session", session, "--json", ...command], { encoding: "utf8", timeout: 90000, maxBuffer: 64 * 1024 * 1024 });
+  return runWithin(90000, session, ...command);
+}
+function runWithin(timeout, session, ...command) {
+  const result = spawnSync(browser, ["--session", session, "--json", ...command], { encoding: "utf8", timeout, maxBuffer: 64 * 1024 * 1024 });
   if (result.status !== 0) throw new Error(`agent-browser ${command[0]} failed: ${result.error?.message || result.stderr || result.stdout}`);
   const parsed = JSON.parse(result.stdout.trim().split("\n").pop());
   if (!parsed.success) throw new Error(parsed.error ?? `agent-browser ${command[0]} failed`);
@@ -82,6 +88,76 @@ const SWEEP = `(() => {
 })()`;
 const CLS = "new Promise((resolve) => { let total = 0; new PerformanceObserver((list) => { for (const e of list.getEntries()) if (!e.hadRecentInput) total += e.value; }).observe({ type: 'layout-shift', buffered: true }); setTimeout(() => resolve(Number(total.toFixed(4))), 1500); })";
 
+// Clicks a menu button. agent-browser's click occasionally hangs right after keyboard steps (not reproducible by
+// hand); after 30 s it is retried once as a DOM click, and the check records that it was.
+const fallbacks = [];
+function clickButton(session, selector) {
+  try {
+    runWithin(30000, session, "click", selector);
+  } catch (error) {
+    if (!/ETIMEDOUT/.test(error.message)) throw error;
+    fallbacks.push(selector);
+    evaluate(session, `document.querySelector(${JSON.stringify(selector)}).click()`);
+  }
+}
+
+// One category-menu check: runs the steps, records pass/fail with the observed values.
+function check(report, log, name, width, observed, passed) {
+  if (fallbacks.length) observed = { ...observed, domClickFallback: fallbacks.splice(0) };
+  report.categoryMenus.push({ name, width, passed, observed });
+  log(`category menu ${name}@${width}: ${passed ? "pass" : "FAIL"} ${JSON.stringify(observed)}`);
+}
+const PANEL_STATE = (key) => `JSON.stringify({ open: [...document.querySelectorAll('nav[aria-label="Categorías"] button[aria-expanded="true"]')].map((b) => b.getAttribute('aria-controls')),
+  panel: !!document.getElementById('categoria-${key}'), viewAll: document.querySelector('#categoria-${key} a')?.textContent ?? null,
+  types: document.querySelectorAll('#categoria-${key} li a').length, active: document.activeElement?.getAttribute('aria-controls') ?? document.activeElement?.textContent?.trim().slice(0, 30) ?? null,
+  url: location.pathname + location.search, overflow: document.documentElement.scrollWidth > innerWidth })`;
+
+// Keyboard checks run in their own browser session: after a run of Esc / Enter / Tab presses, agent-browser
+// navigates its tab to about:blank a few seconds later (reproduced on a bare HTML page with no app code).
+async function categoryMenuKeyboardChecks(session, report, log, width, axeSource) {
+  const state = (key) => JSON.parse(evaluate(session, PANEL_STATE(key)));
+  load(session, "/listados");
+  clickButton(session, 'button[aria-controls="categoria-guitars"]');
+  let s = state("guitars");
+  evaluate(session, `${axeSource};'ok'`);
+  const violations = JSON.parse(await evaluate(session, AXE));
+  check(report, log, "opens", width, { ...s, axe: violations.length }, s.panel && s.viewAll === "Ver todos" && s.types === 3 && !s.overflow && violations.length === 0);
+  run(session, "press", "Escape");
+  s = state("guitars");
+  check(report, log, "escape-returns-focus", width, s, !s.panel && s.active === "categoria-guitars");
+  run(session, "press", "Enter");
+  run(session, "press", "Tab");
+  s = state("guitars");
+  check(report, log, "keyboard-into-panel", width, s, s.panel && s.active === "Ver todos");
+}
+
+async function categoryMenuClickChecks(session, report, log, width) {
+  const state = (key) => JSON.parse(evaluate(session, PANEL_STATE(key)));
+  let s;
+  load(session, "/listados");
+  clickButton(session, 'button[aria-controls="categoria-guitars"]');
+  clickButton(session, 'button[aria-controls="categoria-basses"]');
+  s = state("basses");
+  check(report, log, "one-at-a-time", width, s, s.panel && s.open.length === 1 && s.open[0] === "categoria-basses");
+  run(session, "click", "footer p"); // outside the panel and not a link, at every width
+  s = state("basses");
+  check(report, log, "outside-press", width, s, !s.panel && s.open.length === 0);
+  clickButton(session, 'button[aria-controls="categoria-guitars"]');
+  run(session, "click", '#categoria-guitars a[href="/instrumentos/guitarras"]');
+  run(session, "wait", "--load", "networkidle"); run(session, "wait", "500");
+  s = state("guitars");
+  check(report, log, "view-all-destination", width, s, s.url === "/instrumentos/guitarras" && !s.panel);
+  clickButton(session, 'button[aria-controls="categoria-guitars"]');
+  run(session, "click", '#categoria-guitars a[href="/listados?category=guitars&instrument_type=electric_guitar"]');
+  run(session, "wait", "--load", "networkidle"); run(session, "wait", "500");
+  s = { ...state("guitars"), type: evaluate(session, "document.querySelector('select[name=instrument_type]')?.value ?? null") };
+  check(report, log, "type-destination", width, s, s.url === "/listados?category=guitars&instrument_type=electric_guitar" && s.type === "electric_guitar" && !s.panel);
+  run(session, "click", 'nav[aria-label="Categorías"] li:first-child a');
+  run(session, "wait", "--load", "networkidle"); run(session, "wait", "500");
+  s = state("guitars");
+  check(report, log, "instrumentos-from-filtered-catalog", width, s, s.url === "/listados");
+}
+
 async function discover() {
   const xml = await (await fetch(`${base}/sitemap.xml`)).text();
   const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => new URL(match[1]).pathname);
@@ -102,7 +178,7 @@ async function discover() {
     // Both unknown Admin paths must use Admin's 404 inside its frame, including the deeper catch-all.
     admin: [["admin", "/admin"], ["no-encontrada", "/admin/no-existe"], ["no-encontrada-profunda", "/admin/no-existe/de-verdad"]],
   };
-  const report = { base, templates: [], menus: [], strip: [], zoom: [], cls: [] };
+  const report = { base, templates: [], menus: [], strip: [], categoryMenus: [], zoom: [], cls: [] };
   const log = (line) => console.log(line);
 
   for (const [group, routes] of Object.entries(groups)) {
@@ -148,6 +224,79 @@ async function discover() {
           const passed = metrics.hasStrip && metrics.overflows && metrics.moved && metrics.lastVisible && !metrics.pageOverflow && destination;
           report.strip.push({ width, ...metrics, destination, passed });
           log(`strip@${width}: overflow ${metrics.overflows}, moved ${metrics.moved}, last visible ${metrics.lastVisible}, destination ${destination}, page overflow ${metrics.pageOverflow}`);
+        }
+      }
+      if (group === "public") {
+        // A fresh browser session per width: after many page loads in one session, agent-browser's click occasionally
+        // hung at this point (never reproduced in a fresh session).
+        for (const width of [390, 768, 1440]) {
+          for (const [kind, checks] of [["keys", categoryMenuKeyboardChecks], ["clicks", categoryMenuClickChecks]]) {
+            const menuSession = `ux-audit-menus-${kind}-${width}-${process.pid}`;
+            try {
+              run(menuSession, "set", "viewport", String(width), "900");
+              await checks(menuSession, report, log, width, axeSource);
+            } finally {
+              spawnSync(browser, ["--session", menuSession, "close"], { encoding: "utf8" });
+            }
+          }
+        }
+      }
+      if (group === "particular") {
+        for (const width of [390, 1440]) {
+          run(session, "set", "viewport", String(width), "900");
+          // Account pages carry the strip; a category panel and the account menu are never open together (the open
+          // account menu covers the strip on phones, so the panel is opened first, then the account menu).
+          load(session, "/mi-cuenta/favoritos");
+          clickButton(session, 'button[aria-controls="categoria-amplifiers"]');
+          const opened = JSON.parse(evaluate(session, PANEL_STATE("amplifiers")));
+          clickButton(session, 'button[aria-controls="menu-cuenta"]');
+          const s = { ...JSON.parse(evaluate(session, PANEL_STATE("amplifiers"))), panelBefore: opened.panel, accountMenuOpen: evaluate(session, "document.getElementById('menu-cuenta')?.hidden === false") };
+          check(report, log, "account-page-and-account-menu", width, s, s.panelBefore && !s.panel && s.accountMenuOpen && !s.overflow);
+          run(session, "press", "Escape");
+          clickButton(session, 'button[aria-controls="categoria-amplifiers"]');
+          run(session, "click", '#categoria-amplifiers a[href="/instrumentos/amplificadores"]');
+          run(session, "wait", "--load", "networkidle"); run(session, "wait", "500");
+          const after = JSON.parse(evaluate(session, PANEL_STATE("amplifiers")));
+          check(report, log, "account-page-destination", width, after, after.url === "/instrumentos/amplificadores");
+        }
+      }
+      if (group === "admin") {
+        for (const width of [390, 1440]) {
+          run(session, "set", "viewport", String(width), "900");
+          load(session, "/admin");
+          const scope = width < 1024 ? "#menu-admin" : "aside";
+          if (width < 1024) run(session, "click", 'button[aria-controls="menu-admin"]');
+          const click = (text) => evaluate(session, `[...document.querySelectorAll('${scope} button')].find((b) => b.textContent.trim().startsWith('${text}'))?.click() ?? 'missing'`);
+          click("Explorar categorías"); click("Guitarras");
+          const opened = JSON.parse(evaluate(session, `JSON.stringify({ links: [...document.querySelectorAll('${scope} a')].map((a) => a.getAttribute('href')).filter((h) => /^\\/(listados|instrumentos)/.test(h)).length,
+            viewAll: !![...document.querySelectorAll('${scope} a')].find((a) => a.textContent === 'Ver todos' && a.offsetParent), publicHeader: !!document.querySelector('header.surface-frame'), footer: !!document.querySelector('footer'),
+            overflow: document.documentElement.scrollWidth > innerWidth })`));
+          evaluate(session, `${axeSource};'ok'`);
+          const violations = JSON.parse(await evaluate(session, AXE));
+          check(report, log, "admin-explorar-categorias", width, { ...opened, axe: violations.length }, opened.viewAll && opened.links >= 26 && !opened.publicHeader && !opened.footer && !opened.overflow && violations.length === 0);
+          evaluate(session, `[...document.querySelectorAll('${scope} a')].find((a) => a.textContent === 'Ver todos' && a.offsetParent)?.click()`);
+          run(session, "wait", "--load", "networkidle"); run(session, "wait", "500");
+          const url = evaluate(session, "location.pathname");
+          check(report, log, "admin-destination", width, { url }, url === "/instrumentos/guitarras");
+          // Esc levels in their own session (agent-browser's tab goes blank a while after repeated Esc presses; see above).
+          const escSession = `ux-audit-admin-esc-${width}-${process.pid}`;
+          try {
+            signIn(escSession, accounts.admin);
+            run(escSession, "set", "viewport", String(width), "900");
+            load(escSession, "/admin");
+            if (width < 1024) run(escSession, "click", 'button[aria-controls="menu-admin"]');
+            const clickIn = (text) => evaluate(escSession, `[...document.querySelectorAll('${scope} button')].find((b) => b.textContent.trim().startsWith('${text}'))?.click() ?? 'missing'`);
+            clickIn("Explorar categorías"); clickIn("Guitarras");
+            evaluate(escSession, `[...document.querySelectorAll('${scope} button')].find((b) => b.textContent.trim().startsWith('Guitarras'))?.focus()`);
+            run(escSession, "press", "Escape");
+            const inner = evaluate(escSession, "JSON.stringify({ active: document.activeElement?.textContent?.trim(), expanded: document.activeElement?.getAttribute('aria-expanded') })");
+            run(escSession, "press", "Escape");
+            const outer = evaluate(escSession, "JSON.stringify({ active: document.activeElement?.textContent?.trim(), expanded: document.activeElement?.getAttribute('aria-expanded') })");
+            const esc = { inner: JSON.parse(inner), outer: JSON.parse(outer), menuStillOpen: width < 1024 ? evaluate(escSession, "document.getElementById('menu-admin')?.hidden === false") : null };
+            check(report, log, "admin-escape-levels", width, esc, esc.inner.active === "Guitarras" && esc.inner.expanded === "false" && esc.outer.active === "Explorar categorías" && esc.outer.expanded === "false" && (width >= 1024 || esc.menuStillOpen === true));
+          } finally {
+            spawnSync(browser, ["--session", escSession, "close"], { encoding: "utf8" });
+          }
         }
       }
       if (group === "admin" || (group === "particular" && !accounts.admin)) {
@@ -202,6 +351,9 @@ async function discover() {
     pagesWithoutOneMainAndH1: t.filter((r) => r.mains !== 1 || r.h1 !== 1).length,
     frameFailures: t.filter((r) => !r.frameOk).length,
     stripFailures: report.strip.filter((r) => !r.passed).length,
+    categoryMenuChecks: report.categoryMenus.length,
+    categoryMenuFailures: report.categoryMenus.filter((r) => !r.passed).length,
+    categoryMenuDomClickFallbacks: report.categoryMenus.filter((r) => r.observed.domClickFallback).length,
     maxCls: Math.max(0, ...report.cls.map((r) => r.cls)),
   };
   report.summary = summary;
@@ -210,7 +362,7 @@ async function discover() {
   fs.writeFileSync(path.join(out, "audit.json"), JSON.stringify(report, null, 2));
   log(`summary ${JSON.stringify(summary)}`);
   log(`report: ${path.relative(process.cwd(), path.join(out, "audit.json"))}`);
-  if (summary.frameFailures || summary.stripFailures) process.exitCode = 1;
+  if (summary.frameFailures || summary.stripFailures || summary.categoryMenuFailures) process.exitCode = 1;
 })().catch((error) => {
   console.error(error.message);
   process.exitCode = 1;

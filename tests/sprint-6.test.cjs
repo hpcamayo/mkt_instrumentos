@@ -42,28 +42,40 @@ test("public reputation parser never fabricates a default rating", () => {
   assert.equal(transactions.parsePublicReputation({ ...value, items: [{ ...value.items[0], rating: 8 }] }).review_count, 0);
 });
 
-test("category navigation is driven by canonical taxonomy and shell menus close on every required interaction", () => {
-  // UX-2 replaced the mega-menu with a category strip of links (docs/ux-redesign/ux-2-shell.md); the instrument
-  // types stay on each category page. The strip reads the canonical categories through lib/shell.ts.
+test("mega-menu is driven by canonical taxonomy and closes on every required interaction", () => {
+  // UX-2 hybrid (owner, 3 Oct, N12): the strip's categories open a one-category panel with "Ver todos" and that
+  // category's canonical instrument types, built in lib/shell.ts from the same taxonomy helpers as before UX-2.
   const strip = fs.readFileSync("components/global-categories.tsx", "utf8");
   const shell = fs.readFileSync("lib/shell.ts", "utf8");
   assert.match(strip, /stripItems/);
-  assert.match(shell, /categoryOptions\.map\(\(category\) => \(\{ key: category\.value, label: category\.label, href: categoryLandingPath\(category\.value\) \}\)\)/);
-  assert.match(strip, /aria-current=\{isCurrent \? "page" : undefined\}/);
+  assert.match(strip, /categoryMenus\.find\(\(menu\) => menu\.key === group\.openKey\)/, "one category panel at a time");
+  assert.match(strip, /aria-expanded=\{isOpen\}/);
+  assert.match(strip, /aria-controls=\{panelId\(item\.key\)\}/);
+  assert.match(strip, /onClick=\{onChoose\}/, "choosing a destination closes the panel");
+  assert.match(shell, /href: categoryLandingPath\(category\.value\), kind: "category" as const/);
+  assert.match(shell, /getInstrumentTypeOptions\(category\.value\)\.map\(\(type\) => \(\{ \.\.\.type, href: categoryTypePath\(category\.value, type\.value\) \}\)\)/);
   assert.doesNotMatch(strip, /Popular|Recomendad|Colecciones/);
-  // Every shell menu (account menu, phone search, account switcher, Admin menu) uses one disclosure: it closes on
-  // route change, outside press and Escape, which returns focus to its button.
+  // Every shell menu closes on route change, outside press and Escape, which returns focus to its button; opening one
+  // closes the others. The strip uses the group form of the same disclosure.
   const disclosure = fs.readFileSync("components/use-disclosure.ts", "utf8");
   assert.match(disclosure, /usePathname\(\)/);
-  assert.match(disclosure, /\[pathname\]/);
-  assert.match(disclosure, /pointerdown/);
-  assert.match(disclosure, /event\.key === "Escape"\) close\(true\)/);
+  assert.match(disclosure, /useEffect\(\(\) => \{ setOpen\(false\); \}, \[pathname\]\);/);
+  assert.match(disclosure, /useEffect\(\(\) => \{ setOpenKey\(null\); \}, \[pathname\]\);/);
+  assert.equal((disclosure.match(/pointerdown/g) ?? []).length, 4, "both forms listen for outside presses");
+  // An Esc already handled inside (preventDefault, the Admin accordion) does not also close the outer menu.
+  assert.equal((disclosure.match(/event\.key === "Escape" && !event\.defaultPrevented\) close\(true\)/g) ?? []).length, 2);
   assert.match(disclosure, /buttonRef\.current\?\.focus\(\)/);
+  assert.match(disclosure, /buttons\.current\.get\(key\)\?\.focus\(\)/);
+  assert.match(strip, /useDisclosureGroup\("category-strip"\)/);
   for (const file of ["components/site-header.tsx", "components/account-navigation.tsx", "components/admin-navigation.tsx"]) {
     const source = fs.readFileSync(file, "utf8");
     assert.match(source, /useDisclosure\(/, file);
     assert.match(source, /aria-expanded=/, file);
   }
+  // Admin: the same destinations from its own navigation, an accordion that handles Esc itself.
+  const accordion = fs.readFileSync("components/category-accordion.tsx", "utf8");
+  assert.match(accordion, /categoryMenus\.map/);
+  assert.match(accordion, /aria-expanded=\{expanded\}/);
 });
 
 test("verified transaction UI uses account shell routes and preserves off-platform limitation", () => {

@@ -7,12 +7,14 @@ exports.run=async({base,service,owner,buyer,storeBuyer,live,store,storeIds})=>{
  const evaluate=code=>command('eval',code).result;
  const wait=code=>command('wait','--fn',`Boolean(${code})`);
  function open(path){command('open',base+path);command('snapshot','-i');wait("document.body.innerText.trim() && !document.querySelector('[data-nextjs-dialog]')");assert.deepEqual(command('errors').errors,[]);assert.equal(evaluate(SHELL),true,'UX-2 shell for this route');}
- // UX-2 shell: Admin draws its own frame (no site header, so no header search; page titles may still use <header>); every other page has the header search, and the category strip on public pages except the home.
- const SHELL="(()=>{const p=location.pathname;if(p.startsWith('/admin'))return !document.querySelector('header form[role=search]')&&!!document.querySelector('nav[aria-label=\"Navegación administrativa\"]');const strip=!!document.querySelector('nav[aria-label=\"Categorías\"]');return !!document.querySelector('header form[role=search]')&&(p==='/'||p.startsWith('/mi-cuenta')?!strip:strip);})()";
+ // UX-2 shell: Admin draws its own frame (no site header, so no header search; page titles may still use <header>); every other page has the header search and the category strip with its menus (N12).
+ const SHELL="(()=>{const p=location.pathname;if(p.startsWith('/admin'))return !document.querySelector('header form[role=search]')&&!!document.querySelector('nav[aria-label=\"Navegación administrativa\"]');return !!document.querySelector('header form[role=search]')&&!!document.querySelector('nav[aria-label=\"Categorías\"] button[aria-controls=\"categoria-guitars\"]');})()";
  function login(account){open('/login');command('find','label','Correo','fill',account.email);command('find','label','Contraseña','fill',account.password);command('find','role','button','click','--name','Ingresar');command('wait','--url','**/mi-cuenta');command('snapshot','-i');wait("document.querySelector('header').innerText.includes('Mi cuenta') || document.querySelector('header').innerText.includes('Mi tienda')");}
  function logout(){open('/mi-cuenta');command('click','header button[aria-controls="menu-cuenta"]');command('click','#menu-cuenta form[action="/logout"] button[type="submit"]');command('wait','--url','**/login**');}
  try{
-  for(const path of ['/','/listados','/login','/registro/vendedor','/registro/tienda','/tiendas/casa-musical-grau','/admin']){
+  // Anonymous Admin is not public: the server sends it to sign-in with the way back (Sprint 8 authorization).
+  open('/admin');{const target=new URL(command('get','url').url);assert.equal(target.pathname,'/login');assert.equal(target.searchParams.get('next'),'/admin');}
+  for(const path of ['/','/listados','/login','/registro/vendedor','/registro/tienda','/tiendas/casa-musical-grau']){
    open(path);
    assert.equal(new URL(command('get','url').url).pathname,path,'Public navigation must not silently redirect into account authentication or a different route');
    assert.doesNotMatch(evaluate('document.querySelector("main").innerText'),/This page could not be found|Página no encontrada/);
@@ -26,7 +28,10 @@ exports.run=async({base,service,owner,buyer,storeBuyer,live,store,storeIds})=>{
   open('/mi-cuenta/favoritos');wait(saved(true));assert.match(evaluate('document.body.innerText'),/Sprint 5 pública/);assert.equal(evaluate("!!document.querySelector('nav[aria-label=\"Navegación de cuenta\"] a[href=\"/mi-cuenta/favoritos\"][aria-current=page]')"),true);
   open(`/listados?brand=Yamaha&category=guitars`);const selector=`Array.from(document.querySelectorAll('article')).find(node=>node.querySelector('a[href="/instrumentos/${live.slug}"]'))`;wait(`${selector}?.querySelector('button[aria-pressed=true]')`);
   open('/mi-cuenta/notificaciones');assert.match(evaluate('document.body.innerText'),/Bajó de precio un favorito/);assert.ok(evaluate(`!!document.querySelector('a[href="/mi-cuenta/favoritos/${live.id}"]')`));
-  command('set','viewport','390','844');open('/mi-cuenta/favoritos');assert.equal(evaluate('document.documentElement.scrollWidth <= window.innerWidth'),true);open('/listados');assert.equal(evaluate('document.documentElement.scrollWidth <= window.innerWidth'),true,'Only the category strip scrolls sideways on phones');assert.ok(evaluate("!!document.querySelector('nav[aria-label=\"Categorías\"] a[href=\"/instrumentos/guitarras\"]')"));
+  command('set','viewport','390','844');open('/mi-cuenta/favoritos');assert.equal(evaluate('document.documentElement.scrollWidth <= window.innerWidth'),true);open('/listados');assert.equal(evaluate('document.documentElement.scrollWidth <= window.innerWidth'),true,'Only the category strip scrolls sideways on phones');
+  // Phone category menu: Guitarras opens its panel with "Ver todos" and the canonical types; Escape closes it and returns focus.
+  command('click','button[aria-controls="categoria-guitars"]');wait("document.querySelector('#categoria-guitars a[href=\"/instrumentos/guitarras\"]')");assert.ok(evaluate("!!document.querySelector('#categoria-guitars a[href=\"/listados?category=guitars&instrument_type=electric_guitar\"]')"));
+  command('press','Escape');wait("!document.querySelector('#categoria-guitars') && document.activeElement?.getAttribute('aria-controls')==='categoria-guitars'");
   open('/mi-cuenta/favoritos');command('click','button[aria-controls="menu-cuenta-movil"]');command('snapshot','-i');assert.equal(evaluate("document.querySelector('button[aria-controls=\"menu-cuenta-movil\"]').getAttribute('aria-expanded')"),'true');assert.ok(evaluate("!!document.querySelector('nav[aria-label=\"Menú de cuenta móvil\"] a[href=\"/mi-cuenta/notificaciones\"]')"));
   // The header search is inline from 768 px (account pages have no phone search row).
   command('set','viewport','1280','900');open('/mi-cuenta/favoritos');
@@ -66,7 +71,7 @@ exports.history=async({base,buyer,live,availability})=>{
   command('open',base+'/login');command('snapshot','-i');command('find','label','Correo','fill',buyer.email);command('find','label','Contraseña','fill',buyer.password);command('find','role','button','click','--name','Ingresar');command('wait','--url','**/mi-cuenta');command('snapshot','-i');
   command('open',base+'/mi-cuenta/favoritos');command('snapshot','-i');command('wait','--fn',`!!document.querySelector('[data-favorite-listing="${live.id}"] button:not([disabled])')`);
   const text=command('eval','document.querySelector("main").innerText').result;
-  if(availability==='sold'){assert.match(text,/Vendido/);assert.ok(text.includes(live.title));}else{assert.match(text,/Publicación no disponible/);assert.ok(!text.includes(live.title));}
+  if(availability==='sold'){assert.match(text,/Vendida/);/* UX-1 status dictionary: a sold publication reads "Vendida" */assert.ok(text.includes(live.title));}else{assert.match(text,/Publicación no disponible/);assert.ok(!text.includes(live.title));}
   assert.deepEqual(command('errors').errors,[]);console.log(`PASS actual browser favorite history: ${availability}`);
  }finally{command('close');}
 };

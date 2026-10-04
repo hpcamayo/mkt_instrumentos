@@ -56,20 +56,22 @@ function renderHeader(pathname, account = {}) {
   return renderToStaticMarkup(React.createElement(SiteHeader, { layout: shell.getShellLayout(pathname) }));
 }
 
-test("each route gets its frame: header, strip, phone search and footer (N3–N5)", () => {
+test("each route gets its frame: header, strip, phone search and footer (N3–N5, N12 hybrid)", () => {
+  // The strip and its category menus sit under the public header on every page that has it (N12, 3 Oct); the
+  // publishing pages keep their focused phone frame; Admin has none (its navigation has "Explorar categorías").
   const expectations = {
-    "/": { header: "standard", strip: "none", phoneSearch: "row", footer: "full" },
+    "/": { header: "standard", strip: "all", phoneSearch: "row", footer: "full" },
     "/listados": { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" },
     "/instrumentos/baterias": { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" },
     "/tiendas/casa-musical-grau": { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" },
-    "/instrumentos/bateria-pearl-roadshow-0b6f4a1e-6a3d-4c43-9d49-1d3f64f9c2aa": { header: "standard", strip: "wide", phoneSearch: "toggle", footer: "slim" },
-    "/terminos": { header: "standard", strip: "wide", phoneSearch: "none", footer: "slim" },
-    "/login": { header: "standard", strip: "wide", phoneSearch: "none", footer: "slim" },
-    "/pagina-que-no-existe": { header: "standard", strip: "wide", phoneSearch: "none", footer: "slim" },
-    "/mi-cuenta": { header: "standard", strip: "none", phoneSearch: "none", footer: "slim" },
-    "/mi-cuenta/favoritos": { header: "standard", strip: "none", phoneSearch: "none", footer: "slim" },
-    "/mi-cuenta/publicar": { header: "publishing", strip: "none", phoneSearch: "none", footer: "slim" },
-    "/mi-cuenta/tienda/publicar": { header: "publishing", strip: "none", phoneSearch: "none", footer: "slim" },
+    "/instrumentos/bateria-pearl-roadshow-0b6f4a1e-6a3d-4c43-9d49-1d3f64f9c2aa": { header: "standard", strip: "all", phoneSearch: "toggle", footer: "slim" },
+    "/terminos": { header: "standard", strip: "all", phoneSearch: "none", footer: "slim" },
+    "/login": { header: "standard", strip: "all", phoneSearch: "none", footer: "slim" },
+    "/pagina-que-no-existe": { header: "standard", strip: "all", phoneSearch: "none", footer: "slim" },
+    "/mi-cuenta": { header: "standard", strip: "all", phoneSearch: "none", footer: "slim" },
+    "/mi-cuenta/favoritos": { header: "standard", strip: "all", phoneSearch: "none", footer: "slim" },
+    "/mi-cuenta/publicar": { header: "publishing", strip: "wide", phoneSearch: "none", footer: "slim" },
+    "/mi-cuenta/tienda/publicar": { header: "publishing", strip: "wide", phoneSearch: "none", footer: "slim" },
     "/admin": { header: "none", strip: "none", phoneSearch: "none", footer: "none" },
     "/admin/tiendas": { header: "none", strip: "none", phoneSearch: "none", footer: "none" },
   };
@@ -91,6 +93,7 @@ test("the category strip lists Instrumentos, the categories in taxonomy order an
   assert.deepEqual(shell.stripItems.map((item) => item.label), [
     "Instrumentos", "Guitarras", "Bajos", "Baterías", "Platillos", "Micrófonos", "Pedales", "Amplificadores", "Interfaces de audio", "Tiendas verificadas",
   ]);
+  assert.deepEqual(shell.stripItems.map((item) => item.kind), ["link", ...Array(8).fill("category"), "link"]);
   assert.equal(shell.stripItems[0].href, "/listados");
   assert.equal(shell.stripItems.at(-1).href, "/listados?seller_type=verified_store");
   const current = (pathname, search = "") => shell.currentStripKey(pathname, new URLSearchParams(search));
@@ -101,13 +104,64 @@ test("the category strip lists Instrumentos, the categories in taxonomy order an
   assert.equal(current("/instrumentos/baterias"), "drums");
   assert.equal(current("/instrumentos/bateria-pearl-0b6f4a1e"), null);
   assert.equal(current("/terminos"), null);
+});
 
-  const { GlobalCategories } = load("components/global-categories.tsx", { "next/link": linkMock, "next/navigation": navigationMock("/instrumentos/baterias") });
+// Marks client links so the tests can tell them from native links.
+const clientLinkMock = { __esModule: true, default: ({ children, ...props }) => React.createElement("a", { ...without(props, "prefetch"), "data-client-link": "" }, children) };
+
+test("strip categories are menu buttons; Instrumentos and Tiendas verificadas stay links that load the catalog (N12 hybrid)", () => {
+  const mocks = { "next/link": clientLinkMock, "next/navigation": navigationMock("/instrumentos/baterias") };
+  const { GlobalCategories } = load("components/global-categories.tsx", mocks);
   const html = renderToStaticMarkup(React.createElement(GlobalCategories, { visibility: "all" }));
   assert.match(html, /<nav aria-label="Categorías"/);
-  assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
-  assert.match(html, /href="\/instrumentos\/baterias" aria-current="page"[^>]*shadow-\[inset_0_-3px_0_var\(--accent\)\]/);
+  // Eight disclosure buttons, all closed, each pointing at its panel; the current category keeps the blue underline.
+  const buttons = [...html.matchAll(/<button type="button" aria-expanded="false" aria-controls="(categoria-[^"]+)"[^>]*>([^<]+)/g)];
+  assert.deepEqual(buttons.map((match) => match[2]), ["Guitarras", "Bajos", "Baterías", "Platillos", "Micrófonos", "Pedales", "Amplificadores", "Interfaces de audio"]);
+  assert.match(html, /aria-controls="categoria-drums" aria-current="true" class="[^"]*shadow-\[inset_0_-3px_0_var\(--accent\)\]/);
+  assert.doesNotMatch(html, /categoria-drums"[^>]*hidden|id="categoria-/, "panels render only when open");
+  // Catalog destinations are native links (a client transition between catalog URLs does not complete).
+  for (const href of ["/listados", "/listados?seller_type=verified_store"]) {
+    assert.match(html, new RegExp(`<a href="${href.replace(/[?]/g, "\\?")}" class="[^"]*">`), href);
+    assert.doesNotMatch(html, new RegExp(`<a href="${href.replace(/[?]/g, "\\?")}"[^>]*data-client-link`), href);
+  }
   assert.match(renderToStaticMarkup(React.createElement(GlobalCategories, { visibility: "wide" })), /hidden md:block/);
+});
+
+test("each category menu offers Ver todos and the category's canonical types (PUB-011, PUB-012 behaviour)", () => {
+  const { getInstrumentTypeOptions } = load("lib/listing-submission.ts");
+  for (const menu of shell.categoryMenus) {
+    assert.equal(menu.href, shell.stripItems.find((item) => item.key === menu.key).href);
+    assert.deepEqual(menu.types.map((type) => type.value), getInstrumentTypeOptions(menu.key).map((type) => type.value), menu.key);
+  }
+  const { CategoryPanel } = load("components/global-categories.tsx", { "next/link": clientLinkMock, "next/navigation": navigationMock("/") });
+  const guitars = renderToStaticMarkup(React.createElement(CategoryPanel, { menu: shell.categoryMenus.find((menu) => menu.key === "guitars") }));
+  assert.match(guitars, /^<div id="categoria-guitars" class="menu-fade absolute/);
+  assert.match(guitars, /<a href="\/instrumentos\/guitarras"[^>]*data-client-link="">Ver todos<\/a>/);
+  const types = [...guitars.matchAll(/<li><a href="([^"]+)"[^>]*>([^<]+)<\/a><\/li>/g)].map((match) => [match[2], match[1].replace(/&amp;/g, "&")]);
+  assert.deepEqual(types, [
+    ["Guitarras eléctricas", "/listados?category=guitars&instrument_type=electric_guitar"],
+    ["Guitarras acústicas", "/listados?category=guitars&instrument_type=acoustic_guitar"],
+    ["Otro", "/listados?category=guitars&instrument_type=other"],
+  ]);
+  assert.doesNotMatch(guitars, /listados[^"]*"[^>]*data-client-link/, "type links into the catalog are native links");
+  // A type that mirrors its category resolves to the landing, as in the pre-UX-2 menu.
+  const cymbals = shell.categoryMenus.find((menu) => menu.key === "cymbals");
+  assert.deepEqual(cymbals.types.map((type) => type.href), ["/instrumentos/platillos", "/listados?category=cymbals&instrument_type=other"]);
+});
+
+test("Admin reaches the same destinations from its own navigation, without the public header or footer", () => {
+  const admin = source("components/admin-navigation.tsx");
+  assert.equal((admin.match(/<CategoryAccordion \/>/g) ?? []).length, 2, "sidebar and phone menu");
+  const { CategoryAccordion } = load("components/category-accordion.tsx", { "next/link": clientLinkMock });
+  const html = renderToStaticMarkup(React.createElement(CategoryAccordion));
+  assert.match(html, /<button id="[^"]+-categorias-boton" type="button" aria-expanded="false" aria-controls="[^"]+-categorias"[^>]*>Explorar categorías/);
+  assert.match(html, /<ul id="[^"]+-categorias" hidden=""/);
+  assert.equal((html.match(/aria-expanded="false"/g) ?? []).length, 9, "the entry and eight categories");
+  for (const href of ["/listados", "/listados?seller_type=verified_store", "/instrumentos/guitarras", "/listados?category=guitars&amp;instrument_type=electric_guitar"]) assert.ok(html.includes(`href="${href}"`), href);
+  // Nested in the phone "Menú": the accordion marks its Esc handled so the outer menu stays open (both listen on document).
+  assert.match(source("components/category-accordion.tsx"), /event\.key !== "Escape" \|\| !open\) return;[\s\S]*?event\.preventDefault\(\);\s*event\.stopPropagation\(\);/);
+  assert.match(source("components/use-disclosure.ts"), /event\.key === "Escape" && !event\.defaultPrevented\) close\(true\)/);
+  assert.equal(shell.getShellLayout("/admin/tiendas").strip, "none");
 });
 
 test("header: outline Vender, honest brand search, no Para tiendas, Ingresar when signed out (N1, N8)", () => {

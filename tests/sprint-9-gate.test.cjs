@@ -208,6 +208,10 @@ test("top-level categories link to their Spanish landing and type links never re
   const shell = load("lib/shell.ts");
   for (const option of categoryOptions) {
     assert.equal(shell.stripItems.find((item) => item.key === option.value).href, categories.categoryLandingPath(option.value), option.value);
+    // The restored category menus (N12) offer every canonical type through the same helper.
+    const menu = shell.categoryMenus.find((item) => item.key === option.value);
+    assert.equal(menu.href, categories.categoryLandingPath(option.value), option.value);
+    assert.deepEqual(menu.types.map((type) => type.href), instrumentTypesByCategory[option.value].map((type) => categories.categoryTypePath(option.value, type)), option.value);
   }
   assert.deepEqual(
     shell.listingBreadcrumbs({ category: "guitars", instrument_type: "electric_guitar" }, "Fender Stratocaster").map((crumb) => crumb.href ?? null),

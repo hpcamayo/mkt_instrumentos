@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
+import { CategoryAccordion } from "@/components/category-accordion";
 import { LogoutButton } from "@/components/logout-button";
 import { useDisclosure } from "@/components/use-disclosure";
 import { CountBadge } from "@/components/ui/tag";
@@ -95,7 +96,10 @@ export function AdminNavigation({
       <aside className="surface-frame hidden bg-frame text-surface lg:block">
         <div className="flex min-h-screen flex-col gap-6 px-3 py-5">
           <div className="px-3"><AdminMark /></div>
-          <AdminLinks total={total} />
+          <div className="grid gap-2">
+            <AdminLinks total={total} />
+            <div className="border-t border-white/10 pt-2"><CategoryAccordion /></div>
+          </div>
           <div className="mt-auto"><AdminUser userName={userName} /></div>
         </div>
       </aside>
@@ -118,6 +122,7 @@ export function AdminNavigation({
         </div>
         <div ref={menu.panelRef} id="menu-admin" hidden={!menu.open} className="menu-fade border-t border-white/10 px-2 pb-4 pt-2 sm:px-4">
           <AdminLinks total={total} />
+          <div className="mt-2 border-t border-white/10 pt-2"><CategoryAccordion /></div>
           <div className="mt-3"><AdminUser userName={userName} /></div>
         </div>
       </div>
