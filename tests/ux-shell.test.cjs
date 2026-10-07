@@ -119,7 +119,7 @@ test("strip categories are menu buttons; Instrumentos and Tiendas verificadas st
   assert.deepEqual(buttons.map((match) => match[2]), ["Guitarras", "Bajos", "Baterías", "Platillos", "Micrófonos", "Pedales", "Amplificadores", "Interfaces de audio"]);
   assert.match(html, /aria-controls="categoria-drums" aria-current="true" class="[^"]*shadow-\[inset_0_-3px_0_var\(--accent\)\]/);
   assert.doesNotMatch(html, /categoria-drums"[^>]*hidden|id="categoria-/, "panels render only when open");
-  // Catalog destinations are native links (a client transition between catalog URLs does not complete).
+  // Catalog destinations are native links (some client transitions between catalog URLs never complete).
   for (const href of ["/listados", "/listados?seller_type=verified_store"]) {
     assert.match(html, new RegExp(`<a href="${href.replace(/[?]/g, "\\?")}" class="[^"]*">`), href);
     assert.doesNotMatch(html, new RegExp(`<a href="${href.replace(/[?]/g, "\\?")}"[^>]*data-client-link`), href);
@@ -233,17 +233,26 @@ test("header state endpoint returns the rail's counts, the admin check and the n
   assert.match(route, /"Cache-Control": "private, no-store"/);
 });
 
-test("breadcrumbs: full trail from 768 px with the current page unlinked; a back link to the parent on phones", () => {
+test("breadcrumbs: full trail from 768 px with the current page unlinked; on phones a back link on listings only (N11)", () => {
   const { Breadcrumbs } = load("components/breadcrumbs.tsx", { "next/link": linkMock });
   const items = shell.listingBreadcrumbs({ category: "guitars", instrument_type: "electric_guitar" }, "Fender Stratocaster");
   assert.deepEqual(items.map((item) => item.label), ["Inicio", "Instrumentos", "Guitarras", "Guitarras eléctricas", "Fender Stratocaster"]);
-  const html = renderToStaticMarkup(React.createElement(Breadcrumbs, { items }));
-  assert.match(html, /<nav aria-label="Ruta de navegación"/);
+  const html = renderToStaticMarkup(React.createElement(Breadcrumbs, { items, phoneBackLink: true }));
+  assert.match(html, /<nav aria-label="Ruta de navegación" class="t-meta">/);
   assert.match(html, /<ol class="hidden [^"]*md:flex">/);
   assert.match(html, /<span aria-current="page" class="[^"]*text-ink">Fender Stratocaster<\/span>/);
   assert.doesNotMatch(html, /<a [^>]*>Fender Stratocaster/);
   assert.match(html, /href="\/listados"[^>]*decoration-line-deco[^>]*>Instrumentos</);
   assert.match(html, /<a href="\/listados\?category=guitars&amp;instrument_type=electric_guitar" class="[^"]*md:hidden">.*Volver a <\/span>Guitarras eléctricas/);
+  assert.match(source("app/instrumentos/[slug]/page.tsx"), /<Breadcrumbs items=\{listingBreadcrumbs\(listing, displayTitle\)\} phoneBackLink \/>/);
+  // Browse pages: the whole trail is hidden on phones (the strip leads back), with no back link and no empty landmark.
+  const browse = renderToStaticMarkup(React.createElement(Breadcrumbs, { items: [{ label: "Inicio", href: "/" }, { label: "Instrumentos", href: "/listados" }, { label: "Guitarras" }], className: "mb-3" }));
+  assert.match(browse, /<nav aria-label="Ruta de navegación" class="t-meta hidden md:block mb-3">/);
+  assert.doesNotMatch(browse, /md:hidden|Volver a/);
+  for (const file of ["app/listados/page.tsx", "components/category-landing.tsx"]) {
+    assert.match(source(file), /<Breadcrumbs items=\{\[\{ label: "Inicio", href: "\/" \}/, file);
+    assert.doesNotMatch(source(file), /phoneBackLink/, file);
+  }
   // Structured data keeps its shape; only the catalog's name changes (G1).
   assert.match(source("components/category-landing.tsx"), /position: 2, name: "Instrumentos", item: absoluteUrl\("\/listados"\)/);
 });

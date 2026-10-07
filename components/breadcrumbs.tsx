@@ -4,11 +4,12 @@ import type { Crumb } from "@/lib/shell";
 import { cn } from "@/lib/utils";
 
 // Breadcrumbs (docs/ux-redesign/ux-2-shell.md): the full trail from 768 px, 13 px, links in ink-2 with a
-// decorative underline and the current page in ink (not a link). Phones show only a back link to the parent.
-export function Breadcrumbs({ items, className }: { items: Crumb[]; className?: string }) {
-  const parent = items.slice(0, -1).findLast((item) => item.href);
+// decorative underline and the current page in ink (not a link). On phones only the listing page shows a back link
+// to the parent (`phoneBackLink`); the browse pages show nothing there, since the category strip leads back (N11).
+export function Breadcrumbs({ items, phoneBackLink = false, className }: { items: Crumb[]; phoneBackLink?: boolean; className?: string }) {
+  const parent = phoneBackLink ? items.slice(0, -1).findLast((item) => item.href) : undefined;
   return (
-    <nav aria-label="Ruta de navegación" className={cn("t-meta", className)}>
+    <nav aria-label="Ruta de navegación" className={cn("t-meta", !parent?.href && "hidden md:block", className)}>
       <ol className="hidden flex-wrap items-center gap-x-1.5 gap-y-1 md:flex">
         {items.map((item, index) => {
           const current = index === items.length - 1;

@@ -328,7 +328,7 @@ function ListingDetail({
   return (
     <section className="bg-canvas/70">
       <PageContainer className="py-6 sm:py-8">
-        <Breadcrumbs items={listingBreadcrumbs(listing, displayTitle)} />
+        <Breadcrumbs items={listingBreadcrumbs(listing, displayTitle)} phoneBackLink />
         {!isSold ? <div className="mt-3 flex justify-end"><FavoriteButton listingId={listing.id} /></div> : null}
 
         <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] lg:items-start xl:gap-8">

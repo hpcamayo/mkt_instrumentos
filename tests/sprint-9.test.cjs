@@ -368,7 +368,7 @@ test("public footer, forms and navigation link to legal/safety pages and categor
   assert.match(source("lib/shell.ts"), /href: categoryLandingPath\(category\.value\)/);
   assert.match(source("components_v0/categories-section.tsx"), /href=\{categoryLandingPath\(category\.value\)\}/);
   assert.doesNotMatch(source("components_v0/hero-section.tsx"), /\/listados\?category=/);
-  assert.match(source("app/instrumentos/[slug]/page.tsx"), /<Breadcrumbs items=\{listingBreadcrumbs\(listing, displayTitle\)\} \/>/);
+  assert.match(source("app/instrumentos/[slug]/page.tsx"), /<Breadcrumbs items=\{listingBreadcrumbs\(listing, displayTitle\)\} phoneBackLink \/>/);
   assert.match(source("lib/shell.ts"), /href: categoryLandingPath\(listing\.category\)|const categoryHref = categoryLandingPath\(listing\.category\)/);
   assert.doesNotMatch(source("lib/listings.ts"), /Instrumentos Perú/);
 });
