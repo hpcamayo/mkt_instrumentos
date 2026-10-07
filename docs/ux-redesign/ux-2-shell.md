@@ -156,7 +156,7 @@ The owner wants the mega-menu's functionality back while keeping this design: th
 - Esc closes the innermost open level and returns focus to its button.
 
 **Catalog links**
-- Every shell link into `/listados` ("Instrumentos", "Tiendas verificadas", type links) is a native link that loads the page. A client transition between two catalog URLs does not complete, and the catalog's filter form is uncontrolled; this is the same rule as the applied-filter chips.
+- Every shell link into `/listados` ("Instrumentos", "Tiendas verificadas", type links) is a native link that loads the page. Some client transitions between two catalog URLs never complete (measured 7 Oct: the move to `?seller_type=verified_store` stalls in most trials since UX-1, never on `main`; pagination is not affected), and the catalog's filter form is uncontrolled; this is the same rule as the applied-filter chips.
 - Category landings stay client links.
 
 **Unchanged:** the header, search, account menu, breadcrumbs, frames, footers, 404/500, nothing sticky (N3), no bottom bar (N4).
@@ -164,6 +164,14 @@ The owner wants the mega-menu's functionality back while keeping this design: th
 **Acceptance for this amendment**
 - The criteria above, plus the restored behaviours of `PUB-011`–`PUB-015`, checked by `scripts/ux-audit.cjs` at 390 / 768 / 1440 and by the unit tests.
 - The canonical wording and status of `PUB-008`, `PUB-010`–`PUB-015` and the functional-spec Sprint 5/6 clarifications are reconciled only by the owner (`ux-2-acceptance.md` § What still needs owner acceptance).
+
+## Owner answers at the acceptance gate, 7 Oct 2026
+
+The owner took the recommended option on every open question (`decisions.md` N9–N14):
+- **N9:** "Vender" keeps the `onDark` border (white at 40%); N1's #4B5563 is not used.
+- **N10:** the footer's "Registrar mi tienda" keeps `/registrar-tienda`.
+- **N11:** on phones only the listing page has a back link. This replaces "Phone: only the back link to the parent" under Breadcrumbs for the catalog and the category landings, which show no breadcrumb on phones.
+- **N12:** the build stays as it is (no search in Admin; on phones no search on account, legal or sign-in pages; the compact panel on phones); the canonical record is reworded by the owner (`ux-2-reconciliation.md`).
 
 ## Doc updates (first commit)
 

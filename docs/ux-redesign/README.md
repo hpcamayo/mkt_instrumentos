@@ -3,21 +3,21 @@
 Durable memory for the UX/web-design engagement. Chat history is not memory; this folder is.
 Read this file first, then only the file your task needs. **External reviewers: start at `review-guide.md`.**
 
-## Status (2026-10-03)
+## Status (2026-10-07)
 
 | Sub-sprint | Name | State |
 | --- | --- | --- |
 | UX-0 | Investigation and plan | Done |
 | UX-1 | Foundations: visual + content language, primitives, a11y baseline | **Accepted** (owner, 30 Sep): implemented on branch `ux/redesign` (9 Cowork commits + audit commits, not pushed); audited and corrected 30 Sep; evidence in `ux-1-acceptance.md` |
-| UX-2 | Shell and navigation | **Ready for owner acceptance, as amended 3 Oct** (brief `ux-2-shell.md`, approved 30 Sep): implemented on `ux/redesign` (not pushed), audited, externally reviewed 3 Oct (`reviews/ux-2-external-review.md`, fixes verified); the owner then asked for the mega-menu's category and type access back inside the UX-2 design (N12 hybrid, `ux-2-shell.md` § Amendment). What the owner still has to accept or reconcile: `ux-2-acceptance.md` § What still needs owner acceptance |
-| UX-3 | Discovery: home, catalog, category landings, cards, filters | Not started. Home decided: canvas page "Inicio · versión final", banner set in `art/rotation/` |
-| UX-4 | Listing and store pages | Not started |
-| UX-5 | Selling: create, edit, revise | Not started |
-| UX-6 | Accounts: onboarding, Particular, Store Owner | Not started |
-| UX-7 | Admin workbench | Not started |
-| UX-8 | Coherence and hardening | Not started |
+| UX-2 | Shell and navigation | **Ready for owner acceptance, as amended 3 Oct and answered 7 Oct** (brief `ux-2-shell.md`, approved 30 Sep): implemented on `ux/redesign` (not pushed), audited, externally reviewed 3 Oct (`reviews/ux-2-external-review.md`, fixes verified); the owner then asked for the mega-menu's category and type access back inside the UX-2 design (N12 hybrid, `ux-2-shell.md` § Amendment). On 7 Oct the owner decided N9–N14; N11 and an Admin accordion defect were fixed, and the N12 rows were re-run (`ux-2-reconciliation.md`). Still the owner's: accepting UX-2 (review page https://claude.ai/artifact/XQRP7EMmb4sACMtZ8G3BJx), recording N12, the Safari + VoiceOver pass (N14). See `ux-2-acceptance.md` § What still needs owner acceptance |
+| UX-3 | Discovery: home, catalog, category landings, cards, filters | Not started (waits for UX-2's acceptance). Plan, questions and carried-in issues: `roadmap.md` § UX-3. Home decided: canvas page "Inicio · versión final", banner set in `art/rotation/` |
+| UX-4 | Listing and store pages | Not started; `roadmap.md` § UX-4 |
+| UX-5 | Selling: create, edit, revise | Not started; `roadmap.md` § UX-5 |
+| UX-6 | Accounts: onboarding, Particular, Store Owner | Not started; `roadmap.md` § UX-6 |
+| UX-7 | Admin workbench | Not started; `roadmap.md` § UX-7 |
+| UX-8 | Coherence and hardening | Not started; `roadmap.md` § UX-8 |
 
-Repo: Sprint 9 is closed (owner, 30 Sep); its final head is `main` at `49a38e5`, which was `origin/main` when the branch was cut (`origin/main` has since gained one docs-only commit, `f04e909`). The repo's sprint docs don't record the closure yet: SEO-006, SEO-007, LEGAL-005 and LEGAL-006 still show Not Run in `acceptance/cases.tsv`. UX work lives on `ux/redesign`, branched from `49a38e5`. In the owner's repository it is a local branch checked out in the worktree `../mkt_instrumentos-ux` (imported from the Cowork bundle on 30 Sep), so the catalog work in the main checkout is never touched. Nothing is pushed or merged without the owner's go-ahead.
+Repo: Sprint 9 is closed (owner, 30 Sep); its final head is `main` at `49a38e5`, which was `origin/main` when the branch was cut (`origin/main` has since gained one docs-only commit, `f04e909`). The repo's sprint docs don't record the closure yet: SEO-006, SEO-007, LEGAL-005 and LEGAL-006 still show Not Run in `acceptance/cases.tsv`. UX work lives on `ux/redesign`, branched from `49a38e5`; it is rebased on `main` once, at merge time (N13). In the owner's repository it is a local branch checked out in the worktree `../mkt_instrumentos-ux` (imported from the Cowork bundle on 30 Sep), so the catalog work in the main checkout is never touched. Nothing is pushed or merged without the owner's go-ahead.
 
 Every sub-sprint has two owner gates: approval before implementation, acceptance after.
 Never start the next sub-sprint without explicit owner acceptance of the previous one.
@@ -29,13 +29,14 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `audit.md` | Evidence: what is wrong today, ranked, with screenshots and file:line references |
 | `principles.md` | The 11 design principles every decision is checked against |
 | `references.md` | What Laria learns from Reverb, Discogs, Sweetwater, Thomann, Mercado Libre, classifieds, Chrono24; evidence base |
-| `roadmap.md` | Sub-sprint sequence, dependencies, owner decisions, parallel-work rules, product-behavior flags |
+| `roadmap.md` | Sub-sprint sequence and state; how every sub-sprint runs (gates, evidence, review page, acceptance records); a detailed plan for each of UX-3 to UX-8 (scope with file references, decided inputs, carried-in issues, questions for its brief, product rules not to change, acceptance rows to re-run, tests that pin today's markup); product-behavior flags |
 | `ux-1-foundations.md` | UX-1 approval package and the proposed foundation spec |
 | `ux-1-acceptance.md` | UX-1 acceptance package: commits, criteria with evidence, performance, changed labels, open items |
 | `ux-2-shell.md` | UX-2 brief (approved 30 Sep): header, category strip, account menu, breadcrumbs, page frames, footers, 404/500, decisions N1–N5 and G1, acceptance criteria |
 | `reviews/ux-2-external-review.md` | The independent review of UX-2 (3 Oct): findings UX2-R01–R03, fixes and their verification |
 | `review-guide.md` | For an independent external review: scope and commit ranges, reading order, local setup (Supabase, test accounts), checks, how to reproduce every piece of evidence, traceability from the brief to code and tests, decided vs open, risk areas, report format |
-| `ux-2-acceptance.md` | UX-2 acceptance package: commits, criteria with evidence, measurements, layout shift, deviations for the owner, spec and acceptance rows affected, changed tests |
+| `ux-2-acceptance.md` | UX-2 acceptance package: commits, criteria with evidence, measurements, layout shift, deviations for the owner, spec and acceptance rows affected, changed tests, the owner's 7 Oct answers and what they changed |
+| `ux-2-reconciliation.md` | N12 record draft for the owner: proposed functional-spec clarification, and for PUB-008–PUB-015 what this build was observed to do, the gap, proposed wording and evidence (nothing recorded) |
 | `home-visual-audit.md` | Graphic-design review of the decided home (30 Sep): the numbered items each sub-sprint applies (table "By sub-sprint") and the owner questions still open |
 | `decisions.md` | Decision log (pending and decided). Update it whenever the owner decides |
 | `screenshots/baseline-2026-09-27/` | Live-site baseline captured during the audit |
@@ -58,10 +59,11 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `screenshots/ux1-before/` | Harness captures of the product before UX-1 (selected frames) |
 | `screenshots/ux1-after/` | The same frames after UX-1 (same file names; taken before the 30 Sep audit fixes) |
 | `screenshots/ux2-before/` | Harness captures before UX-2 (selected frames, `<width>-<group>-<route>.webp`) |
-| `screenshots/ux2-after/` | The same frames after UX-2, plus the new 500 page |
+| `screenshots/ux2-after/` | The same frames after UX-2, plus the new 500 page; refreshed 7 Oct to the build as amended (hybrid menus, N11, the Admin accordion fix) |
 | `screenshots/ux1-audit/` | Concept vs build, side by side (16 pairs) after the audit fixes; `index.html` lists the layout differences per pair |
 | `../../scripts/ux-snapshots.cjs` | The screenshot harness (D10): fixed route list at 390 / 768 / 1280 / 1440, anonymous and signed in (each signed-in group also on the catalog); output in the gitignored `.ux-snapshots/` |
 | `../../scripts/ux-local-accounts.cjs` | Creates the local Particular, Store Owner (with a store) and Admin test accounts; local Supabase only; writes the gitignored `.ux-accounts.local.json` |
+| `../../scripts/ux-pub-rerun.cjs` | Re-runs PUB-008 to PUB-015 on a local build following each row's steps; observations only, never a status; output `.ux-snapshots/<label>/pub-rerun.json` |
 | `../../scripts/ux-audit.cjs` | Accessibility and shell audit: axe-core WCAG 2.1 A/AA, focus sweep, skip link, shell Tab order, one `<main>`/`<h1>`, public/Admin frame, strip sideways access and destination at 390 / 768, overflow and 200% zoom, menus open, layout shift; output `.ux-snapshots/<label>/audit.json` |
 | `art/` | Original banner art: SVG (round 2), raster generators and images (`wild/`, `round5/` … `round10/`) |
 
@@ -77,7 +79,7 @@ Visual workspaces (private claude.ai artifacts, owner account; exploratory, not 
 
 ### UX-2 evidence
 
-`screenshots/ux2-before/` and `ux2-after/` come from `scripts/ux-snapshots.cjs` run on production builds (`next start`) of `645d51e` (before the UX-2 code) and of the UX-2 code, on the owner's Mac, against a local Supabase stack, signed out and as a local Particular, Store Owner and Admin. That database also carried 17 later migrations from the catalog branch, which UX-2 does not read; on 2 Oct the build was re-checked on a clean stack built only from this branch's migrations and seed, with accounts from `scripts/ux-local-accounts.cjs` (`review-guide.md` § 6.4). The accessibility numbers and layout shift come from the checks now in `scripts/ux-audit.cjs`. On 3 Oct, the external-review fixes passed a new isolated production-build audit (28 routes, zero frame or strip failures); see `ux-2-acceptance.md` § External-review fixes.
+`screenshots/ux2-before/` and `ux2-after/` come from `scripts/ux-snapshots.cjs` run on production builds (`next start`) of `645d51e` (before the UX-2 code) and of the UX-2 code, on the owner's Mac, against a local Supabase stack, signed out and as a local Particular, Store Owner and Admin. That database also carried 17 later migrations from the catalog branch, which UX-2 does not read; on 2 Oct the build was re-checked on a clean stack built only from this branch's migrations and seed, with accounts from `scripts/ux-local-accounts.cjs` (`review-guide.md` § 6.4). The accessibility numbers and layout shift come from the checks now in `scripts/ux-audit.cjs`. On 3 Oct, the external-review fixes passed a new isolated production-build audit (28 routes, zero frame or strip failures); see `ux-2-acceptance.md` § External-review fixes. On 7 Oct `ux2-after/` was recaptured from the build with the hybrid menus, N11 and the Admin accordion fix (the 500 frames from a scratch copy with the temporary error route); the audit of that build is in `ux-2-acceptance.md` § Owner answers (7 Oct).
 
 ## Working rules for any session
 

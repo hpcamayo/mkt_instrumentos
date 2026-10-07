@@ -1,6 +1,6 @@
 # External review guide — Laria UX redesign (`ux/redesign`)
 
-For an independent reviewer, person or agent, with no access to the design chats or canvases. Everything needed is in this repository: the specs, the owner's decisions, the concept renders, the code, the tests and the scripts that reproduce the evidence. Written 2 Oct 2026; the setup in § 4–6 was run that day on a clean local stack built only from this branch (§ 6.4 says exactly how). External-review fixes and a fresh browser pass were completed on 3 Oct (§ 6.5; `reviews/ux-2-external-review.md`). The same day the owner asked for the mega-menu's category and type access back inside the UX-2 design (N12): the hybrid is described in `ux-2-shell.md` § Amendment and verified in § 6.6.
+For an independent reviewer, person or agent, with no access to the design chats or canvases. Everything needed is in this repository: the specs, the owner's decisions, the concept renders, the code, the tests and the scripts that reproduce the evidence. Written 2 Oct 2026; the setup in § 4–6 was run that day on a clean local stack built only from this branch (§ 6.4 says exactly how). External-review fixes and a fresh browser pass were completed on 3 Oct (§ 6.5; `reviews/ux-2-external-review.md`). The same day the owner asked for the mega-menu's category and type access back inside the UX-2 design (N12): the hybrid is described in `ux-2-shell.md` § Amendment and verified in § 6.6. On 7 Oct the owner answered the open questions (N9–N14); the resulting fixes and re-runs are in § 6.7.
 
 ## 1. What is under review
 
@@ -9,7 +9,7 @@ Branch `ux/redesign`, cut from `main` at `49a38e5` (the close of Sprint 9). Not 
 | Sub-sprint | Commits | State | What the review should do |
 | --- | --- | --- | --- |
 | UX-1 Foundations | `06f0d42` … `3da7afa` (12) | Accepted by the owner, 30 Sep. External review still pending | Check the foundations against `ux-1-foundations.md` and `ux-1-acceptance.md`; findings feed UX-8 or a fix-up |
-| UX-2 Shell and navigation | `645d51e`, `0813138`, `2d06b7e`, `37d441b` (fix found in review preparation), `cde9c5a` (review scripts), `1a96bf5` (browser-smoke correction), `15e689f` (this guide), then the 3 Oct commits: the external-review fixes (Admin 404 catch-all, "Tiendas verificadas" link, audit checks) and the hybrid category navigation (N12) | Ready for owner acceptance (as amended 3 Oct) | **Main focus.** Check the build against the brief `ux-2-shell.md` and the claims in `ux-2-acceptance.md` |
+| UX-2 Shell and navigation | `645d51e`, `0813138`, `2d06b7e`, `37d441b` (fix found in review preparation), `cde9c5a` (review scripts), `1a96bf5` (browser-smoke correction), `15e689f` (this guide), then the 3 Oct commits: the external-review fixes (Admin 404 catch-all, "Tiendas verificadas" link, audit checks) and the hybrid category navigation (N12), then the 7 Oct commits: N11, the Admin accordion fix, `scripts/ux-pub-rerun.cjs` and the docs | Ready for owner acceptance (as amended 3 Oct) | **Main focus.** Check the build against the brief `ux-2-shell.md` and the claims in `ux-2-acceptance.md` |
 
 ```bash
 git log --oneline 49a38e5..ux/redesign          # all redesign commits
@@ -84,7 +84,7 @@ pnpm build && pnpm start -p 3100
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
 
-Expected: no lint or type errors, **274/274** tests, a clean build. `typecheck` also reads the generated `.next/types`; after removing a route, delete `.next` and build again before typechecking. The integration and browser-smoke scripts (`tests/*.integration.cjs`, `tests/*-browser-smoke.cjs`) need their own seeded fixtures and were not run for UX-2 (`tests/favorites-browser-smoke.cjs` was updated to the new shell).
+Expected: no lint or type errors, **275/275** tests, a clean build. `typecheck` also reads the generated `.next/types`; after removing a route, delete `.next` and build again before typechecking. The integration and browser-smoke scripts (`tests/*.integration.cjs`, `tests/*-browser-smoke.cjs`) need their own seeded fixtures and were not run for UX-2 (`tests/favorites-browser-smoke.cjs` was updated to the new shell).
 
 ## 6. Reproduce the evidence
 
@@ -161,6 +161,30 @@ Admin after hydration, both 404 depths and an Admin page error (isolated stack, 
 
 The browser smoke ran on a separate local stack with its own fixtures, removed afterwards. Committed as strict, it stops at a pre-existing React #418 on a fresh listing page; that error is reproduced on the pre-UX-2 build too. With only that error tolerated, in a scratch copy, it passes end to end. Details are in `ux-2-acceptance.md` § Hybrid category navigation.
 
+### 6.7 Owner answers, fixes and re-runs (7 Oct)
+
+On `ux/redesign` with the 7 Oct commits, a production build on the shared local stack with the local accounts (`ux-2-acceptance.md` § Owner answers (7 Oct)):
+
+| Check | Result |
+| --- | --- |
+| Lint, typecheck, build | pass (clean `.next`); first-load JS unchanged (101 kB shared, home 113, catalog 135, Admin 196) |
+| Unit tests | **275/275** (new: the `hidden`-panel guard) |
+| N11 | the phone back link only on listings; the catalog and the landings show no breadcrumb on phones |
+| Admin accordion | closed levels were on screen (a display class overrode `hidden`); fixed, guarded by a unit test and an audit check |
+| Admin-layout failure (induced in a scratch copy) | one `<main>`, the 500 body, skip link, axe 0 at 1440 and 390; no frame |
+| Catalog transitions (scratch builds, page size 2) | `/listados` → `?seller_type=verified_store` stalls since UX-1 (14/18 here, 3/7 on `645d51e`, 0/16 on `49a38e5`); `?page=2` and `?category=` always complete |
+| PUB-008 to PUB-015 re-run | `scripts/ux-pub-rerun.cjs`; observations and proposed wording in `ux-2-reconciliation.md` |
+| `scripts/ux-audit.cjs` (28 template runs at 390 and 1440, no 500 route) | 0 axe violations; 964 focusables, 0 without a ring; 0 Tab-order, skip-link, `<main>`/`<h1>`, frame, strip or overflow problems; 34 category-menu checks, 0 failures (Admin: closed levels show no links); layout shift ≤ 0.0016 |
+
+Reproduce the row re-run:
+
+```bash
+LARIA_AGENT_BROWSER_BIN=<agent-browser> node --require ./tests/setup-alias.cjs scripts/ux-pub-rerun.cjs \
+  --base http://localhost:3100 --label n12-rerun --db-container <local Supabase Postgres container> [--rows PUB-010,PUB-011]
+```
+
+`--db-container` lets PUB-009 count the search events it causes (`docker exec … psql`); without it PUB-009 is skipped. Report: `.ux-snapshots/<label>/pub-rerun.json`.
+
 ## 7. Traceability: brief → code → tests
 
 | Brief item (`ux-2-shell.md`) | Code | Tests (`tests/…`) |
@@ -172,9 +196,9 @@ The browser smoke ran on a separate local stack with its own fixtures, removed a
 | Header data (N6) | `app/api/account-navigation/route.ts`; `components/marketplace-account-provider.tsx` | `ux-shell` "header state endpoint…" |
 | Menus: disclosure, Esc returns focus, one open at a time, 120 ms opacity | `components/use-disclosure.ts`; `.menu-fade` in `app/globals.css` | `sprint-6` "category navigation … shell menus close…" |
 | Category menus (amendment, N12): category buttons, one panel with "Ver todos" and the canonical types, phone stacked list, closing rules | `components/global-categories.tsx` (`CategoryPanel`); `lib/shell.ts` `categoryMenus`, `getShellLayout`; `components/use-disclosure.ts` `useDisclosureGroup`; `components/shell-link.tsx` | `ux-shell` "strip categories are menu buttons…", "each category menu offers Ver todos…"; `sprint-6` "mega-menu is driven by canonical taxonomy…"; `sprint-9-gate`; audit category-menu checks at 390 / 768 / 1440 |
-| Category access in Admin (amendment): "Explorar categorías" in the Admin navigation | `components/category-accordion.tsx`; `components/admin-navigation.tsx` | `ux-shell` "Admin reaches the same destinations…"; audit `admin-*` checks |
+| Category access in Admin (amendment): "Explorar categorías" in the Admin navigation | `components/category-accordion.tsx`; `components/admin-navigation.tsx` | `ux-shell` "Admin reaches the same destinations…", "panels toggled by the hidden attribute carry no display utility…"; audit `admin-*` checks (closed levels show no links) |
 | Category strip (G1 label, N7 destination) | `components/global-categories.tsx`; `lib/shell.ts` `stripItems`, `currentStripKey` | `ux-shell` strip test; `sprint-6`; `sprint-9-gate` "top-level categories…"; `ux-audit` sideways scroll and destination at 390 / 768 |
-| Breadcrumbs; structured data name (G1) | `components/breadcrumbs.tsx`; `lib/shell.ts` `listingBreadcrumbs`; `app/listados/page.tsx`, `components/category-landing.tsx`, `app/instrumentos/[slug]/page.tsx` | `ux-shell` breadcrumbs test; `sprint-9-gate`; `sprint-9`; `seo-smoke` |
+| Breadcrumbs (phone back link on listings only, N11); structured data name (G1) | `components/breadcrumbs.tsx` (`phoneBackLink`); `lib/shell.ts` `listingBreadcrumbs`; `app/listados/page.tsx`, `components/category-landing.tsx`, `app/instrumentos/[slug]/page.tsx` | `ux-shell` breadcrumbs test; `sprint-9-gate`; `sprint-9`; `seo-smoke` |
 | Account frame (rail, phone switcher) | `components/account-navigation.tsx`; `app/mi-cuenta/layout.tsx` | `account-shell`; `sprint-7`; `logout-navigation`; `performance` |
 | Admin frame (sidebar, phone bar, own `<main>`) | `components/admin-navigation.tsx`; `app/admin/layout.tsx` | `sprint-8` "persistent Admin navigation…"; `logout-navigation`; `ux-shell` frame test |
 | Footers full / slim / none (N5) | `components/site-footer.tsx` | `ux-shell` footers test; `sprint-9` LEGAL tests |
@@ -186,12 +210,11 @@ The browser smoke ran on a separate local stack with its own fixtures, removed a
 
 ## 8. Decided and open
 
-Decided by the owner (binding): D1–D12 (foundations), H1–H11 (home), N1–N8 and G1 (shell). Open, where the review's opinion is welcome:
+Decided by the owner (binding): D1–D12 (foundations), H1–H11 (home), N1–N11, N13, N14 and G1 (shell), and N12's preference and build side. Open, where the review's opinion is welcome:
 
 | ID | Topic | Where |
 | --- | --- | --- |
-| N9–N11 | UX-2 deviations from the brief: "Vender" border colour, the footer's store-registration link, phone back links on browse pages | `decisions.md`, `ux-2-acceptance.md` § Deviations |
-| N12 | Preference decided 3 Oct (the hybrid). Still open: the canonical V1 reconciliation of the functional-spec Sprint 5/6 clarifications and PUB-008, PUB-010–PUB-015, which still describe the old shell and carry its Sprint 6 Pass | `decisions.md`, `ux-2-acceptance.md` § What still needs owner acceptance |
+| N12 | Preference (3 Oct) and build side (7 Oct) decided. Still open: the owner's record of the functional-spec Sprint 5/6 clarifications and PUB-008, PUB-010–PUB-015, which still describe the old shell and carry its Sprint 6 Pass; draft wording and 7 Oct observations in `ux-2-reconciliation.md` | `decisions.md`, `ux-2-reconciliation.md` |
 | F9 | Free-text search (brand, model, title) | `decisions.md` |
 | G2, G3 | Legal-page wording; password minimum (6 vs 8) | `decisions.md` |
 | F1–F7 | Product-behaviour flags for later sub-sprints | `decisions.md` |
@@ -200,12 +223,12 @@ Decided by the owner (binding): D1–D12 (foundations), H1–H11 (home), N1–N8
 ## 9. Where to look hardest
 
 - **Header data endpoint (N6).** `GET /api/account-navigation` now returns the signed-in user's name, an admin flag and two counts. It runs on every navigation and on window focus, with the RLS-scoped server client and `Cache-Control: private, no-store`; a failed count or admin check degrades to none. Check for leakage, caching and error handling.
-- **Frame selection on the client.** `SiteShell` picks the frame from `usePathname()`; for `/admin…` it renders no header and no `<main>`, and `app/admin/layout.tsx` renders the `<main>`. This split produced the review-preparation defect (a 404 under `/admin` without `<main>`, fixed in `37d441b` with Admin's own `not-found`/`error` and `FallbackMain`) and the deeper unmatched-path defect fixed on 3 Oct by `app/admin/[section]/[...rest]/page.tsx`. Check both the frame and one `<main>` on every route and state, including 404s and errors under `/admin` and `/mi-cuenta` and errors thrown by a layout.
+- **Frame selection on the client.** `SiteShell` picks the frame from `usePathname()`; for `/admin…` it renders no header and no `<main>`, and `app/admin/layout.tsx` renders the `<main>`. This split produced the review-preparation defect (a 404 under `/admin` without `<main>`, fixed in `37d441b` with Admin's own `not-found`/`error` and `FallbackMain`) and the deeper unmatched-path defect fixed on 3 Oct by `app/admin/[section]/[...rest]/page.tsx`. Check both the frame and one `<main>` on every route and state, including 404s and errors under `/admin` and `/mi-cuenta` and errors thrown by a layout (an Admin-layout failure was induced on 7 Oct: one `<main>`, no frame, § 6.7).
 - **Account entry before hydration.** Until the first account check settles, the entry is rendered invisible (with a `<noscript>` "Ingresar"), so signed-in visitors never see "Ingresar". The remaining layout shift for them is 0.0004–0.0016 (it was 0.0357 on phones before UX-2). Removing it would need the session at server render.
 - **Two search forms in the header markup** (inline from 768 px; a phone row after the bar's actions), never displayed together, so Tab follows the visual order at both sizes. Distinct ids.
 - **`useDisclosure`** and **`useDisclosureGroup`** coordinate "one menu open at a time" through a window event (`laria:disclosure-open`). The Admin accordion lives inside the phone "Menú", so it does not take part in that event; it handles Esc itself, one level at a time, and marks the key handled (`preventDefault`). Every shell menu ignores an Esc already handled inside it, because React and the menus all listen on `document`, where `stopPropagation` cannot separate them.
 - **Category panels** render inside their button's list item (focus order) but are positioned against the strip container, so the strip's sideways scrolling does not clip them. Check at 390, 768 and 1440, with the strip scrolled.
-- **Catalog links.** A client transition between two `/listados` URLs fetches the page data but never commits (root cause not identified; reproduced in both directions). The shell sends every catalog link through a native link (`ShellLink`). The catalog's own pagination still uses client links (UX-3 code, unchanged).
+- **Catalog links.** A client transition between two `/listados` URLs can fetch the page data and never commit (root cause not identified). Measured 7 Oct with `window.next.router.push` on production builds: `/listados` → `?seller_type=verified_store` stalled in 14 of 18 trials on this branch and 3 of 7 on the pre-UX-2 build `645d51e`, never on `main` `49a38e5` (16 of 16 completed), so it arrived with UX-1; `/listados` → `?page=2` and `?category=guitars` completed every time. The shell sends every catalog link through a native link (`ShellLink`). The catalog's own pagination still uses client links (UX-3 code, unchanged).
 - **Tests rewritten with the shell** (§ 7 and `ux-2-acceptance.md` § Tests): check that none lost strength.
 - **Known limitations** (`ux-2-acceptance.md`): no current strip item on listing and store pages; no breadcrumbs on store pages yet (UX-4); on phones the home's old hero (UX-3) shows a search-looking link under the header search.
 

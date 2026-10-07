@@ -1,6 +1,6 @@
 # UX-2 Shell and navigation — acceptance package
 
-Status: **ready for owner acceptance** (1 Oct 2026; built 30 Sep–1 Oct). Implemented and audited by Claude Code on `ux/redesign` against the approved brief `ux-2-shell.md`. Prepared for an independent external review on 2 Oct (`review-guide.md`): re-verified on a clean local stack, one defect found and fixed (§ Review preparation). The 3 Oct external-review fixes are verified below. **Amended 3 Oct (owner, N12): the mega-menu's category and type access is restored inside the UX-2 design** (§ Hybrid category navigation); the canonical V1 reconciliation stays with the owner (§ What still needs owner acceptance). Nothing is pushed or merged.
+Status: **ready for owner acceptance** (1 Oct 2026; built 30 Sep–1 Oct; the owner's answers of 7 Oct applied, § Owner answers (7 Oct)). Implemented and audited by Claude Code on `ux/redesign` against the approved brief `ux-2-shell.md`. Prepared for an independent external review on 2 Oct (`review-guide.md`): re-verified on a clean local stack, one defect found and fixed (§ Review preparation). The 3 Oct external-review fixes are verified below. **Amended 3 Oct (owner, N12): the mega-menu's category and type access is restored inside the UX-2 design** (§ Hybrid category navigation); the canonical V1 reconciliation stays with the owner (§ What still needs owner acceptance). Nothing is pushed or merged.
 
 | # | Commit | Content |
 | --- | --- | --- |
@@ -13,7 +13,11 @@ Status: **ready for owner acceptance** (1 Oct 2026; built 30 Sep–1 Oct). Imple
 | 7 | `15e689f` docs(ux) | `review-guide.md`; this package, the decision log (N9–N12, F9), README, design system, roadmap and UX-1 package brought up to date; reviewer pointers in `AGENTS.md` and the root README |
 | 8 | `b6614e0` fix(ux) | The external review's fixes, as the reviewer (Codex) left them: the deeper Admin 404 catch-all (UX2-R01), the "Tiendas verificadas" native link and the audit's frame and strip checks (UX2-R03), the review report |
 | 9 | `424c13c` feat(ui) | Hybrid category navigation (owner, N12): strip menus, Admin "Explorar categorías", catalog links as native links, the Esc rule for nested menus; tests and audit checks |
-| 10 | docs(ux), after `424c13c` | The brief's amendment, N12 in the decision log, this package (§ Hybrid, § What still needs owner acceptance), the review guide, the design system, the README and a follow-up note in the review report |
+| 10 | `e122b88` docs(ux) | The brief's amendment, N12 in the decision log, this package (§ Hybrid, § What still needs owner acceptance), the review guide, the design system, the README and a follow-up note in the review report |
+| 11 | `d3d7f8f` fix(ui) | N11: the phone back link only on listing pages; tests; a more accurate note on the catalog transition |
+| 12 | `a689a1e` fix(ui) | Admin "Explorar categorías": closed levels were on screen (a display class overrode `hidden`); a unit test for every `hidden` panel; an audit check |
+| 13 | `51e4ed4` chore(ux) | `scripts/ux-pub-rerun.cjs`: re-runs PUB-008 to PUB-015 on a local build and records what it observes |
+| 14 | docs(ux), after `51e4ed4` | The owner's answers (N9–N14), `ux-2-reconciliation.md`, this package, the review guide, the design system, the README and the detailed plans for UX-3 to UX-8 in `roadmap.md` |
 
 ## What changed
 
@@ -34,7 +38,7 @@ No product rule, route, query of product data, schema or authorization changed. 
 ## Checks
 
 - `pnpm lint`, `pnpm typecheck`, `pnpm build`: pass (final run on a clean `.next`, without the temporary 500 route).
-- `pnpm test`: 274/274 (258 before UX-2; 271 after the 2 Oct fix; 274 with the 3 Oct hybrid). `tests/ux-shell.test.cjs` now has 16 tests.
+- `pnpm test`: 275/275 (258 before UX-2; 271 after the 2 Oct fix; 274 with the 3 Oct hybrid; 275 with the 7 Oct guard for `hidden` panels). `tests/ux-shell.test.cjs` now has 17 tests.
 - First-load JS unchanged: 101 kB shared, 113 kB on the home, 135 kB on the catalog (same as before UX-2).
 
 ## Evidence setup
@@ -52,7 +56,7 @@ Production builds (`next build` + `next start`, Chromium through `agent-browser`
 | 2 | N1–N5 and G1 applied; audit items 1, 1b, 5, 10, 14 and 17 applied with the brief's values | N1 onDark outline "Vender" (36 px; the border colour differs, see deviation 1). N2 hairline removed. N3 nothing sticky (test). N4 compact phone header, no bottom bar. N5 full / slim / none (test). G1 "Instrumentos" in the header strip, footer, breadcrumbs and structured data. Items 1 (36 / 32 / 28 / 24 px), 1b, 5, 10 (both ends on the gutter at every width), 14 (global rule), 17 (one placeholder, text changed by N8) | Met; the placeholder text follows N8 instead of item 17 |
 | 3 | "Listados" no longer appears in the interface; "Para tiendas" is gone from the header; tests updated without weakening them | `grep` finds neither in `app`, `components`, `components_v0`, `lib`. The copy test lost its "Listados" exception and now rejects "Listado" in any case (it only caught lower case before) and "Para tiendas"; the header test asserts the sell entry's destination per account type | Met |
 | 4 | The keyboard walk and axe on the 8 harness templates show no regressions against UX-1 | axe-core 4.11.4, WCAG 2.1 A/AA, on the UX-1 templates (home, catalog, listing, store, sign-in, Particular Resumen and Publicar, Admin) at 390 and 1440: **0 violations** (UX-1: 0). Focus sweep: **541** visible focusable elements, **0** without a 2 px ring (UX-1: 0 of 682. The totals are not comparable one to one: the mega-menu's category buttons and the old header links are gone, and closed menus stay hidden). Skip link first and landing on `<main>` on every run; one `<main>` and one `<h1>` per page. Extra runs (category, 404, 500, signed-in catalog, Store Owner): 0 violations, 0 missing rings; 852 focusables in all 26 runs. With each menu open (account menu at 390 and 1440, account switcher, Admin menu, phone search): 0 violations. Tab order in the header and the strip follows the visual order on every run. Reproduced on the clean stack on 2 Oct with the same numbers; the Admin 404s added then also pass (§ Review preparation) | Met |
-| 5 | Before/after captures with `scripts/ux-snapshots.cjs`; selected frames in `screenshots/ux2-before/` and `screenshots/ux2-after/` | Local sets `.ux-snapshots/ux2-before/` (132) and `.ux-snapshots/ux2-after/` (132, plus the 500 page at four widths), gitignored. Repo: 24 "before" and 26 "after" WebP frames with the same names: the 8 UX-1 templates, the 404 and the Store Owner Resumen at 390 and 1440, the catalog at 768, the category page at 390, the signed-in catalog at 1440 and the account frame at 768; the 500 page (390, 1440) exists only after | Met |
+| 5 | Before/after captures with `scripts/ux-snapshots.cjs`; selected frames in `screenshots/ux2-before/` and `screenshots/ux2-after/` | Local sets `.ux-snapshots/ux2-before/` (132) and `.ux-snapshots/ux2-after/` (132, plus the 500 page at four widths), gitignored. Repo: 24 "before" and 26 "after" WebP frames with the same names: the 8 UX-1 templates, the 404 and the Store Owner Resumen at 390 and 1440, the catalog at 768, the category page at 390, the signed-in catalog at 1440 and the account frame at 768; the 500 page (390, 1440) exists only after. *Refreshed 7 Oct: the after frames show the build as amended (hybrid menus, N11, the Admin accordion fix).* | Met |
 | 6 | `pnpm lint`, `typecheck`, `test` and `build` pass | Checks above | Met |
 | 7 | `docs/design-system.md` updated; `ux-2-acceptance.md` written | New section "Shell and navigation" (route table, logo sizes, header and its button rule, menus, strip, breadcrumbs, frames, footers, 404/500), the text-wrap rule under Typography, the `<main>` rule, focus on light panels, the glossary row for "Instrumentos", the logo note under Brand touchpoints | Met |
 
@@ -81,19 +85,19 @@ The remaining shift for a signed-in visitor is the actions group moving left whe
 
 ## Deviations from the brief (for the owner)
 
-1. **"Vender" border colour (open: N9).** N1 names a 1 px #4B5563 border. On the frame black that is 2.6:1, below the design system's 3:1 rule for control boundaries, so the button uses the existing `onDark` variant (white at 40%, about 3.7:1). The button is otherwise as N1 says (white text, 36 px, outline). Changing it is one class if you prefer #4B5563.
+1. **"Vender" border colour (N9, decided 7 Oct: keep white at 40%).** N1 names a 1 px #4B5563 border. On the frame black that is 2.6:1, below the design system's 3:1 rule for control boundaries, so the button uses the existing `onDark` variant (white at 40%, about 3.7:1). The button is otherwise as N1 says (white text, 36 px, outline). Kept as built (N9).
 2. **Search placeholder (N8, decided).** The brief's "Marca, modelo o instrumento" would promise model and instrument search; the catalog matches the brand only. The placeholder is "Busca por marca: Yamaha, Fender…". Free-text search is logged for UX-3.
-3. **"Registrar mi tienda" goes to `/registrar-tienda`**, not `/registro/tienda` (open: N10). It is the existing gate: a signed-out visitor gets "Crear cuenta de Tienda" (`/registro/tienda`) or "Ingresar", a signed-in Particular is told a store needs its own account, a store owner lands on their store. The brief's path would drop a signed-in visitor into the sign-up form. One string to change if you prefer the direct link.
+3. **"Registrar mi tienda" goes to `/registrar-tienda`**, not `/registro/tienda` (N10, decided 7 Oct: keep `/registrar-tienda`). It is the existing gate: a signed-out visitor gets "Crear cuenta de Tienda" (`/registro/tienda`) or "Ingresar", a signed-in Particular is told a store needs its own account, a store owner lands on their store. The brief's path would drop a signed-in visitor into the sign-up form. Kept as built (N10).
 4. **Full footer promise.** The concept's line is "…Laria no cobra comisiones ni procesa pagos." The footer carried the full limitation before (LEGAL-005 evidence, pinned by `tests/sprint-9.test.cjs`), so the brand column now reads "El mercado de instrumentos y audio profesional del Perú. Laria no cobra comisiones, no procesa pagos, no retiene dinero, no gestiona envíos ni garantiza el equipo ni las transacciones." The slim footer uses the brief's copy exactly.
 5. **Footer links that don't exist yet are left out** ("Cómo funciona Laria", "Consejos para vender"). Explora lists Instrumentos, Guitarras, Baterías, Pedales and Tiendas verificadas (the concept's three categories); the phone footer shows six links in two columns (Instrumentos in place of "Cómo funciona Laria").
-6. **Phone breadcrumbs on browse pages (open: N11).** The brief's rule (phones show only the back link) is applied on the catalog ("‹ Inicio") and the category landings ("‹ Instrumentos") as well as the listing; the Catalogo-390 concept shows no back link on browse pages. Easy to limit to the listing page.
+6. **Phone breadcrumbs on browse pages (N11, decided 7 Oct and built: listing pages only).** As first built, the brief's rule (phones show only the back link) applied on the catalog ("‹ Inicio") and the category landings ("‹ Instrumentos") as well as the listing; the Catalogo-390 concept shows no back link on browse pages. Now only the listing has it; on phones the catalog and the category landings show no breadcrumb.
 7. **Publishing header** reduces to the logo and the account entry on phones only (the brief and Publicar-390 describe the phone); from 768 px the standard header stays.
 8. **Small print 12 px on phones** in both footers, so the promise line fits one line and the slim footer stays at two lines as the brief asks (13 px from 640 px).
 9. **Admin sidebar**: "Moderación" carries the total of the moderation queues; the other sections are record views without a pending count of their own. The name and role sit at the bottom of the first screen; on a long page the black column continues below them (nothing sticky).
 10. **Account menu** starts with the name and the account type as a heading (not in the brief; a label, no new action). Its rows are 44 px on phones and 36 px from 768 px.
 11. **Two search rows in the header markup**, never shown together: inline from 768 px, and on phones a row that follows the bar's actions, so Tab follows the visual order at both sizes (a single element placed by CSS would tab out of order on one of them).
 
-## Spec and acceptance rows touched (not edited; open: N12)
+## Spec and acceptance rows touched (not edited; N12 recording open)
 
 *As written on 1–2 Oct, before the hybrid. For the current state, row by row, see § What still needs owner acceptance.*
 
@@ -133,9 +137,9 @@ Harness: `scripts/ux-snapshots.cjs` also opens the catalog in each signed-in gro
 - Local seed photos are placeholders, so full-page captures show grey or lettered photo areas.
 - Tested in Chromium only (agent-browser); not on Safari/WebKit or Firefox, not with a screen reader, not on touch devices, not on a deployment (network performance).
 - 3 Oct, hybrid:
-  - **Client transitions between catalog URLs.** A transition between two `/listados` URLs does not complete (root cause not identified). The shell avoids it with native links; the catalog's pagination still uses client links (UX-3).
+  - **Client transitions between catalog URLs.** Some transitions between two `/listados` URLs never complete (root cause not identified). The shell avoids it with native links. *7 Oct: measured; it arrived with UX-1, pagination is not affected (§ Owner answers (7 Oct)); the fix is UX-3's.*
   - **The pre-existing #418** on listing pages (§ Hybrid) keeps the strict browser smoke from passing end to end; it passes when only that error is tolerated.
-  - **The root `FallbackMain`** (an error thrown by the Admin layout itself) has not been induced; Admin page errors and both Admin 404 depths were.
+  - **The root `FallbackMain`** (an error thrown by the Admin layout itself) has not been induced; Admin page errors and both Admin 404 depths were. *7 Oct: induced; one `<main>`, axe 0, navigable, no frame (§ Owner answers (7 Oct)).*
   - **The home shows the strip** until the UX-3 home header brings its own "Categorías" menu. On phones the publishing pages keep their focused frame without the strip.
 
 ## Review preparation (2 Oct)
@@ -213,15 +217,72 @@ The owner asked for the mega-menu's functionality back inside the UX-2 design. T
   - With only that error tolerated, in a scratch copy: passes end to end. That covers the shell check on every page it opens, the phone category panel with its Esc, the account switcher, the search steps, both favourite-history checks and the integration assertions.
   - On a separate stack the 3 Oct audit was not repeated; the 2 Oct clean-stack results are in `review-guide.md` § 6.4.
 
+## Owner answers (7 Oct)
+
+Asked on 4 Oct as nine questions, each with a recommended option; on 7 Oct the owner answered "go with your recommendations". Recorded in `decisions.md` (N9–N14).
+
+| # | Question | Options offered | Taken |
+| --- | --- | --- | --- |
+| 1 | N9 "Vender" border | a) keep white at 40% (3.7:1) · b) #4B5563 (2.6:1, needs an exception to the 3:1 rule) | a |
+| 2 | N10 "Registrar mi tienda" | a) keep `/registrar-tienda` · b) `/registro/tienda` | a |
+| 3 | N11 phone back links | a) listing pages only · b) catalog, category landings and listings (as first built) | a: built |
+| 4 | N12, build side | a) keep the build, reword the record · b) search back in Admin and on phone account/legal/sign-in pages · c) an accordion on phones | a |
+| 5 | N12, record side | a) Claude drafts the wording and re-runs the rows, the owner records · b) the owner does it all · c) reconcile at merge | a: `ux-2-reconciliation.md` |
+| 6 | Known issues before acceptance | a) induce the Admin-layout failure and check whether pagination stalls, comparing with the pre-UX-2 build · b) only the first · c) leave them | a: below |
+| 7 | Rebase on `main` | a) now · b) once, at merge time | b (N13) |
+| 8 | Human-only checks | a) Safari + VoiceOver on the owner's Mac now, phones later · b) all to UX-8 | a (N14): steps on the review page |
+| 9 | How to review | a) one checklist page with Correct/Wrong per check · b) walk the build with `review-guide.md` | a |
+
+**N11, built.** `Breadcrumbs` takes `phoneBackLink`; only `app/instrumentos/[slug]/page.tsx` passes it. On the catalog and the category landings the whole trail is hidden below 768 px (no empty landmark, no back link); the listing keeps "‹ <parent>". `tests/ux-shell.test.cjs` pins both cases and the call sites; `tests/sprint-9.test.cjs` pins the listing call.
+
+**The Admin-layout failure, induced** (scratch copy of this build, never committed: `app/admin/layout.tsx` throws when a probe cookie is set; `next start` on its own port, local Supabase). `/admin` answers HTTP 500. After hydration, at 1440 and 390: one `<main id="contenido">` (the root `FallbackMain`), the 500 body ("Algo salió mal", one line, the search, "Ir al inicio" · "Ver instrumentos"), the skip link, no public header or footer, no Admin navigation (its layout is what failed), no overflow; axe-core 4.11.4 WCAG 2.1 A/AA: 0 violations at both widths. The server HTML carries no `<main>` yet: Next renders an error boundary on the client, as for any server error. The page has no logo or frame; it is navigable through its search and two links.
+
+**Catalog transitions, measured** (production builds with the page size lowered to 2 in scratch copies so that pagination appears with the 14 local listings; client navigation through `window.next.router.push`, 6 s per trial):
+
+| Build | `/listados` → `?seller_type=verified_store` | `/listados` → `?page=2` | `/listados` → `?category=guitars` |
+| --- | --- | --- | --- |
+| `main` `49a38e5` (before UX-1) | 16 of 16 complete | complete | complete |
+| `645d51e` (UX-1, before UX-2) | 3 of 7 stall | complete | complete |
+| This branch | 14 of 18 stall | 9 of 9 complete | complete |
+
+- The stall arrived with UX-1, not UX-2, so under the owner's rule it stays with UX-3 (`roadmap.md` § UX-3 starts by finding it in UX-1's twelve commits).
+- Catalog pagination is not affected.
+- No link in the current interface makes the stalling move: the shell's catalog links, the applied-filter chips, the filter form and the sort links are all native.
+- The listing's phone back link (kept by N11) is a client link into a filtered catalog, from outside the catalog. From a listing to `/listados?category=guitars&instrument_type=electric_guitar` it completed 6 of 6 trials on this build.
+- When it stalls, the page data is fetched (HTTP 200) and no error reaches the console.
+
+**Defect found and fixed while preparing the review page: Admin's "Explorar categorías" never collapsed.**
+- **What happened:** the lists under "Explorar categorías" toggle with the `hidden` attribute, but each also carried Tailwind's `grid`, and a display class overrides `hidden`'s `display: none`. So the whole tree (eight categories and their types) stayed on screen in the Admin sidebar and the phone "Menú", open or closed.
+- **What hid it:**
+  - the buttons' `aria-expanded` and the Esc handling were right;
+  - the audit counted links and checked `aria-expanded`, not visibility;
+  - the 3 Oct by-hand check looked at each level opening, not at closed levels.
+- **Fix** (`components/category-accordion.tsx`): no display class on those lists, with a comment saying why.
+- **Guards:**
+  - `tests/ux-shell.test.cjs` now fails when any element toggled by `hidden={…}` also carries a display utility (checked: it fails with the old class and passes without it; it covers the 5 such elements in `components/`: the two accordion lists, the account menu, the account switcher and the Admin "Menú");
+  - `scripts/ux-audit.cjs` asserts that no link inside a closed Admin level is visible, before and after opening "Guitarras".
+- **Other panels:** the account menu, the account switcher, the Admin "Menú" and the category panels (rendered only when open) were not affected.
+
+**Checks after the 7 Oct changes** (production build at `a689a1e`, shared local stack, local accounts):
+- `pnpm lint`, `pnpm typecheck`, `pnpm build` pass on a clean `.next`; first-load JS unchanged (101 kB shared, home 113 kB, catalog 135 kB, Admin 196 kB).
+- `pnpm test` **275/275**.
+- `scripts/ux-audit.cjs` (`.ux-snapshots/ux2-n11/audit.json`, gitignored), 28 template runs at 390 and 1440 (the temporary 500 route was not used):
+  - 0 axe violations; 964 focusables, 0 without a ring; 0 Tab-order, skip-link, `<main>`/`<h1>`, frame, strip or overflow problems;
+  - 34 category-menu checks, 0 failures and no fallback clicks, including the new Admin check (closed levels show 0 links at 390 and 1440);
+  - 200% zoom: no overflow; layout shift at most 0.0016.
+
+**N12 re-runs:** `ux-2-reconciliation.md` (row by row, with the proposed wording). Report: `.ux-snapshots/n12-rerun/pub-rerun.json` (gitignored).
+
 ## What still needs owner acceptance
 
 Nothing below was decided or marked by the build. `acceptance/cases.tsv` and `docs/functional-spec.md` are unchanged, and no owner or manual Pass was inferred.
 
 1. **UX-2 as amended.**
+   - The owner's review page (§ Owner answers, question 9): https://claude.ai/artifact/XQRP7EMmb4sACMtZ8G3BJx (private; Correct/Wrong per check with screenshots, the N12 drafts, the Safari + VoiceOver steps, and the final accept/not-yet).
    - Accept or reject the shell against `ux-2-shell.md`, its criteria 1–7 and the 3 Oct amendment.
    - New placements to look at: the strip on the home (until the UX-3 home header), on listing, legal and sign-in pages and on account pages at every width, while the publishing pages show it from 768 px only. Admin's "Explorar categorías" entry.
-2. **Open deviations:** N9 ("Vender" border), N10 ("Registrar mi tienda" link), N11 (phone back link on browse pages).
-3. **N12, V1 reconciliation.** The preference is decided; the canonical record is not. For each item: reword it, re-run it on this build, and record the result (the owner's acceptance process):
+2. **N9–N11 are decided** (7 Oct) and applied: N9 and N10 as built, N11 built (§ Owner answers (7 Oct)).
+3. **N12, recording.** The preference (3 Oct) and the build side (7 Oct) are decided. What is left is the owner's record: the spec clarification and each row's status and evidence. `ux-2-reconciliation.md` gives, row by row, what this build was observed to do on 7 Oct, the gap, proposed wording and a proposed evidence entry. The table below is the gap list as written on 3 Oct.
 
 | Canonical item | What it says | What this build does | Gap |
 | --- | --- | --- | --- |
@@ -237,7 +298,7 @@ Nothing below was decided or marked by the build. `acceptance/cases.tsv` and `do
 | PUB-015 (Pass) | Mobile menu with category-specific **accordions**, no overflow, collapses after a choice or close | Compact per-category panel under the strip, no overflow, closes after a choice, Esc or an outside press | Wording ("accordions"); re-run on this build |
 | LEGAL-001–004 (Pass), LEGAL-005/006 (Not Run) | Legal pages linked from the global footer; limitations stated | Unchanged since 2 Oct: the home footer links all four and states every limitation; the slim footer links three and states commissions and payments | Unchanged; see § Spec and acceptance rows touched |
 
-4. **Checks only the owner (or a human tester) can do:** Safari/iOS and Android browsers, a screen reader (VoiceOver, TalkBack, NVDA), real touch and a deployment. The build was tested in Chromium only.
+4. **Checks only a person can do (N14):** the owner's Safari + VoiceOver pass on the Mac against the local build (steps on the review page). Safari/iOS and Android on real phones, TalkBack/NVDA and a deployment wait for a preview deployment or UX-8. The build was tested in Chromium only.
 
 ## How to review
 
@@ -245,4 +306,4 @@ Nothing below was decided or marked by the build. `acceptance/cases.tsv` and `do
 2. Read `ux-2-shell.md` (the brief) and the "Shell and navigation" section of `docs/design-system.md`.
 3. Compare `screenshots/ux2-before/` with `screenshots/ux2-after/` (same file names; `<width>-<group>-<route>.webp`).
 4. Run the app and walk: a category page at 1440 and 390, a listing on a phone (search icon, back link), the account menu signed in, `/mi-cuenta` on a phone (switcher), `/admin` at 1440 and 390, a 404 (also `/admin/no-existe`).
-5. Owner: decide N9–N12 (N9, N10 and N11 are one-line changes).
+5. Owner: record N12 (`ux-2-reconciliation.md`) and mark the review page.
