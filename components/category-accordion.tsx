@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 // canonical types) and "Tiendas verificadas". Admin keeps its own frame; the links open the public pages.
 // The accordion lives inside other menus (the phone "Menú"), so it handles Esc itself: it closes the innermost open
 // level, returns focus to that level's button and marks the key handled; with nothing open, Esc reaches the outer menu.
+// The lists toggle with the `hidden` attribute, so they carry no display utility: a class such as `grid` would
+// override `hidden` and leave closed levels on screen.
 export function CategoryAccordion() {
   const baseId = useId();
   const [open, setOpen] = useState(false);
@@ -46,7 +48,7 @@ export function CategoryAccordion() {
         Explorar categorías
         <ChevronDown aria-hidden="true" className={cn("h-4 w-4 shrink-0", open && "rotate-180")} />
       </button>
-      <ul id={rootId} hidden={!open} className="menu-fade ml-3 grid border-l border-white/10 pl-2">
+      <ul id={rootId} hidden={!open} className="menu-fade ml-3 border-l border-white/10 pl-2">
         <li><ShellLink href={CATALOG_PATH} className={ROW}>Instrumentos</ShellLink></li>
         {categoryMenus.map((menu) => {
           const expanded = category === menu.key;
@@ -63,7 +65,7 @@ export function CategoryAccordion() {
                 {menu.label}
                 <ChevronDown aria-hidden="true" className={cn("h-4 w-4 shrink-0", expanded && "rotate-180")} />
               </button>
-              <ul id={sectionId(menu.key)} hidden={!expanded} className="ml-3 grid border-l border-white/10 pl-2">
+              <ul id={sectionId(menu.key)} hidden={!expanded} className="ml-3 border-l border-white/10 pl-2">
                 <li><ShellLink href={menu.href} className={cn(ROW, "underline decoration-accent decoration-2 underline-offset-[3px]")}>Ver todos</ShellLink></li>
                 {menu.types.map((type) => (
                   <li key={type.value}><ShellLink href={type.href} className={cn(ROW, "font-normal")}>{type.label}</ShellLink></li>

@@ -257,6 +257,21 @@ test("breadcrumbs: full trail from 768 px with the current page unlinked; on pho
   assert.match(source("components/category-landing.tsx"), /position: 2, name: "Instrumentos", item: absoluteUrl\("\/listados"\)/);
 });
 
+test("panels toggled by the hidden attribute carry no display utility that would override it", () => {
+  // A display class (grid, flex, md:block…) beats the hidden attribute's display: none and leaves a closed panel on
+  // screen; the Admin "Explorar categorías" lists did until 7 Oct.
+  const files = fs.readdirSync(path.join(root, "components"), { recursive: true }).filter((file) => file.endsWith(".tsx"));
+  let checked = 0;
+  for (const file of files) {
+    for (const tag of source(`components/${file}`).matchAll(/<[a-z][a-z0-9]*\b[^<>]*?\shidden=\{[^}]*\}[^<>]*>/g)) {
+      checked += 1;
+      const className = /className=(?:"([^"]*)"|\{([^}]*)\})/.exec(tag[0]);
+      assert.doesNotMatch(className?.[1] ?? className?.[2] ?? "", /(?:^|[\s"'])(?:[\w-]+:)*(?:block|flex|grid|inline|inline-block|inline-flex|inline-grid|table|contents)(?=[\s"']|$)/, `${file}: ${tag[0].slice(0, 90)}`);
+    }
+  }
+  assert.ok(checked >= 5, `the shell's disclosure panels are checked (found ${checked})`);
+});
+
 test("footers: full on the home with four columns, slim everywhere else (N5)", () => {
   const { SiteFooter } = load("components/site-footer.tsx", { "next/link": linkMock, "next/image": imageMock });
   const full = renderToStaticMarkup(React.createElement(SiteFooter, { variant: "full" }));

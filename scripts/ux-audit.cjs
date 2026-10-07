@@ -267,13 +267,16 @@ async function discover() {
           const scope = width < 1024 ? "#menu-admin" : "aside";
           if (width < 1024) run(session, "click", 'button[aria-controls="menu-admin"]');
           const click = (text) => evaluate(session, `[...document.querySelectorAll('${scope} button')].find((b) => b.textContent.trim().startsWith('${text}'))?.click() ?? 'missing'`);
+          // Closed levels must not show their links (a display class once overrode the hidden attribute here).
+          const HIDDEN_SHOWN = `[...document.querySelectorAll('${scope} [hidden] a')].filter((a) => a.getClientRects().length > 0).length`;
+          const closedShown = evaluate(session, HIDDEN_SHOWN);
           click("Explorar categorías"); click("Guitarras");
-          const opened = JSON.parse(evaluate(session, `JSON.stringify({ links: [...document.querySelectorAll('${scope} a')].map((a) => a.getAttribute('href')).filter((h) => /^\\/(listados|instrumentos)/.test(h)).length,
+          const opened = JSON.parse(evaluate(session, `JSON.stringify({ hiddenShown: ${HIDDEN_SHOWN}, links: [...document.querySelectorAll('${scope} a')].map((a) => a.getAttribute('href')).filter((h) => /^\\/(listados|instrumentos)/.test(h)).length,
             viewAll: !![...document.querySelectorAll('${scope} a')].find((a) => a.textContent === 'Ver todos' && a.offsetParent), publicHeader: !!document.querySelector('header.surface-frame'), footer: !!document.querySelector('footer'),
             overflow: document.documentElement.scrollWidth > innerWidth })`));
           evaluate(session, `${axeSource};'ok'`);
           const violations = JSON.parse(await evaluate(session, AXE));
-          check(report, log, "admin-explorar-categorias", width, { ...opened, axe: violations.length }, opened.viewAll && opened.links >= 26 && !opened.publicHeader && !opened.footer && !opened.overflow && violations.length === 0);
+          check(report, log, "admin-explorar-categorias", width, { ...opened, closedShown, axe: violations.length }, closedShown === 0 && opened.hiddenShown === 0 && opened.viewAll && opened.links >= 26 && !opened.publicHeader && !opened.footer && !opened.overflow && violations.length === 0);
           evaluate(session, `[...document.querySelectorAll('${scope} a')].find((a) => a.textContent === 'Ver todos' && a.offsetParent)?.click()`);
           run(session, "wait", "--load", "networkidle"); run(session, "wait", "500");
           const url = evaluate(session, "location.pathname");
