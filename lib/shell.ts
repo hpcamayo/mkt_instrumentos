@@ -1,3 +1,4 @@
+import { CATALOG_PATH } from "@/lib/catalog-filters";
 import { categoryLandingPath, categoryTypePath, getCategoryLandingByValue, reservedCategorySlugs } from "@/lib/category-pages";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
 import { categoryOptions, getCategoryLabel } from "@/lib/listings";
@@ -52,7 +53,7 @@ function instrumentSlug(pathname: string) {
   return match ? match[1] : null;
 }
 
-export const CATALOG_PATH = "/listados";
+export { CATALOG_PATH };
 // No stores directory exists: "Tiendas verificadas" opens the catalog filtered to verified stores (decision N7).
 export const VERIFIED_STORES_PATH = "/listados?seller_type=verified_store";
 

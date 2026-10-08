@@ -106,13 +106,16 @@ test("SEO-002..SEO-005: category pages use the shared catalog query, 24-item sta
   const detail = source("app/instrumentos/[slug]/page.tsx");
   assert.match(detail, /parseListingFilters\(\{ category \}\)[\s\S]*fetchCatalogPage\(supabase, filters, page\)/);
   assert.match(detail, /getPageRedirect\(page, result\.count, result\.error\)/);
+  // UX-3: the landing renders the catalog's own view with its category fixed; the same contracts hold there.
   const landing = source("components/category-landing.tsx");
-  assert.match(landing, /<ListingFilters filters=\{filters\} \/>/);
-  assert.match(landing, /<Pagination page=\{page\} total=\{totalCount\} path=\{path\} \/>/);
-  // One card per listing, keyed by its id (UX-3: the one card also takes the grid's eager row and image sizes).
-  assert.match(landing, /\{listings\.map\(\(listing, index\) => \(\s*<ListingCard key=\{listing\.id\} listing=\{listing\} eager=\{index < 4\} sizes=\{LISTING_GRID_SIZES\} \/>/);
+  assert.match(landing, /<CatalogView[\s\S]*filters=\{filters\}[\s\S]*scope=\{landingScope\(landing\.category\)\}[\s\S]*listings=\{listings\}[\s\S]*totalCount=\{totalCount\}[\s\S]*page=\{page\}[\s\S]*path=\{path\}/);
+  const view = source("components/catalog-view.tsx");
+  assert.match(view, /<ListingFilters filters=\{filters\} scope=\{scope\} \/>/);
+  assert.match(view, /<Pagination page=\{page\} total=\{totalCount\} path=\{path\} params=\{params\} \/>/);
+  // One card per listing, keyed by its id (the one card also takes the grid's eager row and image sizes).
+  assert.match(view, /\{listings\.map\(\(listing, index\) => \(\s*<ListingCard key=\{listing\.id\} listing=\{listing\} eager=\{index < 4\} sizes=\{LISTING_GRID_SIZES\} \/>/);
   assert.match(landing, /<SearchTelemetry/);
-  assert.doesNotMatch(landing, /placehold|lorem|Ejemplo/i);
+  for (const text of [landing, view]) assert.doesNotMatch(text, /placehold|lorem|Ejemplo/i);
 
   const guitars = categories.getCategoryLandingBySlug("guitarras");
   assert.equal(seo.categoryFilterRedirect(guitars, {}), null);

@@ -29,8 +29,11 @@ export function parseClientEvent(value: unknown): ClientEvent | null {
 
 export function searchEventMetadata(filters: ListingFilters, resultCount: number) {
   // Only fields consumed by the actual catalog; there is no free-text q search.
-  const supported: Record<string, string | number | Record<string, string | number | boolean | string[]>> = { sort: filters.sort };
-  for (const [key, value] of Object.entries({ category: filters.category, city: filters.city, brand: filters.brand, condition: filters.condition, seller_type: filters.sellerType, instrument_type: filters.instrumentType, min_price: filters.minPrice, max_price: filters.maxPrice })) {
+  const supported: Record<string, string | number | string[] | Record<string, string | number | boolean | string[]>> = { sort: filters.sort };
+  // F11: one condition or location stays a string, as before; several are a bounded list (the database checks the
+  // filter keys, not their value types).
+  const list = (values: string[]) => (values.length > 1 ? values.slice(0, 20).map((item) => item.slice(0, 100)) : values[0]);
+  for (const [key, value] of Object.entries({ category: filters.category, city: list(filters.cities), brand: filters.brand, condition: list(filters.conditions), seller_type: filters.sellerType, instrument_type: filters.instrumentType, min_price: filters.minPrice, max_price: filters.maxPrice })) {
     if (value !== undefined) supported[key] = typeof value === "string" ? value.slice(0, 200) : value;
   }
   const advanced: Record<string, string | number | boolean | string[]> = {};

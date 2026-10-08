@@ -4,10 +4,9 @@ import { Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useMarketplaceAccount } from "@/components/marketplace-account-provider";
-import { cn } from "@/lib/utils";
 
 // "overlay" sits on a card photo (UX-3): a 36 px white circle inside a 44 px hit area; the focus ring gets a white
-// edge so it shows on any photo.
+// edge so it shows on any photo. Plain class strings: the home loads this button, and cn would add tailwind-merge there.
 const CONTROL = {
   default: "inline-flex min-h-11 min-w-11 items-center justify-center rounded-control border border-line-strong bg-white p-2 text-ink",
   overlay: "inline-flex h-11 w-11 items-center justify-center rounded-full text-ink focus-visible:shadow-[0_0_0_2px_var(--surface)]",
@@ -23,11 +22,11 @@ export function FavoriteButton({ listingId, initialSaved, removableOnly = false,
   useEffect(() => register(listingId), [listingId, register]);
   const saved = favorites[listingId] ?? initialSaved;
   const heart = (filled: boolean) => {
-    const icon = <Heart className={cn("h-5 w-5", filled && "fill-accent")} aria-hidden="true" />;
+    const icon = <Heart className={filled ? "h-5 w-5 fill-accent" : "h-5 w-5"} aria-hidden="true" />;
     return variant === "overlay" ? <span className={OVERLAY_CIRCLE}>{icon}</span> : icon;
   };
   if (ready && !authenticated) return <Link href={`/login?next=${encodeURIComponent(pathname)}`} onClick={(event) => { event.preventDefault(); router.push(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`); }} aria-label="Ingresa para guardar en favoritos" className={CONTROL[variant]}>{heart(false)}</Link>;
-  return <span data-favorite-listing={listingId} className={cn("inline-grid gap-1", variant === "overlay" && "relative")}><button type="button" aria-pressed={saved ?? false} aria-label={saved ? "Quitar de favoritos" : "Guardar en favoritos"} disabled={!ready || !authenticated || saved === undefined || busy || (removableOnly && !saved)} className={cn(CONTROL[variant], "disabled:opacity-50")} onClick={async () => {
+  return <span data-favorite-listing={listingId} className={variant === "overlay" ? "relative inline-grid gap-1" : "inline-grid gap-1"}><button type="button" aria-pressed={saved ?? false} aria-label={saved ? "Quitar de favoritos" : "Guardar en favoritos"} disabled={!ready || !authenticated || saved === undefined || busy || (removableOnly && !saved)} className={`${CONTROL[variant]} disabled:opacity-50`} onClick={async () => {
     setBusy(true); setMessage("");
     try { await setFavorite(listingId, !saved); if (initialSaved !== undefined) router.refresh(); }
     catch (error) { setMessage(error instanceof Error ? error.message : "No se pudo guardar el favorito."); }

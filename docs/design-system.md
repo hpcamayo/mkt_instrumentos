@@ -1,6 +1,6 @@
 # Laria Design System
 
-The canonical reference for Laria UI work. Read it before changing visuals, layout, Tailwind classes, copy or shared components. It describes what the code implements after UX-1 (Foundations) and UX-2 (Shell and navigation). The decisions behind it (D1–D12, N1–N8, G1), the audits and the roadmap are in `docs/ux-redesign/`.
+The canonical reference for Laria UI work. Read it before changing visuals, layout, Tailwind classes, copy or shared components. It describes what the code implements after UX-1 (Foundations), UX-2 (Shell and navigation) and UX-3a (Discovery: the card, the catalog, its filters and the category landings). The decisions behind it (D1–D12, N1–N14, G1, Q1–Q20, F10–F12), the audits and the roadmap are in `docs/ux-redesign/`.
 
 Product behavior is defined by `docs/functional-spec.md`. Nothing here changes a product rule; visual work keeps listing lifecycle, moderation, verification, reviews, favorites, alerts, authorization and seller contact exactly as specified.
 
@@ -61,7 +61,7 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 | `t-meta` | 13/18 | 400, ink-2 | Metadata, hints, counters |
 | `t-ui` | 14/20 | 400/600 | Controls, table cells, dense copy |
 | `t-body` | 16/24 | 400 | Reading text |
-| `t-card-title` | 15/19 | 700, semi-condensed | Card titles, two lines max |
+| `t-card-title` | 15/19 | 600, semi-condensed | Card titles, two lines max (600 confirmed in UX-3, Q17) |
 | `t-card-price` | 18/22 | 750, semi-condensed, tabular | Card prices |
 | `t-section` | 20/26 | 700, semi-condensed | Section headings |
 | `t-page` | 28/32, 34/38 from 1024 px | 700, semi-condensed | Page titles |
@@ -73,14 +73,14 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 - Radius: `rounded-tag` 4 px, `rounded-control` 6 px, `rounded-panel` 8 px. Circles only for icons and avatars. No pill badges.
 - Elevation: cards are flat with a border. `shadow-level-1` for menus and popovers, `shadow-level-2` for dialogs and sheets. No other shadows, no hover lift.
 - Spacing on a 4 px base. Public pages use `PageContainer` (`max-w-page`, 1440 px, gutters 16 / 24 / 32).
-- Motion: 120 ms for color and opacity (`duration-120`), 200 ms for sheets; nothing moves under `prefers-reduced-motion`. Shell menus appear with `.menu-fade` (a 120 ms opacity change) and never slide.
+- Motion: 120 ms for color and opacity (`duration-120`), 200 ms for sheets (`.sheet` slides up); nothing moves under `prefers-reduced-motion`. Shell menus appear with `.menu-fade` (a 120 ms opacity change) and never slide.
 - Targets: 44 px for primary controls (`h-11` or `min-h-11`), 36 px for compact desktop controls, never below 24 px.
 
 ## Layout and page structure
 
 - One `<main id="contenido">` per page: `components/site-shell.tsx` renders it for public and account pages, `app/admin/layout.tsx` for Admin (so the skip link lands after the Admin sidebar). A 404 or error that renders outside the Admin layout (an unmatched `/admin/…` URL, a crash in the layout) gets its `<main>` from `FallbackMain`. Pages and layouts use `section`, `div` or `PageContainer as="section"`, never a second `main`.
 - The first focusable element is the "Saltar al contenido" skip link.
-- Page content (filters, grids, listing and store pages, account and Admin content) is redesigned per template in UX-3 to UX-7; until then keep existing layouts and only use the tokens and components here.
+- Page content is redesigned per template in UX-3 to UX-7: the catalog and the category landings in UX-3a ("Discovery" below); the home in UX-3b; listing and store pages, account and Admin content later. Until a template is redesigned, keep its layout and only use the tokens and components here.
 
 ## Shell and navigation (UX-2)
 
@@ -152,6 +152,48 @@ The strip column follows the 3 Oct amendment (N12): the strip with its category 
 - 404 (`app/not-found.tsx`): "No encontramos esta página" / "Puede que la dirección esté mal o que la publicación ya no esté disponible." 500 (`app/error.tsx`): "Algo salió mal" / "Vuelve a intentarlo en unos minutos."; the error goes to the console, never to the page. The copy lives once in `NOT_FOUND_COPY` / `SERVER_ERROR_COPY`.
 - Inside Admin, `app/admin/not-found.tsx` and `app/admin/error.tsx` render the same body within the Admin frame. An unmatched deeper `/admin/…` URL reaches that 404 through `app/admin/[section]/[...rest]/page.tsx`; the root fallback still covers errors above the Admin layout.
 
+## Discovery (UX-3a)
+
+The catalog (`/listados`) and the category landings (`/instrumentos/<categoría>`) share one page, `CatalogView` (`components/catalog-view.tsx`); the brief is `docs/ux-redesign/ux-3-discovery.md`. Facets, applied chips and catalog URLs come from one pure module, `lib/catalog-filters.ts`, so the sidebar, the sheet and the tests agree; the query is `lib/catalog.ts`.
+
+### The listing card
+
+- `components/listing-card.tsx` is the only listing card (grid variant; the home's showcase tile comes in UX-3b). An `<article>` with one link, the title, stretched over the whole card, and the favourite above it: two tab stops.
+- Photo: square, `object-fit: cover`, in an 8 px frame with a 1 px `subtle` border on `canvas`; responsive optimized image; the first grid row eager (`eager`), the rest lazy. Over it, 8 px in: the favourite (`FavoriteButton variant="overlay"`: a 36 px white circle in a 44 px hit area, top right) and "N fotos" when there is more than one photo (12/16 600, white on `frame` at 75%, bottom left). No arrows, dots, carousel or category tag.
+- Caption, 8 px under the frame: the title (`t-card-title`, two lines reserved so prices line up), the price (`t-card-price`), a spec line (`t-meta`, one line: the condition and up to two key attributes of the type, `getCardSpecLine`), a seller line (`t-meta`: the city, which truncates first, then "Particular", "Tienda" or "Tienda verificada" with the 14 px verified mark). No store link on the card.
+- Hover: the frame's border turns `line-strong` and the title gets the 2 px blue underline. No lift, no zoom.
+- Headings: `h2` in the catalog and the landings, `h3` under a section heading (`headingLevel`).
+- Grid (`lib/ui/listing-grid.ts`): two columns on phones, three from 768 px, four from 1280 px beside the filters; column gaps 12 / 20 px, row gaps 24 / 32 px. Store inventory and recommendations use the same card in their own grids until UX-4.
+
+### Catalog and landing page
+
+- White page in `PageContainer`. The breadcrumb from 768 px (none on phones, N11), then the title row: the `h1` (`t-page`: "Instrumentos", the category, or "Tiendas verificadas" for N7's entry; on a landing its heading) and the count ("262 resultados", `t-meta`, `id="resultados-estado"`). From 1024 px the alert entry and the sort menu sit at the right; on phones and tablets the count reads "6 resultados · Recientes" at the right, and two 44 px secondary buttons follow, "Filtrar" (with a `CountBadge` of applied filters) and "Ordenar".
+- A landing adds its introduction as one lead paragraph (16/24 `ink-2`, 68 characters a line) and its type chips (`ChipLink`). At the end: "Otras categorías" (`ChipLink`s) and "Compra con cuidado".
+- Applied chips under the title row: "Filtros activos:", one `AppliedChip` per value (several locations or conditions are one chip each), "Limpiar todo" (quiet; the plain catalog, or the landing). The category is a chip on `/listados`, never on its landing; sort is never a chip. Then a 1 px `line-deco` rule.
+- From 1024 px two columns: the 272 px filter column (not sticky), 32 px gap, the results.
+- Results: the grid, then "Mostrando 1–24 de 262" (`t-meta`, centred) and the pagination. When a filter or a category narrows the search, the last page ends with a tile on `canvas` spanning two columns: "¿No está lo que buscas?" and the alert entry.
+
+### Filters
+
+- Facets, in order: Categoría (on `/listados` without a category), Tipo (a category with several types: guitars), Condición, Precio, Ubicación, Vendedor, Marca, then the type's attributes (shown for a chosen type, or a category with a single type).
+- Desktop (1024 px and up, `ListingFilters`): live facets. Each option is a link to the catalog with that value set or cleared (`aria-current="true"` on the chosen one), so the column works without JavaScript and filtered URLs stay `noindex`. One-value facets are radio rows (a circle with an ink dot, "Todos"/"Todas" first); condition and location are checkbox rows (a square with an ink fill and a white check); short attribute values ("22\"", "5 piezas") are 36 px `ChipLink`s, pressed again to clear. Rows are 36 px; each facet has an `h2` (14/20 600); facets are separated by 1 px `line-deco` rules. Price and brand are small GET forms with "Aplicar" (secondary, 36 px) that keep every other filter in hidden fields.
+- Phones and tablets (`FilterSheetButton`): "Filtrar" opens the `Sheet` "Filtros". Tipo as `Chip` toggles; Condición as `Checkbox` rows; Precio as two fields with an "S/" prefix; then disclosure rows that show the current value ("Todas ⌄", "2 ubicaciones ⌄") and open in place: Categoría, Ubicación (`Checkbox`), Vendedor (`Radio`), Marca, each attribute. Footer: "Limpiar" (quiet, resets the sheet) and "Ver resultados" (primary, 52 px). The sheet is controlled and starts from the URL each time it opens; applying runs one navigation and focus goes to the results count; dismissing discards the changes and returns focus to "Filtrar".
+- Several values (F11): condition and location are "any of"; the parameter repeats (`?location=Lima&location=Arequipa`), and one value keeps today's URL. Saved alerts keep one value per filter, so on such a search every alert entry gives way to "Para crear una alerta, elige un solo valor en cada filtro."
+
+### Sort and pagination
+
+- Sort is never a form field. Desktop: `SortMenu`, a disclosure button "Ordenar: Más recientes ⌄" (secondary, 36 px) whose menu lists the three orders as links with a check on the chosen one (shell menu rules). Phones and tablets: "Ordenar" opens a `Sheet` with the same three links; a choice applies at once.
+- `Pagination`: "Mostrando a–b de N", then `nav` "Páginas de resultados": "Anterior", the numbers with ellipses (1 … 4 5 6 … 11) and "Siguiente". The current page is an ink square with white text and `aria-current="page"`. 40 px targets from 768 px; on phones 44 px numbers and icon-only arrows ("Página anterior", "Página siguiente"). Crawlable `?page=N` links that keep the filters; page 1 has no `page` parameter.
+
+### Navigation and states
+
+- No route-level `loading.tsx` (it made some catalog transitions never commit; Q1 A). The page's links, chips, pagination and forms navigate inside a transition (`CatalogNavigation`, `CatalogLink`): the results stay on screen with `aria-busy`, dim to 50% after 200 ms (`.catalog-results`), and a polite "Cargando resultados…" is announced; the filters stay usable. After the move, focus returns to the option just chosen (filter options keep their ids), the sort button or the results count. Catalog links are not prefetched.
+- Error: a danger notice "No pudimos cargar las publicaciones. Vuelve a intentarlo en unos minutos." with "Reintentar" (secondary, the same URL); filters and sort stay.
+- Empty catalog (nothing published, no filter): `EmptyState` "Aún no hay publicaciones" / "Las primeras publicaciones aparecerán aquí." / "Publicar un instrumento".
+- No results: `EmptyState` "No encontramos resultados" / "Prueba quitar un filtro o buscar otra marca." / "Limpiar filtros" and the alert entry; the chips stay above.
+- Empty landing: "Aún no hay publicaciones de <categoría>", the alert entry, "Ver todo el catálogo", "Publicar un instrumento"; `noindex`.
+- The alert entry (`CreateSearchAlert`): "Crear alerta" in the title row (secondary, 36 px), a chip-styled button among the chips on phones, the end tile and the no-results state; only when a filter or a category narrows the search. It opens a panel with what the alert saves, its frequency and "Crear alerta"; signed out it leads to sign-in and back. Success: "Alerta creada. Te avisaremos por correo solo sobre publicaciones nuevas que coincidan."
+
 ## Components (`components/ui/`)
 
 Use these instead of writing new markup for the same job.
@@ -159,12 +201,13 @@ Use these instead of writing new markup for the same job.
 - `Button` / `buttonClasses()`: variants `primary` (yellow, one per view), `secondary`, `quiet`, `danger`, `onDark`; sizes `sm` 36, `md` 44, `lg` 52; `loading` + `loadingLabel` keep the primary yellow; with `href` it renders a link. `IconButton` requires a `label`.
 - `Field` with `Input`, `Select`, `Textarea`, `FileInput`, `Checkbox`, `Radio`: every control has a visible label; `Field` wires `id`, `aria-describedby` (hint and error) and `aria-invalid`. `Textarea` with `maxLength` shows an "n / max" counter. Give each field a unique `id` (use `useId()` in repeated components).
 - `Tag` and `StatusTag`: status labels and tones come from `lib/ui/status.ts`, the single dictionary (domains: `listing`, `revision`, `store`, `claim` for Compras y ventas, `transaction` for the Admin sale records, `report`, `review`, `alert`). `StatusEntryTag` renders a status already resolved to an entry, such as `storeStatusEntry()` ("Tienda verificada" for an active verified store). Admin shows a report's target and the audit history through `adminTargetStatusLabel()`. Never write a second label map. `CountBadge` for counts.
-- `Chip`, `ChipLink`, `AppliedChip`: filters and period selectors; selected state has a check and `aria-pressed` or `aria-current`. `AppliedChip` removes a filter; like the catalog's other links it is a client link (`CatalogLink`) that reports to the page's pending state.
+- `Chip`, `ChipLink`, `AppliedChip`: filters and period selectors; selected state has a check and `aria-pressed` (`Chip`, a toggle button: the filter sheet's type and short values) or `aria-current` (`ChipLink`, a link: short filter values, types, other categories, periods). `AppliedChip` removes a filter: it shows the value ("Lima") and is named for what pressing does ("Quitar filtro: Ubicación: Lima"). `ChipLink` and `AppliedChip` are `CatalogLink`s: inside the catalog they report to its pending state, elsewhere they are plain client links.
+- `Sheet` (`components/ui/sheet.tsx`): a bottom sheet over a native modal `<dialog>`, rendered only while open. White, 8 px top corners, `shadow-level-2`, up to 88% of the viewport, over frame black at 55% (`.sheet` in `app/globals.css`); a header with the title (`t-section`) and a 44 px close button, a scrolling body and an optional footer above a 1 px rule. It slides up in 200 ms (in place under reduced motion). The page behind is inert and does not scroll; Tab wraps inside; Esc, the close button and a press on the backdrop call `onDismiss`, and the caller returns focus to the button that opened it.
 - `Notice` (`info`, `success`, `warning`, `danger`, icon + text): danger is an alert, others a status; use `role="note"` for static explanations. Its body underlines every link, so a notice that holds buttons, or that receives focus through a ref, composes `noticeClassName()` + `NoticeIcon` instead (as `PageNotice` does). `PageNotice` moves focus to page-level results; do not use that movement for field errors.
 - `PageHeader`: the page's only `h1`, with an optional eyebrow, a one-line summary (`meta`, 13 px) and the page's actions; a longer 16 px introduction stays a paragraph after it. Light surfaces only: headers on the black frame keep their own markup.
 - `EmptyState` (any list or section with nothing to show; `headingLevel={3}` under a section heading), `Price` (S/ with tabular figures; `card`, `detail`, `inline`), `VerifiedMark` / `VerifiedIcon`, `Skeleton`, `IconButton`, `WhatsAppGlyph`.
 - Shell components (UX-2): `BrandLogo`, `Breadcrumbs`, `ErrorPage`, `AccountSectionLinks`, `CategoryPanel`, `CategoryAccordion`, `useDisclosure`, `useDisclosureGroup`; see "Shell and navigation". Catalog navigation (UX-3): `CatalogNavigation`, `CatalogLink`, `CatalogResults` (`components/catalog-navigation.tsx`).
-- `tests/ux-primitives.test.cjs` fails when a primitive loses its last consumer or a hand-rolled copy (error box, pulse placeholder, price class, count pill) comes back. `Chip` (toggle) and `Radio` have no consumer yet: the filters are redesigned in UX-3, and the only radios (Admin legacy linking) keep markup that `tests/sprint-8.test.cjs` pins. `Skeleton` lost its only consumer with the catalog's `loading.tsx` (UX-3 Q1 A); it is kept for the listing page's streamed sections (UX-4).
+- `tests/ux-primitives.test.cjs` fails when a primitive loses its last consumer or a hand-rolled copy (error box, pulse placeholder, price class, count pill) comes back. `Chip` and `Radio` found their first consumer in the filter sheet (UX-3). `Skeleton` has none since the catalog's `loading.tsx` went (UX-3 Q1 A); it is kept for the listing page's streamed sections (UX-4), the one exemption.
 
 WhatsApp contact: every contact button is the primary yellow button with the WhatsApp glyph and the label "Contactar por WhatsApp". No WhatsApp green.
 

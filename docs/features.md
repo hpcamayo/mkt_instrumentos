@@ -77,31 +77,22 @@ Visual refresh:
 
 ## Listings Page
 
-Route: `/listados`
-
-This is the most important buyer page. It should feel useful and serious for musicians before Laria adds transactional features.
+Route: `/listados` ("Instrumentos"). The category landings (`/instrumentos/<categoría>`) render the same page with their category fixed (`components/catalog-view.tsx`; UX-3, `docs/ux-redesign/ux-3-discovery.md`).
 
 Features:
-- Public browse/search for approved listings.
-- Result count, for example `128 resultados`.
-- Active filter chips.
-- `Limpiar filtros` links.
-- Desktop sticky filter sidebar around 260px.
-- Mobile `Filtrar` and `Ordenar` controls.
-- Empty state: `No encontramos resultados con esos filtros`.
-- Route-level skeleton loaders.
-- URL query params as source of truth, so filtered pages are shareable.
+- Public browse/search for approved listings; URL query params are the source of truth, so filtered pages are shareable.
+- Title row: the page title ("Instrumentos", the category, or "Tiendas verificadas") and the result count, for example `128 resultados`; from 1024 px the alert entry and "Ordenar: Más recientes".
+- Filters: on desktop a 272 px column of live facets (each option is a link; price and brand are small forms); below 1024 px "Filtrar" and "Ordenar" open bottom sheets, and the filter sheet applies once with "Ver resultados".
+- Condition and location take several values ("any of", repeated parameters; owner decision F11); the other filters take one.
+- Applied filter chips (one per value), "Limpiar todo".
+- Numbered pagination with "Mostrando 1–24 de N"; 24 per page, filters kept.
+- States: error with "Reintentar", empty catalog, `No encontramos resultados` with "Limpiar filtros" and the alert entry.
+- No route-level loading skeleton: while a navigation is pending the results stay on screen, dimmed after 200 ms.
+- Search alerts are offered when a filter or category narrows the search and every filter has one value.
 
 Layout:
-- Max width around `1600px`, centralized through `PageContainer`.
-- Desktop: `260px` sidebar + listing grid.
-- Grid: 1 column on narrow screens, 2 on wider mobile, 3 on medium, 4 on large desktop, 5 on very wide screens.
-
-Visual refresh:
-- Light page canvas with white filter/card surfaces.
-- Blue active filter, focus, and selected states.
-- Product cards follow the image/title/metadata/price hierarchy from `docs/design-system.md`.
-- The refresh did not change filter logic, route params, query params, or listing fetching.
+- `PageContainer` (1440 px). Desktop: the 272 px filter column, a 32 px gap, then the grid.
+- Grid: 2 columns on phones, 3 from 768 px, 4 from 1280 px.
 
 ## Listing Cards
 

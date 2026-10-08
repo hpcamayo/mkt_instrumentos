@@ -122,6 +122,39 @@ figcaption {
   transition-delay: 200ms;
 }
 
+/* Bottom sheets (components/ui/sheet.tsx): a modal <dialog> at the bottom of the screen, up to 88% of the viewport,
+   8 px top corners, shadow-level-2, over frame black at 55%. It slides up in 200 ms (in place under reduced motion). */
+.sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 88vh;
+  max-height: 88dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px 8px 0 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 16px 40px rgb(5 6 8 / 0.22), 0 2px 6px rgb(5 6 8 / 0.1);
+  animation: sheet-up 200ms ease-out;
+}
+.sheet::backdrop {
+  background: rgb(5 6 8 / 0.55);
+}
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  max-height: 88dvh;
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
 /* Sideways-scrolling rows (the category strip) scroll without a visible bar. */
 .scrollbar-none {
   scrollbar-width: none;

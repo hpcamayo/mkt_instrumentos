@@ -31,11 +31,21 @@ export type SavedSearchAlert = {
   created_at: string;
 };
 
-export function listingFiltersToSearchAlert(filters: ListingFilters): SearchAlertFilters {
+// What the alert entry says instead on a search it cannot save (owner, Q19).
+export const ONE_VALUE_PER_FILTER = "Para crear una alerta, elige un solo valor en cada filtro.";
+
+// Saved alerts hold one value per filter, validated and matched in the database (Sprint 7). A search with several
+// conditions or locations (F11) is not offered as an alert (owner, Q19): it returns null.
+export function canSaveSearchAlert(filters: Pick<ListingFilters, "cities" | "conditions">) {
+  return filters.cities.length <= 1 && filters.conditions.length <= 1;
+}
+
+export function listingFiltersToSearchAlert(filters: ListingFilters): SearchAlertFilters | null {
+  if (!canSaveSearchAlert(filters)) return null;
   const normalized: SearchAlertFilters = {};
   if (filters.category) normalized.category = filters.category;
-  if (filters.city) normalized.location = filters.city;
-  if (filters.condition) normalized.condition = filters.condition;
+  if (filters.cities[0]) normalized.location = filters.cities[0];
+  if (filters.conditions[0]) normalized.condition = filters.conditions[0];
   if (filters.brand?.trim()) normalized.brand = filters.brand.trim();
   if (filters.sellerType) normalized.seller_type = filters.sellerType;
   if (filters.instrumentType) normalized.instrument_type = filters.instrumentType;

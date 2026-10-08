@@ -52,16 +52,21 @@ export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: 
     query = query.eq("category", filters.category);
   }
 
-  if (filters.city) {
-    query = query.eq("city", filters.city);
+  // F11: one value is today's eq; several are "any of" (in).
+  if (filters.cities.length === 1) {
+    query = query.eq("city", filters.cities[0]);
+  } else if (filters.cities.length > 1) {
+    query = query.in("city", filters.cities);
   }
 
   if (filters.brand) {
     query = query.ilike("brand", `%${filters.brand}%`);
   }
 
-  if (filters.condition) {
-    query = query.eq("condition", filters.condition);
+  if (filters.conditions.length === 1) {
+    query = query.eq("condition", filters.conditions[0]);
+  } else if (filters.conditions.length > 1) {
+    query = query.in("condition", filters.conditions);
   }
 
   if (filters.sellerType === "verified_store") {

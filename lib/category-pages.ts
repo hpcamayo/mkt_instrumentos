@@ -1,3 +1,4 @@
+import type { CatalogScope } from "@/lib/catalog-filters";
 import { instrumentTypesByCategory } from "@/lib/listing-submission";
 import { categoryOptions } from "@/lib/listings";
 
@@ -82,6 +83,12 @@ export function getCategoryLandingBySlug(slug: string) {
 export function getCategoryLandingByValue(category: string | undefined) {
   if (!category) return null;
   return categoryLandingPages.find((page) => page.category === category) ?? null;
+}
+
+// The catalog filters' scope on a landing: its category fixed, its own path for "nothing else chosen".
+export function landingScope(category: string): CatalogScope {
+  const landing = getCategoryLandingByValue(category);
+  return landing ? { landing: { category, path: `/instrumentos/${landing.slug}` } } : {};
 }
 
 export function categoryLandingPath(category: string) {

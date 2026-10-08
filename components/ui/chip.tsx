@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Check, X } from "lucide-react";
 import { CatalogLink } from "@/components/catalog-navigation";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
@@ -31,32 +30,37 @@ export function Chip({
   );
 }
 
+// A chip that navigates (a period, a type, a short filter value). Inside the catalog it reports to the page's pending
+// state (CatalogLink); elsewhere it is a plain client link.
 export function ChipLink({
   href,
   selected = false,
   current = "true",
+  id,
   className,
   children,
 }: {
   href: string;
   selected?: boolean;
   current?: "page" | "true";
+  id?: string;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <Link href={href} aria-current={selected ? current : undefined} className={chipClasses(selected ? "selected" : "default", className)}>
+    <CatalogLink id={id} href={href} aria-current={selected ? current : undefined} className={chipClasses(selected ? "selected" : "default", className)}>
       {selected ? <Check aria-hidden /> : null}
       <span className="truncate">{children}</span>
-    </Link>
+    </CatalogLink>
   );
 }
 
-// An applied filter: pressing it removes the filter. A client link that reports to the catalog's pending state.
-export function AppliedChip({ href, label, className }: { href: string; label: string; className?: string }) {
+// An applied filter: pressing it removes the filter. It shows the value ("Lima"); its name says what pressing does
+// ("Quitar filtro: Ubicación: Lima"). A client link that reports to the catalog's pending state.
+export function AppliedChip({ href, text, label, className }: { href: string; text: string; label: string; className?: string }) {
   return (
     <CatalogLink href={href} aria-label={`Quitar filtro: ${label}`} className={chipClasses("applied", className)}>
-      <span className="truncate">{label}</span>
+      <span className="truncate">{text}</span>
       <X aria-hidden />
     </CatalogLink>
   );

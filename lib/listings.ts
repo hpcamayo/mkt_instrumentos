@@ -46,8 +46,10 @@ export type ListingPhotoData = {
 
 export type ListingFilters = {
   category?: string;
-  city?: string;
-  condition?: string;
+  // F11 (owner, 8 Oct): condition and location take several values, matched as "any of"; none means all. One value
+  // keeps today's URL (?condition=Nuevo); more repeat the parameter (?location=Lima&location=Arequipa).
+  cities: string[];
+  conditions: string[];
   brand?: string;
   sellerType?: "individual" | "store" | "verified_store";
   instrumentType?: string;
@@ -174,6 +176,8 @@ export function buildStoreWhatsAppUrl(store: {
   return `https://wa.me/${phone}?text=${message}`;
 }
 
+const MAX_FILTER_VALUES = 20;
+
 export function parseListingFilters(
   searchParams: Record<string, string | string[] | undefined>,
 ): ListingFilters {
@@ -194,16 +198,23 @@ export function parseListingFilters(
       : undefined;
   };
 
+  // Repeated parameters, in URL order, without blanks or repeats (capped: they become an `in` list).
+  const readList = (key: string) => {
+    const value = searchParams[key];
+    const items = (Array.isArray(value) ? value : [value]).map((item) => item?.trim()).filter((item): item is string => Boolean(item));
+    return [...new Set(items)].slice(0, MAX_FILTER_VALUES);
+  };
+
   const sellerType = readString("seller_type");
   const sort = readString("sort");
-  const location = readString("location");
+  const locations = readList("location");
   const instrumentType = readString("instrument_type");
   const advanced = parseAdvancedFilters(searchParams, instrumentType);
 
   return {
     category: readString("category") || undefined,
-    city: location || readString("city") || undefined,
-    condition: readString("condition") || undefined,
+    cities: locations.length ? locations : readList("city"),
+    conditions: readList("condition"),
     brand: readString("brand") || undefined,
     sellerType:
       sellerType === "individual" ||

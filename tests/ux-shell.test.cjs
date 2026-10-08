@@ -127,9 +127,9 @@ test("the catalog has no route-level loading boundary; its own links navigate in
   const { Pagination } = load("components/pagination.tsx", { "next/link": clientLinkMock });
   const pages = renderToStaticMarkup(React.createElement(Pagination, { page: 2, total: 60, path: "/listados", params: { condition: "Nuevo" } }));
   assert.equal((pages.match(/<a [^>]*data-client-link="" data-on-navigate="">/g) ?? []).length, (pages.match(/<a /g) ?? []).length);
-  for (const file of ["app/listados/page.tsx", "components/category-landing.tsx"]) {
-    assert.match(source(file), /<CatalogNavigation>[\s\S]*<CatalogResults className=/, file);
-  }
+  // The catalog and the landings share one view, wrapped in the navigation provider with the results inside it.
+  assert.match(source("components/catalog-view.tsx"), /<CatalogNavigation>[\s\S]*<CatalogResults className=/);
+  for (const file of ["app/listados/page.tsx", "components/category-landing.tsx"]) assert.match(source(file), /<CatalogView\b/, file);
 });
 
 test("strip categories are menu buttons; Instrumentos and Tiendas verificadas stay client links into the catalog (N12 hybrid, UX-3 Q1)", () => {
@@ -271,10 +271,13 @@ test("breadcrumbs: full trail from 768 px with the current page unlinked; on pho
   const browse = renderToStaticMarkup(React.createElement(Breadcrumbs, { items: [{ label: "Inicio", href: "/" }, { label: "Instrumentos", href: "/listados" }, { label: "Guitarras" }], className: "mb-3" }));
   assert.match(browse, /<nav aria-label="Ruta de navegación" class="t-meta hidden md:block mb-3">/);
   assert.doesNotMatch(browse, /md:hidden|Volver a/);
+  // The catalog and the landings pass their trail to the shared view (UX-3), which renders it without a phone back link.
   for (const file of ["app/listados/page.tsx", "components/category-landing.tsx"]) {
-    assert.match(source(file), /<Breadcrumbs items=\{\[\{ label: "Inicio", href: "\/" \}/, file);
+    assert.match(source(file), /breadcrumbs=\{\[\{ label: "Inicio", href: "\/" \}/, file);
     assert.doesNotMatch(source(file), /phoneBackLink/, file);
   }
+  assert.match(source("components/catalog-view.tsx"), /<Breadcrumbs items=\{breadcrumbs\} className="mb-3" \/>/);
+  assert.doesNotMatch(source("components/catalog-view.tsx"), /phoneBackLink/);
   // Structured data keeps its shape; only the catalog's name changes (G1).
   assert.match(source("components/category-landing.tsx"), /position: 2, name: "Instrumentos", item: absoluteUrl\("\/listados"\)/);
 });

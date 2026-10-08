@@ -35,11 +35,16 @@ const searchAlerts = load("lib/search-alerts.ts", {
 });
 
 test("saved searches serialize canonical supported state and render readable Spanish summaries", () => {
-  const filters = searchAlerts.listingFiltersToSearchAlert({
-    category: "guitars", city: "Lima", condition: "Usado - buen estado", brand: " Fender ", sellerType: "individual",
+  const search = {
+    category: "guitars", cities: ["Lima"], conditions: ["Usado - buen estado"], brand: " Fender ", sellerType: "individual",
     instrumentType: "electric_guitar", minPrice: 1000, maxPrice: 3000,
     advanced: { body_type: "solid_body", pickups: ["single_coil"] }, sort: "price_asc",
-  });
+  };
+  const filters = searchAlerts.listingFiltersToSearchAlert(search);
+  // Saved alerts keep one value per filter (Q19): a search with several locations or conditions (F11) has no alert.
+  assert.equal(searchAlerts.listingFiltersToSearchAlert({ ...search, cities: ["Lima", "Arequipa"] }), null);
+  assert.equal(searchAlerts.listingFiltersToSearchAlert({ ...search, conditions: ["Nuevo", "Usado - buen estado"] }), null);
+  assert.equal(searchAlerts.canSaveSearchAlert({ cities: ["Lima"], conditions: [] }), true);
   assert.deepEqual(filters, {
     category: "guitars", location: "Lima", condition: "Usado - buen estado", brand: "Fender", seller_type: "individual",
     instrument_type: "electric_guitar", min_price: 1000, max_price: 3000,

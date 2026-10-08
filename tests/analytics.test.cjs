@@ -40,7 +40,7 @@ test("client event transport has exact entity/type keys and no forged identity/a
 });
 
 test("search metadata uses actual catalog state, excludes pagination and bounds freeform values", () => {
-  const filters = { category: "guitars", brand: "Y".repeat(300), city: "Lima", instrumentType: "electric_guitar", minPrice: 10, maxPrice: 500, sellerType: "store", sort: "newest", advanced: { body_type: "solid_body", handedness: "X".repeat(200), pickups: Array.from({ length: 30 }, () => "A".repeat(200)), enabled: false, pieces: 5 } };
+  const filters = { category: "guitars", brand: "Y".repeat(300), cities: ["Lima"], conditions: [], instrumentType: "electric_guitar", minPrice: 10, maxPrice: 500, sellerType: "store", sort: "newest", advanced: { body_type: "solid_body", handedness: "X".repeat(200), pickups: Array.from({ length: 30 }, () => "A".repeat(200)), enabled: false, pieces: 5 } };
   const metadata = payload.searchEventMetadata(filters, 2);
   assert.equal(metadata.query.length, 200);
   assert.equal(metadata.filters.brand.length, 200);
@@ -53,8 +53,17 @@ test("search metadata uses actual catalog state, excludes pagination and bounds 
   assert.equal(metadata.zero_results, false);
   assert.ok(!Object.hasOwn(metadata.filters, "page"));
   assert.ok(!Object.hasOwn(metadata.filters, "q"));
-  assert.equal(payload.searchEventMetadata({ sort: "newest", advanced: {} }, 0).zero_results, true);
+  assert.equal(payload.searchEventMetadata({ sort: "newest", cities: [], conditions: [], advanced: {} }, 0).zero_results, true);
   assert.equal(payload.searchEventMetadata(filters, 10000001).result_count, 10000000);
+  // One location or condition keeps today's string; several (F11) are a bounded list, under the same keys.
+  assert.equal(metadata.filters.city, "Lima");
+  assert.ok(!Object.hasOwn(metadata.filters, "condition"));
+  const several = payload.searchEventMetadata({ ...filters, cities: ["Lima", "Arequipa"], conditions: ["Nuevo", "Usado - buen estado"] }, 3).filters;
+  assert.deepEqual(several.city, ["Lima", "Arequipa"]);
+  assert.deepEqual(several.condition, ["Nuevo", "Usado - buen estado"]);
+  const many = payload.searchEventMetadata({ ...filters, cities: Array.from({ length: 30 }, (_, index) => `${index}${"C".repeat(200)}`) }, 3).filters.city;
+  assert.equal(many.length, 20);
+  assert.equal(many[0].length, 100);
 });
 
 function serverWithJar(jar) {
@@ -127,7 +136,7 @@ test("search receipts authenticate canonical counts/state and reject tampering, 
   Date.now = () => fixed;
   try {
     const server = serverWithJar({});
-    const filters = { brand: "Yamaha", city: "Lima", sort: "newest", advanced: {} };
+    const filters = { brand: "Yamaha", cities: ["Lima"], conditions: [], sort: "newest", advanced: {} };
     const receipt = server.createSearchReceipt(filters, 2);
     assert.ok(receipt);
     assert.deepEqual(server.readSearchReceipt(receipt), payload.searchEventMetadata(filters, 2));
