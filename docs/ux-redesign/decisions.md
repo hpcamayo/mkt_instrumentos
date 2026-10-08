@@ -3,6 +3,17 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## Raised during the UX-3a build (8 Oct)
+
+Choices the brief did not settle, built as below and asked on the 3a review page (`ux-3a-acceptance.md` § Deviations and choices). Each is pending until the owner marks it.
+
+| ID | Question | As built | Status |
+| --- | --- | --- | --- |
+| P1 | The one card reaches the store inventory and the listing recommendations now (and the shared pagination the store page) | They show the new card in their existing grids until UX-4; the alternative is the catalog's four-column grid on the store page now | pending (owner, review page I01) |
+| P2 | Q19's "one value per filter" and multiselect attributes (pickups, microphone use), which had several values before 3a and which saved alerts accept | The alert is hidden only for several conditions or locations (F11) | pending (owner, review page I02) |
+| P3 | `Skeleton` without a consumer; `/api/listings/[id]/photos` without a caller | Both kept (Skeleton for UX-4's streamed sections; an API removal is not a visual task) | pending (owner, review page I03) |
+| P4 | Small calls: "Todos/Todas" radio rows, chips that clear when pressed again, a reversed price range read as meant, the verified mark after the words on the card, no in-page pending state for shell links, no prefetch of catalog links | As listed | pending (owner, review page I04) |
+
 ## Decided — UX-3 brief (owner, 2026-10-08)
 
 The UX-3 brief `ux-3-discovery.md` was **approved by the owner on 8 Oct**.

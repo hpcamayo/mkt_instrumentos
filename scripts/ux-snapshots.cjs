@@ -16,6 +16,8 @@
 // Accounts: .ux-accounts.local.json (gitignored) or LARIA_UX_ACCOUNTS=<path>, shaped as
 //   { "particular": { "email": "...", "password": "..." }, "store": { ... }, "admin": { ... } }
 // Browser: agent-browser on PATH, or LARIA_AGENT_BROWSER_BIN. Output: .ux-snapshots/<label>/<width>/<group>-<route>.png
+// A route may carry an action run before its capture (UX-3: the filter sheet or the sort menu open); the action
+// returns false where it does not apply (the sheet above 1023 px, the menu below 1024 px) and the frame is skipped.
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -62,12 +64,23 @@ async function discover() {
   return { listing, store };
 }
 
+// UX-3 frames. The buttons are found by their text, so the same actions work on builds before and after UX-3.
+const OPEN_FILTERS = `(() => { const b = [...document.querySelectorAll('button')].find((e) => e.textContent.trim().startsWith('Filtrar') && e.getClientRects().length); if (!b) return false; b.click(); return true; })()`;
+const OPEN_SORT = `(() => { const b = document.getElementById('orden-boton'); if (!b || !b.getClientRects().length) return false; b.click(); return true; })()`;
+const FILTERED = "/listados?category=guitars&condition=Nuevo&condition=Usado+-+buen+estado&location=Lima&location=Arequipa";
+
 function routeList({ listing, store }) {
   return {
     public: [
       ["inicio", "/"],
       ["catalogo", "/listados"],
+      ["catalogo-filtrado", FILTERED],
+      ["catalogo-verificadas", "/listados?seller_type=verified_store"],
+      ["catalogo-sin-resultados", "/listados?brand=zzzz"],
+      ["catalogo-filtros-abierto", "/listados?category=guitars", OPEN_FILTERS],
+      ["catalogo-orden-abierto", "/listados?category=guitars", OPEN_SORT],
       ["categoria", "/instrumentos/guitarras"],
+      ["categoria-baterias", "/instrumentos/baterias"],
       ...(listing ? [["publicacion", listing]] : []),
       ...(store ? [["tienda", store]] : []),
       ["login", "/login"],
@@ -138,11 +151,15 @@ function signIn(session, account) {
       for (const width of widths) {
         fs.mkdirSync(path.join(out, String(width)), { recursive: true });
         run(session, "set", "viewport", String(width), "900");
-        for (const [name, url] of list) {
+        for (const [name, url, action] of list) {
           const file = path.join(out, String(width), `${group}-${name}.png`);
           run(session, "open", `${base}${url}`);
           run(session, "wait", "--load", "networkidle");
           run(session, "wait", "500");
+          if (action) {
+            if (!run(session, "eval", action).result) continue;
+            run(session, "wait", "600");
+          }
           run(session, "screenshot", "--full", file);
           done.push(path.relative(process.cwd(), file));
         }

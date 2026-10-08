@@ -12,6 +12,10 @@
 // Category menus (N12 hybrid) at 390 / 768 / 1440: a category opens its panel ("Ver todos" and the canonical types), axe with
 // it open, Tab into the panel, Esc back to the button, one panel at a time, outside press, both destination kinds,
 // "Instrumentos" from a filtered catalog; on account pages, and next to the account menu; Admin's "Explorar categorías".
+// UX-3 discovery (docs/ux-redesign/ux-3-discovery.md): the filter sheet at 390 / 768 (a labelled modal dialog, axe with
+// it open, Tab stays inside, the page does not scroll, Esc and the close button return focus to "Filtrar", applying
+// moves focus to the results count), the sort menu at 1280 / 1440 and the sort sheet at 390, the alert panel, two tab
+// stops per card, two columns without overflow at 390, closed sheets and menus invisible.
 //
 // Options:
 //   --base <url>          App origin (default http://localhost:3000)
@@ -150,12 +154,166 @@ async function categoryMenuClickChecks(session, report, log, width) {
   clickButton(session, 'button[aria-controls="categoria-guitars"]');
   run(session, "click", '#categoria-guitars a[href="/listados?category=guitars&instrument_type=electric_guitar"]');
   run(session, "wait", "--load", "networkidle"); run(session, "wait", "500");
-  s = { ...state("guitars"), type: evaluate(session, "document.querySelector('select[name=instrument_type]')?.value ?? null") };
+  // The filters show the chosen type: the old form's select (before UX-3) or the type option marked current.
+  s = { ...state("guitars"), type: evaluate(session, "document.querySelector('select[name=instrument_type]')?.value ?? (document.getElementById('filtro-instrument_type-electric_guitar')?.getAttribute('aria-current') === 'true' ? 'electric_guitar' : null)") };
   check(report, log, "type-destination", width, s, s.url === "/listados?category=guitars&instrument_type=electric_guitar" && s.type === "electric_guitar" && !s.panel);
   run(session, "click", 'nav[aria-label="Categorías"] li:first-child a');
   run(session, "wait", "--load", "networkidle"); run(session, "wait", "500");
   s = state("guitars");
   check(report, log, "instrumentos-from-filtered-catalog", width, s, s.url === "/listados");
+}
+
+// UX-3 checks, one record each.
+function discoveryCheck(report, log, name, width, observed, passed) {
+  report.discovery.push({ name, width, passed, observed });
+  log(`discovery ${name}@${width}: ${passed ? "pass" : "FAIL"} ${JSON.stringify(observed)}`);
+}
+const VISIBLE_JS = "const vis = (el) => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';";
+const SHEET_STATE = `(() => { ${VISIBLE_JS}
+  const dialog = document.querySelector('dialog.sheet');
+  const title = dialog && document.getElementById(dialog.getAttribute('aria-labelledby'));
+  const active = document.activeElement;
+  return JSON.stringify({ open: !!dialog?.open, visible: vis(dialog), modal: dialog?.matches(':modal') ?? false, ariaModal: dialog?.getAttribute('aria-modal') ?? null,
+    label: title?.textContent ?? null, focusInside: !!dialog && dialog.contains(active), active: active?.id || active?.getAttribute('aria-label') || active?.textContent?.trim().slice(0, 30) || active?.tagName,
+    scrollLocked: getComputedStyle(document.documentElement).overflow === 'hidden', openDialogs: [...document.querySelectorAll('dialog')].filter(vis).length,
+    url: location.pathname + location.search, overflow: document.documentElement.scrollWidth > innerWidth });
+})()`;
+const FILTRAR = `[...document.querySelectorAll('button[aria-haspopup="dialog"]')].find((b) => b.textContent.trim().startsWith('Filtrar'))`;
+
+async function discoveryChecks(report, log) {
+  // A fresh browser session per check (agent-browser blanks a tab a while after a run of key presses).
+  const fresh = async (name, width, fn) => {
+    const session = `ux-audit-ux3-${name}-${width}-${process.pid}`;
+    try {
+      run(session, "set", "viewport", String(width), "900");
+      await fn(session);
+    } catch (error) {
+      discoveryCheck(report, log, name, width, { error: error.message }, false);
+    } finally {
+      spawnSync(browser, ["--session", session, "close"], { encoding: "utf8" });
+    }
+  };
+  const axeNow = async (session) => { evaluate(session, `${axeSource};'ok'`); return JSON.parse(await evaluate(session, AXE)); };
+  for (const width of [390, 768]) {
+    // Opening, axe, Tab inside, scroll lock.
+    await fresh("sheet", width, async (session) => {
+      load(session, "/listados?category=guitars");
+      const closedBefore = JSON.parse(evaluate(session, SHEET_STATE));
+      evaluate(session, `${FILTRAR}.click()`);
+      run(session, "wait", "500");
+      const opened = JSON.parse(evaluate(session, SHEET_STATE));
+      const violations = await axeNow(session);
+      discoveryCheck(report, log, "filter-sheet-opens", width, { closedBefore: closedBefore.openDialogs, ...opened, axe: violations },
+        closedBefore.openDialogs === 0 && opened.open && opened.modal && opened.ariaModal === "true" && opened.label === "Filtros" && opened.focusInside && opened.scrollLocked && !opened.overflow && violations.length === 0);
+      let outside = 0;
+      for (let i = 0; i < 40; i += 1) {
+        run(session, "press", "Tab");
+        if (!JSON.parse(evaluate(session, SHEET_STATE)).focusInside) outside += 1;
+      }
+      discoveryCheck(report, log, "filter-sheet-focus-trap", width, { presses: 40, outside }, outside === 0);
+    });
+    // Esc discards and returns focus to Filtrar (own session: Esc runs blank agent-browser's tab later).
+    await fresh("sheet-esc", width, async (session) => {
+      load(session, "/listados?category=guitars");
+      evaluate(session, `${FILTRAR}.focus(); ${FILTRAR}.click()`);
+      run(session, "wait", "500");
+      evaluate(session, `[...document.querySelectorAll('dialog.sheet label')].find((l) => l.textContent.trim() === 'Nuevo')?.click()`);
+      run(session, "press", "Escape");
+      run(session, "wait", "400");
+      const after = JSON.parse(evaluate(session, SHEET_STATE));
+      const focusFiltrar = evaluate(session, `document.activeElement === ${FILTRAR}`);
+      discoveryCheck(report, log, "filter-sheet-escape", width, { ...after, focusFiltrar }, !after.open && after.openDialogs === 0 && focusFiltrar && after.url === "/listados?category=guitars" && !after.scrollLocked);
+    });
+    // The close button discards too; then applying runs one navigation and focuses the results count.
+    await fresh("sheet-apply", width, async (session) => {
+      load(session, "/listados?category=guitars");
+      evaluate(session, `${FILTRAR}.click()`);
+      run(session, "wait", "500");
+      run(session, "click", 'dialog.sheet button[aria-label="Cerrar filtros"]');
+      run(session, "wait", "400");
+      const closed = JSON.parse(evaluate(session, SHEET_STATE));
+      const focusFiltrar = evaluate(session, `document.activeElement === ${FILTRAR}`);
+      discoveryCheck(report, log, "filter-sheet-close-button", width, { ...closed, focusFiltrar }, !closed.open && closed.openDialogs === 0 && focusFiltrar);
+      evaluate(session, `${FILTRAR}.click()`);
+      run(session, "wait", "500");
+      for (const text of ["Nuevo", "Usado · buen estado"]) evaluate(session, `[...document.querySelectorAll('dialog.sheet label')].find((l) => l.textContent.trim() === ${JSON.stringify(text)})?.click()`);
+      evaluate(session, `[...document.querySelectorAll('dialog.sheet button')].find((b) => b.textContent.trim() === 'Ver resultados').click()`);
+      run(session, "wait", "--load", "networkidle"); run(session, "wait", "800");
+      const applied = JSON.parse(evaluate(session, `JSON.stringify({ url: location.pathname + location.search, focus: document.activeElement?.id ?? null, chips: [...document.querySelectorAll('a[aria-label^="Quitar filtro"]')].map((a) => a.getAttribute('aria-label')), dialogs: document.querySelectorAll('dialog').length, alertLine: document.body.innerText.includes('Para crear una alerta, elige un solo valor en cada filtro.') })`));
+      discoveryCheck(report, log, "filter-sheet-apply-f11", width, applied, applied.url === "/listados?category=guitars&condition=Nuevo&condition=Usado+-+buen+estado" && applied.focus === "resultados-estado" && applied.dialogs === 0 && applied.chips.includes("Quitar filtro: Condición: Nuevo") && applied.chips.includes("Quitar filtro: Condición: Usado · buen estado") && applied.alertLine);
+    });
+    // Ordenar sheet: axe with it open, a choice applies at once.
+    await fresh("sort-sheet", width, async (session) => {
+      load(session, "/listados");
+      run(session, "click", "#orden-boton-movil");
+      run(session, "wait", "500");
+      const opened = JSON.parse(evaluate(session, SHEET_STATE));
+      const violations = await axeNow(session);
+      evaluate(session, `[...document.querySelectorAll('dialog.sheet a')].find((a) => a.textContent.trim() === 'Menor precio').click()`);
+      run(session, "wait", "--load", "networkidle"); run(session, "wait", "800");
+      const after = JSON.parse(evaluate(session, SHEET_STATE));
+      discoveryCheck(report, log, "sort-sheet", width, { opened, axe: violations, after }, opened.open && opened.label === "Ordenar" && violations.length === 0 && after.url === "/listados?sort=price_asc" && after.openDialogs === 0);
+    });
+  }
+  for (const width of [1280, 1440]) {
+    await fresh("sort-menu", width, async (session) => {
+      load(session, "/listados?category=guitars");
+      const closed = evaluate(session, "document.getElementById('menu-orden') === null");
+      run(session, "click", "#orden-boton");
+      run(session, "wait", "300");
+      const open = JSON.parse(evaluate(session, `(() => { ${VISIBLE_JS} return JSON.stringify({ visible: vis(document.getElementById('menu-orden')), expanded: document.getElementById('orden-boton').getAttribute('aria-expanded'), options: [...document.querySelectorAll('#menu-orden a')].map((a) => a.textContent.trim()) }); })()`));
+      const violations = await axeNow(session);
+      evaluate(session, `[...document.querySelectorAll('#menu-orden a')].find((a) => a.textContent.trim() === 'Mayor precio').click()`);
+      run(session, "wait", "--load", "networkidle"); run(session, "wait", "800");
+      const after = JSON.parse(evaluate(session, "JSON.stringify({ url: location.pathname + location.search, menu: document.getElementById('menu-orden') !== null, focus: document.activeElement?.id ?? null, label: document.getElementById('orden-boton')?.textContent })"));
+      discoveryCheck(report, log, "sort-menu", width, { closed, ...open, axe: violations, after }, closed && open.visible && open.expanded === "true" && open.options.join() === "Más recientes,Menor precio,Mayor precio" && violations.length === 0 && after.url === "/listados?category=guitars&sort=price_desc" && !after.menu && after.focus === "orden-boton" && /Mayor precio/.test(after.label));
+    });
+    await fresh("sort-menu-esc", width, async (session) => {
+      load(session, "/listados");
+      run(session, "click", "#orden-boton");
+      run(session, "wait", "300");
+      run(session, "press", "Escape");
+      const after = JSON.parse(evaluate(session, "JSON.stringify({ menu: document.getElementById('menu-orden') !== null, focus: document.activeElement?.id ?? null })"));
+      discoveryCheck(report, log, "sort-menu-escape", width, after, !after.menu && after.focus === "orden-boton");
+    });
+    // The pending state: the router's data request is held for 1.5 s in the page, so the results must stay, dim after
+    // 200 ms and announce "Cargando resultados…", then come back at full opacity.
+    await fresh("pending", width, async (session) => {
+      load(session, "/listados");
+      evaluate(session, `(() => { const original = window.fetch; window.fetch = (input, init) => { const headers = new Headers(init?.headers); return headers.get('RSC') === '1' && !headers.get('Next-Router-Prefetch') ? new Promise((resolve) => setTimeout(resolve, 1500)).then(() => original(input, init)) : original(input, init); }; return 'held'; })()`);
+      run(session, "click", "#filtro-seller_type-individual");
+      run(session, "wait", "100");
+      const read = `JSON.stringify({ busy: document.querySelector('.catalog-results')?.getAttribute('aria-busy') ?? null, opacity: getComputedStyle(document.querySelector('.catalog-results')).opacity, status: [...document.querySelectorAll('[role=status]')].map((e) => e.textContent).find((t) => t.includes('Cargando')) ?? null, cards: document.querySelectorAll('main article').length, url: location.pathname + location.search })`;
+      const early = JSON.parse(evaluate(session, read));
+      run(session, "wait", "450");
+      const dimmed = JSON.parse(evaluate(session, read));
+      run(session, "wait", "2500");
+      const after = JSON.parse(evaluate(session, read));
+      discoveryCheck(report, log, "pending-state", width, { early, dimmed, after }, early.busy === "true" && Number(early.opacity) > 0.9 && dimmed.busy === "true" && Math.abs(Number(dimmed.opacity) - 0.5) < 0.05 && dimmed.status === "Cargando resultados…" && dimmed.cards > 0 && after.busy === null && Number(after.opacity) === 1 && after.url === "/listados?seller_type=individual");
+    });
+    // A desktop facet keeps keyboard focus on the option just chosen.
+    await fresh("facet-focus", width, async (session) => {
+      load(session, "/listados");
+      evaluate(session, "document.getElementById('filtro-condition-Nuevo').focus()");
+      run(session, "press", "Enter");
+      run(session, "wait", "--load", "networkidle"); run(session, "wait", "800");
+      const after = JSON.parse(evaluate(session, "JSON.stringify({ url: location.pathname + location.search, focus: document.activeElement?.id ?? null, current: document.getElementById('filtro-condition-Nuevo')?.getAttribute('aria-current') ?? null })"));
+      discoveryCheck(report, log, "facet-keeps-focus", width, after, after.url === "/listados?condition=Nuevo" && after.focus === "filtro-condition-Nuevo" && after.current === "true");
+    });
+  }
+  // Cards: two tab stops each; two columns at 390 without page overflow.
+  for (const width of [390, 768, 1440]) {
+    await fresh("cards", width, async (session) => {
+      load(session, "/listados");
+      const cards = JSON.parse(evaluate(session, `(() => { const selector = 'a[href], button, input:not([type=hidden]), select, textarea, [tabindex]:not([tabindex="-1"])';
+        const articles = [...document.querySelectorAll('main article')];
+        const grid = articles[0]?.parentElement;
+        return JSON.stringify({ cards: articles.length, stops: [...new Set(articles.map((a) => a.querySelectorAll(selector).length))], columns: grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0,
+          cardWidth: Math.round(articles[0]?.getBoundingClientRect().width ?? 0), overflow: document.documentElement.scrollWidth > innerWidth }); })()`));
+      const expected = width < 768 ? 2 : width < 1280 ? 3 : 4;
+      discoveryCheck(report, log, "card-tab-stops-and-grid", width, cards, cards.cards > 0 && cards.stops.length === 1 && cards.stops[0] === 2 && cards.columns === expected && !cards.overflow);
+    });
+  }
 }
 
 async function discover() {
@@ -171,14 +329,15 @@ async function discover() {
 (async () => {
   const { listing, store } = await discover();
   const groups = {
-    public: [["inicio", "/"], ["catalogo", "/listados"], ["categoria", "/instrumentos/guitarras"], ...(listing ? [["publicacion", listing]] : []),
+    public: [["inicio", "/"], ["catalogo", "/listados"], ["catalogo-filtrado", "/listados?category=guitars&condition=Nuevo&condition=Usado+-+buen+estado&location=Lima&location=Arequipa"],
+      ["catalogo-sin-resultados", "/listados?brand=zzzz"], ["categoria", "/instrumentos/guitarras"], ["categoria-baterias", "/instrumentos/baterias"], ...(listing ? [["publicacion", listing]] : []),
       ...(store ? [["tienda", store]] : []), ["login", "/login"], ["no-encontrada", "/pagina-que-no-existe"], ...(errorRoute ? [["error", errorRoute]] : [])],
     particular: [["resumen", "/mi-cuenta"], ["catalogo", "/listados"], ["publicar", "/mi-cuenta/publicar"]],
     store: [["resumen", "/mi-cuenta"]],
     // Both unknown Admin paths must use Admin's 404 inside its frame, including the deeper catch-all.
     admin: [["admin", "/admin"], ["no-encontrada", "/admin/no-existe"], ["no-encontrada-profunda", "/admin/no-existe/de-verdad"]],
   };
-  const report = { base, templates: [], menus: [], strip: [], categoryMenus: [], zoom: [], cls: [] };
+  const report = { base, templates: [], menus: [], strip: [], categoryMenus: [], discovery: [], zoom: [], cls: [] };
   const log = (line) => console.log(line);
 
   for (const [group, routes] of Object.entries(groups)) {
@@ -241,7 +400,19 @@ async function discover() {
           }
         }
       }
+      if (group === "public") await discoveryChecks(report, log);
       if (group === "particular") {
+        // The alert panel, signed in, from the title row (desktop) and the chip (phone).
+        for (const [width, button] of [[1440, "alerta-button-panel"], [390, "alerta-chip-panel"]]) {
+          run(session, "set", "viewport", String(width), "900");
+          load(session, "/listados?category=guitars");
+          run(session, "click", `button[aria-controls="${button}"]`);
+          run(session, "wait", "300");
+          const opened = JSON.parse(evaluate(session, `JSON.stringify({ panel: !!document.getElementById('${button}'), frequency: !!document.querySelector('#${button} select'), overflow: document.documentElement.scrollWidth > innerWidth })`));
+          evaluate(session, `${axeSource};'ok'`);
+          const violations = JSON.parse(await evaluate(session, AXE));
+          discoveryCheck(report, log, "alert-panel", width, { ...opened, axe: violations }, opened.panel && opened.frequency && !opened.overflow && violations.length === 0);
+        }
         for (const width of [390, 1440]) {
           run(session, "set", "viewport", String(width), "900");
           // Account pages carry the strip; a category panel and the account menu are never open together (the open
@@ -317,7 +488,7 @@ async function discover() {
         }
         for (const width of [640, 720]) {
           run(session, "set", "viewport", String(width), "900");
-          for (const url of ["/", "/listados", ...(listing ? [listing] : []), "/mi-cuenta", ...(group === "admin" ? ["/admin"] : []), "/terminos"]) {
+          for (const url of ["/", "/listados", "/listados?category=guitars&condition=Nuevo&condition=Usado+-+buen+estado&location=Lima&location=Arequipa", "/instrumentos/baterias", ...(listing ? [listing] : []), "/mi-cuenta", ...(group === "admin" ? ["/admin"] : []), "/terminos"]) {
             load(session, url);
             const overflow = evaluate(session, "document.documentElement.scrollWidth > innerWidth");
             report.zoom.push({ width, url, overflow });
@@ -328,7 +499,7 @@ async function discover() {
       if (group === "public" || group === "particular") {
         for (const width of [390, 1440]) {
           run(session, "set", "viewport", String(width), "900");
-          for (const url of ["/", "/listados", ...(listing ? [listing] : []), ...(group === "particular" ? ["/mi-cuenta"] : [])]) {
+          for (const url of ["/", "/listados", "/instrumentos/guitarras", ...(listing ? [listing] : []), ...(group === "particular" ? ["/mi-cuenta"] : [])]) {
             run(session, "open", `${base}${url}`);
             run(session, "wait", "--load", "networkidle");
             const cls = await evaluate(session, CLS);
@@ -357,6 +528,8 @@ async function discover() {
     categoryMenuChecks: report.categoryMenus.length,
     categoryMenuFailures: report.categoryMenus.filter((r) => !r.passed).length,
     categoryMenuDomClickFallbacks: report.categoryMenus.filter((r) => r.observed.domClickFallback).length,
+    discoveryChecks: report.discovery.length,
+    discoveryFailures: report.discovery.filter((r) => !r.passed).length,
     maxCls: Math.max(0, ...report.cls.map((r) => r.cls)),
   };
   report.summary = summary;
@@ -365,7 +538,7 @@ async function discover() {
   fs.writeFileSync(path.join(out, "audit.json"), JSON.stringify(report, null, 2));
   log(`summary ${JSON.stringify(summary)}`);
   log(`report: ${path.relative(process.cwd(), path.join(out, "audit.json"))}`);
-  if (summary.frameFailures || summary.stripFailures || summary.categoryMenuFailures) process.exitCode = 1;
+  if (summary.frameFailures || summary.stripFailures || summary.categoryMenuFailures || summary.discoveryFailures) process.exitCode = 1;
 })().catch((error) => {
   console.error(error.message);
   process.exitCode = 1;

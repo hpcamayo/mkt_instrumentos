@@ -10,6 +10,7 @@ Branch `ux/redesign`, cut from `main` at `49a38e5` (the close of Sprint 9). Not 
 | --- | --- | --- | --- |
 | UX-1 Foundations | `06f0d42` … `3da7afa` (12) | Accepted by the owner, 30 Sep. External review still pending | Check the foundations against `ux-1-foundations.md` and `ux-1-acceptance.md`; findings feed UX-8 or a fix-up |
 | UX-2 Shell and navigation | `645d51e`, `0813138`, `2d06b7e`, `37d441b` (fix found in review preparation), `cde9c5a` (review scripts), `1a96bf5` (browser-smoke correction), `15e689f` (this guide), then the 3 Oct commits: the external-review fixes (Admin 404 catch-all, "Tiendas verificadas" link, audit checks) and the hybrid category navigation (N12), then the 7 Oct commits: N11, the Admin accordion fix, `scripts/ux-pub-rerun.cjs` and the docs | Accepted by the owner, 8 Oct (as amended 3 Oct and answered 7 Oct) | **Main focus.** Check the build against the brief `ux-2-shell.md` and the claims in `ux-2-acceptance.md` |
+| UX-3a Discovery, part 1 | `5f4bdd1` (the stall fix), `4ddf8cc` (the one card), `6651815` (catalog, filters with F11, chips, sort, pages, landings, states), then the evidence and docs commit | Built 8 Oct; waiting for the owner's acceptance | Check the build against `ux-3-discovery.md` (3a parts, § Filters with F11, § Owner answers) and the claims in `ux-3a-acceptance.md`; reproduce with § 6.8 |
 
 ```bash
 git log --oneline 49a38e5..ux/redesign          # all redesign commits
@@ -184,6 +185,34 @@ LARIA_AGENT_BROWSER_BIN=<agent-browser> node --require ./tests/setup-alias.cjs s
 ```
 
 `--db-container` lets PUB-009 count the search events it causes (`docker exec … psql`); without it PUB-009 is skipped. Report: `.ux-snapshots/<label>/pub-rerun.json`.
+
+### 6.8 UX-3a (8 Oct)
+
+Production builds on the shared local stack with the local accounts (`ux-3a-acceptance.md` § Evidence setup). The paged scratch builds lower `LISTINGS_PAGE_SIZE` to 2 in a `git archive` copy; never commit that.
+
+| Check | Result |
+| --- | --- |
+| Lint, typecheck, build | pass; first-load JS: home 114 kB, catalog 140 kB (136 before), landings/listings 208 kB (203), stores 195 kB (197) |
+| Unit tests | **290/290** (275 before 3a) |
+| Transition trials, 12 moves × 10 | before 32/120 stalls, after the fix 0/120, on the finished build 0/120 |
+| SEO rendered smoke | pass (sold listing and empty category waived: none in the local data) |
+| `scripts/ux-audit.cjs` (68 template runs at four widths) | 0 axe violations (also with the sheet, the sort menu and the alert panel open); 2,513 focusables, 0 without a ring; 0 overflow (also at 640 / 720); 34 category-menu and 25 discovery checks, 0 failures; layout shift ≤ 0.0016 |
+| Acceptance rows (observations) | `scripts/ux-discovery-rerun.cjs`; summary in `ux-3a-acceptance.md` |
+
+Reproduce:
+
+```bash
+# The transition trials (a paged scratch build on its own port).
+LARIA_AGENT_BROWSER_BIN=<agent-browser> node scripts/ux-transition-trials.cjs --base http://localhost:3301 --label ux3-trials --trials 10 --moves all
+# Captures before/after (UX-3 frames include the filter sheet and the sort menu open).
+LARIA_AGENT_BROWSER_BIN=<agent-browser> node scripts/ux-snapshots.cjs --base http://localhost:3300 --label ux3-after --only public,particular
+# The audit, with the UX-3 checks (sheet, sort, pending state, focus after a facet, card tab stops, grid columns, alert panel).
+LARIA_AGENT_BROWSER_BIN=<agent-browser> node scripts/ux-audit.cjs --base http://localhost:3300 --axe <axe.min.js> --label ux3a-audit --widths 390,768,1280,1440
+# The rows (a normal build and a paged one; the Postgres container counts favourites, alerts and events).
+LARIA_AGENT_BROWSER_BIN=<agent-browser> node scripts/ux-discovery-rerun.cjs --base http://localhost:3300 --paged-base http://localhost:3301 --db-container <container> --label ux3a-rows
+```
+
+Run the rows on a quiet stack: they count events and rows before and after their own steps.
 
 ## 7. Traceability: brief → code → tests
 

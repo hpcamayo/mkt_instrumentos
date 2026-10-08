@@ -42,7 +42,8 @@ Tools and traps (also in the review guide): agent-browser blanks its tab a few s
 
 **State (8 Oct).** The brief `ux-3-discovery.md` is **approved by the owner**.
 - **The answers:** Q1–Q18 on the review page https://claude.ai/artifact/7DCnPzHDMrXRSfBx7mueG4, then Q19 and Q20 in the session (`decisions.md`). Every recommendation was taken except Q8: condition and location become multi-choice (F11), with no alert or database change.
-- **Next:** 3a, starting with the stall fix (Q1 A), in a fresh session from `ux-3a-kickoff.md`. Then 3b, after 3a is accepted.
+- **3a built (8 Oct)**, waiting for the owner's acceptance: `ux-3a-acceptance.md` and its review page. Commits `5f4bdd1` (the stall fix), `4ddf8cc` (the one card), `6651815` (the catalog, filters with F11, chips, sort, numbered pages, landings and states), then the evidence and docs commit.
+- **Next:** the owner marks the 3a review page; 3b (the home) starts after 3a is accepted.
 - The plan below is the input the brief was written from. Where they differ, the brief and its answers win.
 
 **Scope and current code**
@@ -78,7 +79,7 @@ Tools and traps (also in the review guide): agent-browser blanks its tab a few s
   - `main` takes the same path and wins the race. `444ac25` changed the render work enough to lose it: neither half of the commit alone stalls.
   - It is not specific to `?seller_type=verified_store`. On head, `?condition=Nuevo` stalls 10 of 10, `?category=guitars` 5 of 10, `?page=2` 1 of 10.
 - **Fix decided** (Q1 A, owner, 8 Oct; first task of 3a): remove `app/listados/loading.tsx` (0 of 42 stalls on a scratch build of head) and show navigation feedback in the page. Then the catalog links stop being native.
-- Until the fix ships, catalog links stay native (`ShellLink`, chips, filter form, sort).
+- **Built in 3a (`5f4bdd1`):** `loading.tsx` removed, the pending state moved into the page, catalog links client links again. Trials before / after the fix / on the finished 3a build: 32, 0 and 0 stalls in 120 (`ux-3a-acceptance.md` § Transition trials).
 
 **Decided inputs.** H1–H11 and the home's final canvas; N7 ("Tiendas verificadas" opens the filtered catalog; there is no stores directory); N8 (brand-only placeholder); G1; the N12 hybrid (the home header's "Categorías" menu replaces the strip on the home); the home visual audit's UX-3 items 2, 3, 6, 7, 8, 9, 11, 12, 15, 16 and 17.
 
