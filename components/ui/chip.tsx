@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Check, X } from "lucide-react";
+import { CatalogLink } from "@/components/catalog-navigation";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -51,13 +52,12 @@ export function ChipLink({
   );
 }
 
-// An applied filter: pressing it removes the filter. A plain link on purpose: the full page load also resets
-// the filter form, whose fields are uncontrolled (components/listing-filters.tsx).
+// An applied filter: pressing it removes the filter. A client link that reports to the catalog's pending state.
 export function AppliedChip({ href, label, className }: { href: string; label: string; className?: string }) {
   return (
-    <a href={href} aria-label={`Quitar filtro: ${label}`} className={chipClasses("applied", className)}>
+    <CatalogLink href={href} aria-label={`Quitar filtro: ${label}`} className={chipClasses("applied", className)}>
       <span className="truncate">{label}</span>
       <X aria-hidden />
-    </a>
+    </CatalogLink>
   );
 }

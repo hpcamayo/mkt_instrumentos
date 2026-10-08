@@ -107,9 +107,32 @@ test("the category strip lists Instrumentos, the categories in taxonomy order an
 });
 
 // Marks client links so the tests can tell them from native links.
-const clientLinkMock = { __esModule: true, default: ({ children, ...props }) => React.createElement("a", { ...without(props, "prefetch"), "data-client-link": "" }, children) };
+const clientLinkMock = { __esModule: true, default: ({ children, ...props }) => React.createElement("a", { ...without(props, "prefetch", "onNavigate"), "data-client-link": "", "data-on-navigate": props.onNavigate ? "" : undefined }, children) };
 
-test("strip categories are menu buttons; Instrumentos and Tiendas verificadas stay links that load the catalog (N12 hybrid)", () => {
+test("the catalog has no route-level loading boundary; its own links navigate in a transition and dim the results (UX-3 Q1 A)", () => {
+  // A loading.tsx made Next.js 15.5 reuse the seeded /listados prefetch entry, and some transitions never committed.
+  for (const dir of ["app/listados", "app/instrumentos/[slug]"]) assert.equal(fs.existsSync(path.join(root, dir, "loading.tsx")), false, dir);
+  // The native-link workaround is gone.
+  assert.equal(fs.existsSync(path.join(root, "components/shell-link.tsx")), false);
+  assert.equal(shell.isCatalogHref, undefined);
+  const pendingReact = { ...React, useContext: () => ({ pending: true, navigate() {} }) };
+  const pending = load("components/catalog-navigation.tsx", { react: pendingReact, "next/link": clientLinkMock, "next/navigation": navigationMock("/listados") });
+  assert.equal(renderToStaticMarkup(React.createElement(pending.CatalogResults, { className: "grid" }, "x")), '<p role="status" class="sr-only">Cargando resultados…</p><div aria-busy="true" class="catalog-results grid">x</div>');
+  const idle = load("components/catalog-navigation.tsx", { "next/link": clientLinkMock, "next/navigation": navigationMock("/listados") });
+  assert.equal(renderToStaticMarkup(React.createElement(idle.CatalogResults, { className: "grid" }, "x")), '<p role="status" class="sr-only"></p><div class="catalog-results grid">x</div>');
+  assert.match(source("app/globals.css"), /\.catalog-results\[aria-busy="true"\] \{\s*opacity: 0\.5;\s*transition-delay: 200ms;\s*\}/);
+  // Applied chips and pagination are client links that report to the pending state.
+  const { AppliedChip } = load("components/ui/chip.tsx", { "next/link": clientLinkMock });
+  assert.match(renderToStaticMarkup(React.createElement(AppliedChip, { href: "/listados", label: "Condición: Nuevo" })), /^<a href="\/listados" aria-label="Quitar filtro: Condición: Nuevo" class="[^"]*" data-client-link="" data-on-navigate="">/);
+  const { Pagination } = load("components/pagination.tsx", { "next/link": clientLinkMock });
+  const pages = renderToStaticMarkup(React.createElement(Pagination, { page: 2, total: 60, path: "/listados", params: { condition: "Nuevo" } }));
+  assert.equal((pages.match(/<a [^>]*data-client-link="" data-on-navigate="">/g) ?? []).length, (pages.match(/<a /g) ?? []).length);
+  for (const file of ["app/listados/page.tsx", "components/category-landing.tsx"]) {
+    assert.match(source(file), /<CatalogNavigation>[\s\S]*<CatalogResults className=/, file);
+  }
+});
+
+test("strip categories are menu buttons; Instrumentos and Tiendas verificadas stay client links into the catalog (N12 hybrid, UX-3 Q1)", () => {
   const mocks = { "next/link": clientLinkMock, "next/navigation": navigationMock("/instrumentos/baterias") };
   const { GlobalCategories } = load("components/global-categories.tsx", mocks);
   const html = renderToStaticMarkup(React.createElement(GlobalCategories, { visibility: "all" }));
@@ -119,10 +142,9 @@ test("strip categories are menu buttons; Instrumentos and Tiendas verificadas st
   assert.deepEqual(buttons.map((match) => match[2]), ["Guitarras", "Bajos", "Baterías", "Platillos", "Micrófonos", "Pedales", "Amplificadores", "Interfaces de audio"]);
   assert.match(html, /aria-controls="categoria-drums" aria-current="true" class="[^"]*shadow-\[inset_0_-3px_0_var\(--accent\)\]/);
   assert.doesNotMatch(html, /categoria-drums"[^>]*hidden|id="categoria-/, "panels render only when open");
-  // Catalog destinations are native links (some client transitions between catalog URLs never complete).
+  // Catalog destinations are client links again once the transition stall is fixed (UX-3 Q1 A).
   for (const href of ["/listados", "/listados?seller_type=verified_store"]) {
-    assert.match(html, new RegExp(`<a href="${href.replace(/[?]/g, "\\?")}" class="[^"]*">`), href);
-    assert.doesNotMatch(html, new RegExp(`<a href="${href.replace(/[?]/g, "\\?")}"[^>]*data-client-link`), href);
+    assert.match(html, new RegExp(`<a href="${href.replace(/[?]/g, "\\?")}" class="[^"]*"[^>]*data-client-link="">`), href);
   }
   assert.match(renderToStaticMarkup(React.createElement(GlobalCategories, { visibility: "wide" })), /hidden md:block/);
 });
@@ -143,7 +165,7 @@ test("each category menu offers Ver todos and the category's canonical types (PU
     ["Guitarras acústicas", "/listados?category=guitars&instrument_type=acoustic_guitar"],
     ["Otro", "/listados?category=guitars&instrument_type=other"],
   ]);
-  assert.doesNotMatch(guitars, /listados[^"]*"[^>]*data-client-link/, "type links into the catalog are native links");
+  assert.equal((guitars.match(/<a href="\/listados\?[^"]*"[^>]*data-client-link=""/g) ?? []).length, 3, "type links into the catalog are client links (UX-3 Q1)");
   // A type that mirrors its category resolves to the landing, as in the pre-UX-2 menu.
   const cymbals = shell.categoryMenus.find((menu) => menu.key === "cymbals");
   assert.deepEqual(cymbals.types.map((type) => type.href), ["/instrumentos/platillos", "/listados?category=cymbals&instrument_type=other"]);

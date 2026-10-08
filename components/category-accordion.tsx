@@ -2,7 +2,7 @@
 
 import { useId, useState, type KeyboardEvent } from "react";
 import { ChevronDown } from "lucide-react";
-import { ShellLink } from "@/components/shell-link";
+import Link from "next/link";
 import { CATALOG_PATH, VERIFIED_STORES_PATH, categoryMenus } from "@/lib/shell";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +49,7 @@ export function CategoryAccordion() {
         <ChevronDown aria-hidden="true" className={cn("h-4 w-4 shrink-0", open && "rotate-180")} />
       </button>
       <ul id={rootId} hidden={!open} className="menu-fade ml-3 border-l border-white/10 pl-2">
-        <li><ShellLink href={CATALOG_PATH} className={ROW}>Instrumentos</ShellLink></li>
+        <li><Link href={CATALOG_PATH} className={ROW}>Instrumentos</Link></li>
         {categoryMenus.map((menu) => {
           const expanded = category === menu.key;
           return (
@@ -66,15 +66,15 @@ export function CategoryAccordion() {
                 <ChevronDown aria-hidden="true" className={cn("h-4 w-4 shrink-0", expanded && "rotate-180")} />
               </button>
               <ul id={sectionId(menu.key)} hidden={!expanded} className="ml-3 border-l border-white/10 pl-2">
-                <li><ShellLink href={menu.href} className={cn(ROW, "underline decoration-accent decoration-2 underline-offset-[3px]")}>Ver todos</ShellLink></li>
+                <li><Link href={menu.href} className={cn(ROW, "underline decoration-accent decoration-2 underline-offset-[3px]")}>Ver todos</Link></li>
                 {menu.types.map((type) => (
-                  <li key={type.value}><ShellLink href={type.href} className={cn(ROW, "font-normal")}>{type.label}</ShellLink></li>
+                  <li key={type.value}><Link href={type.href} className={cn(ROW, "font-normal")}>{type.label}</Link></li>
                 ))}
               </ul>
             </li>
           );
         })}
-        <li><ShellLink href={VERIFIED_STORES_PATH} className={ROW}>Tiendas verificadas</ShellLink></li>
+        <li><Link href={VERIFIED_STORES_PATH} className={ROW}>Tiendas verificadas</Link></li>
       </ul>
     </div>
   );

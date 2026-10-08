@@ -78,14 +78,6 @@ export const categoryMenus: readonly CategoryMenu[] = categoryOptions.map((categ
   types: getInstrumentTypeOptions(category.value).map((type) => ({ ...type, href: categoryTypePath(category.value, type.value) })),
 }));
 
-// Links into the catalog (/listados with a query) need a full page load: some client transitions between two
-// catalog URLs never complete (for example to ?seller_type=verified_store; pagination is not affected; the stall
-// arrived with UX-1 and is UX-3's to fix, docs/ux-redesign/roadmap.md), and the catalog's filter form is
-// uncontrolled (the same reason as AppliedChip).
-export function isCatalogHref(href: string) {
-  return href === CATALOG_PATH || href.startsWith(`${CATALOG_PATH}?`);
-}
-
 // The strip item for the current page, or null when none applies (listing and store pages, legal pages).
 export function currentStripKey(pathname: string, params: { get(name: string): string | null }): string | null {
   const slug = instrumentSlug(pathname);

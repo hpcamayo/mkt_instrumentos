@@ -106,8 +106,7 @@ app/
   api/contact/route.ts              Canonical WhatsApp destination + intent event
   confirmacion-correo/page.tsx     Email confirmation success page
   instrumentos/[slug]/page.tsx     Listing detail
-  listados/page.tsx                Listings/search page
-  listados/loading.tsx             Listings loading skeleton
+  listados/page.tsx                Listings/search page (no loading.tsx: see the UX-3 note under SEO)
   login/page.tsx                   Password and magic-link login
   logout/route.ts                  Sign out and redirect to /login
   mi-cuenta/layout.tsx             Protected role-aware account shell
@@ -225,6 +224,7 @@ Core local components:
 - `components/page-container.tsx`
 - `components/listing-card.tsx`
 - `components/listing-filters.tsx`
+- `components/catalog-navigation.tsx`
 - `components/listing-detail-gallery.tsx`
 - `components/listing-detail-metadata.tsx`
 - `components/login-form.tsx`
@@ -355,7 +355,8 @@ Public listing, store and revealed-review pages share `ContentReport`; anonymous
 - `lib/seo.ts` builds metadata and JSON-LD. Listing detail and store pages use React `cache()` loaders shared by `generateMetadata` and rendering, so metadata adds no queries. Sold listings are `noindex, follow`; Product JSON-LD names stores but never individual sellers; filtered `/listados` URLs are `noindex, follow` and category-only catalog URLs canonicalize to their landing page.
 - Legal pages (`/terminos`, `/privacidad`, `/articulos-prohibidos`, `/consejos-de-seguridad`) are static server components sharing `components/legal-page.tsx`. The contact line uses `NEXT_PUBLIC_CONTACT_EMAIL` and shows a pre-launch placeholder until it is configured.
 - `lib/account-navigation.ts` defines the frozen account order; `Perfil y seguridad` points to `/mi-cuenta/perfil`, stays active on `/mi-cuenta/seguridad`, and both pages render a Perfil/Seguridad switch. Logout remains the Sprint 8 POST form.
-- `next.config.ts` adds Googlebot to Next's HTML-limited bots (`htmlLimitedBots`), so Googlebot receives blocking metadata in `<head>`. Otherwise Next streams it into `<body>` on `/listados`, whose `loading.tsx` flushes `<head>` early. Visitors keep the streamed metadata and the loading skeleton.
+- `next.config.ts` adds Googlebot to Next's HTML-limited bots (`htmlLimitedBots`), so Googlebot receives blocking metadata in `<head>`. It was added because `/listados` had a `loading.tsx` that flushed `<head>` early and streamed the metadata into `<body>`. UX-3 removed that file (owner decision Q1 A, `docs/ux-redesign/ux-3-discovery.md` § The catalog transition stall): with it, Next.js 15.5 reused the prefetch entry seeded for `/listados` when moving to another catalog URL, and some client transitions never committed. No route has a `loading.tsx` now, so a full load of the catalog sends its first byte after the catalog query, and metadata lands in `<head>` for every user agent; `htmlLimitedBots` stays (harmless, and the Sprint 9 gate checks it).
+- Catalog and landing navigation feedback lives in the page (`components/catalog-navigation.tsx`): their links, chips, pagination and filter forms navigate inside a React transition, so the current results stay on screen with `aria-busy`, dim after 200 ms and a polite "Cargando resultados…" until the next page commits. Links into the catalog from the shell are ordinary client links again.
 - No migration, RLS, Admin authority, scheduler or analytics-event change.
 
 ## Styling

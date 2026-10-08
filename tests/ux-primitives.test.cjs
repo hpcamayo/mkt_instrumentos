@@ -24,8 +24,10 @@ function importers(name) {
 }
 
 // Chip (the toggle button) waits for the filter redesign in UX-3. Radio has no product surface yet: the only
-// radios are the Admin legacy-link choices, whose markup tests/sprint-8.test.cjs pins.
-const NOT_YET_USED = new Set(["Chip", "Radio"]);
+// radios are the Admin legacy-link choices, whose markup tests/sprint-8.test.cjs pins. Skeleton lost its only
+// consumer with app/listados/loading.tsx (UX-3 Q1 A: the catalog keeps its results on screen while it loads); the
+// listing page's streamed sections (UX-4) are its next candidate.
+const NOT_YET_USED = new Set(["Chip", "Radio", "Skeleton"]);
 
 test("every shared primitive has a consumer outside components/ui", () => {
   const primitives = [

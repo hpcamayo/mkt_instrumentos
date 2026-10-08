@@ -5,6 +5,7 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import Link from "next/link";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { CatalogNavigation, CatalogResults } from "@/components/catalog-navigation";
 import { CreateSearchAlert } from "@/components/create-search-alert";
 import { JsonLd } from "@/components/json-ld";
 import { ListingCard } from "@/components/listing-card";
@@ -76,6 +77,7 @@ export function CategoryLanding({
           }}
         />
       ) : null}
+      <CatalogNavigation>
       <section className="bg-canvas/70">
         <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
           <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
@@ -104,7 +106,7 @@ export function CategoryLanding({
           <div className="grid gap-5 lg:grid-cols-[286px_minmax(0,1fr)] lg:items-start xl:gap-6">
             <ListingFilters filters={filters} />
 
-            <div className="grid min-w-0 gap-4">
+            <CatalogResults className="grid min-w-0 gap-4">
               <CreateSearchAlert filters={alertFilters} />
 
               {errorMessage ? (
@@ -139,7 +141,7 @@ export function CategoryLanding({
                   ¿Buscas algo más específico? <Link href={catalogHref} className="link font-semibold">Filtra {landing.label.toLowerCase()} por marca, precio o ubicación</Link>.
                 </p>
               ) : null}
-            </div>
+            </CatalogResults>
           </div>
 
           <div className="grid gap-4 rounded-panel border border-subtle bg-white p-4 t-ui sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -165,6 +167,7 @@ export function CategoryLanding({
           </div>
         </PageContainer>
       </section>
+      </CatalogNavigation>
     </>
   );
 }

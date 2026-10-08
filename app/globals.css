@@ -112,6 +112,16 @@ figcaption {
   }
 }
 
+/* Catalog results while a navigation is pending (components/catalog-navigation.tsx): they stay on screen and dim
+   only after 200 ms, so fast navigations never flicker; they come back at once. */
+.catalog-results {
+  transition: opacity 120ms ease-out;
+}
+.catalog-results[aria-busy="true"] {
+  opacity: 0.5;
+  transition-delay: 200ms;
+}
+
 /* Sideways-scrolling rows (the category strip) scroll without a visible bar. */
 .scrollbar-none {
   scrollbar-width: none;

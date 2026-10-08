@@ -3,8 +3,8 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { ChevronDown } from "lucide-react";
+import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
-import { ShellLink } from "@/components/shell-link";
 import { useDisclosureGroup } from "@/components/use-disclosure";
 import { categoryMenus, currentStripKey, stripItems, type CategoryMenu } from "@/lib/shell";
 import { cn } from "@/lib/utils";
@@ -66,9 +66,9 @@ function CategoryStrip({ current }: { current: string | null }) {
                     positioned against the strip container, outside the list's scroll clipping. */}
                 {item.kind === "category" && open?.key === item.key ? <CategoryPanel menu={open} onChoose={() => group.close()} /> : null}
                 {item.kind === "link" ? (
-                  <ShellLink href={item.href} aria-current={isCurrent ? "page" : undefined} className={cn(ITEM, isCurrent ? UNDERLINE_CURRENT : QUIET)}>
+                  <Link href={item.href} aria-current={isCurrent ? "page" : undefined} className={cn(ITEM, isCurrent ? UNDERLINE_CURRENT : QUIET)}>
                     {item.label}
-                  </ShellLink>
+                  </Link>
                 ) : null}
               </li>
             );
@@ -91,22 +91,22 @@ export function CategoryPanel({ menu, onChoose }: { menu: CategoryMenu; onChoose
         <div className="grid gap-3 md:grid-cols-[220px_minmax(0,1fr)] md:gap-8">
           <div>
             <p className="t-micro text-ink-2">{menu.label}</p>
-            <ShellLink href={menu.href} onClick={onChoose} className="link mt-1 inline-flex min-h-11 items-center t-ui font-semibold md:min-h-9">
+            <Link href={menu.href} onClick={onChoose} className="link mt-1 inline-flex min-h-11 items-center t-ui font-semibold md:min-h-9">
               Ver todos
-            </ShellLink>
+            </Link>
           </div>
           <div className="border-t border-subtle pt-3 md:border-l md:border-t-0 md:pl-8 md:pt-0">
             <p className="t-micro text-ink-2">Tipos</p>
             <ul className="mt-1 grid sm:grid-cols-[repeat(auto-fill,minmax(180px,220px))] sm:gap-x-6">
               {menu.types.map((type) => (
                 <li key={type.value}>
-                  <ShellLink
+                  <Link
                     href={type.href}
                     onClick={onChoose}
                     className="-mx-2 flex min-h-11 items-center rounded-control px-2 t-ui font-semibold text-ink transition-colors duration-120 hover:bg-canvas md:min-h-9"
                   >
                     {type.label}
-                  </ShellLink>
+                  </Link>
                 </li>
               ))}
             </ul>

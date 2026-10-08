@@ -32,6 +32,7 @@ import { fetchCatalogPage } from "@/lib/catalog";
 import { buildCatalogMetadata } from "@/lib/seo";
 import { buttonClasses } from "@/components/ui/button";
 import { AppliedChip } from "@/components/ui/chip";
+import { CatalogLink, CatalogNavigation, CatalogResults } from "@/components/catalog-navigation";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
@@ -106,6 +107,7 @@ function ListingsView({
   errorMessage,
 }: ListingsViewProps) {
   return (
+    <CatalogNavigation>
     <section className="bg-canvas/70">
       <PageContainer className="flex flex-col gap-6 py-6 sm:gap-7 sm:py-8">
         <div className="rounded-panel border border-subtle bg-white p-4 sm:p-6">
@@ -126,9 +128,9 @@ function ListingsView({
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[286px_minmax(0,1fr)] lg:items-start xl:gap-6">
-          <ListingFilters filters={filters} />
+          <ListingFilters key={JSON.stringify(filters)} filters={filters} />
 
-          <div className="grid min-w-0 gap-4">
+          <CatalogResults className="grid min-w-0 gap-4">
             <ActiveFilterChips filters={filters} />
             <CreateSearchAlert filters={listingFiltersToSearchAlert(filters)} />
 
@@ -142,7 +144,7 @@ function ListingsView({
               <EmptyState
                 title="No encontramos resultados con esos filtros"
                 description="Prueba ampliar la búsqueda, cambiar la ciudad o revisar otra categoría de instrumentos."
-                actions={<a href="/listados" className={buttonClasses()}>Limpiar filtros</a>}
+                actions={<CatalogLink href="/listados" className={buttonClasses()}>Limpiar filtros</CatalogLink>}
               />
             ) : null}
 
@@ -161,10 +163,11 @@ function ListingsView({
                 params={searchParams}
               />
             )}
-          </div>
+          </CatalogResults>
         </div>
       </PageContainer>
     </section>
+    </CatalogNavigation>
   );
 }
 
@@ -180,12 +183,12 @@ function ActiveFilterChips({ filters }: { filters: ListingFiltersType }) {
       {chips.map((chip) => (
         <AppliedChip key={chip.key} href={chip.href} label={chip.label} />
       ))}
-      <a
+      <CatalogLink
         href="/listados"
         className={buttonClasses({ variant: "quiet", size: "sm" })}
       >
         Limpiar filtros
-      </a>
+      </CatalogLink>
     </div>
   );
 }

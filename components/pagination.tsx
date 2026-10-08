@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { CatalogLink } from "@/components/catalog-navigation";
 import { LISTINGS_PAGE_SIZE, pageHref } from "@/lib/pagination";
 import { buttonClasses } from "@/components/ui/button";
 
@@ -21,23 +21,23 @@ export function Pagination({
       className="flex flex-wrap items-center justify-center gap-4 py-4 text-sm"
     >
       {page > 1 && (
-        <Link
+        <CatalogLink
           className={buttonClasses({ variant: "secondary" })}
           href={pageHref(path, params, Math.min(page - 1, pages))}
         >
           Anterior
-        </Link>
+        </CatalogLink>
       )}
       <span aria-live="polite">
         Página {page} de {pages}
       </span>
       {page < pages && (
-        <Link
+        <CatalogLink
           className={buttonClasses({ variant: "secondary" })}
           href={pageHref(path, params, page + 1)}
         >
           Siguiente
-        </Link>
+        </CatalogLink>
       )}
     </nav>
   );
