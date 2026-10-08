@@ -8,6 +8,7 @@ import {
 import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { ListingCard } from "@/components/listing-card";
+import { LISTING_GRID, LISTING_GRID_SIZES } from "@/lib/ui/listing-grid";
 import { ListingFilters } from "@/components/listing-filters";
 import { PageContainer } from "@/components/page-container";
 import {
@@ -149,9 +150,9 @@ function ListingsView({
             ) : null}
 
             {listings.length > 0 ? (
-              <div className="grid grid-cols-1 gap-[18px] min-[460px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 2xl:gap-6">
-                {listings.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing} />
+              <div className={LISTING_GRID}>
+                {listings.map((listing, index) => (
+                  <ListingCard key={listing.id} listing={listing} eager={index < 4} sizes={LISTING_GRID_SIZES} />
                 ))}
               </div>
             ) : null}

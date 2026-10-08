@@ -110,6 +110,11 @@ export type ListingDetailData = ListingCardData & {
   profiles: ParticularProfileSummary | ParticularProfileSummary[] | null;
 };
 
+// "Usado - buen estado" reads "Usado · buen estado" on cards, filters and chips; the stored value is unchanged.
+export function getConditionLabel(condition: string) {
+  return condition.split(" - ").join(" · ");
+}
+
 export function getCategoryLabel(category: string) {
   return (
     categoryOptions.find((option) => option.value === category)?.label ?? category

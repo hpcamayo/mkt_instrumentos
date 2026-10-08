@@ -105,17 +105,12 @@ Visual refresh:
 
 ## Listing Cards
 
-Component: `components/listing-card.tsx`
+Component: `components/listing-card.tsx`, the one listing card (UX-3, `docs/ux-redesign/ux-3-discovery.md` § The one listing card). The catalog, the category landings, store inventory and listing recommendations use it; the home's own card goes in UX-3b.
 
-Cards are compact and optimized for dense browsing:
-- 4:3 image ratio.
-- Instrument type/category tag over the image.
-- Photo controls only when multiple photos exist.
-- Seller badge: `Particular`, `Tienda`, or `Tienda Verificada`.
-- Title prefers `brand + model`, falling back to `title`.
-- Condition appears as subtitle, for example `Usado · Buen estado`.
-- Price and location are shown.
-- Store name links to `/tiendas/[slug]` when present.
+- Square photo (`object-fit: cover`) in an 8 px rounded frame; responsive optimized image (PHOTO-016); the first grid row loads eagerly, the rest lazily.
+- Over the photo: the favourite (a 36 px white circle with a 44 px hit area) and "N fotos" when there is more than one photo. No arrows, dots or in-card carousel, and no category tag (the page already names it).
+- Under the photo: the title (two lines reserved so prices line up), the price, a spec line (the condition and up to two key attributes of the type, for example `Usado · buen estado · Shell pack · 22"`) and a seller line (city, then `Particular`, `Tienda` or `Tienda verificada` with the verified mark).
+- One link, the title, stretched over the whole card, plus the favourite: two tab stops. No store-name link on the card; the store is on the listing page.
 
 Cards intentionally do not show:
 - `Publicado hace X dias`
@@ -124,25 +119,19 @@ Cards intentionally do not show:
 - raw `view_count`
 
 Why:
-- Category/type and condition are metadata, not part of the title.
-- Short cards scan better in a 4-column marketplace grid.
+- Category/type is page context, not card content; the key attributes say what the item is.
+- Short cards scan better in a dense marketplace grid.
 - Published/view metadata belongs on the detail page.
 
 ## Listing Card Photo Behavior
 
-Listings page behavior:
-- Initially load/render only the first photo per listing.
-- Show arrows/dots if more photos exist.
-- Fetch remaining photos only when the user interacts with card photo controls.
-- Cache fetched photos in component state.
-- Render only the active photo.
-- Use lazy loading.
+- Render only the first photo per listing; the card shows the photo count, not the other photos.
 - Production Sprint 4: record an impression only while at least 50% of the actual card is in the viewport and the document is visible; scrolling back into view does not inflate the rolling deduplicated count.
 
 Implementation:
 - Listing/store/home queries select `id`, `listing_id`, `image_url`, `alt_text`, and `sort_order` for the first embedded photo.
-- Browse pages calculate `photo_count` with a lightweight `listing_photos` query for `listing_id`.
-- `/api/listings/[id]/photos` fetches additional photos on demand, optionally excluding the already-rendered first photo by `exclude_id`.
+- Browse pages read `photo_count` from the database-computed `listing_photo_count`.
+- `/api/listings/[id]/photos` (additional photos on demand, optionally excluding `exclude_id`) fed the card's carousel until UX-3; no page calls it now.
 
 ## Listing Detail
 

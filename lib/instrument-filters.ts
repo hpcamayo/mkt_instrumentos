@@ -556,6 +556,26 @@ export const instrumentFilterGroups = [
   },
 ] as const satisfies readonly InstrumentFilterGroup[];
 
+// Short numeric attributes carry their unit wherever a value stands without its label (cards, filter chips, applied
+// chips): "22\"", "5 piezas", "7 cuerdas".
+const attributeUnits: Record<string, (label: string) => string> = {
+  strings: (label) => `${label} cuerdas`,
+  frets: (label) => `${label} trastes`,
+  pieces: (label) => `${label} piezas`,
+  kick_size: (label) => `${label}"`,
+  size: (label) => `${label}"`,
+  inputs: (label) => `${label} entradas`,
+};
+
+export const shortAttributeKeys: ReadonlySet<string> = new Set(Object.keys(attributeUnits));
+
+// The label of one stored attribute value ("16_50w" → "16–50W", kick_size "22" → "22\""), from the type's filter
+// options; values without an option keep their stored text.
+export function attributeValueLabel(filter: InstrumentFilterConfig | undefined, key: string, value: string) {
+  const label = filter?.options?.find((option) => option.value === value)?.label ?? value;
+  return attributeUnits[key]?.(label) ?? label;
+}
+
 export function getInstrumentFilterGroup(instrumentType: string) {
   return (
     instrumentFilterGroups.find(

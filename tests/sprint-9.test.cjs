@@ -109,7 +109,8 @@ test("SEO-002..SEO-005: category pages use the shared catalog query, 24-item sta
   const landing = source("components/category-landing.tsx");
   assert.match(landing, /<ListingFilters filters=\{filters\} \/>/);
   assert.match(landing, /<Pagination page=\{page\} total=\{totalCount\} path=\{path\} \/>/);
-  assert.match(landing, /<ListingCard key=\{listing\.id\} listing=\{listing\} \/>/);
+  // One card per listing, keyed by its id (UX-3: the one card also takes the grid's eager row and image sizes).
+  assert.match(landing, /\{listings\.map\(\(listing, index\) => \(\s*<ListingCard key=\{listing\.id\} listing=\{listing\} eager=\{index < 4\} sizes=\{LISTING_GRID_SIZES\} \/>/);
   assert.match(landing, /<SearchTelemetry/);
   assert.doesNotMatch(landing, /placehold|lorem|Ejemplo/i);
 

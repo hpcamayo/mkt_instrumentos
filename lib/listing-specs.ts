@@ -1,11 +1,14 @@
 import {
+  attributeValueLabel,
   getInstrumentFilterGroup,
   type InstrumentFilterConfig,
 } from "@/lib/instrument-filters";
 import {
   getCategoryLabel,
+  getConditionLabel,
   normalizeStore,
   type ListingAttributes,
+  type ListingCardData,
   type ListingDetailData,
 } from "@/lib/listings";
 
@@ -45,6 +48,37 @@ export function getKeyListingSpecs(
     ),
     ...getAttributeSpecs(listing).slice(0, 3),
   ].slice(0, 8);
+}
+
+// Up to two key attributes per type on the listing card (UX-3 Q3 A), in this order. An electric guitar shows its
+// number of strings only when it is not 6.
+const cardAttributeKeys: Record<string, readonly string[]> = {
+  electric_guitar: ["pickups", "strings"],
+  acoustic_guitar: ["acoustic_type", "body_shape"],
+  bass: ["strings", "bass_type"],
+  drums: ["configuration", "kick_size"],
+  cymbals: ["cymbal_type", "size"],
+  microphones: ["microphone_type", "polar_pattern"],
+  audio_interface: ["inputs", "connection"],
+  pedals: ["pedal_type", "format"],
+  amplifiers: ["technology", "power"],
+};
+
+// The card's spec line: the condition, then the type's key attributes ("Usado · buen estado · Shell pack · 22\"").
+// Missing attributes are left out; a listing without them shows the condition alone.
+export function getCardSpecLine(listing: Pick<ListingCardData, "condition" | "instrument_type" | "attributes">) {
+  const parts = listing.condition ? [getConditionLabel(listing.condition)] : [];
+  const type = listing.instrument_type ?? "";
+  const filters = getInstrumentFilterGroup(type)?.filters ?? [];
+  const attributes = normalizeAttributes(listing.attributes);
+  for (const key of cardAttributeKeys[type] ?? []) {
+    const raw = attributes[key];
+    const values = (Array.isArray(raw) ? raw : [raw]).filter((item) => item !== null && item !== undefined && item !== "").map(String);
+    if (values.length === 0 || (type === "electric_guitar" && key === "strings" && values.join() === "6")) continue;
+    const filter: InstrumentFilterConfig | undefined = filters.find((item) => item.key === key);
+    parts.push(values.map((value) => attributeValueLabel(filter, key, value)).join(", "));
+  }
+  return parts.join(" · ");
 }
 
 export function getFullListingSpecs(

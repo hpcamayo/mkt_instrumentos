@@ -4,306 +4,101 @@ import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { ImageOff } from "lucide-react";
 import Link from "next/link";
 import { FavoriteButton } from "@/components/favorite-button";
-import { useEffect, useState } from "react";
 import { useListingImpression } from "@/components/marketplace-telemetry";
 import type { EventSource } from "@/lib/marketplace-event-payload";
-import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
+import { getCardSpecLine } from "@/lib/listing-specs";
 import { Price } from "@/components/ui/price";
-import { Tag } from "@/components/ui/tag";
+import { VerifiedIcon } from "@/components/ui/verified-mark";
 import {
-  getCategoryLabel,
   getListingDisplayTitle,
-  getListingSecondaryTitle,
   normalizeStore,
   type ListingCardData,
-  type ListingPhotoData,
 } from "@/lib/listings";
+
+// Pages that have not adopted the catalog grid (lib/ui/listing-grid.ts) keep today's image sizes: store inventory and
+// listing recommendations (UX-4).
+const DEFAULT_SIZES = "(max-width: 459px) 100vw, (max-width: 767px) 50vw, (max-width: 1279px) 33vw, 320px";
 
 type ListingCardProps = {
   listing: ListingCardData;
   source?: EventSource;
+  // h2 in the catalog and the landings; h3 under a section heading.
+  headingLevel?: 2 | 3;
+  // The first row of a grid loads its photos eagerly.
+  eager?: boolean;
+  sizes?: string;
 };
 
-export function ListingCard({ listing, source = "catalog" }: ListingCardProps) {
+// The one listing card (docs/ux-redesign/ux-3-discovery.md § The one listing card, grid variant): a square photo,
+// then the title, price, a spec line and a seller line. One link, the title, stretched over the whole card, and the
+// favourite above it: two tab stops.
+export function ListingCard({ listing, source = "catalog", headingLevel = 2, eager = false, sizes = DEFAULT_SIZES }: ListingCardProps) {
   const impressionRef = useListingImpression(listing.id, source);
-  const store = normalizeStore(listing);
-  const initialPhotos = listing.listing_photos;
-  const [photos, setPhotos] = useState<ListingPhotoData[]>(initialPhotos);
-  const [activePhotoIndex, setActivePhotoIndex] = useState(0);
-  const [hasLoadedRemainingPhotos, setHasLoadedRemainingPhotos] = useState(
-    initialPhotos.length > 1,
-  );
-  const [isLoadingPhotos, setIsLoadingPhotos] = useState(false);
-  const photoCount = listing.photo_count ?? photos.length;
-  const activePhoto = photos[activePhotoIndex] ?? photos[0];
-  const sellerLabel = getSellerBadgeLabel(listing, store);
-  const sellerBadgeTone = sellerLabel === "Tienda verificada" ? "accent" : "neutral";
+  const photo = listing.listing_photos[0];
+  const photoCount = listing.photo_count ?? listing.listing_photos.length;
   const displayTitle = getListingDisplayTitle(listing);
-  const secondaryTitle = getListingSecondaryTitle(listing);
-  const categoryLabel = getListingTagLabel(listing);
-  const conditionLabel = formatCondition(listing.condition);
-  const hasMultiplePhotos = photoCount > 1;
-
-  useEffect(() => {
-    setPhotos(listing.listing_photos);
-    setActivePhotoIndex(0);
-    setHasLoadedRemainingPhotos(listing.listing_photos.length > 1);
-  }, [listing.id, listing.listing_photos]);
-
-  async function loadRemainingPhotos() {
-    if (hasLoadedRemainingPhotos || isLoadingPhotos) {
-      return photos;
-    }
-
-    setIsLoadingPhotos(true);
-
-    try {
-      const params = new URLSearchParams();
-      const firstPhotoId = photos[0]?.id;
-
-      if (firstPhotoId) {
-        params.set("exclude_id", firstPhotoId);
-      }
-
-      const query = params.toString();
-      const response = await fetch(
-        `/api/listings/${listing.id}/photos${query ? `?${query}` : ""}`,
-      );
-
-      if (!response.ok) {
-        return photos;
-      }
-
-      const payload = (await response.json()) as {
-        photos?: ListingPhotoData[];
-      };
-      const mergedPhotos = mergePhotos(photos, payload.photos ?? []);
-
-      setPhotos(mergedPhotos);
-      setHasLoadedRemainingPhotos(true);
-
-      return mergedPhotos;
-    } catch {
-      return photos;
-    } finally {
-      setIsLoadingPhotos(false);
-    }
-  }
-
-  async function showPhoto(index: number) {
-    if (index === 0 || hasLoadedRemainingPhotos) {
-      setActivePhotoIndex(Math.min(index, Math.max(photos.length - 1, 0)));
-      return;
-    }
-
-    const loadedPhotos = await loadRemainingPhotos();
-    setActivePhotoIndex(Math.min(index, Math.max(loadedPhotos.length - 1, 0)));
-  }
-
-  async function showPreviousPhoto() {
-    if (!hasMultiplePhotos) {
-      return;
-    }
-
-    if (activePhotoIndex > 0) {
-      setActivePhotoIndex(activePhotoIndex - 1);
-      return;
-    }
-
-    const loadedPhotos = await loadRemainingPhotos();
-    setActivePhotoIndex(Math.max(loadedPhotos.length - 1, 0));
-  }
-
-  async function showNextPhoto() {
-    if (!hasMultiplePhotos) {
-      return;
-    }
-
-    const nextIndex = activePhotoIndex + 1;
-
-    if (nextIndex < photos.length) {
-      setActivePhotoIndex(nextIndex);
-      return;
-    }
-
-    const loadedPhotos = await loadRemainingPhotos();
-    setActivePhotoIndex(nextIndex < loadedPhotos.length ? nextIndex : 0);
-  }
+  const specLine = getCardSpecLine(listing);
+  const seller = getSellerLabel(listing);
+  const Heading = headingLevel === 3 ? "h3" : "h2";
 
   return (
-    <article ref={impressionRef} className="group overflow-hidden rounded-panel border border-subtle bg-white transition duration-200 hover:border-accent/35">
-      <div className="relative aspect-[4/3] bg-canvas">
-        {activePhoto ? (
+    <article ref={impressionRef} className="group relative flex min-w-0 flex-col">
+      <div className="relative aspect-square overflow-hidden rounded-panel border border-subtle bg-canvas transition-colors duration-120 group-hover:border-line-strong">
+        {photo ? (
           <Image
-            width={800}
+            width={600}
             height={600}
-            sizes="(max-width: 459px) 100vw, (max-width: 767px) 50vw, (max-width: 1279px) 33vw, 320px"
-            src={activePhoto.image_url}
-            alt={activePhoto.alt_text ?? listing.title}
-            loading="lazy"
+            sizes={sizes}
+            src={photo.image_url}
+            alt={photo.alt_text ?? listing.title}
+            loading={eager ? "eager" : "lazy"}
             decoding="async"
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.025]"
+            className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-2 bg-canvas px-4 text-center">
+          <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
             <ImageOff className="h-8 w-8 text-ink-3" aria-hidden="true" />
             <span className="t-meta font-semibold">Sin foto</span>
           </div>
         )}
-
-        <span className="absolute left-2 top-2 max-w-[calc(100%-4rem)] truncate rounded-tag bg-white/95 px-2 py-0.5 t-meta font-semibold text-ink">
-          {categoryLabel}
-        </span>
-
-        {hasMultiplePhotos ? (
-          <>
-            <div className="absolute inset-x-2 bottom-2 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={showPreviousPhoto}
-                aria-label="Foto anterior"
-                className="flex h-7 w-7 items-center justify-center rounded-control bg-frame/75 text-sm font-semibold text-white transition-colors duration-120 hover:bg-frame"
-              >
-                ‹
-              </button>
-              <div className="flex items-center gap-1.5 rounded-tag bg-frame/60 px-2 py-1">
-                {Array.from({ length: Math.min(photoCount, 5) }).map(
-                  (_, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      onClick={() => showPhoto(index)}
-                      aria-label={`Ver foto ${index + 1}`}
-                      className={
-                        index === activePhotoIndex
-                          ? "h-1.5 w-4 rounded-full bg-accent"
-                          : "h-1.5 w-1.5 rounded-full bg-white/55"
-                      }
-                    />
-                  ),
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={showNextPhoto}
-                aria-label="Foto siguiente"
-                className="flex h-7 w-7 items-center justify-center rounded-control bg-frame/75 text-sm font-semibold text-white transition-colors duration-120 hover:bg-frame"
-              >
-                ›
-              </button>
-            </div>
-            <span className="absolute right-2 top-2 rounded-tag bg-frame/75 px-2 py-0.5 t-meta font-semibold tabular-nums text-white">
-              {activePhotoIndex + 1} / {photoCount}
-            </span>
-          </>
+        {photoCount > 1 ? (
+          <span className="absolute bottom-2 left-2 rounded-tag bg-frame/75 px-1.5 py-0.5 text-[12px] font-semibold leading-4 text-white">
+            {photoCount} fotos
+          </span>
         ) : null}
       </div>
 
-      <div className="space-y-3 p-3.5">
-        <div className="flex justify-end"><FavoriteButton listingId={listing.id} /></div>
-        <div className="space-y-1.5">
-          <div className="flex items-start justify-between gap-2">
-            <h2 className="line-clamp-2 min-w-0 t-card-title text-ink">
-              <Link
-                href={`/instrumentos/${listing.slug}`}
-                className="underline-offset-4 hover:underline hover:decoration-accent hover:decoration-2"
-              >
-                {displayTitle}
-              </Link>
-            </h2>
-            <Tag tone={sellerBadgeTone} className="shrink-0">
-              {sellerLabel}
-            </Tag>
-          </div>
+      <div className="mt-2 flex min-w-0 flex-col gap-1">
+        <Heading className="line-clamp-2 min-h-[38px] t-card-title text-ink">
+          <Link
+            href={`/instrumentos/${listing.slug}`}
+            className="decoration-accent decoration-2 underline-offset-[3px] after:absolute after:inset-0 group-hover:underline"
+          >
+            {displayTitle}
+          </Link>
+        </Heading>
+        <p>
+          <Price value={listing.price_pen} />
+        </p>
+        {specLine ? <p className="truncate t-meta">{specLine}</p> : null}
+        <p className="flex min-w-0 items-center gap-1 t-meta">
+          <span className="min-w-0 truncate">{listing.city}</span>
+          <span aria-hidden="true">·</span>
+          <span className="shrink-0">{seller.label}</span>
+          {seller.verified ? <VerifiedIcon className="h-3.5 w-3.5" /> : null}
+        </p>
+      </div>
 
-          {secondaryTitle ? (
-            <p className="line-clamp-1 t-meta">{secondaryTitle}</p>
-          ) : null}
-
-          {conditionLabel ? (
-            <p className="line-clamp-1 t-meta">
-              {conditionLabel}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="space-y-1">
-          <p>
-            <Price value={listing.price_pen} />
-          </p>
-          <div className="flex items-center justify-between gap-2 t-meta">
-            <p className="min-w-0 truncate">
-              {listing.city}, {listing.region}
-            </p>
-            {store ? (
-              <Link
-                href={`/tiendas/${store.slug}`}
-                className="max-w-[45%] shrink-0 truncate text-right font-semibold text-ink-2 underline-offset-4 hover:text-ink hover:underline hover:decoration-accent hover:decoration-2"
-              >
-                {store.name}
-              </Link>
-            ) : null}
-          </div>
-        </div>
+      <div className="absolute right-1 top-1 z-10">
+        <FavoriteButton listingId={listing.id} variant="overlay" />
       </div>
     </article>
   );
 }
 
-function getListingTagLabel(listing: ListingCardData) {
-  if (listing.instrument_type) {
-    return (
-      getInstrumentFilterGroup(listing.instrument_type)?.label ??
-      getCategoryLabel(listing.category)
-    );
-  }
-
-  return getCategoryLabel(listing.category);
-}
-
-function getSellerBadgeLabel(
-  listing: ListingCardData,
-  store: ReturnType<typeof normalizeStore>,
-) {
-  if (listing.seller_type === "store" && store?.is_verified === true) {
-    return "Tienda verificada";
-  }
-
-  return listing.seller_type === "store" ? "Tienda" : "Particular";
-}
-
-function formatCondition(condition: string | null) {
-  if (!condition) {
-    return null;
-  }
-
-  const parts = condition
-    .split("-")
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  if (parts.length <= 1) {
-    return condition;
-  }
-
-  return parts.map(capitalizeFirst).join(" · ");
-}
-
-function capitalizeFirst(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function mergePhotos(
-  currentPhotos: ListingPhotoData[],
-  nextPhotos: ListingPhotoData[],
-) {
-  const photosByKey = new Map<string, ListingPhotoData>();
-
-  for (const photo of [...currentPhotos, ...nextPhotos]) {
-    photosByKey.set(photo.id ?? photo.image_url, photo);
-  }
-
-  return [...photosByKey.values()].sort(
-    (photoA, photoB) => photoA.sort_order - photoB.sort_order,
-  );
+// Seller words, never a mark alone (VERIFY-001/012): "Particular", "Tienda" or "Tienda verificada".
+function getSellerLabel(listing: ListingCardData) {
+  if (listing.seller_type !== "store") return { label: "Particular", verified: false };
+  const verified = normalizeStore(listing)?.is_verified === true;
+  return { label: verified ? "Tienda verificada" : "Tienda", verified };
 }
