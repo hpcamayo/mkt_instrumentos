@@ -3,21 +3,21 @@
 Durable memory for the UX/web-design engagement. Chat history is not memory; this folder is.
 Read this file first, then only the file your task needs. **External reviewers: start at `review-guide.md`.**
 
-## Status (2026-10-07)
+## Status (2026-10-08)
 
 | Sub-sprint | Name | State |
 | --- | --- | --- |
 | UX-0 | Investigation and plan | Done |
 | UX-1 | Foundations: visual + content language, primitives, a11y baseline | **Accepted** (owner, 30 Sep): implemented on branch `ux/redesign` (9 Cowork commits + audit commits, not pushed); audited and corrected 30 Sep; evidence in `ux-1-acceptance.md` |
-| UX-2 | Shell and navigation | **Ready for owner acceptance, as amended 3 Oct and answered 7 Oct** (brief `ux-2-shell.md`, approved 30 Sep): implemented on `ux/redesign` (not pushed), audited, externally reviewed 3 Oct (`reviews/ux-2-external-review.md`, fixes verified); the owner then asked for the mega-menu's category and type access back inside the UX-2 design (N12 hybrid, `ux-2-shell.md` § Amendment). On 7 Oct the owner decided N9–N14; N11 and an Admin accordion defect were fixed, and the N12 rows were re-run (`ux-2-reconciliation.md`). Still the owner's: accepting UX-2 (review page https://claude.ai/artifact/XQRP7EMmb4sACMtZ8G3BJx), recording N12, the Safari + VoiceOver pass (N14). See `ux-2-acceptance.md` § What still needs owner acceptance |
-| UX-3 | Discovery: home, catalog, category landings, cards, filters | Not started (waits for UX-2's acceptance). Plan, questions and carried-in issues: `roadmap.md` § UX-3. Home decided: canvas page "Inicio · versión final", banner set in `art/rotation/` |
+| UX-2 | Shell and navigation | **Accepted** (owner, 8 Oct, review page: 22 of 22 checks Correct): brief `ux-2-shell.md` (approved 30 Sep), the hybrid category menus (N12, 3 Oct), the owner's answers N9–N14 (7 Oct); implemented on `ux/redesign` (not pushed), audited, externally reviewed 3 Oct. Evidence in `ux-2-acceptance.md`. Still the owner's, not blocking UX-3: recording N12 from `ux-2-reconciliation.md` (drafts approved 8 Oct) |
+| UX-3 | Discovery: home, catalog, category landings, cards, filters | **Next: brief for owner approval** (`ux-3-kickoff.md` is the session prompt). Plan, questions and carried-in issues: `roadmap.md` § UX-3. Home decided: canvas page "Inicio · versión final", banner set in `art/rotation/` |
 | UX-4 | Listing and store pages | Not started; `roadmap.md` § UX-4 |
 | UX-5 | Selling: create, edit, revise | Not started; `roadmap.md` § UX-5 |
 | UX-6 | Accounts: onboarding, Particular, Store Owner | Not started; `roadmap.md` § UX-6 |
 | UX-7 | Admin workbench | Not started; `roadmap.md` § UX-7 |
 | UX-8 | Coherence and hardening | Not started; `roadmap.md` § UX-8 |
 
-Repo: Sprint 9 is closed (owner, 30 Sep); its final head is `main` at `49a38e5`, which was `origin/main` when the branch was cut (`origin/main` has since gained one docs-only commit, `f04e909`). The repo's sprint docs don't record the closure yet: SEO-006, SEO-007, LEGAL-005 and LEGAL-006 still show Not Run in `acceptance/cases.tsv`. UX work lives on `ux/redesign`, branched from `49a38e5`; it is rebased on `main` once, at merge time (N13). In the owner's repository it is a local branch checked out in the worktree `../mkt_instrumentos-ux` (imported from the Cowork bundle on 30 Sep), so the catalog work in the main checkout is never touched. Nothing is pushed or merged without the owner's go-ahead.
+Repo: Sprint 9 is closed (owner, 30 Sep); its final head is `main` at `49a38e5`, which was `origin/main` when the branch was cut (`origin/main` has since gained one docs-only commit, `f04e909`). The repo's sprint docs don't record the closure yet: SEO-006, SEO-007, LEGAL-005 and LEGAL-006 still show Not Run in `acceptance/cases.tsv`. UX work lives on `ux/redesign`, branched from `49a38e5`; it is rebased on `main` once, at merge time (N13). In the owner's repository it is a local branch checked out in the worktree `../mkt_instrumentos-ux` (imported from the Cowork bundle on 30 Sep). The main checkout (`../mkt_instrumentos`) and the catalog worktree (`../mkt_instrumentos-catalog`, `catalog/canonical-catalog`) are never touched. Nothing is pushed or merged without the owner's go-ahead.
 
 Every sub-sprint has two owner gates: approval before implementation, acceptance after.
 Never start the next sub-sprint without explicit owner acceptance of the previous one.
@@ -36,6 +36,7 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `reviews/ux-2-external-review.md` | The independent review of UX-2 (3 Oct): findings UX2-R01–R03, fixes and their verification |
 | `review-guide.md` | For an independent external review: scope and commit ranges, reading order, local setup (Supabase, test accounts), checks, how to reproduce every piece of evidence, traceability from the brief to code and tests, decided vs open, risk areas, report format |
 | `ux-2-acceptance.md` | UX-2 acceptance package: commits, criteria with evidence, measurements, layout shift, deviations for the owner, spec and acceptance rows affected, changed tests, the owner's 7 Oct answers and what they changed |
+| `ux-3-kickoff.md` | The prompt that starts the UX-3 session: reading order, state, the brief to write, the first investigation, questions, rules, environment, checks |
 | `ux-2-reconciliation.md` | N12 record draft for the owner: proposed functional-spec clarification, and for PUB-008–PUB-015 what this build was observed to do, the gap, proposed wording and evidence (nothing recorded) |
 | `home-visual-audit.md` | Graphic-design review of the decided home (30 Sep): the numbered items each sub-sprint applies (table "By sub-sprint") and the owner questions still open |
 | `decisions.md` | Decision log (pending and decided). Update it whenever the owner decides |

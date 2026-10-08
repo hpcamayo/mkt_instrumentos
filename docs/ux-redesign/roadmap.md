@@ -5,8 +5,8 @@ Eight sub-sprints, grouped by UX system and journey, not by file. Each has an ap
 | # | Sub-sprint | Goal | Major surfaces | Depends on | Owner decisions expected | Risk / size | State (7 Oct) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | UX-1 | **Foundations** | One visual and content language, applied everywhere through shared primitives; contrast and focus fixed product-wide; public placeholders removed | Tokens (`globals.css`, `tailwind.config.ts`), font, primitives (Button, Field, Tag/Status, Chip, Notice, EmptyState, PageHeader, Price, VerifiedMark), glossary + status dictionary, orthography sweep, favicon/email colors, skip link, screenshot harness, `docs/design-system.md` rewrite | Sprint 9 accepted | Typeface, blue-as-text policy, derived tones, shape language, base size, uppercase, WhatsApp CTA, glossary, touchpoints | Medium-high: global, wide diff, no layout changes | Accepted 30 Sep |
-| UX-2 | **Shell and navigation** | Compact, fast frame on every device; search always reachable; categories as the main browse path | Header (phone/tablet/desktop), search entry, category nav (strip + menus), account menu and badges, footer, breadcrumbs, page frames (public/account/Admin), 404/500 | UX-1 | *Decided 30 Sep–7 Oct: N1–N14, G1* | Medium | Ready for acceptance; N12 recording open |
-| UX-3 | **Discovery** | Browsing and comparing gear fast | Home (marketplace-first), catalog/search results, category landings, filters (sidebar + sheet), applied chips, sort, pagination/"Ver más", the one listing card, empty/no-results/loading | UX-1, UX-2 | § UX-3 | High: highest traffic, SEO-sensitive | Not started |
+| UX-2 | **Shell and navigation** | Compact, fast frame on every device; search always reachable; categories as the main browse path | Header (phone/tablet/desktop), search entry, category nav (strip + menus), account menu and badges, footer, breadcrumbs, page frames (public/account/Admin), 404/500 | UX-1 | *Decided 30 Sep–7 Oct: N1–N14, G1* | Medium | Accepted 8 Oct; N12 recording open (owner) |
+| UX-3 | **Discovery** | Browsing and comparing gear fast | Home (marketplace-first), catalog/search results, category landings, filters (sidebar + sheet), applied chips, sort, pagination/"Ver más", the one listing card, empty/no-results/loading | UX-1, UX-2 | § UX-3 | High: highest traffic, SEO-sensitive | Next: brief (`ux-3-kickoff.md`) |
 | UX-4 | **Listing and store pages** | Confident decision and trustworthy contact | Gallery + lightbox, identity/price/condition block, contact module, safety note, seller/store module, spec table, description, reviews display, related listings, sold view, store page, report entry points | UX-3 (card) | § UX-4 | Medium-high | Not started |
 | UX-5 | **Selling** | A clear path to a complete, attractive listing | Sell entry (`/vender`), create flow (taxonomy, attributes, photos, price, location, contact), validation and error summary, submit and confirmation, edit and "Cambios en revisión", relist | UX-1, UX-4 (what a listing shows) | § UX-5 | High: forms + photo handling | Not started |
 | UX-6 | **Accounts** | Coherent workspaces for Particular and Store Owner; onboarding | Sign-in, sign-up, store application, invitations, password; Resumen; Mis publicaciones and Inventario; Favoritos; Alertas; Notificaciones; Compras y ventas + reviews; Perfil y seguridad; Mi tienda; Estadísticas | UX-1, UX-2, UX-5 | § UX-6 | High; may split into 6a onboarding + Particular and 6b Store | Not started |
@@ -38,7 +38,7 @@ Tools and traps (also in the review guide): agent-browser blanks its tab a few s
 
 **Goal.** A visitor finds and compares gear fast: a marketplace home, a catalog that works like a discovery tool, category landings that share it, and one listing card everywhere.
 
-**Starts when** the owner accepts UX-2.
+**Starts when** the owner accepts UX-2 (accepted 8 Oct). The session prompt is `ux-3-kickoff.md`.
 
 **Scope and current code**
 - **Home `/`**: `app/page.tsx` (154 lines) and the six `components_v0/*` sections, which go. Build the decided "Inicio · versión final" (`screenshots/home-final/`):
@@ -371,7 +371,7 @@ Tools and traps (also in the review guide): agent-browser blanks its tab a few s
 
 Sprint 9 is closed (owner, 30-09). Its final head is `main` at `49a38e5`, also on GitHub; the sprint docs in the repo don't record the closure yet (SEO-006, SEO-007, LEGAL-005 and LEGAL-006 still Not Run).
 
-- `ux/redesign` branches from `49a38e5` and lives in the worktree `../mkt_instrumentos-ux`; the main checkout (catalog work, `catalog/canonical-catalog`, with its own worktree) is never touched. JEV is out of scope.
+- `ux/redesign` branches from `49a38e5` and lives in the worktree `../mkt_instrumentos-ux`. The main checkout (`../mkt_instrumentos`) and the catalog worktree (`../mkt_instrumentos-catalog`, `catalog/canonical-catalog`) are never touched. JEV is out of scope.
 - So far every sub-sprint is committed on `ux/redesign` itself. It is rebased on `main` once, at merge time (N13, 7 Oct; `origin/main` was one docs-only commit ahead with no overlapping files).
 - Nothing is pushed, merged or deployed without the owner's go-ahead; production deploys keep their own release gate.
 

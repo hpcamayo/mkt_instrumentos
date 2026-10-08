@@ -1,6 +1,6 @@
 # External review guide — Laria UX redesign (`ux/redesign`)
 
-For an independent reviewer, person or agent, with no access to the design chats or canvases. Everything needed is in this repository: the specs, the owner's decisions, the concept renders, the code, the tests and the scripts that reproduce the evidence. Written 2 Oct 2026; the setup in § 4–6 was run that day on a clean local stack built only from this branch (§ 6.4 says exactly how). External-review fixes and a fresh browser pass were completed on 3 Oct (§ 6.5; `reviews/ux-2-external-review.md`). The same day the owner asked for the mega-menu's category and type access back inside the UX-2 design (N12): the hybrid is described in `ux-2-shell.md` § Amendment and verified in § 6.6. On 7 Oct the owner answered the open questions (N9–N14); the resulting fixes and re-runs are in § 6.7.
+For an independent reviewer, person or agent, with no access to the design chats or canvases. Everything needed is in this repository: the specs, the owner's decisions, the concept renders, the code, the tests and the scripts that reproduce the evidence. Written 2 Oct 2026; the setup in § 4–6 was run that day on a clean local stack built only from this branch (§ 6.4 says exactly how). External-review fixes and a fresh browser pass were completed on 3 Oct (§ 6.5; `reviews/ux-2-external-review.md`). The same day the owner asked for the mega-menu's category and type access back inside the UX-2 design (N12): the hybrid is described in `ux-2-shell.md` § Amendment and verified in § 6.6. On 7 Oct the owner answered the open questions (N9–N14); the resulting fixes and re-runs are in § 6.7. On 8 Oct the owner accepted UX-2 through its review page (22 of 22 checks Correct).
 
 ## 1. What is under review
 
@@ -9,7 +9,7 @@ Branch `ux/redesign`, cut from `main` at `49a38e5` (the close of Sprint 9). Not 
 | Sub-sprint | Commits | State | What the review should do |
 | --- | --- | --- | --- |
 | UX-1 Foundations | `06f0d42` … `3da7afa` (12) | Accepted by the owner, 30 Sep. External review still pending | Check the foundations against `ux-1-foundations.md` and `ux-1-acceptance.md`; findings feed UX-8 or a fix-up |
-| UX-2 Shell and navigation | `645d51e`, `0813138`, `2d06b7e`, `37d441b` (fix found in review preparation), `cde9c5a` (review scripts), `1a96bf5` (browser-smoke correction), `15e689f` (this guide), then the 3 Oct commits: the external-review fixes (Admin 404 catch-all, "Tiendas verificadas" link, audit checks) and the hybrid category navigation (N12), then the 7 Oct commits: N11, the Admin accordion fix, `scripts/ux-pub-rerun.cjs` and the docs | Ready for owner acceptance (as amended 3 Oct) | **Main focus.** Check the build against the brief `ux-2-shell.md` and the claims in `ux-2-acceptance.md` |
+| UX-2 Shell and navigation | `645d51e`, `0813138`, `2d06b7e`, `37d441b` (fix found in review preparation), `cde9c5a` (review scripts), `1a96bf5` (browser-smoke correction), `15e689f` (this guide), then the 3 Oct commits: the external-review fixes (Admin 404 catch-all, "Tiendas verificadas" link, audit checks) and the hybrid category navigation (N12), then the 7 Oct commits: N11, the Admin accordion fix, `scripts/ux-pub-rerun.cjs` and the docs | Accepted by the owner, 8 Oct (as amended 3 Oct and answered 7 Oct) | **Main focus.** Check the build against the brief `ux-2-shell.md` and the claims in `ux-2-acceptance.md` |
 
 ```bash
 git log --oneline 49a38e5..ux/redesign          # all redesign commits
@@ -210,7 +210,7 @@ LARIA_AGENT_BROWSER_BIN=<agent-browser> node --require ./tests/setup-alias.cjs s
 
 ## 8. Decided and open
 
-Decided by the owner (binding): D1–D12 (foundations), H1–H11 (home), N1–N11, N13, N14 and G1 (shell), and N12's preference and build side. Open, where the review's opinion is welcome:
+Decided by the owner (binding): D1–D12 (foundations), H1–H11 (home), N1–N11, N13, N14 and G1 (shell), and N12's preference and build side; UX-2 accepted 8 Oct. Open, where the review's opinion is welcome:
 
 | ID | Topic | Where |
 | --- | --- | --- |

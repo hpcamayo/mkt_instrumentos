@@ -1,6 +1,6 @@
 # UX-2 — V1 reconciliation draft (N12)
 
-Prepared by Claude Code on 7 Oct 2026 at the owner's request (`decisions.md` N12, record side). **Nothing here is recorded.** `docs/functional-spec.md` and `acceptance/cases.tsv` are unchanged, no status was set and no Pass is inferred: the owner reads each proposal and the evidence, decides, and records it.
+Prepared by Claude Code on 7 Oct 2026 at the owner's request (`decisions.md` N12, record side). **8 Oct: the owner marked every draft below Correct on the UX-2 review page (fine to record).** **Nothing here is recorded yet.** `docs/functional-spec.md` and `acceptance/cases.tsv` are unchanged, no status was set and no Pass is inferred: the owner reads each proposal and the evidence, decides, and records it.
 
 The build side is decided (N12, 7 Oct): the UX-2 shell stays as built, with no search in Admin, no search on phone account, legal or sign-in pages, and the compact category panel on phones. So the canonical text is what changes.
 

@@ -1,6 +1,6 @@
 # UX-2 Shell and navigation — acceptance package
 
-Status: **ready for owner acceptance** (1 Oct 2026; built 30 Sep–1 Oct; the owner's answers of 7 Oct applied, § Owner answers (7 Oct)). Implemented and audited by Claude Code on `ux/redesign` against the approved brief `ux-2-shell.md`. Prepared for an independent external review on 2 Oct (`review-guide.md`): re-verified on a clean local stack, one defect found and fixed (§ Review preparation). The 3 Oct external-review fixes are verified below. **Amended 3 Oct (owner, N12): the mega-menu's category and type access is restored inside the UX-2 design** (§ Hybrid category navigation); the canonical V1 reconciliation stays with the owner (§ What still needs owner acceptance). Nothing is pushed or merged.
+Status: **accepted by the owner, 8 Oct 2026** (review page: 22 of 22 checks Correct, § Owner acceptance (8 Oct)). Built 30 Sep–1 Oct; the owner's answers of 7 Oct applied (§ Owner answers (7 Oct)). Implemented and audited by Claude Code on `ux/redesign` against the approved brief `ux-2-shell.md`. Prepared for an independent external review on 2 Oct (`review-guide.md`): re-verified on a clean local stack, one defect found and fixed (§ Review preparation). The 3 Oct external-review fixes are verified below. **Amended 3 Oct (owner, N12): the mega-menu's category and type access is restored inside the UX-2 design** (§ Hybrid category navigation); the canonical V1 reconciliation stays with the owner (§ What still needs owner acceptance). Nothing is pushed or merged.
 
 | # | Commit | Content |
 | --- | --- | --- |
@@ -273,9 +273,25 @@ Asked on 4 Oct as nine questions, each with a recommended option; on 7 Oct the o
 
 **N12 re-runs:** `ux-2-reconciliation.md` (row by row, with the proposed wording). Report: `.ux-snapshots/n12-rerun/pub-rerun.json` (gitignored).
 
-## What still needs owner acceptance
+## Owner acceptance (8 Oct)
 
-Nothing below was decided or marked by the build. `acceptance/cases.tsv` and `docs/functional-spec.md` are unchanged, and no owner or manual Pass was inferred.
+The owner marked the review page (https://claude.ai/artifact/XQRP7EMmb4sACMtZ8G3BJx) on 8 Oct: **22 of 22 checks Correct, no notes.** Claude Code read the answers from the page's store; no answer was inferred.
+
+| Section | Checks | Result |
+| --- | --- | --- |
+| A. The shell, as amended | A01–A10: header and strip, desktop and phone menus, new strip placements, N11 phone breadcrumbs, account and publishing frames, Admin "Explorar categorías" (fixed 7 Oct), footers (N10), 404/500 and the frameless Admin-layout failure page | all Correct |
+| B. N12 record drafts | B01–B06: the proposed spec clarification and the PUB-008–PUB-015 observations and wording | all Correct: fine for the owner to record |
+| C. Safari and VoiceOver on the owner's Mac (N14) | C0–C4: the build runs; menus by mouse and keyboard; phone size in Responsive Design Mode; VoiceOver on the public shell, the account menu and Admin | all Correct |
+| D. Decision | D1: accept UX-2 as amended | **Accepted** |
+
+**Still open after acceptance** (none blocks UX-3):
+- **N12 recording:** the owner writes the spec clarification and the PUB-008–PUB-015 status and evidence from `ux-2-reconciliation.md` into `docs/functional-spec.md` and `acceptance/cases.tsv` (not done as of 8 Oct; Claude Code does not edit them).
+- **Real devices** (iPhone and Android with touch, TalkBack/NVDA) and a deployment: UX-8 (N14).
+- **Known limitations** above, owned by later sub-sprints: the catalog transition stall (UX-3), React #418 on fresh listing pages (UX-4), no current strip item on listing and store pages and no store breadcrumbs (UX-4).
+
+## What still needed owner acceptance (as of 7 Oct)
+
+*Kept as written before the 8 Oct acceptance.* Nothing below was decided or marked by the build. `acceptance/cases.tsv` and `docs/functional-spec.md` are unchanged, and no owner or manual Pass was inferred.
 
 1. **UX-2 as amended.**
    - The owner's review page (§ Owner answers, question 9): https://claude.ai/artifact/XQRP7EMmb4sACMtZ8G3BJx (private; Correct/Wrong per check with screenshots, the N12 drafts, the Safari + VoiceOver steps, and the final accept/not-yet).

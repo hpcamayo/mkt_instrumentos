@@ -2,6 +2,8 @@
 
 Approved by the owner on 30 Sep 2026, after UX-1 was accepted. Claude Code implements and audits it on `ux/redesign`. No product rule, route or query changes. Where this brief and the concept screenshots differ, this brief wins.
 
+**Accepted by the owner on 8 Oct 2026** as amended below and with the answers of 7 Oct (`ux-2-acceptance.md` § Owner acceptance (8 Oct)).
+
 **Amended 3 Oct 2026 (owner, N12):** the mega-menu's category and type access comes back inside this design. The amendment at the end of this brief replaces the parts it names (the strip as links only, the strip's placement, Admin without category access); everything else stands.
 
 Visual reference (page concepts accepted 27 Sep), in `screenshots/page-concepts/`:
