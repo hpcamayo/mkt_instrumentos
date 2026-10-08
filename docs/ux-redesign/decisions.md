@@ -3,6 +3,45 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## Decided — UX-3 brief (owner, 2026-10-08)
+
+The UX-3 brief `ux-3-discovery.md` was **approved by the owner on 8 Oct**.
+- **How it was answered:** all 18 questions on the review page https://claude.ai/artifact/7DCnPzHDMrXRSfBx7mueG4 (answers in its db collection `answers`, no notes), then Q19 and Q20 in the session.
+- **The result:** every recommendation except Q8, where the owner chose multi-choice facets. Q19 and Q20 shape that choice.
+- **What changed in the brief:** the decisions are in its § Owner answers (8 Oct), and § Filters is amended for F11.
+- **Next:** 3a is built first (Q2), starting with the stall fix (Q1).
+
+| ID | Question | Options offered | Recommendation | Status |
+| --- | --- | --- | --- | --- |
+| Q1 | How to fix the catalog transition stall: Next.js 15.5's aliased-prefetch navigation, first seen in UX-1's `444ac25`; brief § The catalog transition stall | A remove `app/listados/loading.tsx`, a pending state in the page instead, catalog links back to client links · B an in-page `<Suspense>` keyed by the query · C prefetch before every catalog navigation · D upgrade Next.js | A | decided 2026-10-08 by owner: A |
+| Q2 | Split UX-3 | A 3a (card, catalog, filters, landings, states, the fix) then 3b (home), each with its own acceptance · B one pass | A | decided 2026-10-08 by owner: A |
+| Q3 | Card fields | A condition + up to two key attributes per type + city · seller type · B condition + city · seller type · C A plus brand/model | A | decided 2026-10-08 by owner: A |
+| Q4 | Card photo aspect ratio | A 1:1 cover · B 4:3 cover (today) · C 1:1 contain on white | A | decided 2026-10-08 by owner: A |
+| Q5 | Photo browsing on cards | A first photo and "N fotos", no arrows or dots · B keep arrows and dots, enlarged | A | decided 2026-10-08 by owner: A |
+| Q6 | Grid or list | A grid only · B grid with a list toggle | A | decided 2026-10-08 by owner: A |
+| Q7 | Live filters or an apply button | A desktop live (options are links), the phone sheet applies once · B apply everywhere · C live everywhere | A | decided 2026-10-08 by owner: A |
+| Q8 | Single- or multi-choice facets (flag F11) | A single choice (today's query and alerts) · B multi-choice for condition, location, seller | A | **decided 2026-10-08 by owner: B**, shaped by Q19 and Q20 |
+| Q9 | Pagination | A numbered pages · B "Ver más" · C both; crawlable `?page=N` either way | A | decided 2026-10-08 by owner: A |
+| Q10 | Counts (flag F10) | A none · B home only (total + per category) · C B plus facet counts and a live "Ver N resultados" | B | decided 2026-10-08 by owner: B |
+| Q11 | Alert entry | A title-row button when a filter or category is set + end-of-results tile + no-results · B end tile and no-results only · C a panel above the results (today) | A | decided 2026-10-08 by owner: A (hidden on multi-value searches, Q19) |
+| Q12 | `photo_count` on the home for H2 | A read `listing_photo_count` · B drop the 3-photo condition · C any listing with a photo | A | decided 2026-10-08 by owner: A |
+| Q13 | F9 free-text search | A leave for later · B decide now (its own change after UX-3) | A | decided 2026-10-08 by owner: A (left for later) |
+| Q14 | Categories in the phone home header | A "Categorías" in the phone bar, no strip on the home · B keep the strip on the phone home | A | decided 2026-10-08 by owner: A |
+| Q15 | Home visual audit item 4: "Recién publicados" density | A as decided (four cards + end tile) · B six per row | B | decided 2026-10-08 by owner: B |
+| Q16 | Home visual audit item 13: the phone banner | A frame black block + 40 px CSS fade · B each piece's own ground colour · C frame black, hard edge | A | decided 2026-10-08 by owner: A |
+| Q17 | Design-system confirmations (home visual audit) | `t-card-title` 600; buttons 36/44/52 only; gutters 20/12, radius 8; section spacing 32→48 / 24→32; white monograms | Confirm all | decided 2026-10-08 by owner: all five confirmed |
+| Q18 | Store tile stats on the home (flag F12) | A name, place, "Tienda verificada" · B + "N publicaciones" · C + "N ventas confirmadas" | A (revisit with UX-4) | decided 2026-10-08 by owner: A |
+| Q19 | Q8 = B, but saved alerts accept one value per filter, enforced in the database (`normalize_saved_search`, `listing_matches_saved_search`, Sprint 7 migration) | Hide the alert entry on searches with several values in one filter (no migration) · migrate alerts to accept several values (production database deploy) · back to single choice | Hide it | decided 2026-10-08 by owner: hide the alert entry there, with "Para crear una alerta, elige un solo valor en cada filtro."; no migration |
+| Q20 | Seller type's options overlap (a verified store is also a store) | Seller type stays single choice · seller multi-choice too (likely needs a database view or column) | Single choice | decided 2026-10-08 by owner: single choice; condition and location are the multi-choice facets |
+
+Product-behavior flags from the brief:
+
+| ID | Question | Status |
+| --- | --- | --- |
+| F10 | New read-only count queries: facet counts, a live "Ver N resultados" in the phone sheet, the home's total and per-category counts | decided 2026-10-08 by owner (Q10 B): only the home's total and per-category counts; no facet counts, no live sheet count |
+| F11 | Multi-choice facets | decided 2026-10-08 by owner (Q8 B, Q19, Q20): condition and location accept several values in the catalog (repeated parameters, `in` filters; one-value URLs unchanged). Seller type stays single. Saved alerts and their database functions are unchanged, and the alert entry is hidden on multi-value searches. No migration. A later change could teach alerts several values (a migration and a production deploy) |
+| F12 | Store stats on the home's store tiles | decided 2026-10-08 by owner (Q18 A): not shown; revisit with UX-4's store page |
+
 ## Pending — product-behavior flags (not needed for UX-1)
 
 | ID | Question | Surfaces in |
@@ -62,11 +101,11 @@ Deviations from the approved brief, explained in `ux-2-acceptance.md` § Deviati
 | N13 | When to rebase `ux/redesign` on `main` (the roadmap asks before each acceptance package; UX-2 was not rebased; `origin/main` is one docs-only commit ahead, no overlapping files) | Not rebased | decided 2026-10-07 by owner: rebase once, at merge time, so the commit IDs quoted in the acceptance docs stay valid until then |
 | N14 | Checks only a person can do (Safari/WebKit, a screen reader, real touch, a deployment) | Chromium only | decided 2026-10-07 by owner: the owner runs a short Safari + VoiceOver pass on the Mac against the local build (steps on the UX-2 review page); real iPhone/Android checks wait for a preview deployment (pushing needs the owner's go-ahead) or UX-8. **Mac pass done 8 Oct by the owner: all Correct** |
 
-## Pending — product-behavior flags raised in UX-2
+## Product-behavior flags raised in UX-2
 
 | ID | Question | Surfaces in |
 | --- | --- | --- |
-| F9 | Free-text search over brand, model and title (raised by N8). Today the search matches the brand only; widening it is a query change touching the catalog filters, search alerts and SEO | UX-3 |
+| F9 | Free-text search over brand, model and title (raised by N8). Today the search matches the brand only; widening it is a query change touching the catalog filters, search alerts and SEO. Asked in the UX-3 brief as Q13: **decided 2026-10-08 by owner: left for later**; brand-only search and the N8 placeholder stay | later |
 
 ## Decided — UX-1 foundations (asked 2026-09-27)
 

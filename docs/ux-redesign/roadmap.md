@@ -2,11 +2,11 @@
 
 Eight sub-sprints, grouped by UX system and journey, not by file. Each has an approval gate before implementation and an acceptance gate after. Nothing starts automatically.
 
-| # | Sub-sprint | Goal | Major surfaces | Depends on | Owner decisions expected | Risk / size | State (7 Oct) |
+| # | Sub-sprint | Goal | Major surfaces | Depends on | Owner decisions expected | Risk / size | State (8 Oct) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | UX-1 | **Foundations** | One visual and content language, applied everywhere through shared primitives; contrast and focus fixed product-wide; public placeholders removed | Tokens (`globals.css`, `tailwind.config.ts`), font, primitives (Button, Field, Tag/Status, Chip, Notice, EmptyState, PageHeader, Price, VerifiedMark), glossary + status dictionary, orthography sweep, favicon/email colors, skip link, screenshot harness, `docs/design-system.md` rewrite | Sprint 9 accepted | Typeface, blue-as-text policy, derived tones, shape language, base size, uppercase, WhatsApp CTA, glossary, touchpoints | Medium-high: global, wide diff, no layout changes | Accepted 30 Sep |
 | UX-2 | **Shell and navigation** | Compact, fast frame on every device; search always reachable; categories as the main browse path | Header (phone/tablet/desktop), search entry, category nav (strip + menus), account menu and badges, footer, breadcrumbs, page frames (public/account/Admin), 404/500 | UX-1 | *Decided 30 Sep–7 Oct: N1–N14, G1* | Medium | Accepted 8 Oct; N12 recording open (owner) |
-| UX-3 | **Discovery** | Browsing and comparing gear fast | Home (marketplace-first), catalog/search results, category landings, filters (sidebar + sheet), applied chips, sort, pagination/"Ver más", the one listing card, empty/no-results/loading | UX-1, UX-2 | § UX-3 | High: highest traffic, SEO-sensitive | Next: brief (`ux-3-kickoff.md`) |
+| UX-3 | **Discovery** | Browsing and comparing gear fast | Home (marketplace-first), catalog/search results, category landings, filters (sidebar + sheet), applied chips, sort, pagination/"Ver más", the one listing card, empty/no-results/loading | UX-1, UX-2 | § UX-3 | High: highest traffic, SEO-sensitive | Brief approved 8 Oct (`ux-3-discovery.md`, answers Q1–Q20); 3a next (`ux-3a-kickoff.md`), then 3b |
 | UX-4 | **Listing and store pages** | Confident decision and trustworthy contact | Gallery + lightbox, identity/price/condition block, contact module, safety note, seller/store module, spec table, description, reviews display, related listings, sold view, store page, report entry points | UX-3 (card) | § UX-4 | Medium-high | Not started |
 | UX-5 | **Selling** | A clear path to a complete, attractive listing | Sell entry (`/vender`), create flow (taxonomy, attributes, photos, price, location, contact), validation and error summary, submit and confirmation, edit and "Cambios en revisión", relist | UX-1, UX-4 (what a listing shows) | § UX-5 | High: forms + photo handling | Not started |
 | UX-6 | **Accounts** | Coherent workspaces for Particular and Store Owner; onboarding | Sign-in, sign-up, store application, invitations, password; Resumen; Mis publicaciones and Inventario; Favoritos; Alertas; Notificaciones; Compras y ventas + reviews; Perfil y seguridad; Mi tienda; Estadísticas | UX-1, UX-2, UX-5 | § UX-6 | High; may split into 6a onboarding + Particular and 6b Store | Not started |
@@ -40,6 +40,11 @@ Tools and traps (also in the review guide): agent-browser blanks its tab a few s
 
 **Starts when** the owner accepts UX-2 (accepted 8 Oct). The session prompt is `ux-3-kickoff.md`.
 
+**State (8 Oct).** The brief `ux-3-discovery.md` is **approved by the owner**.
+- **The answers:** Q1–Q18 on the review page https://claude.ai/artifact/7DCnPzHDMrXRSfBx7mueG4, then Q19 and Q20 in the session (`decisions.md`). Every recommendation was taken except Q8: condition and location become multi-choice (F11), with no alert or database change.
+- **Next:** 3a, starting with the stall fix (Q1 A), in a fresh session from `ux-3a-kickoff.md`. Then 3b, after 3a is accepted.
+- The plan below is the input the brief was written from. Where they differ, the brief and its answers win.
+
 **Scope and current code**
 - **Home `/`**: `app/page.tsx` (154 lines) and the six `components_v0/*` sections, which go. Build the decided "Inicio · versión final" (`screenshots/home-final/`):
   - the **home header** with its own "Categorías" menu and the banner search (`ux-2-shell.md` § Home header). The home then leaves the category strip (`getShellLayout("/")` in `lib/shell.ts`); its search row on phones moves into the banner;
@@ -66,10 +71,14 @@ Tools and traps (also in the review guide): agent-browser blanks its tab a few s
 - **States**: empty, no results ("No encontramos resultados", pinned by the favorites smoke), loading and error for the home, the catalog and the landings.
 - **Primitives waiting for a consumer:** `Chip` (toggle) and `Radio` (`tests/ux-primitives.test.cjs:28`). The filter sheet is their first.
 
-**First task: the catalog transition stall.** A client transition from `/listados` to `/listados?seller_type=verified_store` stalls in most trials since UX-1. The page data is fetched (HTTP 200) and the transition never commits. `main` is unaffected; pagination and `?category=` work (`ux-2-acceptance.md` § Owner answers (7 Oct)).
-- Find the cause in UX-1's twelve commits (`49a38e5..3da7afa`) with the same probe: scratch builds, the page size lowered, at least 10 `window.next.router.push` trials per build.
-- Fix it before the catalog adds any client navigation of its own.
-- Until then, catalog links stay native (`ShellLink`, chips, filter form, sort).
+**First task: the catalog transition stall.** Done 8 Oct; details and measurements in `ux-3-discovery.md` § The catalog transition stall.
+- **Found:**
+  - The bisect of UX-1's twelve commits names `444ac25` (class migration) as the first stalling build: 6 of 10 trials, against 0 of 12 on `6525abb`.
+  - The cause is a race in Next.js 15.5's aliased-prefetch navigation. With no prefetch for the exact URL, the router reuses the entry seeded for `/listados` because the route has a `loading.tsx`, renders the page without data, lazily fetches it and patches its state. In stalled trials the router state holds the new page, and React never renders it.
+  - `main` takes the same path and wins the race. `444ac25` changed the render work enough to lose it: neither half of the commit alone stalls.
+  - It is not specific to `?seller_type=verified_store`. On head, `?condition=Nuevo` stalls 10 of 10, `?category=guitars` 5 of 10, `?page=2` 1 of 10.
+- **Fix decided** (Q1 A, owner, 8 Oct; first task of 3a): remove `app/listados/loading.tsx` (0 of 42 stalls on a scratch build of head) and show navigation feedback in the page. Then the catalog links stop being native.
+- Until the fix ships, catalog links stay native (`ShellLink`, chips, filter form, sort).
 
 **Decided inputs.** H1–H11 and the home's final canvas; N7 ("Tiendas verificadas" opens the filtered catalog; there is no stores directory); N8 (brand-only placeholder); G1; the N12 hybrid (the home header's "Categorías" menu replaces the strip on the home); the home visual audit's UX-3 items 2, 3, 6, 7, 8, 9, 11, 12, 15, 16 and 17.
 
@@ -388,9 +397,11 @@ Logged in `decisions.md` with their IDs; candidates get an ID when a brief asks 
 | F5 Safety step before the first WhatsApp contact | UX-4 | Adds a step to seller-contact semantics |
 | F6 Draft autosave in the sell flow | UX-5 | New behavior |
 | F7 Admin bulk actions | UX-7 | Authority/audit implications |
-| "Load more" vs numbered pages | UX-3 | Keep crawlable `?page=N` either way |
-| F9 Free-text search (brand, model, title) | UX-3 | Query change: catalog filters, search alerts, SEO |
-| Candidate: facet counts and a live "Ver N resultados" | UX-3 | New read-only count queries |
+| "Load more" vs numbered pages | UX-3 | Decided 8 Oct (Q9 A): numbered pages, crawlable `?page=N` |
+| F9 Free-text search (brand, model, title) | later | Query change: catalog filters, search alerts, SEO. Decided 8 Oct (Q13 A): left for later |
+| F10 Counts: facet counts, a live "Ver N resultados", the home's total and per-category counts | UX-3b | Decided 8 Oct (Q10 B): only the home's total and per-category counts |
+| F11 Multi-choice facets | UX-3a | Decided 8 Oct (Q8 B, Q19, Q20): condition and location take several values in the catalog; seller type single; alerts unchanged and hidden on multi-value searches; no migration |
+| F12 Store stats on the home's store tiles (listing count, confirmed sales) | UX-4 | Decided 8 Oct (Q18 A): not on the home; revisit with UX-4's store page |
 | Candidate: in-store search and chips on store pages | UX-4 | A store-scoped catalog query |
 | Candidate: an owner's view of their own listing | UX-4 | New view of existing data |
 | Candidate: database strings "artículo" / "producto" | UX-5/UX-6 | Migration (UX-1 open item) |
