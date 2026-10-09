@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { eventSources, isUuid, type EventSource } from "@/lib/marketplace-event-payload";
+import { eventSources, isEntityId, isUuid, type EventSource } from "@/lib/marketplace-event-payload";
 import { getMarketplaceActor, getMarketplaceSession, logMarketplaceEventFailure, recordMarketplaceEvent, sameOriginEventRequest } from "@/lib/marketplace-events-server";
 import { buildStoreWhatsAppUrl, buildWhatsAppUrl, type ListingDetailData } from "@/lib/listings";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
@@ -11,8 +11,8 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body || Object.keys(body).some((key) => !["eventId", "listingId", "storeId", "source"].includes(key)) || !isUuid(body.eventId)
     || (body.source !== undefined && !eventSources.includes(body.source))
-    || (isUuid(body.listingId) === isUuid(body.storeId))
-    || (body.listingId !== undefined && !isUuid(body.listingId)) || (body.storeId !== undefined && !isUuid(body.storeId))) return failure(400, requestId);
+    || (isEntityId(body.listingId) === isEntityId(body.storeId))
+    || (body.listingId !== undefined && !isEntityId(body.listingId)) || (body.storeId !== undefined && !isEntityId(body.storeId))) return failure(400, requestId);
   const client = getPublicSupabaseClient();
   if (!client) return failure(503, requestId);
   let url: string;

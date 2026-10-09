@@ -10,7 +10,12 @@ export type ClientEvent = {
   source?: EventSource;
   searchReceipt?: string;
 };
+// Ids the browser or server generates for events and sessions (crypto.randomUUID): RFC 4122 versions 1–5.
 export const isUuid = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+// Listing and store ids: any UUID. The seed rows, which also exist in production (for example
+// 20000000-0000-0000-0000-000000000001), use version digit 0, and the strict check above rejected their contacts,
+// views and impressions. The database decides whether the listing or store exists and is public (as lib/favorites.ts).
+export const isEntityId = (value: unknown): value is string => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 
 export function parseClientEvent(value: unknown): ClientEvent | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
@@ -18,9 +23,9 @@ export function parseClientEvent(value: unknown): ClientEvent | null {
   if (Object.keys(event).some((key) => !["type", "eventId", "listingId", "storeId", "source", "searchReceipt"].includes(key))) return null;
   if (!isUuid(event.eventId) || (event.source !== undefined && !eventSources.includes(event.source as EventSource))) return null;
   if (event.type === "listing_view" || event.type === "listing_impression") {
-    if (!isUuid(event.listingId) || event.storeId !== undefined || event.searchReceipt !== undefined) return null;
+    if (!isEntityId(event.listingId) || event.storeId !== undefined || event.searchReceipt !== undefined) return null;
   } else if (event.type === "store_view") {
-    if (!isUuid(event.storeId) || event.listingId !== undefined || event.searchReceipt !== undefined) return null;
+    if (!isEntityId(event.storeId) || event.listingId !== undefined || event.searchReceipt !== undefined) return null;
   } else if (event.type === "search" || event.type === "filter_applied") {
     if (event.listingId !== undefined || event.storeId !== undefined || typeof event.searchReceipt !== "string" || event.searchReceipt.length > 8192) return null;
   } else return null;

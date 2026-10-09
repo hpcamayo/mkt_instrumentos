@@ -39,6 +39,29 @@ test("client event transport has exact entity/type keys and no forged identity/a
   }
 });
 
+test("listing and store ids accept the seed rows' UUIDs (version digit 0); event ids stay RFC 4122", () => {
+  // The seed listings and stores, also present in production (docs/evidence/sprint-9-production-gate/seo-005-pagination.json),
+  // have ids such as 20000000-0000-0000-0000-000000000001; their contacts, views and impressions were rejected with HTTP 400.
+  const seedListing = "20000000-0000-0000-0000-000000000001";
+  const seedStore = "10000000-0000-0000-0000-000000000001";
+  assert.ok(payload.parseClientEvent({ type: "listing_impression", eventId, listingId: seedListing, source: "catalog" }));
+  assert.ok(payload.parseClientEvent({ type: "listing_view", eventId, listingId: seedListing, source: "detail" }));
+  assert.ok(payload.parseClientEvent({ type: "store_view", eventId, storeId: seedStore, source: "store" }));
+  assert.equal(payload.parseClientEvent({ type: "listing_view", eventId: seedListing, listingId: seedListing, source: "detail" }), null, "event ids keep the strict check");
+  for (const bad of ["invalid", `${seedListing} OR 1=1`, `${seedListing}0`, "20000000-0000-0000-0000-00000000000g", "../listings", ""]) {
+    assert.equal(payload.parseClientEvent({ type: "listing_impression", eventId, listingId: bad, source: "catalog" }), null, bad);
+    assert.equal(payload.isEntityId(bad), false, bad);
+  }
+  assert.equal(payload.isEntityId(seedListing), true);
+  assert.equal(payload.isUuid(seedListing), false);
+  // The contact and view routes check entity ids the same way; event ids stay strict.
+  const contact = fs.readFileSync("app/api/contact/route.ts", "utf8");
+  assert.match(contact, /!isUuid\(body\.eventId\)/);
+  assert.match(contact, /isEntityId\(body\.listingId\) === isEntityId\(body\.storeId\)/);
+  assert.doesNotMatch(contact, /isUuid\(body\.(listingId|storeId)\)/);
+  assert.match(fs.readFileSync("app/api/listings/[id]/view/route.ts", "utf8"), /!sameOriginEventRequest\(request\) \|\| !isEntityId\(id\)/);
+});
+
 test("search metadata uses actual catalog state, excludes pagination and bounds freeform values", () => {
   const filters = { category: "guitars", brand: "Y".repeat(300), cities: ["Lima"], conditions: [], instrumentType: "electric_guitar", minPrice: 10, maxPrice: 500, sellerType: "store", sort: "newest", advanced: { body_type: "solid_body", handedness: "X".repeat(200), pickups: Array.from({ length: 30 }, () => "A".repeat(200)), enabled: false, pieces: 5 } };
   const metadata = payload.searchEventMetadata(filters, 2);
