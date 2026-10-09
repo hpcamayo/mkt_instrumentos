@@ -11,7 +11,7 @@ Branch `ux/redesign`, cut from `main` at `49a38e5` (the close of Sprint 9). Not 
 | UX-1 Foundations | `06f0d42` … `3da7afa` (12) | Accepted by the owner, 30 Sep. External review still pending | Check the foundations against `ux-1-foundations.md` and `ux-1-acceptance.md`; findings feed UX-8 or a fix-up |
 | UX-2 Shell and navigation | `645d51e`, `0813138`, `2d06b7e`, `37d441b` (fix found in review preparation), `cde9c5a` (review scripts), `1a96bf5` (browser-smoke correction), `15e689f` (this guide), then the 3 Oct commits: the external-review fixes (Admin 404 catch-all, "Tiendas verificadas" link, audit checks) and the hybrid category navigation (N12), then the 7 Oct commits: N11, the Admin accordion fix, `scripts/ux-pub-rerun.cjs` and the docs | Accepted by the owner, 8 Oct (as amended 3 Oct and answered 7 Oct) | **Main focus.** Check the build against the brief `ux-2-shell.md` and the claims in `ux-2-acceptance.md` |
 | UX-3a Discovery, part 1 | `5f4bdd1` (the stall fix), `4ddf8cc` (the one card), `6651815` (catalog, filters with F11, chips, sort, pages, landings, states), then the evidence and docs commit | Accepted by the owner, 9 Oct (review page 31 of 31 Correct); seed-id fix `4057065` on 9 Oct | Check the build against `ux-3-discovery.md` (3a parts, § Filters with F11, § Owner answers) and the claims in `ux-3a-acceptance.md`; reproduce with § 6.8 |
-| UX-3b Discovery, part 2 (the home) | `eeeb7ad` (the local photo fixture), `7806053` (the home), then the evidence and docs commit | Built 9 Oct; ready for the owner's acceptance | Check the build against `ux-3-discovery.md` (§ Home, § States, § Owner answers) and the claims in `ux-3b-acceptance.md`; reproduce with § 6.9 |
+| UX-3b Discovery, part 2 (the home) | `eeeb7ad` (the local photo fixture), `7806053` (the home), then the evidence and docs commit | Accepted by the owner, 9 Oct (review page 37 of 37 Correct) | Check the build against `ux-3-discovery.md` (§ Home, § States, § Owner answers) and the claims in `ux-3b-acceptance.md`; reproduce with § 6.9 |
 
 ```bash
 git log --oneline 49a38e5..ux/redesign          # all redesign commits
@@ -283,11 +283,10 @@ Decided by the owner (binding): D1–D12 (foundations), H1–H11 (home), N1–N1
 
 | ID | Topic | Where |
 | --- | --- | --- |
-| N12 | Preference (3 Oct) and build side (7 Oct) decided; drafts approved 8 Oct. Still open: the owner's record of the functional-spec Sprint 5/6 clarifications and PUB-008, PUB-010–PUB-015, which still describe the old shell and carry its Sprint 6 Pass; wording and observations refreshed on 9 Oct for the shell after 3b, ready to record on the 3b review page (`ux-2-reconciliation.md`) | `decisions.md`, `ux-2-reconciliation.md` |
+| N12 | Preference (3 Oct) and build side (7 Oct) decided; drafts approved 8 Oct. Still open: the owner's record of the functional-spec Sprint 5/6 clarifications and PUB-008, PUB-010–PUB-015, which still describe the old shell and carry its Sprint 6 Pass; wording and observations refreshed on 9 Oct for the shell after 3b and approved by the owner on the 3b review page (option A for PUB-008, PUB-010, PUB-015; `ux-2-reconciliation.md`) | `decisions.md`, `ux-2-reconciliation.md` |
 | F9 | Free-text search (brand, model, title) | `decisions.md` |
 | G2, G3 | Legal-page wording; password minimum (6 vs 8) | `decisions.md` |
 | F1–F7 | Product-behaviour flags for later sub-sprints | `decisions.md` |
-| P6–P10 | The 3b choices (rows below 1024 px, the showcase tile's layout, fallbacks, the banner files and one colour, the home's first-load JS) | `decisions.md`, `ux-3b-acceptance.md` |
 
 ## 9. Where to look hardest
 

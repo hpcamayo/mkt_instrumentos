@@ -1,6 +1,6 @@
 # UX-3b Discovery, part 2 (the home) — acceptance package
 
-Status: **ready for the owner's review** (built 9 Oct 2026 on `ux/redesign` against the approved brief `ux-3-discovery.md`, the owner's answers Q1–Q20 and the 3a acceptance; review page https://claude.ai/artifact/EYTr4nHqS4u1GHLZeoaAM1, 37 checks in groups A–H, answers in its db collection `checks`). Nothing is pushed, merged or deployed. The review page also carries N12, refreshed for the shell as it will ship (§ N12, ready to record).
+Status: **accepted by the owner, 9 Oct 2026** (review page https://claude.ai/artifact/EYTr4nHqS4u1GHLZeoaAM1: 37 of 37 checks Correct; § Owner acceptance (9 Oct)). Built 9 Oct 2026 on `ux/redesign` against the approved brief `ux-3-discovery.md`, the owner's answers Q1–Q20 and the 3a acceptance. Nothing is pushed, merged or deployed. The review page also carried N12, refreshed for the shell as it ships (§ N12, ready to record): all ten items marked Correct, option A for PUB-008, PUB-010 and PUB-015; recording it is a separate step.
 
 ## What changed
 
@@ -176,6 +176,18 @@ Logged as pending in `decisions.md` (P6–P10) and asked on the review page.
 - The local data has 12 public listings, so the feed shows seven cards on desktop (eleven fit) and the "two rows of six" are seen only in the tests.
 - Failed and empty states are covered by the tests (§ Checks); no scratch build forced them in a browser.
 - LCP is measured on a local production build over loopback, without network throttling: it shows the order of events (what is the largest element, that the banner is preloaded), not field performance.
+
+## Owner acceptance (9 Oct)
+
+The owner marked the review page on 9 Oct: **37 of 37 checks Correct**. Claude Code read the answers from the page's store (collection `checks`); no answer was inferred. With it the owner:
+- accepted the home header and its "Categorías" menu (A01–A04), the banner and its search (B01–B04), the vitrina and its rules (C01–C03), the other sections, spacing and states (D01–D06) and the evidence (E01–E04), H01 included: **UX-3b is accepted**;
+- kept the five choices as built (`decisions.md` P6–P10): the vitrina and store rows scroll sideways below 1024 px (F01); the showcase tile's edge-to-edge photo and the city on its own line below 1280 px (F02); the fallbacks (F03); the banner files in `public/banners/` and the phone lead in `line-deco` (F04); the home's first-load JS as is, with a lighter card proposed for UX-8, and the small calls (F05);
+- marked every N12 item Correct (G01–G10): the spec paragraph and the optional legal-pages line as written, and the PUB-008 to PUB-015 evidence texts as written, with **option A** (keep the row's words, add the evidence) for PUB-008, PUB-010 and PUB-015. The notes give no status word for the `<result>` placeholders, so the verdict per row is still the owner's to state when N12 is recorded.
+
+**Still open (none blocks UX-4):**
+1. Recording N12 in `docs/functional-spec.md` and `acceptance/cases.tsv`: the owner's step, or Claude Code's with exactly the texts marked Correct when the owner asks in a session (status words for `<result>` and column 5 from the owner).
+2. A lighter card for every grid page (P10), proposed for UX-8.
+3. `ListingImpressionBoundary` has no page left using it (a small follow-up).
 
 ## How to review
 
