@@ -16,8 +16,9 @@
 // Accounts: .ux-accounts.local.json (gitignored) or LARIA_UX_ACCOUNTS=<path>, shaped as
 //   { "particular": { "email": "...", "password": "..." }, "store": { ... }, "admin": { ... } }
 // Browser: agent-browser on PATH, or LARIA_AGENT_BROWSER_BIN. Output: .ux-snapshots/<label>/<width>/<group>-<route>.png
-// A route may carry an action run before its capture (UX-3: the filter sheet or the sort menu open); the action
-// returns false where it does not apply (the sheet above 1023 px, the menu below 1024 px) and the frame is skipped.
+// A route may carry an action run before its capture (UX-3: the filter sheet or the sort menu open; UX-3b: the home's
+// "Categorías" menu open); the action returns false where it does not apply (the sheet above 1023 px, the menu below
+// 1024 px, a build without the home header) and the frame is skipped.
 const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -67,12 +68,14 @@ async function discover() {
 // UX-3 frames. The buttons are found by their text, so the same actions work on builds before and after UX-3.
 const OPEN_FILTERS = `(() => { const b = [...document.querySelectorAll('button')].find((e) => e.textContent.trim().startsWith('Filtrar') && e.getClientRects().length); if (!b) return false; b.click(); return true; })()`;
 const OPEN_SORT = `(() => { const b = document.getElementById('orden-boton'); if (!b || !b.getClientRects().length) return false; b.click(); return true; })()`;
+const OPEN_HOME_CATEGORIES = `(() => { const b = document.querySelector('button[aria-controls="menu-categorias"]'); if (!b || !b.getClientRects().length) return false; b.click(); return true; })()`;
 const FILTERED = "/listados?category=guitars&condition=Nuevo&condition=Usado+-+buen+estado&location=Lima&location=Arequipa";
 
 function routeList({ listing, store }) {
   return {
     public: [
       ["inicio", "/"],
+      ["inicio-categorias", "/", OPEN_HOME_CATEGORIES],
       ["catalogo", "/listados"],
       ["catalogo-filtrado", FILTERED],
       ["catalogo-verificadas", "/listados?seller_type=verified_store"],
@@ -92,6 +95,7 @@ function routeList({ listing, store }) {
     ],
     // Each signed-in group also opens the catalog, so the signed-in header is captured on a public page (UX-2).
     particular: [
+      ["inicio", "/"],
       ["catalogo", "/listados"],
       ...(listing ? [["publicacion", listing]] : []),
       ["resumen", "/mi-cuenta"],

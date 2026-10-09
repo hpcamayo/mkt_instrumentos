@@ -16,6 +16,11 @@
 // it open, Tab stays inside, the page does not scroll, Esc and the close button return focus to "Filtrar", applying
 // moves focus to the results count), the sort menu at 1280 / 1440 and the sort sheet at 390, the alert panel, two tab
 // stops per card, two columns without overflow at 390, closed sheets and menus invisible.
+// UX-3b home: the home header's "Categorías" menu at 390 / 768 / 1440 with the shell menu rules (closed means not in the
+// page; opens with every destination, axe with it open, no overflow, Enter and Tab into the panel, Esc back to the
+// button, outside press, a route change, one menu at a time with the account menu, the four kinds of destination),
+// "Cómo funciona" reaching #como-funciona, and the banner (exactly one banner file requested, the one for the viewport,
+// fixed band height, layout shift and the largest contentful paint on cold loads).
 //
 // Options:
 //   --base <url>          App origin (default http://localhost:3000)
@@ -161,6 +166,139 @@ async function categoryMenuClickChecks(session, report, log, width) {
   run(session, "wait", "--load", "networkidle"); run(session, "wait", "500");
   s = state("guitars");
   check(report, log, "instrumentos-from-filtered-catalog", width, s, s.url === "/listados");
+}
+
+// UX-3b home checks, one record each.
+function homeCheck(report, log, name, width, observed, passed) {
+  report.home.push({ name, width, passed, observed });
+  log(`home ${name}@${width}: ${passed ? "pass" : "FAIL"} ${JSON.stringify(observed)}`);
+}
+const HOME_MENU_STATE = `(() => { const vis = (el) => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+  const panel = document.getElementById('menu-categorias'); const button = document.querySelector('button[aria-controls="menu-categorias"]'); const active = document.activeElement;
+  return JSON.stringify({ panel: !!panel, visible: vis(panel), expanded: button?.getAttribute('aria-expanded') ?? null, links: panel ? panel.querySelectorAll('a').length : 0,
+    visibleLinks: panel ? [...panel.querySelectorAll('a')].filter(vis).length : 0, scrollsInside: !!panel && panel.scrollHeight > panel.clientHeight + 1,
+    active: active === button ? 'categorias' : active?.textContent?.trim().slice(0, 30) ?? null, url: location.pathname + location.search + location.hash,
+    overflow: document.documentElement.scrollWidth > innerWidth });
+})()`;
+const BANNER_STATE = `(() => { const banner = document.querySelector('[data-banner]'); const img = banner?.querySelector('img');
+  const files = performance.getEntriesByType('resource').map((entry) => new URL(entry.name).pathname).filter((name) => name.startsWith('/banners/'));
+  return JSON.stringify({ id: banner?.dataset.banner ?? null, height: banner ? Math.round(banner.getBoundingClientRect().height) : null, art: img ? Math.round(img.getBoundingClientRect().height) : null,
+    alt: img?.getAttribute('alt'), loaded: !!img && img.complete && img.naturalWidth > 0, current: img ? new URL(img.currentSrc).pathname : null, files: [...new Set(files)],
+    preloads: [...document.querySelectorAll('link[rel=preload][as=image]')].filter((link) => (link.getAttribute('imagesrcset') ?? link.href).includes('/banners/')).map((link) => ({ media: link.media, srcset: link.getAttribute('imagesrcset') })) });
+})()`;
+const LCP = "new Promise((resolve) => { let last = null; new PerformanceObserver((list) => { for (const e of list.getEntries()) last = e; }).observe({ type: 'largest-contentful-paint', buffered: true }); setTimeout(() => resolve(JSON.stringify(last ? { time: Math.round(last.startTime), element: last.element ? last.element.tagName + (last.element.id ? '#' + last.element.id : '') : null, url: last.url ? new URL(last.url).pathname : null, size: last.size } : null)), 1500); })";
+
+async function homeChecks(report, log) {
+  const fresh = async (name, width, fn) => {
+    const session = `ux-audit-home-${name}-${width}-${process.pid}`;
+    try {
+      run(session, "set", "viewport", String(width), "900");
+      await fn(session);
+    } catch (error) {
+      homeCheck(report, log, name, width, { error: error.message }, false);
+    } finally {
+      spawnSync(browser, ["--session", session, "close"], { encoding: "utf8" });
+    }
+  };
+  const state = (session) => JSON.parse(evaluate(session, HOME_MENU_STATE));
+  const destinations = [
+    ["todos", "Todos los instrumentos", "/listados"],
+    ["categoria", "Baterías", "/instrumentos/baterias"],
+    ["tipo", "Guitarras eléctricas", "/listados?category=guitars&instrument_type=electric_guitar"],
+    ["tiendas", "Tiendas verificadas", "/listados?seller_type=verified_store"],
+  ];
+  for (const width of [390, 768, 1440]) {
+    // Closed means absent; opening shows every destination; axe with it open; no page overflow.
+    await fresh("categorias-opens", width, async (session) => {
+      load(session, "/");
+      const closed = state(session);
+      clickButton(session, 'button[aria-controls="menu-categorias"]');
+      const opened = state(session);
+      evaluate(session, `${axeSource};'ok'`);
+      const violations = JSON.parse(await evaluate(session, AXE));
+      homeCheck(report, log, "categorias-opens", width, { closed, opened, axe: violations },
+        !closed.panel && closed.expanded === "false" && opened.panel && opened.visible && opened.expanded === "true" && opened.links === 27 && !opened.overflow && violations.length === 0 && (width >= 768 || opened.scrollsInside));
+    });
+    // Keyboard, in its own session: Enter opens, Tab enters the panel, Esc closes and returns focus.
+    await fresh("categorias-keyboard", width, async (session) => {
+      load(session, "/");
+      evaluate(session, "document.querySelector('button[aria-controls=\"menu-categorias\"]').focus(); 'ok'");
+      run(session, "press", "Enter");
+      const opened = state(session);
+      run(session, "press", "Tab");
+      const tabbed = state(session);
+      run(session, "press", "Escape");
+      const escaped = state(session);
+      homeCheck(report, log, "categorias-keyboard", width, { opened, tabbed, escaped },
+        opened.panel && tabbed.active === "Todos los instrumentos" && !escaped.panel && escaped.expanded === "false" && escaped.active === "categorias");
+    });
+    // Outside press, and a route change (the menu open, then a client navigation away and back).
+    await fresh("categorias-close", width, async (session) => {
+      load(session, "/");
+      clickButton(session, 'button[aria-controls="menu-categorias"]');
+      run(session, "click", "#como-funciona-titulo");
+      const outside = state(session);
+      clickButton(session, 'button[aria-controls="menu-categorias"]');
+      const reopened = state(session);
+      evaluate(session, "window.next.router.push('/listados'); 'ok'");
+      run(session, "wait", "--load", "networkidle"); run(session, "wait", "800");
+      evaluate(session, "window.history.back(); 'ok'");
+      run(session, "wait", "--load", "networkidle"); run(session, "wait", "800");
+      const back = state(session);
+      homeCheck(report, log, "categorias-close", width, { outside, reopened, back },
+        !outside.panel && outside.expanded === "false" && reopened.panel && back.url === "/" && !back.panel && back.expanded === "false");
+    });
+    // Each kind of destination closes the menu on arrival.
+    for (const [key, label, href] of destinations) {
+      await fresh(`categorias-destino-${key}`, width, async (session) => {
+        load(session, "/");
+        clickButton(session, 'button[aria-controls="menu-categorias"]');
+        run(session, "click", `#menu-categorias a[href="${href}"]`);
+        run(session, "wait", "--load", "networkidle"); run(session, "wait", "600");
+        const arrived = JSON.parse(evaluate(session, `JSON.stringify({ url: location.pathname + location.search, h1: document.querySelector('h1')?.textContent ?? null,
+          homePanel: !!document.getElementById('menu-categorias'), openStripPanels: document.querySelectorAll('nav[aria-label="Categorías"] button[aria-expanded="true"]').length,
+          type: document.getElementById('filtro-instrument_type-electric_guitar')?.getAttribute('aria-current') ?? null })`));
+        homeCheck(report, log, `categorias-destino-${key}`, width, { label, ...arrived }, arrived.url === href && !arrived.homePanel && arrived.openStripPanels === 0 && (key !== "tipo" || width < 1024 || arrived.type === "true"));
+      });
+    }
+    // The banner: one file for this viewport, decorative, a fixed band; no layout shift; LCP on a cold load.
+    await fresh("banner", width, async (session) => {
+      run(session, "open", `${base}/`);
+      run(session, "wait", "--load", "networkidle"); run(session, "wait", "300");
+      const banner = JSON.parse(evaluate(session, BANNER_STATE));
+      const cls = await evaluate(session, CLS);
+      const lcp = JSON.parse(await evaluate(session, LCP));
+      const kind = width >= 768 ? "desktop" : "phone";
+      const expectedHeight = width >= 768 ? 300 : null;
+      homeCheck(report, log, "banner", width, { ...banner, cls, lcp },
+        banner.files.length === 1 && banner.files[0].includes(`-${banner.id}-${kind}`) && banner.current?.includes(`-${kind}`) && banner.loaded && banner.alt === "" &&
+        banner.preloads.length === 2 && (expectedHeight === null || banner.height === expectedHeight) && cls === 0);
+    });
+  }
+  // "Cómo funciona" in the bar (from 1024 px) reaches the section.
+  await fresh("como-funciona", 1440, async (session) => {
+    load(session, "/");
+    run(session, "click", 'header a[href="#como-funciona"]');
+    run(session, "wait", "600");
+    const s = JSON.parse(evaluate(session, "JSON.stringify({ url: location.pathname + location.hash, top: Math.round(document.getElementById('como-funciona').getBoundingClientRect().top) })"));
+    homeCheck(report, log, "como-funciona", 1440, s, s.url === "/#como-funciona" && Math.abs(s.top) <= 2);
+  });
+  // LCP repeated on cold loads (a fresh browser each time), phone and desktop.
+  for (const width of [390, 1440]) {
+    const runs = [];
+    for (let trial = 0; trial < 5; trial += 1) {
+      const session = `ux-audit-home-lcp-${width}-${trial}-${process.pid}`;
+      try {
+        run(session, "set", "viewport", String(width), "900");
+        run(session, "open", `${base}/`);
+        run(session, "wait", "--load", "networkidle");
+        runs.push(JSON.parse(await evaluate(session, LCP)));
+      } finally {
+        spawnSync(browser, ["--session", session, "close"], { encoding: "utf8" });
+      }
+    }
+    homeCheck(report, log, "lcp", width, { runs, median: runs.map((r) => r?.time ?? null).sort((a, b) => a - b)[2] }, runs.every(Boolean));
+  }
 }
 
 // UX-3 checks, one record each.
@@ -332,12 +470,12 @@ async function discover() {
     public: [["inicio", "/"], ["catalogo", "/listados"], ["catalogo-filtrado", "/listados?category=guitars&condition=Nuevo&condition=Usado+-+buen+estado&location=Lima&location=Arequipa"],
       ["catalogo-sin-resultados", "/listados?brand=zzzz"], ["categoria", "/instrumentos/guitarras"], ["categoria-baterias", "/instrumentos/baterias"], ...(listing ? [["publicacion", listing]] : []),
       ...(store ? [["tienda", store]] : []), ["login", "/login"], ["no-encontrada", "/pagina-que-no-existe"], ...(errorRoute ? [["error", errorRoute]] : [])],
-    particular: [["resumen", "/mi-cuenta"], ["catalogo", "/listados"], ["publicar", "/mi-cuenta/publicar"]],
+    particular: [["inicio", "/"], ["resumen", "/mi-cuenta"], ["catalogo", "/listados"], ["publicar", "/mi-cuenta/publicar"]],
     store: [["resumen", "/mi-cuenta"]],
     // Both unknown Admin paths must use Admin's 404 inside its frame, including the deeper catch-all.
     admin: [["admin", "/admin"], ["no-encontrada", "/admin/no-existe"], ["no-encontrada-profunda", "/admin/no-existe/de-verdad"]],
   };
-  const report = { base, templates: [], menus: [], strip: [], categoryMenus: [], discovery: [], zoom: [], cls: [] };
+  const report = { base, templates: [], menus: [], strip: [], categoryMenus: [], discovery: [], home: [], zoom: [], cls: [] };
   const log = (line) => console.log(line);
 
   for (const [group, routes] of Object.entries(groups)) {
@@ -401,6 +539,22 @@ async function discover() {
         }
       }
       if (group === "public") await discoveryChecks(report, log);
+      if (group === "public") await homeChecks(report, log);
+      if (group === "particular") {
+        // One menu at a time on the home: "Categorías" and the account menu close each other.
+        for (const width of [390, 1440]) {
+          run(session, "set", "viewport", String(width), "900");
+          load(session, "/");
+          clickButton(session, 'button[aria-controls="menu-categorias"]');
+          const first = JSON.parse(evaluate(session, HOME_MENU_STATE));
+          clickButton(session, 'button[aria-controls="menu-cuenta"]');
+          const second = { ...JSON.parse(evaluate(session, HOME_MENU_STATE)), accountMenuOpen: evaluate(session, "document.getElementById('menu-cuenta')?.hidden === false") };
+          clickButton(session, 'button[aria-controls="menu-categorias"]');
+          const third = { ...JSON.parse(evaluate(session, HOME_MENU_STATE)), accountMenuOpen: evaluate(session, "document.getElementById('menu-cuenta')?.hidden === false") };
+          homeCheck(report, log, "categorias-and-account-menu", width, { first, second, third },
+            first.panel && !second.panel && second.accountMenuOpen && third.panel && !third.accountMenuOpen && !third.overflow);
+        }
+      }
       if (group === "particular") {
         // The alert panel, signed in, from the title row (desktop) and the chip (phone).
         for (const [width, button] of [[1440, "alerta-button-panel"], [390, "alerta-chip-panel"]]) {
@@ -530,6 +684,8 @@ async function discover() {
     categoryMenuDomClickFallbacks: report.categoryMenus.filter((r) => r.observed.domClickFallback).length,
     discoveryChecks: report.discovery.length,
     discoveryFailures: report.discovery.filter((r) => !r.passed).length,
+    homeChecks: report.home.length,
+    homeFailures: report.home.filter((r) => !r.passed).length,
     maxCls: Math.max(0, ...report.cls.map((r) => r.cls)),
   };
   report.summary = summary;
@@ -538,7 +694,7 @@ async function discover() {
   fs.writeFileSync(path.join(out, "audit.json"), JSON.stringify(report, null, 2));
   log(`summary ${JSON.stringify(summary)}`);
   log(`report: ${path.relative(process.cwd(), path.join(out, "audit.json"))}`);
-  if (summary.frameFailures || summary.stripFailures || summary.categoryMenuFailures || summary.discoveryFailures) process.exitCode = 1;
+  if (summary.frameFailures || summary.stripFailures || summary.categoryMenuFailures || summary.discoveryFailures || summary.homeFailures) process.exitCode = 1;
 })().catch((error) => {
   console.error(error.message);
   process.exitCode = 1;

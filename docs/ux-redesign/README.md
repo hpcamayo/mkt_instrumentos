@@ -3,14 +3,14 @@
 Durable memory for the UX/web-design engagement. Chat history is not memory; this folder is.
 Read this file first, then only the file your task needs. **External reviewers: start at `review-guide.md`.**
 
-## Status (2026-10-08)
+## Status (2026-10-09)
 
 | Sub-sprint | Name | State |
 | --- | --- | --- |
 | UX-0 | Investigation and plan | Done |
 | UX-1 | Foundations: visual + content language, primitives, a11y baseline | **Accepted** (owner, 30 Sep): implemented on branch `ux/redesign` (9 Cowork commits + audit commits, not pushed); audited and corrected 30 Sep; evidence in `ux-1-acceptance.md` |
 | UX-2 | Shell and navigation | **Accepted** (owner, 8 Oct, review page: 22 of 22 checks Correct): brief `ux-2-shell.md` (approved 30 Sep), the hybrid category menus (N12, 3 Oct), the owner's answers N9–N14 (7 Oct); implemented on `ux/redesign` (not pushed), audited, externally reviewed 3 Oct. Evidence in `ux-2-acceptance.md`. Still the owner's, not blocking UX-3: recording N12 from `ux-2-reconciliation.md` (drafts approved 8 Oct) |
-| UX-3 | Discovery: home, catalog, category landings, cards, filters | **Brief approved** (owner, 8 Oct): `ux-3-discovery.md`, answers Q1–Q20 in `decisions.md`.<br>• **3a accepted** (owner, 9 Oct; review page https://claude.ai/artifact/NpxKr4FfUSLH65RZooTwdB, 31 of 31 Correct): the stall fix (`5f4bdd1`: 32 of 120 trials stalled before, 0 of 120 after), the one card (`4ddf8cc`), the catalog, filters with F11, chips, sort, numbered pages, the category landings and their states (`6651815`), evidence `58bae38`, and the seed-id fix for events, contacts and views (`4057065`, also needed in production; ships with the UX-3 push, owner 9 Oct). Package: `ux-3a-acceptance.md`.<br>• **Next:** 3b (the home) in a fresh session from `ux-3b-kickoff.md` |
+| UX-3 | Discovery: home, catalog, category landings, cards, filters | **Brief approved** (owner, 8 Oct): `ux-3-discovery.md`, answers Q1–Q20 in `decisions.md`.<br>• **3a accepted** (owner, 9 Oct; review page https://claude.ai/artifact/NpxKr4FfUSLH65RZooTwdB, 31 of 31 Correct): the stall fix (`5f4bdd1`: 32 of 120 trials stalled before, 0 of 120 after), the one card (`4ddf8cc`), the catalog, filters with F11, chips, sort, numbered pages, the category landings and their states (`6651815`), evidence `58bae38`, and the seed-id fix for events, contacts and views (`4057065`, also needed in production; ships with the UX-3 push, owner 9 Oct). Package: `ux-3a-acceptance.md`.<br>• **3b built** (9 Oct), **ready for the owner's acceptance**: the local photo fixture (`eeeb7ad`), the home (`7806053`: the home header with "Categorías", the banner, "En vitrina" with the showcase tile, categories with counts, "Recién publicados", "Cómo funciona Laria", verified stores, the sell block), then evidence and docs. Package: `ux-3b-acceptance.md`; review page https://claude.ai/artifact/EYTr4nHqS4u1GHLZeoaAM1 (37 checks; group G is N12, refreshed for recording; answers in its db collection `checks`). Choices P6–P10 pending in `decisions.md` |
 | UX-4 | Listing and store pages | Not started; `roadmap.md` § UX-4 |
 | UX-5 | Selling: create, edit, revise | Not started; `roadmap.md` § UX-5 |
 | UX-6 | Accounts: onboarding, Particular, Store Owner | Not started; `roadmap.md` § UX-6 |
@@ -39,9 +39,10 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `ux-3-kickoff.md` | The prompt that starts the UX-3 session: reading order, state, the brief to write, the first investigation, questions, rules, environment, checks |
 | `ux-3a-kickoff.md` | The prompt that starts the UX-3a build session (fix, card, catalog, filters, landings, states) |
 | `ux-3b-kickoff.md` | The prompt that starts the UX-3b build session (the home) |
+| `ux-3b-acceptance.md` | UX-3b acceptance package (the home): commits, criteria with evidence, audit and home checks, banner and LCP, first-load JS, rows re-run (observations), N12 ready to record, deviations and choices P6–P10, changed tests |
 | `ux-3a-acceptance.md` | UX-3a acceptance package (accepted 9 Oct): commits, criteria with evidence, transition trials before/after, audit, first-load JS, acceptance rows re-run (observations), deviations and choices for the owner, changed tests |
 | `ux-3-discovery.md` | UX-3 brief (approved by the owner 8 Oct, with § Owner answers): the catalog transition stall (bisect, cause, proposed fix, measurements), the 3a/3b split, the design per surface (card, catalog, filters and sheet, chips, sort, pagination, landings, states, home), product rules, questions Q1–Q18, acceptance criteria, evidence plan, tests expected to change |
-| `ux-2-reconciliation.md` | N12 record draft for the owner: proposed functional-spec clarification, and for PUB-008–PUB-015 what this build was observed to do, the gap, proposed wording and evidence (nothing recorded) |
+| `ux-2-reconciliation.md` | N12 record draft for the owner: proposed functional-spec clarification, and for PUB-008–PUB-015 what the build was observed to do, the gap, proposed wording and evidence (nothing recorded); refreshed 9 Oct for the shell after 3b |
 | `home-visual-audit.md` | Graphic-design review of the decided home (30 Sep): the numbered items each sub-sprint applies (table "By sub-sprint") and the owner questions still open |
 | `decisions.md` | Decision log (pending and decided). Update it whenever the owner decides |
 | `screenshots/baseline-2026-09-27/` | Live-site baseline captured during the audit |
@@ -58,7 +59,7 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `screenshots/home-arte-fiesta/` | Renders of the fiesta batch (round 8) |
 | `screenshots/home-arte-ocho/` | Renders of the final eight (round 9) |
 | `screenshots/home-arte-diablada/` | Renders of the instruments in Diablada style (round 10) |
-| `art/rotation/` | The decided home banner set (9 pieces, WebP/JPEG at 1x and 2x, manifest, rules) |
+| `art/rotation/` | The decided home banner set: manifest, rules, rotation sheet and generators; the image files (9 pieces, WebP/JPEG at 1x and 2x) are served from `public/banners/` since 3b |
 | `screenshots/home-decisiones-h/` | The options for home decisions H6, H2, H3, H4 and the H4 promise table (decided 30 Sep) |
 | `screenshots/home-final/` | The home with every decision applied (1440, 390) and the nine rotation banners: the reference for UX-3 |
 | `screenshots/ux1-before/` | Harness captures of the product before UX-1 (selected frames) |
@@ -66,14 +67,17 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `screenshots/ux2-before/` | Harness captures before UX-2 (selected frames, `<width>-<group>-<route>.webp`) |
 | `screenshots/ux2-after/` | The same frames after UX-2, plus the new 500 page; refreshed 7 Oct to the build as amended (hybrid menus, N11, the Admin accordion fix) |
 | `screenshots/ux3-before/` | Harness captures before UX-3a (`375a213`): catalog, filtered and multi-value catalog, no results, the old filter sheet, landings, store page (`<width>-<group>-<route>.webp`) |
+| `screenshots/ux3b-before/`, `screenshots/ux3b-after/` | Harness captures of the home before 3b (`d08a135`) and after (`7806053`) at 390 / 768 / 1280 / 1440, signed out and as the Particular; after also with the home's "Categorías" menu open (`<width>-<group>-<route>.webp`) |
 | `screenshots/ux3-after/` | The same frames after UX-3a, plus the sort menu and sheet, the location row of the filter sheet, the pending state, pagination (a scratch build with 2 per page) and the error and empty states (a scratch build that forces them) |
 | `screenshots/ux1-audit/` | Concept vs build, side by side (16 pairs) after the audit fixes; `index.html` lists the layout differences per pair |
 | `../../scripts/ux-snapshots.cjs` | The screenshot harness (D10): fixed route list at 390 / 768 / 1280 / 1440, anonymous and signed in (each signed-in group also on the catalog); output in the gitignored `.ux-snapshots/` |
 | `../../scripts/ux-local-accounts.cjs` | Creates the local Particular, Store Owner (with a store) and Admin test accounts; local Supabase only; writes the gitignored `.ux-accounts.local.json` |
-| `../../scripts/ux-pub-rerun.cjs` | Re-runs PUB-008 to PUB-015 on a local build following each row's steps; observations only, never a status; output `.ux-snapshots/<label>/pub-rerun.json` |
+| `../../scripts/ux-pub-rerun.cjs` | Re-runs PUB-008 to PUB-015 on a local build following each row's steps (since 3b: the home header and its "Categorías" panel, the banner search, applied chips instead of the old filter selects; 1440 / 768 / 390, all four visitors); observations only, never a status; output `.ux-snapshots/<label>/pub-rerun.json` |
 | `../../scripts/ux-transition-trials.cjs` | The catalog transition trials (UX-3 brief appendix): fresh-session `window.next.router.push` trials per move, 6 s each, reading `location` and the router's own state; output `.ux-snapshots/<label>/transitions.json` |
+| `../../scripts/ux-local-photos.cjs` | Gives ten local seed listings 2 to 5 photos so the home's vitrina has data (local Supabase only; `--remove` undoes it) |
+| `../../scripts/ux-home-rerun.cjs` | Re-runs the rows UX-3b touches (PUB-001, PUB-006, SEO-002, AN-001, PUB-009 for the banner search) and recomputes the vitrina and the feed in SQL as the anon role to compare with the page; observations only; output `.ux-snapshots/<label>/rows.json` |
 | `../../scripts/ux-discovery-rerun.cjs` | Re-runs the acceptance rows UX-3a touches (PUB, SEO, REL, PHOTO, LIFE, FAV, ALERT, AN) on a local build, observations only; removes the favourite and alert it creates; output `.ux-snapshots/<label>/rows.json` |
-| `../../scripts/ux-audit.cjs` | Accessibility and shell audit: axe-core WCAG 2.1 A/AA, focus sweep, skip link, shell Tab order, one `<main>`/`<h1>`, public/Admin frame, strip sideways access and destination at 390 / 768, overflow and 200% zoom, menus open, layout shift; output `.ux-snapshots/<label>/audit.json` |
+| `../../scripts/ux-audit.cjs` | Accessibility and shell audit: axe-core WCAG 2.1 A/AA, focus sweep, skip link, shell Tab order, one `<main>`/`<h1>`, public/Admin frame, strip sideways access and destination at 390 / 768, overflow and 200% zoom, menus open, layout shift; since 3b the home's "Categorías" menu, the banner (one file, fixed height, layout shift) and LCP; output `.ux-snapshots/<label>/audit.json` |
 | `art/` | Original banner art: SVG (round 2), raster generators and images (`wild/`, `round5/` … `round10/`) |
 
 In the repo, `screenshots/` keeps only the baseline, the page and UX-1 concepts, the final home and the harness captures (UX-1, UX-2), as WebP. The banner explorations (rounds 1–10 and their renders) stay on the Laria Page Concepts canvas; `art/rotation/src/` keeps the generators of the nine decided pieces.
