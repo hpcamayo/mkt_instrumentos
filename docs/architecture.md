@@ -246,11 +246,12 @@ Core local components:
 - `components/site-header.tsx`
 - `components/site-footer.tsx`
 
-Generated/imported UI:
-- `components_v0/*`
-- Removed unused `components_v0/ui` scaffold
+Home (UX-3b, `docs/ux-redesign/ux-3-discovery.md` § Home):
+- `components/home/home-banner.tsx` (the banner piece picked per request, `lib/home-banner.ts`, files in `public/banners/`)
+- `components/home/home-sections.tsx` (vitrina, categories, recent listings, how it works, verified stores, sell block)
+- `lib/home.ts` (the home's read-only queries and its vitrina and feed selection)
 
-The homepage uses `components_v0` sections, but marketplace data logic remains in the route page. v0-generated UI should be integrated carefully and should not replace Supabase/business logic blindly.
+The v0-generated home sections (`components_v0/*`) were removed in UX-3b; the home composes the shared card and components instead.
 
 The listing detail route composes `ListingDetailGallery` in a sticky desktop column using `minmax(0,0.82fr)`, with the main listing facts, seller/store trust box, description, and full specs in the wider `minmax(0,1fr)` right column. Recommendation sections stay below that main detail grid.
 
@@ -373,7 +374,6 @@ The app uses Tailwind CSS 3-style config:
 Tailwind includes content paths for:
 - `app/**/*`
 - `components/**/*`
-- `components_v0/**/*`
 - `lib/**/*` (the status dictionary in `lib/ui/status.ts` holds class names)
 
 Colors are named by role, not by hue: `frame`, `action`, `accent`, `ink` / `ink-2` / `ink-3`, `muted-dark`, `surface`, `canvas`, `subtle`, `line-deco` / `line-strong`, and the functional `danger`, `danger-tint` and `warning-tint`. The legacy aliases (`brass`, `cedar`, `mist`, `laria.*`) were removed in UX-1. Type, radius, elevation and focus rules, the shared components in `components/ui/` and the contrast rules are documented in `docs/design-system.md`.

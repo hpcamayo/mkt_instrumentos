@@ -25,7 +25,7 @@ Product scope:
 - Domain/brand target: `laria.audio`. Some current app metadata/copy may still say "Instrumentos Peru"; treat Laria as the intended platform name.
 
 Important current routes:
-- `/`: homepage using `components_v0` sections with real Supabase data.
+- `/`: homepage (UX-3b): a rotating art banner with the brand search, "En vitrina" (the newest listing with 3 or more photos per category), category tiles with counts, recent listings, how Laria works, verified stores and the sell block, all from real Supabase data (`lib/home.ts`).
 - `/listados`: advanced searchable listings page.
 - `/instrumentos/[slug]`: the eight reserved Spanish slugs resolve to real category landings; other public slugs resolve to listing details with a sticky desktop gallery at about 45% of the main detail grid, a wider right-side detail column, WhatsApp CTA, published/view metadata, seller/store trust box, description, full specs, and recommendation sections below the main grid.
 - `/login`: account login with email/password and magic-link modes.

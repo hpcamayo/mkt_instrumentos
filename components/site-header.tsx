@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Suspense, useEffect, useRef } from "react";
-import { Bell, Search, UserRound } from "lucide-react";
+import { Suspense, useEffect, useRef, type Ref } from "react";
+import { Bell, ChevronDown, Search, UserRound } from "lucide-react";
 import { AccountLogout, AccountSectionLinks } from "@/components/account-navigation";
 import { BrandLogo } from "@/components/brand-logo";
 import { GlobalSearch } from "@/components/global-search";
@@ -13,7 +13,7 @@ import { useDisclosure } from "@/components/use-disclosure";
 import { buttonClasses } from "@/components/ui/button";
 import { CountBadge } from "@/components/ui/tag";
 import { accountRoleLabel, getAccountNavigationItems, getSellEntry } from "@/lib/account-navigation";
-import type { ShellLayout } from "@/lib/shell";
+import { CATALOG_PATH, VERIFIED_STORES_PATH, categoryMenus, type ShellLayout } from "@/lib/shell";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +88,87 @@ export function SiteHeader({ layout }: { layout: ShellLayout }) {
         ) : null}
       </PageContainer>
     </header>
+  );
+}
+
+// The home header (docs/ux-redesign/ux-3-discovery.md § Home header, N12, Q14): the same black bar with the logo,
+// then "Categorías" (a disclosure menu that replaces the category strip on the home), "Tiendas verificadas" from 768 px
+// and "Cómo funciona" from 1024 px; "Vender" and the account entry on the right. No search in the bar and no phone
+// search row: the banner has the search.
+const HOME_ITEM = "inline-flex h-11 items-center whitespace-nowrap rounded-control px-2 text-[14px] font-semibold leading-5 text-surface transition-colors duration-120 hover:bg-white/10";
+
+export function HomeHeader() {
+  const account = useMarketplaceAccount();
+  const sell = getSellEntry(account);
+  const menu = useDisclosure("home-categories");
+
+  return (
+    <header className="surface-frame relative bg-frame text-surface">
+      <PageContainer className="flex h-14 items-center md:h-16">
+        <Link href="/" aria-label="Laria inicio" className="flex h-full w-fit shrink-0 items-center">
+          <BrandLogo size="header" priority />
+        </Link>
+        {/* 20 px plus the items' 8 px padding: the first label sits 28 px after the logo. */}
+        <nav aria-label="Navegación principal" className="ml-5 flex min-w-0 items-center gap-1.5">
+          <button
+            ref={menu.buttonRef}
+            type="button"
+            aria-expanded={menu.open}
+            aria-controls="menu-categorias"
+            onClick={menu.toggle}
+            className={cn(HOME_ITEM, "gap-1", menu.open && "bg-white/10")}
+          >
+            Categorías
+            <ChevronDown aria-hidden="true" className={cn("h-3.5 w-3.5 shrink-0", menu.open && "rotate-180")} />
+          </button>
+          {/* Rendered only while open, right after its button, so Tab goes from the button into the panel. */}
+          {menu.open ? <HomeCategoryPanel panelRef={menu.panelRef} onChoose={() => menu.close()} /> : null}
+          <Link href={VERIFIED_STORES_PATH} className={cn(HOME_ITEM, "hidden md:inline-flex")}>Tiendas verificadas</Link>
+          <Link href="#como-funciona" className={cn(HOME_ITEM, "hidden lg:inline-flex")}>Cómo funciona</Link>
+        </nav>
+        <div className="ml-auto flex shrink-0 items-center justify-end gap-1 pl-3 sm:gap-2">
+          <Link href={sell.href} className={buttonClasses({ variant: "onDark", size: "sm", className: SELL_HIT_AREA })}>
+            {sell.label}
+          </Link>
+          <AccountEntry publishing={false} />
+        </div>
+      </PageContainer>
+    </header>
+  );
+}
+
+// "Todos los instrumentos", every category (its name opens its landing) with its canonical types, and "Tiendas
+// verificadas": the strip's destinations (lib/shell.ts categoryMenus, PUB-011–015). From 768 px a white panel across
+// the page under the bar, the categories in four columns of two rows, 36 px rows; on phones one stacked list with
+// 44 px rows, the types indented, scrolling inside the panel.
+const PANEL_ROW = "-mx-2 flex min-h-11 items-center rounded-control px-2 t-ui transition-colors duration-120 hover:bg-canvas md:min-h-9";
+
+function HomeCategoryPanel({ panelRef, onChoose }: { panelRef: Ref<HTMLDivElement>; onChoose: () => void }) {
+  return (
+    <div
+      ref={panelRef}
+      id="menu-categorias"
+      className="surface-light menu-fade absolute inset-x-0 top-full z-40 max-h-[calc(100dvh-56px)] overflow-y-auto border-b border-line-deco bg-surface text-ink shadow-level-1 md:max-h-none md:overflow-visible"
+    >
+      <PageContainer className="py-2 md:py-6">
+        <Link href={CATALOG_PATH} onClick={onChoose} className={cn(PANEL_ROW, "font-semibold")}>Todos los instrumentos</Link>
+        <ul className="mt-2 grid border-y border-subtle py-2 md:mt-3 md:grid-cols-4 md:gap-x-8 md:gap-y-5 md:py-5">
+          {categoryMenus.map((category) => (
+            <li key={category.key}>
+              <Link href={category.href} onClick={onChoose} className={cn(PANEL_ROW, "font-semibold")}>{category.label}</Link>
+              <ul>
+                {category.types.map((type) => (
+                  <li key={type.value}>
+                    <Link href={type.href} onClick={onChoose} className={cn(PANEL_ROW, "pl-6 text-ink-2 hover:text-ink md:pl-2")}>{type.label}</Link>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+        <Link href={VERIFIED_STORES_PATH} onClick={onChoose} className={cn(PANEL_ROW, "mt-2 font-semibold md:mt-3")}>Tiendas verificadas</Link>
+      </PageContainer>
+    </div>
   );
 }
 

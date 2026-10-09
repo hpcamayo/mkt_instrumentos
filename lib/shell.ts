@@ -5,8 +5,9 @@ import { categoryOptions, getCategoryLabel } from "@/lib/listings";
 
 // Site shell per route (docs/ux-redesign/ux-2-shell.md). Pure so tests can pin every template.
 export type ShellLayout = {
+  // "home": the home header (no search in the bar: the banner has it; a "Categorías" menu instead of the strip).
   // "publishing" keeps only the logo and the account entry on phones.
-  header: "standard" | "publishing" | "none";
+  header: "standard" | "home" | "publishing" | "none";
   // The category strip with its menus. "all": every width; "wide": 768 px and up; "none": no strip.
   strip: "all" | "wide" | "none";
   // Below 768 px: a search row under the bar, a search icon that opens it, or no search.
@@ -21,13 +22,14 @@ function under(pathname: string, prefix: string) {
 }
 
 // The category strip, with its category menus, sits under the header on every page that has the public header (owner,
-// 3 Oct, N12: restore the mega-menu inside the UX-2 design). Two exceptions: the publishing pages keep their focused
-// phone frame (strip from 768 px only), and Admin reaches the categories from its own navigation.
+// 3 Oct, N12: restore the mega-menu inside the UX-2 design). Three exceptions: the home, whose header has its own
+// "Categorías" menu with the same destinations (UX-3, Q14); the publishing pages, which keep their focused phone frame
+// (strip from 768 px only); and Admin, which reaches the categories from its own navigation.
 export function getShellLayout(pathname: string): ShellLayout {
   // Admin draws its own frame (sidebar, <main>) and has no footer.
   if (under(pathname, "/admin")) return { header: "none", strip: "none", phoneSearch: "none", footer: "none" };
-  // The home keeps the standard header until the UX-3 banner search ships, so search is never missing.
-  if (pathname === "/") return { header: "standard", strip: "all", phoneSearch: "row", footer: "full" };
+  // The home: its banner carries the search, so the bar has none and phones get no search row (UX-3 § Home header).
+  if (pathname === "/") return { header: "home", strip: "none", phoneSearch: "none", footer: "full" };
   if (PUBLISHING_PATHS.has(pathname)) return { header: "publishing", strip: "wide", phoneSearch: "none", footer: "slim" };
   if (under(pathname, "/mi-cuenta")) return { header: "standard", strip: "all", phoneSearch: "none", footer: "slim" };
   if (isBrowsePath(pathname)) return { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" };
@@ -54,6 +56,11 @@ function instrumentSlug(pathname: string) {
 }
 
 export { CATALOG_PATH };
+
+// The catalog searches by brand only, so every search box says so (decision N8): the header, the home banner and the
+// 404 page. Free-text search is left for later (F9). Kept in a plain module so server components can read it.
+export const SEARCH_PLACEHOLDER = "Busca por marca: Yamaha, Fender…";
+export const SEARCH_LABEL = "Buscar por marca en el catálogo";
 // No stores directory exists: "Tiendas verificadas" opens the catalog filtered to verified stores (decision N7).
 export const VERIFIED_STORES_PATH = "/listados?seller_type=verified_store";
 

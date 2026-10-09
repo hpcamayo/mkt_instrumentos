@@ -57,10 +57,11 @@ function renderHeader(pathname, account = {}) {
 }
 
 test("each route gets its frame: header, strip, phone search and footer (N3–N5, N12 hybrid)", () => {
-  // The strip and its category menus sit under the public header on every page that has it (N12, 3 Oct); the
-  // publishing pages keep their focused phone frame; Admin has none (its navigation has "Explorar categorías").
+  // The strip and its category menus sit under the public header on every page that has it (N12, 3 Oct), except the
+  // home, whose header brings its own "Categorías" menu and whose banner has the search (UX-3b, Q14); the publishing
+  // pages keep their focused phone frame; Admin has none (its navigation has "Explorar categorías").
   const expectations = {
-    "/": { header: "standard", strip: "all", phoneSearch: "row", footer: "full" },
+    "/": { header: "home", strip: "none", phoneSearch: "none", footer: "full" },
     "/listados": { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" },
     "/instrumentos/baterias": { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" },
     "/tiendas/casa-musical-grau": { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" },
@@ -76,6 +77,9 @@ test("each route gets its frame: header, strip, phone search and footer (N3–N5
     "/admin/tiendas": { header: "none", strip: "none", phoneSearch: "none", footer: "none" },
   };
   for (const [pathname, expected] of Object.entries(expectations)) assert.deepEqual(shell.getShellLayout(pathname), expected, pathname);
+  // The home gets the home header and no strip; every other public page the standard header.
+  assert.match(source("components/site-shell.tsx"), /\{layout\.header === "home" \? <HomeHeader \/> : <SiteHeader layout=\{layout\} \/>\}/);
+  assert.match(source("components/site-shell.tsx"), /\{layout\.strip !== "none" \? <GlobalCategories visibility=\{layout\.strip\} \/> : null\}/);
   // Admin owns its <main>; everywhere else the shell renders the only one.
   assert.match(source("components/site-shell.tsx"), /if \(layout\.header === "none"\) return <>\{children\}<\/>;/);
   assert.match(source("components/site-shell.tsx"), /<main id="contenido" tabIndex=\{-1\}/);
@@ -243,6 +247,59 @@ test("header per template: search icon on listings, logo and account only while 
   assert.match(publishing, /href="\/mi-cuenta\/publicar" class="[^"]*hidden md:inline-flex/);
   assert.match(publishing, /href="\/mi-cuenta\/notificaciones"[^>]*class="[^"]*hidden md:inline-flex/);
   assert.match(publishing, /aria-controls="menu-cuenta"/);
+});
+
+function renderHomeHeader({ open = false, account = {} } = {}) {
+  const state = { ...SIGNED_OUT, ...account };
+  const { HomeHeader } = load("components/site-header.tsx", {
+    "next/link": clientLinkMock,
+    "next/image": imageMock,
+    "next/navigation": navigationMock("/"),
+    "@/components/marketplace-account-provider": { useMarketplaceAccount: () => state },
+    // The menu's open state, as useDisclosure would hold it after a press on "Categorías".
+    "@/components/use-disclosure": { useDisclosure: () => ({ open, toggle() {}, close() {}, buttonRef: { current: null }, panelRef: { current: null } }) },
+  });
+  return renderToStaticMarkup(React.createElement(HomeHeader));
+}
+
+test("home header: Categorías menu, Tiendas verificadas from 768 px, Cómo funciona from 1024 px, no search (UX-3b, N12, Q14)", () => {
+  const html = renderHomeHeader();
+  assert.match(html, /<header class="surface-frame relative bg-frame text-surface">/);
+  assert.match(html, /aria-label="Laria inicio"/);
+  assert.match(html, /<nav aria-label="Navegación principal"[^>]*><button type="button" aria-expanded="false" aria-controls="menu-categorias" class="[^"]*h-11[^"]*">Categorías<svg/);
+  // Closed, the panel is not in the page at all (no hidden attribute a display class could override).
+  assert.doesNotMatch(html, /id="menu-categorias"/);
+  assert.match(html, /<a href="\/listados\?seller_type=verified_store" class="[^"]*hidden md:inline-flex"[^>]*>Tiendas verificadas<\/a>/);
+  assert.match(html, /<a href="#como-funciona" class="[^"]*hidden lg:inline-flex"[^>]*>Cómo funciona<\/a>/);
+  // No search in the bar and no phone search row: the banner has the search.
+  assert.doesNotMatch(html, /role="search"|name="brand"|busqueda-movil/);
+  // "Vender" stays the outline button on dark (N1, N9) and the account entry is the standard one.
+  assert.match(html.match(/<a href="\/vender" class="([^"]*)"/)[1], /border border-white\/40 bg-transparent text-surface/);
+  assert.match(html, /href="\/login"[^>]*>.*Ingresar/);
+  assert.match(renderHomeHeader({ account: { authenticated: true, name: "Lucía Prueba" } }), /aria-controls="menu-cuenta"/);
+  assert.match(source("components/site-header.tsx"), /\{menu\.open \? <HomeCategoryPanel panelRef=\{menu\.panelRef\} onChoose=\{\(\) => menu\.close\(\)\} \/> : null\}/);
+});
+
+test("the home Categorías panel: Todos los instrumentos, every category with its types, Tiendas verificadas (PUB-011–015 destinations)", () => {
+  const html = renderHomeHeader({ open: true });
+  assert.match(html, /aria-expanded="true" aria-controls="menu-categorias"/);
+  // The panel follows its button in the markup, so Tab goes from the button into it.
+  const panel = html.slice(html.indexOf('<div id="menu-categorias"'), html.indexOf("Tiendas verificadas</a></div></div>") + 35);
+  assert.ok(html.indexOf('aria-controls="menu-categorias"') < html.indexOf('id="menu-categorias"'));
+  assert.ok(html.indexOf('id="menu-categorias"') < html.indexOf('href="#como-funciona"'));
+  assert.match(panel, /^<div id="menu-categorias" class="surface-light menu-fade absolute inset-x-0 top-full z-40 max-h-\[calc\(100dvh-56px\)\] overflow-y-auto[^"]*shadow-level-1[^"]*md:max-h-none md:overflow-visible">/);
+  assert.match(panel, /<ul class="[^"]*md:grid-cols-4[^"]*">/);
+  const links = [...panel.matchAll(/<a href="([^"]+)" class="([^"]*)"[^>]*>([^<]+)<\/a>/g)].map((match) => ({ href: match[1].replace(/&amp;/g, "&"), className: match[2], label: match[3] }));
+  const expected = [
+    ["Todos los instrumentos", "/listados"],
+    ...shell.categoryMenus.flatMap((menu) => [[menu.label, menu.href], ...menu.types.map((type) => [type.label, type.href])]),
+    ["Tiendas verificadas", "/listados?seller_type=verified_store"],
+  ];
+  assert.deepEqual(links.map((link) => [link.label, link.href]), expected);
+  // Every destination is a client link; 44 px rows on phones, 36 px from 768 px; types indented on phones.
+  assert.equal((panel.match(/data-client-link=""/g) ?? []).length, expected.length);
+  for (const link of links) assert.match(link.className, /min-h-11[^"]*md:min-h-9/, link.label);
+  assert.match(links.find((link) => link.label === "Guitarras eléctricas").className, /pl-6[^"]*md:pl-2/);
 });
 
 test("header state endpoint returns the rail's counts, the admin check and the name, degrading to none (N6)", () => {

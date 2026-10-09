@@ -344,7 +344,7 @@ test("LEGAL-005/LEGAL-006: safety and trust copy states the limitations and neve
     assert.match(html, /no garantiza que una transacción se concrete/);
   }
   const trustSurfaces = [
-    "components/legal-page.tsx", "components/site-footer.tsx", "components/category-landing.tsx", "components_v0/trust-section.tsx",
+    "components/legal-page.tsx", "components/site-footer.tsx", "components/category-landing.tsx", "components/home/home-sections.tsx", "components/home/home-banner.tsx",
     "components/sell-listing-form.tsx", "components/seller-signup-form.tsx", "app/instrumentos/[slug]/page.tsx", "app/tiendas/[slug]/page.tsx",
     "components/reputation-summary.tsx", ...legalRoutes.map(([file]) => file),
   ];
@@ -370,8 +370,9 @@ test("public footer, forms and navigation link to legal/safety pages and categor
   assert.match(source("components/store-owner-signup-form.tsx"), /href="\/terminos"[\s\S]*href="\/privacidad"/);
   assert.match(source("components/global-categories.tsx"), /stripItems/);
   assert.match(source("lib/shell.ts"), /href: categoryLandingPath\(category\.value\)/);
-  assert.match(source("components_v0/categories-section.tsx"), /href=\{categoryLandingPath\(category\.value\)\}/);
-  assert.doesNotMatch(source("components_v0/hero-section.tsx"), /\/listados\?category=/);
+  assert.match(source("components/home/home-sections.tsx"), /href=\{categoryLandingPath\(category\.value\)\}/);
+  assert.doesNotMatch(source("components/home/home-sections.tsx"), /\/listados\?category=/);
+  assert.doesNotMatch(source("components/home/home-banner.tsx"), /\/listados\?category=/);
   assert.match(source("app/instrumentos/[slug]/page.tsx"), /<Breadcrumbs items=\{listingBreadcrumbs\(listing, displayTitle\)\} phoneBackLink \/>/);
   assert.match(source("lib/shell.ts"), /href: categoryLandingPath\(listing\.category\)|const categoryHref = categoryLandingPath\(listing\.category\)/);
   assert.doesNotMatch(source("lib/listings.ts"), /Instrumentos Perú/);

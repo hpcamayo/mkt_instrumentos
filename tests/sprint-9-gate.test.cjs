@@ -182,11 +182,17 @@ test("top-level categories link to their Spanish landing and type links never re
     assert.equal(categories.categoryLandingPath(category), `/instrumentos/${slug}`);
   }
 
-  const { CategoriesSection } = load("components_v0/categories-section.tsx", { "next/link": linkMock });
+  // UX-3b: the home's "Explora por categoría" tiles (components/home/home-sections.tsx) link every landing.
+  const { CategoryTiles } = load("components/home/home-sections.tsx", {
+    "next/link": linkMock,
+    "@/components/listing-card": { ListingCard: () => null },
+    "@/components/marketplace-image": { MarketplaceImage: () => null },
+  });
   const { categoryOptions } = load("lib/listings.ts");
-  const home = renderToStaticMarkup(React.createElement(CategoriesSection, { categories: [...categoryOptions] }));
+  const home = renderToStaticMarkup(React.createElement(CategoryTiles, { counts: { cymbals: 3 } }));
   assert.match(home, /href="\/instrumentos\/platillos"/);
   assert.doesNotMatch(home, /href="\/listados\?/);
+  assert.deepEqual([...home.matchAll(/href="([^"]+)"/g)].map((match) => match[1]), Object.values(expected).map((slug) => `/instrumentos/${slug}`));
 
   // Mirror types resolve to the landing; narrower types keep instrument_type.
   assert.equal(categories.categoryTypePath("cymbals", "cymbals"), "/instrumentos/platillos");

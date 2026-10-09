@@ -1,6 +1,6 @@
 # Laria Design System
 
-The canonical reference for Laria UI work. Read it before changing visuals, layout, Tailwind classes, copy or shared components. It describes what the code implements after UX-1 (Foundations), UX-2 (Shell and navigation) and UX-3a (Discovery: the card, the catalog, its filters and the category landings). The decisions behind it (D1–D12, N1–N14, G1, Q1–Q20, F10–F12), the audits and the roadmap are in `docs/ux-redesign/`.
+The canonical reference for Laria UI work. Read it before changing visuals, layout, Tailwind classes, copy or shared components. It describes what the code implements after UX-1 (Foundations), UX-2 (Shell and navigation), UX-3a (Discovery: the card, the catalog, its filters and the category landings) and UX-3b (Discovery: the home). The decisions behind it (D1–D12, N1–N14, G1, Q1–Q20, F10–F12), the audits and the roadmap are in `docs/ux-redesign/`.
 
 Product behavior is defined by `docs/functional-spec.md`. Nothing here changes a product rule; visual work keeps listing lifecycle, moderation, verification, reviews, favorites, alerts, authorization and seller contact exactly as specified.
 
@@ -80,7 +80,7 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 
 - One `<main id="contenido">` per page: `components/site-shell.tsx` renders it for public and account pages, `app/admin/layout.tsx` for Admin (so the skip link lands after the Admin sidebar). A 404 or error that renders outside the Admin layout (an unmatched `/admin/…` URL, a crash in the layout) gets its `<main>` from `FallbackMain`. Pages and layouts use `section`, `div` or `PageContainer as="section"`, never a second `main`.
 - The first focusable element is the "Saltar al contenido" skip link.
-- Page content is redesigned per template in UX-3 to UX-7: the catalog and the category landings in UX-3a ("Discovery" below); the home in UX-3b; listing and store pages, account and Admin content later. Until a template is redesigned, keep its layout and only use the tokens and components here.
+- Page content is redesigned per template in UX-3 to UX-7: the catalog and the category landings in UX-3a ("Discovery" below); the home in UX-3b ("Home" below); listing and store pages, account and Admin content later. Until a template is redesigned, keep its layout and only use the tokens and components here.
 
 ## Shell and navigation (UX-2)
 
@@ -88,7 +88,7 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 
 | Route | Header | Category strip | Phone search | Footer |
 | --- | --- | --- | --- | --- |
-| Home `/` | standard (until the UX-3 banner search) | every width (until the UX-3 home header) | row | full |
+| Home `/` | home (logo, "Categorías", "Tiendas verificadas" from 768 px, "Cómo funciona" from 1024 px; no search) | none (the home header's "Categorías" menu) | none (the banner has the search) | full |
 | Browse: `/listados`, category landings, `/tiendas/…` | standard | every width | row | slim |
 | Listing `/instrumentos/<listing>` | standard | every width | icon that opens the row | slim |
 | Other public pages (legal, sign-in, 404, 500) | standard | every width | none | slim |
@@ -96,7 +96,7 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 | Publishing `/mi-cuenta/publicar`, `/mi-cuenta/tienda/publicar` | phones: logo and account only | 768 px and up | none | slim |
 | Admin `/admin…` | none (Admin frame) | none ("Explorar categorías" in the Admin navigation) | none | none |
 
-The strip column follows the 3 Oct amendment (N12): the strip with its category menus sits under the public header everywhere except the publishing pages on phones; the UX-2 brief had it on public pages only, and only on browse pages on phones.
+The strip column follows the 3 Oct amendment (N12): the strip with its category menus sits under the public header everywhere except the home (UX-3b, Q14: its header's "Categorías" menu gives the same destinations) and the publishing pages on phones; the UX-2 brief had it on public pages only, and only on browse pages on phones.
 
 ### Logo
 
@@ -106,7 +106,7 @@ The strip column follows the 3 Oct amendment (N12): the strip with its category 
 ### Header
 
 - Black bar (`surface-frame bg-frame`), 64 px from 768 px, 56 px on phones, page gutters. Logo, search, then the actions 8 px apart (4 px on phones, 44 px targets).
-- Search: 44 px field up to 680 px wide, 28 px after the logo, 36 px icon submit button inside the field. It searches the brand only, so its placeholder says so: "Busca por marca: Yamaha, Fender…" (N8; the same placeholder goes on the home banner in UX-3). It submits `brand` to `/listados`; no suggestions. On phones the search is a row under the bar on browse pages and the home, behind a search icon on listing pages, and absent elsewhere; the phone row follows the actions in the markup so Tab follows the visual order.
+- Search: 44 px field up to 680 px wide, 28 px after the logo, 36 px icon submit button inside the field. It searches the brand only, so its placeholder says so: "Busca por marca: Yamaha, Fender…" (N8; the home banner's search uses the same placeholder and label, `SEARCH_PLACEHOLDER` and `SEARCH_LABEL` in `lib/shell.ts`). It submits `brand` to `/listados`; no suggestions. On phones the search is a row under the bar on browse pages, behind a search icon on listing pages, and absent elsewhere (on the home the banner has it); the phone row follows the actions in the markup so Tab follows the visual order.
 - **Header button rule (N1, N9):** "Vender" is `buttonClasses({ variant: "onDark", size: "sm" })`, the 36 px outline button on dark, its border white at 40% (about 3.7:1 on the frame; N9 kept it over N1's #4B5563, which is 2.6:1); yellow stays for each page's own action. On phones its hit area grows to 44 px without changing its look. Store owners keep their labels ("Publicar", "Solicitud de tienda"); `getSellEntry` holds the destinations. "Para tiendas" is not a header entry (the footer's "Registrar mi tienda" is).
 - Account entry: signed out, "Ingresar" (icon + text); signed in, a bell to Notificaciones with a `CountBadge` of unread notifications, and an avatar with initials + "Mi cuenta" that opens the account menu. Below 900 px both labels become icons with accessible names. The entry keeps its place, invisible, until the first account check settles (no "Ingresar" flash for a signed-in visitor).
 - The last item's visible edge sits on the right gutter, like the logo on the left: pull out its side padding with a negative margin.
@@ -127,6 +127,11 @@ The strip column follows the 3 Oct amendment (N12): the strip with its category 
 - Current item: a 3 px blue underline (`shadow-[inset_0_-3px_0_var(--accent)]`) in ink, with `aria-current="page"` on a link and `aria-current="true"` on a category button; an open category has a 3 px ink underline. On phones the other items are ink-2. Focus rings are inset so the scroll container does not clip them.
 - Category panel (`CategoryPanel`): "Ver todos" (the category landing) and "Tipos", every canonical instrument type of the category (`categoryMenus`: the listing form's and catalog filters' values through `categoryTypePath`). It renders after its button, positioned across the page under the strip, with `shadow-level-1`, a `line-deco` border and `.menu-fade`. From 768 px: the category as a micro label, types in 180–220 px columns, 36 px rows. Phones: a stacked list with 44 px rows. One panel at a time; the closing rules of every shell menu.
 - Every strip link, including those into the catalog (`/listados`, with or without a query), is a client link. Until UX-3 the catalog links were native, because some client transitions between two catalog URLs never completed; UX-3 removed the cause (`app/listados/loading.tsx`, owner decision Q1 A) and the workaround (`ShellLink`, `isCatalogHref`).
+
+### Home header (UX-3b)
+
+- `HomeHeader` (`components/site-header.tsx`), chosen by `SiteShell` when `getShellLayout("/")` returns `header: "home"`: the same black bar (64 px from 768 px, 56 px on phones), the logo, then 28 px later "Categorías ⌄" (a disclosure button, `aria-controls="menu-categorias"`), "Tiendas verificadas" (N7) from 768 px and "Cómo funciona" (a link to `#como-funciona`) from 1024 px, 14 px / 600 white in `nav` "Navegación principal"; on the right "Vender" (N1, N9) and the account entry, as on every page. No search in the bar and no phone search row: the banner has the search. No category strip on the home (Q14).
+- The "Categorías" panel: "Todos los instrumentos" (`/listados`), every category (its name opens its landing) with its canonical types (`categoryMenus`, the strip's destinations), then "Tiendas verificadas". From 768 px a white panel across the page under the bar (`surface-light`, `shadow-level-1`, `line-deco` bottom border, `.menu-fade`), the categories in four columns of two rows, 36 px rows. Phones: one stacked list with 44 px rows, the types indented, scrolling inside the panel (up to the viewport height under the bar). It follows its button in the markup, renders only while open, and follows the shell menu rules (`useDisclosure`).
 
 ### Breadcrumbs
 
@@ -158,7 +163,7 @@ The catalog (`/listados`) and the category landings (`/instrumentos/<categoría>
 
 ### The listing card
 
-- `components/listing-card.tsx` is the only listing card (grid variant; the home's showcase tile comes in UX-3b). An `<article>` with one link, the title, stretched over the whole card, and the favourite above it: two tab stops.
+- `components/listing-card.tsx` is the only listing card, in two variants: `grid` (below) and `showcase` (the home's vitrina tile, "Home" below). An `<article>` with one link, the title, stretched over the whole card, and the favourite above it: two tab stops.
 - Photo: square, `object-fit: cover`, in an 8 px frame with a 1 px `subtle` border on `canvas`; responsive optimized image; the first grid row eager (`eager`), the rest lazy. Over it, 8 px in: the favourite (`FavoriteButton variant="overlay"`: a 36 px white circle in a 44 px hit area, top right) and "N fotos" when there is more than one photo (12/16 600, white on `frame` at 75%, bottom left). No arrows, dots, carousel or category tag.
 - Caption, 8 px under the frame: the title (`t-card-title`, two lines reserved so prices line up), the price (`t-card-price`), a spec line (`t-meta`, one line: the condition and up to two key attributes of the type, `getCardSpecLine`), a seller line (`t-meta`: the city, which truncates first, then "Particular", "Tienda" or "Tienda verificada" with the 14 px verified mark). No store link on the card.
 - Hover: the frame's border turns `line-strong` and the title gets the 2 px blue underline. No lift, no zoom.
@@ -194,6 +199,34 @@ The catalog (`/listados`) and the category landings (`/instrumentos/<categoría>
 - Empty landing: "Aún no hay publicaciones de <categoría>", the alert entry, "Ver todo el catálogo", "Publicar un instrumento"; `noindex`.
 - The alert entry (`CreateSearchAlert`): "Crear alerta" in the title row (secondary, 36 px), a chip-styled button among the chips on phones, the end tile and the no-results state; only when a filter or a category narrows the search. It opens a panel with what the alert saves, its frequency and "Crear alerta"; signed out it leads to sign-in and back. Success: "Alerta creada. Te avisaremos por correo solo sobre publicaciones nuevas que coincidan."
 
+## Home (UX-3b)
+
+The home (`app/page.tsx`) is the decided "Inicio · versión final"; the brief is `docs/ux-redesign/ux-3-discovery.md` § Home. Order: the home header, the banner, "En vitrina", "Explora por categoría", "Recién publicados", "Cómo funciona Laria", "Tiendas verificadas", the sell block, the full footer. Data: `lib/home.ts` (read-only, the public client, so RLS decides what is public); banner pieces: `lib/home-banner.ts`; sections: `components/home/`.
+
+### Banner
+
+- One of the nine decided pieces (`public/banners/`, sources and rules in `docs/ux-redesign/art/rotation/`) per request, picked on the server (`pickHomeBanner`; the page is dynamic). Only that piece is preloaded (`preload` with `media`: the desktop file from 768 px, the phone file below) and loaded, through `<picture>`: WebP 1x/2x with the JPEG fallback. Decorative: `alt=""`. No carousel, no motion (H11).
+- From 768 px: a 300 px band, the art `object-fit: cover; object-position: center` behind the text, centred on the page axis and lifted 13 px above the middle: `h1` "El mercado de instrumentos del Perú" (`t-display` 40/44, white), the lead "Nuevos y usados, de músicos y tiendas de todo el país." (16/24, `line-deco`), then the search.
+- Phones: the 390×150 art strip (fixed aspect ratio), then the text on frame black (`h1` 28/32, lead 14/20); a 40 px CSS gradient fades the art's bottom into the frame (Q16 A; the art files are unchanged).
+- The search is the header search's GET form (`brand` to `/listados`, the N8 placeholder, the label "Buscar por marca en el catálogo"): a white box, radius 8, 64 px tall and up to 640 px wide from 768 px with "Explorar" (primary, 52 px) at a 6 px inset; 56 px with a 44 px "Explorar" on phones. It records nothing itself; the catalog records the search. Every height is fixed, so the image never shifts the page.
+- The art may leave the brand palette; the interface over it does not (H10).
+
+### Sections
+
+- Spacing (audit item 7): 32 px under the banner, then 48 px between sections from 768 px; 24, then 32 on phones. Section titles are `h2` `t-section`, subtitles `t-meta`; a section's link sits on the title's line, right-aligned (item 15), with its hit area grown to 44 px on phones. Eight type sizes on desktop: 40, 20, 18, 16, 15, 14, 13, 12.
+- **En vitrina** (H2, H3, Q12): "Lo más reciente de cada categoría. Se actualiza sola." and "Ver las N publicaciones" (the total, Q10 B). The newest approved listing of each category with 3 photos or more (`listing_photo_count`), the five most recent of them (`selectVitrina`). The **showcase tile**: a bordered 8 px box (1 px `subtle`, `line-strong` on hover) with the square photo and, on it, 8 px in, the ink price tag (`ink` fill, white 14 px / 750 tabular text, a 1.5 px white edge, 4 px radius), the tile's only price; under it, 12 px in, the category micro label (`t-micro`, `ink-2`), the title on one line (`t-card-title`, truncated, `h3`) and the seller line (below 1280 px the city takes its own line above the seller words). No favourite, no photo count, no spec line: one tab stop. Five columns from 1024 px; below, a row that scrolls sideways inside the section (160 px tiles on phones, 192 px on tablets, 12 / 20 px gaps). Hidden when no category qualifies.
+- **Explora por categoría**: eight tiles in taxonomy order, each a link to its landing (SEO-002), with the name (`t-card-title`), "N publicaciones" (`t-meta`, Q10 B) and a chevron; bordered like the cards; two columns on phones (44 px minimum), four from 768 px, eight from 1280 px.
+- **Recién publicados** (Q15 B): the newest approved listings without the vitrina's (`selectFeed`), as grid cards with `h3` titles: eleven and the end tile on desktop (`HOME_FEED_GRID`: 2 / 3 / 4 / 6 columns at 0 / 768 / 1024 / 1280 px, about 213 px cards at 1440), the first six on phones and then "Ver las N publicaciones" (secondary, full width). No link in its header (item 16). The end tile, on `canvas` without border, square: "N publicaciones" (`t-section`), "Guitarras, baterías, pedales, amplificadores y más." and "Ver todo el catálogo". Empty marketplace: `EmptyState` "Aún no hay publicaciones" / "Las primeras publicaciones aparecerán aquí." / "Publicar un instrumento".
+- **Cómo funciona Laria** (`id="como-funciona"`, H4, H5): a `canvas` panel without border; on the left the title, "Laria conecta a quien compra con quien vende. No procesa pagos ni envíos: eso lo acuerdan ustedes." and "Consejos de seguridad" (after the safety line on phones); on the right the four promises (H4 2–5), each with an 18 px line icon (the verified mark drawn at the same 18 px, item 12), a 16 px / 600 title and a 14 px `ink-2` line; under them, after a `line-deco` rule, the safety line. The home makes no email promise (H4).
+- **Tiendas verificadas** (Q18 A, N7): "Ver todas" opens the catalog filtered to verified stores. Up to three active verified stores, newest first, each a link to its page: the logo or white initials on a 40 px `frame-2` square (item 11), the name, the place, `VerifiedMark`; no stats. Then the `canvas` tile "¿Tienes una tienda?" with "Registrar mi tienda" (`/registrar-tienda`, N10). Four columns from 1024 px, a sideways row below (256 px tiles). Hidden when there is no verified store.
+- **Sell block** (H4, item 9): a `canvas` panel without border, "¿Tienes equipo que ya no usas?", "Publicar es gratis. Revisamos tu publicación antes de mostrarla." and "Vender mi equipo" (primary, 52 px, full width on phones), the page's other yellow action, far from "Explorar".
+
+### States
+
+- The home is server-rendered; there is no loading state of its own.
+- A failed listing query (the vitrina's, the feed's) leaves its section out, the rest renders and the error goes to the server log; a failed count leaves the counts out ("Ver todo el catálogo" instead of "Ver las N publicaciones"); a failed stores query hides the stores section. Without the public Supabase keys every listing section is left out.
+- Empty marketplace: no vitrina; "Recién publicados" shows the empty state. When the vitrina already holds every listing, "Recién publicados" is left out. No verified store: no stores section.
+
 ## Components (`components/ui/`)
 
 Use these instead of writing new markup for the same job.
@@ -206,7 +239,7 @@ Use these instead of writing new markup for the same job.
 - `Notice` (`info`, `success`, `warning`, `danger`, icon + text): danger is an alert, others a status; use `role="note"` for static explanations. Its body underlines every link, so a notice that holds buttons, or that receives focus through a ref, composes `noticeClassName()` + `NoticeIcon` instead (as `PageNotice` does). `PageNotice` moves focus to page-level results; do not use that movement for field errors.
 - `PageHeader`: the page's only `h1`, with an optional eyebrow, a one-line summary (`meta`, 13 px) and the page's actions; a longer 16 px introduction stays a paragraph after it. Light surfaces only: headers on the black frame keep their own markup.
 - `EmptyState` (any list or section with nothing to show; `headingLevel={3}` under a section heading), `Price` (S/ with tabular figures; `card`, `detail`, `inline`), `VerifiedMark` / `VerifiedIcon`, `Skeleton`, `IconButton`, `WhatsAppGlyph`.
-- Shell components (UX-2): `BrandLogo`, `Breadcrumbs`, `ErrorPage`, `AccountSectionLinks`, `CategoryPanel`, `CategoryAccordion`, `useDisclosure`, `useDisclosureGroup`; see "Shell and navigation". Catalog navigation (UX-3): `CatalogNavigation`, `CatalogLink`, `CatalogResults` (`components/catalog-navigation.tsx`).
+- Shell components (UX-2): `BrandLogo`, `Breadcrumbs`, `ErrorPage`, `AccountSectionLinks`, `CategoryPanel`, `CategoryAccordion`, `useDisclosure`, `useDisclosureGroup`, and since UX-3b `HomeHeader`; see "Shell and navigation". Catalog navigation (UX-3): `CatalogNavigation`, `CatalogLink`, `CatalogResults` (`components/catalog-navigation.tsx`). Home (UX-3b): `HomeBanner` (`components/home/home-banner.tsx`) and the sections in `components/home/home-sections.tsx`; see "Home".
 - `tests/ux-primitives.test.cjs` fails when a primitive loses its last consumer or a hand-rolled copy (error box, pulse placeholder, price class, count pill) comes back. `Chip` and `Radio` found their first consumer in the filter sheet (UX-3). `Skeleton` has none since the catalog's `loading.tsx` went (UX-3 Q1 A); it is kept for the listing page's streamed sections (UX-4), the one exemption.
 
 WhatsApp contact: every contact button is the primary yellow button with the WhatsApp glyph and the label "Contactar por WhatsApp". No WhatsApp green.

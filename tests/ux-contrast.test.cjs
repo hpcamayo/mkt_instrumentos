@@ -92,7 +92,7 @@ test("CSS variables mirror the Tailwind roles", () => {
 const FRAME_CHILDREN = new Set();
 
 test("light-on-dark text roles are only used on frame surfaces", () => {
-  const files = ["app", "components", "components_v0"].flatMap(function walk(dir) {
+  const files = ["app", "components"].flatMap(function walk(dir) {
     return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
       const file = path.join(dir, entry.name);
       return entry.isDirectory() ? walk(file) : file.endsWith(".tsx") ? [file] : [];

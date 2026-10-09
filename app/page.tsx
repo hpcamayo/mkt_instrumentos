@@ -1,154 +1,46 @@
-import { CategoriesSection } from "@/components_v0/categories-section";
-import { CTASection } from "@/components_v0/cta-section";
-import {
-  FeaturedListings,
-  type FeaturedListing,
-} from "@/components_v0/featured-listings";
-import { HeroSection } from "@/components_v0/hero-section";
-import { TrustSection } from "@/components_v0/trust-section";
-import {
-  VerifiedStores,
-  type VerifiedStore,
-} from "@/components_v0/verified-stores";
-import {
-  categoryOptions,
-  normalizeStore,
-  type ListingCardData,
-} from "@/lib/listings";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 import type { Metadata } from "next";
+import { HomeBanner } from "@/components/home/home-banner";
+import { CategoryTiles, HowItWorks, RecentListings, SellBlock, ShowcaseSection, VerifiedStoresSection } from "@/components/home/home-sections";
 import { JsonLd } from "@/components/json-ld";
+import { PageContainer } from "@/components/page-container";
+import { fetchHomeData, type HomeData } from "@/lib/home";
+import { pickHomeBanner } from "@/lib/home-banner";
 import { buildHomeMetadata, buildOrganizationJsonLd } from "@/lib/seo";
+import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 
+// Dynamic: the banner piece is picked per request (H11) and the vitrina and feed refresh by themselves (H2).
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = buildHomeMetadata();
 
-type StorePreviewData = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  city: string;
-  district: string | null;
-  logo_url: string | null;
-};
+// Without the public keys every listing query counts as failed: those sections are left out, as on a query error.
+const UNAVAILABLE: HomeData = { vitrina: null, feed: null, total: null, categoryCounts: {}, stores: null };
 
+// The decided home (docs/ux-redesign/ux-3-discovery.md § Home, "Inicio · versión final"): the banner, then "En
+// vitrina", "Explora por categoría", "Recién publicados", "Cómo funciona Laria", "Tiendas verificadas" and the sell
+// block; the shell adds the home header and the full footer (lib/shell.ts). A failed listing query leaves its section
+// out (logged on the server); an empty vitrina and no verified stores hide their sections.
 export default async function HomePage() {
+  const banner = pickHomeBanner();
   const supabase = getPublicSupabaseClient();
-  let listings: ListingCardData[] = [];
-  let stores: StorePreviewData[] = [];
-
-  if (supabase) {
-    const [{ data: listingRows }, { data: storeRows }] = await Promise.all([
-      supabase
-        .from("listings")
-        .select(
-          `
-            id,
-            title,
-            slug,
-            category,
-            brand,
-            model,
-            condition,
-            price_pen,
-            instrument_type,
-            attributes,
-            published_at,
-            view_count,
-            city,
-            region,
-            seller_type,
-            created_at,
-            stores (
-              name,
-              slug,
-              status,
-              is_verified
-            ),
-            listing_photos (
-              id,
-              listing_id,
-              image_url,
-              alt_text,
-              sort_order
-            )
-          `,
-        )
-        .eq("status", "approved")
-        .order("created_at", { ascending: false })
-        .order("sort_order", {
-          foreignTable: "listing_photos",
-          ascending: true,
-        })
-        .limit(1, { foreignTable: "listing_photos" })
-        .limit(8),
-      supabase
-        .from("stores")
-        .select(
-          `
-            id,
-            name,
-            slug,
-            description,
-            city,
-            district,
-            logo_url
-          `,
-        )
-        .eq("status", "active")
-        .eq("is_verified", true)
-        .order("created_at", { ascending: false })
-        .limit(4),
-    ]);
-
-    listings = (listingRows ?? []) as ListingCardData[];
-    stores = (storeRows ?? []) as StorePreviewData[];
-  }
+  if (!supabase) warnMissingSupabaseEnv();
+  const { vitrina, feed, total, categoryCounts, stores } = supabase ? await fetchHomeData(supabase) : UNAVAILABLE;
+  // The feed's empty state is for a marketplace with nothing published; when the vitrina holds every listing the
+  // feed has nothing new to add and is left out.
+  const showFeed = feed !== null && (feed.length > 0 || !vitrina?.length);
 
   return (
     <>
       <JsonLd data={buildOrganizationJsonLd()} />
-      <HeroSection />
-      <CategoriesSection categories={[...categoryOptions]} />
-      <FeaturedListings listings={toFeaturedListings(listings)} />
-      <VerifiedStores stores={toVerifiedStores(stores)} />
-      <TrustSection />
-      <CTASection />
+      <HomeBanner banner={banner} />
+      <PageContainer className="flex flex-col gap-8 pb-8 pt-6 md:gap-12 md:pb-12 md:pt-8">
+        {vitrina?.length ? <ShowcaseSection listings={vitrina} total={total} /> : null}
+        <CategoryTiles counts={categoryCounts} />
+        {showFeed ? <RecentListings listings={feed} total={total} /> : null}
+        <HowItWorks />
+        {stores?.length ? <VerifiedStoresSection stores={stores} /> : null}
+        <SellBlock />
+      </PageContainer>
     </>
   );
-}
-
-function toFeaturedListings(listings: ListingCardData[]): FeaturedListing[] {
-  return listings.map((listing) => {
-    const store = normalizeStore(listing);
-    const photo = listing.listing_photos[0];
-
-    return {
-      id: listing.id,
-      title: listing.title,
-      slug: listing.slug,
-      pricePen: listing.price_pen,
-      location: `${listing.city}, ${listing.region}`,
-      imageUrl: photo?.image_url ?? null,
-      imageAlt: photo?.alt_text ?? listing.title,
-      condition: listing.condition ?? null,
-      isVerifiedStore:
-        listing.seller_type === "store" && store?.is_verified === true,
-    };
-  });
-}
-
-function toVerifiedStores(stores: StorePreviewData[]): VerifiedStore[] {
-  return stores.map((store) => ({
-    id: store.id,
-    name: store.name,
-    slug: store.slug,
-    logoUrl: store.logo_url,
-    location: [store.district, store.city].filter(Boolean).join(", "),
-    description:
-      store.description ??
-      "Tienda activa con publicaciones revisadas.",
-  }));
 }

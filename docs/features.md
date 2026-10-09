@@ -53,27 +53,20 @@ Stores are likely the first realistic monetization engine.
 
 ## Homepage
 
-Route: `/`
+Route: `/` (UX-3b, `docs/ux-redesign/ux-3-discovery.md` § Home; visuals in `docs/design-system.md` § Home)
 
-The homepage uses newer UI sections from `components_v0`:
-- `HeroSection`
-- `CategoriesSection`
-- `FeaturedListings`
-- `VerifiedStores`
-- `TrustSection`
-- `CTASection`
+The home header (logo, "Categorías" menu with every category and type, "Tiendas verificadas", "Cómo funciona", "Vender", account) replaces the category strip on the home, then:
+- A banner: one of nine decided art pieces per visit (`lib/home-banner.ts`, `public/banners/`), the headline and the brand search (a GET form to `/listados`).
+- "En vitrina": the newest approved listing with 3 or more photos in each category, the five most recent of them, as showcase tiles with an ink price tag.
+- "Explora por categoría": the eight category landings with their approved-listing counts.
+- "Recién publicados": the newest approved listings not in the vitrina (eleven and an end tile on desktop, six on phones).
+- "Cómo funciona Laria" (`#como-funciona`): what Laria does and does not do, four promises and the safety line.
+- "Tiendas verificadas": up to three active verified stores and a "¿Tienes una tienda?" tile.
+- The sell block and the full footer.
 
-It fetches real Supabase data:
-- Up to 8 approved listings for featured listings.
-- Up to 4 active verified stores.
-- Only the first listing photo is embedded for homepage listings.
+It reads real Supabase data with the public client (`lib/home.ts`): eight per-category vitrina queries on `listing_photo_count`, the newest approved listings, the total and per-category counts (head counts) and the three newest active verified stores. A failed listing query leaves its section out (logged on the server). Only the first photo of each listing is embedded.
 
 Layout uses the shared `PageContainer` public width system.
-
-Visual refresh:
-- Uses the canonical Laria visual system from `docs/design-system.md`.
-- Keeps the black header/footer, yellow major CTAs, light marketplace sections, blue interface accents, and placeholder-only unsupported blocks.
-- Does not add backend logic, Supabase queries, or new marketplace features.
 
 ## Listings Page
 

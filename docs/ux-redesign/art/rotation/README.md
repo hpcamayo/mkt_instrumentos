@@ -1,7 +1,9 @@
 # Home banner rotation (decided 30 Sep 2026)
 
 Owner decisions H7 and H11 in `../../decisions.md`: the home banner shows one of these nine pieces per visit.
-Everything here is ready for UX-3 (Discovery: home). Nothing is implemented yet.
+Built in UX-3b (9 Oct 2026): the image files moved to `public/banners/` (same names), where the site serves them;
+`lib/home-banner.ts` lists the pieces and `components/home/home-banner.tsx` renders the chosen one. This folder keeps
+the manifest, the rules, the rotation sheet and the generators (`src/`).
 
 ## The set
 
@@ -27,11 +29,11 @@ Everything here is ready for UX-3 (Discovery: home). Nothing is implemented yet.
 - The images are decorative: `alt=""`. The headline and search carry the meaning.
 - Text is the same for all nine: headline #FFFFFF; lead #C8CDD6 on desktop and #D5D9E2 on phone; search box as specified in the page concept. No per-banner colour switching.
 - Desktop: the art fills the 1440×300 banner behind the centred headline and search (`object-fit: cover`, centred). The centre of every piece is kept dark and calm for the text.
-- Phone: a 390×150 art strip above the text block; the text block uses the banner's phone background colour.
+- Phone: a 390×150 art strip above the text block; the text block uses the banner's phone background colour. *Superseded by Q16 A (owner, 8 Oct): the text block is frame black (#050608) on all nine, and a 40 px CSS gradient fades the art's bottom into it; the art files are unchanged. The lead uses the `line-deco` token (#C8CDD6) on both sizes, so the interface keeps the brand palette (H10).*
 
 ## Files
 
-Each banner comes as `NN-id-desktop.webp` (1440×300), `NN-id-desktop@2x.webp` (2880×600), `NN-id-phone.webp` (390×150), `NN-id-phone@2x.webp` (780×300), plus JPEG fallbacks at 2x.
+In `public/banners/`, each banner comes as `NN-id-desktop.webp` (1440×300), `NN-id-desktop@2x.webp` (2880×600), `NN-id-phone.webp` (390×150), `NN-id-phone@2x.webp` (780×300), plus JPEG fallbacks at 2x.
 Average weight: desktop@2x WebP ~95 KB, desktop 1x WebP ~32 KB, phone@2x WebP ~29 KB.
 
 Sources: `../round9/diablada.py` and `../round10/` (all generated in code; no photos, no image-generation models).

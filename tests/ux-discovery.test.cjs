@@ -117,6 +117,22 @@ test("the card caption: title, price, the real condition with the type's key att
   assert.match(renderCard({ headingLevel: 3 }), /<h3 class="line-clamp-2 min-h-\[38px\] t-card-title/);
 });
 
+test("the showcase tile (vitrina, UX-3b): bordered box, square photo, the ink price tag, category, one-line title, seller words, no favourite (H2, H3)", () => {
+  const verified = listing({ city: "Huancayo", seller_type: "store", stores: { name: "Tienda QA", slug: "tienda-qa", status: "active", is_verified: true } });
+  const html = renderCard({ variant: "showcase", headingLevel: 3, eager: true, listing: verified });
+  assert.equal(focusables(html), 1, "the stretched title link only");
+  assert.doesNotMatch(html, /favoritos/);
+  assert.match(html, /<article class="group relative flex min-w-0 flex-col overflow-hidden rounded-panel border border-subtle bg-surface[^"]*hover:border-line-strong">/);
+  assert.match(html, /<div class="relative aspect-square border-b border-subtle bg-canvas"><img src="\/foto\.jpg" alt="Batería Pearl Export usada" loading="eager"/);
+  assert.match(html, /<span class="absolute left-2 top-2 rounded-tag border-\[1\.5px\] border-white bg-ink [^"]*text-white[^"]*">S\/\s?1,800<\/span>/);
+  assert.equal((html.match(/1,800/g) ?? []).length, 1, "the tag is the tile's only price");
+  assert.match(html, /<p class="truncate t-micro text-ink-2">Baterías<\/p><h3 class="truncate t-card-title text-ink"><a href="\/instrumentos\/bateria-pearl-export-usada-6b1f4f8e" class="[^"]*after:absolute after:inset-0[^"]*">Batería Pearl Export usada<\/a><\/h3>/);
+  // Below 1280 px the city takes its own line above the seller words.
+  assert.match(html, /<p class="flex min-w-0 items-center gap-1 t-meta max-xl:flex-wrap max-xl:gap-y-0"><span class="min-w-0 truncate max-xl:basis-full">Huancayo<\/span><span aria-hidden="true" class="max-xl:hidden">·<\/span><span class="shrink-0">Tienda verificada<\/span><svg/);
+  assert.doesNotMatch(html, /fotos<|Shell pack/, "no photo count and no spec line on the tile");
+  assert.match(renderCard({ variant: "showcase", listing: listing({ price_pen: null }) }), />Precio a consultar<\/span>/);
+});
+
 test("the spec line names up to two key attributes per type, with units, and skips missing ones (Q3 A)", () => {
   const { getCardSpecLine } = load("lib/listing-specs.ts");
   const line = (instrument_type, attributes, condition = "Usado - buen estado") => getCardSpecLine({ instrument_type, attributes, condition });

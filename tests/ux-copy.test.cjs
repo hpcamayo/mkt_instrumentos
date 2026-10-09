@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const ts = require("typescript");
 
-const ROOTS = ["app", "components", "components_v0", "lib"];
+const ROOTS = ["app", "components", "lib"];
 const SKIP_FILES = [/lib\/supabase\/database\.types\.ts$/, /\.d\.ts$/];
 // Legal pages keep their approved wording and name the data processors (decisions.md, G2); only orthography applies there.
 const LEGAL = /^app\/(terminos|privacidad|articulos-prohibidos|consejos-de-seguridad)\//;
@@ -138,12 +138,18 @@ test("every WhatsApp contact button shares one label and the glyph", () => {
   assert.equal(buttons, 3);
 });
 
-test("buyers see no placeholder copy and the home badge shows the real condition (D11)", () => {
+test("buyers see no placeholder copy and the home's cards show the real condition (D11)", () => {
   const placeholders = /^(Foto|Banner|Logo) pendiente$|Bloque visual temporal|Vista previa visual|Comprar ahora|Destacados para ti|\b(Tienda|Backline|Audio) demo\b|placeholder/i;
   assert.deepEqual(failures(({ text }) => placeholders.test(text)), []);
-  const featured = fs.readFileSync("components_v0/featured-listings.tsx", "utf8");
-  assert.match(featured, /\{listing\.condition\}/);
-  assert.doesNotMatch(featured, /"Nuevo"/);
+  // UX-3b: the home's second card went; the home renders the one card, whose spec line starts with the listing's own
+  // condition (lib/listing-specs.ts), never a literal.
+  const card = fs.readFileSync("components/listing-card.tsx", "utf8");
+  assert.match(card, /const specLine = getCardSpecLine\(listing\);/);
+  assert.doesNotMatch(card, /"Nuevo"|"Usado/);
+  assert.match(fs.readFileSync("lib/listing-specs.ts", "utf8"), /const parts = listing\.condition \? \[getConditionLabel\(listing\.condition\)\] : \[\];/);
+  const home = fs.readFileSync("components/home/home-sections.tsx", "utf8");
+  assert.equal((home.match(/<ListingCard /g) ?? []).length, 2, "the vitrina tile and the feed card are the one card");
+  assert.doesNotMatch(home, /"Nuevo"|condition/);
   const store = fs.readFileSync("app/tiendas/[slug]/page.tsx", "utf8");
   assert.match(store, /storeInitials\(store\.name\)/);
 });
