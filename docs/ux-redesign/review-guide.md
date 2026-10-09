@@ -19,7 +19,7 @@ git diff 3da7afa..ux/redesign -- app components components_v0 lib scripts tests 
 git diff 49a38e5..3da7afa                        # UX-1
 ```
 
-Relation to `main`: as of the last fetch (30 Sep), `origin/main` is one docs-only commit ahead (`f04e909`: `docs/context.md`, `docs/functional-spec.md`, `docs/go-live-checklist.md`, `docs/sprint-9-production-release-gate.md`; Sprint 9 records). No file overlaps this branch. The branch has not been rebased; the roadmap asks for a rebase before merge, which is the owner's call.
+Relation to `main`: on 9 Oct the branch was rebased once onto `origin/main` at `313fb7e` (N13), so it is `main` plus the redesign commits and goes to production as a fast-forward. The commit IDs quoted in this guide and the acceptance packages are the pre-rebase ones; `commit-ids.md` maps them to the rebased IDs.
 
 Out of scope: page content owned by later sub-sprints (listing and store UX-4, selling UX-5, account pages UX-6, the Admin workbench UX-7), the catalog branch `catalog/canonical-catalog`, Supabase schema and any hosted environment.
 
