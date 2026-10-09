@@ -1,6 +1,6 @@
 # UX-3b Discovery, part 2 (the home) — acceptance package
 
-Status: **accepted by the owner, 9 Oct 2026** (review page https://claude.ai/artifact/EYTr4nHqS4u1GHLZeoaAM1: 37 of 37 checks Correct; § Owner acceptance (9 Oct)). Built 9 Oct 2026 on `ux/redesign` against the approved brief `ux-3-discovery.md`, the owner's answers Q1–Q20 and the 3a acceptance. Nothing is pushed, merged or deployed. The review page also carried N12, refreshed for the shell as it ships (§ N12, ready to record): all ten items marked Correct, option A for PUB-008, PUB-010 and PUB-015; recording it is a separate step.
+Status: **accepted by the owner, 9 Oct 2026** (review page https://claude.ai/artifact/EYTr4nHqS4u1GHLZeoaAM1: 37 of 37 checks Correct; § Owner acceptance (9 Oct)). Built 9 Oct 2026 on `ux/redesign` against the approved brief `ux-3-discovery.md`, the owner's answers Q1–Q20 and the 3a acceptance. Nothing is pushed, merged or deployed. The review page also carried N12, refreshed for the shell as it ships (§ N12, ready to record): all ten items marked Correct, option A for PUB-008, PUB-010 and PUB-015; recorded the same day at the owner's request, status Pass.
 
 ## What changed
 
@@ -153,7 +153,7 @@ Logged as pending in `decisions.md` (P6–P10) and asked on the review page.
 
 ## Spec and acceptance rows touched (not edited)
 
-`docs/functional-spec.md` and `acceptance/cases.tsv` are unchanged. The functional spec's home row ("Public homepage… exist") describes no layout. The rows above were re-run as observations. N12 is ready to record on the review page; recording it stays the owner's step (§ N12).
+`docs/functional-spec.md` and `acceptance/cases.tsv` are unchanged. The functional spec's home row ("Public homepage… exist") describes no layout. The rows above were re-run as observations. N12 was recorded afterwards at the owner's request (§ Owner acceptance).
 
 ## Tests
 
@@ -182,10 +182,10 @@ Logged as pending in `decisions.md` (P6–P10) and asked on the review page.
 The owner marked the review page on 9 Oct: **37 of 37 checks Correct**. Claude Code read the answers from the page's store (collection `checks`); no answer was inferred. With it the owner:
 - accepted the home header and its "Categorías" menu (A01–A04), the banner and its search (B01–B04), the vitrina and its rules (C01–C03), the other sections, spacing and states (D01–D06) and the evidence (E01–E04), H01 included: **UX-3b is accepted**;
 - kept the five choices as built (`decisions.md` P6–P10): the vitrina and store rows scroll sideways below 1024 px (F01); the showcase tile's edge-to-edge photo and the city on its own line below 1280 px (F02); the fallbacks (F03); the banner files in `public/banners/` and the phone lead in `line-deco` (F04); the home's first-load JS as is, with a lighter card proposed for UX-8, and the small calls (F05);
-- marked every N12 item Correct (G01–G10): the spec paragraph and the optional legal-pages line as written, and the PUB-008 to PUB-015 evidence texts as written, with **option A** (keep the row's words, add the evidence) for PUB-008, PUB-010 and PUB-015. The notes give no status word for the `<result>` placeholders, so the verdict per row is still the owner's to state when N12 is recorded.
+- marked every N12 item Correct (G01–G10): the spec paragraph and the optional legal-pages line as written, and the PUB-008 to PUB-015 evidence texts as written, with **option A** (keep the row's words, add the evidence) for PUB-008, PUB-010 and PUB-015. The notes gave no status word for the `<result>` placeholders; in the session the owner then asked to "mark n12 as pass", and Claude Code recorded exactly those texts with Pass (`ux-2-reconciliation.md`).
 
 **Still open (none blocks UX-4):**
-1. Recording N12 in `docs/functional-spec.md` and `acceptance/cases.tsv`: the owner's step, or Claude Code's with exactly the texts marked Correct when the owner asks in a session (status words for `<result>` and column 5 from the owner).
+1. ~~Recording N12.~~ Recorded 9 Oct at the owner's request: status Pass for PUB-008–PUB-015, the clarification and the legal-pages line in the functional spec.
 2. A lighter card for every grid page (P10), proposed for UX-8.
 3. `ListingImpressionBoundary` has no page left using it (a small follow-up).
 

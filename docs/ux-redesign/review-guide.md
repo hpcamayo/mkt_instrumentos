@@ -279,11 +279,11 @@ UX-3b, the home (`ux-3-discovery.md` § Home):
 
 ## 8. Decided and open
 
-Decided by the owner (binding): D1–D12 (foundations), H1–H11 (home), N1–N11, N13, N14 and G1 (shell), and N12's preference and build side; UX-2 accepted 8 Oct. Open, where the review's opinion is welcome:
+Decided by the owner (binding): D1–D12 (foundations), H1–H11 (home), N1–N11, N13, N14 and G1 (shell), and N12's preference and build side; UX-2 accepted 8 Oct. Open, where the review's opinion is welcome (N12 is listed for its history):
 
 | ID | Topic | Where |
 | --- | --- | --- |
-| N12 | Preference (3 Oct) and build side (7 Oct) decided; drafts approved 8 Oct. Still open: the owner's record of the functional-spec Sprint 5/6 clarifications and PUB-008, PUB-010–PUB-015, which still describe the old shell and carry its Sprint 6 Pass; wording and observations refreshed on 9 Oct for the shell after 3b and approved by the owner on the 3b review page (option A for PUB-008, PUB-010, PUB-015; `ux-2-reconciliation.md`) | `decisions.md`, `ux-2-reconciliation.md` |
+| N12 | Decided and recorded: preference (3 Oct), build side (7 Oct), drafts approved 8 Oct and, refreshed for the shell after 3b, again on 9 Oct; recorded 9 Oct in `docs/functional-spec.md` (UX-2 navigation clarification, legal-pages line) and `acceptance/cases.tsv` (PUB-008–PUB-015 evidence, status Pass) | `decisions.md`, `ux-2-reconciliation.md` |
 | F9 | Free-text search (brand, model, title) | `decisions.md` |
 | G2, G3 | Legal-page wording; password minimum (6 vs 8) | `decisions.md` |
 | F1–F7 | Product-behaviour flags for later sub-sprints | `decisions.md` |
