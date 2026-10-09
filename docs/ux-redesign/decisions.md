@@ -7,6 +7,10 @@ Record who decided and when. A decided item changes only through a new entry.
 
 The owner accepted UX-3a through its review page (https://claude.ai/artifact/NpxKr4FfUSLH65RZooTwdB): 31 of 31 checks Correct, no notes (`ux-3a-acceptance.md` § Owner acceptance (9 Oct)). P1–P4 below are decided as built. 3b (the home) may start.
 
+| ID | Question | Status |
+| --- | --- | --- |
+| P5 | The seed-id fix for events, contacts and views (`4057065`): production has the same seed ids, so ship it sooner as a hotfix from `main`, or with the redesign | decided 2026-10-09 by owner: ship it with the UX-3 push; no separate hotfix |
+
 ## Raised during the UX-3a build (8 Oct)
 
 Choices the brief did not settle, built as below and asked on the 3a review page (`ux-3a-acceptance.md` § Deviations and choices).

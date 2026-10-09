@@ -42,7 +42,7 @@ Tools and traps (also in the review guide): agent-browser blanks its tab a few s
 
 **State (8 Oct).** The brief `ux-3-discovery.md` is **approved by the owner**.
 - **The answers:** Q1–Q18 on the review page https://claude.ai/artifact/7DCnPzHDMrXRSfBx7mueG4, then Q19 and Q20 in the session (`decisions.md`). Every recommendation was taken except Q8: condition and location become multi-choice (F11), with no alert or database change.
-- **3a accepted (owner, 9 Oct**; review page 31 of 31 Correct): `ux-3a-acceptance.md`. Commits `5f4bdd1` (the stall fix), `4ddf8cc` (the one card), `6651815` (the catalog, filters with F11, chips, sort, numbered pages, landings and states), `58bae38` (evidence and docs), `4057065` (seed-id fix for events, contacts and views, found in the row re-runs; production has the same ids).
+- **3a accepted (owner, 9 Oct**; review page 31 of 31 Correct): `ux-3a-acceptance.md`. Commits `5f4bdd1` (the stall fix), `4ddf8cc` (the one card), `6651815` (the catalog, filters with F11, chips, sort, numbered pages, landings and states), `58bae38` (evidence and docs), `4057065` (seed-id fix for events, contacts and views, found in the row re-runs; production has the same ids; ships with the UX-3 push, owner 9 Oct).
 - **Next:** 3b (the home) in a fresh session from `ux-3b-kickoff.md`.
 - The plan below is the input the brief was written from. Where they differ, the brief and its answers win.
 
