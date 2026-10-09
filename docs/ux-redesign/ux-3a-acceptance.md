@@ -1,6 +1,6 @@
 # UX-3a Discovery, part 1 — acceptance package
 
-Status: **built and checked, waiting for the owner's acceptance** (review page: https://claude.ai/artifact/NpxKr4FfUSLH65RZooTwdB). Built 8 Oct 2026 on `ux/redesign` against the approved brief `ux-3-discovery.md` and the owner's answers Q1–Q20. Nothing is pushed, merged or deployed. 3b (the home) starts only after the owner accepts 3a (Q2).
+Status: **accepted by the owner, 9 Oct 2026** (review page https://claude.ai/artifact/NpxKr4FfUSLH65RZooTwdB: 31 of 31 checks Correct, no notes; § Owner acceptance (9 Oct)). Built 8 Oct 2026 on `ux/redesign` against the approved brief `ux-3-discovery.md` and the owner's answers Q1–Q20. Nothing is pushed, merged or deployed. 3b (the home) starts only after the owner accepts 3a (Q2).
 
 ## What changed
 
@@ -170,10 +170,17 @@ Logged as pending in `decisions.md` (P1–P4) and asked on the review page (I01�
 - The empty-catalog, empty-landing and error frames come from a scratch copy that forces those results.
 - The brief's 135 kB catalog baseline was measured with `pnpm build` on `6fafbed`; the same-method baseline here is 136 kB.
 
-## What still needs the owner
+## Owner acceptance (9 Oct)
 
-1. The review page https://claude.ai/artifact/NpxKr4FfUSLH65RZooTwdB: Correct/Wrong per check, and the accept / not-yet answer.
-2. Recording N12 (unchanged from UX-2).
+The owner marked the review page on 9 Oct: **31 of 31 checks Correct, no notes**, including J01 (accept UX-3a). Claude Code read the answers from the page's store (collection `checks`); no answer was inferred. With it the owner:
+- accepted the stall fix and its measurements (A01–A03), the card (B01–B03), the catalog (C01–C03), the filters with F11 (D01–D04), chips, sort and pages (E01–E03), the landings (F01–F02), the states and the alert panel (G01–G04) and the evidence (H01–H04, H03 already noting the 9 Oct seed-id fix);
+- kept the four choices as built (`decisions.md` P1–P4): the store page and recommendations keep the new card in their grids until UX-4 (I01); the alert stays offered for multi-value attributes (I02); `Skeleton` and `/api/listings/[id]/photos` stay (I03); the small behaviours stay (I04).
+
+3b (the home) may start, from `ux-3b-kickoff.md`.
+
+**Still open (none blocks 3b):**
+1. Recording N12 (unchanged from UX-2).
+2. Whether the seed-id fix (`4057065`) goes to production sooner, as a hotfix from `main`, or with the redesign merge.
 
 ## How to review
 
