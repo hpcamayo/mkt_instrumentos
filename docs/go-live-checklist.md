@@ -62,3 +62,7 @@ as `dpl_9qxJS8KgYDfXR66yUV8i3Wis9ybX` on `laria.audio`. The public and auth-page
 counts, catalog lookup/Jev probes, and anon Admin-RPC refusal/recovery passed. Authenticated Admin pages were Not Run
 because no Admin session was provided for this gate. See [the catalog production release report](catalog-production-release-gate.md)
 for evidence and limits. This catalog release does not close the separate V1 launch dependencies above.
+
+## Release history
+
+- 2026-10-09 — UX-1–UX-3 redesign: application/audit SHA `50963fb` deployed READY as `dpl_57FCmnsw4EyQxCB4XwKkeZniKMfx`; read-only production SEO and 390/1440 px browser smoke passed with documented data/session waivers; see [the UX production release gate](ux-production-release-gate.md).
