@@ -193,7 +193,7 @@ Production builds on the shared local stack with the local accounts (`ux-3a-acce
 | Check | Result |
 | --- | --- |
 | Lint, typecheck, build | pass; first-load JS: home 114 kB, catalog 140 kB (136 before), landings/listings 208 kB (203), stores 195 kB (197) |
-| Unit tests | **290/290** (275 before 3a) |
+| Unit tests | **290/290** (275 before 3a); 291/291 after the 9 Oct seed-id fix (`ux-3a-acceptance.md`, commit 5) |
 | Transition trials, 12 moves × 10 | before 32/120 stalls, after the fix 0/120, on the finished build 0/120 |
 | SEO rendered smoke | pass (sold listing and empty category waived: none in the local data) |
 | `scripts/ux-audit.cjs` (68 template runs at four widths) | 0 axe violations (also with the sheet, the sort menu and the alert panel open); 2,513 focusables, 0 without a ring; 0 overflow (also at 640 / 720); 34 category-menu and 25 discovery checks, 0 failures; layout shift ≤ 0.0016 |
