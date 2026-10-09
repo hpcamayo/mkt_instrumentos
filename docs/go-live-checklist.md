@@ -50,20 +50,15 @@ The remediated application commit `bbb586bc0457941da92025766e266fc893ebf474` dep
 
 The category URL follow-up at `49a38e5be7b6e195617a841fe1c572420769dab0` deployed READY as `dpl_6TwxfiFvinP8LYUgwrVM8UJ6pnGA`; `laria.audio` still pointed to that SHA on 2026-09-30. Global category links and whole-category single-type links use the existing Spanish landing pages. Narrower type and `other` links remain filtered catalog URLs. The catalog form and canonical/noindex rules did not change. `SEO-006`, `SEO-007`, `LEGAL-005` and `LEGAL-006` still need owner review; Search Console registration and the launch scheduler remain open.
 
-## Catalog schema and reduced catalog — production release, 2026-10-08 (pending)
+## Catalog schema and reduced catalog — production release, 2026-10-09 (passed)
 
-Candidate `main`: `f04e909` plus the 25 catalog migrations and these docs, with no application change. Before the push:
-- the owner checks production's Postgres version (Settings → Infrastructure). Below `17.6.1.143`, upgrade it first:
-  supautils' permission hint can crash the database on an anonymous call to a function without EXECUTE (supabase/postgres#2377);
-- the owner runs `supabase migration list` and `supabase db push --dry-run` (exactly the 25 catalog migrations pending),
-  then `supabase db push`;
-- the owner loads the reduced catalog with `catalog/scripts/ops/load_production.sh` from the `catalog/canonical-catalog`
-  worktree. It needs a passing `check_production.py` report for the build (`3.18f_production_guards`: PASS).
+Candidate `main`: `f04e909` plus the 25 catalog migrations and these docs, with no application change. The owner
+confirmed the database prerequisites on 2026-10-09: Postgres `17.11.0.003` with supautils `3.4.4`, all 25 catalog
+migrations applied (44 recorded), and the reduced catalog loaded. The `catalog_products` comment identifies the
+production profile, 170 brands with products, 20,386 products, and checksum prefix `2e0bd5efd20ed753`.
 
-Release gate (Codex):
-- push `main`;
-- confirm the Vercel production deployment is READY on the pushed SHA;
-- audit the live build: public pages, Admin, the catalog through the anon API (`catalog_lookup`, counts), and admin
-  RPCs refused to anon without a database restart;
-- record the result here.
-
+The release gate passed: `a377bce06673400d66664b70534fdcfbb6761eda` was pushed to `main` and deployed READY
+as `dpl_9qxJS8KgYDfXR66yUV8i3Wis9ybX` on `laria.audio`. The public and auth-page audit, seven exact anon catalog
+counts, catalog lookup/Jev probes, and anon Admin-RPC refusal/recovery passed. Authenticated Admin pages were Not Run
+because no Admin session was provided for this gate. See [the catalog production release report](catalog-production-release-gate.md)
+for evidence and limits. This catalog release does not close the separate V1 launch dependencies above.
