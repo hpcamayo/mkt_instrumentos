@@ -282,6 +282,50 @@ The following remain post-V1 unless an explicit new product decision changes the
 - Sophisticated fraud scoring.
 - Arbitrary new social or community functionality.
 
+## Planned After V1: Catalog Autofill, Jev and Category Navigation
+
+Status: approved product direction for post-V1 sprints. It is **not** part of the V1 contract or V1 acceptance, and
+nothing in it changes V1 behavior. The canonical instrument catalog these features read is in production since
+2026-10-08: one record per real product (brand, model, category, product line, variants and detailed attributes with
+Spanish display values), reduced to the brands the Peruvian market sells (`database.md`).
+
+Listing creation with autofill:
+
+- The seller types brand and model as today. When the text matches a catalog product, the form prefills the
+  category, instrument type and the product's model-level attributes, each marked as autocompleted.
+- Every prefilled value stays editable. The listing records which catalog product it matched, which values were
+  autofilled and which the seller changed.
+- Values that differ between versions of the same model (for example colour or handedness) are prefilled only when the
+  seller's text or choice identifies that version. Details of the specific unit (condition, what is included,
+  modifications, price, photos, description, location) always come from the seller.
+- The seller can reject the match and continue without it. When nothing matches, the listing continues exactly as
+  today, and the unmatched brand/model text feeds the catalog's gap queue.
+- Autofilled attributes describe the catalog product, not an inspection of the seller's unit; Laria must not imply
+  that it verified the instrument.
+
+Moderation and edits: existing rules apply unchanged. Every new Particular listing still requires admin moderation,
+autofilled attributes follow the same immediate-edit rule as other detailed instrument attributes, and brand, model,
+category and instrument type remain moderated fields.
+
+Jev is Laria's AI decision engine. It will score whether a listing is identified and detailed enough for automatic
+approval, using the catalog match (`catalog_jev_inputs`), the matched product's completeness and the values the seller
+changed. What Jev may do (advisory score, automatic approval, thresholds, account types) is decided in its sprint;
+until then Jev has no effect on moderation.
+
+Category navigation enrichment: each marketplace category gets a detailed tree of the products in it, built from the
+catalog: subcategories, brands, product lines and models (with their variants). Buyers browse the tree and reach the
+listings of a model; the tree uses the catalog's Spanish category labels. Only brands with products appear (the
+catalog also stores every brand name, to recognize listings of brands it does not carry). The tree covers the
+reduced Peruvian-market catalog; adding a brand to the catalog adds it to the tree.
+
+Open product questions for those sprints:
+
+- Whether Tienda inventory creation uses the same autofill.
+- Whether buyers see that a value came from the catalog.
+- Marketplace categories the catalog covers but Laria does not list today (keyboards, pianos, synthesizers), and
+  splitting `cutaway` out of the acoustic body-shape field.
+- How deep the navigation tree goes on mobile, and whether models without listings appear.
+
 ## V1 Freeze Rule
 
 Once this specification is implemented, tested, and documented, Laria V1 is functionally frozen. Work then shifts to QA, reliability, visual polish, marketplace supply, store onboarding, real-user testing, analytics, and observing marketplace behavior.

@@ -91,6 +91,8 @@ After all requirements are implemented, tested, and documented, freeze V1 and fo
 
 Post-V1 candidates, not current commitments, include payments, escrow, shipping integrations, commission enforcement, paid subscriptions/packages, paid boosts, internal messaging, multiple store employees, automatic SUNAT verification, email change, account deletion, sophisticated fraud scoring, and expansion into separately branded verticals.
 
+Approved post-V1 direction (2026-10-08): the canonical instrument catalog is in production (schema and the reduced Peruvian-market data, `database.md`). Two sprints will read it, neither started: **Jev and listing autofill**, and **category navigation enrichment** (each category's tree of brands, product lines and models). Scope in `functional-spec.md` § Planned After V1.
+
 ## Commercial Priorities
 
 Product development does not replace marketplace operations:

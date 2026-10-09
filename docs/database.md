@@ -572,3 +572,44 @@ Post-V1 concepts include `featured_listing_orders` and `store_plan_subscriptions
 `20260910120000_sprint_1_owner_acceptance_fixes.sql` updates the Auth user trigger to persist normalized signup name, WhatsApp, city, and region without duplicate onboarding, safely fills only missing/default values on existing profiles from Auth metadata, and allows the shared `instrument_type='other'` fallback for supported categories.
 
 `20260913120000_listing_sprint_3.sql` adds owner lifecycle management, moderated revision isolation, sold immutability, copied relisting, owner-visible moderation reasons, admin review operations, and append-only edit uploads without weakening legacy or Sprint 2 store behavior.
+
+## Canonical instrument catalog (`catalog_*` tables)
+
+Added by the 25 migrations `20260927120000_canonical_catalog.sql` … `20261021120000_catalog_attribute_value_es.sql`.
+Reference data for listing autofill, Jev and category navigation (post-V1, see `functional-spec.md`); it changes no
+marketplace table, RLS policy or listing behavior, and no application code reads it yet.
+
+- **Identity:** `catalog_manufacturers` (+ `catalog_manufacturer_aliases`), `catalog_products` (manufacturer + model key +
+  identity domain; `entity_level` model / family, `family_product_id`), `catalog_product_aliases`,
+  `catalog_product_variants` (SKU, GTIN, finish, colour, size, configuration), `catalog_product_families`.
+- **Taxonomy:** `catalog_categories`, a tree (`parent_id`, `depth`) with Spanish labels and terms, mapped to
+  `listings.category` / `listings.instrument_type` through `laria_category` / `laria_instrument_type`;
+  `catalog_category_terms` (materialized view).
+- **Detail:** `catalog_product_attributes` holds one normalized value per (product, attribute) with `value_es` (the
+  Spanish display text), provenance, weight, `trusted` and conflicting values. On `catalog_products`:
+  - `detail_status`, `missing_attributes`, `untrusted_attributes`: whether a product is detailed enough to autofill;
+  - `variant_attributes`: attributes that differ between variants, so they are filled only from the variant a listing
+    names.
+- **Matching:** `catalog_lookup(query, manufacturer_hint, max_results)` returns ranked candidates.
+  `catalog_match(query, manufacturer_hint)` decides MATCH / FAMILY / CONFLICTING / INSUFFICIENT with a tier (AUTO /
+  REVIEW / INSUFFICIENT). `catalog_jev_inputs(query, manufacturer_hint)` is Jev's one-row contract. Helpers:
+  `catalog_normalize()`, `catalog_compact()`; vocabulary table `catalog_lookup_terms`.
+- **Gap queue:** `catalog_search_log` with a daily `pg_cron` prune job (`catalog-search-log-prune`, 08:30 UTC); `catalog_search_gaps` (view).
+- **Review:** `catalog_review_candidates`, `catalog_review_decisions` and admin RPCs (`get_catalog_review_queue`,
+  `decide_catalog_review`, …).
+- **Provenance:** `catalog_sources`, `catalog_product_sources`, `catalog_source_records`, `catalog_product_specs`,
+  `catalog_product_external_ids`, `catalog_conflicts`.
+- **RLS:** reference tables are public read-only; raw records, conflicts and the review queue are admin-only; writes go
+  through the service role / loader. Extensions: `pg_trgm`, `unaccent`, `fuzzystrmatch`, `pg_cron`.
+
+**Production data** is the reduced Peruvian-market catalog: every product of the 170 brands Peruvian stores sell or
+list (20,386 products), every brand name, and only the tables the site reads. Raw payloads, specs, external IDs and
+conflicts stay empty; provenance is kept only for review pairs. That is about 80 MB.
+- **Where it lives:** the catalog pipeline, its data and the full catalog (29,001 products) are on branch
+  `catalog/canonical-catalog`, not in `main`.
+- **How it is loaded:** with `catalog/scripts/ops/load_production.sh` from that branch's worktree. The loader stops
+  before commit above 450 MB and writes the loaded build (profile, brands, products, checksum) as the comment on
+  `catalog_products`.
+- **Details:** sizes, guards and procedure are in that branch's `catalog/docs/production_footprint.md`.
+- `lib/supabase/database.types.ts` is regenerated for these tables in the sprint that first reads them.
+
