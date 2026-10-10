@@ -1,0 +1,12 @@
+jit=off tokens=  3 chars=  21 catalog_match_ms_median=    23.9
+jit=off tokens=  6 chars=  45 catalog_match_ms_median=    42.5
+jit=off tokens= 12 chars=  75 catalog_match_ms_median=    63.8
+jit=off tokens= 24 chars= 153 catalog_match_ms_median=   120.6
+jit=off tokens= 48 chars= 306 catalog_match_ms_median=   252.6
+jit=off tokens= 96 chars= 614 catalog_match_ms_median=   583.8
+jit=on tokens=  3 chars=  21 catalog_match_ms_median=  5237.3
+jit=on tokens=  6 chars=  45 catalog_match_ms_median=  4902.7
+jit=on tokens= 12 chars=  75 catalog_match_ms_median=  5418.2
+jit=on tokens= 24 chars= 153 catalog_match_ms_median=  5263.3
+jit=on tokens= 48 chars= 306 catalog_match_ms_median=  5261.1
+jit=on tokens= 96 chars= 614 catalog_match_ms_median=  5572.0

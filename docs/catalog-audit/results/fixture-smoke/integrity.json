@@ -1,0 +1,1118 @@
+[
+ {
+  "id": "snapshot",
+  "title": "Catalog snapshot",
+  "kind": "permissible",
+  "severity": "S4",
+  "n": 1,
+  "sample": [
+   {
+    "products": 151,
+    "live_products": 151,
+    "family_entities": 10,
+    "brands_with_products": 45,
+    "manufacturers": 45,
+    "aliases": 389,
+    "variants": 1,
+    "attributes": 473,
+    "categories": 17,
+    "lookup_terms": 99,
+    "build_comment": null
+   }
+  ],
+  "error": null,
+  "ms": 2.2
+ },
+ {
+  "id": "status_distribution",
+  "title": "Verification / quality / publish_ready / detail status",
+  "kind": "permissible",
+  "severity": "S4",
+  "n": 5,
+  "sample": [
+   {
+    "verification_status": "VERIFIED",
+    "quality_status": "ok",
+    "publish_ready": true,
+    "entity_level": "model",
+    "detail_status": "detailed",
+    "n": 125
+   },
+   {
+    "verification_status": "VERIFIED",
+    "quality_status": "ok",
+    "publish_ready": true,
+    "entity_level": "model",
+    "detail_status": "partial",
+    "n": 15
+   },
+   {
+    "verification_status": "VERIFIED",
+    "quality_status": "ok",
+    "publish_ready": false,
+    "entity_level": "family",
+    "detail_status": "none",
+    "n": 9
+   },
+   {
+    "verification_status": "VERIFIED",
+    "quality_status": "ok",
+    "publish_ready": true,
+    "entity_level": "family",
+    "detail_status": "detailed",
+    "n": 1
+   },
+   {
+    "verification_status": "UNVERIFIED",
+    "quality_status": "ok",
+    "publish_ready": false,
+    "entity_level": "model",
+    "detail_status": "partial",
+    "n": 1
+   }
+  ],
+  "error": null,
+  "ms": 1.5
+ },
+ {
+  "id": "dup_key_cross_domain",
+  "title": "Same manufacturer + model key in more than one identity domain",
+  "kind": "risk",
+  "severity": "S2",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 1.6
+ },
+ {
+  "id": "dup_key_generic_suffix",
+  "title": "Model keys equal after dropping a generic trailing word (guitar, pedal, amp ...)",
+  "kind": "error",
+  "severity": "S2",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 3.1
+ },
+ {
+  "id": "dup_review_queue",
+  "title": "Duplicate-review pairs still pending, by kind",
+  "kind": "ambiguous",
+  "severity": "S3",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 0.8
+ },
+ {
+  "id": "alias_collision_cross_brand",
+  "title": "Alias keys shared by products of different manufacturers",
+  "kind": "ambiguous",
+  "severity": "S2",
+  "n": 4,
+  "sample": [
+   {
+    "alias_key": "lespaulstandard50s",
+    "brands": 2,
+    "products": 2,
+    "all_flagged": true,
+    "brand_sample": [
+     "Epiphone",
+     "Gibson"
+    ]
+   },
+   {
+    "alias_key": "lespaulstandard60s",
+    "brands": 2,
+    "products": 2,
+    "all_flagged": true,
+    "brand_sample": [
+     "Epiphone",
+     "Gibson"
+    ]
+   },
+   {
+    "alias_key": "lpstandard50s",
+    "brands": 2,
+    "products": 2,
+    "all_flagged": true,
+    "brand_sample": [
+     "Epiphone",
+     "Gibson"
+    ]
+   },
+   {
+    "alias_key": "lpstandard60s",
+    "brands": 2,
+    "products": 2,
+    "all_flagged": true,
+    "brand_sample": [
+     "Epiphone",
+     "Gibson"
+    ]
+   }
+  ],
+  "error": null,
+  "ms": 3.1
+ },
+ {
+  "id": "alias_collision_same_brand",
+  "title": "Alias keys shared by several products of one manufacturer",
+  "kind": "risk",
+  "severity": "S2",
+  "n": 1,
+  "sample": [
+   {
+    "brand": "Boss",
+    "alias_key": "digitaldelay",
+    "products": 2,
+    "all_flagged": false,
+    "names": [
+     "DD-3",
+     "DD-7"
+    ]
+   }
+  ],
+  "error": null,
+  "ms": 2.8
+ },
+ {
+  "id": "alias_ambiguity_flag_wrong",
+  "title": "Shared alias key not flagged is_ambiguous (or flagged but unique)",
+  "kind": "error",
+  "severity": "S1",
+  "n": 1,
+  "sample": [
+   {
+    "problem": "shared_not_flagged",
+    "n": 2,
+    "sample": [
+     "Digital Delay",
+     "Digital Delay"
+    ]
+   }
+  ],
+  "error": null,
+  "ms": 2.3
+ },
+ {
+  "id": "alias_short",
+  "title": "Alias keys of 3 characters or less (exact-match risk: 'c1', 'm2', 'ds1')",
+  "kind": "risk",
+  "severity": "S3",
+  "n": 2,
+  "sample": [
+   {
+    "key_len": 2,
+    "n": 4,
+    "sample": [
+     "C-1",
+     "C1",
+     "LP",
+     "M2"
+    ]
+   },
+   {
+    "key_len": 3,
+    "n": 25,
+    "sample": [
+     "BD-2",
+     "BD2",
+     "C40",
+     "CH-1",
+     "CH1",
+     "D-28",
+     "D28",
+     "DD-3",
+     "DD-7",
+     "DD-8",
+     "DD3",
+     "DD7",
+     "DD8",
+     "DS-1",
+     "DS-2"
+    ]
+   }
+  ],
+  "error": null,
+  "ms": 1.3
+ },
+ {
+  "id": "alias_is_category_word",
+  "title": "Product aliases that are category / Spanish marketplace words",
+  "kind": "error",
+  "severity": "S1",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 1.0
+ },
+ {
+  "id": "alias_type_mix",
+  "title": "Alias types (store-title aliases are weaker evidence)",
+  "kind": "permissible",
+  "severity": "S4",
+  "n": 5,
+  "sample": [
+   {
+    "alias_type": "manufacturer_prefixed",
+    "retail_source": false,
+    "n": 177,
+    "avg_conf": "0.900"
+   },
+   {
+    "alias_type": "official_alias",
+    "retail_source": false,
+    "n": 150,
+    "avg_conf": "0.900"
+   },
+   {
+    "alias_type": "punctuation_variant",
+    "retail_source": false,
+    "n": 33,
+    "avg_conf": "0.900"
+   },
+   {
+    "alias_type": "abbreviation",
+    "retail_source": false,
+    "n": 27,
+    "avg_conf": "0.900"
+   },
+   {
+    "alias_type": "seller_common_name",
+    "retail_source": false,
+    "n": 2,
+    "avg_conf": "0.900"
+   }
+  ],
+  "error": null,
+  "ms": 1.0
+ },
+ {
+  "id": "mfr_alias_collision",
+  "title": "Manufacturer alias keys that name more than one manufacturer",
+  "kind": "error",
+  "severity": "S1",
+  "n": 1,
+  "sample": [
+   {
+    "alias_key": "ua",
+    "n": 2,
+    "brands": [
+     "Universal Audio",
+     "Alesis"
+    ]
+   }
+  ],
+  "error": null,
+  "ms": 0.8
+ },
+ {
+  "id": "mfr_alias_is_word",
+  "title": "Manufacturer aliases that are ordinary words or model-like codes (<= 3 chars or Spanish words)",
+  "kind": "risk",
+  "severity": "S2",
+  "n": 10,
+  "sample": [
+   {
+    "alias": "EHX",
+    "canonical_name": "Electro-Harmonix",
+    "products": 3
+   },
+   {
+    "alias": "Vox",
+    "canonical_name": "Vox",
+    "products": 3
+   },
+   {
+    "alias": "Tama",
+    "canonical_name": "Tama",
+    "products": 2
+   },
+   {
+    "alias": "UA",
+    "canonical_name": "Alesis",
+    "products": 2
+   },
+   {
+    "alias": "AKG",
+    "canonical_name": "AKG",
+    "products": 1
+   },
+   {
+    "alias": "UA",
+    "canonical_name": "Universal Audio",
+    "products": 1
+   },
+   {
+    "alias": "PRS",
+    "canonical_name": "PRS",
+    "products": 1
+   },
+   {
+    "alias": "ESP",
+    "canonical_name": "ESP",
+    "products": 1
+   },
+   {
+    "alias": "LTD",
+    "canonical_name": "ESP",
+    "products": 1
+   },
+   {
+    "alias": "MXR",
+    "canonical_name": "MXR",
+    "products": 1
+   }
+  ],
+  "error": null,
+  "ms": 1.2
+ },
+ {
+  "id": "mfr_parent_brands",
+  "title": "Sub-brands with a parent manufacturer (Squier/Fender, Epiphone/Gibson, LTD/ESP)",
+  "kind": "permissible",
+  "severity": "S4",
+  "n": 2,
+  "sample": [
+   {
+    "brand": "Squier",
+    "parent": "Fender",
+    "products": 5
+   },
+   {
+    "brand": "Epiphone",
+    "parent": "Gibson",
+    "products": 3
+   }
+  ],
+  "error": null,
+  "ms": 0.7
+ },
+ {
+  "id": "mfr_uncurated_with_products",
+  "title": "Manufacturers with products that are not curated",
+  "kind": "incomplete",
+  "severity": "S3",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 0.6
+ },
+ {
+  "id": "family_link_broken",
+  "title": "Model linked to a family entity that is not a family / of another brand / superseded",
+  "kind": "error",
+  "severity": "S1",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 1.1
+ },
+ {
+  "id": "family_without_models",
+  "title": "Family entities that no live model points to",
+  "kind": "risk",
+  "severity": "S2",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 1.0
+ },
+ {
+  "id": "family_detailed",
+  "title": "Family entities with detail_status detailed/complete or publish_ready (a line is not one product)",
+  "kind": "error",
+  "severity": "S1",
+  "n": 1,
+  "sample": [
+   {
+    "detail_status": "detailed",
+    "publish_ready": true,
+    "n": 1,
+    "sample": [
+     "Katana"
+    ]
+   }
+  ],
+  "error": null,
+  "ms": 0.8
+ },
+ {
+  "id": "model_named_like_family",
+  "title": "Model-level products whose name is a bare line name with no model token (no digit, <= 2 words)",
+  "kind": "risk",
+  "severity": "S2",
+  "n": 2,
+  "sample": [
+   {
+    "brand": "Fender",
+    "canonical_model_name": "Player Stratocaster",
+    "category_id": "instruments.guitars.electric"
+   },
+   {
+    "brand": "Fender",
+    "canonical_model_name": "Player Telecaster",
+    "category_id": "instruments.guitars.electric"
+   }
+  ],
+  "error": null,
+  "ms": 1.8
+ },
+ {
+  "id": "variant_sku_collision",
+  "title": "Variant SKU keys shared by different products",
+  "kind": "error",
+  "severity": "S1",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 0.8
+ },
+ {
+  "id": "variant_gtin_collision",
+  "title": "GTINs shared by different products",
+  "kind": "error",
+  "severity": "S1",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 0.4
+ },
+ {
+  "id": "variant_attrs_without_variants",
+  "title": "variant_attributes listed but the product has no variants to decide them",
+  "kind": "incomplete",
+  "severity": "S2",
+  "n": 6,
+  "sample": [
+   {
+    "detail_group": "drums",
+    "attribute": "kick_size",
+    "n": 6
+   },
+   {
+    "detail_group": "drums",
+    "attribute": "pieces",
+    "n": 6
+   },
+   {
+    "detail_group": "drums",
+    "attribute": "configuration",
+    "n": 4
+   },
+   {
+    "detail_group": "electric_guitar",
+    "attribute": "handedness",
+    "n": 4
+   },
+   {
+    "detail_group": "bass",
+    "attribute": "handedness",
+    "n": 2
+   },
+   {
+    "detail_group": "electric_guitar",
+    "attribute": "pickups",
+    "n": 1
+   }
+  ],
+  "error": null,
+  "ms": 0.8
+ },
+ {
+  "id": "variant_attr_also_product_level",
+  "title": "An attribute both listed in variant_attributes and stored at product level",
+  "kind": "error",
+  "severity": "S1",
+  "n": 1,
+  "sample": [
+   {
+    "attribute_key": "handedness",
+    "n": 1
+   }
+  ],
+  "error": null,
+  "ms": 1.2
+ },
+ {
+  "id": "variant_size_as_model",
+  "title": "Products whose name carries a size (cymbals/drums) — size-level granularity",
+  "kind": "permissible",
+  "severity": "S4",
+  "n": 8,
+  "sample": [
+   {
+    "cat": "instruments.guitars",
+    "with_size_in_name": 0,
+    "products": 38
+   },
+   {
+    "cat": "effects.pedals",
+    "with_size_in_name": 0,
+    "products": 29
+   },
+   {
+    "cat": "instruments.drums",
+    "with_size_in_name": 12,
+    "products": 26
+   },
+   {
+    "cat": "amplification.guitar",
+    "with_size_in_name": 0,
+    "products": 18
+   },
+   {
+    "cat": "studio.audio_interfaces",
+    "with_size_in_name": 0,
+    "products": 16
+   },
+   {
+    "cat": "pro_audio.microphones",
+    "with_size_in_name": 0,
+    "products": 13
+   },
+   {
+    "cat": "instruments.bass",
+    "with_size_in_name": 0,
+    "products": 9
+   },
+   {
+    "cat": "amplification.bass",
+    "with_size_in_name": 0,
+    "products": 2
+   }
+  ],
+  "error": null,
+  "ms": 0.8
+ },
+ {
+  "id": "category_missing",
+  "title": "Live model products without a category or with a weak category",
+  "kind": "incomplete",
+  "severity": "S2",
+  "n": 1,
+  "sample": [
+   {
+    "category_confidence": "null",
+    "no_category": false,
+    "n": 1
+   }
+  ],
+  "error": null,
+  "ms": 0.6
+ },
+ {
+  "id": "category_unmapped",
+  "title": "Products in categories with no Laria marketplace mapping",
+  "kind": "incomplete",
+  "severity": "S3",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 0.7
+ },
+ {
+  "id": "category_domain_mismatch",
+  "title": "Cross-tab of identity domain x category group (read the off-diagonal rows by hand)",
+  "kind": "permissible",
+  "severity": "S4",
+  "n": 9,
+  "sample": [
+   {
+    "identity_domain": "audio_interfaces",
+    "cat_group": "studio.audio_interfaces",
+    "n": 16,
+    "sample": [
+     "Scarlett",
+     "Scarlett 2i2 3rd Gen",
+     "Scarlett 2i2 4th Gen",
+     "Scarlett Solo 3rd Gen",
+     "Scarlett 4i4 3rd Gen",
+     "UMC22",
+     "UMC202HD",
+     "UMC404HD"
+    ]
+   },
+   {
+    "identity_domain": "bass",
+    "cat_group": "instruments.bass",
+    "n": 9,
+    "sample": [
+     "Precision Bass",
+     "Jazz Bass",
+     "Player Precision Bass",
+     "Player Jazz Bass",
+     "Player Jazz Bass V",
+     "SR300E",
+     "GSR200",
+     "TRBX174"
+    ]
+   },
+   {
+    "identity_domain": "bass",
+    "cat_group": "amplification.bass",
+    "n": 2,
+    "sample": [
+     "Rumble 40",
+     "BA-110"
+    ]
+   },
+   {
+    "identity_domain": "bass",
+    "cat_group": "instruments.guitars",
+    "n": 1,
+    "sample": [
+     "Affinity Series Jazz Bass"
+    ]
+   },
+   {
+    "identity_domain": "drums",
+    "cat_group": "instruments.drums",
+    "n": 26,
+    "sample": [
+     "Export",
+     "A Custom",
+     "Export EXX",
+     "Roadshow",
+     "Imperialstar",
+     "Superstar Classic",
+     "Stage Custom Birch",
+     "TD-07KV"
+    ]
+   },
+   {
+    "identity_domain": "guitar",
+    "cat_group": "amplification.guitar",
+    "n": 18,
+    "sample": [
+     "Champion 20",
+     "Champion 40",
+     "Mustang LT25",
+     "Blues Junior IV",
+     "Frontman 10G",
+     "DSL40CR",
+     "Crush 20RT",
+     "AC15C1"
+    ]
+   },
+   {
+    "identity_domain": "guitars",
+    "cat_group": "instruments.guitars",
+    "n": 37,
+    "sample": [
+     "Stratocaster",
+     "Telecaster",
+     "Les Paul",
+     "Player Stratocaster",
+     "Player Stratocaster HSS",
+     "Player Telecaster",
+     "American Professional II Stratocaster",
+     "Classic Vibe '50s Stratocaster"
+    ]
+   },
+   {
+    "identity_domain": "microphones",
+    "cat_group": "pro_audio.microphones",
+    "n": 13,
+    "sample": [
+     "SM57",
+     "SM58",
+     "Beta 58A",
+     "SM7B",
+     "AT2020",
+     "AT2020USB+",
+     "NT1-A",
+     "PodMic"
+    ]
+   },
+   {
+    "identity_domain": "pedals",
+    "cat_group": "effects.pedals",
+    "n": 29,
+    "sample": [
+     "Tube Screamer",
+     "DS-1",
+     "DS-2",
+     "SD-1",
+     "BD-2",
+     "DD-3",
+     "DD-3T",
+     "DD-7"
+    ]
+   }
+  ],
+  "error": null,
+  "ms": 0.7
+ },
+ {
+  "id": "category_name_contradiction",
+  "title": "Model name contains a category word of another Laria category",
+  "kind": "error",
+  "severity": "S2",
+  "n": 1,
+  "sample": [
+   {
+    "laria_category": "guitars",
+    "canonical_model_name": "Affinity Series Jazz Bass",
+    "brand": "Squier"
+   }
+  ],
+  "error": null,
+  "ms": 11.7
+ },
+ {
+  "id": "attr_conflict",
+  "title": "Resolved attributes carrying conflicting values from strong sources",
+  "kind": "ambiguous",
+  "severity": "S2",
+  "n": 1,
+  "sample": [
+   {
+    "attribute_key": "polar_pattern",
+    "n": 1,
+    "trusted_despite_conflict": 1
+   }
+  ],
+  "error": null,
+  "ms": 0.9
+ },
+ {
+  "id": "attr_trusted_with_conflict",
+  "title": "Attributes marked trusted although a strong source disagrees",
+  "kind": "error",
+  "severity": "S1",
+  "n": 1,
+  "sample": [
+   {
+    "attribute_key": "polar_pattern",
+    "value": "cardioid",
+    "conflict_values": [
+     "8"
+    ],
+    "canonical_model_name": "SM58"
+   }
+  ],
+  "error": null,
+  "ms": 1.1
+ },
+ {
+  "id": "attr_provenance",
+  "title": "Attribute provenance and trust (default / name / category are inferred, not stated)",
+  "kind": "permissible",
+  "severity": "S4",
+  "n": 2,
+  "sample": [
+   {
+    "provenance": "spec",
+    "trusted": true,
+    "n": 472,
+    "avg_weight": "0.800"
+   },
+   {
+    "provenance": "default",
+    "trusted": false,
+    "n": 1,
+    "avg_weight": "0.500"
+   }
+  ],
+  "error": null,
+  "ms": 1.0
+ },
+ {
+  "id": "attr_missing_required",
+  "title": "Required attributes missing, by attribute group",
+  "kind": "incomplete",
+  "severity": "S3",
+  "n": 6,
+  "sample": [
+   {
+    "detail_group": "amplifiers",
+    "attribute": "power",
+    "n": 1
+   },
+   {
+    "detail_group": "electric_guitar",
+    "attribute": "pickups",
+    "n": 5
+   },
+   {
+    "detail_group": "electric_guitar",
+    "attribute": "bridge",
+    "n": 4
+   },
+   {
+    "detail_group": "electric_guitar",
+    "attribute": "shape",
+    "n": 2
+   },
+   {
+    "detail_group": "pedals",
+    "attribute": "format",
+    "n": 4
+   },
+   {
+    "detail_group": "pedals",
+    "attribute": "pedal_type",
+    "n": 2
+   }
+  ],
+  "error": null,
+  "ms": 1.4
+ },
+ {
+  "id": "attr_untrusted_required",
+  "title": "Required attributes untrusted, by attribute group",
+  "kind": "incomplete",
+  "severity": "S2",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 1.0
+ },
+ {
+  "id": "attr_status_inconsistent",
+  "title": "detail_status inconsistent with missing/untrusted lists",
+  "kind": "error",
+  "severity": "S1",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 0.8
+ },
+ {
+  "id": "attr_value_es_missing",
+  "title": "Attributes without a Spanish display value, or with an untranslated enum code",
+  "kind": "incomplete",
+  "severity": "S2",
+  "n": 2,
+  "sample": [
+   {
+    "attribute_key": "body_shape",
+    "no_value_es": 1,
+    "code_as_value_es": 0,
+    "same_as_value": 0,
+    "n": 6
+   },
+   {
+    "attribute_key": "technology",
+    "no_value_es": 0,
+    "code_as_value_es": 1,
+    "same_as_value": 1,
+    "n": 19
+   }
+  ],
+  "error": null,
+  "ms": 1.7
+ },
+ {
+  "id": "attr_numeric_outliers",
+  "title": "Numeric attribute values outside plausible ranges",
+  "kind": "error",
+  "severity": "S2",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 3.1
+ },
+ {
+  "id": "norm_parity",
+  "title": "normalized_model_name / model_key differ from catalog_normalize / catalog_compact of the name",
+  "kind": "error",
+  "severity": "S2",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 68.4
+ },
+ {
+  "id": "norm_brand_in_model",
+  "title": "Model name repeats the brand ('Fender Fender Stratocaster')",
+  "kind": "error",
+  "severity": "S3",
+  "n": 0,
+  "sample": [],
+  "error": null,
+  "ms": 1.1
+ },
+ {
+  "id": "norm_noise_in_model",
+  "title": "Model names carrying seller / colour / condition words",
+  "kind": "error",
+  "severity": "S2",
+  "n": 1,
+  "sample": [
+   {
+    "brand": "Fender",
+    "canonical_model_name": "Player Telecaster Black"
+   }
+  ],
+  "error": null,
+  "ms": 2.1
+ },
+ {
+  "id": "norm_short_key",
+  "title": "Model keys of 2 characters or less / digits only",
+  "kind": "risk",
+  "severity": "S2",
+  "n": 2,
+  "sample": [
+   {
+    "brand": "Behringer",
+    "canonical_model_name": "C-1",
+    "model_key": "c1"
+   },
+   {
+    "brand": "MOTU",
+    "canonical_model_name": "M2",
+    "model_key": "m2"
+   }
+  ],
+  "error": null,
+  "ms": 0.8
+ },
+ {
+  "id": "confusable_one_char",
+  "title": "Same-brand model keys that differ only by a trailing character (dd3 / dd3t, pac112v / pac112j)",
+  "kind": "ambiguous",
+  "severity": "S2",
+  "n": 9,
+  "sample": [
+   {
+    "brand": "Boss",
+    "model_a": "DD-7",
+    "model_b": "DD-3"
+   },
+   {
+    "brand": "Boss",
+    "model_a": "DD-7",
+    "model_b": "DD-8"
+   },
+   {
+    "brand": "Boss",
+    "model_a": "DD-8",
+    "model_b": "DD-3"
+   },
+   {
+    "brand": "Boss",
+    "model_a": "DS-1",
+    "model_b": "DS-2"
+   },
+   {
+    "brand": "Boss",
+    "model_a": "DS-1X",
+    "model_b": "DS-1W"
+   },
+   {
+    "brand": "Roland",
+    "model_a": "TD-17KV",
+    "model_b": "TD-17K-L"
+   },
+   {
+    "brand": "Shure",
+    "model_a": "SM58",
+    "model_b": "SM57"
+   },
+   {
+    "brand": "Vox",
+    "model_a": "AC15C1",
+    "model_b": "AC15C2"
+   },
+   {
+    "brand": "Yamaha",
+    "model_a": "Pacifica PAC112J",
+    "model_b": "Pacifica PAC112V"
+   }
+  ],
+  "error": null,
+  "ms": 1.7
+ },
+ {
+  "id": "confusable_prefix",
+  "title": "Same-brand model key that is a strict prefix of another (sm7 / sm7b, katana50 / katana50mk2)",
+  "kind": "ambiguous",
+  "severity": "S2",
+  "n": 10,
+  "sample": [
+   {
+    "brand": "Boss",
+    "shorter": "BD-2",
+    "longer": "BD-2W"
+   },
+   {
+    "brand": "Boss",
+    "shorter": "DD-3",
+    "longer": "DD-3T"
+   },
+   {
+    "brand": "Boss",
+    "shorter": "DS-1",
+    "longer": "DS-1X"
+   },
+   {
+    "brand": "Boss",
+    "shorter": "DS-1",
+    "longer": "DS-1W"
+   },
+   {
+    "brand": "Boss",
+    "shorter": "Katana-50",
+    "longer": "Katana-50 MkII"
+   },
+   {
+    "brand": "Boss",
+    "shorter": "Katana-50",
+    "longer": "Katana-50 Gen 3"
+   },
+   {
+    "brand": "Fender",
+    "shorter": "Player Jazz Bass",
+    "longer": "Player Jazz Bass V"
+   },
+   {
+    "brand": "Fender",
+    "shorter": "Player Stratocaster",
+    "longer": "Player Stratocaster HSS"
+   },
+   {
+    "brand": "Roland",
+    "shorter": "TD-17KV",
+    "longer": "TD-17KVX"
+   },
+   {
+    "brand": "Shure",
+    "shorter": "SM58",
+    "longer": "SM58S"
+   }
+  ],
+  "error": null,
+  "ms": 1.8
+ },
+ {
+  "id": "confusable_cross_brand_key",
+  "title": "Same model key under different brands (Gibson / Epiphone 'Les Paul Standard 50s')",
+  "kind": "ambiguous",
+  "severity": "S2",
+  "n": 2,
+  "sample": [
+   {
+    "model_key": "lespaulstandard50s",
+    "brands": 2,
+    "brand_sample": [
+     "Epiphone",
+     "Gibson"
+    ]
+   },
+   {
+    "model_key": "lespaulstandard60s",
+    "brands": 2,
+    "brand_sample": [
+     "Epiphone",
+     "Gibson"
+    ]
+   }
+  ],
+  "error": null,
+  "ms": 1.3
+ }
+]

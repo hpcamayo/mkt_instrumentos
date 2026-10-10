@@ -1,0 +1,156 @@
+[
+ {
+  "brand": "Gibson",
+  "products": 4,
+  "missing_required": 0,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 4,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "Epiphone",
+  "products": 3,
+  "missing_required": 0,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 4,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "Squier",
+  "products": 5,
+  "missing_required": 3,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "Boss",
+  "products": 21,
+  "missing_required": 2,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 1
+ },
+ {
+  "brand": "Electro-Harmonix",
+  "products": 3,
+  "missing_required": 2,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "Shure",
+  "products": 6,
+  "missing_required": 0,
+  "untrusted_required": 0,
+  "attr_conflicts": 1,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "Yamaha",
+  "products": 9,
+  "missing_required": 1,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "MXR",
+  "products": 1,
+  "missing_required": 1,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "Fender",
+  "products": 22,
+  "missing_required": 1,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "Jackson",
+  "products": 1,
+  "missing_required": 1,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "Gretsch",
+  "products": 1,
+  "missing_required": 1,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "Dunlop",
+  "products": 1,
+  "missing_required": 1,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "PRS",
+  "products": 1,
+  "missing_required": 1,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ },
+ {
+  "brand": "Ampeg",
+  "products": 1,
+  "missing_required": 1,
+  "untrusted_required": 0,
+  "attr_conflicts": 0,
+  "shared_aliases": 0,
+  "no_category": 0,
+  "quality_flagged": 0,
+  "family_detailed": 0
+ }
+]
