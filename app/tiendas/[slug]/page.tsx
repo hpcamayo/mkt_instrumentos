@@ -1,34 +1,23 @@
-import { redirect } from "next/navigation";
-import { Pagination } from "@/components/pagination";
-import {
-  LISTINGS_PAGE_SIZE,
-  parsePage,
-  pageHref,
-  getPageRedirect,
-} from "@/lib/pagination";
-import { MarketplaceImage as Image } from "@/components/marketplace-image";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { cache } from "react";
 import { JsonLd } from "@/components/json-ld";
-import { buildStoreJsonLd, buildStoreMetadata } from "@/lib/seo";
-import { NOINDEX_ROBOTS } from "@/lib/site";
 import { ListingCard } from "@/components/listing-card";
-import { ContentReport } from "@/components/content-report";
+import { ReputationSection } from "@/components/listing/reputation-section";
 import { StoreVisitTelemetry } from "@/components/marketplace-telemetry";
-import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PageContainer } from "@/components/page-container";
-import { ReputationSummary } from "@/components/reputation-summary";
-import { buildStoreWhatsAppUrl, type ListingCardData } from "@/lib/listings";
-import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
-import { storeInitials } from "@/lib/ui/initials";
-import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
-import { buttonClasses } from "@/components/ui/button";
+import { Pagination } from "@/components/pagination";
+import { StoreHeader, type StoreHeaderData } from "@/components/store/store-header";
+import { StoreAboutSection, StoreSectionLinks, type StoreAbout } from "@/components/store/store-sections";
+import { StripCurrent } from "@/components/strip-current";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
-import { Tag } from "@/components/ui/tag";
-import { VerifiedMark } from "@/components/ui/verified-mark";
-import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
+import type { ListingCardData } from "@/lib/listings";
+import { LISTINGS_PAGE_SIZE, getPageRedirect, pageHref, parsePage } from "@/lib/pagination";
+import { buildStoreJsonLd, buildStoreMetadata } from "@/lib/seo";
+import { NOINDEX_ROBOTS } from "@/lib/site";
+import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
+import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
 
 export const dynamic = "force-dynamic";
 
@@ -39,18 +28,12 @@ type StorePageProps = {
   }>;
 };
 
-type StoreData = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  city: string;
-  district: string | null;
-  whatsapp_phone: string;
-  logo_url: string | null;
-  banner_url: string | null;
-  is_verified: boolean;
-};
+type StoreData = StoreHeaderData & StoreAbout;
+
+// The store page's own grid (UX-4 § Store page): the catalog card without a sidebar, two columns on phones, three
+// from 768 px, four from 1024 px and five from 1280 px.
+const STORE_GRID = "grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-5";
+const STORE_GRID_SIZES = "(max-width: 767px) 50vw, (max-width: 1023px) 33vw, (max-width: 1279px) 25vw, 270px";
 
 const loadActiveStore = cache(async (slug: string) => {
   const supabase = getPublicSupabaseClient();
@@ -65,14 +48,27 @@ const loadActiveStore = cache(async (slug: string) => {
         description,
         city,
         district,
+        region,
         whatsapp_phone,
         logo_url,
         banner_url,
-        is_verified
+        is_verified,
+        created_at,
+        instagram_url,
+        facebook_url,
+        tiktok_url,
+        website_url,
+        store_photos (
+          id,
+          image_url,
+          alt_text,
+          sort_order
+        )
       `,
     )
     .eq("status", "active")
     .eq("slug", slug)
+    .order("sort_order", { foreignTable: "store_photos", ascending: true })
     .maybeSingle<StoreData>();
 });
 
@@ -154,26 +150,31 @@ export default async function StorePage({
   if (redirectPage !== null)
     redirect(pageHref(`/tiendas/${slug}`, {}, redirectPage));
   const listings = (data ?? []) as ListingCardData[];
-  const { data: reputationData } = await supabase.rpc("get_public_reputation", {
+  // A failed reputation call leaves the reviews and the rating out instead of claiming there are none.
+  const reputationResult = await supabase.rpc("get_public_reputation", {
     p_subject_store_id: store.id,
     p_limit: 5,
   });
+  const reputation = reputationResult.error ? null : readPublicReputation(reputationResult.data);
 
   return (
     <>
     <JsonLd data={buildStoreJsonLd(store)} />
     <StoreView
-      store={store as StoreData}
+      store={{ ...store, store_photos: store.store_photos ?? [] } as StoreData}
       listings={listings}
       page={page}
-      total={count ?? 0}
+      total={error ? null : count ?? 0}
       hasError={Boolean(error)}
-      reputation={parsePublicReputation(reputationData)}
+      reputation={reputation}
     />
     </>
   );
 }
 
+// The store page (docs/ux-redesign/ux-4-listing-store.md § Store page, L16–L20): the compact header, the section
+// links, "Publicaciones" in the catalog grid with numbered pages (REL-002), then "Reseñas" and "Sobre la tienda" side
+// by side from 1024 px. Every section is on the page; no in-store search, chips or sort.
 function StoreView({
   store,
   listings,
@@ -185,131 +186,57 @@ function StoreView({
   store: StoreData;
   listings: ListingCardData[];
   page: number;
-  total: number;
+  total: number | null;
   hasError: boolean;
-  reputation: PublicReputation;
+  reputation: PublicReputation | null;
 }) {
+  const rating =
+    reputation && reputation.review_count > 0 && reputation.average_rating !== null
+      ? { average: reputation.average_rating, count: reputation.review_count }
+      : null;
   return (
-    <PageContainer
-      as="section"
-      className="flex flex-col gap-5 py-5 sm:gap-6 sm:py-6"
-    >
+    <>
       <StoreVisitTelemetry storeId={store.id} />
-      <div className="overflow-hidden rounded-panel border border-subtle bg-white">
-        <div className="relative h-40 bg-canvas sm:h-56">
-          {store.banner_url ? (
-            <Image
-              width={1600}
-              height={400}
-              sizes="100vw"
-              priority
-              src={store.banner_url}
-              alt={`Banner de ${store.name}`}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div aria-hidden="true" className="flex h-full items-center justify-center overflow-hidden bg-frame px-6">
-              <span className="truncate t-display text-muted-dark">{store.name}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-[auto_1fr_auto] md:items-end">
-          <div className="-mt-16 h-28 w-28 overflow-hidden rounded-panel border-4 border-white bg-canvas">
-            {store.logo_url ? (
-              <Image
-                width={112}
-                height={112}
-                sizes="112px"
-                src={store.logo_url}
-                alt={`Logo de ${store.name}`}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div aria-hidden="true" className="flex h-full items-center justify-center bg-frame-2 t-page text-surface">
-                {storeInitials(store.name)}
+      {store.is_verified ? <StripCurrent value="verified_stores" /> : null}
+      <StoreHeader store={store} total={total} rating={rating} />
+      <StoreSectionLinks total={total} reviews={reputation ? reputation.review_count : null} />
+      <PageContainer as="section" className="grid gap-10 pb-12 pt-6 lg:gap-14 lg:pt-8">
+        <section id="publicaciones" aria-labelledby="publicaciones-titulo" className="scroll-mt-4">
+          <h2 id="publicaciones-titulo" className="t-section text-ink">
+            Publicaciones{total !== null ? <span className="ml-2 t-meta tabular-nums">{total}</span> : null}
+          </h2>
+          <div className="mt-4">
+            {hasError ? (
+              <Notice tone="danger" role="alert">
+                No se pudieron cargar las publicaciones. Intenta nuevamente.
+              </Notice>
+            ) : listings.length > 0 ? (
+              <div className={STORE_GRID}>
+                {listings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} source="store" headingLevel={3} sizes={STORE_GRID_SIZES} />
+                ))}
               </div>
+            ) : (
+              <EmptyState
+                headingLevel={3}
+                title="Esta tienda aún no tiene publicaciones"
+                description="Vuelve pronto para revisar sus instrumentos aprobados."
+              />
             )}
           </div>
-
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="t-page text-ink">
-                {store.name}
-              </h1>
-              {store.is_verified ? <VerifiedMark /> : <Tag>Tienda</Tag>}
+          {!hasError && total !== null ? (
+            <div className="mt-6">
+              <Pagination page={page} total={total} path={`/tiendas/${store.slug}`} />
             </div>
-            <p className="t-ui text-ink-2">
-              {[store.district, store.city].filter(Boolean).join(", ")}
-            </p>
-            {store.description ? (
-              <p className="max-w-[68ch] t-body text-ink-2">
-                {store.description}
-              </p>
-            ) : null}
-            {store.is_verified ? (
-              <p className="max-w-[68ch] t-meta">
-                La verificación valida la identidad comercial. Laria no procesa pagos, envíos ni garantiza las transacciones ni el equipo.
-              </p>
-            ) : null}
-          </div>
+          ) : null}
+        </section>
 
-          <div className="grid justify-items-start gap-3 md:justify-items-end">
-            <WhatsAppContactLink
-              href={buildStoreWhatsAppUrl(store)}
-              storeId={store.id}
-              source="store"
-              className={buttonClasses({ block: true, className: "md:w-auto" })}
-            >
-              <WhatsAppGlyph />
-              Contactar por WhatsApp
-            </WhatsAppContactLink>
-            <ContentReport
-              targetType="store"
-              targetId={store.id}
-              label="Reportar tienda"
-            />
-          </div>
+        <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
+          <ReputationSection reputation={reputation} title={`Reseñas de ${store.name}`} className="min-w-0" />
+          <StoreAboutSection store={store} className="min-w-0" />
         </div>
-      </div>
-
-      <ReputationSummary reputation={reputation} title={`Reseñas de ${store.name}`} />
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="t-micro text-ink-2">
-            En venta
-          </p>
-          <h2 className="mt-2 t-section text-ink">
-            Publicaciones de la tienda
-          </h2>
-        </div>
-        <p className="t-ui text-ink-2">
-          {total} resultado{total === 1 ? "" : "s"}
-        </p>
-      </div>
-
-      {hasError ? (
-        <Notice tone="danger" role="alert">
-          No se pudieron cargar las publicaciones. Intenta nuevamente.
-        </Notice>
-      ) : listings.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {listings.map((listing) => (
-            <ListingCard key={listing.id} listing={listing} source="store" />
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          headingLevel={3}
-          title="Esta tienda aún no tiene publicaciones"
-          description="Vuelve pronto para revisar sus instrumentos aprobados."
-        />
-      )}
-      {!hasError && (
-        <Pagination page={page} total={total} path={`/tiendas/${store.slug}`} />
-      )}
-    </PageContainer>
+      </PageContainer>
+    </>
   );
 }
 

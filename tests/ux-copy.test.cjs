@@ -91,7 +91,7 @@ function failures(check) {
 
 test("the copy scan reaches the user-facing surfaces", () => {
   assert.ok(COPY.length > 1500, `only ${COPY.length} strings found`);
-  for (const expected of ["Contactar por WhatsApp", "Publicaciones de la tienda", "Compras y ventas", "¿Ya tienes cuenta?"]) {
+  for (const expected of ["Contactar por WhatsApp", "Sobre la tienda", "Compras y ventas", "¿Ya tienes cuenta?"]) {
     assert.ok(COPY.some(({ text }) => text.includes(expected)), expected);
   }
 });
@@ -129,7 +129,7 @@ test("the object is an instrumento or equipo, never an artículo or producto", (
 test("every WhatsApp contact button shares one label and the glyph, one per page (UX-4 L10 A)", () => {
   // UX-4: the listing page's one button lives in its contact module (the phone bar is the same element); the store
   // page has its own. Exactly one button body per file, each the glyph and "Contactar por WhatsApp".
-  for (const file of ["components/listing/contact-module.tsx", "app/tiendas/[slug]/page.tsx"]) {
+  for (const file of ["components/listing/contact-module.tsx", "components/store/store-header.tsx"]) {
     const bodies = [...fs.readFileSync(file, "utf8").matchAll(/<WhatsAppContactLink[\s\S]*?>([\s\S]*?)<\/WhatsAppContactLink>/g)].map(([, body]) => body);
     assert.equal(bodies.length, 1, file);
     for (const body of bodies) {
@@ -140,6 +140,9 @@ test("every WhatsApp contact button shares one label and the glyph, one per page
   const listingPage = fs.readFileSync("app/instrumentos/[slug]/page.tsx", "utf8");
   assert.equal((listingPage.match(/<ContactModule /g) ?? []).length, 1);
   assert.doesNotMatch(listingPage, /<WhatsAppContactLink/);
+  const storePage = fs.readFileSync("app/tiendas/[slug]/page.tsx", "utf8");
+  assert.equal((storePage.match(/<StoreHeader /g) ?? []).length, 1);
+  assert.doesNotMatch(storePage, /<WhatsAppContactLink/);
   // No button uses the seller panel source any more; the API keeps accepting it.
   for (const file of [...files("app"), ...files("components")]) assert.doesNotMatch(fs.readFileSync(file, "utf8"), /source="seller_panel"/, file);
   assert.match(fs.readFileSync("lib/marketplace-event-payload.ts", "utf8"), /"seller_panel"/);
@@ -157,8 +160,9 @@ test("buyers see no placeholder copy and the home's cards show the real conditio
   const home = fs.readFileSync("components/home/home-sections.tsx", "utf8");
   assert.equal((home.match(/<ListingCard /g) ?? []).length, 2, "the vitrina tile and the feed card are the one card");
   assert.doesNotMatch(home, /"Nuevo"|condition/);
-  const store = fs.readFileSync("app/tiendas/[slug]/page.tsx", "utf8");
-  assert.match(store, /storeInitials\(store\.name\)/);
+  // UX-4: the store header and the seller card draw the monogram through SellerAvatar (initials of the store name).
+  assert.match(fs.readFileSync("components/listing/seller-card.tsx", "utf8"), /\{initials\(seller\.name\)\}/);
+  assert.match(fs.readFileSync("components/store/store-header.tsx", "utf8"), /<SellerAvatar seller=\{\{ name: store\.name, kind, logoUrl: store\.logo_url \}\} size=\{96\} \/>/);
 });
 
 test("status labels come from the one dictionary", () => {

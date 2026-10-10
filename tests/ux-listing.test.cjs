@@ -212,3 +212,39 @@ test("store socials are links only for http(s) URLs", () => {
   assert.equal(page.safeExternalUrl(""), null);
   assert.equal(page.safeExternalUrl(null), null);
 });
+
+test("4b: the store header, breadcrumb by store type, section links and 'Sobre la tienda'", () => {
+  const { storeBreadcrumbs } = load("components/store/store-header.tsx", mocks);
+  assert.deepEqual(storeBreadcrumbs({ name: "Casa Musical Grau", is_verified: true }).map((crumb) => crumb.label), ["Inicio", "Tiendas verificadas", "Casa Musical Grau"]);
+  assert.equal(storeBreadcrumbs({ name: "Casa Musical Grau", is_verified: true })[1].href, "/listados?seller_type=verified_store");
+  assert.deepEqual(storeBreadcrumbs({ name: "Ritmo Sur", is_verified: false }).map((crumb) => crumb.label), ["Inicio", "Ritmo Sur"]);
+  const sections = load("components/store/store-sections.tsx", { ...mocks, "@/components/store/store-photos": { StorePhotos: ({ photos }) => React.createElement("ul", { "data-photos": photos.length }) } });
+  const links = html(React.createElement(sections.StoreSectionLinks, { total: 24, reviews: 9 }));
+  assert.match(links, /aria-label="Secciones de la tienda"/);
+  assert.match(links, /href="#publicaciones"[^>]*>Publicaciones<span[^>]*>24</);
+  assert.match(links, /href="#resenas"[^>]*>Reseñas<span[^>]*>9</);
+  assert.match(links, /href="#sobre-la-tienda"/);
+  assert.doesNotMatch(links, /role="tab"/);
+  assert.doesNotMatch(html(React.createElement(sections.StoreSectionLinks, { total: 3, reviews: null })), /#resenas/);
+  const store = { id: "s1", name: "Casa Musical Grau", city: "Lima", district: "Cercado de Lima", region: "Lima", is_verified: true, instagram_url: "https://instagram.com/casagrau", facebook_url: "javascript:alert(1)", tiktok_url: null, website_url: "ftp://x", store_photos: [{ image_url: "/a.jpg", alt_text: null, sort_order: 0 }] };
+  const about = html(React.createElement(sections.StoreAboutSection, { store }));
+  assert.match(about, /Ubicación<\/dt><dd[^>]*>Cercado de Lima, Lima<\/dd>/);
+  assert.match(about, /href="https:\/\/instagram\.com\/casagrau" target="_blank" rel="noopener noreferrer nofollow"/);
+  assert.doesNotMatch(about, /javascript:|Facebook|TikTok|Sitio web|ftp:/);
+  assert.match(about, /data-photos="1"/);
+  assert.match(about, /Laria revisó a mano su RUC, razón social y contacto\. No es una garantía sobre su equipo ni sus ventas\./);
+  assert.match(about, /data-report="store"/);
+  const plain = html(React.createElement(sections.StoreAboutSection, { store: { ...store, is_verified: false, instagram_url: null, store_photos: [] } }));
+  assert.match(plain, /Laria aprobó esta tienda\. Cada publicación suya se revisa antes de mostrarse\./);
+  assert.doesNotMatch(plain, /Redes|Fotos del local/);
+  const page = source("app/tiendas/[slug]/page.tsx");
+  assert.match(page, /\{store\.is_verified \? <StripCurrent value="verified_stores" \/> : null\}/);
+  assert.match(page, /<StoreVisitTelemetry storeId=\{store\.id\} \/>/);
+  assert.match(page, /lg:grid-cols-4 xl:grid-cols-5/);
+  assert.match(page, /source="store"/);
+  for (const field of ["created_at", "instagram_url", "facebook_url", "tiktok_url", "website_url", "store_photos"]) assert.match(page, new RegExp(field));
+  // No street address or contact person (L18 A).
+  assert.doesNotMatch(page, /\baddress\b|contact_person/);
+  // The banner shows only when the store uploaded one, decorative.
+  assert.match(source("components/store/store-header.tsx"), /\{store\.banner_url \? \([\s\S]*alt=""[\s\S]*\) : null\}/);
+});

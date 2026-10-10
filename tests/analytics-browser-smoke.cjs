@@ -238,7 +238,8 @@ exports.runAnalyticsBrowserSmoke = async function runAnalyticsBrowserSmoke({ bas
       const image = document.querySelector('article img');
       return { src: image.getAttribute('src'), sizes: image.getAttribute('sizes'), srcset: image.getAttribute('srcset'), loading: image.getAttribute('loading') };
     })()`);
-    assert.ok(cardImage.src.startsWith("/_next/image") && cardImage.sizes.includes("100vw") && cardImage.srcset);
+    // UX-4: the store grid's own sizes (two columns on phones, up to five from 1280 px).
+    assert.ok(cardImage.src.startsWith("/_next/image") && cardImage.sizes.includes("50vw") && cardImage.srcset);
     assert.equal(cardImage.loading, "lazy");
     anonymous.wait("document.querySelector('article img').complete && document.querySelector('article img').naturalWidth > 0");
     anonymous.command("scroll", "up", "1800");

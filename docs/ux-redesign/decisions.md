@@ -3,6 +3,21 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## Raised during the UX-4 build (cloud session, 10 Oct; provisional, for the 4a/4b reviews)
+
+Built on L1–L21 as answered (N17). Where the brief left a detail open or a rule forced a change, Claude Code chose; each choice is reversible at the review.
+
+| ID | Choice | Why | Status |
+| --- | --- | --- | --- |
+| U1 | The listing's trust statement reads "Coordinas el pago y la entrega directamente con quien vende. Laria no procesa pagos, no retiene dinero, no gestiona envíos ni garantiza el equipo o la transacción." + "Consejos de seguridad" | The brief worded the store and bar lines only; this keeps the full LEGAL-005/006 content of the old notice (L5 A) | provisional (Claude Code) |
+| U2 | The verified-store line says "…No es una garantía sobre su equipo ni sus ventas." (brief: "sus productos") | The glossary rejects "producto" (`ux-copy.test.cjs`) | provisional (Claude Code) |
+| U3 | Phone bar: WhatsApp on the left, the 44 px favourite on the right (brief: favourite first) | DOM order = visual order = Tab order (WhatsApp right after the identity block) | provisional (Claude Code) |
+| U4 | Phones: "Reportar publicación" follows the seller card, before the reviews (brief: after the reviews) | Keeps Tab order equal to the visual order without duplicating the control | provisional (Claude Code) |
+| U5 | "Publicado hoy" on the publication day (was "Publicado hace 0 días"); the date line is composed on the server | Reads naturally; a server string cannot mismatch on hydration (the #418 lesson) | provisional (Claude Code) |
+| U6 | Store grid photos stay lazy (no eager first row) | `analytics-browser-smoke` reads the first store card's lazy image; the header is the store page's LCP | provisional (Claude Code) |
+| U7 | When the store's reputation call fails, the "Reseñas" section link, the reviews and the rating figure are all left out | The brief's failure rule, applied to the section links too | provisional (Claude Code) |
+| U8 | Spec strip and table values keep the card's units ("6 cuerdas", "22\"") | One label per value across card, strip and table | provisional (Claude Code) |
+
 ## UX-4 brief: provisional answers (owner, 2026-10-09)
 
 The brief `ux-4-listing-store.md` asks L1–L21 on its review page https://claude.ai/artifact/T2pej3FqaGD3Nimwi5VGcY (answers in the page's db collection `answers`, one document per question). Options and context are in the brief. **Provisional:** before travelling on the evening of 9 Oct the owner answered in the session "Yes, all recommendations", so every question takes its recommendation (L11 B, all others A). They were built while the owner was away and are confirmed or reversed at the 4a and 4b reviews (N17). The same answers were written to the review page's `answers` collection, each with a note saying so.

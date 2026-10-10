@@ -348,7 +348,7 @@ test("LEGAL-005/LEGAL-006: safety and trust copy states the limitations and neve
     "components/sell-listing-form.tsx", "components/seller-signup-form.tsx", "app/instrumentos/[slug]/page.tsx", "app/tiendas/[slug]/page.tsx",
     // UX-4: the listing and store pages' limitation texts live in their components (TrustNote holds them all).
     "components/listing/trust-note.tsx", "components/listing/contact-module.tsx", "components/listing/seller-card.tsx",
-    "components/listing/reputation-section.tsx", ...legalRoutes.map(([file]) => file),
+    "components/listing/reputation-section.tsx", "components/store/store-header.tsx", "components/store/store-sections.tsx", ...legalRoutes.map(([file]) => file),
   ];
   const forbidden = /(garantizamos|te garantiza|compra (protegida|segura) con laria|pago (protegido|seguro) (en|con) laria|protección al comprador|devolución garantizada|autenticidad garantizada|envío gratis)/i;
   for (const file of trustSurfaces) assert.doesNotMatch(source(file), forbidden, file);

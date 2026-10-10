@@ -372,7 +372,7 @@ test("authenticated report controls cover public listings, active stores, and re
   const form = source("components/content-report-form.tsx");
   const control = `${trigger}\n${form}`;
   const listing = source("app/instrumentos/[slug]/page.tsx");
-  const store = source("app/tiendas/[slug]/page.tsx");
+  const store = source("components/store/store-sections.tsx");
   const reputation = source("components/listing/reputation-section.tsx");
   assert.match(trigger, /dynamic\(\(\) => import\("@\/components\/content-report-form"\)/);
   assert.doesNotMatch(trigger, /browser-client|getSupabaseBrowserClient/);
