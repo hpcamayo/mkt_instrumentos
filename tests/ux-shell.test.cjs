@@ -79,7 +79,7 @@ test("each route gets its frame: header, strip, phone search and footer (N3–N5
   for (const [pathname, expected] of Object.entries(expectations)) assert.deepEqual(shell.getShellLayout(pathname), expected, pathname);
   // The home gets the home header and no strip; every other public page the standard header.
   assert.match(source("components/site-shell.tsx"), /\{layout\.header === "home" \? <HomeHeader \/> : <SiteHeader layout=\{layout\} \/>\}/);
-  assert.match(source("components/site-shell.tsx"), /\{layout\.strip !== "none" \? <GlobalCategories visibility=\{layout\.strip\} \/> : null\}/);
+  assert.match(source("components/site-shell.tsx"), /\{layout\.strip !== "none" \? <GlobalCategories visibility=\{layout\.strip\} brands=\{menuBrands\} \/> : null\}/);
   // Admin owns its <main>; everywhere else the shell renders the only one.
   assert.match(source("components/site-shell.tsx"), /if \(layout\.header === "none"\) return <>\{children\}<\/>;/);
   assert.match(source("components/site-shell.tsx"), /<main id="contenido" tabIndex=\{-1\}/);
@@ -163,13 +163,15 @@ test("each category menu offers Ver todos and the category's canonical types (PU
   const guitars = renderToStaticMarkup(React.createElement(CategoryPanel, { menu: shell.categoryMenus.find((menu) => menu.key === "guitars") }));
   assert.match(guitars, /^<div id="categoria-guitars" class="menu-fade absolute/);
   assert.match(guitars, /<a href="\/instrumentos\/guitarras"[^>]*data-client-link="">Ver todos<\/a>/);
-  const types = [...guitars.matchAll(/<li><a href="([^"]+)"[^>]*>([^<]+)<\/a><\/li>/g)].map((match) => [match[2], match[1].replace(/&amp;/g, "&")]);
+  // The "Tipos" list: the canonical types, as before the detailed navigation.
+  const typeList = guitars.slice(guitars.indexOf(">Tipos</p>"), guitars.indexOf("</ul>", guitars.indexOf(">Tipos</p>")));
+  const types = [...typeList.matchAll(/<li><a href="([^"]+)"[^>]*>([^<]+)<\/a><\/li>/g)].map((match) => [match[2], match[1].replace(/&amp;/g, "&")]);
   assert.deepEqual(types, [
     ["Guitarras eléctricas", "/listados?category=guitars&instrument_type=electric_guitar"],
     ["Guitarras acústicas", "/listados?category=guitars&instrument_type=acoustic_guitar"],
     ["Otro", "/listados?category=guitars&instrument_type=other"],
   ]);
-  assert.equal((guitars.match(/<a href="\/listados\?[^"]*"[^>]*data-client-link=""/g) ?? []).length, 3, "type links into the catalog are client links (UX-3 Q1)");
+  assert.equal((guitars.match(/<a href="\/listados\?[^"]*"[^>]*>/g) ?? []).length, (guitars.match(/<a href="\/listados\?[^"]*"[^>]*data-client-link=""/g) ?? []).length, "links into the catalog are client links (UX-3 Q1)");
   // A type that mirrors its category resolves to the landing, as in the pre-UX-2 menu.
   const cymbals = shell.categoryMenus.find((menu) => menu.key === "cymbals");
   assert.deepEqual(cymbals.types.map((type) => type.href), ["/instrumentos/platillos", "/listados?category=cymbals&instrument_type=other"]);

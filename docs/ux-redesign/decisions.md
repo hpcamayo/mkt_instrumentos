@@ -3,6 +3,20 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## Detailed category navigation (cloud session, 10 Oct; for review on its own branch)
+
+Owner's ask: enrich the category navigation from the instrument catalog, reverb.com style. Built on
+`ux/catalog-category-nav-0ueck4` (`category-navigation.md`); every row is provisional until the owner's review.
+
+| ID | Choice | Why | Status |
+| --- | --- | --- | --- |
+| CN1 | Subcategories are the listing attributes the catalog filters already accept (Strat, Clásicas, Delay…), not the catalog's own category tree and labels (the spec's long-term tree) | Listings do not store a catalog category or product, so a catalog subcategory link could not filter anything today; the 132-row catalog tree could not be read from the cloud session either. Revisit once autofill records the catalog product on listings | pending (owner) |
+| CN2 | Brands come from the catalog (most catalog models in the category first) and are shown whether or not they have live listings; an empty brand page shows the normal empty state with "Crear alerta" | With few listings, "only brands with listings" would leave the menus nearly empty; the spec's "only brands with products" means catalog products. Alternative: show only brands with approved listings | pending (owner) |
+| CN3 | Depth on phones: the strip panel shows types and the first five brands; subtypes and the full brand list live on the category landing ("Explora …") | Keeps the phone panel short; the spec leaves mobile depth open | pending (owner) |
+| CN4 | No product-line or model level, and no categories the catalog has but Laria does not list (keyboards, pianos, synthesizers) | The catalog page cannot filter by model (brand-only search, N8/F9), and new categories change the listing taxonomy (spec open question) | pending (owner) |
+| CN5 | The home "Categorías" menu and the Admin "Explorar categorías" keep types only | They list all eight categories at once; the detail lives in each strip panel and landing | provisional (Claude Code) |
+| CN6 | The shared shell reads the brand list (day-cached, 4 s timeout, no brands on failure), so formerly static pages now regenerate daily | Keeps the strip identical on every page without a client fetch | provisional (Claude Code) |
+
 ## UX-7 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-7 review)
 
 Brief `ux-7-admin.md`. Under N17 the recommendations W1–W9 are taken provisionally; F7 (bulk actions) is not built.

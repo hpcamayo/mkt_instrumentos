@@ -37,6 +37,7 @@ import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
 import { fetchCatalogPage } from "@/lib/catalog";
+import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
 import {
   categoryLandingPath,
   categoryTypePath,
@@ -271,7 +272,7 @@ async function renderCategoryLanding(
 
   const page = parsePage(searchParams.page);
   const filters = parseListingFilters({ category: landing.category });
-  const result = await loadCategoryPage(landing.category, page);
+  const [result, catalogBrands] = await Promise.all([loadCategoryPage(landing.category, page), getCatalogBrandsByCategory()]);
   if (!result.configured) return <SupabaseSetupMessage />;
 
   const redirectPage = getPageRedirect(page, result.count, result.error);
@@ -283,6 +284,7 @@ async function renderCategoryLanding(
   return (
     <CategoryLanding
       landing={landing}
+      brands={catalogBrands[landing.category] ?? []}
       filters={filters}
       listings={(result.data ?? []) as ListingCardData[]}
       totalCount={result.count ?? 0}
