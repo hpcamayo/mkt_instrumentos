@@ -117,11 +117,13 @@ export function parseEligibleBuyers(value: unknown): EligibleBuyer[] {
   ));
 }
 
-export function parsePublicReputation(value: unknown): PublicReputation {
+// The public reputation, or null when the payload is not what get_public_reputation returns (a failed call reads as
+// null too): pages then leave the reviews out instead of claiming there are none (UX-4).
+export function readPublicReputation(value: unknown): PublicReputation | null {
   if (!isRecord(value)
     || !isCount(value.review_count)
     || !(value.average_rating === null || isFiniteNumber(value.average_rating))
-    || !Array.isArray(value.items)) return emptyReputation;
+    || !Array.isArray(value.items)) return null;
   const items = value.items.filter((item): item is PublicReputation["items"][number] => (
     isRecord(item)
     && isString(item.id)
@@ -132,8 +134,12 @@ export function parsePublicReputation(value: unknown): PublicReputation {
     && isDate(item.submitted_at)
     && nullableString(item.reviewer_name)
   ));
-  if (items.length !== value.items.length) return emptyReputation;
+  if (items.length !== value.items.length) return null;
   return { review_count: value.review_count, average_rating: value.average_rating, items };
+}
+
+export function parsePublicReputation(value: unknown): PublicReputation {
+  return readPublicReputation(value) ?? emptyReputation;
 }
 
 // Labels come from the one status dictionary (lib/ui/status.ts, domain "claim").

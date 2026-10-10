@@ -183,14 +183,16 @@ exports.runAnalyticsBrowserSmoke = async function runAnalyticsBrowserSmoke({ bas
     const gallery = buyer.evaluate(`(() => {
       const thumbnails = document.querySelector('[aria-label="Miniaturas de fotos"]');
       const main = thumbnails?.previousElementSibling.querySelector('img');
-      return { main: main && { src: main.getAttribute('src'), sizes: main.getAttribute('sizes'), srcset: main.getAttribute('srcset'), loading: main.getAttribute('loading') },
+      return { main: main && { src: main.getAttribute('src'), sizes: main.getAttribute('sizes'), srcset: main.getAttribute('srcset'), loading: main.getAttribute('loading'), priority: main.getAttribute('fetchpriority') },
         thumbnails: Array.from(thumbnails?.querySelectorAll('img') ?? []).map(image => ({ src: image.getAttribute('src'), sizes: image.getAttribute('sizes'), loading: image.getAttribute('loading') })) };
     })()`);
     assert.ok(gallery.main.src.startsWith("/_next/image"));
     assert.ok(gallery.main.sizes.includes("100vw") && gallery.main.srcset);
-    assert.equal(gallery.main.loading, "eager");
+    // UX-4 L3 A: the first photo is the page's LCP (eager, high priority); thumbnails are 56 px on phones, 72 px wide.
+    assert.notEqual(gallery.main.loading, "lazy");
+    assert.equal(gallery.main.priority, "high");
     assert.ok(gallery.thumbnails.length >= 2);
-    assert.ok(gallery.thumbnails.every((image) => image.src.startsWith("/_next/image") && image.sizes === "64px" && image.loading === "lazy"));
+    assert.ok(gallery.thumbnails.every((image) => image.src.startsWith("/_next/image") && image.sizes === "(max-width: 1023px) 56px, 72px" && image.loading === "lazy"));
     buyer.evaluate(`(() => {
       window.__qaContactDestinations = [];
       window.open = () => ({ closed: false, opener: null, location: { set href(url) { window.__qaContactDestinations.push(url); } } });

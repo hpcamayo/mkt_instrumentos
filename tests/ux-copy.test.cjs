@@ -126,16 +126,23 @@ test("the object is an instrumento or equipo, never an artículo or producto", (
   assert.deepEqual(failures(({ file, text }) => !LEGAL.test(file) && !file.endsWith("legal-page.tsx") && OBJECT.test(text.replace(DEFINED, ""))), []);
 });
 
-test("every WhatsApp contact button shares one label and the glyph", () => {
-  let buttons = 0;
-  for (const file of ["app/instrumentos/[slug]/page.tsx", "app/tiendas/[slug]/page.tsx"]) {
-    for (const [, body] of fs.readFileSync(file, "utf8").matchAll(/<WhatsAppContactLink[\s\S]*?>([\s\S]*?)<\/WhatsAppContactLink>/g)) {
-      buttons++;
+test("every WhatsApp contact button shares one label and the glyph, one per page (UX-4 L10 A)", () => {
+  // UX-4: the listing page's one button lives in its contact module (the phone bar is the same element); the store
+  // page has its own. Exactly one button body per file, each the glyph and "Contactar por WhatsApp".
+  for (const file of ["components/listing/contact-module.tsx", "app/tiendas/[slug]/page.tsx"]) {
+    const bodies = [...fs.readFileSync(file, "utf8").matchAll(/<WhatsAppContactLink[\s\S]*?>([\s\S]*?)<\/WhatsAppContactLink>/g)].map(([, body]) => body);
+    assert.equal(bodies.length, 1, file);
+    for (const body of bodies) {
       assert.match(body, /<WhatsAppGlyph \/>/, file);
       assert.equal(body.replace(/<WhatsAppGlyph \/>/, "").trim(), "Contactar por WhatsApp", file);
     }
   }
-  assert.equal(buttons, 3);
+  const listingPage = fs.readFileSync("app/instrumentos/[slug]/page.tsx", "utf8");
+  assert.equal((listingPage.match(/<ContactModule /g) ?? []).length, 1);
+  assert.doesNotMatch(listingPage, /<WhatsAppContactLink/);
+  // No button uses the seller panel source any more; the API keeps accepting it.
+  for (const file of [...files("app"), ...files("components")]) assert.doesNotMatch(fs.readFileSync(file, "utf8"), /source="seller_panel"/, file);
+  assert.match(fs.readFileSync("lib/marketplace-event-payload.ts", "utf8"), /"seller_panel"/);
 });
 
 test("buyers see no placeholder copy and the home's cards show the real condition (D11)", () => {

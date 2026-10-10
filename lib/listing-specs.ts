@@ -6,7 +6,6 @@ import {
 import {
   getCategoryLabel,
   getConditionLabel,
-  normalizeStore,
   type ListingAttributes,
   type ListingCardData,
   type ListingDetailData,
@@ -37,18 +36,6 @@ const fallbackAttributeValues: Record<string, string> = {
   true: "Sí",
   false: "No",
 };
-
-export function getKeyListingSpecs(
-  listing: ListingDetailData,
-  sellerName?: string | null,
-) {
-  return [
-    ...getBaseListingSpecs(listing, sellerName).filter(
-      (spec) => spec.label !== "Publicado",
-    ),
-    ...getAttributeSpecs(listing).slice(0, 3),
-  ].slice(0, 8);
-}
 
 // Up to two key attributes per type on the listing card (UX-3 Q3 A), in this order. An electric guitar shows its
 // number of strings only when it is not 6.
@@ -81,69 +68,49 @@ export function getCardSpecLine(listing: Pick<ListingCardData, "condition" | "in
   return parts.join(" · ");
 }
 
-export function getFullListingSpecs(
-  listing: ListingDetailData,
-  sellerName?: string | null,
-) {
-  const instrumentLabel = listing.instrument_type
-    ? getInstrumentFilterGroup(listing.instrument_type)?.label
-    : null;
+// The listing page's spec strip (UX-4 L9 A): up to four of the type's attributes, starting with the card's two, then
+// the rest in the type's filter order. The condition, brand and model are in the identity block already.
+export function getSpecStrip(listing: Pick<ListingDetailData, "instrument_type" | "attributes">): ListingSpec[] {
+  const specs = getAttributeSpecs(listing);
+  const first = cardAttributeKeys[listing.instrument_type ?? ""] ?? [];
+  const ranked = [
+    ...first.flatMap((key) => specs.filter((spec) => spec.key === key)),
+    ...specs.filter((spec) => !first.includes(spec.key)),
+  ];
+  return ranked.slice(0, 4).map(({ label, value }) => ({ label, value }));
+}
 
+// "Especificaciones" (UX-4 L9 A): Tipo (the instrument type, or the category when there is none), Marca, Modelo,
+// Condición, then every attribute with its label (LIST-011). Rows without a value are left out, and nothing repeats
+// the page's other blocks (no publication date, city or seller).
+export function getSpecTable(
+  listing: Pick<ListingDetailData, "category" | "instrument_type" | "attributes" | "brand" | "model" | "condition">,
+): ListingSpec[] {
+  const typeLabel = listing.instrument_type ? getInstrumentFilterGroup(listing.instrument_type)?.label : undefined;
   return [
-    ...(instrumentLabel ? [{ label: "Instrumento", value: instrumentLabel }] : []),
-    ...getBaseListingSpecs(listing, sellerName),
-    ...getAttributeSpecs(listing),
+    { label: "Tipo", value: typeLabel ?? getCategoryLabel(listing.category) },
+    { label: "Marca", value: listing.brand ?? "" },
+    { label: "Modelo", value: listing.model ?? "" },
+    { label: "Condición", value: listing.condition ? getConditionLabel(listing.condition) : "" },
+    ...getAttributeSpecs(listing).map(({ label, value }) => ({ label, value })),
   ].filter((spec) => spec.value.trim() !== "");
 }
 
-function getBaseListingSpecs(
-  listing: ListingDetailData,
-  sellerName?: string | null,
-): ListingSpec[] {
-  const store = normalizeStore(listing);
+type AttributeSpec = ListingSpec & { key: string };
 
-  return [
-    {
-      label: "Publicado",
-      value: formatPublishedDate(listing.published_at ?? listing.created_at),
-    },
-    { label: "Condición", value: listing.condition || "No indicada" },
-    { label: "Categoría", value: getCategoryLabel(listing.category) },
-    { label: "Marca", value: listing.brand || "No indicada" },
-    { label: "Modelo", value: listing.model || "No indicado" },
-    { label: "Ciudad", value: `${listing.city}, ${listing.region}` },
-    {
-      label: listing.seller_type === "store" ? "Tienda" : "Vendedor",
-      value:
-        listing.seller_type === "store"
-          ? store?.name || sellerName || "Tienda"
-          : sellerName || "Particular",
-    },
-  ];
-}
-
-function getAttributeSpecs(listing: ListingDetailData): ListingSpec[] {
+// Every attribute with its label and value: the type's known attributes first, in its filter order, then any other.
+function getAttributeSpecs(listing: Pick<ListingDetailData, "instrument_type" | "attributes">): AttributeSpec[] {
   const attributes = normalizeAttributes(listing.attributes);
-  const entries = Object.entries(attributes);
-
-  if (entries.length === 0) {
-    return [];
-  }
-
-  const group = listing.instrument_type
-    ? getInstrumentFilterGroup(listing.instrument_type)
-    : null;
-  const filters = new Map<string, InstrumentFilterConfig>(
-    group?.filters.map((filter) => [filter.key, filter] as const) ?? [],
-  );
-
-  return entries
-    .map(([key, value]) => {
-      const filter = filters.get(key);
-      return {
-        label: filter?.label ?? formatAttributeLabel(key),
-        value: formatAttributeValue(value, filter),
-      };
+  const group = listing.instrument_type ? getInstrumentFilterGroup(listing.instrument_type) : null;
+  const order: string[] = group?.filters.map((filter) => filter.key) ?? [];
+  const keys = [
+    ...order.filter((key) => Object.hasOwn(attributes, key)),
+    ...Object.keys(attributes).filter((key) => !order.includes(key)),
+  ];
+  return keys
+    .map((key) => {
+      const filter = group?.filters.find((item) => item.key === key);
+      return { key, label: filter?.label ?? formatAttributeLabel(key), value: formatAttributeValue(attributes[key], key, filter) };
     })
     .filter((spec) => spec.value !== "");
 }
@@ -156,10 +123,8 @@ function normalizeAttributes(attributes: ListingAttributes | null) {
   return attributes;
 }
 
-function formatAttributeValue(
-  value: unknown,
-  filter?: InstrumentFilterConfig,
-) {
+// Known option values read as their labels with the card's units ("22\""); unknown values keep a readable fallback.
+function formatAttributeValue(value: unknown, key: string, filter?: InstrumentFilterConfig) {
   const values = Array.isArray(value) ? value : [value];
 
   return values
@@ -169,12 +134,10 @@ function formatAttributeValue(
       }
 
       const stringValue = String(item);
-      return (
-        filter?.options?.find((option) => option.value === stringValue)
-          ?.label ??
-        fallbackAttributeValues[stringValue] ??
-        formatAttributeLabel(stringValue)
-      );
+      if (filter && (!filter.options || filter.options.some((option) => option.value === stringValue))) {
+        return attributeValueLabel(filter, key, stringValue);
+      }
+      return fallbackAttributeValues[stringValue] ?? formatAttributeLabel(stringValue);
     })
     .filter(Boolean)
     .join(", ");
@@ -189,18 +152,4 @@ function formatAttributeLabel(value: string) {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ")
   );
-}
-
-function formatPublishedDate(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "No disponible";
-  }
-
-  return new Intl.DateTimeFormat("es-PE", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(date);
 }

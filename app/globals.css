@@ -155,6 +155,47 @@ figcaption {
   }
 }
 
+/* The listing lightbox (components/listing/lightbox.tsx, UX-4 L3 A): a modal <dialog> over the whole viewport on
+   frame black at 95%. It fades in 120 ms (in place under reduced motion). */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 0 0 env(safe-area-inset-bottom);
+  border: 0;
+  background: transparent;
+  color: var(--surface);
+  animation: menu-fade 120ms ease-out;
+}
+.lightbox::backdrop {
+  background: rgb(5 6 8 / 0.95);
+}
+
+/* The listing's contact module (components/listing/contact-module.tsx, UX-4 L4 A). Below 1024 px it is a bar at the
+   bottom of the screen: white, a 1 px line-deco top border, the safe area below. The page gets a matching spacer and
+   scroll padding, so the bar never hides a focused element. On short viewports (landscape, 200% zoom) it is not fixed:
+   the module stays in the page after the identity block. */
+@media (max-width: 1023px) and (min-height: 560px) {
+  .contact-bar {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 30;
+    padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line-deco);
+    background: var(--surface);
+  }
+  html:has(.contact-bar) {
+    scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  }
+  .contact-bar-spacer {
+    height: calc(104px + env(safe-area-inset-bottom));
+  }
+}
+
 /* Sideways-scrolling rows (the category strip) scroll without a visible bar. */
 .scrollbar-none {
   scrollbar-width: none;

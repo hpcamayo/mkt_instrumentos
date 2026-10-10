@@ -23,10 +23,9 @@ function importers(name) {
   return SOURCES.filter(({ text }) => pattern.test(text)).map(({ file }) => file);
 }
 
-// Skeleton lost its only consumer with app/listados/loading.tsx (UX-3 Q1 A: the catalog keeps its results on screen
-// while it loads); the listing page's streamed sections (UX-4) are its next candidate. Chip and Radio found theirs in
-// the filter sheet (UX-3).
-const NOT_YET_USED = new Set(["Skeleton"]);
+// Every primitive has a consumer: Chip and Radio in the filter sheet (UX-3), Skeleton in the listing page's streamed
+// sections (UX-4, P3), so no exemption is left.
+const NOT_YET_USED = new Set([]);
 
 test("every shared primitive has a consumer outside components/ui", () => {
   const primitives = [
