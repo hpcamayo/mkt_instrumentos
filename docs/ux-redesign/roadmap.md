@@ -2,12 +2,12 @@
 
 Eight sub-sprints, grouped by UX system and journey, not by file. Each has an approval gate before implementation and an acceptance gate after. Nothing starts automatically.
 
-| # | Sub-sprint | Goal | Major surfaces | Depends on | Owner decisions expected | Risk / size | State (8 Oct) |
+| # | Sub-sprint | Goal | Major surfaces | Depends on | Owner decisions expected | Risk / size | State (9 Oct) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| UX-1 | **Foundations** | One visual and content language, applied everywhere through shared primitives; contrast and focus fixed product-wide; public placeholders removed | Tokens (`globals.css`, `tailwind.config.ts`), font, primitives (Button, Field, Tag/Status, Chip, Notice, EmptyState, PageHeader, Price, VerifiedMark), glossary + status dictionary, orthography sweep, favicon/email colors, skip link, screenshot harness, `docs/design-system.md` rewrite | Sprint 9 accepted | Typeface, blue-as-text policy, derived tones, shape language, base size, uppercase, WhatsApp CTA, glossary, touchpoints | Medium-high: global, wide diff, no layout changes | Accepted 30 Sep |
-| UX-2 | **Shell and navigation** | Compact, fast frame on every device; search always reachable; categories as the main browse path | Header (phone/tablet/desktop), search entry, category nav (strip + menus), account menu and badges, footer, breadcrumbs, page frames (public/account/Admin), 404/500 | UX-1 | *Decided 30 Sep–7 Oct: N1–N14, G1* | Medium | Accepted 8 Oct; N12 recording open (owner) |
-| UX-3 | **Discovery** | Browsing and comparing gear fast | Home (marketplace-first), catalog/search results, category landings, filters (sidebar + sheet), applied chips, sort, pagination/"Ver más", the one listing card, empty/no-results/loading | UX-1, UX-2 | § UX-3 | High: highest traffic, SEO-sensitive | Brief approved 8 Oct (`ux-3-discovery.md`, answers Q1–Q20); 3a and 3b accepted 9 Oct (`ux-3a-acceptance.md`, `ux-3b-acceptance.md`); UX-4 next |
-| UX-4 | **Listing and store pages** | Confident decision and trustworthy contact | Gallery + lightbox, identity/price/condition block, contact module, safety note, seller/store module, spec table, description, reviews display, related listings, sold view, store page, report entry points | UX-3 (card) | § UX-4 | Medium-high | Not started |
+| UX-1 | **Foundations** | One visual and content language, applied everywhere through shared primitives; contrast and focus fixed product-wide; public placeholders removed | Tokens (`globals.css`, `tailwind.config.ts`), font, primitives (Button, Field, Tag/Status, Chip, Notice, EmptyState, PageHeader, Price, VerifiedMark), glossary + status dictionary, orthography sweep, favicon/email colors, skip link, screenshot harness, `docs/design-system.md` rewrite | Sprint 9 accepted | Typeface, blue-as-text policy, derived tones, shape language, base size, uppercase, WhatsApp CTA, glossary, touchpoints | Medium-high: global, wide diff, no layout changes | Accepted 30 Sep; live 9 Oct |
+| UX-2 | **Shell and navigation** | Compact, fast frame on every device; search always reachable; categories as the main browse path | Header (phone/tablet/desktop), search entry, category nav (strip + menus), account menu and badges, footer, breadcrumbs, page frames (public/account/Admin), 404/500 | UX-1 | *Decided 30 Sep–7 Oct: N1–N14, G1* | Medium | Accepted 8 Oct; N12 recorded 9 Oct; live 9 Oct |
+| UX-3 | **Discovery** | Browsing and comparing gear fast | Home (marketplace-first), catalog/search results, category landings, filters (sidebar + sheet), applied chips, sort, pagination/"Ver más", the one listing card, empty/no-results/loading | UX-1, UX-2 | § UX-3 | High: highest traffic, SEO-sensitive | Brief approved 8 Oct (`ux-3-discovery.md`, answers Q1–Q20); 3a and 3b accepted 9 Oct (`ux-3a-acceptance.md`, `ux-3b-acceptance.md`); live 9 Oct |
+| UX-4 | **Listing and store pages** | Confident decision and trustworthy contact | Gallery + lightbox, identity/price/condition block, contact module, safety note, seller/store module, spec table, description, reviews display, related listings, sold view, store page, report entry points | UX-3 (card) | § UX-4 | Medium-high | Brief provisionally approved 9 Oct (all recommendations); building (N17) |
 | UX-5 | **Selling** | A clear path to a complete, attractive listing | Sell entry (`/vender`), create flow (taxonomy, attributes, photos, price, location, contact), validation and error summary, submit and confirmation, edit and "Cambios en revisión", relist | UX-1, UX-4 (what a listing shows) | § UX-5 | High: forms + photo handling | Not started |
 | UX-6 | **Accounts** | Coherent workspaces for Particular and Store Owner; onboarding | Sign-in, sign-up, store application, invitations, password; Resumen; Mis publicaciones and Inventario; Favoritos; Alertas; Notificaciones; Compras y ventas + reviews; Perfil y seguridad; Mi tienda; Estadísticas | UX-1, UX-2, UX-5 | § UX-6 | High; may split into 6a onboarding + Particular and 6b Store | Not started |
 | UX-7 | **Admin workbench** | Moderation throughput and safety | Queue layout, list/detail with inline photos and change diffs, dense tables, action hierarchy and confirmations, stores/users/reports/reviews/transactions/legacy linking, audit history | UX-1 (+ list primitives from UX-6) | § UX-7 | Medium-high | Not started |
@@ -16,6 +16,8 @@ Eight sub-sprints, grouped by UX system and journey, not by file. Each has an ap
 Each sub-sprint also applies its items from `home-visual-audit.md` (table "By sub-sprint").
 
 Sequencing: UX-1 → UX-2 → UX-3 → UX-4 → UX-5 → UX-6 → UX-7 → UX-8. Admin (UX-7) could move earlier if moderation volume requires it; that is an owner call.
+
+Releases: UX-1 to UX-3 reached production together on 9 Oct (`50963fb`; `../ux-production-release-gate.md`). From UX-4 on, each sub-sprint is audited and released once the owner accepts it (N15; step 6 below).
 
 The sections below are the starting point for each sub-sprint's brief, not the brief itself. They were checked against the code on 7 Oct (file:line references are as of `ux/redesign` after the UX-2 answers). Each brief re-checks them, proposes the design, and asks the owner the listed questions.
 
@@ -31,6 +33,12 @@ The sections below are the starting point for each sub-sprint's brief, not the b
    - the acceptance rows the sub-sprint touches, re-run on the build with `scripts/ux-pub-rerun.cjs`-style scripts, observations only (as for N12 in `ux-2-reconciliation.md`).
 4. **Acceptance package** `ux-N-acceptance.md` (commits, criteria with evidence, deviations, rows touched, tests changed, known limitations, what still needs the owner) and **one review page** for the owner: a private checklist with Correct/Wrong per check and screenshots (the owner's preferred format). Docs updated in the same pass: this roadmap, `README.md`, `decisions.md`, `docs/design-system.md`, `review-guide.md` when the review scope changes.
 5. **Acceptance records.** `acceptance/cases.tsv` and `docs/functional-spec.md` are the owner's: Claude Code drafts wording and evidence and never sets a status or infers a Pass.
+6. **Release** (N15, from UX-4 on), after the owner accepts the sub-sprint:
+   - Codex runs a blind audit of the sub-sprint's diff against `origin/main` (the method of `reviews/ux-release-audit.md`);
+   - the owner pushes (a fast-forward of `main`);
+   - a read-only production smoke follows, with a release record (as `../ux-production-release-gate.md`).
+
+   Claude Code never pushes. Before the next sub-sprint starts, `ux/redesign` is fast-forwarded to `origin/main`. UX-5 to UX-7 change write flows a read-only smoke cannot reach; how their releases prove them is N16 (pending).
 
 Tools and traps (also in the review guide): agent-browser blanks its tab a few seconds after a run of Esc/Enter/Tab presses, so keyboard checks run in their own sessions; the axe-core file is at `~/Documents/backus-visitas/node_modules/axe-core/axe.min.js`; `typecheck` reads `.next/types`, so delete `.next` after removing a route; the Supabase CLI rewrites `supabase/.temp/cli-latest` (restore it with `git checkout`).
 
@@ -44,7 +52,7 @@ Tools and traps (also in the review guide): agent-browser blanks its tab a few s
 - **The answers:** Q1–Q18 on the review page https://claude.ai/artifact/7DCnPzHDMrXRSfBx7mueG4, then Q19 and Q20 in the session (`decisions.md`). Every recommendation was taken except Q8: condition and location become multi-choice (F11), with no alert or database change.
 - **3a accepted (owner, 9 Oct**; review page 31 of 31 Correct): `ux-3a-acceptance.md`. Commits `5f4bdd1` (the stall fix), `4ddf8cc` (the one card), `6651815` (the catalog, filters with F11, chips, sort, numbered pages, landings and states), `58bae38` (evidence and docs), `4057065` (seed-id fix for events, contacts and views, found in the row re-runs; production has the same ids; ships with the UX-3 push, owner 9 Oct).
 - **3b accepted (owner, 9 Oct**; review page 37 of 37 Correct, P6–P10 as built): `ux-3b-acceptance.md` and its review page, which also carries N12 refreshed for recording. Commits `eeeb7ad` (the local photo fixture), `7806053` (the home: home header and "Categorías", the banner, the showcase tile and "En vitrina", the sections, states, tests), then the evidence and docs commit. Choices P6–P10 pending in `decisions.md`.
-- **Next:** UX-4 starts with its brief (§ UX-4), in a fresh session. N12's refreshed texts were approved on the 3b review page (option A for PUB-008, PUB-010, PUB-015) and recorded on 9 Oct with status Pass.
+- **Released 9 Oct** with UX-1 and UX-2 (`50963fb`), after Codex's independent audit and a read-only production smoke. N12's refreshed texts were approved on the 3b review page (option A for PUB-008, PUB-010, PUB-015) and recorded on 9 Oct with status Pass.
 - The plan below is the input the brief was written from. Where they differ, the brief and its answers win.
 
 **Scope and current code**
@@ -123,7 +131,9 @@ Tools and traps (also in the review guide): agent-browser blanks its tab a few s
 
 **Goal.** A buyer decides with confidence and contacts the seller in one obvious step.
 
-**Starts when** UX-3 is accepted (it reuses the card for related listings and store grids).
+**Starts when** UX-3 is accepted (it reuses the card for related listings and store grids). Accepted and released 9 Oct.
+
+**State (9 Oct).** The brief `ux-4-listing-store.md` is provisionally approved: before travelling the owner took every recommendation (L1–L21, `decisions.md`), and UX-4 is built while the owner is away (N17), to be confirmed at the 4a and 4b reviews. It recommends 4a (the listing page, starting with React #418) then 4b (the store page), one release after 4b. The plan below is the input the brief was written from; where they differ, the brief and its answers win.
 
 **Scope and current code**
 - **Listing** `app/instrumentos/[slug]/page.tsx` (881 lines) with `listing-detail-gallery.tsx` (142), `listing-detail-metadata.tsx` (67), `whatsapp-contact-link.tsx`, `reputation-summary.tsx`, `content-report.tsx` (154, inline form), `favorite-button.tsx`, `lib/listing-specs.ts`.
@@ -374,16 +384,16 @@ Tools and traps (also in the review guide): agent-browser blanks its tab a few s
 - **Tooling:** refresh the harness baseline (`screenshots/`); keep `scripts/ux-*.cjs` working or retire them deliberately.
 - **External review:** UX-1's is still pending (`review-guide.md` § 1); review later sub-sprints as the owner wishes.
 - **The V1 record:** collect every row and spec line the redesign touched (N12 and the per-sub-sprint lists above) into one reconciliation for the owner.
-- **Merge preparation:** one rebase on `main` (N13), the full suite, a final audit, the docs; the merge and the production release gate stay the owner's.
+- **Release:** like every sub-sprint since UX-4 (N15), a blind audit, the owner's push and a read-only production smoke; then the final docs.
 
 **Size.** Medium.
 
-## Repo setup (Sprint 9 closed, 30-09)
+## Repo setup (updated 9 Oct)
 
-Sprint 9 is closed (owner, 30-09). Its final head is `main` at `49a38e5`, also on GitHub; the sprint docs in the repo don't record the closure yet (SEO-006, SEO-007, LEGAL-005 and LEGAL-006 still Not Run).
+Sprint 9 is closed (owner, 30-09). UX-1 to UX-3 are in production since 9 Oct (`main` at `50963fb`, then the docs-only `568b07a`).
 
-- `ux/redesign` branches from `49a38e5` and lives in the worktree `../mkt_instrumentos-ux`. The main checkout (`../mkt_instrumentos`) and the catalog worktree (`../mkt_instrumentos-catalog`, `catalog/canonical-catalog`) are never touched. JEV is out of scope.
-- So far every sub-sprint is committed on `ux/redesign` itself. It is rebased on `main` once, at merge time (N13, 7 Oct; `origin/main` was one docs-only commit ahead with no overlapping files).
+- `ux/redesign` lives in the worktree `../mkt_instrumentos-ux`. It was rebased once onto `313fb7e` (N13), released as a fast-forward of `main`, then fast-forwarded to `origin/main` `568b07a` on 9 Oct, so UX-4 starts from production. The main checkout (`../mkt_instrumentos`) and the catalog worktree (`../mkt_instrumentos-catalog`, `catalog/canonical-catalog`) are never touched. JEV is out of scope.
+- Every sub-sprint is committed on `ux/redesign` and released on its own after acceptance (N15). If `origin/main` moves (a catalog release), the branch is brought up to date before the next sub-sprint starts.
 - Nothing is pushed, merged or deployed without the owner's go-ahead; production deploys keep their own release gate.
 
 ## Product-behavior flags (owner decisions, never silent)
@@ -392,19 +402,19 @@ Logged in `decisions.md` with their IDs; candidates get an ID when a brief asks 
 
 | Flag | Where it surfaces | Note |
 | --- | --- | --- |
-| F1 Relist slug growth (`-republicado-<hash>` per relist) | UX-4/UX-5 | URL/SEO behavior |
+| F1 Relist slug growth (`-republicado-<hash>` per relist) | UX-4/UX-5 | URL/SEO behavior; UX-4 brief L21 recommends UX-5 |
 | F2 Condition scale (3 grades) vs a gear-specific scale with definitions | UX-4/UX-5, later canonical DB | Data model change |
-| F3 Public "Visto N veces" | UX-4 | Hide below a threshold or show only to the owner |
+| F3 Public "Visto N veces" | UX-4 | Hide below a threshold or show only to the owner; UX-4 brief L6 |
 | F4 "Nuevo" condition limited to stores | UX-5 | Product rule |
-| F5 Safety step before the first WhatsApp contact | UX-4 | Adds a step to seller-contact semantics |
+| F5 Safety step before the first WhatsApp contact | UX-4 | Adds a step to seller-contact semantics; UX-4 brief L7 |
 | F6 Draft autosave in the sell flow | UX-5 | New behavior |
 | F7 Admin bulk actions | UX-7 | Authority/audit implications |
 | "Load more" vs numbered pages | UX-3 | Decided 8 Oct (Q9 A): numbered pages, crawlable `?page=N` |
 | F9 Free-text search (brand, model, title) | later | Query change: catalog filters, search alerts, SEO. Decided 8 Oct (Q13 A): left for later |
 | F10 Counts: facet counts, a live "Ver N resultados", the home's total and per-category counts | UX-3b | Decided 8 Oct (Q10 B): only the home's total and per-category counts |
 | F11 Multi-choice facets | UX-3a | Decided 8 Oct (Q8 B, Q19, Q20): condition and location take several values in the catalog; seller type single; alerts unchanged and hidden on multi-value searches; no migration |
-| F12 Store stats on the home's store tiles (listing count, confirmed sales) | UX-4 | Decided 8 Oct (Q18 A): not on the home; revisit with UX-4's store page |
-| Candidate: in-store search and chips on store pages | UX-4 | A store-scoped catalog query |
-| Candidate: an owner's view of their own listing | UX-4 | New view of existing data |
+| F12 Store stats on the home's store tiles (listing count, confirmed sales) | UX-4 | Decided 8 Oct (Q18 A): not on the home. UX-4 brief L20: a confirmed-sales count needs a migration |
+| Candidate: in-store search and chips on store pages | UX-4 | A store-scoped catalog query; UX-4 brief L16 |
+| Candidate: an owner's view of their own listing | UX-4 | New view of existing data; UX-4 brief L14 |
 | Candidate: database strings "artículo" / "producto" | UX-5/UX-6 | Migration (UX-1 open item) |
 | G3 Password minimum (6 vs 8) | UX-6 | Product rule |

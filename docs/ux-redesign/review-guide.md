@@ -4,7 +4,7 @@ For an independent reviewer, person or agent, with no access to the design chats
 
 ## 1. What is under review
 
-Branch `ux/redesign`, cut from `main` at `49a38e5` (the close of Sprint 9). Not pushed; nothing is merged or deployed.
+Branch `ux/redesign`, cut from `main` at `49a38e5` (the close of Sprint 9). UX-1 to UX-3 are in production since 9 Oct (`main` at `50963fb`; the release audit is `reviews/ux-release-audit.md`). From UX-4 on, each sub-sprint is reviewed and released on its own (N15); its diff is `origin/main..ux/redesign`.
 
 | Sub-sprint | Commits | State | What the review should do |
 | --- | --- | --- | --- |
