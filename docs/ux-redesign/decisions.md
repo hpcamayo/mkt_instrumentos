@@ -3,6 +3,15 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## UX-7 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-7 review)
+
+Brief `ux-7-admin.md`. Under N17 the recommendations W1–W9 are taken provisionally; F7 (bulk actions) is not built.
+
+| ID | Choice | Why | Status |
+| --- | --- | --- | --- |
+| U18 | The queue keeps its card list; the concept's master-detail, review checklist and decision bar wait | `sprint-8` pins about 170 source assertions on today's markup; the layout is worth deciding with real moderation volume | pending (owner) |
+| U19 | Approvals stay one click; only verify/revoke gains a confirmation | Approving is the queue's main job and is reversible from the record; verification changes every new listing of a store | provisional (Claude Code) |
+
 ## UX-6 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-6 review)
 
 Brief `ux-6-accounts.md`. Under N17 the recommendations A1–A9 are taken provisionally; flags take no change: G3 (password minimum) unchanged, the "artículo" notification string not migrated, "Compras y ventas" kept.

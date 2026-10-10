@@ -265,6 +265,13 @@ The brief is `docs/ux-redesign/ux-4-listing-store.md` (answers L1–L21, provisi
 - **Inventory** (`ListingManagementTable`, Mis publicaciones and Inventario): a table from 768 px; below it each row is a card: the title, then one row per value with its column name on the left (`data-label`), then the actions. No sideways scroll.
 - Store names are never uppercase eyebrows: the eyebrow is "Mi tienda"; the name goes in the summary line.
 
+## Admin (UX-7)
+
+- Queue cards show photos inline (4:3 thumbnails, two columns on phones, four from 640 px), each opening full size in a new tab.
+- Decisions: reject, hide, dismiss, revoke and hiding a review use the `danger` button; approve, restore, verify and resolve the `secondary` one. No yellow in the queue (several cards share a view).
+- Verify and revoke ask first with the consequence; reasons stay required for reject, hide, resolve and dismiss.
+- Admin times are always America/Lima. Identifiers sit on their own "Identificador" line, never in a title line.
+
 ## Components (`components/ui/`)
 
 Use these instead of writing new markup for the same job.

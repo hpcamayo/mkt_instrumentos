@@ -7,9 +7,11 @@ import { adminTargetStatusLabel, adminValueLabel } from "@/lib/admin";
 import { requireAdmin } from "@/lib/admin-server";
 import type { Json } from "@/lib/supabase/database.types";
 
+// Audit times read in Lima time, whatever the server's timezone (UX-7 W4).
 const AUDIT_DATE_FORMATTER = new Intl.DateTimeFormat("es-PE", {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: "America/Lima",
 });
 
 const TARGET_TYPES = [
@@ -87,7 +89,7 @@ export default async function AdminAuditPage({
         <PageHeader
           eyebrow="Auditoría administrativa"
           title={`Historial de ${adminValueLabel(targetType).toLowerCase()}`}
-          meta={<span className="break-all">{targetId}</span>}
+          meta={<span className="break-all">Identificador: <code className="font-mono text-[13px]">{targetId}</code></span>}
         />
         <Link href={backHref} className="mt-4 inline-flex text-sm link font-semibold">Volver al contexto anterior</Link>
       </div>
