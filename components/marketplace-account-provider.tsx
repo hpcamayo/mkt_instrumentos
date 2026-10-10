@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 export type HeaderState = {
@@ -95,8 +95,17 @@ export function MarketplaceAccountProvider({ children }: { children: ReactNode }
   return <Context.Provider value={{ ...header, ready, settled, favorites, register, setFavorite }}>{children}</Context.Provider>;
 }
 
-export function useMarketplaceAccount() {
+// The state every consumer renders on the server: the provider's initial state.
+const SERVER_STATE = { ...SIGNED_OUT, ready: false, settled: false, favorites: {} as FavoriteState };
+const subscribeToNothing = () => () => {};
+
+// A section that streams in late (the listing page's related listings) hydrates after the first account check may have
+// finished. Hydrating it with the live state rendered a different element than the server sent (a sign-in link instead
+// of the disabled favourite button) and React threw #418 (docs/ux-redesign/ux-4-listing-store.md § First task). So while
+// a component hydrates it gets the server's state (useSyncExternalStore's server snapshot), then the live state.
+export function useMarketplaceAccount(): ContextValue {
   const value = useContext(Context);
+  const hydrating = useSyncExternalStore(subscribeToNothing, () => false, () => true);
   if (!value) throw new Error("Marketplace account context required.");
-  return value;
+  return hydrating ? { ...value, ...SERVER_STATE } : value;
 }
