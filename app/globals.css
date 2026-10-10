@@ -175,6 +175,23 @@ figcaption {
   background: rgb(5 6 8 / 0.95);
 }
 
+/* In-page confirmations (components/ui/confirm-dialog.tsx, UX-6 A3): a white modal <dialog>, centred, 8 px corners,
+   up to 440 px wide with a 16 px gutter on phones, over frame black at 55%. */
+.confirm-dialog {
+  width: calc(100% - 32px);
+  max-width: 440px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 16px 40px rgb(5 6 8 / 0.22), 0 2px 6px rgb(5 6 8 / 0.1);
+  animation: menu-fade 120ms ease-out;
+}
+.confirm-dialog::backdrop {
+  background: rgb(5 6 8 / 0.55);
+}
+
 /* The listing's contact module (components/listing/contact-module.tsx, UX-4 L4 A). Below 1024 px it is a bar at the
    bottom of the screen: white, a 1 px line-deco top border, the safe area below. The page gets a matching spacer and
    scroll padding, so the bar never hides a focused element. On short viewports (landscape, 200% zoom) it is not fixed:

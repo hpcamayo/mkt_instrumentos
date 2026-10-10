@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useMemo, useState } from "react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PageNotice } from "@/components/page-notice";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import {
@@ -31,6 +32,7 @@ export function TransactionDetailView({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [messageKind, setMessageKind] = useState<"success" | "error">("success");
+  const [confirm, confirmDialog] = useConfirm();
   const eligibleSelectedBuyer = candidates.some(
     (candidate) => candidate.buyer_user_id === selectedBuyer,
   )
@@ -65,7 +67,12 @@ export function TransactionDetailView({
   }
 
   async function recordExternal() {
-    if (!supabase || !window.confirm("¿Registrar esta venta como realizada fuera de Laria o con una persona sin cuenta?")) return;
+    if (!supabase) return;
+    if (!(await confirm({
+      title: "¿Registrar esta venta como realizada fuera de Laria o con una persona sin cuenta?",
+      body: "No habilita reseñas verificadas.",
+      confirmLabel: "Registrar venta",
+    }))) return;
     await run(
       () => supabase.rpc("record_external_sale", { p_listing_id: detail.listing_id }),
       "La venta quedó registrada sin comprador Laria. No habilita reseñas verificadas.",
@@ -84,7 +91,8 @@ export function TransactionDetailView({
   }
 
   async function cancelClaim() {
-    if (!supabase || !detail.claim_id || !window.confirm("¿Cancelar esta solicitud de confirmación?")) return;
+    if (!supabase || !detail.claim_id) return;
+    if (!(await confirm({ title: "¿Cancelar esta solicitud de confirmación?", confirmLabel: "Cancelar solicitud", cancelLabel: "Volver", tone: "danger" }))) return;
     await run(
       () => supabase.rpc("cancel_transaction_claim", { p_claim_id: detail.claim_id! }),
       "La solicitud fue cancelada. Puedes seleccionar otro contacto elegible.",
@@ -94,6 +102,7 @@ export function TransactionDetailView({
   return (
     <div className="grid gap-5">
       {message ? <PageNotice kind={messageKind} message={message} /> : null}
+      {confirmDialog}
       <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
         <PageHeader
           eyebrow={detail.role === "buyer" ? "Compra" : "Venta"}
@@ -208,10 +217,17 @@ function ReviewSection({
   run: (action: () => PromiseLike<{ error: { message: string } | null }>, success: string) => Promise<void>;
 }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const [confirm, confirmDialog] = useConfirm();
   async function submitReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supabase || !detail.transaction_id || !window.confirm("La reseña será final: no podrás editarla ni eliminarla libremente. ¿Deseas enviarla?")) return;
+    if (!supabase || !detail.transaction_id) return;
+    // Read the form before the confirmation: the event's target is gone after an await.
     const form = new FormData(event.currentTarget);
+    if (!(await confirm({
+      title: "¿Deseas enviar tu reseña?",
+      body: "La reseña será final: no podrás editarla ni eliminarla libremente.",
+      confirmLabel: "Enviar reseña",
+    }))) return;
     await run(
       () => supabase.rpc("submit_transaction_review", {
         p_transaction_id: detail.transaction_id!,
@@ -224,6 +240,7 @@ function ReviewSection({
 
   return (
     <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
+      {confirmDialog}
       <h2 className="t-section text-ink">Reseñas de la transacción</h2>
       <p className="mt-2 t-ui text-ink-2">
         Plazo: hasta {formatDateTime(detail.review_deadline!)}. Las reseñas son doble ciego: se revelan cuando ambas partes envían o al terminar los 10 días.

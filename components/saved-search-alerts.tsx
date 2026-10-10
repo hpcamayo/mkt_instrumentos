@@ -6,6 +6,7 @@ import { useState } from "react";
 import { PageNotice } from "@/components/page-notice";
 import { searchAlertFrequencyLabel, searchAlertPath, searchAlertSummary, type SavedSearchAlert } from "@/lib/search-alerts";
 import { buttonClasses } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusTag } from "@/components/ui/tag";
 
@@ -13,10 +14,11 @@ export function SavedSearchAlerts({ alerts }: { alerts: SavedSearchAlert[] }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+  const [confirm, confirmDialog] = useConfirm();
 
   async function mutate(alert: SavedSearchAlert, action: "status" | "delete") {
     if (busy) return;
-    if (action === "delete" && !window.confirm("¿Eliminar esta alerta? No recibirás nuevas coincidencias.")) return;
+    if (action === "delete" && !(await confirm({ title: "¿Eliminar esta alerta?", body: "No recibirás nuevas coincidencias.", confirmLabel: "Eliminar alerta", tone: "danger" }))) return;
     setBusy(alert.id);
     setNotice(null);
     try {
@@ -44,6 +46,7 @@ export function SavedSearchAlerts({ alerts }: { alerts: SavedSearchAlert[] }) {
   return (
     <div className="grid gap-4">
       {notice ? <PageNotice kind={notice.kind} message={notice.message} /> : null}
+      {confirmDialog}
       {!alerts.length ? (
         <EmptyState
           title="Todavía no tienes alertas"
