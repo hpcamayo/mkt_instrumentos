@@ -41,9 +41,9 @@ export default async function StoreInventoryPage() {
     <section className="rounded-panel border border-subtle bg-white">
       <PageHeader
         className="border-b border-subtle p-5"
-        eyebrow={store.name}
+        eyebrow="Mi tienda"
         title="Inventario"
-        meta={`${concurrent} de 50 publicaciones concurrentes`}
+        meta={`${store.name} · ${concurrent} de 50 publicaciones concurrentes`}
         actions={concurrent < 50 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar</Link> : null}
       />
       <ListingManagementTable listings={managedListings} emptyMessage="Aún no hay publicaciones en el inventario" />

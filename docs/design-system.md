@@ -260,6 +260,11 @@ The brief is `docs/ux-redesign/ux-4-listing-store.md` (answers L1–L21, provisi
 - **Sending**: the button reads "Publicando…" and a status line says "Subiendo foto N de M…", then "Enviando la publicación…".
 - **After sending**: the form is replaced by a `PageNotice` that says what happens next; listings that go to review promise the email, never a speed.
 
+## Accounts (UX-6)
+
+- **Inventory** (`ListingManagementTable`, Mis publicaciones and Inventario): a table from 768 px; below it each row is a card: the title, then one row per value with its column name on the left (`data-label`), then the actions. No sideways scroll.
+- Store names are never uppercase eyebrows: the eyebrow is "Mi tienda"; the name goes in the summary line.
+
 ## Components (`components/ui/`)
 
 Use these instead of writing new markup for the same job.
@@ -269,6 +274,7 @@ Use these instead of writing new markup for the same job.
 - `Tag` and `StatusTag`: status labels and tones come from `lib/ui/status.ts`, the single dictionary (domains: `listing`, `revision`, `store`, `claim` for Compras y ventas, `transaction` for the Admin sale records, `report`, `review`, `alert`). `StatusEntryTag` renders a status already resolved to an entry, such as `storeStatusEntry()` ("Tienda verificada" for an active verified store). Admin shows a report's target and the audit history through `adminTargetStatusLabel()`. Never write a second label map. `CountBadge` for counts.
 - `Chip`, `ChipLink`, `AppliedChip`: filters and period selectors; selected state has a check and `aria-pressed` (`Chip`, a toggle button: the filter sheet's type and short values) or `aria-current` (`ChipLink`, a link: short filter values, types, other categories, periods). `AppliedChip` removes a filter: it shows the value ("Lima") and is named for what pressing does ("Quitar filtro: Ubicación: Lima"). `ChipLink` and `AppliedChip` are `CatalogLink`s: inside the catalog they report to its pending state, elsewhere they are plain client links.
 - `Sheet` (`components/ui/sheet.tsx`): a bottom sheet over a native modal `<dialog>`, rendered only while open. White, 8 px top corners, `shadow-level-2`, up to 88% of the viewport, over frame black at 55% (`.sheet` in `app/globals.css`); a header with the title (`t-section`) and a 44 px close button, a scrolling body and an optional footer above a 1 px rule. It slides up in 200 ms (in place under reduced motion). The page behind is inert and does not scroll; Tab wraps inside; Esc, the close button and a press on the backdrop call `onDismiss`, and the caller returns focus to the button that opened it.
+- `ConfirmDialog` / `useConfirm` (UX-6): the in-page confirmation for actions that need one (never `window.confirm`). A modal `<dialog role="alertdialog">`, 440 px max, title as a question, one-line body, "Cancelar" (focused first) and a verb button (`danger` for deleting or cancelling); Esc and the backdrop cancel; focus returns to the control.
 - `ErrorSummary` (UX-5): a form's failed checks at the top of the form, focused on each failed submit, links that focus each field; renders nothing without errors.
 - `Notice` (`info`, `success`, `warning`, `danger`, icon + text): danger is an alert, others a status; use `role="note"` for static explanations. Its body underlines every link, so a notice that holds buttons, or that receives focus through a ref, composes `noticeClassName()` + `NoticeIcon` instead (as `PageNotice` does). `PageNotice` moves focus to page-level results; do not use that movement for field errors.
 - `PageHeader`: the page's only `h1`, with an optional eyebrow, a one-line summary (`meta`, 13 px) and the page's actions; a longer 16 px introduction stays a paragraph after it. Light surfaces only: headers on the black frame keep their own markup.

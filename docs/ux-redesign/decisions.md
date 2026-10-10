@@ -3,6 +3,17 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## UX-6 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-6 review)
+
+Brief `ux-6-accounts.md`. Under N17 the recommendations A1–A9 are taken provisionally; flags take no change: G3 (password minimum) unchanged, the "artículo" notification string not migrated, "Compras y ventas" kept.
+
+| ID | Choice | Why | Status |
+| --- | --- | --- | --- |
+| U14 | Confirmation copy: a question title, a one-line body, a verb on the button ("Ocultar", "Marcar vendida", "Republicar copia", "Eliminar alerta", "Registrar venta", "Cancelar solicitud" with "Volver", "Enviar reseña"). "Registro" dropped from the mark-sold and relist questions (glossary) | The old questions kept; the button names the action instead of "Aceptar" | provisional (Claude Code) |
+| U15 | Onboarding forms (sign-in, sign-up, store application, password) keep their single top notice; per-field errors wait | They run on auth flows the overnight rules keep unchanged | pending (owner: UX-8 or later) |
+| U16 | Resumen is not turned into a to-do list | It needs new reads across transactions and reviews | pending (owner) |
+| U17 | Favoritos keeps its own card | A favourite can be sold or unavailable; the catalog card has no state for that | pending (owner) |
+
 ## UX-5 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-5 review)
 
 Brief `ux-5-selling.md`. Under N17 every question S1–S11 takes its recommendation (S1–S11 A) as a provisional answer; every product flag takes no change: F6 (draft autosave) not built, F4 ("Nuevo" only for stores) not built, F2 (condition scale) unchanged, F1 (relist) not touched, the "producto" database string not migrated.
