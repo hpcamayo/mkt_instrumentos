@@ -6,7 +6,7 @@ import type { EvidencePacket, ListingOperation, SellerKind } from "@/lib/catalog
 // and it lists every gate with its result so an Admin can see why a listing did or did not qualify.
 // The outcomes are policy results, not listing statuses (spec §12): nothing here touches listings.status.
 
-export const POLICY_VERSION = "approval-policy-2026-10-10.1";
+export const POLICY_VERSION = "approval-policy-2026-10-10.2";
 
 export type PolicyOutcome = "AUTO_APPROVE" | "REVIEW" | "INSUFFICIENT" | "CONFLICTING" | "SYSTEM_FAILURE";
 
@@ -16,6 +16,9 @@ export type GateId =
   | "new_listing"
   | "catalog_identity"
   | "catalog_detailed"
+  | "catalog_product_ready"
+  | "category_consistent"
+  | "identity_consistent"
   | "identity_not_edited"
   | "text_signals_clean"
   | "provider_valid"
@@ -46,6 +49,7 @@ export type PolicyResult = {
 };
 
 const IDENTITY_FIELDS = ["brand", "model", "category", "instrument_type"];
+const AUTO_VERIFICATION = ["VERIFIED", "PROBABLE"];
 
 export function evaluatePolicy(input: PolicyInput): PolicyResult {
   const { packet, provider, thresholds } = input;
@@ -63,6 +67,9 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
   const detail = answers?.detail_quality.type === "score" ? answers.detail_quality.score : null;
   const catalog = packet.catalog;
   const topCandidate = catalog.candidates.find((item) => item.option === catalog.top_option) ?? null;
+  const identitySignals = packet.checks.identity_signals;
+  const categorySignals = identitySignals.filter((item) => item.signal === "category_mismatch");
+  const otherSignals = identitySignals.filter((item) => item.signal !== "category_mismatch");
   const editedIdentity = packet.listing.autofill.modified_fields.filter((field) => IDENTITY_FIELDS.includes(field));
 
   const gates: Gate[] = [
@@ -83,6 +90,23 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
       catalog.detail.detailed === true,
       `${catalog.detail.detail_status ?? "none"}${catalog.detail.untrusted_attributes.length ? `; untrusted: ${catalog.detail.untrusted_attributes.join(", ")}` : ""}`,
     ),
+    gate(
+      "catalog_product_ready",
+      Boolean(
+        topCandidate &&
+          topCandidate.publish_ready &&
+          AUTO_VERIFICATION.includes(topCandidate.verification_status) &&
+          topCandidate.quality_status === "ok" &&
+          topCandidate.warning === null,
+      ),
+      topCandidate
+        ? `${topCandidate.verification_status}, quality ${topCandidate.quality_status}, publish_ready ${topCandidate.publish_ready}${topCandidate.warning ? `, warning ${topCandidate.warning}` : ""}`
+        : "no candidate",
+    ),
+    // The catalog does not lower its tier when the listing's category contradicts the product (catalog audit).
+    gate("category_consistent", categorySignals.length === 0, categorySignals.map((item) => item.detail).join("; ") || "ok"),
+    // Copy wording, a second product, an unnamed generation or a size the listing never wrote (catalog audit).
+    gate("identity_consistent", otherSignals.length === 0, otherSignals.map((item) => `${item.signal}: ${item.detail}`).join("; ") || "ok"),
     gate("identity_not_edited", editedIdentity.length === 0, editedIdentity.join(", ") || "ok"),
     gate("text_signals_clean", packet.checks.text_signals.length === 0, packet.checks.text_signals.join(", ") || "ok"),
     gate("provider_valid", Boolean(provider?.ok), provider ? (provider.ok ? `${provider.provider}${provider.mock ? " (mock)" : ""}` : provider.failure) : "not called"),

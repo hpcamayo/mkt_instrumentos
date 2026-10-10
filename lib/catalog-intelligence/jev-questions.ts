@@ -5,7 +5,7 @@ import type { EvidencePacket } from "@/lib/catalog-intelligence/listing-evidence
 // decision (spec §23.5) and must be calibrated on labeled Laria listings before any of it gates publication.
 // Question shapes follow the AI SDK decision contract (choice / boolean / score).
 
-export const JEV_QUESTION_SET_VERSION = "jev-questions-2026-10-10.1";
+export const JEV_QUESTION_SET_VERSION = "jev-questions-2026-10-10.2";
 
 export const SPECIAL_CHOICES = {
   INSUFFICIENT_INFORMATION: "The listing does not carry enough identifying evidence to pick one candidate.",
@@ -65,7 +65,7 @@ export function buildJevQuestions(packet: EvidencePacket): JevQuestions {
     material_conflict: {
       type: "boolean",
       instructions:
-        "Judge whether the seller's identifying claims (brand, model, category, type, technical attributes) materially contradict each other or the trusted catalog evidence. Cosmetic spelling differences are not contradictions.",
+        "Judge whether the seller's identifying claims (brand, model, category, type, technical attributes) materially contradict each other or the trusted catalog evidence. Cosmetic spelling differences are not contradictions. The state's checks.identity_signals lists contradictions Laria already found deterministically (copy wording, category, a second product, an unnamed generation, a size); weigh them as evidence.",
       criteria: {
         true: "There is at least one contradiction a buyer would care about, such as a model of another brand or the wrong instrument type.",
         false: "Claims and catalog evidence agree, or differ only in spelling.",

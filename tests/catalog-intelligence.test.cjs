@@ -12,6 +12,7 @@ const provider = require("@/lib/catalog-intelligence/decision-provider");
 const questions = require("@/lib/catalog-intelligence/jev-questions");
 const policy = require("@/lib/catalog-intelligence/approval-policy");
 const evaluation = require("@/lib/catalog-intelligence/evaluate-listing");
+const identity = require("@/lib/catalog-intelligence/identity-signals");
 
 const SM57 = "10000000-0000-4000-a000-000000000001";
 const DS1 = "10000000-0000-4000-a000-000000000002";
@@ -57,6 +58,8 @@ test("catalogQuery repeats the brand as the manufacturer hint and never doubles 
   assert.deepEqual(resolver.catalogQuery(" Boss ", "DS1"), { query: "Boss DS1", manufacturerHint: "Boss" });
   assert.deepEqual(resolver.catalogQuery("Shure", "Shure SM57"), { query: "Shure SM57", manufacturerHint: "Shure" });
   assert.deepEqual(resolver.catalogQuery("", "SM57"), { query: "SM57", manufacturerHint: null });
+  // an autofilled size-level name (A Custom Crash 18") must still match exactly when the listing is evaluated
+  assert.equal(resolver.catalogQuery("Zildjian", 'A Custom Crash 18"').query, "Zildjian A Custom Crash 18");
 });
 
 test("lookup kinds follow catalog_match's decision and tier, never the top rank alone", () => {
@@ -290,6 +293,63 @@ test("the policy: only every gate together reaches AUTO_APPROVE, and nothing is 
   assert.match(outage.record.failure, /^catalog_error/);
   // mode off: no evaluation at all
   assert.equal(await evaluation.evaluateListing({ listing: listing(), catalog: memoryCatalog(), provider: provider.createMockDecisionProvider(), config: { ...shadow(), mode: "off" } }), null);
+});
+
+test("identity signals catch the catalog audit's unsafe AUTO cases, and only those", () => {
+  const top = (manufacturer, model, extra = {}) => ({ product_id: "top", manufacturer, model, matched_text: model, laria_category: "pedals", laria_instrument_type: "pedals", ...extra });
+  const base = { title: "", brand: "Boss", model: "DS-1", category: "pedals", instrument_type: "pedals" };
+  const signals = (listingExtra, topRow, candidates = []) => identity.identitySignals({ listing: { ...base, ...listingExtra }, top: topRow, candidates }).map((item) => item.signal);
+
+  // copy wording, even with "de" or an article before the brand
+  assert.deepEqual(signals({ title: "Réplica de Gibson Les Paul Standard 50s", brand: "Gibson", model: "Les Paul Standard 50s", category: "guitars", instrument_type: "electric_guitar" },
+    top("Gibson", "Les Paul Standard '50s", { laria_category: "guitars", laria_instrument_type: "electric_guitar" })), ["copy_wording"]);
+  assert.deepEqual(signals({ title: "Clon del Boss DS1" }, top("Boss", "DS-1 Distortion", { matched_text: "Boss DS-1" })), ["copy_wording"]);
+  assert.deepEqual(signals({ title: "Boss DS-1 original, caja incluida" }, top("Boss", "DS-1 Distortion", { matched_text: "Boss DS-1" })), []);
+  // a category the product does not belong to; an unmapped catalog category is not a confirmation either
+  assert.deepEqual(signals({ title: "Amplificador Boss DS-1", category: "amplifiers", instrument_type: "amplifiers" }, top("Boss", "DS-1 Distortion", { matched_text: "Boss DS-1" })), ["category_mismatch"]);
+  assert.deepEqual(signals({ title: "Boss DS-1" }, top("Boss", "DS-1 Distortion", { matched_text: "Boss DS-1", laria_category: null })), ["category_mismatch"]);
+  // two products side by side, but not a model inside its own family name
+  const sm57 = { product_id: "sm57", manufacturer: "Shure", model: "SM57", matched_text: "Shure SM57" };
+  assert.deepEqual(signals({ title: "Boss DS1 Shure SM57" }, top("Boss", "DS-1 Distortion", { matched_text: "DS-1 Distortion" }), [{ ...sm57 }, { product_id: "top", manufacturer: "Boss", model: "DS-1 Distortion", matched_text: "Boss DS-1" }]), ["second_product"]);
+  const strat = { title: "Fender Player Stratocaster HSS", brand: "Fender", model: "Player Stratocaster HSS", category: "guitars", instrument_type: "electric_guitar" };
+  assert.deepEqual(signals(strat, top("Fender", "Player Stratocaster HSS", { laria_category: "guitars", laria_instrument_type: "electric_guitar" }),
+    [{ product_id: "family", manufacturer: "Fender", model: "Player Stratocaster", matched_text: "Fender Player Stratocaster" }]), []);
+  // the seller's brand is not the product's manufacturer
+  assert.deepEqual(signals({ title: "Boss DS1 Shure SM57", model: "DS1 Shure SM57", category: "microphones", instrument_type: "microphones" },
+    top("Shure", "SM57", { product_id: "sm57", matched_text: "Shure SM57", laria_category: "microphones", laria_instrument_type: "microphones" })), ["brand_mismatch"]);
+  // the generation with the bare name, while a later one exists and the listing names none
+  const amp = { title: "Boss Katana 50", model: "Katana 50", category: "amplifiers", instrument_type: "amplifiers" };
+  const ampTop = (model) => top("Boss", model, { laria_category: "amplifiers", laria_instrument_type: "amplifiers" });
+  const mk2 = { product_id: "mk2", manufacturer: "Boss", model: "Katana-50 MkII", matched_text: "Katana-50 MkII" };
+  assert.deepEqual(signals(amp, ampTop("Katana-50"), [mk2]), ["missing_generation"]);
+  assert.deepEqual(signals({ ...amp, title: "Boss Katana 50 MkII", model: "Katana 50 MkII" }, ampTop("Katana-50 MkII"), [{ ...mk2, product_id: "mk1", model: "Katana-50" }]), []);
+  // a size the listing never wrote (the catalog ranked 16" first for an 18" listing)
+  const cymbal = { title: "Zildjian A Custom Crash 18", brand: "Zildjian", model: "A Custom Crash 18", category: "cymbals", instrument_type: "cymbals" };
+  const cymbalTop = (model) => top("Zildjian", model, { laria_category: "cymbals", laria_instrument_type: "cymbals" });
+  assert.deepEqual(signals(cymbal, cymbalTop('A Custom Crash 16"')), ["number_mismatch"]);
+  assert.deepEqual(signals(cymbal, cymbalTop('A Custom Crash 18"')), []);
+  assert.deepEqual(signals({ title: "Shure sm 57", brand: "shure", model: "sm 57", category: "microphones", instrument_type: "microphones" },
+    top("Shure", "SM57", { laria_category: "microphones", laria_instrument_type: "microphones" })), []);
+});
+
+test("the policy keeps identity signals out of AUTO_APPROVE, whatever Jev answers", async () => {
+  const cases = [
+    [{ title: "Réplica de Shure SM57" }, "identity_consistent"],
+    [{ title: "Batería Shure SM57", category: "drums", instrument_type: "drums", attributes: {} }, "category_consistent"],
+  ];
+  for (const [extra, gateId] of cases) {
+    const run = await evaluation.evaluateListing({ listing: listing(extra), catalog: memoryCatalog(), provider: provider.createMockDecisionProvider(), config: shadow() });
+    assert.equal(run.record.outcome, "REVIEW", JSON.stringify(extra));
+    assert.deepEqual(run.record.gates.filter((gate) => !gate.passed).map((gate) => gate.id), [gateId]);
+    assert.ok(run.packet.checks.identity_signals.length > 0, "Jev sees the signal in the evidence packet");
+  }
+  // a candidate that is not publish-ready, not verified or carries a warning never qualifies
+  for (const extra of [{ publish_ready: false }, { verification_status: "UNVERIFIED" }, { quality_status: "needs_review" }, { warning: "unexplained_code:x" }]) {
+    const catalog = { ...memoryCatalog(), async lookup(query) { return query.includes("SM57") ? [row(SM57, "Shure", "SM57", extra)] : []; } };
+    const run = await evaluation.evaluateListing({ listing: listing(), catalog, provider: provider.createMockDecisionProvider(), config: shadow() });
+    assert.equal(run.record.outcome, "REVIEW", JSON.stringify(extra));
+    assert.deepEqual(run.record.gates.filter((gate) => !gate.passed).map((gate) => gate.id), ["catalog_product_ready"], JSON.stringify(extra));
+  }
 });
 
 test("contradictions win over Jev's confidence", () => {

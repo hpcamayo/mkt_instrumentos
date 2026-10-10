@@ -37,7 +37,7 @@ Screenshots (local fixture catalog, mock evaluator): `docs/catalog-prototype/`.
 | `approval-policy` | `approval-policy.ts` | Deterministic outcome (`AUTO_APPROVE`, `REVIEW`, `INSUFFICIENT`, `CONFLICTING`, `SYSTEM_FAILURE`) with 14 named gates. |
 | `evaluation-audit` | `evaluate-listing.ts` | The pipeline and the audit record (spec §17 fields); `planTransition()` re-checks version, hash, status, Admin decision, prior application, provider, threshold source and mode before anything could publish. |
 | switches | `config.ts` | `CATALOG_AUTOFILL_PROTOTYPE`, `JEV_MODE` (off / shadow; `enforce` is downgraded to shadow), `JEV_KILL_SWITCH`, `JEV_PROVIDER=gateway`, `JEV_MODEL_ID`, `JEV_TIMEOUT_MS` (default 4000, clamped 500–15000). Defaults are all off. |
-| `evaluation-fixtures` | `scripts/catalog-prototype/` | Seed corpus (23 labeled cases), benchmark, local Postgres setup and fixture rows. |
+| `evaluation-fixtures` | `scripts/catalog-prototype/` | Seed corpus (33 labeled cases), benchmark, local Postgres setup and fixture rows. |
 | prototype UI | `app/prototipos/autofill/page.tsx`, `components/catalog-autofill-prototype.tsx`, `app/api/catalog/{suggestions,products/[id],evaluate}` | Admin-only, behind the flag. |
 
 ## Actual catalog function interfaces and observations
@@ -91,10 +91,11 @@ No conflict with a production invariant was found.
 
 Order: invalid submission → `INSUFFICIENT`; catalog `brand_contradicted`, Jev `CONFLICTING_INFORMATION` or a high
 conflict probability → `CONFLICTING`; no valid Jev answer → `SYSTEM_FAILURE`; no candidate, catalog `INSUFFICIENT`, or
-Jev `INSUFFICIENT_INFORMATION` / `NONE_OF_THE_ABOVE` → `INSUFFICIENT`; all 14 gates → `AUTO_APPROVE`; else `REVIEW`.
+Jev `INSUFFICIENT_INFORMATION` / `NONE_OF_THE_ABOVE` → `INSUFFICIENT`; all 17 gates → `AUTO_APPROVE`; else `REVIEW`.
 
 Gates: submission valid; seller kind in scope (Particular, Tienda); new listing; catalog `MATCH/AUTO` on a model;
-catalog `detailed`; identity fields not edited after autofill; no text signals (contact details, links,
+catalog `detailed`; top candidate publish-ready, VERIFIED or PROBABLE, quality `ok` and warning-free; listing category
+and type equal to the product's mapped catalog category; no identity signal (below); identity fields not edited after autofill; no text signals (contact details, links,
 instruction-like text); valid provider answer; thresholds present; Jev picked the catalog's own top candidate above
 the threshold; sufficiency, no-conflict, detail and clean-text answers within thresholds.
 
@@ -102,15 +103,46 @@ the threshold; sufficiency, no-conflict, detail and clean-text answers within th
 the listing is still pending, no Admin decided, nothing was applied, the provider is not the mock, the thresholds are
 `calibrated` and the mode is `enforce`. The last three can never all hold in this prototype.
 
+### Identity signals (from the catalog quality audit, PR #4)
+
+The independent audit (`docs/catalog-audit/jev-autofill-handoff.md` on PR #4) found listings for which `catalog_match`
+returns `MATCH/AUTO` although they must not be auto-approved. The catalog functions are unchanged; Laria's own layer
+now checks them in `lib/catalog-intelligence/identity-signals.ts`, puts the findings in the evidence packet
+(`checks.identity_signals`, which the material-conflict question tells Jev to weigh) and fails a gate on any of them:
+
+| Signal | Example | Gate |
+| --- | --- | --- |
+| `copy_wording` | "Réplica de Gibson Les Paul Standard 50s", "Clon del Boss DS1" (réplica, clon, copia, imitación, tipo, estilo, inspirada en …, in title or model) | `identity_consistent` |
+| `category_mismatch` | "Amplificador Boss DS-1" listed as Amplificadores; "Batería Shure SM58" listed as Baterías; or no mapped catalog category | `category_consistent` |
+| `brand_mismatch` | brand "Boss", model "DS1 Shure SM57": the catalog AUTOs the Shure SM57 | `identity_consistent` |
+| `second_product` | "Boss DS1 Shure SM57": two products' matched words side by side in the title or the brand + model | `identity_consistent` |
+| `missing_generation` | "Boss Katana 50" while Katana-50 MkII is also a candidate and the listing names no generation | `identity_consistent` |
+| `number_mismatch` | the top candidate is A Custom Crash 16" for a listing that says 18 | `identity_consistent` |
+
+To find a second product, the evaluation also looks up the listing title (capped at 200 characters) when it says more
+than brand + model. Limits: a generation is caught only when a later generation is among the candidates; copy words
+are a fixed list; `brand_mismatch` also sends a Squier product listed as "Fender" to review. Every signal only keeps a
+listing in normal moderation. On the local fixture, without these gates, 4 of the audit's cases came out
+`AUTO_APPROVE` (the others were held only because the Boss DS-1 fixture row is not `detailed`); with them, none does,
+and the controls (SM58 typed by hand, Katana-50 MkII named, A Custom Crash 18") still qualify.
+
+One further finding on the way: an autofilled size-level name with an inch mark (`A Custom Crash 18"`) dropped to
+`INSUFFICIENT/REVIEW (fuzzy_only)` when the saved listing was matched again. `catalogQuery` now drops an inch mark
+after a number. Whether real catalog names carry inch marks is unmeasured.
+
+Not covered here: Postgres JIT on production (about 5 s per call in the audit and locally) needs `show jit;` on the
+production database, and a statement timeout belongs in the RPCs, which this prototype does not change.
+
 ## Labeled corpus and metrics
 
-23 cases cover every case §21 asks for (exact SM57, DS-1 alias, ambiguous Fender/Squier kept and chosen, family-only,
+33 cases cover every case §21 asks for (exact SM57, DS-1 alias, ambiguous Fender/Squier kept and chosen, family-only,
 wrong brand, unknown, incomplete, Jev timeout / error / invalid) plus spelling variants, variant-only fields, untrusted
 attributes, edited attributes and identity, rejected match, prompt injection, contact details, verified store and
-revision. Expected values were labeled before running.
+revision, plus the catalog audit's unsafe-AUTO cases and three controls (labeled from the audit's handoff; the
+cases name the gate that must hold them back). Expected values were labeled before running.
 
 Result on the **local fixture catalog with the mock evaluator** (full table: `docs/catalog-prototype/benchmark-local-fixture.md`):
-all 23 cases pass; Recall@1/3/5 20/20; 7 shadow autoapprovals, all labeled correct; 0 transitions would publish.
+all 33 cases pass; Recall@1/3/5 30/30; 10 shadow autoapprovals, all labeled correct; 0 transitions would publish.
 **These figures check that the code does what the labels say. They are not catalog recall and not Jev accuracy**:
 the catalog rows were written for the test and the evaluator is a rule-based mock. The one mismatch found on the first
 run was a case missing its category (fixed in the corpus, not in the code).

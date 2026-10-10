@@ -24,7 +24,8 @@ export function getCatalogSupabaseClient(): SupabaseClient | null {
 // way catalog_match() expects it ("Boss" + "DS1" -> query "Boss DS1", hint "Boss").
 export function catalogQuery(brand: string, model: string) {
   const cleanBrand = brand.replace(/\s+/g, " ").trim();
-  const cleanModel = model.replace(/\s+/g, " ").trim();
+  // An inch mark after a size (A Custom Crash 18") turns an exact catalog name into a fuzzy match, so it is dropped.
+  const cleanModel = model.replace(/(\d)\s*["”″]/g, "$1").replace(/\s+/g, " ").trim();
   const modelHasBrand = cleanBrand !== "" && cleanModel.toLowerCase().startsWith(cleanBrand.toLowerCase());
   return {
     query: (modelHasBrand ? cleanModel : `${cleanBrand} ${cleanModel}`).trim().slice(0, 200),

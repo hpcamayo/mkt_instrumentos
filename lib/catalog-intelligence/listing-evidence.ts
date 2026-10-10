@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { AutofillProvenance } from "@/lib/catalog-intelligence/autofill";
+import { identitySignals, type IdentityCheck } from "@/lib/catalog-intelligence/identity-signals";
 import type { CatalogJevInputsRow, CatalogLookupRow, CatalogProductDetail } from "@/lib/catalog-intelligence/types";
 import {
   MAX_LISTING_PHOTOS,
@@ -125,6 +126,12 @@ export type CandidateOption = {
   match_type: string;
   score: number;
   warning: string | null;
+  verification_status: string;
+  quality_status: string;
+  publish_ready: boolean;
+  // The product's catalog category on Laria's taxonomy (null when unknown or unmapped).
+  laria_category: string | null;
+  laria_instrument_type: string | null;
   // Trusted, conflict-free model attributes (Spanish display values). Untrusted ones are not shown to Jev.
   trusted_attributes: Record<string, string>;
   detail_status: string | null;
@@ -162,6 +169,8 @@ export type EvidencePacket = {
     validation_passed: boolean;
     problems: string[];
     text_signals: TextSignal[];
+    // Deterministic identity findings (copy wording, category, second product, generation, size). Jev sees them too.
+    identity_signals: IdentityCheck[];
   };
 };
 
@@ -173,6 +182,8 @@ export function buildEvidencePacket(input: {
   signals: TextSignal[];
   jevInputs: CatalogJevInputsRow;
   candidates: CatalogLookupRow[];
+  // Candidates for the listing title, when it says more than brand and model (a second product, a copy word).
+  titleCandidates?: CatalogLookupRow[];
   details: Map<string, CatalogProductDetail>;
   maxCandidates: number;
 }): EvidencePacket {
@@ -185,6 +196,8 @@ export function buildEvidencePacket(input: {
         .filter((item) => item.trusted && !untrusted.has(item.attribute_key) && item.conflict_values.length === 0)
         .map((item) => [item.attribute_key, item.value_es ?? item.value]),
     );
+    const deepestCategory = [...(detail?.category_path ?? [])].reverse().find((node) => node.laria_category);
+    const deepestType = [...(detail?.category_path ?? [])].reverse().find((node) => node.laria_instrument_type);
     return {
       option: `candidate_${index + 1}`,
       product_id: row.product_id,
@@ -195,11 +208,22 @@ export function buildEvidencePacket(input: {
       match_type: row.match_type,
       score: row.score,
       warning: row.warning,
+      verification_status: row.verification_status,
+      quality_status: row.quality_status,
+      publish_ready: row.publish_ready,
+      laria_category: deepestCategory?.laria_category ?? null,
+      laria_instrument_type: deepestType?.laria_instrument_type ?? null,
       trusted_attributes: trusted,
       detail_status: detail?.detail_status ?? null,
     };
   });
   const autofill = listing.autofill;
+  const topIndex = options.findIndex((item) => item.product_id === jevInputs.product_id);
+  const identity = identitySignals({
+    listing,
+    top: topIndex >= 0 ? { ...input.candidates[topIndex], ...options[topIndex] } : null,
+    candidates: [...input.candidates, ...(input.titleCandidates ?? [])],
+  });
   return {
     listing: {
       title: redactContactDetails(listing.title).slice(0, 300),
@@ -237,6 +261,7 @@ export function buildEvidencePacket(input: {
       validation_passed: input.validation.ok,
       problems: input.validation.problems,
       text_signals: input.signals,
+      identity_signals: identity,
     },
   };
 }

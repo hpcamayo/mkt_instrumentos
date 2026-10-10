@@ -3,6 +3,7 @@ import { evaluatePolicy, POLICY_VERSION, type Gate, type PolicyOutcome, type Pol
 import { catalogQuery } from "@/lib/catalog-intelligence/catalog-resolver";
 import type { JevConfig } from "@/lib/catalog-intelligence/config";
 import { callDecisionProvider, type DecisionProvider, type JevAnswers, type ProviderOutcome } from "@/lib/catalog-intelligence/decision-provider";
+import { compact } from "@/lib/catalog-intelligence/identity-signals";
 import { buildJevQuestions, JEV_QUESTION_SET_VERSION } from "@/lib/catalog-intelligence/jev-questions";
 import {
   buildEvidencePacket,
@@ -76,9 +77,14 @@ export async function evaluateListing(input: {
 
   let packet: EvidencePacket;
   try {
-    const [jevInputs, candidates] = await Promise.all([
+    // The title is looked up too when it says more than brand and model: a second product or a copy word lives
+    // there (catalog audit). Capped at 200 characters before it reaches the catalog.
+    const titleQuery = listing.title.replace(/\s+/g, " ").trim().slice(0, 200);
+    const lookupTitle = titleQuery !== "" && compact(titleQuery) !== compact(query);
+    const [jevInputs, candidates, titleCandidates] = await Promise.all([
       input.catalog.jevInputs(query, manufacturerHint),
       input.catalog.lookup(query, manufacturerHint, config.maxCandidates),
+      lookupTitle ? input.catalog.lookup(titleQuery, null, config.maxCandidates) : Promise.resolve([]),
     ]);
     const details = new Map<string, CatalogProductDetail>();
     await Promise.all(
@@ -87,7 +93,16 @@ export async function evaluateListing(input: {
         if (detail) details.set(row.product_id, detail);
       }),
     );
-    packet = buildEvidencePacket({ listing, validation, signals, jevInputs, candidates, details, maxCandidates: config.maxCandidates });
+    packet = buildEvidencePacket({
+      listing,
+      validation,
+      signals,
+      jevInputs,
+      candidates,
+      titleCandidates,
+      details,
+      maxCandidates: config.maxCandidates,
+    });
   } catch (error) {
     // The catalog is unreachable: the listing simply stays in normal moderation.
     const record: EvaluationRecord = {

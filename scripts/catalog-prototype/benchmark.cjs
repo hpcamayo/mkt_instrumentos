@@ -118,7 +118,14 @@ async function runCase(catalog, base, item, provider) {
     const got = top ? key(top.manufacturer, top.model) : null;
     checks.push(["final_product", got === e.final_product, String(got)]);
   }
+  if (e.blocked_by) {
+    const failed = record.gates.filter((g) => !g.passed).map((g) => g.id);
+    checks.push(["blocked_by", failed.includes(e.blocked_by), failed.join(",") || "none"]);
+  }
   if (e.redacted) checks.push(["redacted", Boolean(run.packet && !/987 654 321|vendo@example\.com/.test(JSON.stringify(run.packet))), "packet"]);
+  if (checks.some(([, ok]) => !ok)) {
+    console.error(`${c.id}: failed gates ${record.gates.filter((g) => !g.passed).map((g) => `${g.id} (${g.detail})`).join("; ") || "none"}`);
+  }
   return { c, lookup, ranked, record, plan, checks, lookupMs };
 }
 
