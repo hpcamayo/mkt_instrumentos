@@ -10,6 +10,10 @@ type LocationFieldsProps = {
   defaultCity?: string;
   defaultRegion?: string;
   required?: boolean;
+  // Stable ids let a form's error summary link to these fields; errors are shown under each field.
+  idPrefix?: string;
+  cityError?: string;
+  regionError?: string;
 };
 
 export function LocationFields({
@@ -18,14 +22,18 @@ export function LocationFields({
   defaultCity = "",
   defaultRegion = "",
   required = true,
+  idPrefix,
+  cityError,
+  regionError,
 }: LocationFieldsProps) {
-  const id = useId();
+  const generatedId = useId();
+  const id = idPrefix ?? generatedId;
   const cityListId = `${id}-cities`;
   const regionListId = `${id}-regions`;
 
   return (
     <>
-      <Field id={`${id}-city`} label="Ciudad">
+      <Field id={`${id}-city`} label="Ciudad" error={cityError}>
         <Input
           name={cityName}
           required={required}
@@ -41,7 +49,7 @@ export function LocationFields({
         ))}
       </datalist>
 
-      <Field id={`${id}-region`} label="Región">
+      <Field id={`${id}-region`} label="Región" error={regionError}>
         <Input
           name={regionName}
           required={required}

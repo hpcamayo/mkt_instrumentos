@@ -6,6 +6,10 @@ export type SubmissionFile = {
   file: File;
   role?: "logo" | "banner" | "store_photo";
 };
+// Reported while a submission runs, so a form can say which photo is uploading.
+export type SubmissionProgress =
+  | { step: "upload"; index: number; total: number }
+  | { step: "complete" };
 type Attempt = {
   id: string;
   token: string;
@@ -24,6 +28,7 @@ export function createPublicSubmission(client: Client) {
     kind: Kind,
     fields: Record<string, unknown>,
     rawFiles: File[] | SubmissionFile[],
+    onProgress?: (progress: SubmissionProgress) => void,
   ) => {
     if (busy) throw new Error("El envío ya está en curso.");
     busy = true;
@@ -70,6 +75,7 @@ export function createPublicSubmission(client: Client) {
       if (!attempt.commitStarted) {
         try {
           for (const [index, { file }] of files.entries()) {
+            onProgress?.({ step: "upload", index, total: files.length });
             const { error } = await client.storage
               .from(bucket)
               .upload(paths[index], file, {
@@ -106,6 +112,7 @@ export function createPublicSubmission(client: Client) {
         }
       }
       attempt.commitStarted = true;
+      onProgress?.({ step: "complete" });
       try {
         await submissionRequest({
           action: "complete",

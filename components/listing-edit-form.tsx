@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent 
 import { useRouter } from "next/navigation";
 import { LocationFields } from "@/components/location-fields";
 import { PageNotice } from "@/components/page-notice";
+import { ConditionCards } from "@/components/selling/choice-fields";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import {
   MAX_LISTING_PHOTOS,
@@ -17,6 +18,7 @@ import {
 import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
+import { conditionChoices } from "@/lib/sell-form";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
@@ -355,10 +357,10 @@ export function ListingEditForm({
         <SelectField label="Tipo de instrumento" name="instrument_type" value={instrumentType} onChange={setInstrumentType} options={getInstrumentTypeOptions(category)} />
         <TextField label="Marca" name="brand" defaultValue={listing.brand ?? ""} />
         <TextField label="Modelo" name="model" defaultValue={listing.model ?? ""} />
-        <SelectField label="Condición" name="condition" defaultValue={listing.condition ?? ""} options={conditionOptions.map((condition) => ({ value: condition, label: condition }))} />
         <Field id="editar-price_pen" label="Precio en soles"><Input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" required defaultValue={listing.price_pen ?? ""} /></Field>
         <LocationFields defaultCity={listing.city} defaultRegion={listing.region} />
       </div>
+      <ConditionCards id="editar-condition" name="condition" legend="Condición" options={conditionChoices(conditionOptions)} defaultValue={listing.condition ?? ""} />
       {attributeGroup ? (
         <fieldset className="grid gap-4 rounded-panel border border-subtle bg-canvas p-4 sm:grid-cols-2">
           <legend className="px-2 t-ui font-semibold text-ink">Características del instrumento</legend>

@@ -61,9 +61,9 @@ export const instrumentFilterGroups = [
         label: "Tipo de cuerpo",
         type: "select",
         options: [
-          { value: "solid_body", label: "Solid body" },
-          { value: "semi_hollow", label: "Semi-hollow" },
-          { value: "hollow_body", label: "Hollow body" },
+          { value: "solid_body", label: "Cuerpo sólido" },
+          { value: "semi_hollow", label: "Semihueca" },
+          { value: "hollow_body", label: "Hueca" },
         ],
       },
       {
@@ -383,9 +383,9 @@ export const instrumentFilterGroups = [
         options: [
           { value: "dynamic", label: "Dinámico" },
           { value: "condenser", label: "Condensador" },
-          { value: "ribbon", label: "Ribbon" },
-          { value: "lavalier", label: "Lavalier" },
-          { value: "shotgun", label: "Shotgun" },
+          { value: "ribbon", label: "De cinta" },
+          { value: "lavalier", label: "Corbatero" },
+          { value: "shotgun", label: "Cañón" },
         ],
       },
       {
@@ -472,15 +472,15 @@ export const instrumentFilterGroups = [
         type: "select",
         options: [
           { value: "overdrive", label: "Overdrive" },
-          { value: "distortion", label: "Distortion" },
+          { value: "distortion", label: "Distorsión" },
           { value: "fuzz", label: "Fuzz" },
           { value: "delay", label: "Delay" },
           { value: "reverb", label: "Reverb" },
           { value: "chorus", label: "Chorus" },
           { value: "wah", label: "Wah" },
-          { value: "compressor", label: "Compressor" },
-          { value: "tuner", label: "Tuner" },
-          { value: "multi_fx", label: "Multi-FX" },
+          { value: "compressor", label: "Compresor" },
+          { value: "tuner", label: "Afinador" },
+          { value: "multi_fx", label: "Multiefectos" },
         ],
       },
       {
@@ -512,7 +512,7 @@ export const instrumentFilterGroups = [
         options: [
           { value: "combo", label: "Combo" },
           { value: "head", label: "Cabezal" },
-          { value: "cabinet", label: "Cabinet" },
+          { value: "cabinet", label: "Gabinete" },
         ],
       },
       {

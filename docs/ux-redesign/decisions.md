@@ -3,6 +3,18 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## UX-5 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-5 review)
+
+Brief `ux-5-selling.md`. Under N17 every question S1–S11 takes its recommendation (S1–S11 A) as a provisional answer; every product flag takes no change: F6 (draft autosave) not built, F4 ("Nuevo" only for stores) not built, F2 (condition scale) unchanged, F1 (relist) not touched, the "producto" database string not migrated.
+
+| ID | Choice | Why | Status |
+| --- | --- | --- | --- |
+| U9 | Spanish attribute labels: Cuerpo sólido, Semihueca, Hueca, Distorsión, Compresor, Afinador, Multiefectos, Gabinete, De cinta, Corbatero, Cañón. Kept: Single coil, Humbucker, P90, Overdrive, Fuzz, Delay, Reverb, Chorus, Wah, True bypass, Phantom power, Shell pack, Dark and the shape names | S9 A; the design system welcomes musician vocabulary ("cuerpo sólido"), and the kept names are what Peruvian musicians search. Values and URLs unchanged; the labels change wherever they show (filters, chips, cards, spec table) | provisional (Claude Code) |
+| U10 | The edit page gets the condition cards and Spanish labels only; per-field errors and the error summary on edit wait for UX-8 | The edit form's save flow and photo editor are pinned by `photo-editor.test.cjs` (a hook-level harness); reworking its validation overnight risks the edit rules | pending (owner: keep for UX-8 or drop) |
+| U11 | Type chips appear once a category with more than one type is chosen; a single-type category selects its type silently, as today | No one-chip question to answer | provisional (Claude Code) |
+| U12 | The description's label is visually hidden under the "Descripción" section heading; the hint carries a live count "N de 40 caracteres mínimos" | One visible name per field; the count answers "why won't it send" before the summary does | provisional (Claude Code) |
+| U13 | After sending, the confirmation offers "Ver mis publicaciones" / "Ver inventario", "Publicar otro instrumento" and "Volver al resumen" | S6 A; the old links kept, plus a way to start again | provisional (Claude Code) |
+
 ## Raised during the UX-4 build (cloud session, 10 Oct; provisional, for the 4a/4b reviews)
 
 Built on L1–L21 as answered (N17). Where the brief left a detail open or a rule forced a change, Claude Code chose; each choice is reversible at the review.

@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { ConditionCards, FormSection, TypeChips } from "@/components/selling/choice-fields";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import {
   MAX_LISTING_PHOTOS,
@@ -22,13 +23,28 @@ import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
 import { PageNotice } from "@/components/page-notice";
 import { parseWholeSolPrice } from "@/lib/price";
-import { createPublicSubmission } from "@/lib/public-submission";
+import { createPublicSubmission, type SubmissionProgress } from "@/lib/public-submission";
+import {
+  DESCRIPTION_MIN,
+  PHOTO_GUIDANCE,
+  conditionChoices,
+  errorSummaryTitle,
+  sellConfirmation,
+  validateSellDraft,
+  type SellError,
+  type SellField,
+} from "@/lib/sell-form";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Button, buttonClasses } from "@/components/ui/button";
+import { ErrorSummary } from "@/components/ui/error-summary";
 import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+
+// The sell form (docs/ux-redesign/ux-5-selling.md): seven sections, photos first; the form checks itself and lists
+// what is missing in an error summary; after sending, a confirmation replaces the form. The submission itself is
+// createPublicSubmission, unchanged.
 
 type FormState = "idle" | "submitting" | "success" | "error";
 
@@ -46,6 +62,23 @@ type StoreContext = {
   isVerified: boolean;
 };
 
+const ID = "venta";
+// Where each error's summary link lands. Location fields use the same prefix (LocationFields idPrefix).
+const FIELD_IDS: Record<SellField, string> = {
+  photos: `${ID}-fotos`,
+  category: `${ID}-category`,
+  instrument_type: `${ID}-instrument_type`,
+  brand: `${ID}-brand`,
+  model: `${ID}-model`,
+  title: `${ID}-title`,
+  condition: `${ID}-condition`,
+  price_pen: `${ID}-price_pen`,
+  city: `${ID}-city`,
+  region: `${ID}-region`,
+  description: `${ID}-description`,
+  marketplace_rules: `${ID}-marketplace_rules`,
+};
+
 export function SellListingForm({ profile, store }: { profile: SellerProfile; store?: StoreContext }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const submit = useMemo(
@@ -54,8 +87,13 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
   );
   const [state, setState] = useState<FormState>("idle");
   const [message, setMessage] = useState("");
+  const [progress, setProgress] = useState("");
+  const [errors, setErrors] = useState<SellError[]>([]);
+  const [attempt, setAttempt] = useState(0);
+  const [formKey, setFormKey] = useState(0);
   const [category, setCategory] = useState("");
   const [instrumentType, setInstrumentType] = useState("");
+  const [descriptionLength, setDescriptionLength] = useState(0);
   const [photos, setPhotos] = useState<File[]>([]);
   const photoPreviews = useMemo(
     () => photos.map((photo) => URL.createObjectURL(photo)),
@@ -74,33 +112,35 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
   const attributeGroup = instrumentType
     ? getInstrumentFilterGroup(instrumentType)
     : null;
+  const direct = store?.status === "active" && store.isVerified;
+  const busy = state === "submitting";
+  const errorFor = (field: SellField) => errors.find((error) => error.field === field)?.message;
+
+  function clearError(field: SellField) {
+    setErrors((current) => (current.some((error) => error.field === field) ? current.filter((error) => error.field !== field) : current));
+  }
+
+  function showMessage(value: string) {
+    setState("error");
+    setMessage(value);
+  }
 
   function handleCategoryChange(value: string) {
     const options = getInstrumentTypeOptions(value);
     setCategory(value);
     setInstrumentType(options.length === 1 ? options[0].value : "");
+    clearError("category");
   }
 
   function addPhotos(event: ChangeEvent<HTMLInputElement>) {
     const chosen = Array.from(event.target.files ?? []);
     const selected = chosen.filter(isImageFile);
     event.target.value = "";
-    if (chosen.some((photo) => !isImageFile(photo))) {
-      setState("error");
-      setMessage("Usa fotos JPEG, PNG o WebP.");
-      return;
-    }
-    if (selected.some((photo) => photo.size > MAX_LISTING_PHOTO_BYTES)) {
-      setState("error");
-      setMessage("Cada foto debe pesar 5 MB o menos.");
-      return;
-    }
-    if (photos.length + selected.length > MAX_LISTING_PHOTOS) {
-      setState("error");
-      setMessage(`Puedes subir hasta ${MAX_LISTING_PHOTOS} fotos por publicación.`);
-      return;
-    }
+    if (chosen.some((photo) => !isImageFile(photo))) return showMessage("Usa fotos JPEG, PNG o WebP.");
+    if (selected.some((photo) => photo.size > MAX_LISTING_PHOTO_BYTES)) return showMessage("Cada foto debe pesar 5 MB o menos.");
+    if (photos.length + selected.length > MAX_LISTING_PHOTOS) return showMessage(`Puedes subir hasta ${MAX_LISTING_PHOTOS} fotos por publicación.`);
     setPhotos((current) => [...current, ...selected]);
+    if (photos.length + selected.length >= MIN_LISTING_PHOTOS) clearError("photos");
     setState("idle");
     setMessage("");
   }
@@ -109,17 +149,9 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
     const chosen = Array.from(event.target.files ?? []);
     const file = chosen.find(isImageFile);
     event.target.value = "";
-    if (!file && chosen.length) {
-      setState("error");
-      setMessage("Usa una foto JPEG, PNG o WebP.");
-      return;
-    }
+    if (!file && chosen.length) return showMessage("Usa una foto JPEG, PNG o WebP.");
     if (!file) return;
-    if (file.size > MAX_LISTING_PHOTO_BYTES) {
-      setState("error");
-      setMessage("Cada foto debe pesar 5 MB o menos.");
-      return;
-    }
+    if (file.size > MAX_LISTING_PHOTO_BYTES) return showMessage("Cada foto debe pesar 5 MB o menos.");
     setPhotos((current) =>
       current.map((photo, photoIndex) => (photoIndex === index ? file : photo)),
     );
@@ -140,174 +172,232 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
     setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index));
   }
 
+  // An error clears as soon as its field changes; the summary shrinks with it.
+  function handleFieldChange(event: FormEvent<HTMLFormElement>) {
+    const target = event.target as HTMLInputElement;
+    if (target.name === "description") setDescriptionLength(target.value.trim().length);
+    if (target.name in FIELD_IDS) clearError(target.name as SellField);
+  }
+
+  function reportProgress(step: SubmissionProgress) {
+    setProgress(step.step === "upload" ? `Subiendo foto ${step.index + 1} de ${step.total}…` : "Enviando la publicación…");
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!supabase || !submit) {
-      setState("error");
-      setMessage("No se pudo conectar con Laria. Intenta nuevamente.");
-      return;
-    }
+    if (busy) return;
+    if (!supabase || !submit) return showMessage("No se pudo conectar con Laria. Intenta nuevamente.");
 
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const title = readRequired(formData, "title");
-    const brand = readRequired(formData, "brand");
-    const model = readRequired(formData, "model");
-    const condition = readRequired(formData, "condition");
-    const pricePen = parseWholeSolPrice(readRequired(formData, "price_pen"));
-    const city = readRequired(formData, "city");
-    const region = normalizePeruRegion(readRequired(formData, "region"));
-    const description = readRequired(formData, "description");
-    const acceptedRules = formData.get("marketplace_rules") === "on";
-
-    if (
-      !title ||
-      !category ||
-      !instrumentType ||
-      !brand ||
-      !model ||
-      !condition ||
-      !city ||
-      !region ||
-      description.length < 40 ||
-      pricePen === null
-    ) {
-      setState("error");
-      setMessage("Completa los datos obligatorios y escribe una descripción de al menos 40 caracteres.");
-      return;
-    }
-    if (!acceptedRules) {
-      setState("error");
-      setMessage("Debes aceptar las reglas del marketplace para publicar.");
-      return;
-    }
-    if (photos.length < MIN_LISTING_PHOTOS || photos.length > MAX_LISTING_PHOTOS) {
-      setState("error");
-      setMessage(`Agrega entre ${MIN_LISTING_PHOTOS} y ${MAX_LISTING_PHOTOS} fotos.`);
-      return;
-    }
-
-    setState("submitting");
+    const formData = new FormData(event.currentTarget);
+    const price = readValue(formData, "price_pen");
+    const region = readValue(formData, "region");
+    const draft = {
+      photoCount: photos.length,
+      category,
+      instrumentType,
+      brand: readValue(formData, "brand"),
+      model: readValue(formData, "model"),
+      title: readValue(formData, "title"),
+      condition: readValue(formData, "condition"),
+      price,
+      priceValue: parseWholeSolPrice(price),
+      city: readValue(formData, "city"),
+      region,
+      regionValue: normalizePeruRegion(region) || null,
+      description: readValue(formData, "description"),
+      acceptedRules: formData.get("marketplace_rules") === "on",
+    };
+    const found = validateSellDraft(draft);
     setMessage("");
+    setState("idle");
+    if (found.length) {
+      setErrors(found);
+      setAttempt((count) => count + 1);
+      return;
+    }
+    setErrors([]);
+    setState("submitting");
+    setProgress("Preparando el envío…");
     try {
       await submit(
         store ? "store_listing" : "listing",
         {
-          title,
+          title: draft.title,
           category,
           instrument_type: instrumentType,
           attributes: readAttributes(formData, instrumentType),
-          brand,
-          model,
-          condition,
-          price_pen: pricePen,
-          city,
-          region,
-          description,
+          brand: draft.brand,
+          model: draft.model,
+          condition: draft.condition,
+          price_pen: draft.priceValue,
+          city: draft.city,
+          region: draft.regionValue,
+          description: draft.description,
           marketplace_rules_accepted: true,
         },
         photos,
+        reportProgress,
       );
     } catch (error) {
-      setState("error");
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "No se pudo completar el envío. Intenta nuevamente.",
-      );
+      showMessage(error instanceof Error ? error.message : "No se pudo completar el envío. Intenta nuevamente.");
+      setProgress("");
       return;
     }
+    setProgress("");
+    setState("success");
+  }
 
-    form.reset();
+  // A fresh, empty form: a new key remounts every uncontrolled field.
+  function startAnother() {
+    setPhotos([]);
     setCategory("");
     setInstrumentType("");
-    setPhotos([]);
-    setState("success");
-    setMessage(
-      store?.status === "active" && store.isVerified
-        ? "Tu publicación ya está en el catálogo."
-        : "Publicación enviada. Un administrador la revisará antes de hacerla pública.",
+    setDescriptionLength(0);
+    setErrors([]);
+    setMessage("");
+    setState("idle");
+    setFormKey((key) => key + 1);
+  }
+
+  if (state === "success") {
+    const confirmation = sellConfirmation(direct);
+    return (
+      <div className="grid gap-6 rounded-panel border border-subtle bg-white p-5 sm:p-6">
+        <PageNotice kind="success" message={confirmation.message}>
+          <p className="mt-2">{confirmation.next}</p>
+        </PageNotice>
+        <div className="flex flex-wrap gap-3">
+          <Link href={store ? "/mi-cuenta/tienda/inventario" : "/mi-cuenta/publicaciones"} className={buttonClasses({ variant: "secondary" })}>{store ? "Ver inventario" : "Ver mis publicaciones"}</Link>
+          <button type="button" onClick={startAnother} className={buttonClasses({ variant: "secondary" })}>Publicar otro instrumento</button>
+          <Link href="/mi-cuenta" className="link self-center font-semibold">Volver al resumen</Link>
+        </div>
+      </div>
     );
   }
 
   return (
     <form
+      key={formKey}
+      noValidate
       onSubmit={handleSubmit}
+      onChange={handleFieldChange}
+      aria-busy={busy}
       className="grid gap-6 rounded-panel border border-subtle bg-white p-5 sm:p-6"
     >
-      {message ? (
-        <PageNotice kind={state === "success" ? "success" : "error"} message={message}>
-          {state === "success" ? <div className="mt-3 flex flex-wrap gap-3"><Link href="/mi-cuenta" className="link font-semibold">Volver al resumen</Link><Link href={store ? "/mi-cuenta/tienda/inventario" : "/mi-cuenta/publicaciones"} className="link font-semibold">{store ? "Ver inventario" : "Ver mis publicaciones"}</Link></div> : null}
-        </PageNotice>
-      ) : null}
+      {message ? <PageNotice kind="error" message={message} /> : null}
+      <ErrorSummary
+        title={errorSummaryTitle(errors.length)}
+        errors={errors.map((error) => ({ id: FIELD_IDS[error.field], message: error.message }))}
+        attempt={attempt}
+      />
 
       <Notice tone="info" role="note">
         {store ? <>
-          Publicarás en <strong className="text-ink">{store.name}</strong>. {store.status === "active" && store.isVerified ? "Como Tienda verificada, tus publicaciones aparecen directamente si cumplen las reglas." : "Tu publicación quedará en revisión antes de aparecer."}
+          Publicarás en <strong className="text-ink">{store.name}</strong>. {direct ? "Como Tienda verificada, tus publicaciones aparecen directamente si cumplen las reglas." : "Tu publicación quedará en revisión antes de aparecer."}
         </> : <>
           Publicarás como <strong className="text-ink">{profile.fullName}</strong>. Las consultas llegarán al WhatsApp <strong className="text-ink">{profile.phone}</strong>. Puedes cambiar estos datos en <Link href="/mi-cuenta/perfil" className="link font-semibold">tu perfil</Link>.
         </>}
       </Notice>
 
-      <TextField label="Título" name="title" required />
-      <div className="grid gap-5 sm:grid-cols-2">
-        <SelectField label="Categoría" name="category" required value={category} onChange={handleCategoryChange} options={categoryOptions} />
-        <SelectField label="Tipo de instrumento" name="instrument_type" required value={instrumentType} onChange={setInstrumentType} disabled={!category} options={instrumentOptions} />
-        <TextField label="Marca" name="brand" required />
-        <TextField label="Modelo" name="model" required />
-        <SelectField label="Condición" name="condition" required options={conditionOptions.map((condition) => ({ value: condition, label: condition }))} />
-        <NumberField label="Precio en soles" name="price_pen" required />
-        <LocationFields defaultCity={profile.city} defaultRegion={profile.region} />
-      </div>
+      <fieldset disabled={busy} className="grid min-w-0 gap-6">
+        <FormSection id="photo-heading" step={1} title="Fotos" hint={<>Entre {MIN_LISTING_PHOTOS} y {MAX_LISTING_PHOTOS}, JPEG, PNG o WebP de 5 MB o menos. La primera es la principal.</>}>
+          <ul className="grid gap-1 t-meta sm:grid-cols-2">
+            {PHOTO_GUIDANCE.map((tip) => <li key={tip} className="flex gap-2"><span aria-hidden>·</span>{tip}</li>)}
+          </ul>
+          {errorFor("photos") ? <p id={`${FIELD_IDS.photos}-error`} className="t-ui font-semibold text-danger">{errorFor("photos")}</p> : null}
+          <label className={buttonClasses({ variant: "secondary", className: "w-fit cursor-pointer" })}>
+            Agregar fotos
+            <input id={FIELD_IDS.photos} type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" onChange={addPhotos} aria-describedby={errorFor("photos") ? `${FIELD_IDS.photos}-error` : undefined} aria-invalid={errorFor("photos") ? true : undefined} />
+          </label>
+          {photos.length ? (
+            <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {photos.map((photo, index) => (
+                <li key={`${photo.name}-${photo.lastModified}-${index}`} className="rounded-panel border border-subtle bg-white p-3">
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-control bg-canvas">
+                    <Image src={photoPreviews[index]} alt={`Foto ${index + 1}`} fill unoptimized className="object-contain" />
+                    {index === 0 ? <Tag tone="solid" className="absolute left-2 top-2">Principal</Tag> : null}
+                  </div>
+                  <p className="mt-2 t-meta font-semibold">Foto {index + 1} de {photos.length}{index === 0 ? " · Principal" : ""}</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" disabled={index === 0} aria-label={`Mover foto ${index + 1} antes`} onClick={() => movePhoto(index, -1)} className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11" })}>Anterior</button>
+                    <button type="button" disabled={index === photos.length - 1} aria-label={`Mover foto ${index + 1} después`} onClick={() => movePhoto(index, 1)} className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11" })}>Siguiente</button>
+                    <label className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11 cursor-pointer" })}>Reemplazar<input type="file" aria-label={`Reemplazar foto ${index + 1}`} accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => replacePhoto(index, event)} /></label>
+                    <button type="button" disabled={photos.length <= MIN_LISTING_PHOTOS} aria-label={`Quitar foto ${index + 1}`} onClick={() => removePhoto(index)} className={buttonClasses({ variant: "danger", size: "sm", className: "min-h-11" })}>Quitar</button>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+          <p className="t-meta font-semibold" aria-live="polite">{photos.length} de {MAX_LISTING_PHOTOS} fotos</p>
+        </FormSection>
 
-      {attributeGroup ? (
-        <fieldset className="grid gap-4 rounded-panel border border-subtle bg-canvas p-4 sm:grid-cols-2">
-          <legend className="px-2 t-ui font-semibold text-ink">Características del instrumento <span className="font-normal text-ink-2">(opcionales)</span></legend>
-          {attributeGroup.filters.map((filter) => <AttributeField key={filter.key} filter={filter} />)}
-        </fieldset>
-      ) : null}
+        <FormSection id={`${ID}-instrumento`} step={2} title="El instrumento">
+          <SelectField label="Categoría" name="category" value={category} onChange={handleCategoryChange} options={categoryOptions} error={errorFor("category")} />
+          {category && instrumentOptions.length > 1 ? (
+            <TypeChips
+              id={FIELD_IDS.instrument_type}
+              name="instrument_type"
+              legend="Tipo de instrumento"
+              options={instrumentOptions}
+              value={instrumentType}
+              onChange={(value) => { setInstrumentType(value); clearError("instrument_type"); }}
+              error={errorFor("instrument_type")}
+            />
+          ) : null}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <TextField label="Marca" name="brand" error={errorFor("brand")} />
+            <TextField label="Modelo" name="model" error={errorFor("model")} />
+          </div>
+          <TextField label="Título" name="title" hint="Marca, modelo y lo que lo distingue. Ej.: Fender Player Stratocaster 2021, color Tidepool." error={errorFor("title")} />
+        </FormSection>
 
-      <Field id="venta-description" label="Descripción" hint="Mínimo 40 caracteres. Describe el estado real, detalles y accesorios incluidos.">
-        <Textarea name="description" required minLength={40} rows={6} />
-      </Field>
+        <FormSection id={`${ID}-condicion`} step={3} title="Condición y precio">
+          <ConditionCards id={FIELD_IDS.condition} name="condition" legend="Condición" options={conditionChoices(conditionOptions)} error={errorFor("condition")} />
+          <Field id={FIELD_IDS.price_pen} label="Precio en soles" hint="Solo números, sin decimales." error={errorFor("price_pen")} className="sm:max-w-xs">
+            <Input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" required />
+          </Field>
+        </FormSection>
 
-      <section className="grid gap-4" aria-labelledby="photo-heading">
-        <div>
-          <h2 id="photo-heading" className="t-section text-ink">Fotos</h2>
-          <p className="mt-1 t-meta">Agrega entre 2 y 10 fotos. La primera será la imagen principal; incluye vistas frontal y posterior.</p>
-        </div>
-        <label className={buttonClasses({ variant: "secondary", className: "w-fit cursor-pointer" })}>
-          Agregar fotos
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only" onChange={addPhotos} />
-        </label>
-        {photos.length ? (
-          <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {photos.map((photo, index) => (
-              <li key={`${photo.name}-${photo.lastModified}-${index}`} className="rounded-panel border border-subtle bg-white p-3">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-control bg-canvas">
-                  <Image src={photoPreviews[index]} alt={`Vista previa ${index + 1}`} fill unoptimized className="object-contain" />
-                  {index === 0 ? <Tag tone="solid" className="absolute left-2 top-2">Principal</Tag> : null}
-                </div>
-                <p className="mt-2 truncate t-meta">{photo.name}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button type="button" disabled={index === 0} onClick={() => movePhoto(index, -1)} className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11" })}>Anterior</button>
-                  <button type="button" disabled={index === photos.length - 1} onClick={() => movePhoto(index, 1)} className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11" })}>Siguiente</button>
-                  <label className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11 cursor-pointer" })}>Reemplazar<input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => replacePhoto(index, event)} /></label>
-                  <button type="button" disabled={photos.length <= MIN_LISTING_PHOTOS} onClick={() => removePhoto(index)} className={buttonClasses({ variant: "danger", size: "sm", className: "min-h-11" })}>Quitar</button>
-                </div>
-              </li>
-            ))}
-          </ol>
+        <FormSection id={`${ID}-ubicacion`} step={4} title="Ubicación" hint="Dónde puede verse o recogerse el instrumento.">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <LocationFields idPrefix={ID} defaultCity={profile.city} defaultRegion={profile.region} cityError={errorFor("city")} regionError={errorFor("region")} />
+          </div>
+        </FormSection>
+
+        <FormSection id={`${ID}-descripcion`} step={5} title="Descripción">
+          <Field
+            id={FIELD_IDS.description}
+            label="Descripción"
+            labelClassName="sr-only"
+            hint={<>Describe el estado real, detalles y accesorios incluidos. {descriptionLength} de {DESCRIPTION_MIN} caracteres mínimos.</>}
+            error={errorFor("description")}
+          >
+            <Textarea name="description" required minLength={DESCRIPTION_MIN} rows={6} />
+          </Field>
+        </FormSection>
+
+        {attributeGroup ? (
+          <FormSection id={`${ID}-caracteristicas`} step={6} title="Características" hint="Opcionales. Ayudan a que te encuentren con los filtros.">
+            <div className="grid gap-4 sm:grid-cols-2">
+              {attributeGroup.filters.map((filter) => <AttributeField key={filter.key} filter={filter} />)}
+            </div>
+          </FormSection>
         ) : null}
-        <p className="t-meta font-semibold">{photos.length} de {MAX_LISTING_PHOTOS} fotos · máximo 5 MB por foto</p>
-      </section>
 
-      <label className="flex gap-3 rounded-panel bg-canvas p-3 t-ui text-ink-2">
-        <input type="checkbox" name="marketplace_rules" required className="mt-0.5 h-5 w-5 shrink-0 accent-ink" />
-        <span>Acepto los <a href="/terminos" target="_blank" rel="noopener" className="link font-semibold">términos y reglas del marketplace</a>, confirmo que el equipo no está entre los <a href="/articulos-prohibidos" target="_blank" rel="noopener" className="link font-semibold">artículos prohibidos</a> y que la información y las fotos son reales. Laria no procesa pagos, no gestiona envíos ni garantiza transacciones.</span>
-      </label>
+        <FormSection id={`${ID}-publicar`} step={attributeGroup ? 7 : 6} title="Publicar">
+          <div className="grid gap-1.5">
+            <label className="flex gap-3 rounded-panel bg-canvas p-3 t-ui text-ink-2">
+              <input id={FIELD_IDS.marketplace_rules} type="checkbox" name="marketplace_rules" required className="mt-0.5 h-5 w-5 shrink-0 accent-ink" aria-describedby={errorFor("marketplace_rules") ? `${FIELD_IDS.marketplace_rules}-error` : undefined} aria-invalid={errorFor("marketplace_rules") ? true : undefined} />
+              <span>Acepto los <a href="/terminos" target="_blank" rel="noopener" className="link font-semibold">términos y reglas del marketplace</a>, confirmo que el equipo no está entre los <a href="/articulos-prohibidos" target="_blank" rel="noopener" className="link font-semibold">artículos prohibidos</a> y que la información y las fotos son reales. Laria no procesa pagos, no gestiona envíos ni garantiza transacciones.</span>
+            </label>
+            {errorFor("marketplace_rules") ? <p id={`${FIELD_IDS.marketplace_rules}-error`} className="t-ui font-semibold text-danger">{errorFor("marketplace_rules")}</p> : null}
+          </div>
+          <p className="t-meta">{direct ? "Aparecerá en el catálogo al publicarla." : "Un administrador la revisará antes de mostrarla. Te avisaremos por correo."}</p>
+        </FormSection>
+      </fieldset>
 
-      <Button type="submit" block className="sm:w-auto sm:justify-self-start" disabled={!supabase} loading={state === "submitting"} loadingLabel="Enviando...">
+      {busy && progress ? <p role="status" aria-live="polite" className="t-ui font-semibold text-ink-2">{progress}</p> : null}
+      <Button type="submit" block className="sm:w-auto sm:justify-self-start" disabled={!supabase} loading={busy} loadingLabel="Publicando…">
         Publicar
       </Button>
     </form>
@@ -342,7 +432,7 @@ function readAttributes(formData: FormData, instrumentType: string) {
       if (values.length) attributes[filter.key] = values;
       continue;
     }
-    const value = readRequired(formData, name);
+    const value = readValue(formData, name);
     if (!value) continue;
     attributes[filter.key] = value;
   }
@@ -350,22 +440,18 @@ function readAttributes(formData: FormData, instrumentType: string) {
 }
 
 function fieldId(name: string) {
-  return `venta-${name.replace(/[^a-z0-9_-]/gi, "-")}`;
+  return `${ID}-${name.replace(/[^a-z0-9_-]/gi, "-")}`;
 }
 
-function TextField({ label, name, required }: { label: string; name: string; required?: boolean }) {
-  return <Field id={fieldId(name)} label={label}><Input type="text" name={name} required={required} /></Field>;
+function TextField({ label, name, hint, error }: { label: string; name: string; hint?: string; error?: string }) {
+  return <Field id={fieldId(name)} label={label} hint={hint} error={error}><Input type="text" name={name} required /></Field>;
 }
 
-function NumberField({ label, name, required }: { label: string; name: string; required?: boolean }) {
-  return <Field id={fieldId(name)} label={label}><Input type="text" inputMode="numeric" pattern="[0-9]+" name={name} required={required} /></Field>;
+function SelectField({ label, name, options, value, onChange, error }: { label: string; name: string; options: readonly { value: string; label: string }[]; value?: string; onChange?: (value: string) => void; error?: string }) {
+  return <Field id={fieldId(name)} label={label} error={error}><Select name={name} value={value} defaultValue={value === undefined ? "" : undefined} onChange={onChange ? (event) => onChange(event.target.value) : undefined}><option value="">Selecciona una opción</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select></Field>;
 }
 
-function SelectField({ label, name, required, options, value, onChange, disabled }: { label: string; name: string; required?: boolean; options: readonly { value: string; label: string }[]; value?: string; onChange?: (value: string) => void; disabled?: boolean }) {
-  return <Field id={fieldId(name)} label={label}><Select name={name} required={required} value={value} defaultValue={value === undefined ? "" : undefined} disabled={disabled} onChange={onChange ? (event) => onChange(event.target.value) : undefined}><option value="" disabled>Selecciona una opción</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select></Field>;
-}
-
-function readRequired(formData: FormData, key: string) {
+function readValue(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
 }
