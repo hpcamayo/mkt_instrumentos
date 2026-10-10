@@ -205,7 +205,7 @@ export function StoreRegistrationForm({
       </div>
       <Field id="tienda-reg-store-photos" label="Fotos del local (opcionales, hasta 5)"><FileInput name="store_photos" multiple accept="image/jpeg,image/png,image/webp" /></Field>
       {currentPhotos.length ? <ul className="grid gap-3 sm:grid-cols-3">{currentPhotos.map((photo) => <li key={photo.id} className="rounded-panel border border-subtle p-2"><Image src={photo.image_url} alt={photo.alt_text ?? "Foto del local"} width={320} height={220} className="aspect-[4/3] w-full rounded-control object-cover" /><button type="button" onClick={() => removeStorePhoto(photo)} className={buttonClasses({ variant: "danger", size: "sm", block: true, className: "mt-2 min-h-11" })}>Quitar foto</button></li>)}</ul> : null}
-      <Button type="submit" block className="sm:w-auto sm:justify-self-start" loading={state === "submitting"} loadingLabel="Guardando...">{store ? "Guardar datos de la tienda" : "Enviar solicitud de tienda"}</Button>
+      <Button type="submit" block className="sm:w-auto sm:justify-self-start" loading={state === "submitting"} loadingLabel="Guardando…">{store ? "Guardar datos de la tienda" : "Enviar solicitud de tienda"}</Button>
     </form>
   );
 }

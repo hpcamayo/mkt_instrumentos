@@ -27,7 +27,7 @@ export function ForgotPasswordForm() {
     setBusy(false);
     setMessage(error ? "No se pudo enviar el enlace. Intenta nuevamente." : "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.");
   }
-  return <form onSubmit={submit} className="mt-6 grid gap-4"><AuthInput label="Correo" name="email" type="email" autoComplete="email" /><Status message={message} /><Button type="submit" loading={busy} loadingLabel="Enviando...">Enviar enlace</Button><Link href="/login" className="link text-center t-ui font-semibold">Volver a ingresar</Link></form>;
+  return <form onSubmit={submit} className="mt-6 grid gap-4"><AuthInput label="Correo" name="email" type="email" autoComplete="email" /><Status message={message} /><Button type="submit" loading={busy} loadingLabel="Enviando…">Enviar enlace</Button><Link href="/login" className="link text-center t-ui font-semibold">Volver a ingresar</Link></form>;
 }
 
 export function PasswordUpdateForm({ mode }: { mode: "reset" | "change" }) {
@@ -61,7 +61,7 @@ export function PasswordUpdateForm({ mode }: { mode: "reset" | "change" }) {
     router.push(`${destination.pathname}${destination.search}`);
     router.refresh();
   }
-  return <form onSubmit={submit} className="mt-6 grid gap-4"><AuthInput label="Nueva contraseña" name="password" type="password" autoComplete="new-password" /><AuthInput label="Confirmar contraseña" name="confirmation" type="password" autoComplete="new-password" /><Status message={message} /><Button type="submit" loading={busy} loadingLabel="Guardando...">Guardar contraseña</Button></form>;
+  return <form onSubmit={submit} className="mt-6 grid gap-4"><AuthInput label="Nueva contraseña" name="password" type="password" autoComplete="new-password" /><AuthInput label="Confirmar contraseña" name="confirmation" type="password" autoComplete="new-password" /><Status message={message} /><Button type="submit" loading={busy} loadingLabel="Guardando…">Guardar contraseña</Button></form>;
 }
 
 function AuthInput({ label, name, type, autoComplete }: { label: string; name: string; type: string; autoComplete: string }) {

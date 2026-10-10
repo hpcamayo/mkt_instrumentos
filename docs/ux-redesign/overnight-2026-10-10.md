@@ -32,11 +32,26 @@ and commit it with each sub-sprint.
 
 ## Done so far
 
+**Morning summary (cloud session, 10 Oct):** UX-4 to UX-7 are built on the provisional answers, and UX-8's cloud part is done. Every sub-sprint has its brief (questions, options, recommendation taken), acceptance package, decisions and tests. lint, typecheck, **340 tests** and `pnpm build` pass on the last commit. Nothing was run against a database; every browser check, audit and acceptance row is **pending on the Mac** with its command in the sub-sprint's acceptance package. `main` was not touched; `acceptance/cases.tsv` and `docs/functional-spec.md` were not edited. One draft PR `ux/redesign` → `main` is open for review only (not to merge).
+
 | Commit | What |
 | --- | --- |
 | `d8ef099` | UX-4 brief with provisional answers (previous session) |
 | `0dda0ec` | **React #418 fixed** (4a's first task); regression test |
-| (this commit) | `scripts/ux-hydration-trials.cjs` and this handoff |
+| `c0accd6` | `scripts/ux-hydration-trials.cjs` and this handoff |
+| `3d57c86` | **UX-4a** the listing page (L2–L15) |
+| `942131f` | **UX-4b** the store page (L16–L20); UX-4 docs, choices U1–U8 |
+| `ae772fb` | **UX-5** selling (S1–S11): sections, error summary, confirmation, progress; U9–U13 |
+| `e97740a` | **UX-6a** in-page confirmations; the inventory as cards on phones |
+| `01ddd91` | **UX-6b** store pages' eyebrows; UX-6 docs, U14–U17 |
+| `a7136ab` | **UX-7** Admin: inline queue photos, decision styles, verify/revoke confirmation, Lima audit times; U18–U19 |
+| (this commit) | **UX-8** cloud sweep, coherence tests, the V1 record reconciliation drafts, this summary |
+
+**Provisional decisions to confirm or reverse:** UX-4 L1–L21 and U1–U8; UX-5 S1–S11 and U9–U13; UX-6 A1–A9 and U14–U17; UX-7 W1–W9 and U18–U19; UX-8 C1–C5 (`decisions.md`, newest sections first). Every product flag took its no-change option (F1, F2, F4, F6, F7, G3, the "producto"/"artículo" strings, "Compras y ventas").
+
+**Pending owner decisions:** N16 (how a release proves write flows; blocks releasing UX-5 to UX-7), U10 (per-field errors on edit), U15 (onboarding form errors), U16 (Resumen as a to-do list), U17 (Favoritos card), U18 (Admin master-detail), C4 (a preview deployment for devices), G2 (legal wording).
+
+**Skipped and why:** the Admin master-detail layout (U18: `sprint-8` pins its markup; better decided with real volume); onboarding form rework (U15: auth flows stay unchanged overnight); a visual sweep from screenshots (C1: no local stack or devices in the cloud); no review page (Artifact) was published; review checklists are the acceptance packages.
 
 ### React #418 (4a, first task): cause and fix
 
@@ -72,22 +87,9 @@ and commit it with each sub-sprint.
   set), two PNGs uploaded to the `listing-photos` bucket at `<owner>/<listing>/<n>.png`, one `listing_photos` row each
   with the public URL; removal deletes the objects, the photo rows, the listing's `marketplace_events` and the listing.
 
-## Next (cloud session), in order
+## Next
 
-1. **4a, L15:** load the report form (and the Supabase browser client it imports, ~62 kB gz of the listing and store
-   first load) only when "Reportar …" is pressed: keep `ContentReport`'s trigger and sign-in link light and move the
-   form into a component loaded with `next/dynamic` / `import()` on press. Keep labels and flow (REP-001–005,
-   REVW-015). Note the #418 lesson: account-dependent markup must keep using `useMarketplaceAccount`.
-2. **4a, the listing page** per `ux-4-listing-store.md` § Listing page: `components/listing/` (`ListingGallery`,
-   `Lightbox`, `ContactModule`, `TrustNote`, `SellerCard`, `ReputationSection`, `SpecTable`, `RelatedListings`). Keep
-   `app/instrumentos/[slug]` without `loading.tsx` (`tests/ux-shell.test.cjs`, the stall rule) and the tests listed in
-   the brief's § Tests expected to change.
-3. **4b, the store page** (`components/store/`), then the UX-4 acceptance packages (4a, 4b) with "pending: run on the
-   Mac" for captures, audit, browser first-load and rows.
-4. **UX-5, UX-6 (6a/6b), UX-7, UX-8:** brief → provisional answers → build, each in its own commits, as far as the
-   night allows.
-5. Before stopping: update this file (commits per sub-sprint, what is built, provisional decisions, what is pending
-   with the Mac commands, anything skipped and why), commit, push `ux/redesign`.
+The cloud session's list is done (UX-4 to UX-8 as above). Next is the owner's review, sub-sprint by sub-sprint, then N15 releases once N16 is decided.
 
 ## Pending on the Mac (owner's return)
 
@@ -95,3 +97,5 @@ and commit it with each sub-sprint.
 - Production build on the worktree's local `.env.local` (127.0.0.1:54321), `next start -p 3100`, then the strict
   favorites smoke and the hydration trials above, then each sub-sprint's captures, audit and row re-runs as its
   acceptance package lists them.
+- Commands per sub-sprint: `ux-4a-acceptance.md`, `ux-4b-acceptance.md`, `ux-5-acceptance.md`, `ux-6-acceptance.md`,
+  `ux-7-acceptance.md`, and the Mac checklist in `ux-8-coherence.md`.

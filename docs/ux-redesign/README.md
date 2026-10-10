@@ -15,7 +15,7 @@ Read this file first, then only the file your task needs. **External reviewers: 
 | UX-5 | Selling: create, edit, revise | **Built, waiting for the owner's review** (cloud session, 10 Oct; N17): brief `ux-5-selling.md` (S1–S11 provisional, flags no change), build choices U9–U13 in `decisions.md`, acceptance `ux-5-acceptance.md`. Browser walk-through and rows pending on the Mac |
 | UX-6 | Accounts | **Built, waiting for the owner's review** (cloud session, 10 Oct; N17): brief `ux-6-accounts.md` (A1–A9 provisional, flags no change), choices U14–U17 in `decisions.md`, acceptance `ux-6-acceptance.md`: in-page confirmations, the inventory as cards on phones, store eyebrows. Onboarding forms not changed (U15). Rows pending on the Mac |
 | UX-7 | Admin workbench | **Built, waiting for the owner's review** (cloud session, 10 Oct; N17): brief `ux-7-admin.md` (W1–W9 provisional, F7 not built), choices U18–U19, acceptance `ux-7-acceptance.md`: inline queue photos, distinct approve/reject styles, verify/revoke confirmation, Lima time in the audit, identifiers off title lines. Master-detail layout pending (U18). Rows pending on the Mac |
-| UX-8 | Coherence and hardening | Not started; `roadmap.md` § UX-8 |
+| UX-8 | Coherence and hardening | **Cloud part done, rest pending on the Mac** (10 Oct; N17): `ux-8-coherence.md` (C1–C5 provisional): Admin buttons on the 36/44/52 scale, one ellipsis in loading labels, coherence tests; device, screen-reader, CWV, baseline and release work listed with commands; the V1 record reconciliation drafted for the owner |
 
 Repo: Sprint 9 is closed (owner, 30 Sep). Its owner/manual acceptance rows remain as recorded in `acceptance/cases.tsv`. The UX work was built on `ux/redesign`, rebased onto the catalog production base `313fb7e` on 9 Oct (N13), then independently audited at `d993f5d`. Henri authorized the release; `main` was fast-forwarded to `50963fb` and Vercel deployed it READY to `laria.audio` on 9 Oct. See [the production release gate](../ux-production-release-gate.md). Earlier commit IDs cited in this workspace are mapped in `commit-ids.md`. The `ux/redesign` branch remains checked out in `../mkt_instrumentos-ux`; the catalog worktree was not changed by this release.
 
@@ -36,6 +36,7 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `reviews/ux-2-external-review.md` | The independent review of UX-2 (3 Oct): findings UX2-R01–R03, fixes and their verification |
 | `review-guide.md` | For an independent external review: scope and commit ranges, reading order, local setup (Supabase, test accounts), checks, how to reproduce every piece of evidence, traceability from the brief to code and tests, decided vs open, risk areas, report format |
 | `ux-2-acceptance.md` | UX-2 acceptance package: commits, criteria with evidence, measurements, layout shift, deviations for the owner, spec and acceptance rows affected, changed tests, the owner's 7 Oct answers and what they changed |
+| `ux-8-coherence.md` | UX-8 (10 Oct, provisional): cloud sweep, the Mac checklist, and the V1 record reconciliation for UX-4–UX-7 |
 | `ux-7-admin.md` | UX-7 brief (10 Oct, provisional): questions W1–W9 |
 | `ux-7-acceptance.md` | UX-7 acceptance package |
 | `ux-6-accounts.md` | UX-6 brief (10 Oct, provisional): questions A1–A9, flags, rules, criteria |

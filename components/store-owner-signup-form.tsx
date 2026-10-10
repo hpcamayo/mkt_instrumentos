@@ -129,7 +129,7 @@ export function StoreOwnerSignupForm() {
         <Link href="/terminos" target="_blank" className="link font-semibold">términos y reglas del marketplace</Link> y la{" "}
         <Link href="/privacidad" target="_blank" className="link font-semibold">política de privacidad</Link>.
       </p>
-      <Button type="submit" block loading={state === "checking" || state === "submitting"} loadingLabel={state === "submitting" ? "Creando cuenta..." : undefined}>
+      <Button type="submit" block loading={state === "checking" || state === "submitting"} loadingLabel={state === "submitting" ? "Creando cuenta…" : undefined}>
         Crear cuenta de Tienda
       </Button>
       <p className="text-center t-ui text-ink-2">

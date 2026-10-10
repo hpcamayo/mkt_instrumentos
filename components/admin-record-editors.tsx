@@ -363,7 +363,7 @@ export function AdminListingEditor({
 
   if (!expanded) {
     return (
-      <button ref={actionRef} type="button" onClick={() => void open()} disabled={busy} className="min-h-10 w-fit rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink hover:bg-canvas disabled:opacity-50">
+      <button ref={actionRef} type="button" onClick={() => void open()} disabled={busy} className={buttonClasses({ variant: "secondary", size: "sm", className: "w-fit" })}>
         {busy ? "Cargando…" : "Editar datos básicos"}
       </button>
     );
@@ -393,7 +393,7 @@ export function AdminListingEditor({
       <EditorError message={error} errorRef={errorRef} />
       <div className="flex flex-wrap gap-2 sm:col-span-2">
         <button type="submit" disabled={busy || !record} className={buttonClasses({ variant: "secondary" })}>{busy ? "Guardando…" : "Guardar datos"}</button>
-        <button type="button" onClick={() => { restoreFocusRef.current = true; setExpanded(false); setRecord(null); setError(""); }} className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink">Cancelar</button>
+        <button type="button" onClick={() => { restoreFocusRef.current = true; setExpanded(false); setRecord(null); setError(""); }} className={buttonClasses({ variant: "secondary", size: "sm" })}>Cancelar</button>
       </div>
     </form>
   );
@@ -525,7 +525,7 @@ export function AdminStoreEditor({
 
   if (!expanded) {
     return (
-      <button ref={actionRef} type="button" onClick={() => void open()} disabled={busy} className="min-h-10 w-fit rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink hover:bg-canvas disabled:opacity-50">
+      <button ref={actionRef} type="button" onClick={() => void open()} disabled={busy} className={buttonClasses({ variant: "secondary", size: "sm", className: "w-fit" })}>
         {busy ? "Cargando…" : "Editar perfil de tienda"}
       </button>
     );
@@ -554,7 +554,7 @@ export function AdminStoreEditor({
       <EditorError message={error} errorRef={errorRef} />
       <div className="flex flex-wrap gap-2 sm:col-span-2">
         <button type="submit" disabled={busy || !record} className={buttonClasses({ variant: "secondary" })}>{busy ? "Guardando…" : "Guardar datos"}</button>
-        <button type="button" onClick={() => { restoreFocusRef.current = true; setExpanded(false); setRecord(null); setError(""); }} className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink">Cancelar</button>
+        <button type="button" onClick={() => { restoreFocusRef.current = true; setExpanded(false); setRecord(null); setError(""); }} className={buttonClasses({ variant: "secondary", size: "sm" })}>Cancelar</button>
       </div>
     </form>
   );

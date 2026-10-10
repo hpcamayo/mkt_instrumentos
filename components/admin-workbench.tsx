@@ -315,7 +315,7 @@ export function AdminMutationControl({
           <button
             type="submit"
             disabled={busy}
-            className={buttonClasses({ variant: "secondary" })}
+            className={buttonClasses({ variant: isNegativeMutation(mutation) ? "danger" : "secondary", size: "sm" })}
           >
             {busy ? "Guardando…" : `Confirmar: ${label}`}
           </button>
@@ -325,7 +325,7 @@ export function AdminMutationControl({
               restoreFocusRef.current = true;
               setExpanded(false);
             }}
-            className="min-h-10 rounded-control border border-line-strong px-3 py-2 text-meta font-semibold text-ink"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
           >
             Cancelar
           </button>
@@ -344,7 +344,7 @@ export function AdminMutationControl({
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => void execute()} className={buttonClasses({ variant: "secondary" })}>
+          <button type="button" disabled={busy} onClick={() => void execute()} className={buttonClasses({ variant: isNegativeMutation(mutation) ? "danger" : "secondary", size: "sm" })}>
             {busy ? "Guardando…" : `Confirmar: ${label}`}
           </button>
           <button
@@ -353,7 +353,7 @@ export function AdminMutationControl({
               restoreFocusRef.current = true;
               setExpanded(false);
             }}
-            className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
           >
             Cancelar
           </button>
@@ -370,7 +370,7 @@ export function AdminMutationControl({
         aria-label={`${label}: ${mutation.id}`}
         disabled={busy}
         onClick={() => (reasonLabel || confirmationText ? setExpanded(true) : void execute())}
-        className={buttonClasses({ variant: isNegativeMutation(mutation) ? "danger" : "secondary", size: "sm", className: "min-h-10" })}
+        className={buttonClasses({ variant: isNegativeMutation(mutation) ? "danger" : "secondary", size: "sm" })}
       >
         {busy ? "Procesando…" : label}
       </button>
