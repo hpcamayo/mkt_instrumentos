@@ -4,6 +4,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteShell } from "@/components/site-shell";
 import "./globals.css";
 import { MarketplaceAccountProvider } from "@/components/marketplace-account-provider";
+import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
+import { MENU_BRAND_COUNT } from "@/lib/category-nav";
 import {
   NOINDEX_ROBOTS,
   OPEN_GRAPH_BASE,
@@ -54,18 +56,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The strip's "Marcas" column: each category's leading catalog brands (a day-cached catalog read; none if it fails).
+  const brands = await getCatalogBrandsByCategory();
+  const menuBrands = Object.fromEntries(Object.entries(brands).map(([category, list]) => [category, list.slice(0, MENU_BRAND_COUNT).map((brand) => brand.name)]));
   return (
     <html lang="es" className={archivo.variable}>
       <body className="font-sans">
         <a href="#contenido" className="skip-link">Saltar al contenido</a>
         <MarketplaceAccountProvider>
           {/* One <main id="contenido"> per page: in the shell, or in app/admin/layout.tsx for Admin. */}
-          <SiteShell fullFooter={<SiteFooter variant="full" />} slimFooter={<SiteFooter variant="slim" />}>{children}</SiteShell>
+          <SiteShell menuBrands={menuBrands} fullFooter={<SiteFooter variant="full" />} slimFooter={<SiteFooter variant="slim" />}>{children}</SiteShell>
         </MarketplaceAccountProvider>
       </body>
     </html>

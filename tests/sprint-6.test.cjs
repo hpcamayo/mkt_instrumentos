@@ -53,7 +53,7 @@ test("mega-menu is driven by canonical taxonomy and closes on every required int
   assert.match(strip, /aria-controls=\{panelId\(item\.key\)\}/);
   assert.match(strip, /onClick=\{onChoose\}/, "choosing a destination closes the panel");
   assert.match(shell, /href: categoryLandingPath\(category\.value\), kind: "category" as const/);
-  assert.match(shell, /getInstrumentTypeOptions\(category\.value\)\.map\(\(type\) => \(\{ \.\.\.type, href: categoryTypePath\(category\.value, type\.value\) \}\)\)/);
+  assert.match(shell, /getInstrumentTypeOptions\(category\.value\)\.map\(\(type\) => \(\{\s+\.\.\.type,\s+href: categoryTypePath\(category\.value, type\.value\),/);
   assert.doesNotMatch(strip, /Popular|Recomendad|Colecciones/);
   // Every shell menu closes on route change, outside press and Escape, which returns focus to its button; opening one
   // closes the others. The strip uses the group form of the same disclosure.

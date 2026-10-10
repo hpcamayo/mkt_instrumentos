@@ -1,4 +1,5 @@
 import { CATALOG_PATH } from "@/lib/catalog-filters";
+import { subtypeLinks, type NavLink } from "@/lib/category-nav";
 import { categoryLandingPath, categoryTypePath, getCategoryLandingByValue, reservedCategorySlugs } from "@/lib/category-pages";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
 import { categoryOptions, getCategoryLabel } from "@/lib/listings";
@@ -74,16 +75,26 @@ export const stripItems: readonly StripItem[] = [
   { key: "verified_stores", label: "Tiendas verificadas", href: VERIFIED_STORES_PATH, kind: "link" },
 ];
 
-export type CategoryMenu = { key: string; label: string; href: string; types: { value: string; label: string; href: string }[] };
+export type CategoryMenu = {
+  key: string;
+  label: string;
+  href: string;
+  types: { value: string; label: string; href: string; subtypes: NavLink[] }[];
+};
 
 // One menu per category, from the canonical taxonomy: "Ver todos" opens the category landing, then every instrument
 // type the listing form and the catalog filters accept, through the same helpers (a type that mirrors its category
-// resolves to the landing). The pre-UX-2 mega-menu offered the same destinations.
+// resolves to the landing). The pre-UX-2 mega-menu offered the same destinations. Each type also carries its subtypes
+// (lib/category-nav.ts: Strat, Clásicas, Delay…), the detailed level the panel and the landing show.
 export const categoryMenus: readonly CategoryMenu[] = categoryOptions.map((category) => ({
   key: category.value,
   label: category.label,
   href: categoryLandingPath(category.value),
-  types: getInstrumentTypeOptions(category.value).map((type) => ({ ...type, href: categoryTypePath(category.value, type.value) })),
+  types: getInstrumentTypeOptions(category.value).map((type) => ({
+    ...type,
+    href: categoryTypePath(category.value, type.value),
+    subtypes: subtypeLinks(category.value, type.value),
+  })),
 }));
 
 // The strip item for the current page, or null when none applies (listing and store pages, legal pages).
