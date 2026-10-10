@@ -11,6 +11,7 @@ import {
   adminDate,
   adminNumber,
   adminString,
+  verificationConfirmation,
 } from "@/components/admin-workbench";
 import type {
   AdminDomain,
@@ -172,7 +173,7 @@ function DomainActions({ domain, item, onComplete }: { domain: AdminDomain; item
     );
     if (status === "active") return (
       <div className="flex flex-wrap gap-2">
-        <AdminMutationControl mutation={{ kind: "verification", id, verified: item.is_verified !== true }} label={item.is_verified === true ? "Revocar verificación" : "Verificar tienda"} onComplete={onComplete} />
+        <AdminMutationControl mutation={{ kind: "verification", id, verified: item.is_verified !== true }} label={item.is_verified === true ? "Revocar verificación" : "Verificar tienda"} confirmationText={verificationConfirmation(item.is_verified !== true)} onComplete={onComplete} />
         <AdminMutationControl mutation={{ kind: "store", id, decision: "hide" }} label="Ocultar tienda" reasonLabel="Motivo obligatorio" onComplete={onComplete} />
       </div>
     );

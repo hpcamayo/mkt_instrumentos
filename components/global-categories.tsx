@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { PageContainer } from "@/components/page-container";
+import { useStripCurrent } from "@/components/strip-current";
 import { useDisclosureGroup } from "@/components/use-disclosure";
 import { categoryMenus, currentStripKey, stripItems, type CategoryMenu } from "@/lib/shell";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,8 @@ export function GlobalCategories({ visibility }: { visibility: "all" | "wide" })
 function CurrentStrip() {
   const pathname = usePathname();
   const params = useSearchParams();
-  return <CategoryStrip current={currentStripKey(pathname, params)} />;
+  const pageCurrent = useStripCurrent();
+  return <CategoryStrip current={pageCurrent ?? currentStripKey(pathname, params)} />;
 }
 
 const ITEM = "inline-flex items-center whitespace-nowrap px-1 text-[14px] font-semibold leading-5 transition-colors duration-120 focus-visible:outline-offset-[-2px]";

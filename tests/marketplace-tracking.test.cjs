@@ -320,7 +320,12 @@ test("catalog creates authoritative search receipts only for successful page-one
   assert.ok(!signature.initializer.expression.getText(source).includes("page"));
 });
 
-test("detail view count uses the accepted server receipt, not a synthetic local increment", async () => {
+// UX-4 L6 A (F3): the listing page no longer shows "Visto N veces". The detail view is still registered (AN-002)
+// once the page is visible and again on visibilitychange, deduplicated by the transport; never for a sold listing.
+const renderedText = (element) => typeof element === "string" || typeof element === "number" ? String(element)
+  : Array.isArray(element) ? element.map(renderedText).join("") : element?.props ? renderedText(element.props.children) : "";
+
+test("detail view registration waits for a visible page and renders no public count", async () => {
   const transport = clientHarness({ request(entry) {
     if (entry.url === "/api/events") return response({ events: entry.body.events.map((event) => ({ eventId: event.eventId, recorded: true, view_count: 17 })) });
   } });
@@ -329,12 +334,15 @@ test("detail view count uses the accepted server receipt, not a synthetic local 
   const { ListingDetailMetadata } = loadTypeScript("components/listing-detail-metadata.tsx", {
     react: react.react, "@/lib/marketplace-events-client": transport.client,
   }, browser);
-  const props = { listingId, publishedAt: "2026-09-01", createdAt: "2026-08-01", initialViewCount: 8 };
-  assert.equal(react.render(ListingDetailMetadata, props).props.children[1].props.children, "Visto 8 veces");
+  const props = { listingId, children: "Lima, Lima · Publicado hace 3 días" };
+  assert.equal(renderedText(react.render(ListingDetailMetadata, props)), "Lima, Lima · Publicado hace 3 días");
   assert.equal(transport.timers.pending.size, 0);
   browser.visibility("visible");
   await transport.timers.drain();
-  assert.equal(react.render(ListingDetailMetadata, props).props.children[1].props.children, "Visto 17 veces");
+  assert.equal(transport.batches().length, 1);
+  assert.equal(transport.batches()[0].body.events[0].type, "listing_view");
+  const after = renderedText(react.render(ListingDetailMetadata, props));
+  assert.doesNotMatch(after, /Visto|veces|\b17\b/);
   browser.visibility("hidden");
   browser.visibility("visible");
   await settle();
@@ -342,17 +350,18 @@ test("detail view count uses the accepted server receipt, not a synthetic local 
   assert.equal(transport.batches().length, 1);
   react.unmount();
   assert.equal(browser.listeners.get("visibilitychange").size, 0);
+  assert.doesNotMatch(fs.readFileSync("components/listing-detail-metadata.tsx", "utf8"), /formatViewCount|setViewCount|view_count/);
 });
 
-test("sold detail metadata preserves its existing count and does not register an active-listing view", () => {
+test("sold detail metadata does not register an active-listing view", () => {
   const browser = browserHarness();
   const react = reactHarness();
   const calls = [];
   const { ListingDetailMetadata } = loadTypeScript("components/listing-detail-metadata.tsx", {
     react: react.react, "@/lib/marketplace-events-client": { sendBrowsingEvent: (...args) => { calls.push(args); return Promise.resolve(null); } },
   }, browser);
-  const metadata = react.render(ListingDetailMetadata, { listingId, publishedAt: null, createdAt: "2026-09-01", initialViewCount: 1, trackView: false });
-  assert.equal(metadata.props.children[1].props.children, "Visto 1 vez");
+  const metadata = react.render(ListingDetailMetadata, { listingId, children: "Lima, Lima · Publicado hace 1 día", trackView: false });
+  assert.equal(renderedText(metadata), "Lima, Lima · Publicado hace 1 día");
   browser.visibility("hidden");
   browser.visibility("visible");
   assert.deepEqual(calls, []);

@@ -68,6 +68,7 @@ type StoreSummary = {
   city?: string | null;
   district?: string | null;
   whatsapp_phone?: string | null;
+  logo_url?: string | null;
   created_at?: string | null;
 };
 

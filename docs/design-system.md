@@ -1,6 +1,6 @@
 # Laria Design System
 
-The canonical reference for Laria UI work. Read it before changing visuals, layout, Tailwind classes, copy or shared components. It describes what the code implements after UX-1 (Foundations), UX-2 (Shell and navigation), UX-3a (Discovery: the card, the catalog, its filters and the category landings) and UX-3b (Discovery: the home). The decisions behind it (D1–D12, N1–N14, G1, Q1–Q20, F10–F12), the audits and the roadmap are in `docs/ux-redesign/`.
+The canonical reference for Laria UI work. Read it before changing visuals, layout, Tailwind classes, copy or shared components. It describes what the code implements after UX-1 (Foundations), UX-2 (Shell and navigation), UX-3a (Discovery: the card, the catalog, its filters and the category landings), UX-3b (Discovery: the home) and UX-4 (listing and store pages). The decisions behind it (D1–D12, N1–N14, G1, Q1–Q20, F10–F12), the audits and the roadmap are in `docs/ux-redesign/`.
 
 Product behavior is defined by `docs/functional-spec.md`. Nothing here changes a product rule; visual work keeps listing lifecycle, moderation, verification, reviews, favorites, alerts, authorization and seller contact exactly as specified.
 
@@ -80,7 +80,7 @@ Archivo (variable, weight 100–900, width 62–125) is self-hosted from `app/fo
 
 - One `<main id="contenido">` per page: `components/site-shell.tsx` renders it for public and account pages, `app/admin/layout.tsx` for Admin (so the skip link lands after the Admin sidebar). A 404 or error that renders outside the Admin layout (an unmatched `/admin/…` URL, a crash in the layout) gets its `<main>` from `FallbackMain`. Pages and layouts use `section`, `div` or `PageContainer as="section"`, never a second `main`.
 - The first focusable element is the "Saltar al contenido" skip link.
-- Page content is redesigned per template in UX-3 to UX-7: the catalog and the category landings in UX-3a ("Discovery" below); the home in UX-3b ("Home" below); listing and store pages, account and Admin content later. Until a template is redesigned, keep its layout and only use the tokens and components here.
+- Page content is redesigned per template in UX-3 to UX-7: the catalog and the category landings in UX-3a ("Discovery" below); the home in UX-3b ("Home" below); listing and store pages in UX-4 ("Listing and store pages" below); account and Admin content later. Until a template is redesigned, keep its layout and only use the tokens and components here.
 
 ## Shell and navigation (UX-2)
 
@@ -168,7 +168,7 @@ The catalog (`/listados`) and the category landings (`/instrumentos/<categoría>
 - Caption, 8 px under the frame: the title (`t-card-title`, two lines reserved so prices line up), the price (`t-card-price`), a spec line (`t-meta`, one line: the condition and up to two key attributes of the type, `getCardSpecLine`), a seller line (`t-meta`: the city, which truncates first, then "Particular", "Tienda" or "Tienda verificada" with the 14 px verified mark). No store link on the card.
 - Hover: the frame's border turns `line-strong` and the title gets the 2 px blue underline. No lift, no zoom.
 - Headings: `h2` in the catalog and the landings, `h3` under a section heading (`headingLevel`).
-- Grid (`lib/ui/listing-grid.ts`): two columns on phones, three from 768 px, four from 1280 px beside the filters; column gaps 12 / 20 px, row gaps 24 / 32 px. Store inventory and recommendations use the same card in their own grids until UX-4.
+- Grid (`lib/ui/listing-grid.ts`): two columns on phones, three from 768 px, four from 1280 px beside the filters; column gaps 12 / 20 px, row gaps 24 / 32 px. Store inventory and recommendations use the same card in their own grids (UX-4, below).
 
 ### Catalog and landing page
 
@@ -227,6 +227,51 @@ The home (`app/page.tsx`) is the decided "Inicio · versión final"; the brief i
 - A failed listing query (the vitrina's, the feed's) leaves its section out, the rest renders and the error goes to the server log; a failed count leaves the counts out ("Ver todo el catálogo" instead of "Ver las N publicaciones"); a failed stores query hides the stores section. Without the public Supabase keys every listing section is left out.
 - Empty marketplace: no vitrina; "Recién publicados" shows the empty state. When the vitrina already holds every listing, "Recién publicados" is left out. No verified store: no stores section.
 
+## Listing and store pages (UX-4)
+
+The brief is `docs/ux-redesign/ux-4-listing-store.md` (answers L1–L21, provisional until the 4a/4b reviews; build choices U1–U8 in `decisions.md`). Components: `components/listing/` and `components/store/`.
+
+### Listing page (`app/instrumentos/[slug]`)
+
+- White page in `PageContainer`. From 1024 px a 12-column grid: the gallery (7 columns), then "Especificaciones", "Descripción" and the reviews under it; the decision column (5 columns, spanning both rows, nothing sticky): `StatusTag` "Vendida" when sold, the `h1` (`t-page`), "Marca Modelo" (`t-ui` ink-2), the price (`Price size="detail"`), the condition `Tag` and "Miraflores, Lima · Publicado hace 3 días" (`t-meta`, composed on the server), the spec strip, the contact module, the trust statement, the seller card and "Reportar publicación". Below 1024 px the column wrappers are `display: contents` and each block takes an `order`: gallery, identity, a compact seller row (links to `#vendedor`), strip, trust statement, specifications, description, seller card, report, reviews.
+- **Gallery** (`ListingGallery`): one sideways track of 4:3 frames (photo contained on white, 1 px `subtle` border, radius 8); phones swipe it (scroll snap), from 1024 px two 44 px round arrows move it; the counter "1 / 8" (13 px / 600 white on `frame` at 75%, polite) shows with two photos or more. Each frame is a button "Ampliar foto N de M". The first photo is eager with high fetch priority (the LCP); the rest lazy. Thumbnails in `role="group"` "Miniaturas de fotos": square, cover, 56 px on phones and 72 px from 1024 px (`sizes="(max-width: 1023px) 56px, 72px"`), the chosen one with a 2 px ink ring and `aria-current`; four on phones and six wide, then a "+N" tile that opens the lightbox at the next photo. No photo: "Sin foto".
+- **Lightbox** (`Lightbox`): a native modal `<dialog class="lightbox surface-frame">` over frame black at 95%, rendered only while open; the photo fitted to the viewport (`sizes="100vw"`, loaded only now), "Foto N de M" (polite), 44 px "Cerrar" and arrows, Esc, arrow keys and a sideways swipe; Tab wraps inside; focus returns to the opener. A 120 ms fade, none under reduced motion.
+- **Contact module** (`ContactModule`): "Contactar por WhatsApp" (primary, 52 px, `source` detail) and "Guardar" (`FavoriteButton variant="module"`: full-width secondary 44 px with its label from 1024 px, "Guardada" with `aria-pressed` when saved; a 44 px square on phones). Below 1024 px and at least 560 px tall the same element is the bar at the bottom of the screen (`.contact-bar` in `app/globals.css`: white, 1 px `line-deco` top border, safe area), with "Laria no procesa pagos ni envíos · Consejos de seguridad" under the buttons; the page ends with `.contact-bar-spacer` and the document gets a matching `scroll-padding-bottom`, so the bar never hides focus. On shorter viewports it stays in the page after the identity block. One WhatsApp button per page; none, and no bar, on a sold listing (its text and "Ver publicaciones similares" take the module's place).
+- **Trust texts** (`TrustNote`, `TRUST_COPY`): every limitation text of these pages lives there. One trust statement per page next to its contact button (a 16 px shield, `t-meta`, "Consejos de seguridad"); the reviews, a sold listing and the store's verification have their own lines.
+- **Spec strip** (`SpecStrip`): up to four of the type's attributes, the card's two first, in bordered cells (label `t-meta`, value `t-ui` 600), three a row on phones. **Specifications** (`SpecTable`): Tipo, Marca, Modelo, Condición, then every attribute; empty rows left out; 44 px rows with `line-deco` separators, two columns from 1024 px.
+- **Seller card** (`SellerCard`, `id="vendedor"`): a 40 px square (store logo, white initials on `frame-2`, or a Particular's initials on `canvas`), the name, `VerifiedMark` or the `Tag` "Tienda"/"Particular", the place, then real figures only: "4.8 ★ · 9 reseñas" (read as "4.8 de 5"), "N publicaciones" (streamed), "En Laria desde jul. 2026" (America/Lima). A store adds "Ver la tienda" (secondary, 36 px). No contact button.
+- **Reviews** (`ReputationSection`, shared with the store page): the average "4.8 de 5 · 9 reseñas", the five latest (reviewer "Rodrigo C.", stars plus "5 de 5", the month, the comment, "Reportar reseña"), "Mostrando las 5 más recientes de 9", "Aún no tiene reseñas." and the closing line "Solo se reseña después de una compra que comprador y vendedor confirmaron en Laria. Laria no procesó el pago ni la entrega." A failed reputation call leaves the section out.
+- **Related** (`RelatedListings`): "Publicaciones similares" ("Ver todo") and "Más de esta tienda" ("Ver la tienda") / "Más de este vendedor", four cards in a 2 / 3 / 4 column grid (gaps 12 / 20), left out when empty; `Skeleton` cards hold their place while they stream.
+- **Report**: `ContentReport` keeps its flow; its form (`content-report-form.tsx`, with the Supabase browser client) loads with `next/dynamic` on the first press. First-load JS: listing 146 kB, store 132 kB (208 and 195 before).
+- **Strip**: the page renders `<StripCurrent value=…>`; the strip marks it after hydration (`useStripCurrent`).
+
+### Store page (`app/tiendas/[slug]`)
+
+- `StoreHeader` on a `canvas` band: the breadcrumb from 768 px ("Inicio / Tiendas verificadas / <tienda>" for a verified store, "Inicio / <tienda>" otherwise); the uploaded banner as a 120 px strip (96 px on phones, decorative), nothing when there is none; the 96 px logo or white initials (64 px on phones), the `h1`, `VerifiedMark` or `Tag` "Tienda", the place, the description (68 characters a line), the figures (rating, "N publicaciones", "En Laria desde …"); at the right (full width on phones) "Contactar por WhatsApp" (52 px, `source` store) and the trust statement.
+- `StoreSectionLinks`: `nav` "Secciones de la tienda" with "Publicaciones 24", "Reseñas 9" and "Sobre la tienda", links to sections on the page (not tabs), 44 px on phones.
+- "Publicaciones": the card in a 2 / 3 / 4 / 5 column grid, numbered pages of 24. "Reseñas" and "Sobre la tienda" side by side from 1024 px. `StoreAboutSection`: Ubicación, Redes (only `http(s)` URLs, `rel="noopener noreferrer nofollow"`), Fotos del local (up to five, opening the lightbox), Verificación ("Laria revisó a mano…" or "Laria aprobó esta tienda…"), "Reportar tienda". No street address or contact person. The strip marks "Tiendas verificadas" on a verified store's page.
+
+## Selling (UX-5)
+
+- **One page, numbered sections** (`FormSection`): 1 Fotos, 2 El instrumento, 3 Condición y precio, 4 Ubicación, 5 Descripción, 6 Características (only when the type has attributes), then Publicar. Sections are separated by a `subtle` rule; the heading is `t-section` with its number in `ink-2`.
+- **Photos first**, with a four-item checklist (`PHOTO_GUIDANCE`). Each photo card: preview 4:3, "Principal" on the first, "Foto N de M", then Anterior / Siguiente / Reemplazar / Quitar named "Mover foto N antes/después", "Reemplazar foto N", "Quitar foto N" (create and edit alike).
+- **Type** is `TypeChips`: native radios inside 44 px chip labels (accent fill and check when chosen). **Condition** is `ConditionCards`: three radio cards with a one-line definition; the stored values do not change.
+- **Errors**: the form validates itself (`noValidate`). Each field shows its error under the label (`Field error`, `aria-invalid`, `aria-describedby`); `ErrorSummary` sits at the top of the form, takes focus on every failed submit, titles "Revisa N datos antes de publicar" and lists links that focus each field. An error clears when its field changes. Server errors stay in `PageNotice`.
+- **Sending**: the button reads "Publicando…" and a status line says "Subiendo foto N de M…", then "Enviando la publicación…".
+- **After sending**: the form is replaced by a `PageNotice` that says what happens next; listings that go to review promise the email, never a speed.
+
+## Accounts (UX-6)
+
+- **Inventory** (`ListingManagementTable`, Mis publicaciones and Inventario): a table from 768 px; below it each row is a card: the title, then one row per value with its column name on the left (`data-label`), then the actions. No sideways scroll.
+- Store names are never uppercase eyebrows: the eyebrow is "Mi tienda"; the name goes in the summary line.
+
+## Admin (UX-7)
+
+- Queue cards show photos inline (4:3 thumbnails, two columns on phones, four from 640 px), each opening full size in a new tab.
+- Decisions: reject, hide, dismiss, revoke and hiding a review use the `danger` button; approve, restore, verify and resolve the `secondary` one. No yellow in the queue (several cards share a view).
+- Verify and revoke ask first with the consequence; reasons stay required for reject, hide, resolve and dismiss.
+- Admin times are always America/Lima. Identifiers sit on their own "Identificador" line, never in a title line.
+
 ## Components (`components/ui/`)
 
 Use these instead of writing new markup for the same job.
@@ -236,11 +281,13 @@ Use these instead of writing new markup for the same job.
 - `Tag` and `StatusTag`: status labels and tones come from `lib/ui/status.ts`, the single dictionary (domains: `listing`, `revision`, `store`, `claim` for Compras y ventas, `transaction` for the Admin sale records, `report`, `review`, `alert`). `StatusEntryTag` renders a status already resolved to an entry, such as `storeStatusEntry()` ("Tienda verificada" for an active verified store). Admin shows a report's target and the audit history through `adminTargetStatusLabel()`. Never write a second label map. `CountBadge` for counts.
 - `Chip`, `ChipLink`, `AppliedChip`: filters and period selectors; selected state has a check and `aria-pressed` (`Chip`, a toggle button: the filter sheet's type and short values) or `aria-current` (`ChipLink`, a link: short filter values, types, other categories, periods). `AppliedChip` removes a filter: it shows the value ("Lima") and is named for what pressing does ("Quitar filtro: Ubicación: Lima"). `ChipLink` and `AppliedChip` are `CatalogLink`s: inside the catalog they report to its pending state, elsewhere they are plain client links.
 - `Sheet` (`components/ui/sheet.tsx`): a bottom sheet over a native modal `<dialog>`, rendered only while open. White, 8 px top corners, `shadow-level-2`, up to 88% of the viewport, over frame black at 55% (`.sheet` in `app/globals.css`); a header with the title (`t-section`) and a 44 px close button, a scrolling body and an optional footer above a 1 px rule. It slides up in 200 ms (in place under reduced motion). The page behind is inert and does not scroll; Tab wraps inside; Esc, the close button and a press on the backdrop call `onDismiss`, and the caller returns focus to the button that opened it.
+- `ConfirmDialog` / `useConfirm` (UX-6): the in-page confirmation for actions that need one (never `window.confirm`). A modal `<dialog role="alertdialog">`, 440 px max, title as a question, one-line body, "Cancelar" (focused first) and a verb button (`danger` for deleting or cancelling); Esc and the backdrop cancel; focus returns to the control.
+- `ErrorSummary` (UX-5): a form's failed checks at the top of the form, focused on each failed submit, links that focus each field; renders nothing without errors.
 - `Notice` (`info`, `success`, `warning`, `danger`, icon + text): danger is an alert, others a status; use `role="note"` for static explanations. Its body underlines every link, so a notice that holds buttons, or that receives focus through a ref, composes `noticeClassName()` + `NoticeIcon` instead (as `PageNotice` does). `PageNotice` moves focus to page-level results; do not use that movement for field errors.
 - `PageHeader`: the page's only `h1`, with an optional eyebrow, a one-line summary (`meta`, 13 px) and the page's actions; a longer 16 px introduction stays a paragraph after it. Light surfaces only: headers on the black frame keep their own markup.
 - `EmptyState` (any list or section with nothing to show; `headingLevel={3}` under a section heading), `Price` (S/ with tabular figures; `card`, `detail`, `inline`), `VerifiedMark` / `VerifiedIcon`, `Skeleton`, `IconButton`, `WhatsAppGlyph`.
 - Shell components (UX-2): `BrandLogo`, `Breadcrumbs`, `ErrorPage`, `AccountSectionLinks`, `CategoryPanel`, `CategoryAccordion`, `useDisclosure`, `useDisclosureGroup`, and since UX-3b `HomeHeader`; see "Shell and navigation". Catalog navigation (UX-3): `CatalogNavigation`, `CatalogLink`, `CatalogResults` (`components/catalog-navigation.tsx`). Home (UX-3b): `HomeBanner` (`components/home/home-banner.tsx`) and the sections in `components/home/home-sections.tsx`; see "Home".
-- `tests/ux-primitives.test.cjs` fails when a primitive loses its last consumer or a hand-rolled copy (error box, pulse placeholder, price class, count pill) comes back. `Chip` and `Radio` found their first consumer in the filter sheet (UX-3). `Skeleton` has none since the catalog's `loading.tsx` went (UX-3 Q1 A); it is kept for the listing page's streamed sections (UX-4), the one exemption.
+- `tests/ux-primitives.test.cjs` fails when a primitive loses its last consumer or a hand-rolled copy (error box, pulse placeholder, price class, count pill) comes back. `Chip` and `Radio` found their first consumer in the filter sheet (UX-3). `Skeleton` holds the listing page's streamed sections (UX-4); no primitive is exempt.
 
 WhatsApp contact: every contact button is the primary yellow button with the WhatsApp glyph and the label "Contactar por WhatsApp". No WhatsApp green.
 

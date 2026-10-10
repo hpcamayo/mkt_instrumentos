@@ -31,6 +31,20 @@ test('favorite controls reflect actual saved state and anonymous safe login navi
  const html=renderToStaticMarkup(React.createElement(button({}),{listingId:'id'}));assert.match(html,/aria-pressed="true"/);assert.match(html,/Quitar de favoritos/);
  const anon=renderToStaticMarkup(React.createElement(button({authenticated:false}),{listingId:'id'}));assert.match(anon,/login\?next=%2Flistados/);assert.match(anon,/Ingresa para guardar/);
 });
+// React #418 on listing pages (docs/ux-redesign/ux-4-listing-store.md § First task): the related listings stream in after
+// the first account check has finished; hydrated with the live state, their favourite rendered a sign-in link where the
+// server had sent the disabled button. While a component hydrates, the account hook must hand it the server's state.
+test('account state while hydrating equals the server render (React #418)',()=>{
+ const live={authenticated:true,storeOwner:true,hasStore:true,admin:true,name:'Ana',unreadNotifications:2,pendingBuyerConfirmations:1,ready:true,settled:true,favorites:{id:true},register:()=>()=>{},setFavorite:async()=>{}};
+ const {useMarketplaceAccount}=load('components/marketplace-account-provider.tsx',{react:{...React,useContext:()=>live}});
+ let seen;const Probe=()=>{seen=useMarketplaceAccount();return null;};
+ // A server render reads useSyncExternalStore's server snapshot, exactly as hydration does.
+ renderToStaticMarkup(React.createElement(Probe));
+ const {register,setFavorite,...state}=seen;
+ assert.deepEqual(state,{authenticated:false,storeOwner:false,hasStore:false,admin:false,name:null,unreadNotifications:0,pendingBuyerConfirmations:0,ready:false,settled:false,favorites:{}});
+ assert.equal(register,live.register);assert.equal(setFavorite,live.setFavorite);
+ assert.match(fs.readFileSync('components/marketplace-account-provider.tsx','utf8'),/useSyncExternalStore\(subscribeToNothing, \(\) => false, \(\) => true\)/);
+});
 test('global search uses exactly the catalog brand parameter and no client event',()=>{
  const {GlobalSearch}=load('components/global-search.tsx',{'next/navigation':{useSearchParams:()=>new URLSearchParams('brand=Yamaha')}});
  const html=renderToStaticMarkup(React.createElement(GlobalSearch));assert.match(html,/action="\/listados"/);assert.match(html,/name="brand"/);assert.match(html,/value="Yamaha"/);assert.match(html,/role="search"/);

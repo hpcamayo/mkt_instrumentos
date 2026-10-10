@@ -3,6 +3,91 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## UX-7 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-7 review)
+
+Brief `ux-7-admin.md`. Under N17 the recommendations W1–W9 are taken provisionally; F7 (bulk actions) is not built.
+
+| ID | Choice | Why | Status |
+| --- | --- | --- | --- |
+| U18 | The queue keeps its card list; the concept's master-detail, review checklist and decision bar wait | `sprint-8` pins about 170 source assertions on today's markup; the layout is worth deciding with real moderation volume | pending (owner) |
+| U19 | Approvals stay one click; only verify/revoke gains a confirmation | Approving is the queue's main job and is reversible from the record; verification changes every new listing of a store | provisional (Claude Code) |
+
+## UX-6 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-6 review)
+
+Brief `ux-6-accounts.md`. Under N17 the recommendations A1–A9 are taken provisionally; flags take no change: G3 (password minimum) unchanged, the "artículo" notification string not migrated, "Compras y ventas" kept.
+
+| ID | Choice | Why | Status |
+| --- | --- | --- | --- |
+| U14 | Confirmation copy: a question title, a one-line body, a verb on the button ("Ocultar", "Marcar vendida", "Republicar copia", "Eliminar alerta", "Registrar venta", "Cancelar solicitud" with "Volver", "Enviar reseña"). "Registro" dropped from the mark-sold and relist questions (glossary) | The old questions kept; the button names the action instead of "Aceptar" | provisional (Claude Code) |
+| U15 | Onboarding forms (sign-in, sign-up, store application, password) keep their single top notice; per-field errors wait | They run on auth flows the overnight rules keep unchanged | pending (owner: UX-8 or later) |
+| U16 | Resumen is not turned into a to-do list | It needs new reads across transactions and reviews | pending (owner) |
+| U17 | Favoritos keeps its own card | A favourite can be sold or unavailable; the catalog card has no state for that | pending (owner) |
+
+## UX-5 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-5 review)
+
+Brief `ux-5-selling.md`. Under N17 every question S1–S11 takes its recommendation (S1–S11 A) as a provisional answer; every product flag takes no change: F6 (draft autosave) not built, F4 ("Nuevo" only for stores) not built, F2 (condition scale) unchanged, F1 (relist) not touched, the "producto" database string not migrated.
+
+| ID | Choice | Why | Status |
+| --- | --- | --- | --- |
+| U9 | Spanish attribute labels: Cuerpo sólido, Semihueca, Hueca, Distorsión, Compresor, Afinador, Multiefectos, Gabinete, De cinta, Corbatero, Cañón. Kept: Single coil, Humbucker, P90, Overdrive, Fuzz, Delay, Reverb, Chorus, Wah, True bypass, Phantom power, Shell pack, Dark and the shape names | S9 A; the design system welcomes musician vocabulary ("cuerpo sólido"), and the kept names are what Peruvian musicians search. Values and URLs unchanged; the labels change wherever they show (filters, chips, cards, spec table) | provisional (Claude Code) |
+| U10 | The edit page gets the condition cards and Spanish labels only; per-field errors and the error summary on edit wait for UX-8 | The edit form's save flow and photo editor are pinned by `photo-editor.test.cjs` (a hook-level harness); reworking its validation overnight risks the edit rules | pending (owner: keep for UX-8 or drop) |
+| U11 | Type chips appear once a category with more than one type is chosen; a single-type category selects its type silently, as today | No one-chip question to answer | provisional (Claude Code) |
+| U12 | The description's label is visually hidden under the "Descripción" section heading; the hint carries a live count "N de 40 caracteres mínimos" | One visible name per field; the count answers "why won't it send" before the summary does | provisional (Claude Code) |
+| U13 | After sending, the confirmation offers "Ver mis publicaciones" / "Ver inventario", "Publicar otro instrumento" and "Volver al resumen" | S6 A; the old links kept, plus a way to start again | provisional (Claude Code) |
+
+## Raised during the UX-4 build (cloud session, 10 Oct; provisional, for the 4a/4b reviews)
+
+Built on L1–L21 as answered (N17). Where the brief left a detail open or a rule forced a change, Claude Code chose; each choice is reversible at the review.
+
+| ID | Choice | Why | Status |
+| --- | --- | --- | --- |
+| U1 | The listing's trust statement reads "Coordinas el pago y la entrega directamente con quien vende. Laria no procesa pagos, no retiene dinero, no gestiona envíos ni garantiza el equipo o la transacción." + "Consejos de seguridad" | The brief worded the store and bar lines only; this keeps the full LEGAL-005/006 content of the old notice (L5 A) | provisional (Claude Code) |
+| U2 | The verified-store line says "…No es una garantía sobre su equipo ni sus ventas." (brief: "sus productos") | The glossary rejects "producto" (`ux-copy.test.cjs`) | provisional (Claude Code) |
+| U3 | Phone bar: WhatsApp on the left, the 44 px favourite on the right (brief: favourite first) | DOM order = visual order = Tab order (WhatsApp right after the identity block) | provisional (Claude Code) |
+| U4 | Phones: "Reportar publicación" follows the seller card, before the reviews (brief: after the reviews) | Keeps Tab order equal to the visual order without duplicating the control | provisional (Claude Code) |
+| U5 | "Publicado hoy" on the publication day (was "Publicado hace 0 días"); the date line is composed on the server | Reads naturally; a server string cannot mismatch on hydration (the #418 lesson) | provisional (Claude Code) |
+| U6 | Store grid photos stay lazy (no eager first row) | `analytics-browser-smoke` reads the first store card's lazy image; the header is the store page's LCP | provisional (Claude Code) |
+| U7 | When the store's reputation call fails, the "Reseñas" section link, the reviews and the rating figure are all left out | The brief's failure rule, applied to the section links too | provisional (Claude Code) |
+| U8 | Spec strip and table values keep the card's units ("6 cuerdas", "22\"") | One label per value across card, strip and table | provisional (Claude Code) |
+
+## UX-4 brief: provisional answers (owner, 2026-10-09)
+
+The brief `ux-4-listing-store.md` asks L1–L21 on its review page https://claude.ai/artifact/T2pej3FqaGD3Nimwi5VGcY (answers in the page's db collection `answers`, one document per question). Options and context are in the brief. **Provisional:** before travelling on the evening of 9 Oct the owner answered in the session "Yes, all recommendations", so every question takes its recommendation (L11 B, all others A). They were built while the owner was away and are confirmed or reversed at the 4a and 4b reviews (N17). The same answers were written to the review page's `answers` collection, each with a note saying so.
+
+| ID | Question | Recommendation | Status |
+| --- | --- | --- | --- |
+| L1 | Split and release: 4a (listing, with #418) then 4b (store), one release after 4b | A | provisional 2026-10-09 (owner: all recommendations) |
+| L2 | Listing layout: two columns as in the concept | A | provisional 2026-10-09 (owner: all recommendations) |
+| L3 | Gallery: thumbnails with "+N", swipe on phones, a lightbox | A | provisional 2026-10-09 (owner: all recommendations) |
+| L4 | Contact on phones: one module that becomes a bar at the bottom below 1024 px | A | provisional 2026-10-09 (owner: all recommendations) |
+| L5 | The one trust statement: the full limitation per surface | A | provisional 2026-10-09 (owner: all recommendations) |
+| L6 | F3: hide the public view counter (views still counted) | A | provisional 2026-10-09 (owner: all recommendations) |
+| L7 | F5: no safety step before WhatsApp | A | provisional 2026-10-09 (owner: all recommendations) |
+| L8 | "Compartir": not added ("Guardar" only) | A | provisional 2026-10-09 (owner: all recommendations) |
+| L9 | Spec strip (type attributes) and a table without repeated fields | A | provisional 2026-10-09 (owner: all recommendations) |
+| L10 | Seller card with real figures; no second WhatsApp button | A | provisional 2026-10-09 (owner: all recommendations) |
+| L11 | Reviewer's name: first name and initial | B | provisional 2026-10-09 (owner: all recommendations) |
+| L12 | Related listings: two sections, four cards, left out when empty | A | provisional 2026-10-09 (owner: all recommendations) |
+| L13 | Current strip item on listing and verified store pages | A | provisional 2026-10-09 (owner: all recommendations) |
+| L14 | Owner's view of their own listing: not now | A | provisional 2026-10-09 (owner: all recommendations) |
+| L15 | Load the report form (and the Supabase client) only when pressed | A | provisional 2026-10-09 (owner: all recommendations) |
+| L16 | Store: section links; no in-store search, chips or sort | A | provisional 2026-10-09 (owner: all recommendations) |
+| L17 | Store: compact header; banner strip only when uploaded | A | provisional 2026-10-09 (owner: all recommendations) |
+| L18 | "Sobre la tienda" without street address or contact person | A | provisional 2026-10-09 (owner: all recommendations) |
+| L19 | Store breadcrumb by store type, none on phones | A | provisional 2026-10-09 (owner: all recommendations) |
+| L20 | F12: no public confirmed-sales count (it needs a migration) | A | provisional 2026-10-09 (owner: all recommendations) |
+| L21 | F1 to UX-5, F2 after V1 | A | provisional 2026-10-09 (owner: all recommendations) |
+
+## Release cadence (owner, 2026-10-09)
+
+UX-1 to UX-3 reached production together on 9 Oct (`50963fb`, deployment `dpl_57FCmnsw4EyQxCB4XwKkeZniKMfx`; `docs/ux-production-release-gate.md`, `reviews/ux-release-audit.md`).
+
+| ID | Question | Decision | Status |
+| --- | --- | --- | --- |
+| N15 | When the redesign reaches production. N13 kept one rebase and one merge for the end of UX-8 | Each sub-sprint is audited and released once the owner accepts it: Codex's blind audit of that sub-sprint's diff, the owner's push (a fast-forward of `main`), a read-only production smoke and a release record. `ux/redesign` is fast-forwarded to `origin/main` before each sub-sprint starts (done 9 Oct to `568b07a`). Supersedes N13's "rebase once, at merge time" from UX-4 on; the commit IDs in the UX-1 to UX-3 docs stay mapped in `commit-ids.md` | decided 2026-10-09 by owner |
+| N17 | Work while the owner travels (night of 9 to 10 Oct, no internet) | The session moves to a Claude Code cloud session and keeps working: UX-4 built on the recommendations (L1–L21 provisional), then UX-5 onward briefed and built on Claude Code's own recommendations, each sub-sprint in its own commits, every answer marked provisional for the owner's review. `ux/redesign` is pushed to GitHub as a backup (owner's go-ahead for a possible Vercel preview, the N14 condition); `main` and production are never touched (production stays at UX-3). No migrations, schema, RLS, auth, moderation or product-rule changes; flags take their no-change options. Evidence that needs the local Supabase stack (browser captures, audits, row re-runs) is prepared and run on the owner's Mac afterwards if the cloud has no database | decided 2026-10-09 by owner (session answers) |
+| N16 | How a release proves write flows. A read-only production smoke cannot exercise publishing, account changes or moderation, which UX-5 to UX-7 redesign | A: a scripted production smoke with a dedicated test account, cleaned up afterwards · B: local evidence only, as for UX-1 to UX-3 | pending (owner; needed before UX-5 ships) |
+
 ## UX-3b accepted (owner, 2026-10-09)
 
 The owner accepted UX-3b (the home) through its review page (https://claude.ai/artifact/EYTr4nHqS4u1GHLZeoaAM1): 37 of 37 checks Correct (`ux-3b-acceptance.md` § Owner acceptance (9 Oct)). P6–P10 below are decided as built. N12's refreshed texts (group G) were all marked Correct, option A for PUB-008, PUB-010 and PUB-015; on the owner's request the same day they were recorded with status Pass (N12 below).
@@ -133,7 +218,7 @@ Deviations from the approved brief, explained in `ux-2-acceptance.md` § Deviati
 | N10 | Footer "Registrar mi tienda": the brief names `/registro/tienda` | `/registrar-tienda`, the existing gate (signed out: create a store account or sign in; signed-in Particular: told a store needs its own account; store owner: their store) | decided 2026-10-07 by owner: keep `/registrar-tienda` |
 | N11 | Phone breadcrumbs: the brief's rule (only a back link to the parent) also applies to the catalog and the category landings, where the Catalogo-390 concept shows none | Back link on the catalog ("‹ Inicio"), the category landings ("‹ Instrumentos") and listings | decided 2026-10-07 by owner: the back link only on listing pages; the catalog and the category landings show no breadcrumb on phones (the strip, on every page since N12, starts with "Instrumentos" and the logo leads home). Built 7 Oct (`Breadcrumbs` `phoneBackLink`) |
 | N12 | The shell that UX-2 replaced (mega-menu, categories and search on account and Admin pages) is still what the canonical V1 record describes: functional-spec "Sprint 5 owner navigation clarification" and "Sprint 6 implementation clarification", rows PUB-008 and PUB-010 to PUB-015, and the legal pages "linked from the global footer" | **Preference decided 3 Oct by the owner:** restore the mega-menu's category and type access inside the UX-2 design. Built as the hybrid in `ux-2-shell.md` § Amendment: strip categories open "Ver todos" + canonical types, "Instrumentos" and "Tiendas verificadas" stay links, a compact panel on phones, the strip on account pages, "Explorar categorías" in the Admin navigation | **Preference: decided** (owner, 3 Oct). **Build side: decided 2026-10-07 by owner:** the build stays as it is (no search in Admin; on phones no search on account, legal or sign-in pages; the phone form is the compact panel, not an accordion); the canonical record is reworded instead. **Record side: decided 2026-10-07 by owner:** Claude Code drafts the wording and re-runs the rows on this build (`ux-2-reconciliation.md`); the owner records status and wording in `docs/functional-spec.md` and `acceptance/cases.tsv`. **Drafts approved by the owner on 8 Oct (review page B01–B06); refreshed 9 Oct for the shell after 3b and approved again on the 3b review page (https://claude.ai/artifact/EYTr4nHqS4u1GHLZeoaAM1, G01–G10 Correct; option A for PUB-008, PUB-010 and PUB-015). Recorded 2026-10-09 at the owner's request (status Pass, the owner's word):** the clarification paragraph and the legal-pages line in `docs/functional-spec.md`; the evidence for PUB-008–PUB-015 in `acceptance/cases.tsv` (option A, rows' words unchanged) |
-| N13 | When to rebase `ux/redesign` on `main` (the roadmap asks before each acceptance package; UX-2 was not rebased; `origin/main` is one docs-only commit ahead, no overlapping files) | Not rebased | decided 2026-10-07 by owner: rebase once, at merge time, so the commit IDs quoted in the acceptance docs stay valid until then; **rebased 2026-10-09 onto `origin/main` `313fb7e` before the production push** (`commit-ids.md` maps the IDs) |
+| N13 | When to rebase `ux/redesign` on `main` (the roadmap asks before each acceptance package; UX-2 was not rebased; `origin/main` is one docs-only commit ahead, no overlapping files) | Not rebased | decided 2026-10-07 by owner: rebase once, at merge time, so the commit IDs quoted in the acceptance docs stay valid until then; **rebased 2026-10-09 onto `origin/main` `313fb7e` before the production push** (`commit-ids.md` maps the IDs). Superseded from UX-4 on by N15 (a release per sub-sprint) |
 | N14 | Checks only a person can do (Safari/WebKit, a screen reader, real touch, a deployment) | Chromium only | decided 2026-10-07 by owner: the owner runs a short Safari + VoiceOver pass on the Mac against the local build (steps on the UX-2 review page); real iPhone/Android checks wait for a preview deployment (pushing needs the owner's go-ahead) or UX-8. **Mac pass done 8 Oct by the owner: all Correct** |
 
 ## Product-behavior flags raised in UX-2

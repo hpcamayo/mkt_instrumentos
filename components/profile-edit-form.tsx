@@ -63,7 +63,7 @@ export function ProfileEditForm({
         <LocationFields defaultCity={profile.city} defaultRegion={profile.region} />
       </div>
       {message ? <PageNotice kind="error" message={message} /> : null}
-      <Button type="submit" block className="sm:w-auto sm:justify-self-start" loading={busy} loadingLabel="Guardando...">Guardar perfil</Button>
+      <Button type="submit" block className="sm:w-auto sm:justify-self-start" loading={busy} loadingLabel="Guardando…">Guardar perfil</Button>
     </form>
   );
 }

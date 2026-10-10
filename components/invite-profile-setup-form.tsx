@@ -161,7 +161,7 @@ export function InviteProfileSetupForm({
 
       {message ? <Notice tone="warning">{message}</Notice> : null}
 
-      <Button type="submit" block loading={state === "submitting"} loadingLabel="Guardando...">
+      <Button type="submit" block loading={state === "submitting"} loadingLabel="Guardando…">
         {content.submitLabel}
       </Button>
     </form>

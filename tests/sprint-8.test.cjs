@@ -366,10 +366,16 @@ test("Admin mark-sold uses the canonical guarded listing transition and explicit
 });
 
 test("authenticated report controls cover public listings, active stores, and revealed reviews", () => {
-  const control = source("components/content-report.tsx");
+  // UX-4 L15: the trigger stays in content-report.tsx and the form (with the Supabase client) loads on the first press
+  // from content-report-form.tsx; together they keep every label and rule below.
+  const trigger = source("components/content-report.tsx");
+  const form = source("components/content-report-form.tsx");
+  const control = `${trigger}\n${form}`;
   const listing = source("app/instrumentos/[slug]/page.tsx");
-  const store = source("app/tiendas/[slug]/page.tsx");
-  const reputation = source("components/reputation-summary.tsx");
+  const store = source("components/store/store-sections.tsx");
+  const reputation = source("components/listing/reputation-section.tsx");
+  assert.match(trigger, /dynamic\(\(\) => import\("@\/components\/content-report-form"\)/);
+  assert.doesNotMatch(trigger, /browser-client|getSupabaseBrowserClient/);
 
   assert.match(control, /type ReportTarget = "listing" \| "store" \| "review"/);
   assert.match(control, /useMarketplaceAccount\(\)/);

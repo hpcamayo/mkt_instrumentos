@@ -144,7 +144,7 @@ export function LoginForm() {
           type="submit"
           block
           loading={state === "submitting"}
-          loadingLabel="Procesando..."
+          loadingLabel="Procesando…"
         >
           {mode === "password" ? "Ingresar" : "Enviar enlace"}
         </Button>

@@ -227,7 +227,7 @@ export function SellerSignupForm() {
         type="submit"
         block
         loading={state === "loading" || state === "submitting"}
-        loadingLabel={state === "submitting" ? "Creando cuenta..." : "Revisando sesión..."}
+        loadingLabel={state === "submitting" ? "Creando cuenta…" : "Revisando sesión…"}
       >
         Crear cuenta Particular
       </Button>

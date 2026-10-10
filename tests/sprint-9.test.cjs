@@ -346,7 +346,9 @@ test("LEGAL-005/LEGAL-006: safety and trust copy states the limitations and neve
   const trustSurfaces = [
     "components/legal-page.tsx", "components/site-footer.tsx", "components/category-landing.tsx", "components/home/home-sections.tsx", "components/home/home-banner.tsx",
     "components/sell-listing-form.tsx", "components/seller-signup-form.tsx", "app/instrumentos/[slug]/page.tsx", "app/tiendas/[slug]/page.tsx",
-    "components/reputation-summary.tsx", ...legalRoutes.map(([file]) => file),
+    // UX-4: the listing and store pages' limitation texts live in their components (TrustNote holds them all).
+    "components/listing/trust-note.tsx", "components/listing/contact-module.tsx", "components/listing/seller-card.tsx",
+    "components/listing/reputation-section.tsx", "components/store/store-header.tsx", "components/store/store-sections.tsx", ...legalRoutes.map(([file]) => file),
   ];
   const forbidden = /(garantizamos|te garantiza|compra (protegida|segura) con laria|pago (protegido|seguro) (en|con) laria|protección al comprador|devolución garantizada|autenticidad garantizada|envío gratis)/i;
   for (const file of trustSurfaces) assert.doesNotMatch(source(file), forbidden, file);
@@ -354,7 +356,10 @@ test("LEGAL-005/LEGAL-006: safety and trust copy states the limitations and neve
   // commissions and payments on every other page (docs/ux-redesign/ux-2-shell.md).
   assert.match(source("components/site-footer.tsx"), /Laria no cobra comisiones, no procesa pagos, no\s+retiene dinero, no gestiona envíos ni garantiza el equipo ni las transacciones/);
   assert.match(source("components/site-footer.tsx"), /No cobramos comisiones ni procesamos pagos\./);
-  assert.match(source("app/instrumentos/[slug]/page.tsx"), /href="\/consejos-de-seguridad"/);
+  // UX-4 L5 A: one trust statement per page, with the safety link, from TrustNote; the listing page renders it.
+  assert.match(source("components/listing/trust-note.tsx"), /href="\/consejos-de-seguridad"/);
+  assert.match(source("components/listing/trust-note.tsx"), /no procesa pagos, no retiene dinero, no gestiona envíos ni garantiza el equipo o la transacción/);
+  assert.match(source("app/instrumentos/[slug]/page.tsx"), /<TrustNote surface="listing"/);
 });
 
 test("public footer, forms and navigation link to legal/safety pages and category landings", () => {

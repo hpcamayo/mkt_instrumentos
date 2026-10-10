@@ -1,35 +1,32 @@
 import Link from "next/link";
-import { FavoriteButton } from "@/components/favorite-button";
-import { ContentReport } from "@/components/content-report";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { cache, Suspense, type ReactNode } from "react";
+import { cache, Suspense } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { ListingCard } from "@/components/listing-card";
 import { CategoryLanding } from "@/components/category-landing";
+import { ContentReport } from "@/components/content-report";
 import { JsonLd } from "@/components/json-ld";
-import { ListingDetailGallery } from "@/components/listing-detail-gallery";
+import { ContactModule } from "@/components/listing/contact-module";
+import { ListingGallery } from "@/components/listing/listing-gallery";
+import { RelatedListings, RelatedListingsSkeleton } from "@/components/listing/related-listings";
+import { ReputationSection } from "@/components/listing/reputation-section";
+import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@/components/listing/seller-card";
+import { SpecStrip, SpecTable } from "@/components/listing/spec-table";
+import { TrustNote } from "@/components/listing/trust-note";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
-import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PageContainer } from "@/components/page-container";
-import { ReputationSummary } from "@/components/reputation-summary";
-import { buttonClasses } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
+import { StripCurrent } from "@/components/strip-current";
+import { NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { Price } from "@/components/ui/price";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusTag, Tag } from "@/components/ui/tag";
-import { VerifiedMark } from "@/components/ui/verified-mark";
-import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
-import {
-  getFullListingSpecs,
-  getKeyListingSpecs,
-  type ListingSpec,
-} from "@/lib/listing-specs";
+import { getSpecStrip, getSpecTable } from "@/lib/listing-specs";
+import { formatMonthYear, formatPublishedAgo, listingCountLabel } from "@/lib/listing-page";
 import {
   buildWhatsAppUrl,
+  getConditionLabel,
   getListingDisplayTitle,
   getListingSecondaryTitle,
-  getSellerTypeLabel,
   normalizeStore,
   parseListingFilters,
   resolveParticularSeller,
@@ -38,9 +35,11 @@ import {
 } from "@/lib/listings";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
-import { parsePublicReputation, type PublicReputation } from "@/lib/transactions";
+import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
 import { fetchCatalogPage } from "@/lib/catalog";
 import {
+  categoryLandingPath,
+  categoryTypePath,
   getCategoryLandingBySlug,
   type CategoryLandingPage,
 } from "@/lib/category-pages";
@@ -154,6 +153,7 @@ const loadPublicListing = cache(async (slug: string) => {
           city,
           district,
           whatsapp_phone,
+          logo_url,
           created_at
         ),
         photo_count:listing_photo_count,
@@ -239,13 +239,15 @@ export default async function ListingDetailPage({
     : listing.owner_user_id
       ? { p_subject_user_id: listing.owner_user_id, p_limit: 5 }
       : null;
-  const { data: reputationData } = reputationTarget
+  // A failed reputation call leaves the reviews (and the rating figure) out instead of claiming there are none.
+  const reputationResult = reputationTarget
     ? await supabase.rpc("get_public_reputation", reputationTarget)
-    : { data: null };
+    : null;
+  const reputation = reputationResult && !reputationResult.error ? readPublicReputation(reputationResult.data) : null;
   return (
     <>
       <JsonLd data={buildListingJsonLd(listing)} />
-      <ListingDetail listing={listing} supabase={supabase} reputation={parsePublicReputation(reputationData)} />
+      <ListingDetail listing={listing} supabase={supabase} reputation={reputation} />
     </>
   );
 }
@@ -292,6 +294,11 @@ async function renderCategoryLanding(
   );
 }
 
+// The listing page (docs/ux-redesign/ux-4-listing-store.md § Listing page, answers L1–L21). From 1024 px two columns:
+// the gallery, "Especificaciones", "Descripción" and the reviews on the left (7 of 12); the decision column on the
+// right (identity, spec strip, the contact module, the trust statement, the seller card, "Reportar publicación"). Below
+// 1024 px one column, in the brief's order: the column wrappers become `contents` and each block takes its `order`;
+// the contact module becomes the bar at the bottom of the screen. Nothing is sticky.
 function ListingDetail({
   listing,
   supabase,
@@ -299,168 +306,133 @@ function ListingDetail({
 }: {
   listing: ListingDetailData;
   supabase: PublicSupabaseClient;
-  reputation: PublicReputation;
+  reputation: PublicReputation | null;
 }) {
   const store = normalizeStore(listing);
   const particular = resolveParticularSeller(listing);
-  const sellerName =
-    listing.seller_type === "store" ? store?.name : particular.name;
+  const isStore = listing.seller_type === "store";
   const displayTitle = getListingDisplayTitle(listing);
   const secondaryTitle = getListingSecondaryTitle(listing);
-  const sellerTypeLabel =
-    listing.seller_type === "store" && store?.is_verified === true
-      ? "Tienda verificada"
-      : getSellerTypeLabel(listing.seller_type);
-  const sellerLocation =
-    listing.seller_type === "store"
-      ? [store?.district, store?.city].filter(Boolean).join(", ") ||
-        `${listing.city}, ${listing.region}`
-      : `${listing.city}, ${listing.region}`;
-  const resolvedSellerLocation =
-    listing.seller_type === "store"
-      ? sellerLocation
-      : [particular.city, particular.region].filter(Boolean).join(", ") ||
-        sellerLocation;
-  const keySpecs = getKeyListingSpecs(listing, sellerName);
-  const fullSpecs = getFullListingSpecs(listing, sellerName);
   const isSold = listing.status === "sold";
+  const place = `${listing.city}, ${listing.region}`;
+  const seller: SellerSummary = {
+    name: (isStore ? store?.name : particular.name) || (isStore ? "Tienda" : "Particular"),
+    kind: isStore ? (store?.is_verified === true ? "verified" : "store") : "particular",
+    place: isStore
+      ? [store?.district, store?.city].filter(Boolean).join(", ") || place
+      : [particular.city, particular.region].filter(Boolean).join(", ") || place,
+    logoUrl: isStore ? store?.logo_url ?? null : null,
+    storeHref: isStore && store ? `/tiendas/${store.slug}` : null,
+    rating:
+      reputation && reputation.review_count > 0 && reputation.average_rating !== null
+        ? { average: reputation.average_rating, count: reputation.review_count }
+        : null,
+    since: formatMonthYear(isStore ? store?.created_at : particular.createdAt ?? listing.created_at),
+  };
+  const strip = getSpecStrip(listing);
+  const typeHref = listing.instrument_type
+    ? categoryTypePath(listing.category, listing.instrument_type)
+    : categoryLandingPath(listing.category);
 
   return (
-    <section className="bg-canvas/70">
-      <PageContainer className="py-6 sm:py-8">
+    <section className="bg-surface">
+      <StripCurrent value={listing.category} />
+      <PageContainer className="pb-10 pt-3 md:pt-5 lg:pb-14">
         <Breadcrumbs items={listingBreadcrumbs(listing, displayTitle)} phoneBackLink />
-        {!isSold ? <div className="mt-3 flex justify-end"><FavoriteButton listingId={listing.id} /></div> : null}
 
-        <div className="mt-4 grid min-w-0 gap-6 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1fr)] lg:items-start xl:gap-8">
-          <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
-            <ListingDetailGallery
-              photos={listing.listing_photos}
-              title={displayTitle}
-            />
+        <div className="mt-2 flex min-w-0 flex-col gap-6 md:mt-4 lg:grid lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:gap-x-8 lg:gap-y-10">
+          <div className="order-1 min-w-0 lg:col-span-7 lg:row-start-1">
+            <ListingGallery photos={listing.listing_photos} title={displayTitle} />
           </div>
 
-          <aside className="min-w-0 space-y-5">
-            <div className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
-              <div className="flex flex-wrap gap-2">
-                <SellerBadge
-                  label={sellerTypeLabel}
-                  isVerified={store?.is_verified === true}
-                />
-                {isSold ? (
-                  <StatusTag domain="listing" status="sold" />
-                ) : null}
-              </div>
-
-              <h1 className="mt-4 t-page text-ink">
+          <div className="contents lg:col-span-5 lg:col-start-8 lg:row-span-2 lg:row-start-1 lg:flex lg:min-w-0 lg:flex-col lg:gap-6 lg:self-start">
+            <div className="order-2 min-w-0 lg:order-1">
+              {isSold ? <div className="mb-3"><StatusTag domain="listing" status="sold" /></div> : null}
+              <h1 className="t-page text-ink">
                 {displayTitle}
               </h1>
-              {secondaryTitle ? (
-                <p className="mt-2 t-ui text-ink-2">
-                  {secondaryTitle}
-                </p>
-              ) : null}
-              <p className="mt-5">
+              {secondaryTitle ? <p className="mt-1 t-ui text-ink-2">{secondaryTitle}</p> : null}
+              <p className="mt-3">
                 <Price value={listing.price_pen} size="detail" />
               </p>
-
-              <ListingDetailMetadata
-                listingId={listing.id}
-                publishedAt={listing.published_at}
-                createdAt={listing.created_at}
-                initialViewCount={listing.view_count}
-                trackView={!isSold}
-              />
-
-              <KeySpecs specs={keySpecs} />
-
-              {isSold ? (
-                <p className="mt-6 rounded-panel bg-subtle p-4 t-ui font-semibold text-ink">
-                  Este instrumento fue marcado como vendido y ya no está disponible para consultas de compra.
-                </p>
-              ) : (
-                <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto]">
-                  <WhatsAppContactLink
-                    href={buildWhatsAppUrl(listing)}
-                    listingId={listing.id}
-                    className={buttonClasses({ block: true })}
-                  >
-                    <WhatsAppGlyph />
-                    Contactar por WhatsApp
-                  </WhatsAppContactLink>
-                  {listing.seller_type === "store" && store ? (
-                    <Link
-                      href={`/tiendas/${store.slug}`}
-                      className={buttonClasses({ variant: "secondary", block: true, className: "sm:w-auto" })}
-                    >
-                      Ver tienda
-                    </Link>
-                  ) : null}
-                </div>
-              )}
-
-              <Notice tone="info" role="note" className="mt-4">
-                Contacto directo por WhatsApp. Laria no procesa pagos, no retiene
-                dinero, no gestiona envíos ni garantiza la transacción o el
-                equipo.{" "}
-                <Link href="/consejos-de-seguridad" className="link font-semibold">
-                  Consejos de seguridad
-                </Link>
-              </Notice>
-              <div className="mt-3">
-                <ContentReport
-                  targetType="listing"
-                  targetId={listing.id}
-                  label="Reportar publicación"
-                />
-              </div>
+              <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+                {listing.condition ? <Tag>{getConditionLabel(listing.condition)}</Tag> : null}
+                <ListingDetailMetadata listingId={listing.id} trackView={!isSold}>
+                  {place} · {formatPublishedAgo(listing.published_at ?? listing.created_at, Date.now())}
+                </ListingDetailMetadata>
+              </p>
             </div>
 
-            <SellerTrustBox
-              sellerName={sellerName}
-              sellerTypeLabel={sellerTypeLabel}
-              sellerLocation={resolvedSellerLocation}
-              sellerVisibleSince={particular.createdAt ?? listing.created_at}
-              listing={listing}
-              isSold={isSold}
-              sellerPublishedCount={
-                <Suspense fallback="Cargando…">
+            {isSold ? (
+              <div className="order-3 grid gap-2 rounded-panel bg-canvas p-4 lg:order-3">
+                <p className="t-ui font-semibold text-ink">
+                  Este instrumento fue marcado como vendido y ya no está disponible para consultas de compra.
+                </p>
+                <Link href="#similares" className="link w-fit t-ui font-semibold">Ver publicaciones similares</Link>
+              </div>
+            ) : (
+              <ContactModule listingId={listing.id} href={buildWhatsAppUrl(listing)} className="order-3 lg:order-3" />
+            )}
+
+            <a href="#vendedor" className="order-4 -my-1 flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-control py-1 lg:hidden">
+              <span className="t-ui font-semibold text-ink underline decoration-line-deco underline-offset-[3px]">{seller.name}</span>
+              <span className="t-meta">{sellerKindLabel(seller.kind)}</span>
+              {seller.rating ? <span className="t-meta"><RatingFigure rating={seller.rating} /></span> : null}
+            </a>
+
+            <SpecStrip specs={strip} className="order-5 lg:order-2" />
+
+            {isSold ? null : <TrustNote surface="listing" className="order-6 lg:order-4" />}
+
+            <SellerCard
+              seller={seller}
+              sold={isSold}
+              className="order-9 lg:order-5"
+              listingCount={
+                <Suspense fallback={<li aria-hidden="true"><Skeleton className="inline-block h-[18px] w-28 align-middle" /></li>}>
                   <SellerInventory supabase={supabase} listing={listing} />
                 </Suspense>
               }
             />
 
-            <ReputationSummary reputation={reputation} title={`Reseñas de ${sellerName ?? "este vendedor"}`} />
+            <div className="order-10 lg:order-6">
+              <ContentReport targetType="listing" targetId={listing.id} label="Reportar publicación" icon />
+            </div>
+          </div>
 
-            <DetailSection title="Descripción">
+          <div className="contents lg:col-span-7 lg:col-start-1 lg:row-start-2 lg:flex lg:min-w-0 lg:flex-col lg:gap-10">
+            <SpecTable specs={getSpecTable(listing)} className="order-7 min-w-0" />
+
+            <section aria-labelledby="descripcion" className="order-8 min-w-0">
+              <h2 id="descripcion" className="t-section text-ink">Descripción</h2>
               {listing.description ? (
-                <p className="max-w-[68ch] whitespace-pre-line t-body text-ink">
+                <p className="mt-3 max-w-[68ch] whitespace-pre-line break-words t-body text-ink">
                   {listing.description}
                 </p>
               ) : (
-                <p className="t-body text-ink-2">
+                <p className="mt-3 t-body text-ink-2">
                   Esta publicación aún no tiene descripción.
                 </p>
               )}
-            </DetailSection>
+            </section>
 
-            <DetailSection title="Especificaciones completas">
-              <SpecsList specs={fullSpecs} />
-            </DetailSection>
-          </aside>
+            <ReputationSection
+              reputation={reputation}
+              title={`Reseñas de ${seller.name}`}
+              className="order-11 min-w-0"
+            />
+          </div>
         </div>
 
-        <Suspense
-          fallback={
-            <p className="py-6 t-ui text-ink-2">
-              Cargando publicaciones similares…
-            </p>
-          }
-        >
-          <SimilarListings supabase={supabase} listing={listing} />
-        </Suspense>
-        <Suspense fallback={null}>
-          <SellerListings supabase={supabase} listing={listing} />
-        </Suspense>
+        <div className="mt-10 grid gap-10 lg:mt-14 lg:gap-14">
+          <Suspense fallback={<RelatedListingsSkeleton />}>
+            <SimilarListings supabase={supabase} listing={listing} href={typeHref} />
+          </Suspense>
+          <Suspense fallback={<RelatedListingsSkeleton />}>
+            <SellerListings supabase={supabase} listing={listing} storeHref={seller.storeHref ?? null} />
+          </Suspense>
+        </div>
+        {isSold ? null : <div aria-hidden="true" className="contact-bar-spacer" />}
       </PageContainer>
     </section>
   );
@@ -600,215 +572,6 @@ const getMoreFromSellerListings = cache(
   },
 );
 
-function SellerBadge({
-  label,
-  isVerified,
-}: {
-  label: string;
-  isVerified: boolean;
-}) {
-  return isVerified ? <VerifiedMark /> : <Tag>{label}</Tag>;
-}
-
-function KeySpecs({ specs }: { specs: ListingSpec[] }) {
-  return (
-    <dl className="mt-6 grid grid-cols-2 gap-x-5 gap-y-4 border-y border-subtle py-5">
-      {specs.map((spec) => (
-        <div key={spec.label} className="min-w-0">
-          <dt className="t-micro text-ink-2">
-            {spec.label}
-          </dt>
-          <dd className="mt-1 break-words t-ui font-semibold text-ink">
-            {spec.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function SellerTrustBox({
-  sellerName,
-  sellerTypeLabel,
-  sellerLocation,
-  sellerVisibleSince,
-  listing,
-  isSold,
-  sellerPublishedCount,
-}: {
-  sellerName?: string | null;
-  sellerTypeLabel: string;
-  sellerLocation: string;
-  sellerVisibleSince: string;
-  listing: ListingDetailData;
-  isSold: boolean;
-  sellerPublishedCount: ReactNode;
-}) {
-  const store = normalizeStore(listing);
-  const isStore = listing.seller_type === "store";
-  const visibleSince =
-    isStore && store?.created_at
-      ? formatDate(store.created_at)
-      : formatDate(sellerVisibleSince);
-
-  return (
-    <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="t-micro text-ink-2">
-            {isStore ? "Sobre la tienda" : "Sobre el vendedor"}
-          </p>
-          <h2 className="mt-2 t-section text-ink">
-            {sellerName || "Particular"}
-          </h2>
-          <p className="mt-1 t-ui font-semibold text-ink-2">
-            {sellerTypeLabel}
-          </p>
-        </div>
-        {store?.is_verified === true ? (
-          <VerifiedMark />
-        ) : null}
-      </div>
-
-      {isStore && store?.description ? (
-        <p className="mt-4 line-clamp-3 t-ui text-ink-2">
-          {store.description}
-        </p>
-      ) : null}
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <TrustSignal
-          label="Ubicación"
-          value={sellerLocation || "No indicada"}
-        />
-        <TrustSignal label="Publicaciones" value={sellerPublishedCount} />
-        <TrustSignal label="Visible desde" value={visibleSince} />
-      </div>
-
-      <div className="mt-5 grid gap-3">
-        {!isSold ? (
-          <WhatsAppContactLink
-            href={buildWhatsAppUrl(listing)}
-            listingId={listing.id}
-            source="seller_panel"
-            className={buttonClasses({ block: true })}
-          >
-            <WhatsAppGlyph />
-            Contactar por WhatsApp
-          </WhatsAppContactLink>
-        ) : null}
-        {isStore && store ? (
-          <Link
-            href={`/tiendas/${store.slug}`}
-            className={buttonClasses({ variant: "secondary", block: true })}
-          >
-            Ver página de la tienda
-          </Link>
-        ) : null}
-      </div>
-
-      <p className="mt-5 rounded-panel bg-canvas p-3 t-meta text-ink-2">
-        {isSold
-          ? "Este registro se conserva como historial. Laria no procesó ni garantizó la transacción."
-          : "Coordina por WhatsApp, revisa el instrumento cuando sea posible y evita adelantos si no conoces al vendedor. Laria no procesa pagos, envíos ni garantías."}
-      </p>
-    </section>
-  );
-}
-
-function DetailSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
-      <h2 className="t-section text-ink">{title}</h2>
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
-
-function SpecsList({ specs }: { specs: ListingSpec[] }) {
-  if (specs.length === 0) {
-    return (
-      <p className="t-ui text-ink-2">
-        No hay especificaciones disponibles para esta publicación.
-      </p>
-    );
-  }
-
-  return (
-    <dl className="divide-y divide-subtle rounded-panel border border-subtle t-ui">
-      {specs.map((spec) => (
-        <div
-          key={spec.label}
-          className="grid gap-1 px-4 py-3 transition even:bg-canvas/55 sm:grid-cols-[minmax(160px,0.42fr)_1fr] sm:gap-6"
-        >
-          <dt className="font-semibold text-ink-2">{spec.label}</dt>
-          <dd className="break-words font-semibold text-ink sm:text-right">
-            {spec.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-function TrustSignal({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="rounded-control border border-subtle bg-canvas p-3">
-      <p className="t-micro text-ink-2">
-        {label}
-      </p>
-      <p className="mt-1 t-ui font-semibold text-ink">{value}</p>
-    </div>
-  );
-}
-
-function RelatedListingsSection({
-  title,
-  emptyMessage,
-  listings,
-}: {
-  title: string;
-  emptyMessage?: string;
-  listings: ListingCardData[];
-}) {
-  return (
-    <section className="mt-8">
-      <div className="mb-4 flex items-end justify-between gap-4">
-        <h2 className="t-section text-ink">{title}</h2>
-      </div>
-      {listings.length > 0 ? (
-        <div className="grid grid-cols-1 gap-[18px] min-[460px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-          {listings.map((item) => (
-            <ListingCard key={item.id} listing={item} source="recommendations" />
-          ))}
-        </div>
-      ) : (
-        <EmptyState headingLevel={3} title={emptyMessage ?? "No hay publicaciones disponibles por ahora"} />
-      )}
-    </section>
-  );
-}
-
-function formatDate(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "No disponible";
-  }
-
-  return new Intl.DateTimeFormat("es-PE", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
-
 function SupabaseSetupMessage() {
   warnMissingSupabaseEnv();
   return (
@@ -833,15 +596,18 @@ function SupabaseSetupMessage() {
 async function SimilarListings({
   supabase,
   listing,
+  href,
 }: {
   supabase: PublicSupabaseClient;
   listing: ListingDetailData;
+  href: string;
 }) {
   const result = await getSimilarListings(supabase, listing);
   return (
-    <RelatedListingsSection
+    <RelatedListings
+      id="similares"
       title="Publicaciones similares"
-      emptyMessage="Todavía no hay publicaciones similares"
+      link={{ href, label: "Ver todo" }}
       listings={result.listings}
     />
   );
@@ -850,23 +616,24 @@ async function SimilarListings({
 async function SellerListings({
   supabase,
   listing,
+  storeHref,
 }: {
   supabase: PublicSupabaseClient;
   listing: ListingDetailData;
+  storeHref: string | null;
 }) {
   const result = await getMoreFromSellerListings(supabase, listing);
-  return result.listings.length ? (
-    <RelatedListingsSection
-      title={
-        listing.seller_type === "store"
-          ? "Más de esta tienda"
-          : "Más de este vendedor"
-      }
+  return (
+    <RelatedListings
+      id="mas-del-vendedor"
+      title={listing.seller_type === "store" ? "Más de esta tienda" : "Más de este vendedor"}
+      link={storeHref ? { href: storeHref, label: "Ver la tienda" } : null}
       listings={result.listings}
     />
-  ) : null;
+  );
 }
 
+// "N publicaciones" on the seller card: the seller's active publications today; left out when the count failed.
 async function SellerInventory({
   supabase,
   listing,
@@ -875,7 +642,5 @@ async function SellerInventory({
   listing: ListingDetailData;
 }) {
   const { publishedCount } = await getMoreFromSellerListings(supabase, listing);
-  return publishedCount === null
-    ? "No disponible"
-    : `${publishedCount} ${publishedCount === 1 ? "publicación activa" : "publicaciones activas"}`;
+  return publishedCount === null ? null : <li>{listingCountLabel(publishedCount)}</li>;
 }

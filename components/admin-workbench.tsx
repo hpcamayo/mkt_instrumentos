@@ -64,6 +64,22 @@ function stringList(item: AdminJsonItem, key: string) {
     : [];
 }
 
+// Approve-like and reject-like decisions look different (UX-7 W2): rejecting, hiding, dismissing and revoking use the
+// danger button; approving, verifying and resolving the secondary one. The decision itself is unchanged.
+export function isNegativeMutation(mutation: AdminMutation) {
+  if (mutation.kind === "verification") return !mutation.verified;
+  if (mutation.kind === "report") return mutation.status === "dismissed";
+  if (mutation.kind === "review") return mutation.hidden;
+  return mutation.decision === "reject" || mutation.decision === "hide";
+}
+
+// Verifying or revoking a store changes how all its listings publish, so it asks first (UX-7 W3).
+export function verificationConfirmation(verified: boolean) {
+  return verified
+    ? "La tienda mostrará la marca de Tienda verificada y sus publicaciones nuevas aparecerán sin revisión previa si cumplen las reglas."
+    : "La tienda dejará de mostrarse como verificada y sus publicaciones nuevas volverán a pasar por revisión.";
+}
+
 export function adminDate(value: string) {
   if (!value) return "Sin fecha";
   return ADMIN_DATE_FORMATTER.format(new Date(value));
@@ -128,6 +144,28 @@ function formatRevisionValue(field: string, value: Json | undefined, instrumentT
     return [`${filter?.label ?? key.replaceAll("_", " ")}: ${formatted}`];
   });
   return values.length ? values.join("; ") : "Sin características";
+}
+
+// A queue photo shown inline (UX-7 W1); it still opens full size in a new tab.
+function QueuePhoto({ href, label }: { href: string; label: string }) {
+  return (
+    <li className="min-w-0">
+      <a href={href} target="_blank" rel="noreferrer" className="group grid gap-1 text-meta font-semibold text-ink">
+        <Image
+          src={href}
+          alt={label}
+          width={320}
+          height={240}
+          // Private previews need the Admin browser's authenticated cookies.
+          unoptimized={href.startsWith("/api/listing-images/")}
+          loading="lazy"
+          sizes="(max-width: 639px) 50vw, 200px"
+          className="aspect-[4/3] w-full rounded border border-subtle bg-canvas object-cover"
+        />
+        <span className="link w-fit">Abrir {label.toLowerCase()}</span>
+      </a>
+    </li>
+  );
 }
 
 function RevisionPhotos({ title, photos }: { title: string; photos: AdminJsonItem[] }) {
@@ -277,7 +315,7 @@ export function AdminMutationControl({
           <button
             type="submit"
             disabled={busy}
-            className={buttonClasses({ variant: "secondary" })}
+            className={buttonClasses({ variant: isNegativeMutation(mutation) ? "danger" : "secondary", size: "sm" })}
           >
             {busy ? "Guardando…" : `Confirmar: ${label}`}
           </button>
@@ -287,7 +325,7 @@ export function AdminMutationControl({
               restoreFocusRef.current = true;
               setExpanded(false);
             }}
-            className="min-h-10 rounded-control border border-line-strong px-3 py-2 text-meta font-semibold text-ink"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
           >
             Cancelar
           </button>
@@ -306,7 +344,7 @@ export function AdminMutationControl({
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2">
-          <button type="button" disabled={busy} onClick={() => void execute()} className={buttonClasses({ variant: "secondary" })}>
+          <button type="button" disabled={busy} onClick={() => void execute()} className={buttonClasses({ variant: isNegativeMutation(mutation) ? "danger" : "secondary", size: "sm" })}>
             {busy ? "Guardando…" : `Confirmar: ${label}`}
           </button>
           <button
@@ -315,7 +353,7 @@ export function AdminMutationControl({
               restoreFocusRef.current = true;
               setExpanded(false);
             }}
-            className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink"
+            className={buttonClasses({ variant: "secondary", size: "sm" })}
           >
             Cancelar
           </button>
@@ -332,7 +370,7 @@ export function AdminMutationControl({
         aria-label={`${label}: ${mutation.id}`}
         disabled={busy}
         onClick={() => (reasonLabel || confirmationText ? setExpanded(true) : void execute())}
-        className="min-h-10 rounded-control border border-line-strong bg-white px-3 py-2 text-meta font-semibold text-ink transition hover:bg-canvas disabled:opacity-50"
+        className={buttonClasses({ variant: isNegativeMutation(mutation) ? "danger" : "secondary", size: "sm" })}
       >
         {busy ? "Procesando…" : label}
       </button>
@@ -414,6 +452,7 @@ function QueueActions({
       <AdminMutationControl
         mutation={{ kind: "verification", id, verified: true }}
         label="Verificar tienda"
+        confirmationText={verificationConfirmation(true)}
         onComplete={onComplete}
       />
     );
@@ -513,7 +552,7 @@ function QueueItem({
             {title}
           </h2>
           <p className="mt-1 text-meta text-ink-2">
-            En espera desde {adminDate(createdAt)} · {id}
+            En espera desde {adminDate(createdAt)}
           </p>
         </div>
         {adminNumber(item, "open_target_report_count") > 1 ? (
@@ -557,12 +596,12 @@ function QueueItem({
       </div>
 
       {firstPhotoUrl || storePhotos.length || adminString(item, "logo_url") || adminString(item, "banner_url") ? (
-        <div className="flex flex-wrap gap-3 text-meta font-semibold">
-          {firstPhotoUrl ? <a href={firstPhotoUrl} target="_blank" rel="noreferrer" className="link">Abrir foto principal</a> : null}
-          {adminString(item, "logo_url") ? <a href={adminString(item, "logo_url")} target="_blank" rel="noreferrer" className="link">Abrir logo</a> : null}
-          {adminString(item, "banner_url") ? <a href={adminString(item, "banner_url")} target="_blank" rel="noreferrer" className="link">Abrir banner</a> : null}
-          {storePhotos.map((photo, index) => typeof photo.image_url === "string" ? <a key={String(photo.id ?? photo.image_url)} href={photo.image_url} target="_blank" rel="noreferrer" className="link">Foto de tienda {index + 1}</a> : null)}
-        </div>
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Fotos para revisar">
+          {firstPhotoUrl ? <QueuePhoto href={firstPhotoUrl} label="Foto principal" /> : null}
+          {adminString(item, "logo_url") ? <QueuePhoto href={adminString(item, "logo_url")} label="Logo" /> : null}
+          {adminString(item, "banner_url") ? <QueuePhoto href={adminString(item, "banner_url")} label="Banner" /> : null}
+          {storePhotos.map((photo, index) => typeof photo.image_url === "string" ? <QueuePhoto key={String(photo.id ?? photo.image_url)} href={photo.image_url} label={`Foto de tienda ${index + 1}`} /> : null)}
+        </ul>
       ) : null}
 
       <div className="flex flex-wrap gap-3 text-meta font-semibold">
@@ -570,6 +609,7 @@ function QueueItem({
         {targetHref ? <Link href={targetHref} className="link">Inspeccionar objetivo</Link> : null}
         <Link href={auditHref} className="link">Ver auditoría</Link>
       </div>
+      <p className="text-meta text-ink-2">Identificador: <code className="break-all font-mono text-[13px]">{id}</code></p>
 
       <QueueActions queue={queue} item={item} onComplete={onComplete} />
     </article>
