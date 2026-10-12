@@ -578,6 +578,8 @@ Post-V1 concepts include `featured_listing_orders` and `store_plan_subscriptions
 Added by the 25 migrations `20260927120000_canonical_catalog.sql` … `20261021120000_catalog_attribute_value_es.sql`.
 Reference data for listing autofill, Jev and category navigation (post-V1, see `functional-spec.md`); it changes no
 marketplace table, RLS policy or listing behavior, and no application code reads it yet.
+The only reader is the flagged, Admin-only autofill/Jev prototype (`docs/catalog-autofill-jev-prototype.md`), off by
+default and read-only.
 
 - **Identity:** `catalog_manufacturers` (+ `catalog_manufacturer_aliases`), `catalog_products` (manufacturer + model key +
   identity domain; `entity_level` model / family, `family_product_id`), `catalog_product_aliases`,
