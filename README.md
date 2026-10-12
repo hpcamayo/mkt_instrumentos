@@ -106,7 +106,7 @@ El archivo `supabase/seed.sql` incluye datos locales para desarrollo:
 - 3 tiendas.
 - 12 listados de tiendas.
 - Ciudades de Peru: Lima, Ayacucho, Huancayo y Arequipa.
-- Categorias: `guitars`, `basses`, `drums`, `cymbals`, `microphones`, `pedals`, `amplifiers` y `audio interfaces`.
+- Categorias: `guitars`, `basses`, `percussion` (tipos `drums` y `cymbals`), `microphones`, `pedals`, `amplifiers` y `audio` (tipo `audio_interface`). Las categorias `keyboards`, `winds` y `strings` existen desde el 12 Oct 2026 pero el seed aun no tiene listados en ellas.
 - Mezcla de registros `approved` y `pending`.
 
 Para recrear la base local con migraciones y seed:

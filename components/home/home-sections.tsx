@@ -65,12 +65,13 @@ export function ShowcaseSection({ listings, total }: { listings: ListingCardData
   );
 }
 
-// Eight tiles in taxonomy order, each a link to its landing (SEO-002), with its count (Q10 B).
+// One tile per category in taxonomy order (ten: two rows of five on wide screens), each a link to its landing
+// (SEO-002), with its count (Q10 B).
 export function CategoryTiles({ counts }: { counts: Record<string, number | null> }) {
   return (
     <section aria-labelledby="categorias-titulo">
       <SectionHeader id="categorias-titulo" title="Explora por categoría" />
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5 xl:grid-cols-8">
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-5">
         {categoryOptions.map((category) => {
           const count = counts[category.value];
           return (

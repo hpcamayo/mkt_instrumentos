@@ -8,14 +8,25 @@ import { getShellLayout } from "@/lib/shell";
 
 // Chooses the frame for the current route (lib/shell.ts). The footers are server-rendered and passed in, so
 // only the header and the strip ship as client code. Admin draws its own frame and its own <main>.
-export function SiteShell({ children, fullFooter, slimFooter }: { children: ReactNode; fullFooter: ReactNode; slimFooter: ReactNode }) {
+export function SiteShell({
+  children,
+  fullFooter,
+  slimFooter,
+  menuBrands = {},
+}: {
+  children: ReactNode;
+  fullFooter: ReactNode;
+  slimFooter: ReactNode;
+  // Listing category → the brands its strip panel lists (lib/catalog-brands.ts, read by the root layout).
+  menuBrands?: Record<string, string[]>;
+}) {
   const layout = getShellLayout(usePathname());
   if (layout.header === "none") return <>{children}</>;
   return (
     <div className="flex min-h-screen flex-col">
       {/* Two components, not a prop: the home header and the standard header keep their own state and hooks. */}
       {layout.header === "home" ? <HomeHeader /> : <SiteHeader layout={layout} />}
-      {layout.strip !== "none" ? <GlobalCategories visibility={layout.strip} /> : null}
+      {layout.strip !== "none" ? <GlobalCategories visibility={layout.strip} brands={menuBrands} /> : null}
       <main id="contenido" tabIndex={-1} className="flex-1">{children}</main>
       {layout.footer === "full" ? fullFooter : layout.footer === "slim" ? slimFooter : null}
     </div>

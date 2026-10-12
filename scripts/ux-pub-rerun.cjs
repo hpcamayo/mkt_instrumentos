@@ -314,7 +314,7 @@ function searchEvents() {
     log("PUB-013", "strip: type link, then a client navigation to a listing @1440", { afterType, afterClient });
     run(s, "click", 'button[aria-controls="categoria-drums"]');
     const opened = json(s, PANELS).open;
-    evaluate(s, "window.next.router.push('/instrumentos/baterias'); 'ok'");
+    evaluate(s, "window.next.router.push('/instrumentos/percusion'); 'ok'");
     settle(s);
     log("PUB-013", "strip: panel open, then a client route change @1440", { openBefore: opened, ...json(s, PANELS), clientNavigation: evaluate(s, "window.__sameDocument === true") });
     close(s);
@@ -328,7 +328,7 @@ function searchEvents() {
       const afterType = { ...json(h, CHOSEN("electric_guitar")), clientNavigation: evaluate(h, "window.__sameDocument === true") };
       load(h, "/");
       const before = openHome(h);
-      evaluate(h, "window.__sameDocument = true; window.next.router.push('/instrumentos/baterias'); 'ok'");
+      evaluate(h, "window.__sameDocument = true; window.next.router.push('/instrumentos/percusion'); 'ok'");
       settle(h);
       const routeChanged = { ...json(h, CHOSEN("drums")), clientNavigation: evaluate(h, "window.__sameDocument === true") };
       evaluate(h, "window.history.back(); 'ok'");

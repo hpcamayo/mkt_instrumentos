@@ -1,7 +1,8 @@
 import { CATALOG_PATH } from "@/lib/catalog-filters";
+import { subtypeLinks, type NavLink } from "@/lib/category-nav";
 import { categoryLandingPath, categoryTypePath, getCategoryLandingByValue, reservedCategorySlugs } from "@/lib/category-pages";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
-import { categoryOptions, getCategoryLabel } from "@/lib/listings";
+import { categoryOptions, getCategoryLabel, legacyCategories } from "@/lib/listings";
 
 // Site shell per route (docs/ux-redesign/ux-2-shell.md). Pure so tests can pin every template.
 export type ShellLayout = {
@@ -67,23 +68,37 @@ export const VERIFIED_STORES_PATH = "/listados?seller_type=verified_store";
 // "link" items go straight to their page; "category" items open that category's menu.
 export type StripItem = { key: string; label: string; href: string; kind: "link" | "category" };
 
+// Shorter strip labels, so ten categories still fit one row at 1280 px; the panel, the landing and every other place
+// keep the full label.
+const stripLabels: Record<string, string> = { keyboards: "Teclados" };
+
 // "Instrumentos" first, the categories in taxonomy order, "Tiendas verificadas" last (at the right on desktop).
 export const stripItems: readonly StripItem[] = [
   { key: "catalog", label: "Instrumentos", href: CATALOG_PATH, kind: "link" },
-  ...categoryOptions.map((category) => ({ key: category.value, label: category.label, href: categoryLandingPath(category.value), kind: "category" as const })),
+  ...categoryOptions.map((category) => ({ key: category.value, label: stripLabels[category.value] ?? category.label, href: categoryLandingPath(category.value), kind: "category" as const })),
   { key: "verified_stores", label: "Tiendas verificadas", href: VERIFIED_STORES_PATH, kind: "link" },
 ];
 
-export type CategoryMenu = { key: string; label: string; href: string; types: { value: string; label: string; href: string }[] };
+export type CategoryMenu = {
+  key: string;
+  label: string;
+  href: string;
+  types: { value: string; label: string; href: string; subtypes: NavLink[] }[];
+};
 
 // One menu per category, from the canonical taxonomy: "Ver todos" opens the category landing, then every instrument
 // type the listing form and the catalog filters accept, through the same helpers (a type that mirrors its category
-// resolves to the landing). The pre-UX-2 mega-menu offered the same destinations.
+// resolves to the landing). The pre-UX-2 mega-menu offered the same destinations. Each type also carries its subtypes
+// (lib/category-nav.ts: Strat, Clásicas, Delay…), the detailed level the panel and the landing show.
 export const categoryMenus: readonly CategoryMenu[] = categoryOptions.map((category) => ({
   key: category.value,
   label: category.label,
   href: categoryLandingPath(category.value),
-  types: getInstrumentTypeOptions(category.value).map((type) => ({ ...type, href: categoryTypePath(category.value, type.value) })),
+  types: getInstrumentTypeOptions(category.value).map((type) => ({
+    ...type,
+    href: categoryTypePath(category.value, type.value),
+    subtypes: subtypeLinks(category.value, type.value),
+  })),
 }));
 
 // The strip item for the current page, or null when none applies (listing and store pages, legal pages).
@@ -92,6 +107,7 @@ export function currentStripKey(pathname: string, params: { get(name: string): s
   if (slug !== null) return categoryOptions.find((category) => getCategoryLandingByValue(category.value)?.slug === slug)?.value ?? null;
   if (pathname !== CATALOG_PATH) return null;
   const category = params.get("category");
+  if (category && legacyCategories[category]) return legacyCategories[category].category;
   if (category && categoryOptions.some((option) => option.value === category)) return category;
   if (params.get("seller_type") === "verified_store") return "verified_stores";
   return "catalog";

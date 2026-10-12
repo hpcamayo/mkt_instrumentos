@@ -6,6 +6,8 @@ import { SearchTelemetry } from "@/components/marketplace-telemetry";
 import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
+import { brandsAlphabetical, type CategoryBrand } from "@/lib/catalog-brands-aggregate";
+import { BRANDS_ANCHOR, categoryBrandHref, subtypeLinks } from "@/lib/category-nav";
 import { categoryLandingPages, categoryTypePath, landingScope, type CategoryLandingPage } from "@/lib/category-pages";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
 import type { ListingCardData, ListingFilters as ListingFiltersType } from "@/lib/listings";
@@ -18,6 +20,7 @@ import { absoluteUrl } from "@/lib/site";
 // /listados?category=…, where filtering happens (categoryFilterRedirect); its own pages stay on the landing's path.
 export function CategoryLanding({
   landing,
+  brands = [],
   filters,
   listings,
   totalCount,
@@ -27,6 +30,8 @@ export function CategoryLanding({
   searchSignature,
 }: {
   landing: CategoryLandingPage;
+  // The category's brands in the instrument catalog (lib/catalog-brands.ts); none when the catalog is unavailable.
+  brands?: readonly CategoryBrand[];
   filters: ListingFiltersType;
   listings: ListingCardData[];
   totalCount: number;
@@ -106,6 +111,8 @@ export function CategoryLanding({
           />
         }
         after={
+          <>
+          <CategoryExplore landing={landing} brands={brands} />
           <div className="mt-12 grid gap-8 border-t border-line-deco pt-8 lg:grid-cols-2">
             <section aria-labelledby="otras-categorias">
               <h2 id="otras-categorias" className="t-section text-ink">Otras categorías</h2>
@@ -125,8 +132,53 @@ export function CategoryLanding({
               </p>
             </section>
           </div>
+          </>
         }
       />
     </>
+  );
+}
+
+// "Explora <categoría>": every type's subtypes and every catalog brand of the category, as chips into the catalog
+// (docs/ux-redesign/category-navigation.md). The strip panel shows the same subtypes from 768 px and the leading
+// brands; phones reach the full tree here.
+function CategoryExplore({ landing, brands }: { landing: CategoryLandingPage; brands: readonly CategoryBrand[] }) {
+  const types = getInstrumentTypeOptions(landing.category)
+    .map((type) => ({ ...type, subtypes: subtypeLinks(landing.category, type.value) }))
+    .filter((type) => type.subtypes.length > 0);
+  if (types.length === 0 && brands.length === 0) return null;
+  const label = landing.label.toLowerCase();
+  return (
+    <section aria-labelledby="explora" className="mt-12 border-t border-line-deco pt-8">
+      <h2 id="explora" className="t-section text-ink">Explora {label}</h2>
+      <div className="mt-4 grid gap-6 lg:grid-cols-2">
+        {types.map((type) => (
+          <div key={type.value}>
+            <h3 className="t-card-title text-ink">
+              {types.length > 1 ? <Link href={categoryTypePath(landing.category, type.value)} className="link">{type.label}</Link> : "Por tipo"}
+            </h3>
+            <ul aria-label={type.label} className="mt-2 flex flex-wrap gap-2">
+              {type.subtypes.map((subtype) => (
+                <li key={subtype.href}>
+                  <ChipLink href={subtype.href}>{subtype.label}</ChipLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {brands.length > 0 ? (
+        <div id={BRANDS_ANCHOR} className="mt-6 scroll-mt-28">
+          <h3 className="t-card-title text-ink">Marcas</h3>
+          <ul aria-label={`Marcas de ${label}`} className="mt-2 flex flex-wrap gap-2">
+            {brandsAlphabetical(brands).map((brand) => (
+              <li key={brand.name}>
+                <ChipLink href={categoryBrandHref(landing.category, brand.name)}>{brand.name}</ChipLink>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </section>
   );
 }

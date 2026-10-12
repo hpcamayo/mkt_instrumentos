@@ -182,7 +182,16 @@ test("instrument type and attributes reuse the supported filter definitions", ()
   );
   assert.deepEqual(sanitizeListingAttributes("electric_guitar", {}), {});
   assert.equal(isInstrumentTypeValid("guitars", "other"), true);
-  assert.equal(isInstrumentTypeValid("audio interfaces", "other"), true);
+  assert.equal(isInstrumentTypeValid("audio", "other"), true);
+  // 12 Oct 2026: drums and cymbals are types of percussion, the audio interface a type of audio; the retired
+  // categories no longer validate.
+  assert.equal(isInstrumentTypeValid("percussion", "drums"), true);
+  assert.equal(isInstrumentTypeValid("percussion", "cymbals"), true);
+  assert.equal(isInstrumentTypeValid("audio", "audio_interface"), true);
+  assert.equal(isInstrumentTypeValid("audio interfaces", "other"), false);
+  assert.equal(isInstrumentTypeValid("drums", "drums"), false);
+  assert.deepEqual(sanitizeListingAttributes("keyboards", { keyboard_type: "digital_piano", keys: "88", weighted_keys: "yes" }), { keyboard_type: "digital_piano", keys: "88", weighted_keys: "yes" });
+  assert.equal(sanitizeListingAttributes("winds", { wind_type: "kazoo" }), null);
   assert.deepEqual(sanitizeListingAttributes("other", {}), {});
   assert.equal(
     sanitizeListingAttributes("other", { parallel_taxonomy: "invalid" }),

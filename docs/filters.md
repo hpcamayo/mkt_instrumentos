@@ -119,12 +119,34 @@ These are the actual keys currently implemented in `lib/instrument-filters.ts`. 
 - `polar_pattern`: Cardioide, Supercardioide, Omnidireccional, Figura 8.
 - `connection`: XLR, USB, 3.5mm.
 
-### `audio_interface` / Interfaces / audio
+### `audio_interface` / Interfaces de audio
 
 - `inputs`: 1, 2, 4, 8+.
 - `connection`: USB, USB-C, Thunderbolt.
 - `phantom_power`: Si, No.
 - `midi`: Si, No.
+
+### `hand_percussion` / Percusión latina y de mano
+
+- `percussion_type`: Cajon, Congas, Bongos, Timbales, Djembe, Pandereta, Shaker / maraca, Cencerro, Percusion orquestal.
+
+### `keyboards` / Teclados y pianos
+
+- `keyboard_type`: Piano digital, Piano de escenario, Piano acustico, Sintetizador, Teclado arreglista, Teclado portatil, Workstation, Organo, Controlador MIDI.
+- `keys`: 25, 37, 49, 61, 73, 76, 88.
+- `weighted_keys`: Si, No.
+
+### `winds` / Vientos
+
+- `wind_type`: Saxofon, Trompeta, Trombon, Clarinete, Flauta traversa, Flauta dulce, Tuba / bombardino, Corno, Oboe / fagot, Armonica, Acordeon.
+
+### `string_instrument` / Cuerdas
+
+- `string_type`: Ukelele, Violin, Viola, Violonchelo, Contrabajo, Mandolina, Banjo.
+
+### `audio_gear` / Equipos de audio
+
+- `audio_type`: Mezcladora, Parlante, Subwoofer, Amplificador de potencia, Monitor de piso, Monitor de estudio, Audifonos, Monitor in-ear, Procesador de audio, Grabadora.
 
 ### `pedals` / Pedales
 

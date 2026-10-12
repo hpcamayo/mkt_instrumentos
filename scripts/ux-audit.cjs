@@ -203,7 +203,7 @@ async function homeChecks(report, log) {
   const state = (session) => JSON.parse(evaluate(session, HOME_MENU_STATE));
   const destinations = [
     ["todos", "Todos los instrumentos", "/listados"],
-    ["categoria", "Baterías", "/instrumentos/baterias"],
+    ["categoria", "Percusión", "/instrumentos/percusion"],
     ["tipo", "Guitarras eléctricas", "/listados?category=guitars&instrument_type=electric_guitar"],
     ["tiendas", "Tiendas verificadas", "/listados?seller_type=verified_store"],
   ];
@@ -457,7 +457,7 @@ async function discoveryChecks(report, log) {
 async function discover() {
   const xml = await (await fetch(`${base}/sitemap.xml`)).text();
   const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => new URL(match[1]).pathname);
-  const categories = new Set(["guitarras", "bajos", "baterias", "platillos", "microfonos", "pedales", "amplificadores", "interfaces-de-audio"]);
+  const categories = new Set(["guitarras", "bajos", "teclados", "percusion", "vientos", "cuerdas", "pedales", "amplificadores", "microfonos", "audio"]);
   return {
     listing: paths.find((url) => url.startsWith("/instrumentos/") && !categories.has(url.split("/")[2])),
     store: paths.find((url) => url.startsWith("/tiendas/")),
@@ -468,7 +468,7 @@ async function discover() {
   const { listing, store } = await discover();
   const groups = {
     public: [["inicio", "/"], ["catalogo", "/listados"], ["catalogo-filtrado", "/listados?category=guitars&condition=Nuevo&condition=Usado+-+buen+estado&location=Lima&location=Arequipa"],
-      ["catalogo-sin-resultados", "/listados?brand=zzzz"], ["categoria", "/instrumentos/guitarras"], ["categoria-baterias", "/instrumentos/baterias"], ...(listing ? [["publicacion", listing]] : []),
+      ["catalogo-sin-resultados", "/listados?brand=zzzz"], ["categoria", "/instrumentos/guitarras"], ["categoria-percusion", "/instrumentos/percusion"], ...(listing ? [["publicacion", listing]] : []),
       ...(store ? [["tienda", store]] : []), ["login", "/login"], ["no-encontrada", "/pagina-que-no-existe"], ...(errorRoute ? [["error", errorRoute]] : [])],
     particular: [["inicio", "/"], ["resumen", "/mi-cuenta"], ["catalogo", "/listados"], ["publicar", "/mi-cuenta/publicar"]],
     store: [["resumen", "/mi-cuenta"]],
@@ -642,7 +642,7 @@ async function discover() {
         }
         for (const width of [640, 720]) {
           run(session, "set", "viewport", String(width), "900");
-          for (const url of ["/", "/listados", "/listados?category=guitars&condition=Nuevo&condition=Usado+-+buen+estado&location=Lima&location=Arequipa", "/instrumentos/baterias", ...(listing ? [listing] : []), "/mi-cuenta", ...(group === "admin" ? ["/admin"] : []), "/terminos"]) {
+          for (const url of ["/", "/listados", "/listados?category=guitars&condition=Nuevo&condition=Usado+-+buen+estado&location=Lima&location=Arequipa", "/instrumentos/percusion", ...(listing ? [listing] : []), "/mi-cuenta", ...(group === "admin" ? ["/admin"] : []), "/terminos"]) {
             load(session, url);
             const overflow = evaluate(session, "document.documentElement.scrollWidth > innerWidth");
             report.zoom.push({ width, url, overflow });

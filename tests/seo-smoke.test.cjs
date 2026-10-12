@@ -126,11 +126,11 @@ test("valid representative sitemap passes; full sample URLs (including query) ar
   assert.equal(result.samples.store.href, `${site}/tiendas/tienda-qa?pagina=1`);
   for (const path of [category, listing, "/tiendas/tienda-qa?pagina=1", "/", "/listados", "/registro/vendedor", "/registro/tienda", "/login"]) assert.ok(fetch.requested.includes(path), path);
   // robots.txt + (9 indexable + 3 noindex) for googlebot and bingbot, then the required coverage (first crawler):
-  // page 2 + 8 category aliases + filtered catalog + 1 populated and 7 empty categories + sold listing
+  // page 2 + 10 category aliases + filtered catalog + 1 populated and 9 empty categories + sold listing
   // + home/listing/store JSON-LD + 2 Admin record pages.
-  assert.equal(result.passed.length, 25 + 24);
+  assert.equal(result.passed.length, 25 + 28);
   for (const [surface, state] of Object.entries(result.coverage)) assert.equal(state.status, "verified", surface);
-  for (const path of ["/listados?page=2", "/listados?category=audio+interfaces", "/listados?category=guitars&sort=price_asc", "/instrumentos/platillos", soldListing, "/admin/tiendas", "/admin/publicaciones"]) assert.ok(fetch.requested.includes(path), path);
+  for (const path of ["/listados?page=2", "/listados?category=audio", "/listados?category=guitars&sort=price_asc", "/instrumentos/cuerdas", soldListing, "/admin/tiendas", "/admin/publicaciones"]) assert.ok(fetch.requested.includes(path), path);
 });
 
 test("valid XML variants are parsed into real elements: CDATA, spaced tags, numeric references, prefixes and extensions", async () => {
@@ -253,7 +253,7 @@ test("every <loc> must be an absolute http(s) URL on the canonical origin, witho
 });
 
 test("samples are chosen by URL shape, not by fixed IDs", () => {
-  assert.equal(classifyPath("/instrumentos/interfaces-de-audio"), "category");
+  assert.equal(classifyPath("/instrumentos/percusion"), "category");
   assert.equal(classifyPath(listing), "listing");
   assert.equal(classifyPath("/instrumentos/fender-strat-0b6f4a1e-6a3d-4c43-9d49-1d3f64f9c2aa-republicado-0b6f4a1e"), "listing");
   assert.equal(classifyPath("/tiendas/otra-tienda"), "store");
@@ -595,7 +595,7 @@ test("catalog pagination: page 2 must canonicalize to itself or redirect to /lis
 
 test("category-only catalog URLs must canonicalize (canonical and og:url) to their landing page", async () => {
   // The Sprint 9 og:url bug: canonical pointed at the landing while og:url kept /listados.
-  await failsWith({ pages: { "/listados?category=drums": page(`${site}/instrumentos/baterias`, { ogUrl: `${site}/listados` }) } }, /\/listados\?category=drums: og:url https:\/\/laria\.audio\/listados is not the expected https:\/\/laria\.audio\/instrumentos\/baterias/);
+  await failsWith({ pages: { "/listados?category=percussion": page(`${site}/instrumentos/percusion`, { ogUrl: `${site}/listados` }) } }, /\/listados\?category=percussion: og:url https:\/\/laria\.audio\/listados is not the expected https:\/\/laria\.audio\/instrumentos\/percusion/);
   await failsWith({ pages: { "/listados?category=microphones": page(`${site}/listados?category=microphones`) } }, /\/listados\?category=microphones: canonical .* is not the expected https:\/\/laria\.audio\/instrumentos\/microfonos/, 2);
   await failsWith({ statuses: { "/listados?category=guitars": 500 } }, /\/listados\?category=guitars: HTTP 500/);
 });
@@ -611,7 +611,7 @@ test("filtered catalog URLs must be noindex, follow without a canonical, naming 
 
 test("populated categories are indexable with an ItemList; empty categories are noindex and publish none", async () => {
   const populated = `${site}/instrumentos/bajos`;
-  const empty = `${site}/instrumentos/platillos`;
+  const empty = `${site}/instrumentos/cuerdas`;
   const sitemapBody = sitemap([...representative, "/instrumentos/bajos"]);
   const both = { sitemapBody, populated: ["guitarras", "bajos"] };
   await run(both);
@@ -619,9 +619,9 @@ test("populated categories are indexable with an ItemList; empty categories are 
   await failsWith({ ...both, pages: { "/instrumentos/bajos": page(populated, { jsonLd: [breadcrumb(populated)] }) } }, /populated category \/instrumentos\/bajos: expected exactly one ItemList JSON-LD item, found 0/);
   // In the sitemap, the page must not be empty: an empty category must not be submitted.
   await failsWith({ sitemapBody }, /populated category \/instrumentos\/bajos: expected exactly one ItemList JSON-LD item, found 0|robots meta blocks indexing/, null);
-  await failsWith({ pages: { "/instrumentos/platillos": page(empty, { jsonLd: [breadcrumb(empty)] }) } }, /empty category \/instrumentos\/platillos: expected a noindex, follow robots meta \(found: none\)/);
-  await failsWith({ pages: { "/instrumentos/platillos": page(empty, { robots: "noindex, follow", jsonLd: [breadcrumb(empty), itemList([`${site}${listing}`])] }) } }, /empty category \/instrumentos\/platillos: an empty category must not publish an ItemList/);
-  await failsWith({ pages: { "/instrumentos/platillos": page(empty, { robots: "noindex, nofollow", jsonLd: [breadcrumb(empty)] }) } }, /empty category \/instrumentos\/platillos: expected a noindex, follow robots meta/);
+  await failsWith({ pages: { "/instrumentos/cuerdas": page(empty, { jsonLd: [breadcrumb(empty)] }) } }, /empty category \/instrumentos\/cuerdas: expected a noindex, follow robots meta \(found: none\)/);
+  await failsWith({ pages: { "/instrumentos/cuerdas": page(empty, { robots: "noindex, follow", jsonLd: [breadcrumb(empty), itemList([`${site}${listing}`])] }) } }, /empty category \/instrumentos\/cuerdas: an empty category must not publish an ItemList/);
+  await failsWith({ pages: { "/instrumentos/cuerdas": page(empty, { robots: "noindex, nofollow", jsonLd: [breadcrumb(empty)] }) } }, /empty category \/instrumentos\/cuerdas: expected a noindex, follow robots meta/);
 });
 
 test("legacy listing slugs without UUIDs are sampled as listings", async () => {
@@ -691,7 +691,7 @@ test("data-dependent surfaces must be verified or explicitly waived; core surfac
 
 test("noindex, follow pages fail when X-Robots-Tag or a crawler meta adds nofollow", async () => {
   const filtered = "/listados?category=guitars&sort=price_asc";
-  const empty = "/instrumentos/platillos";
+  const empty = "/instrumentos/cuerdas";
   for (const path of [filtered, empty, soldListing]) {
     for (const header of ["nofollow", "none", "googlebot: nofollow", "bingbot: none", "noindex, nofollow"]) {
       await failsWith({ pageHeaders: { [path]: { "X-Robots-Tag": header } } }, new RegExp(`X-Robots-Tag "${header}" adds [^,]*(nofollow|none)[^,]*, but the page must stay follow`));
@@ -701,7 +701,7 @@ test("noindex, follow pages fail when X-Robots-Tag or a crawler meta adds nofoll
     await run({ pageHeaders: { [path]: { "X-Robots-Tag": "noindex" } } });
   }
   const self = `${site}${empty}`;
-  await failsWith({ pages: { [empty]: page(self, { robots: "noindex, follow", jsonLd: [breadcrumb(self)] }).replace("</head>", '<meta name="googlebot" content="nofollow"/></head>') } }, /empty category \/instrumentos\/platillos: a robots-style meta adds nofollow, but the page must stay follow/);
+  await failsWith({ pages: { [empty]: page(self, { robots: "noindex, follow", jsonLd: [breadcrumb(self)] }).replace("</head>", '<meta name="googlebot" content="nofollow"/></head>') } }, /empty category \/instrumentos\/cuerdas: a robots-style meta adds nofollow, but the page must stay follow/);
   await failsWith({ pages: { [empty]: page(self, { robots: "noindex, follow", jsonLd: [breadcrumb(self)] }).replace("</main>", '</main><meta name="robots" content="none"/>') } }, /a robots-style meta adds none, but the page must stay follow/);
 });
 

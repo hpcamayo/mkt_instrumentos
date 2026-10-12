@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { cache, Suspense } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
@@ -37,10 +37,12 @@ import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
 import { fetchCatalogPage } from "@/lib/catalog";
+import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
 import {
   categoryLandingPath,
   categoryTypePath,
   getCategoryLandingBySlug,
+  legacyCategoryRedirect,
   type CategoryLandingPage,
 } from "@/lib/category-pages";
 import { createSearchReceipt } from "@/lib/marketplace-events-server";
@@ -194,6 +196,8 @@ const loadPublicListing = cache(async (slug: string) => {
 
 export async function generateMetadata({ params, searchParams }: ListingDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
+  // A retired category landing only redirects (below); it has no metadata of its own.
+  if (legacyCategoryRedirect(slug)) return { robots: NOINDEX_FOLLOW_ROBOTS };
   const landing = getCategoryLandingBySlug(slug);
   if (landing) {
     const resolvedSearchParams = await searchParams;
@@ -218,6 +222,8 @@ export default async function ListingDetailPage({
   searchParams,
 }: ListingDetailPageProps) {
   const { slug } = await params;
+  const moved = legacyCategoryRedirect(slug);
+  if (moved) permanentRedirect(moved);
   const landing = getCategoryLandingBySlug(slug);
   if (landing) {
     return renderCategoryLanding(landing, await searchParams);
@@ -271,7 +277,7 @@ async function renderCategoryLanding(
 
   const page = parsePage(searchParams.page);
   const filters = parseListingFilters({ category: landing.category });
-  const result = await loadCategoryPage(landing.category, page);
+  const [result, catalogBrands] = await Promise.all([loadCategoryPage(landing.category, page), getCatalogBrandsByCategory()]);
   if (!result.configured) return <SupabaseSetupMessage />;
 
   const redirectPage = getPageRedirect(page, result.count, result.error);
@@ -283,6 +289,7 @@ async function renderCategoryLanding(
   return (
     <CategoryLanding
       landing={landing}
+      brands={catalogBrands[landing.category] ?? []}
       filters={filters}
       listings={(result.data ?? []) as ListingCardData[]}
       totalCount={result.count ?? 0}

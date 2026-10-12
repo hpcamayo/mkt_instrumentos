@@ -3,16 +3,28 @@ import { resolveParticularSeller } from "@/lib/seller-contact";
 
 export { resolveParticularSeller } from "@/lib/seller-contact";
 
+// The ten marketplace categories (owner decision, 12 Oct 2026; docs/ux-redesign/category-restructure.md), in menu
+// order. Baterías and Platillos became types of Percusión, and Interfaces de audio a type of Audio.
 export const categoryOptions = [
   { value: "guitars", label: "Guitarras" },
   { value: "basses", label: "Bajos" },
-  { value: "drums", label: "Baterías" },
-  { value: "cymbals", label: "Platillos" },
-  { value: "microphones", label: "Micrófonos" },
+  { value: "keyboards", label: "Teclados y pianos" },
+  { value: "percussion", label: "Percusión" },
+  { value: "winds", label: "Vientos" },
+  { value: "strings", label: "Cuerdas" },
   { value: "pedals", label: "Pedales" },
   { value: "amplifiers", label: "Amplificadores" },
-  { value: "audio interfaces", label: "Interfaces de audio" },
+  { value: "microphones", label: "Micrófonos" },
+  { value: "audio", label: "Audio" },
 ] as const;
+
+// Category values retired on 12 Oct 2026 → the category and type they became. Old links, bookmarks and alert e-mails
+// keep working: the catalog reads them as the new category with the old type (the migration moved stored rows).
+export const legacyCategories: Readonly<Record<string, { category: string; instrumentType: string }>> = {
+  drums: { category: "percussion", instrumentType: "drums" },
+  cymbals: { category: "percussion", instrumentType: "cymbals" },
+  "audio interfaces": { category: "audio", instrumentType: "audio_interface" },
+};
 
 export const cityOptions = ["Lima", "Ayacucho", "Huancayo", "Arequipa"] as const;
 
@@ -209,11 +221,12 @@ export function parseListingFilters(
   const sellerType = readString("seller_type");
   const sort = readString("sort");
   const locations = readList("location");
-  const instrumentType = readString("instrument_type");
+  const legacy = legacyCategories[readString("category") ?? ""];
+  const instrumentType = readString("instrument_type") || legacy?.instrumentType;
   const advanced = parseAdvancedFilters(searchParams, instrumentType);
 
   return {
-    category: readString("category") || undefined,
+    category: legacy?.category ?? (readString("category") || undefined),
     cities: locations.length ? locations : readList("city"),
     conditions: readList("condition"),
     brand: readString("brand") || undefined,

@@ -46,7 +46,7 @@ const listing = (overrides = {}) => ({
   id: "6b1f4f8e-1111-4c43-9d49-1d3f64f9c2aa",
   title: "Batería Pearl Export usada",
   slug: "bateria-pearl-export-usada-6b1f4f8e",
-  category: "drums",
+  category: "percussion",
   brand: "Pearl",
   model: "Export",
   condition: "Usado - buen estado",
@@ -126,7 +126,7 @@ test("the showcase tile (vitrina, UX-3b): bordered box, square photo, the ink pr
   assert.match(html, /<div class="relative aspect-square border-b border-subtle bg-canvas"><img src="\/foto\.jpg" alt="Batería Pearl Export usada" loading="eager"/);
   assert.match(html, /<span class="absolute left-2 top-2 rounded-tag border-\[1\.5px\] border-white bg-ink [^"]*text-white[^"]*">S\/\s?1,800<\/span>/);
   assert.equal((html.match(/1,800/g) ?? []).length, 1, "the tag is the tile's only price");
-  assert.match(html, /<p class="truncate t-micro text-ink-2">Baterías<\/p><h3 class="truncate t-card-title text-ink"><a href="\/instrumentos\/bateria-pearl-export-usada-6b1f4f8e" class="[^"]*after:absolute after:inset-0[^"]*">Batería Pearl Export usada<\/a><\/h3>/);
+  assert.match(html, /<p class="truncate t-micro text-ink-2">Percusión<\/p><h3 class="truncate t-card-title text-ink"><a href="\/instrumentos\/bateria-pearl-export-usada-6b1f4f8e" class="[^"]*after:absolute after:inset-0[^"]*">Batería Pearl Export usada<\/a><\/h3>/);
   // Below 1280 px the city takes its own line above the seller words.
   assert.match(html, /<p class="flex min-w-0 items-center gap-1 t-meta max-xl:flex-wrap max-xl:gap-y-0"><span class="min-w-0 truncate max-xl:basis-full">Huancayo<\/span><span aria-hidden="true" class="max-xl:hidden">·<\/span><span class="shrink-0">Tienda verificada<\/span><svg/);
   assert.doesNotMatch(html, /fotos<|Shell pack/, "no photo count and no spec line on the tile");
@@ -175,7 +175,9 @@ test("F11: condition and location repeat, parse in URL order without repeats, an
   ]) assert.equal(href(url.split("?")[1] ?? ""), url);
   // The alert path of a one-value search is unchanged too.
   const { listingFiltersToSearchAlert, searchAlertPath } = load("lib/search-alerts.ts");
-  assert.equal(searchAlertPath(listingFiltersToSearchAlert(parse("category=drums&location=Arequipa&condition=Nuevo"))), "/listados?category=drums&location=Arequipa&condition=Nuevo");
+  assert.equal(searchAlertPath(listingFiltersToSearchAlert(parse("category=percussion&location=Arequipa&condition=Nuevo"))), "/listados?category=percussion&location=Arequipa&condition=Nuevo");
+  // A retired category (12 Oct 2026) reads as its new category and type, so an old link narrows the same way.
+  assert.equal(searchAlertPath(listingFiltersToSearchAlert(parse("category=drums&location=Arequipa&condition=Nuevo"))), "/listados?category=percussion&location=Arequipa&condition=Nuevo&instrument_type=drums");
   // Several values repeat the parameter.
   assert.equal(href("location=Lima&location=Arequipa&condition=Nuevo"), "/listados?location=Lima&location=Arequipa&condition=Nuevo");
 });
@@ -230,9 +232,13 @@ test("filter URLs: each option sets or clears its value; landings lead to /lista
   assert.deepEqual(facets("").map((facet) => facet.title), ["Categoría", "Condición", "Precio", "Ubicación", "Vendedor", "Marca"]);
   assert.deepEqual(facets("category=guitars").map((facet) => facet.title), ["Tipo", "Condición", "Precio", "Ubicación", "Vendedor", "Marca"]);
   assert.deepEqual(facets("category=guitars&instrument_type=acoustic_guitar").slice(6).map((facet) => facet.title), ["Tipo", "Cuerpo", "Cuerdas", "Mano", "Incluye preamp"]);
-  // A single-type category shows its attributes at once; short values are chips; the type facet is absent.
-  const drums = facets("category=drums");
-  assert.deepEqual(drums.map((facet) => facet.title), ["Condición", "Precio", "Ubicación", "Vendedor", "Marca", "Tipo", "Configuración", "Número de piezas", "Material", "Incluye hardware", "Incluye platillos", "Medida de bombo"]);
+  // A single-type category shows its attributes at once; the type facet is absent.
+  assert.deepEqual(facets("category=winds").map((facet) => facet.title), ["Condición", "Precio", "Ubicación", "Vendedor", "Marca", "Tipo"]);
+  // Percussion has several types (drums, cymbals, hand percussion): the type comes first, then each type's
+  // attributes; short values are chips.
+  assert.deepEqual(facets("category=percussion").map((facet) => facet.title), ["Tipo", "Condición", "Precio", "Ubicación", "Vendedor", "Marca"]);
+  const drums = facets("category=percussion&instrument_type=drums");
+  assert.deepEqual(drums.slice(6).map((facet) => facet.title), ["Tipo", "Configuración", "Número de piezas", "Material", "Incluye hardware", "Incluye platillos", "Medida de bombo"]);
   assert.equal(drums.find((facet) => facet.key === "kick_size").chips, true);
   assert.deepEqual(drums.find((facet) => facet.key === "pieces").options.map((item) => item.label), ["4 piezas", "5 piezas", "6 piezas", "7+ piezas"]);
   // Several-value facets toggle, in option order whatever the click order.
@@ -243,15 +249,15 @@ test("filter URLs: each option sets or clears its value; landings lead to /lista
   assert.equal(option("seller_type=store&page=3", "seller_type", "individual"), "/listados?seller_type=individual");
   assert.equal(option("seller_type=store", "seller_type", null), "/listados");
   assert.equal(option("category=guitars&instrument_type=electric_guitar&pickups=hss", "instrument_type", "acoustic_guitar"), "/listados?category=guitars&instrument_type=acoustic_guitar");
-  assert.equal(option("instrument_type=electric_guitar&location=Lima", "category", "drums"), "/listados?category=drums&location=Lima");
-  assert.equal(option("category=drums&kick_size=22", "kick_size", null), "/listados?category=drums");
+  assert.equal(option("instrument_type=electric_guitar&location=Lima", "category", "percussion"), "/listados?category=percussion&location=Lima");
+  assert.equal(option("category=percussion&instrument_type=drums&kick_size=22", "kick_size", null), "/listados?category=percussion&instrument_type=drums");
   // On a landing, options lead to the catalog with the category; nothing else chosen is the landing itself.
-  const landing = load("lib/category-pages.ts").landingScope("drums");
-  assert.deepEqual(landing, { landing: { category: "drums", path: "/instrumentos/baterias" } });
-  assert.equal(option("category=drums", "condition", "Nuevo", landing), "/listados?category=drums&condition=Nuevo");
-  assert.equal(option("category=drums&condition=Nuevo", "condition", "Nuevo", landing), "/instrumentos/baterias");
-  assert.equal(catalog.catalogHref(catalog.withSort(parse("category=drums"), "price_asc"), landing), "/listados?category=drums&sort=price_asc");
-  assert.equal(catalog.catalogHref(catalog.clearedFilters(landing), landing), "/instrumentos/baterias");
+  const landing = load("lib/category-pages.ts").landingScope("percussion");
+  assert.deepEqual(landing, { landing: { category: "percussion", path: "/instrumentos/percusion" } });
+  assert.equal(option("category=percussion", "condition", "Nuevo", landing), "/listados?category=percussion&condition=Nuevo");
+  assert.equal(option("category=percussion&condition=Nuevo", "condition", "Nuevo", landing), "/instrumentos/percusion");
+  assert.equal(catalog.catalogHref(catalog.withSort(parse("category=percussion"), "price_asc"), landing), "/listados?category=percussion&sort=price_asc");
+  assert.equal(catalog.catalogHref(catalog.clearedFilters(landing), landing), "/instrumentos/percusion");
   assert.equal(catalog.catalogHref(catalog.clearedFilters()), "/listados");
 });
 
