@@ -4,16 +4,44 @@ export type CategoryBrand = { name: string; models: number };
 // Listing category value ("guitars", "pedals"…) → its brands, the ones with the most catalog models first.
 export type CatalogBrandsByCategory = Record<string, CategoryBrand[]>;
 
+// Catalog category (its dotted id, docs/database.md § Canonical instrument catalog) → marketplace category; the longest
+// matching prefix wins ("pro_audio.microphones.usb" → microphones, "pro_audio.mixers" → audio). Kept here instead of
+// reading catalog_categories.laria_category, which the catalog build still writes with the eight categories used before
+// 12 Oct 2026. Catalog categories no marketplace category covers (DJ, studio, accessories) map to none.
+const catalogCategoryPrefixes: readonly (readonly [string, string])[] = [
+  ["instruments.guitars", "guitars"],
+  ["instruments.bass", "basses"],
+  ["instruments.keyboards", "keyboards"],
+  ["studio.midi_controllers", "keyboards"],
+  ["instruments.drums", "percussion"],
+  ["instruments.folk.cajon", "percussion"],
+  ["instruments.wind", "winds"],
+  ["instruments.strings", "strings"],
+  ["effects", "pedals"],
+  ["amplification", "amplifiers"],
+  ["pro_audio.microphones", "microphones"],
+  ["pro_audio.wireless", "microphones"],
+  ["pro_audio", "audio"],
+];
+
+export function marketplaceCategoryOf(catalogCategoryId: string) {
+  let match: readonly [string, string] | null = null;
+  for (const entry of catalogCategoryPrefixes) {
+    const [prefix] = entry;
+    const covers = catalogCategoryId === prefix || catalogCategoryId.startsWith(`${prefix}.`);
+    if (covers && (!match || prefix.length > match[0].length)) match = entry;
+  }
+  return match ? match[1] : null;
+}
+
 export function aggregateCatalogBrands(
-  categories: readonly { id: string; laria_category: string | null }[],
   products: readonly { category_id: string | null; manufacturer_id: string }[],
   manufacturers: readonly { id: string; canonical_name: string }[],
 ): CatalogBrandsByCategory {
-  const listingCategory = new Map(categories.flatMap((row) => (row.laria_category ? [[row.id, row.laria_category] as const] : [])));
   const names = new Map(manufacturers.map((row) => [row.id, row.canonical_name.trim()]));
   const counts = new Map<string, Map<string, number>>();
   for (const product of products) {
-    const category = product.category_id ? listingCategory.get(product.category_id) : undefined;
+    const category = product.category_id ? marketplaceCategoryOf(product.category_id) : null;
     const name = names.get(product.manufacturer_id);
     if (!category || !name) continue;
     const brands = counts.get(category) ?? new Map<string, number>();

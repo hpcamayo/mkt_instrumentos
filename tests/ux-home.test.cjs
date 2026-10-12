@@ -121,12 +121,12 @@ test("vitrina: the newest listing with 3 photos or more per category, the five m
   const winners = [
     listing("g", "guitars", "2026-04-19T17:00:00Z"),
     null,
-    listing("d", "drums", "2026-04-24T13:40:00Z"),
-    listing("c", "cymbals", null),
+    listing("d", "percussion", "2026-04-24T13:40:00Z"),
+    listing("c", "winds", null),
     listing("m", "microphones", "2026-04-24T20:30:00Z"),
     listing("p", "pedals", "2026-04-21T18:20:00Z"),
     listing("a", "amplifiers", "2026-04-22T21:45:00Z"),
-    listing("i", "audio interfaces", "2026-04-24T13:40:00Z", { created_at: "2026-02-01T00:00:00Z" }),
+    listing("i", "audio", "2026-04-24T13:40:00Z", { created_at: "2026-02-01T00:00:00Z" }),
   ];
   // Catalog order: published_at newest first, never-published last, then created_at, then id.
   assert.deepEqual(home.selectVitrina(winners).map((item) => item.id), ["m", "i", "d", "a", "p"]);
@@ -167,9 +167,9 @@ const called = (query, name, ...args) => query.calls.some(([callName, ...callArg
 const valueOf = (query, name, column) => query.calls.find(([callName, key]) => callName === name && key === column)?.[2];
 
 const LOCAL = {
-  winners: { guitars: listing("g", "guitars", "2026-04-19T17:00:00Z"), basses: listing("b", "basses", "2026-04-24T14:05:00Z"), drums: listing("d", "drums", "2026-04-24T13:40:00Z"),
+  winners: { guitars: listing("g", "guitars", "2026-04-19T17:00:00Z"), basses: listing("b", "basses", "2026-04-24T14:05:00Z"), percussion: listing("d", "percussion", "2026-04-24T13:40:00Z"),
     microphones: listing("m", "microphones", "2026-04-24T20:30:00Z"), pedals: listing("p", "pedals", "2026-04-21T18:20:00Z"), amplifiers: listing("a", "amplifiers", "2026-04-22T21:45:00Z"),
-    "audio interfaces": listing("i", "audio interfaces", "2026-04-23T15:25:00Z") },
+    audio: listing("i", "audio", "2026-04-23T15:25:00Z") },
 };
 function respondLocal({ failing } = {}) {
   return (query) => {
@@ -180,17 +180,17 @@ function respondLocal({ failing } = {}) {
       if (category === failing) return { data: null, error: { message: "boom" } };
       return { data: LOCAL.winners[category] ? [LOCAL.winners[category]] : [], error: null };
     }
-    const all = [...Object.values(LOCAL.winners), listing("x", "cymbals", "2026-04-23T19:10:00Z"), listing("y", "guitars", "2026-04-20T15:00:00Z")];
+    const all = [...Object.values(LOCAL.winners), listing("x", "winds", "2026-04-23T19:10:00Z"), listing("y", "guitars", "2026-04-20T15:00:00Z")];
     return { data: all.sort(home.compareCatalogOrder), error: null };
   };
 }
 
-test("home data: eight per-category vitrina queries on listing_photo_count, one feed query, nine head counts, three stores", async () => {
+test("home data: ten per-category vitrina queries on listing_photo_count, one feed query, eleven head counts, three stores", async () => {
   const client = fakeClient(respondLocal());
   const data = await home.fetchHomeData(client);
   const listingQueries = client.queries.filter((query) => query.table === "listings");
   const vitrina = listingQueries.filter((query) => called(query, "gte", "listing_photo_count"));
-  assert.equal(vitrina.length, 8);
+  assert.equal(vitrina.length, 10);
   for (const query of vitrina) {
     assert.ok(called(query, "eq", "status", "approved"));
     assert.ok(called(query, "gte", "listing_photo_count", 3));
@@ -200,9 +200,9 @@ test("home data: eight per-category vitrina queries on listing_photo_count, one 
     assert.ok(called(query, "limit", 1) && query.calls.filter(([name]) => name === "limit").length === 2);
     assert.match(query.calls.find(([name]) => name === "select")[1], /photo_count:listing_photo_count/);
   }
-  assert.deepEqual(vitrina.map((query) => valueOf(query, "eq", "category")), ["guitars", "basses", "drums", "cymbals", "microphones", "pedals", "amplifiers", "audio interfaces"]);
+  assert.deepEqual(vitrina.map((query) => valueOf(query, "eq", "category")), ["guitars", "basses", "keyboards", "percussion", "winds", "strings", "pedals", "amplifiers", "microphones", "audio"]);
   const counts = listingQueries.filter((query) => called(query, "select", "id", { count: "exact", head: true }));
-  assert.equal(counts.length, 9);
+  assert.equal(counts.length, 11);
   assert.ok(counts.every((query) => called(query, "eq", "status", "approved")));
   const feed = listingQueries.filter((query) => !vitrina.includes(query) && !counts.includes(query));
   assert.equal(feed.length, 1);
@@ -214,7 +214,7 @@ test("home data: eight per-category vitrina queries on listing_photo_count, one 
   assert.deepEqual(data.vitrina.map((item) => item.id), ["m", "b", "d", "i", "a"]);
   assert.deepEqual(data.feed.map((item) => item.id), ["x", "p", "y", "g"]);
   assert.equal(data.total, 12);
-  assert.equal(data.categoryCounts.drums, 2);
+  assert.equal(data.categoryCounts.percussion, 2);
   assert.equal(data.stores.length, 1);
 });
 
@@ -254,7 +254,7 @@ const FULL = {
   vitrina: ["m", "b", "d", "i", "a"].map((id) => LOCAL.winners[Object.keys(LOCAL.winners).find((key) => LOCAL.winners[key].id === id)]),
   feed: Array.from({ length: 11 }, (_, index) => listing(`f${index}`, "guitars", "2026-04-01T00:00:00Z")),
   total: 262,
-  categoryCounts: { guitars: 86, basses: 21, drums: 38, cymbals: 1, microphones: 24, pedals: 45, amplifiers: 19, "audio interfaces": 12 },
+  categoryCounts: { guitars: 86, basses: 21, keyboards: 7, percussion: 39, winds: 1, strings: 0, pedals: 45, amplifiers: 19, microphones: 24, audio: 12 },
   stores: [
     { id: "s1", name: "Casa Musical Grau", slug: "casa-musical-grau", city: "Lima", district: "Cercado", logo_url: null },
     { id: "s2", name: "Andes Sonido", slug: "andes-sonido", city: "Huancayo", district: null, logo_url: null },
@@ -293,8 +293,10 @@ test("vitrina and feed: showcase tiles, eleven grid cards and the end tile, six 
   assert.match(feed, /<a href="\/listados" class="[^"]*w-full[^"]*md:hidden">Ver las 262 publicaciones<\/a>/);
   const categories = html.slice(html.indexOf('aria-labelledby="categorias-titulo"'), html.indexOf('aria-labelledby="recientes-titulo"'));
   assert.match(categories, /<a href="\/instrumentos\/guitarras"[^>]*><span[^>]*>Guitarras<\/span><span[^>]*><span>86 publicaciones<\/span>/);
-  assert.match(categories, />Platillos<\/span><span[^>]*><span>1 publicación<\/span>/);
-  assert.match(categories, /grid-cols-2 [^"]*md:grid-cols-4 [^"]*xl:grid-cols-8/);
+  assert.match(categories, />Vientos<\/span><span[^>]*><span>1 publicación<\/span>/);
+  // Ten tiles: two columns on phones, two rows of five from 768 px.
+  assert.equal((categories.match(/<li><a href="\/instrumentos\//g) ?? []).length, 10);
+  assert.match(categories, /grid-cols-2 [^"]*md:grid-cols-5/);
 });
 
 test("Cómo funciona Laria carries H4 promises 2–5 and the safety line, with no email promise on the home (H4)", async () => {

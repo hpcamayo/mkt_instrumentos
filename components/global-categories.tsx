@@ -48,8 +48,9 @@ function CategoryStrip({ current, brands }: { current: string | null; brands: Me
   return (
     <div ref={group.containerRef} className="relative">
       <PageContainer className="px-0 sm:px-0 lg:px-0">
-        {/* Items carry 4 px of side padding for an inset focus ring, so the list pads 4 px less than the page gutter. */}
-        <ul className="scrollbar-none flex h-11 items-stretch gap-3 overflow-x-auto px-3 sm:px-5 md:h-12 md:gap-[18px] lg:px-7">
+        {/* Items carry 4 px of side padding for an inset focus ring, so the list pads 4 px less than the page gutter.
+            16 px between items keeps the ten categories on one row at 1280 px; narrower screens scroll the row. */}
+        <ul className="scrollbar-none flex h-11 items-stretch gap-3 overflow-x-auto px-3 sm:px-5 md:h-12 md:gap-4 lg:px-7">
           {stripItems.map((item) => {
             const isCurrent = item.key === current;
             const isOpen = item.key === group.openKey;

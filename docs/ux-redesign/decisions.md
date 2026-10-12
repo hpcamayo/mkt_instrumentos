@@ -3,6 +3,20 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## Marketplace categories (owner, 2026-10-12)
+
+Henri asked for separate Percusión, Vientos and Audio categories and confirmed the full proposed set on 12 Oct.
+Details, data migration and follow-ups: `category-restructure.md` (branch `ux/marketplace-categories`).
+
+| ID | Question | Answer | Status |
+| --- | --- | --- | --- |
+| MC1 | Which categories | Ten: Guitarras, Bajos, Teclados y pianos, Percusión (drums, cymbals, Latin and hand percussion), Vientos, Cuerdas, Pedales, Amplificadores, Micrófonos, Audio (interfaces and audio gear). DJ / production and Andean instruments not added | decided 2026-10-12 by owner ("the full set") |
+| MC2 | Existing listings, revisions and saved searches in the retired categories | Moved by the migration to the new category with their old type | provisional (Claude Code) |
+| MC3 | Retired landing URLs | Permanent redirect to the new category filtered to the old type | provisional (Claude Code) |
+| MC4 | Brand lists for the new categories | Mapped from the catalog's category ids in the app; the catalog build's `laria_category` to follow | provisional (Claude Code) |
+
+Supersedes CN4's "no categories the catalog has but Laria does not list" and CN5's "all eight categories".
+
 ## Detailed category navigation (cloud session, 10 Oct; for review on its own branch)
 
 Owner's ask: enrich the category navigation from the instrument catalog, reverb.com style. Built on

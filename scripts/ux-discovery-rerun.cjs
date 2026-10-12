@@ -117,7 +117,7 @@ function eventBatches(session) {
   // SEO-001 to SEO-007 on the landings.
   {
     const s = session(1440);
-    for (const [row, url] of [["SEO-001", "/instrumentos/guitarras"], ["SEO-002", "/instrumentos/guitarras"], ["SEO-003", "/instrumentos/baterias"], ["SEO-004", "/instrumentos/microfonos"]]) {
+    for (const [row, url] of [["SEO-001", "/instrumentos/guitarras"], ["SEO-002", "/instrumentos/guitarras"], ["SEO-003", "/listados?category=percussion&instrument_type=drums"], ["SEO-004", "/instrumentos/microfonos"]]) {
       load(s, url);
       log(row, `open ${url}`, json(s, PAGE));
     }

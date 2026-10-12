@@ -425,7 +425,7 @@ export const instrumentFilterGroups = [
   },
   {
     instrumentType: "audio_interface",
-    label: "Interfaces / audio",
+    label: "Interfaces de audio",
     filters: [
       {
         key: "inputs",
@@ -549,6 +549,139 @@ export const instrumentFilterGroups = [
       },
     ],
   },
+  // Types of the categories added on 12 Oct 2026 (docs/ux-redesign/category-restructure.md). Each has one "what is it"
+  // select, as cymbals do; its values are the catalog's subcategories, so the menu and the brand lists line up.
+  {
+    instrumentType: "hand_percussion",
+    label: "Percusión latina y de mano",
+    filters: [
+      {
+        key: "percussion_type",
+        label: "Tipo",
+        type: "select",
+        options: [
+          { value: "cajon", label: "Cajón" },
+          { value: "congas", label: "Congas" },
+          { value: "bongos", label: "Bongós" },
+          { value: "timbales", label: "Timbales" },
+          { value: "djembe", label: "Djembé" },
+          { value: "tambourine", label: "Pandereta" },
+          { value: "shaker", label: "Shaker / maraca" },
+          { value: "cowbell", label: "Cencerro" },
+          { value: "orchestral", label: "Percusión orquestal" },
+        ],
+      },
+    ],
+  },
+  {
+    instrumentType: "keyboards",
+    label: "Teclados y pianos",
+    filters: [
+      {
+        key: "keyboard_type",
+        label: "Tipo",
+        type: "select",
+        options: [
+          { value: "digital_piano", label: "Piano digital" },
+          { value: "stage_piano", label: "Piano de escenario" },
+          { value: "acoustic_piano", label: "Piano acústico" },
+          { value: "synthesizer", label: "Sintetizador" },
+          { value: "arranger", label: "Teclado arreglista" },
+          { value: "portable", label: "Teclado portátil" },
+          { value: "workstation", label: "Workstation" },
+          { value: "organ", label: "Órgano" },
+          { value: "midi_controller", label: "Controlador MIDI" },
+        ],
+      },
+      {
+        key: "keys",
+        label: "Número de teclas",
+        type: "select",
+        options: [
+          { value: "25", label: "25" },
+          { value: "37", label: "37" },
+          { value: "49", label: "49" },
+          { value: "61", label: "61" },
+          { value: "73", label: "73" },
+          { value: "76", label: "76" },
+          { value: "88", label: "88" },
+        ],
+      },
+      {
+        key: "weighted_keys",
+        label: "Teclas contrapesadas",
+        type: "boolean",
+        options: yesNoOptions,
+      },
+    ],
+  },
+  {
+    instrumentType: "winds",
+    label: "Vientos",
+    filters: [
+      {
+        key: "wind_type",
+        label: "Tipo",
+        type: "select",
+        options: [
+          { value: "saxophone", label: "Saxofón" },
+          { value: "trumpet", label: "Trompeta" },
+          { value: "trombone", label: "Trombón" },
+          { value: "clarinet", label: "Clarinete" },
+          { value: "flute", label: "Flauta traversa" },
+          { value: "recorder", label: "Flauta dulce" },
+          { value: "tuba", label: "Tuba / bombardino" },
+          { value: "french_horn", label: "Corno" },
+          { value: "oboe_bassoon", label: "Oboe / fagot" },
+          { value: "harmonica", label: "Armónica" },
+          { value: "accordion", label: "Acordeón" },
+        ],
+      },
+    ],
+  },
+  {
+    instrumentType: "string_instrument",
+    label: "Cuerdas",
+    filters: [
+      {
+        key: "string_type",
+        label: "Tipo",
+        type: "select",
+        options: [
+          { value: "ukulele", label: "Ukelele" },
+          { value: "violin", label: "Violín" },
+          { value: "viola", label: "Viola" },
+          { value: "cello", label: "Violonchelo" },
+          { value: "double_bass", label: "Contrabajo" },
+          { value: "mandolin", label: "Mandolina" },
+          { value: "banjo", label: "Banjo" },
+        ],
+      },
+    ],
+  },
+  {
+    instrumentType: "audio_gear",
+    label: "Equipos de audio",
+    filters: [
+      {
+        key: "audio_type",
+        label: "Tipo",
+        type: "select",
+        options: [
+          { value: "mixer", label: "Mezcladora" },
+          { value: "pa_speaker", label: "Parlante" },
+          { value: "subwoofer", label: "Subwoofer" },
+          { value: "power_amp", label: "Amplificador de potencia" },
+          { value: "stage_monitor", label: "Monitor de piso" },
+          { value: "studio_monitor", label: "Monitor de estudio" },
+          { value: "headphones", label: "Audífonos" },
+          { value: "in_ear", label: "Monitor in-ear" },
+          { value: "processor", label: "Procesador de audio" },
+          { value: "recorder", label: "Grabadora" },
+        ],
+      },
+    ],
+  },
   {
     instrumentType: "other",
     label: "Otro",
@@ -565,6 +698,7 @@ const attributeUnits: Record<string, (label: string) => string> = {
   kick_size: (label) => `${label}"`,
   size: (label) => `${label}"`,
   inputs: (label) => `${label} entradas`,
+  keys: (label) => `${label} teclas`,
 };
 
 export const shortAttributeKeys: ReadonlySet<string> = new Set(Object.keys(attributeUnits));

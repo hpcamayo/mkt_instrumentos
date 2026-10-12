@@ -1,6 +1,6 @@
 import type { CatalogScope } from "@/lib/catalog-filters";
 import { instrumentTypesByCategory } from "@/lib/listing-submission";
-import { categoryOptions } from "@/lib/listings";
+import { categoryOptions, legacyCategories } from "@/lib/listings";
 
 type CategoryValue = (typeof categoryOptions)[number]["value"];
 
@@ -28,17 +28,29 @@ const landingCopy = {
     description: "Bajos eléctricos usados y de tiendas en Perú. Compara precios, estado y ubicación, y contacta directo por WhatsApp.",
     intro: "Bajos publicados por particulares y tiendas en Perú. Revisa fotos y detalles técnicos antes de coordinar con el vendedor.",
   },
-  drums: {
-    slug: "baterias",
-    heading: "Baterías en venta en Perú",
-    description: "Baterías acústicas y electrónicas usadas y de tiendas en Perú. Revisa fotos y precios y contacta directo por WhatsApp.",
-    intro: "Baterías y sets publicados por particulares y tiendas. Compara configuración, estado y ubicación antes de contactar.",
+  keyboards: {
+    slug: "teclados",
+    heading: "Teclados y pianos en venta en Perú",
+    description: "Pianos digitales, sintetizadores y teclados usados y de tiendas en Perú. Compara precios y contacta al vendedor directo por WhatsApp.",
+    intro: "Pianos digitales, sintetizadores, teclados arreglistas y controladores publicados por particulares y tiendas. Revisa teclas, estado y ubicación antes de coordinar.",
   },
-  cymbals: {
-    slug: "platillos",
-    heading: "Platillos en venta en Perú",
-    description: "Platillos usados y de tiendas en Perú: crash, ride, hi-hat y más. Contacta al vendedor directo por WhatsApp.",
-    intro: "Platillos publicados por particulares y tiendas. Revisa tipo, medida y estado antes de coordinar con el vendedor.",
+  percussion: {
+    slug: "percusion",
+    heading: "Percusión en venta en Perú",
+    description: "Baterías, platillos, cajones y percusión latina usados y de tiendas en Perú. Revisa fotos y precios y contacta directo por WhatsApp.",
+    intro: "Baterías acústicas y electrónicas, platillos, cajones, congas y más, publicados por particulares y tiendas. Compara configuración, medida y estado antes de contactar.",
+  },
+  winds: {
+    slug: "vientos",
+    heading: "Instrumentos de viento en venta en Perú",
+    description: "Saxofones, trompetas, flautas y más instrumentos de viento usados y de tiendas en Perú. Contacta al vendedor directo por WhatsApp.",
+    intro: "Saxofones, trompetas, trombones, clarinetes, flautas, armónicas y acordeones publicados por particulares y tiendas en Perú.",
+  },
+  strings: {
+    slug: "cuerdas",
+    heading: "Ukeleles, violines y más instrumentos de cuerda en venta en Perú",
+    description: "Ukeleles, violines, mandolinas y otros instrumentos de cuerda usados y de tiendas en Perú. Contacta al vendedor directo por WhatsApp.",
+    intro: "Ukeleles, violines, violas, violonchelos, mandolinas y banjos publicados por particulares y tiendas. Revisa fotos y estado antes de coordinar.",
   },
   microphones: {
     slug: "microfonos",
@@ -58,11 +70,11 @@ const landingCopy = {
     description: "Amplificadores de guitarra y bajo usados y de tiendas en Perú. Compara potencia, estado y precio y contacta por WhatsApp.",
     intro: "Amplificadores y cabezales publicados por particulares y tiendas en Perú.",
   },
-  "audio interfaces": {
-    slug: "interfaces-de-audio",
-    heading: "Interfaces de audio en venta en Perú",
-    description: "Interfaces de audio usadas y de tiendas en Perú para grabar en casa o en estudio. Contacta al vendedor directo por WhatsApp.",
-    intro: "Interfaces de audio publicadas por particulares y tiendas. Revisa entradas, conexión y estado antes de coordinar.",
+  audio: {
+    slug: "audio",
+    heading: "Equipos de audio en venta en Perú",
+    description: "Interfaces de audio, mezcladoras, parlantes, monitores y audífonos usados y de tiendas en Perú. Contacta al vendedor directo por WhatsApp.",
+    intro: "Interfaces, mezcladoras, parlantes, monitores de estudio y audífonos publicados por particulares y tiendas. Revisa entradas, potencia y estado antes de coordinar.",
   },
 } satisfies Record<CategoryValue, Omit<CategoryLandingPage, "category" | "label">>;
 
@@ -72,12 +84,29 @@ export const categoryLandingPages: readonly CategoryLandingPage[] = categoryOpti
   label: option.label,
 }));
 
+// Landings of the categories retired on 12 Oct 2026 → the type they became (`legacyCategories` in lib/listings.ts).
+// The landing route answers them with a permanent redirect to that type, so indexed URLs keep their visitors.
+export const legacyCategorySlugs: Readonly<Record<string, string>> = {
+  baterias: "drums",
+  platillos: "cymbals",
+  "interfaces-de-audio": "audio interfaces",
+};
+
 // Listing-detail slugs are generated as `<title>-<uuid>` (and relists add a
 // suffix), so these bare category slugs never match a real listing.
-export const reservedCategorySlugs: ReadonlySet<string> = new Set(categoryLandingPages.map((page) => page.slug));
+export const reservedCategorySlugs: ReadonlySet<string> = new Set([
+  ...categoryLandingPages.map((page) => page.slug),
+  ...Object.keys(legacyCategorySlugs),
+]);
 
 export function getCategoryLandingBySlug(slug: string) {
   return categoryLandingPages.find((page) => page.slug === slug) ?? null;
+}
+
+// Where a retired landing slug now lives: the new category's type ("/instrumentos/baterias" → Percusión, Baterías).
+export function legacyCategoryRedirect(slug: string) {
+  const legacy = legacyCategories[legacyCategorySlugs[slug] ?? ""];
+  return legacy ? categoryTypePath(legacy.category, legacy.instrumentType) : null;
 }
 
 export function getCategoryLandingByValue(category: string | undefined) {
@@ -97,7 +126,7 @@ export function categoryLandingPath(category: string) {
 }
 
 // Catalog URL for one instrument type inside a category. When the type is the
-// category's only specific type (e.g. cymbals → cymbals), `instrument_type`
+// category's only specific type (e.g. winds → winds), `instrument_type`
 // adds nothing, so the link goes to the category landing instead.
 export function categoryTypePath(category: string, instrumentType: string) {
   const specificTypes = (instrumentTypesByCategory[category] ?? []).filter((type) => type !== "other");

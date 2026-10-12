@@ -2,7 +2,7 @@ import { CATALOG_PATH } from "@/lib/catalog-filters";
 import { subtypeLinks, type NavLink } from "@/lib/category-nav";
 import { categoryLandingPath, categoryTypePath, getCategoryLandingByValue, reservedCategorySlugs } from "@/lib/category-pages";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
-import { categoryOptions, getCategoryLabel } from "@/lib/listings";
+import { categoryOptions, getCategoryLabel, legacyCategories } from "@/lib/listings";
 
 // Site shell per route (docs/ux-redesign/ux-2-shell.md). Pure so tests can pin every template.
 export type ShellLayout = {
@@ -68,10 +68,14 @@ export const VERIFIED_STORES_PATH = "/listados?seller_type=verified_store";
 // "link" items go straight to their page; "category" items open that category's menu.
 export type StripItem = { key: string; label: string; href: string; kind: "link" | "category" };
 
+// Shorter strip labels, so ten categories still fit one row at 1280 px; the panel, the landing and every other place
+// keep the full label.
+const stripLabels: Record<string, string> = { keyboards: "Teclados" };
+
 // "Instrumentos" first, the categories in taxonomy order, "Tiendas verificadas" last (at the right on desktop).
 export const stripItems: readonly StripItem[] = [
   { key: "catalog", label: "Instrumentos", href: CATALOG_PATH, kind: "link" },
-  ...categoryOptions.map((category) => ({ key: category.value, label: category.label, href: categoryLandingPath(category.value), kind: "category" as const })),
+  ...categoryOptions.map((category) => ({ key: category.value, label: stripLabels[category.value] ?? category.label, href: categoryLandingPath(category.value), kind: "category" as const })),
   { key: "verified_stores", label: "Tiendas verificadas", href: VERIFIED_STORES_PATH, kind: "link" },
 ];
 
@@ -103,6 +107,7 @@ export function currentStripKey(pathname: string, params: { get(name: string): s
   if (slug !== null) return categoryOptions.find((category) => getCategoryLandingByValue(category.value)?.slug === slug)?.value ?? null;
   if (pathname !== CATALOG_PATH) return null;
   const category = params.get("category");
+  if (category && legacyCategories[category]) return legacyCategories[category].category;
   if (category && categoryOptions.some((option) => option.value === category)) return category;
   if (params.get("seller_type") === "verified_store") return "verified_stores";
   return "catalog";

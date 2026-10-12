@@ -73,7 +73,10 @@ test("SEO-001/SEO-007: category landing pages come from the canonical taxonomy w
   assert.equal(new Set(slugs).size, slugs.length);
   for (const slug of slugs) assert.match(slug, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
   assert.equal(categories.getCategoryLandingBySlug("guitarras").category, "guitars");
-  assert.equal(categories.getCategoryLandingBySlug("baterias").category, "drums");
+  assert.equal(categories.getCategoryLandingBySlug("percusion").category, "percussion");
+  assert.equal(categories.getCategoryLandingBySlug("teclados").category, "keyboards");
+  // Retired landings (12 Oct 2026) are no landings; they redirect (legacyCategoryRedirect).
+  assert.equal(categories.getCategoryLandingBySlug("baterias"), null);
   assert.equal(categories.getCategoryLandingBySlug("microfonos").category, "microphones");
   assert.equal(categories.getCategoryLandingBySlug("fender-stratocaster-0b6f4a1e-6a3d-4c43-9d49-1d3f64f9c2aa"), null);
   assert.equal(categories.categoryLandingPath("guitars"), "/instrumentos/guitarras");
@@ -142,8 +145,8 @@ test("catalog metadata canonicalizes unfiltered pages and keeps filtered combina
   assert.equal(seo.buildCatalogMetadata({}, 1).alternates.canonical, "/listados");
   assert.equal(seo.buildCatalogMetadata({ page: "2" }, 2).alternates.canonical, "/listados?page=2");
   assert.equal(seo.buildCatalogMetadata({ utm_source: "ig", brand: "" }, 1).alternates.canonical, "/listados");
-  assert.equal(seo.buildCatalogMetadata({ category: "drums" }, 1).alternates.canonical, "/instrumentos/baterias");
-  assert.deepEqual(seo.buildCatalogMetadata({ category: "drums", brand: "Pearl" }, 1).robots, { index: false, follow: true });
+  assert.equal(seo.buildCatalogMetadata({ category: "percussion" }, 1).alternates.canonical, "/instrumentos/percusion");
+  assert.deepEqual(seo.buildCatalogMetadata({ category: "percussion", brand: "Pearl" }, 1).robots, { index: false, follow: true });
   assert.deepEqual(seo.buildCatalogMetadata({ sort: "price_asc" }, 1).robots, { index: false, follow: true });
 });
 
@@ -277,6 +280,7 @@ test("sitemap lists public pages, non-empty categories and bounded public invent
   for (const expected of ["/", "/listados", "/terminos", "/privacidad", "/articulos-prohibidos", "/consejos-de-seguridad", "/instrumentos/guitarras", "/tiendas/tienda-qa", "/instrumentos/pedal-qa-l"]) {
     assert.ok(urls.includes(`https://laria.audio${expected}`), expected);
   }
+  assert.equal(urls.includes("https://laria.audio/instrumentos/percusion"), false);
   assert.equal(urls.includes("https://laria.audio/instrumentos/baterias"), false);
   assert.equal(urls.some((url) => /mi-cuenta|admin|login|api/.test(url)), false);
   for (const call of client.calls) {

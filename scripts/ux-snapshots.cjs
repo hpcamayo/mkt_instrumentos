@@ -59,7 +59,7 @@ async function discover() {
   const response = await fetch(`${base}/sitemap.xml`);
   const xml = await response.text();
   const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => new URL(match[1]).pathname);
-  const categories = new Set(["guitarras", "bajos", "baterias", "platillos", "microfonos", "pedales", "amplificadores", "interfaces-de-audio"]);
+  const categories = new Set(["guitarras", "bajos", "teclados", "percusion", "vientos", "cuerdas", "pedales", "amplificadores", "microfonos", "audio"]);
   const listing = urls.find((url) => url.startsWith("/instrumentos/") && !categories.has(url.split("/")[2]));
   const store = urls.find((url) => url.startsWith("/tiendas/"));
   return { listing, store };
@@ -83,7 +83,7 @@ function routeList({ listing, store }) {
       ["catalogo-filtros-abierto", "/listados?category=guitars", OPEN_FILTERS],
       ["catalogo-orden-abierto", "/listados?category=guitars", OPEN_SORT],
       ["categoria", "/instrumentos/guitarras"],
-      ["categoria-baterias", "/instrumentos/baterias"],
+      ["categoria-percusion", "/instrumentos/percusion"],
       ...(listing ? [["publicacion", listing]] : []),
       ...(store ? [["tienda", store]] : []),
       ["login", "/login"],

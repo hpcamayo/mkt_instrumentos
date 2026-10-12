@@ -45,8 +45,13 @@ const cardAttributeKeys: Record<string, readonly string[]> = {
   bass: ["strings", "bass_type"],
   drums: ["configuration", "kick_size"],
   cymbals: ["cymbal_type", "size"],
+  hand_percussion: ["percussion_type"],
+  keyboards: ["keyboard_type", "keys"],
+  winds: ["wind_type"],
+  string_instrument: ["string_type"],
   microphones: ["microphone_type", "polar_pattern"],
   audio_interface: ["inputs", "connection"],
+  audio_gear: ["audio_type"],
   pedals: ["pedal_type", "format"],
   amplifiers: ["technology", "power"],
 };

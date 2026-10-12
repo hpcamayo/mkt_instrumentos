@@ -8,15 +8,18 @@ export const MIN_LISTING_PHOTOS = 2;
 export const MAX_LISTING_PHOTOS = 10;
 export const MAX_LISTING_PHOTO_BYTES = 5 * 1024 * 1024;
 
+// Mirrors public.listing_taxonomy_is_valid (supabase/migrations/20261022120000_marketplace_categories.sql).
 export const instrumentTypesByCategory: Record<string, readonly string[]> = {
   guitars: ["electric_guitar", "acoustic_guitar", "other"],
   basses: ["bass", "other"],
-  drums: ["drums", "other"],
-  cymbals: ["cymbals", "other"],
-  microphones: ["microphones", "other"],
+  keyboards: ["keyboards", "other"],
+  percussion: ["drums", "cymbals", "hand_percussion", "other"],
+  winds: ["winds", "other"],
+  strings: ["string_instrument", "other"],
   pedals: ["pedals", "other"],
   amplifiers: ["amplifiers", "other"],
-  "audio interfaces": ["audio_interface", "other"],
+  microphones: ["microphones", "other"],
+  audio: ["audio_interface", "audio_gear", "other"],
 };
 
 export type ListingAttributeValue = string | string[] | number | boolean;

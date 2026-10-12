@@ -13,7 +13,7 @@ const legal = (href: string) => legalPages.find((page) => page.href === href)!;
 const exploreLinks: FooterLink[] = [
   { href: CATALOG_PATH, label: "Instrumentos" },
   { href: categoryLandingPath("guitars"), label: "Guitarras" },
-  { href: categoryLandingPath("drums"), label: "Baterías" },
+  { href: categoryLandingPath("percussion"), label: "Percusión" },
   { href: categoryLandingPath("pedals"), label: "Pedales" },
   { href: VERIFIED_STORES_PATH, label: "Tiendas verificadas" },
 ];

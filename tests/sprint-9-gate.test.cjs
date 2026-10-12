@@ -151,9 +151,11 @@ test("catalog og:url always names the same page as its canonical (pagination, ca
     assert.equal(metadata.openGraph.url, expected, `og:url for ${JSON.stringify(params)}`);
     assert.equal(metadata.robots, undefined);
   }
-  const drums = seo.buildCatalogMetadata({ category: "drums" }, 1);
-  assert.equal(drums.title, "Baterías en venta en Perú");
-  assert.match(drums.openGraph.title, /^Baterías en venta en Perú \| Laria$/);
+  const percussion = seo.buildCatalogMetadata({ category: "percussion" }, 1);
+  assert.equal(percussion.title, "Percusión en venta en Perú");
+  assert.match(percussion.openGraph.title, /^Percusión en venta en Perú \| Laria$/);
+  // A retired category (12 Oct 2026) is no landing any more: its old catalog URL stays out of the index.
+  assert.deepEqual(seo.buildCatalogMetadata({ category: "drums" }, 1).robots, { index: false, follow: true });
   const filtered = seo.buildCatalogMetadata({ category: "guitars", brand: "Fender", pickups: ["hss", "sss"], utm_source: "ig" }, 2);
   assert.deepEqual(filtered.robots, { index: false, follow: true });
   assert.equal(filtered.alternates, undefined, "filtered combinations have no canonical");
@@ -174,8 +176,8 @@ test("top-level categories link to their Spanish landing and type links never re
   const categories = load("lib/category-pages.ts");
   const { instrumentTypesByCategory } = load("lib/listing-submission.ts");
   const expected = {
-    guitars: "guitarras", basses: "bajos", drums: "baterias", cymbals: "platillos",
-    microphones: "microfonos", pedals: "pedales", amplifiers: "amplificadores", "audio interfaces": "interfaces-de-audio",
+    guitars: "guitarras", basses: "bajos", keyboards: "teclados", percussion: "percusion", winds: "vientos",
+    strings: "cuerdas", pedals: "pedales", amplifiers: "amplificadores", microphones: "microfonos", audio: "audio",
   };
   assert.deepEqual(Object.fromEntries(categories.categoryLandingPages.map((page) => [page.category, page.slug])), expected);
   for (const [category, slug] of Object.entries(expected)) {
@@ -189,16 +191,24 @@ test("top-level categories link to their Spanish landing and type links never re
     "@/components/marketplace-image": { MarketplaceImage: () => null },
   });
   const { categoryOptions } = load("lib/listings.ts");
-  const home = renderToStaticMarkup(React.createElement(CategoryTiles, { counts: { cymbals: 3 } }));
-  assert.match(home, /href="\/instrumentos\/platillos"/);
+  const home = renderToStaticMarkup(React.createElement(CategoryTiles, { counts: { percussion: 3 } }));
+  assert.match(home, /href="\/instrumentos\/percusion"/);
   assert.doesNotMatch(home, /href="\/listados\?/);
   assert.deepEqual([...home.matchAll(/href="([^"]+)"/g)].map((match) => match[1]), Object.values(expected).map((slug) => `/instrumentos/${slug}`));
 
   // Mirror types resolve to the landing; narrower types keep instrument_type.
-  assert.equal(categories.categoryTypePath("cymbals", "cymbals"), "/instrumentos/platillos");
-  assert.equal(categories.categoryTypePath("audio interfaces", "audio_interface"), "/instrumentos/interfaces-de-audio");
+  assert.equal(categories.categoryTypePath("winds", "winds"), "/instrumentos/vientos");
+  assert.equal(categories.categoryTypePath("strings", "string_instrument"), "/instrumentos/cuerdas");
+  assert.equal(categories.categoryTypePath("percussion", "cymbals"), "/listados?category=percussion&instrument_type=cymbals");
+  assert.equal(categories.categoryTypePath("audio", "audio_interface"), "/listados?category=audio&instrument_type=audio_interface");
   assert.equal(categories.categoryTypePath("guitars", "electric_guitar"), "/listados?category=guitars&instrument_type=electric_guitar");
-  assert.equal(categories.categoryTypePath("cymbals", "other"), "/listados?category=cymbals&instrument_type=other");
+  assert.equal(categories.categoryTypePath("winds", "other"), "/listados?category=winds&instrument_type=other");
+  // The retired landings answer with the type they became.
+  assert.equal(categories.legacyCategoryRedirect("baterias"), "/listados?category=percussion&instrument_type=drums");
+  assert.equal(categories.legacyCategoryRedirect("platillos"), "/listados?category=percussion&instrument_type=cymbals");
+  assert.equal(categories.legacyCategoryRedirect("interfaces-de-audio"), "/listados?category=audio&instrument_type=audio_interface");
+  assert.equal(categories.legacyCategoryRedirect("guitarras"), null);
+  for (const slug of ["baterias", "platillos", "interfaces-de-audio"]) assert.ok(categories.reservedCategorySlugs.has(slug), slug);
   for (const [category, types] of Object.entries(instrumentTypesByCategory)) {
     for (const type of types) {
       const href = categories.categoryTypePath(category, type);
@@ -224,9 +234,13 @@ test("top-level categories link to their Spanish landing and type links never re
     ["/", "/listados", "/instrumentos/guitarras", "/listados?category=guitars&instrument_type=electric_guitar", null],
   );
   // A type that mirrors its category (or "other") adds no level that would repeat the category.
-  for (const [category, type] of [["cymbals", "cymbals"], ["drums", "drums"], ["guitars", "other"]]) {
+  for (const [category, type] of [["winds", "winds"], ["keyboards", "keyboards"], ["guitars", "other"], ["percussion", "other"]]) {
     assert.deepEqual(shell.listingBreadcrumbs({ category, instrument_type: type }, "X").length, 4, `${category}/${type}`);
   }
+  assert.deepEqual(
+    shell.listingBreadcrumbs({ category: "percussion", instrument_type: "cymbals" }, "X").map((crumb) => crumb.label),
+    ["Inicio", "Instrumentos", "Percusión", "Platillos", "X"],
+  );
   const nav = fs.readFileSync(path.join(root, "components/global-categories.tsx"), "utf8");
   const shellSource = fs.readFileSync(path.join(root, "lib/shell.ts"), "utf8");
   const landing = fs.readFileSync(path.join(root, "components/category-landing.tsx"), "utf8");
@@ -237,8 +251,8 @@ test("top-level categories link to their Spanish landing and type links never re
 
   // Catalog category filtering keeps the internal enum and its canonical/noindex behavior.
   const seo = load("lib/seo.ts");
-  assert.equal(`/listados?${new URLSearchParams({ category: "cymbals" })}`, "/listados?category=cymbals");
-  assert.equal(seo.buildCatalogMetadata({ category: "cymbals" }, 1).alternates.canonical, "/instrumentos/platillos");
+  assert.equal(`/listados?${new URLSearchParams({ category: "percussion" })}`, "/listados?category=percussion");
+  assert.equal(seo.buildCatalogMetadata({ category: "percussion" }, 1).alternates.canonical, "/instrumentos/percusion");
   const narrowed = seo.buildCatalogMetadata({ category: "guitars", instrument_type: "electric_guitar" }, 1);
   assert.deepEqual(narrowed.robots, { index: false, follow: true });
   assert.equal(narrowed.openGraph.url, "/listados?category=guitars&instrument_type=electric_guitar");

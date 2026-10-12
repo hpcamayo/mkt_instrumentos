@@ -24,7 +24,7 @@ const XMLNS_NS = "http://www.w3.org/2000/xmlns/";
 const STATIC_PAGES = ["/", "/listados", "/terminos", "/privacidad", "/articulos-prohibidos", "/consejos-de-seguridad"];
 const NOINDEX_PAGES = ["/registro/vendedor", "/registro/tienda", "/login"];
 const REQUIRED_SURFACES = ["category", "listing", "store"];
-// Legacy public listing slugs predate UUID-suffixed slugs. Only the eight
+// Legacy public listing slugs predate UUID-suffixed slugs. Only the ten
 // reserved landing slugs identify categories; every other detail path is a listing.
 
 class XmlError extends Error {}
@@ -1084,12 +1084,14 @@ function structuredDataProblems(label, surface, expectedUrl, html, context = {})
 const CATEGORY_LANDINGS = [
   { category: "guitars", slug: "guitarras" },
   { category: "basses", slug: "bajos" },
-  { category: "drums", slug: "baterias" },
-  { category: "cymbals", slug: "platillos" },
-  { category: "microphones", slug: "microfonos" },
+  { category: "keyboards", slug: "teclados" },
+  { category: "percussion", slug: "percusion" },
+  { category: "winds", slug: "vientos" },
+  { category: "strings", slug: "cuerdas" },
   { category: "pedals", slug: "pedales" },
   { category: "amplifiers", slug: "amplificadores" },
-  { category: "audio interfaces", slug: "interfaces-de-audio" },
+  { category: "microphones", slug: "microfonos" },
+  { category: "audio", slug: "audio" },
 ];
 
 // Every release gate must verify these, or waive a data-dependent one explicitly.

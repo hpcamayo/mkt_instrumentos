@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { cache, Suspense } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
@@ -42,6 +42,7 @@ import {
   categoryLandingPath,
   categoryTypePath,
   getCategoryLandingBySlug,
+  legacyCategoryRedirect,
   type CategoryLandingPage,
 } from "@/lib/category-pages";
 import { createSearchReceipt } from "@/lib/marketplace-events-server";
@@ -195,6 +196,8 @@ const loadPublicListing = cache(async (slug: string) => {
 
 export async function generateMetadata({ params, searchParams }: ListingDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
+  // A retired category landing only redirects (below); it has no metadata of its own.
+  if (legacyCategoryRedirect(slug)) return { robots: NOINDEX_FOLLOW_ROBOTS };
   const landing = getCategoryLandingBySlug(slug);
   if (landing) {
     const resolvedSearchParams = await searchParams;
@@ -219,6 +222,8 @@ export default async function ListingDetailPage({
   searchParams,
 }: ListingDetailPageProps) {
   const { slug } = await params;
+  const moved = legacyCategoryRedirect(slug);
+  if (moved) permanentRedirect(moved);
   const landing = getCategoryLandingBySlug(slug);
   if (landing) {
     return renderCategoryLanding(landing, await searchParams);

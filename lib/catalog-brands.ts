@@ -4,8 +4,8 @@ import { unstable_cache } from "next/cache";
 import { aggregateCatalogBrands, type CatalogBrandsByCategory } from "@/lib/catalog-brands-aggregate";
 
 // The brands of each marketplace category, read from the canonical instrument catalog (docs/database.md § Canonical
-// instrument catalog): the catalog categories mapped to a listing category (`laria_category`), their current
-// model-level products and each product's manufacturer. Reference tables are public read-only, so the anon key reads
+// instrument catalog): its current model-level products, each placed in a marketplace category by its catalog category
+// (lib/catalog-brands-aggregate.ts), and each product's manufacturer. Reference tables are public read-only, so the anon key reads
 // them; nothing is written. The catalog changes only when the loader runs, so the result is cached for a day.
 // `lib/supabase/database.types.ts` does not describe the catalog tables yet, hence the untyped client and the local row
 // types below.
@@ -14,7 +14,6 @@ const PAGE_SIZE = 1000; // PostgREST's default max rows on Supabase
 const REVALIDATE_SECONDS = 60 * 60 * 24;
 const REQUEST_TIMEOUT_MS = 4000;
 
-type CategoryRow = { id: string; laria_category: string | null };
 type ProductRow = { id: string; category_id: string | null; manufacturer_id: string };
 type ManufacturerRow = { id: string; canonical_name: string };
 
@@ -27,11 +26,6 @@ async function loadCatalogBrands(): Promise<CatalogBrandsByCategory> {
     auth: { persistSession: false },
     global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }) },
   });
-
-  const categories = await supabase.from("catalog_categories").select("id, laria_category").not("laria_category", "is", null);
-  if (categories.error) throw new Error(categories.error.message);
-  const categoryRows = (categories.data ?? []) as CategoryRow[];
-  if (categoryRows.length === 0) return {};
 
   // Every page of a query ordered by id. The first page also returns the row count, so the rest load together.
   type Page<Row> = PromiseLike<{ data: Row[] | null; error: { message: string } | null; count: number | null }>;
@@ -66,12 +60,12 @@ async function loadCatalogBrands(): Promise<CatalogBrandsByCategory> {
     ),
   ]);
 
-  return aggregateCatalogBrands(categoryRows, products, manufacturers);
+  return aggregateCatalogBrands(products, manufacturers);
 }
 
 // A failed read throws inside the cache, so it is not stored; the caller gets no brands and the menus show the
 // subtypes only.
-const cachedCatalogBrands = unstable_cache(loadCatalogBrands, ["catalog-brands-by-category-v1"], { revalidate: REVALIDATE_SECONDS });
+const cachedCatalogBrands = unstable_cache(loadCatalogBrands, ["catalog-brands-by-category-v2"], { revalidate: REVALIDATE_SECONDS });
 
 export async function getCatalogBrandsByCategory(): Promise<CatalogBrandsByCategory> {
   try {

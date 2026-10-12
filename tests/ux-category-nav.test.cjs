@@ -10,7 +10,7 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const root = path.resolve(__dirname, "..");
 const source = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const nav = require("../lib/category-nav.ts");
-const { aggregateCatalogBrands, brandsAlphabetical } = require("../lib/catalog-brands-aggregate.ts");
+const { aggregateCatalogBrands, brandsAlphabetical, marketplaceCategoryOf } = require("../lib/catalog-brands-aggregate.ts");
 const { instrumentTypesByCategory } = require("../lib/listing-submission.ts");
 const { parseListingFilters } = require("../lib/listings.ts");
 const shell = require("../lib/shell.ts");
@@ -53,45 +53,78 @@ test("subtype labels read as Spanish menu entries", () => {
   assert.deepEqual(labels("guitars", "acoustic_guitar").slice(0, 3), ["Clásicas", "Acústicas", "Electroacústicas"]);
   assert.deepEqual(labels("basses", "bass").slice(0, 3), ["4 cuerdas", "5 cuerdas", "6 cuerdas"]);
   assert.ok(labels("pedals", "pedals").includes("Distorsión"));
-  assert.deepEqual(labels("audio interfaces", "audio_interface").slice(0, 2), ["1 entrada", "2 entradas"]);
+  assert.deepEqual(labels("audio", "audio_interface").slice(0, 2), ["1 entrada", "2 entradas"]);
+  // The categories added on 12 Oct 2026.
+  assert.deepEqual(labels("percussion", "hand_percussion").slice(0, 3), ["Cajones", "Congas", "Bongós"]);
+  assert.deepEqual(labels("keyboards", "keyboards").slice(0, 2), ["Pianos digitales", "Pianos de escenario"]);
+  assert.ok(labels("keyboards", "keyboards").includes("De 88 teclas"));
+  assert.deepEqual(labels("winds", "winds").slice(0, 2), ["Saxofones", "Trompetas"]);
+  assert.deepEqual(labels("strings", "string_instrument").slice(0, 2), ["Ukeleles", "Violines"]);
+  assert.deepEqual(labels("audio", "audio_gear").slice(0, 2), ["Mezcladoras", "Parlantes"]);
   assert.equal(nav.subtypeLinks("guitars", "electric_guitar")[0].href, "/listados?category=guitars&instrument_type=electric_guitar&shape=strat");
 });
 
 test("brand links use the catalog's brand filter inside the category", () => {
   assert.equal(nav.categoryBrandHref("guitars", "Fender"), "/listados?category=guitars&brand=Fender");
-  assert.equal(nav.categoryBrandHref("audio interfaces", "Focusrite"), "/listados?category=audio+interfaces&brand=Focusrite");
+  assert.equal(nav.categoryBrandHref("audio", "Focusrite"), "/listados?category=audio&brand=Focusrite");
   const filters = parseListingFilters(query(nav.categoryBrandHref("pedals", "Boss")));
   assert.equal(filters.brand, "Boss");
   assert.equal(filters.category, "pedals");
 });
 
-test("catalog brands are grouped by listing category, most catalog models first", () => {
-  const categories = [
-    { id: "instruments.guitars.electric", laria_category: "guitars" },
-    { id: "instruments.guitars.acoustic", laria_category: "guitars" },
-    { id: "effects.pedals", laria_category: "pedals" },
-    { id: "instruments.keyboards", laria_category: null },
-  ];
+test("catalog categories map to the marketplace categories by their dotted id, longest prefix first", () => {
+  const cases = {
+    "instruments.guitars.electric": "guitars",
+    "instruments.bass.electric": "basses",
+    "instruments.keyboards.digital_piano": "keyboards",
+    "studio.midi_controllers": "keyboards",
+    "instruments.drums.cymbal": "percussion",
+    "instruments.drums.latin_percussion": "percussion",
+    "instruments.folk.cajon": "percussion",
+    "instruments.wind.saxophone": "winds",
+    "instruments.strings.ukulele": "strings",
+    "effects.guitar_pedal": "pedals",
+    "amplification.bass_amp": "amplifiers",
+    "pro_audio.microphones.dynamic": "microphones",
+    "pro_audio.wireless": "microphones",
+    "pro_audio.interfaces": "audio",
+    "pro_audio.mixers": "audio",
+    "pro_audio.monitoring.headphones": "audio",
+  };
+  for (const [id, category] of Object.entries(cases)) assert.equal(marketplaceCategoryOf(id), category, id);
+  // No marketplace category covers these, and a prefix only matches whole id segments.
+  for (const id of ["dj.controllers", "studio.samplers", "accessories.tuners", "instruments.folk.charango", "instruments", "instruments.bassoon", "pro_audiox"]) {
+    assert.equal(marketplaceCategoryOf(id), null, id);
+  }
+});
+
+test("catalog brands are grouped by marketplace category, most catalog models first", () => {
   const manufacturers = [
     { id: "m1", canonical_name: "Fender" },
     { id: "m2", canonical_name: "Gibson" },
     { id: "m3", canonical_name: "Boss" },
     { id: "m4", canonical_name: "Ibanez" },
+    { id: "m5", canonical_name: "Yamaha" },
   ];
   const products = [
     { category_id: "instruments.guitars.electric", manufacturer_id: "m2" },
     { category_id: "instruments.guitars.electric", manufacturer_id: "m1" },
     { category_id: "instruments.guitars.acoustic", manufacturer_id: "m1" },
     { category_id: "instruments.guitars.acoustic", manufacturer_id: "m4" },
-    { category_id: "effects.pedals", manufacturer_id: "m3" },
-    { category_id: "instruments.keyboards", manufacturer_id: "m3" }, // not a listing category
+    { category_id: "effects.guitar_pedal", manufacturer_id: "m3" },
+    { category_id: "instruments.keyboards.synthesizer", manufacturer_id: "m5" },
+    { category_id: "instruments.drums.cymbal", manufacturer_id: "m5" },
+    { category_id: "instruments.drums.kit", manufacturer_id: "m5" },
+    { category_id: "dj.controllers", manufacturer_id: "m3" }, // no marketplace category
     { category_id: null, manufacturer_id: "m1" },
-    { category_id: "effects.pedals", manufacturer_id: "unknown" },
+    { category_id: "effects.guitar_pedal", manufacturer_id: "unknown" },
   ];
-  const brands = aggregateCatalogBrands(categories, products, manufacturers);
-  assert.deepEqual(Object.keys(brands).sort(), ["guitars", "pedals"]);
+  const brands = aggregateCatalogBrands(products, manufacturers);
+  assert.deepEqual(Object.keys(brands).sort(), ["guitars", "keyboards", "pedals", "percussion"]);
   assert.deepEqual(brands.guitars, [{ name: "Fender", models: 2 }, { name: "Gibson", models: 1 }, { name: "Ibanez", models: 1 }]);
   assert.deepEqual(brands.pedals, [{ name: "Boss", models: 1 }]);
+  assert.deepEqual(brands.keyboards, [{ name: "Yamaha", models: 1 }]);
+  assert.deepEqual(brands.percussion, [{ name: "Yamaha", models: 2 }]);
   assert.deepEqual(brandsAlphabetical([{ name: "ibanez", models: 1 }, { name: "Fender", models: 3 }, { name: "Álvarez", models: 1 }]).map((brand) => brand.name), ["Álvarez", "Fender", "ibanez"]);
 });
 
@@ -99,7 +132,7 @@ test("the catalog read is server-only, read-only, cached and fails soft", () => 
   const reader = source("lib/catalog-brands.ts");
   assert.match(reader, /^import "server-only";/);
   assert.doesNotMatch(reader, /\.(insert|update|upsert|delete|rpc)\(/);
-  assert.match(reader, /unstable_cache\(loadCatalogBrands, \["catalog-brands-by-category-v1"\], \{ revalidate: REVALIDATE_SECONDS \}\)/);
+  assert.match(reader, /unstable_cache\(loadCatalogBrands, \["catalog-brands-by-category-v2"\], \{ revalidate: REVALIDATE_SECONDS \}\)/);
   assert.match(reader, /catch \(error\) \{[\s\S]*return \{\};/);
   assert.match(source("app/layout.tsx"), /const brands = await getCatalogBrandsByCategory\(\);/);
 });
