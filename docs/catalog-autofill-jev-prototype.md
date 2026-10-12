@@ -10,6 +10,65 @@ already give autofill and the policy everything they need, and the whole flow ru
 is how real Jev answers, real seller text and the full catalog behave**: no Jev credentials and no catalog database
 were reachable from the build environment (see [What was not measured](#what-was-not-measured)).
 
+## Before resuming: ten categories and the enriched navigation (added 2026-10-12)
+
+This prototype was built on V1's eight listing categories. Since then two changes were made for `ux/redesign` (PR #2,
+going into PR #1): the **detailed category navigation** (subtypes and catalog brands per category,
+`docs/ux-redesign/category-navigation.md`) and the **ten marketplace categories** (owner decision of 12 Oct 2026,
+`docs/ux-redesign/category-restructure.md`, migration `20261022120000_marketplace_categories.sql`):
+
+| Category | Instrument types | "What is it" listing attribute |
+| --- | --- | --- |
+| guitars, basses, pedals, amplifiers, microphones | unchanged | unchanged |
+| keyboards (new) | keyboards | `keyboard_type`, plus `keys`, `weighted_keys` |
+| percussion (was drums + cymbals) | drums, cymbals, hand_percussion | drums and cymbals unchanged; `percussion_type` |
+| winds (new) | winds | `wind_type` |
+| strings (new) | string_instrument | `string_type` |
+| audio (was audio interfaces) | audio_interface, audio_gear | audio_interface unchanged; `audio_type` |
+
+The menu links each subtype to a listing attribute filter (`lib/category-nav.ts`) and lists brands from the catalog
+(`lib/catalog-brands-aggregate.ts`). So autofill is what puts a listing under "Pianos digitales", "Saxofones" or
+"Cajones" in the menu, and under the exact brand name the menu shows. When this work resumes, rebase on `ux/redesign`
+and make these changes before measuring anything:
+
+1. **One catalog → listing taxonomy mapping.** `autofill.ts` and `listing-evidence.ts` read
+   `catalog_categories.laria_category` / `laria_instrument_type`, which the catalog build still writes with the eight
+   old values. The navigation already maps catalog category ids itself (`marketplaceCategoryOf`). Extend that module to
+   return category, instrument type and subtype attribute, and use it in autofill, in the `category_consistent` gate
+   and in the menu's brand lists, so the three can never disagree. In the same release, have the catalog build
+   (`catalog/canonical-catalog`, category config) write the ten values into `laria_category` / `laria_instrument_type`
+   (or drop the columns). Target mapping:
+
+   | Catalog category ids | category / instrument_type | Subtype attribute from the catalog |
+   | --- | --- | --- |
+   | `instruments.drums.{kit,snare,tom,bass_drum,hardware,electronic}` | percussion / drums | `drum_type` from kit vs electronic |
+   | `instruments.drums.{cymbal,cymbal_pack,hihat}` | percussion / cymbals | `cymbal_type` (hihat → `hi_hat`) |
+   | `instruments.drums.{hand_percussion,latin_percussion,orchestral,other}`, `instruments.folk.cajon` | percussion / hand_percussion | `percussion_type` (cajon from the category; congas, bongos… from the catalog's `percussion.type`; orchestral from the category) |
+   | `instruments.keyboards.*`, `studio.midi_controllers` | keyboards / keyboards | `keyboard_type` from the subcategory (digital_piano, stage_piano, acoustic_piano, synthesizer, arranger, portable, workstation, organ; MIDI controllers → midi_controller) |
+   | `instruments.wind.*` | winds / winds | `wind_type` from the subcategory (saxophone, trumpet, trombone, clarinet, flute, recorder, tuba, horn → french_horn, oboe_bassoon, harmonica, accordion) |
+   | `instruments.strings.*` | strings / string_instrument | `string_type` from the subcategory (ukulele, violin, viola, cello, double_bass, mandolin, banjo) |
+   | `pro_audio.interfaces` | audio / audio_interface | — |
+   | `pro_audio.{mixers,live_sound.*,monitoring.*,outboard.*,recorders}` | audio / audio_gear | `audio_type` (mixer, pa_speaker, subwoofer, power_amp, stage_monitor, studio_monitor, headphones, in_ear, processor, recorder) |
+   | `pro_audio.microphones.*`, `pro_audio.wireless` | microphones / microphones | `microphone_type` |
+   | DJ, other studio gear, accessories | none (no marketplace category) | — |
+
+2. **Catalog attribute keys → listing attribute keys.** `autofill.ts` suggests an attribute only when the catalog's
+   `attribute_key` equals a listing filter key, but catalog keys are namespaced (`cymbal.type`, `cymbal.diameter_in`,
+   `keyboard.keys`, `wind.instrument`, `strings.instrument`, `percussion.type`, `mic.type`, `mic.polar_patterns`,
+   `interface.connection`…) and listing keys are flat (`cymbal_type`, `size`, `keys`, `wind_type`…). Add an explicit
+   key and value map per instrument type (for example `cymbal.diameter_in` 18 → `size` "18", `keyboard.keys` 88 →
+   `keys` "88", `keyboard.action` weighted/hammer → `weighted_keys` "yes", `interface.mic_preamps` → `inputs` bucket),
+   check every value against the filter's options (`toFormValue` already refuses the rest), and test each mapping.
+3. **Fixtures and labels.** `scripts/catalog-prototype/local-fixture.sql` writes `laria_category = 'cymbals'` and
+   `evaluation-cases.json` has a `drums` listing (`audit-category-drums`); move both to percussion / cymbals and
+   percussion / drums, and add cases for each new category (one exact model per category, one subtype attribute each).
+4. **Database and site, when this leaves the prototype.** The proposed `listing_catalog_links` and
+   `listing_jev_evaluations` tables below are unchanged; any new migration must sort after
+   `20261022120000_marketplace_categories.sql`. The V1 sell form (`components/sell-listing-form.tsx`) already offers
+   the ten categories and their types, so autofill only needs to fill category, type, the subtype attribute and the
+   type's other attributes. Listings filled this way then show up under the menu's subtype and brand links with no
+   further site change.
+
 ## How to try it
 
 | Where | How |
