@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Suspense, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { GlobalCategories } from "@/components/global-categories";
 import { HomeHeader, SiteHeader } from "@/components/site-header";
 import { getShellLayout } from "@/lib/shell";
@@ -28,13 +28,18 @@ export function SiteShell({
       {layout.header === "home" ? <HomeHeader /> : <SiteHeader layout={layout} />}
       {layout.strip !== "none" ? <GlobalCategories visibility={layout.strip} brands={menuBrands} /> : null}
       <main id="contenido" tabIndex={-1} className="flex-1">
-        {/* The route can arrive after the shell. Keep its hydration inside a boundary so a retry cannot
-            complete <main> before React claims the server-rendered page (React #418). */}
-        <Suspense fallback={null}>{children}</Suspense>
+        <RouteContent>{children}</RouteContent>
       </main>
       {layout.footer === "full" ? fullFooter : layout.footer === "slim" ? slimFooter : null}
     </div>
   );
+}
+
+// Keep the streamed route in a component fiber before React starts resolving its lazy RSC children.
+// Suspending directly while reconciling <main> left its server-rendered children unclaimed (React #418).
+// This adds no streaming fallback, so server redirects and not-found responses keep their HTTP status.
+function RouteContent({ children }: { children: ReactNode }) {
+  return <>{children}</>;
 }
 
 // Admin pages get their <main> from app/admin/layout.tsx. A 404 or an error that Next renders outside that layout

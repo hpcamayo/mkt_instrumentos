@@ -1,6 +1,6 @@
 # Laria UX-4–UX-8 production release gate
 
-**2026-10-13 (America/Lima): FIX-FORWARD; keep the site live.** Henri authorized the coordinated release with “go” after the pre-flight checkpoint. A sitemap correction was then explicitly authorized. One intermittent React #418 on the public store-signup page remains open; this gate is not Pass.
+**2026-10-13 (America/Lima): FIX-FORWARD; keep the site live.** Henri authorized the coordinated release with “go” after the pre-flight checkpoint. A sitemap correction was then explicitly authorized. The owner-authorized hydration fix `0a8af92` is live and passes the new hydration smoke, but it regressed HTTP redirects for the three retired category URLs and `/publicar`. The gate remains FIX-FORWARD; this gate is not Pass.
 
 ## Release identity and boundaries
 
@@ -8,6 +8,7 @@
 - Coordinated production deployment: `dpl_F45gEzgKRCg6vPEXsGhUgtkYbrRx`, READY, source `b37aadd`. All four public domains were confirmed against it immediately after promotion.
 - Migration: `20261022120000_marketplace_categories.sql`. Hosted project `hswkjandadscduodejig` moved from 44 applied migrations through `20261021120000` to **45/45 synchronized**. The dry-run listed only this migration. No down migration or manual production SQL was run.
 - Owner-authorized fix-forward: `4b6b2edd4a24b03af8f60d8e470b91438e1ae147`, deployment `dpl_AE97HP37zxYdc1Z9gUx14XsFUsRT`. It adds all ten category URLs to the sitemap even without inventory; empty pages retain `noindex` until inventory exists. The matching SEO harness distinguishes empty pages from their rendered metadata/ItemList instead of sitemap membership. READY and exact SHA were reverified through all four public domains; the live sitemap contains all ten categories, no retired landing, and the updated SEO smoke exits 0 with only the Admin-session waiver.
+- Owner-authorized hydration correction: `0a8af92e69296f5e94eb0eee2b37864944448834`, READY deployment `dpl_4WrXsUVZkM1wnVxMzuNLsLfMKFpQ`. All four domains resolve to it. The read-only retest below records both the successful hydration checks and the HTTP-redirect regression.
 - Pre-release rollback target: `dpl_H777E1P45pMVrrNBYkfrGZ3LuZS5`, source `568b07af4229be3c52c379966cb897692909a81a`. No rollback was performed. The database stays migrated if an app rollback is ever required.
 - PR #3 (Jev/autofill), PR #4 (catalog audit), catalog builds/loaders/extracts and catalog-table changes were excluded. Production retains the previously loaded reduced catalog (20,386 products / 170 brands); this gate did not reload or query catalog tables directly.
 - No hosted environment variables, cron, Auth settings or email templates changed. Neither seed.sql nor db reset nor any loader was run. No force-push occurred.
@@ -125,9 +126,9 @@ Changed files in this gate:
 
 Verification: frozen dependency install; lint, typecheck, 355/355 tests and build without production env; TSV-only acceptance validation; diff-check; guarded GET/HEAD-only production browser smoke and rendered SEO before/after the sitemap correction. No acceptance, specification, schema, lockfile or hosted configuration edits accompanied the correction.
 
-## Local hydration follow-up — awaiting release approval
+## Initial local hydration follow-up — subsequently released as 0a8af92
 
-Baseline: `25e089167c3060a224faf07388cebee7866cd189`, still live as `dpl_5JmL5H6ECsrMrFLBADA9q1RWPrYY`. This follow-up makes **no production change** and does not change step 16 to Pass.
+Investigation baseline: `25e089167c3060a224faf07388cebee7866cd189`, then live as `dpl_5JmL5H6ECsrMrFLBADA9q1RWPrYY`. The following local evidence preceded owner approval and release of `0a8af92`; the later production retest supersedes its pending-release status.
 
 The compiled local production build reproduced React #418 during anonymous full-document navigation through `/login`, `/registro/vendedor` and `/registro/tienda`. One bounded comparison recorded four errors across twelve fresh contexts / twenty-four visits, including with the account-navigation request blocked. Temporary diagnostics in the generated local React bundle showed `<main id="contenido">` completing with no child fiber while its server-rendered page `<section>` remained unclaimed. The failure also appeared on `/listados` when the candidate boundary was limited to auth pages. The development build did not reproduce it; this evidence identifies a shared streamed-route hydration boundary, without claiming an upstream framework defect.
 
@@ -152,4 +153,45 @@ Set `LARIA_CHROME_EXECUTABLE` only if Playwright needs an existing Chrome execut
 
 Limits: this proof used placeholder localhost public credentials and no database. It verifies anonymous hydration and interactivity, not account creation, authenticated workflows or real hosted catalog data. No production data, settings, auth, migration or catalog was touched. Temporary diagnostics were removed by a clean rebuild and are not part of the patch. Raw local evidence: `/private/tmp/laria-signup-hydration/`; browser evidence paths are printed by the regression script.
 
-Henri's fix-forward rule still requires approval before a GitHub push. After approval: deploy the correction, repeat the read-only production auth/core-page and listing-hydration checks, verify rendered SEO and runtime health, then update the release decision using that evidence. No additional migration is needed.
+Henri subsequently replied “yes please” to publishing this specific patch and running the read-only production retest. The next section records that release. No additional migration was applied.
+
+
+## Production hydration retest — 0a8af92, FIX-FORWARD for redirects
+
+Henri authorized the tested hydration commit. [GITHUB PUSH → PRODUCTION] Fast-forwarded `main` from `25e0891` to `0a8af92`, triggering the automatic Git deployment. No other production-changing action was performed in this follow-up. `dpl_4WrXsUVZkM1wnVxMzuNLsLfMKFpQ` reached READY with that exact SHA and was confirmed on `laria.audio`, `www.laria.audio`, `laria.pro`, `www.laria.pro`.
+
+| Step | Current result | Evidence |
+| --- | --- | --- |
+| 13. Migration synchronization | **Pass** | Read-only linked history: 45/45 synchronized through `20261022120000`; no new migration. |
+| 14. Data migration | **Pass** | Privileged GET-only PostgREST counts remain identical to the after column above: 54 listings, 2 null-category revisions, 2 live alerts; zero retired category values and zero duplicate alert deletions. |
+| 15. Rendered SEO | **Pass; Admin waived** | Exit 0; both crawlers, 7 populated / 3 empty categories, public sold listing and JSON-LD exercised. Only Admin records waived for no authenticated production session. This script did not expose the separate ordinary-user-agent HTTP redirect regression in step 17. |
+| 16. Public pages, layout and hydration | **Pass for this retest** | 46/46 page visits return 200 at 390/1440 px; 42 HTML visits have one main/H1, Spanish interface, no overflow, broken completed images, page errors, unexpected console errors or failed application GETs. Ten required screenshots inspected. Separate real-production account/JS timing trials: 20/20 fresh contexts, 100 visits including 60 auth visits, zero page errors; login and signup forms become interactive without submission. No mocked production API response. |
+| 17. Legacy URLs and sitemap | **Fail — HTTP status regression** | Ordinary GETs to all three retired landings now return HTTP 200 with a refresh meta tag, no Location header, instead of the required 308. Browser navigation still reaches the expected destination. Legacy drums filter remains Percusión / Baterías + noindex; sitemap still has all ten new landings and no retired landing. |
+| 18. Navigation | **Pass** | All ten category panels at both widths, mobile home menu, catalog brand lists, one-row strip at 1280 including Teclados, and two home rows of five pass. |
+| 19. Listing React #418 | **Pass** | Same approved Particular listing, 10 new contexts: 0/10 React #418 and zero page errors. |
+| 20. Signed-out guards | **Fail for HTTP semantics; browser guard passes** | All three anonymous browser visits reach `/login` without 500. `/mi-cuenta`, `/vender` and `/admin` retain HTTP 307 from middleware; `/publicar` now returns HTTP 200 + refresh meta tag for its `/vender` hop. This streamed redirect is included in the pending correction. |
+| 21. WhatsApp | **Pass** | Listing/store wa.me anchors and Spanish messages verified at both widths; never opened. |
+| 22. Runtime health | **Pass for queried window** | `2026-10-14T02:47:20Z`–`02:53:00Z`, this deployment: 50 returned request-log records, zero error, fatal and 5xx matches in separate bounded queries. |
+
+Sample response times (390/1440 px): home **951/857 ms**, catalog **456/506 ms**, Percusión **460/480 ms**, approved listing **550/602 ms**, store **554/437 ms**.
+
+Production smoke writes: **none**. Every browser context installed a GET/HEAD-only interceptor before navigation and blocked service workers. **80 attempted POST /api/events/session requests were aborted**, with zero completed non-GET/HEAD requests. No sign-in, form submission, publishing, favorites, alerts, reports, Admin actions or WhatsApp navigation. Across the whole release, the authorized categories migration and its triggers remain the only production data writes.
+
+**Decision: FIX-FORWARD; keep live, no rollback.** Core pages work and the original signup hydration failure was absent in the bounded retest. The global Suspense fallback added by this patch allows the response to start before a page redirect resolves, changing HTTP semantics. Next.js documents this client-side meta redirect behavior in a streaming context: https://nextjs.org/docs/app/api-reference/functions/permanentRedirect. The first patch's local checks missed HTTP statuses; that omission is corrected in the regression script below. Do not mark the gate Pass or infer acceptance-row changes.
+
+### Prepared local correction — approval required before push
+
+Replace the new streaming Suspense fallback with a small `RouteContent` component inside main. Its own component fiber separates lazy RSC reconciliation from the host main without introducing a streaming fallback or extra DOM. The existing page redirects and route data logic remain intact; no Next.js routing/configuration, database, dependencies, environment or auth changes are needed.
+
+Local compiled-build evidence (placeholder localhost credentials; no production database):
+
+- The exact original timing comparison: 12 contexts / 24 visits, **0 errors**, versus four #418 errors on the baseline.
+- Additional normal/instant/delayed account and delayed-JS trials: **20/20 contexts, 100 visits**, zero page errors, forms interactive without submission.
+- Home, catalog, Percusión and signup preserve server-rendered main/H1, with **four successful client catalog transitions** across 390/1440 px and zero page errors.
+- Ordinary GET with manual redirect handling: all three required **308** responses and exact destinations; `/publicar` **307 → /vender**; unknown page **404**.
+- `scripts/ux-auth-hydration-smoke.cjs` now asserts these five raw HTTP responses before launching its browser. Updated script validation: five HTTP checks + **4/4 contexts / 20 visits** pass.
+- Lint, TypeScript, **355/355 tests** and production build pass. No production environment file was loaded. Canonical TSV remains untouched.
+
+The correction and current results are prepared locally only. Henri's explicit fix-forward rule requires a new OK before publishing the correction; the earlier OK covered `0a8af92`. After approval, deploy the correction, repeat the affected raw HTTP checks and read-only hydration/core/SEO checks, and only then revise the release decision. UX-5–UX-7 write flows remain proven locally only.
+
+Changed files for this follow-up: `components/site-shell.tsx`, `scripts/ux-auth-hydration-smoke.cjs`, this release record, `docs/architecture.md`, `docs/ux-redesign/README.md`. Raw production and local-correction evidence: `/private/tmp/laria-hydration-release-0a8af92/` (not committed/uploaded).

@@ -17,6 +17,23 @@ const results = [];
 const signedOut = { authenticated: false, storeOwner: false, hasStore: false, admin: false, name: null, unreadNotifications: 0, pendingBuyerConfirmations: 0 };
 const routes = ["/login", "/registro/vendedor", "/registro/tienda"];
 (async () => {
+  // A streaming fallback can hide a server redirect/404 behind HTTP 200 even when the browser reaches its destination.
+  const http = [];
+  for (const [route, status, location] of [
+    ["/instrumentos/baterias", 308, "/listados?category=percussion&instrument_type=drums"],
+    ["/instrumentos/platillos", 308, "/listados?category=percussion&instrument_type=cymbals"],
+    ["/instrumentos/interfaces-de-audio", 308, "/listados?category=audio&instrument_type=audio_interface"],
+    ["/publicar", 307, "/vender"],
+    ["/ruta-inexistente-del-gate-de-hidratacion", 404, null],
+  ]) {
+    const response = await fetch(new URL(route, target), { method: "GET", redirect: "manual", headers: { "User-Agent": "Mozilla/5.0 (Laria hydration regression)" } });
+    const destination = response.headers.get("location");
+    http.push({ route, status: response.status, location: destination });
+    fs.writeFileSync(path.join(artifacts, "http.json"), JSON.stringify(http, null, 2));
+    assert.equal(response.status, status, `${route}: HTTP status before hydration`);
+    if (location) assert.equal(new URL(destination, target).href, new URL(location, target).href, `${route}: redirect target`);
+  }
+  console.log(JSON.stringify({ http }));
   const browser = await chromium.launch({ headless: true, ...(process.env.LARIA_CHROME_EXECUTABLE ? { executablePath: process.env.LARIA_CHROME_EXECUTABLE } : {}) });
   try {
     for (const width of [390, 1440]) {
