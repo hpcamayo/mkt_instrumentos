@@ -15,7 +15,7 @@ Browser
 
 The codebase currently favors server-rendered public and protected page shells with small client islands for forms, moderation actions, filters, card photo carousel behavior, and listing detail metadata.
 
-Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 is deployed and operational; the owner accepted the exercised real-inbox flows on 2026-09-25, while `ALERT-005` and `TX-018` remain blocked for their exact owner checks. Sprint 8 is implemented and verified locally only. Migration `20260923120000_sprint_8_admin_reports_legacy.sql` and the matching application changes have not been deployed.
+Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7, Sprint 8 moderation/legacy ownership and Sprint 9 public discovery/legal/account-navigation changes are in production; owner/manual launch dependencies remain in `docs/go-live-checklist.md`. UX-1–UX-3 shipped on 2026-10-09. **UX-4–UX-8 and the ten marketplace categories are in production as of 2026-10-13**, released from `b37aadd` together with `20261022120000_marketplace_categories.sql` (45/45 synchronized). Henri separately authorized the all-ten-category sitemap correction `4b6b2ed`. The production gate remains **FIX-FORWARD** for one intermittent public store-signup React #418; no rollback was performed. See `docs/ux-4-8-production-release-gate.md`. UX-5–UX-7 write flows were verified locally only, not exercised against production in this read-only gate.
 
 ## Core Responsibilities
 
