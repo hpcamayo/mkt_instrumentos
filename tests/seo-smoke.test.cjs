@@ -617,8 +617,13 @@ test("populated categories are indexable with an ItemList; empty categories are 
   await run(both);
   await failsWith({ ...both, pages: { "/instrumentos/bajos": page(populated, { robots: "noindex, follow", jsonLd: [breadcrumb(populated), itemList([`${site}${listing}`])] }) } }, /populated category \/instrumentos\/bajos: robots meta blocks indexing of a public page \(noindex\)/);
   await failsWith({ ...both, pages: { "/instrumentos/bajos": page(populated, { jsonLd: [breadcrumb(populated)] }) } }, /populated category \/instrumentos\/bajos: expected exactly one ItemList JSON-LD item, found 0/);
-  // In the sitemap, the page must not be empty: an empty category must not be submitted.
-  await failsWith({ sitemapBody }, /populated category \/instrumentos\/bajos: expected exactly one ItemList JSON-LD item, found 0|robots meta blocks indexing/, null);
+  // Empty landings may remain in the sitemap while retaining noindex and no fabricated ItemList.
+  await run({ sitemapBody });
+  const allLandings = smoke.CATEGORY_LANDINGS.map((landing) => `/instrumentos/${landing.slug}`).reverse();
+  const all = await run({ sitemapBody: sitemap(["/", "/listados", ...allLandings, listing, store]) });
+  assert.equal(all.coverage["populated-category"].detail, "1 populated");
+  assert.equal(all.coverage["empty-category"].detail, "9 empty");
+  assert.equal(all.samples.category.pathname, category);
   await failsWith({ pages: { "/instrumentos/cuerdas": page(empty, { jsonLd: [breadcrumb(empty)] }) } }, /empty category \/instrumentos\/cuerdas: expected a noindex, follow robots meta \(found: none\)/);
   await failsWith({ pages: { "/instrumentos/cuerdas": page(empty, { robots: "noindex, follow", jsonLd: [breadcrumb(empty), itemList([`${site}${listing}`])] }) } }, /empty category \/instrumentos\/cuerdas: an empty category must not publish an ItemList/);
   await failsWith({ pages: { "/instrumentos/cuerdas": page(empty, { robots: "noindex, nofollow", jsonLd: [breadcrumb(empty)] }) } }, /empty category \/instrumentos\/cuerdas: expected a noindex, follow robots meta/);

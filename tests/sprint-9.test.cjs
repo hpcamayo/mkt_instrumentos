@@ -269,7 +269,7 @@ function fakeSupabase({ counts, stores, listings: rows }) {
   };
 }
 
-test("sitemap lists public pages, non-empty categories and bounded public inventory only", async () => {
+test("sitemap lists all ten category landings and bounded public inventory, even without category data", async () => {
   const client = fakeSupabase({
     counts: { guitars: 3, drums: 0 },
     stores: [{ id: "s", slug: "tienda-qa", updated_at: "2026-09-01T00:00:00Z" }],
@@ -280,7 +280,9 @@ test("sitemap lists public pages, non-empty categories and bounded public invent
   for (const expected of ["/", "/listados", "/terminos", "/privacidad", "/articulos-prohibidos", "/consejos-de-seguridad", "/instrumentos/guitarras", "/tiendas/tienda-qa", "/instrumentos/pedal-qa-l"]) {
     assert.ok(urls.includes(`https://laria.audio${expected}`), expected);
   }
-  assert.equal(urls.includes("https://laria.audio/instrumentos/percusion"), false);
+  for (const landing of categories.categoryLandingPages) {
+    assert.ok(urls.includes(`https://laria.audio/instrumentos/${landing.slug}`), landing.slug);
+  }
   assert.equal(urls.includes("https://laria.audio/instrumentos/baterias"), false);
   assert.equal(urls.some((url) => /mi-cuenta|admin|login|api/.test(url)), false);
   for (const call of client.calls) {
@@ -290,6 +292,11 @@ test("sitemap lists public pages, non-empty categories and bounded public invent
   }
   const preview = await withEnv({ VERCEL_ENV: "preview" }, () => sitemap());
   assert.deepEqual(preview, []);
+  const withoutDatabase = load("app/sitemap.ts", { "@/lib/supabase/public-client": { getPublicSupabaseClient: () => null } }).default;
+  const staticUrls = await withEnv({ VERCEL_ENV: "production" }, async () => (await withoutDatabase()).map((entry) => entry.url));
+  for (const landing of categories.categoryLandingPages) {
+    assert.ok(staticUrls.includes(`https://laria.audio/instrumentos/${landing.slug}`), landing.slug);
+  }
 });
 
 test("private account/Admin/auth surfaces are noindex by metadata and X-Robots-Tag", () => {

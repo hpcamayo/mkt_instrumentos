@@ -20,25 +20,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl("/"), changeFrequency: "daily", priority: 1 },
     { url: absoluteUrl("/listados"), changeFrequency: "hourly", priority: 0.9 },
     ...legalPages.map((page): Entry => ({ url: absoluteUrl(page.href), changeFrequency: "yearly", priority: 0.2 })),
+    // Owner decision (13 Oct 2026): keep all ten landings discoverable before they have inventory.
+    // Empty landing metadata still declares noindex until public listings are available.
+    ...categoryLandingPages.map((landing): Entry => ({
+      url: absoluteUrl(`/instrumentos/${landing.slug}`), changeFrequency: "daily", priority: 0.8,
+    })),
   ];
 
   const supabase = getPublicSupabaseClient();
   if (!supabase) return entries;
-
-  // Only non-empty category pages are indexable; RLS limits rows to public inventory.
-  const categoryCounts = await Promise.all(
-    categoryLandingPages.map(async (landing) => {
-      const { count, error } = await supabase
-        .from("listings")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "approved")
-        .eq("category", landing.category);
-      return { landing, count: error ? 0 : count ?? 0 };
-    }),
-  );
-  for (const { landing, count } of categoryCounts) {
-    if (count > 0) entries.push({ url: absoluteUrl(`/instrumentos/${landing.slug}`), changeFrequency: "daily", priority: 0.8 });
-  }
 
   for (let offset = 0; offset < MAX_STORES; offset += BATCH_SIZE) {
     const { data, error } = await supabase

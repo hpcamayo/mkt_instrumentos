@@ -1243,8 +1243,24 @@ async function runChecks({ base, site = DEFAULT_SITE, crawlers = Object.keys(CRA
   }
   const sitemapSet = new Set(sitemapUrls.map((url) => url.href));
   const sitemapCategories = new Set(sitemapUrls.filter((url) => classifyPath(url.pathname) === "category").map((url) => url.pathname));
-  const populated = sitemapOk ? CATEGORY_LANDINGS.filter((landing) => sitemapCategories.has(`/instrumentos/${landing.slug}`)) : [];
-  const empty = sitemapOk ? CATEGORY_LANDINGS.filter((landing) => !sitemapCategories.has(`/instrumentos/${landing.slug}`)) : [];
+  const populated = [];
+  const empty = [];
+  if (sitemapOk) {
+    for (const landing of CATEGORY_LANDINGS) {
+      const path = `/instrumentos/${landing.slug}`;
+      if (!sitemapCategories.has(path)) { empty.push(landing); continue; }
+      // All ten landings may be submitted before inventory arrives. An empty landing
+      // declares noindex and has no ItemList; a populated landing must still pass both checks below.
+      try {
+        const { html } = await get(path);
+        const noindex = robotsDirectives(readPageMetadata(html).robots).includes("noindex");
+        const hasItems = ofType(readJsonLd(html).items, "ItemList").length > 0;
+        (noindex && !hasItems ? empty : populated).push(landing);
+      } catch { populated.push(landing); } // The page check below reports the request failure.
+    }
+    const populatedPaths = new Set(populated.map((landing) => `/instrumentos/${landing.slug}`));
+    samples.category = sitemapUrls.find((url) => populatedPaths.has(url.pathname)) ?? samples.category;
+  }
 
   const pages = [
     ...STATIC_PAGES.map((path) => ({ label: path, requestPath: path, expected: siteUrl(path) })),
@@ -1347,8 +1363,8 @@ async function runChecks({ base, site = DEFAULT_SITE, crawlers = Object.keys(CRA
     if (ok) cover("filtered-catalog", path); else uncover("filtered-catalog", "see failures");
   }
 
-  // 5d. Every category landing: populated ones (listed in the sitemap) are indexable with ItemList
-  // data; empty ones are noindex. Without a valid sitemap the two cannot be told apart.
+  // 5d. Every category landing: populated ones are indexable with ItemList data;
+  // empty ones are noindex even when their URLs are submitted in the sitemap.
   let populatedOk = sitemapOk && populated.length > 0;
   if (!sitemapOk) { uncover("populated-category", "sitemap.xml unavailable"); uncover("empty-category", "sitemap.xml unavailable"); }
   else if (!populated.length) { failures.push("INCOMPLETE COVERAGE: no populated category landing in sitemap.xml; required surface not verified: populated-category"); uncover("populated-category", "no populated category"); }
