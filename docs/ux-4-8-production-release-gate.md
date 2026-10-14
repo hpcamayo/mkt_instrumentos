@@ -124,3 +124,32 @@ Changed files in this gate:
 - `docs/architecture.md`.
 
 Verification: frozen dependency install; lint, typecheck, 355/355 tests and build without production env; TSV-only acceptance validation; diff-check; guarded GET/HEAD-only production browser smoke and rendered SEO before/after the sitemap correction. No acceptance, specification, schema, lockfile or hosted configuration edits accompanied the correction.
+
+## Local hydration follow-up — awaiting release approval
+
+Baseline: `25e089167c3060a224faf07388cebee7866cd189`, still live as `dpl_5JmL5H6ECsrMrFLBADA9q1RWPrYY`. This follow-up makes **no production change** and does not change step 16 to Pass.
+
+The compiled local production build reproduced React #418 during anonymous full-document navigation through `/login`, `/registro/vendedor` and `/registro/tienda`. One bounded comparison recorded four errors across twelve fresh contexts / twenty-four visits, including with the account-navigation request blocked. Temporary diagnostics in the generated local React bundle showed `<main id="contenido">` completing with no child fiber while its server-rendered page `<section>` remained unclaimed. The failure also appeared on `/listados` when the candidate boundary was limited to auth pages. The development build did not reproduce it; this evidence identifies a shared streamed-route hydration boundary, without claiming an upstream framework defect.
+
+The proposed correction gives `{children}` its own `Suspense` boundary inside the existing main in `components/site-shell.tsx`. It preserves server-rendered content, the single main, header/footer, forms and account behavior; it adds no route-level `loading.tsx`, environment variable, dependency or database change. The initial same-condition comparison after this change recorded zero errors in twenty-four visits. One early catalog-navigation timeout was recorded during investigation; the final candidate is checked on catalog transitions as well as auth pages.
+
+Local verification:
+
+- Frozen installed dependencies; lint, TypeScript, all **355/355 tests**, production build and diff whitespace check pass. Canonical TSV validation remains **403 cases**, with no acceptance changes.
+- `scripts/ux-auth-hydration-smoke.cjs` is a repeatable local-only Playwright regression. It uses fresh contexts at 390/1440 px, normal/instant/delayed account responses and delayed JavaScript, checks HTTP 200, one main/H1 and interactive login/signup forms, records page errors with the actual URL/stack, and blocks all non-GET/HEAD and non-local-origin requests before navigation. It submits no form.
+- The final shared-boundary build passes **10/10 contexts, 50/50 visits**, including 30 auth-page visits, with zero page errors. This run used five trials per width; the script defaults to ten per width.
+- Home, catalog, Percusión and store signup retain their server-rendered main/H1 and HTTP 200 at both widths. Four client transitions from catalog to verified-store filtering complete with zero page errors. Signup screenshots at both widths were inspected.
+- The first expanded harness recorded zero hydration errors but counted one canceled prefetch as a failure. Resource console entries are now excluded only when they match a recorded canceled request; diagnostics are retained. Local middleware redirects use `localhost`, so the final harness consistently uses that origin rather than mixing it with `127.0.0.1` and creating a prefetch CORS error.
+
+To repeat, start the compiled local build using a local Supabase stack or placeholder localhost public credentials, never a production `.env.local`, then run:
+
+```sh
+LARIA_PLAYWRIGHT_MODULE=<installed-playwright-module> \
+  node scripts/ux-auth-hydration-smoke.cjs http://localhost:3013 5
+```
+
+Set `LARIA_CHROME_EXECUTABLE` only if Playwright needs an existing Chrome executable. Playwright remains an optional verification tool; no package/lockfile change is required.
+
+Limits: this proof used placeholder localhost public credentials and no database. It verifies anonymous hydration and interactivity, not account creation, authenticated workflows or real hosted catalog data. No production data, settings, auth, migration or catalog was touched. Temporary diagnostics were removed by a clean rebuild and are not part of the patch. Raw local evidence: `/private/tmp/laria-signup-hydration/`; browser evidence paths are printed by the regression script.
+
+Henri's fix-forward rule still requires approval before a GitHub push. After approval: deploy the correction, repeat the read-only production auth/core-page and listing-hydration checks, verify rendered SEO and runtime health, then update the release decision using that evidence. No additional migration is needed.

@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { GlobalCategories } from "@/components/global-categories";
 import { HomeHeader, SiteHeader } from "@/components/site-header";
 import { getShellLayout } from "@/lib/shell";
@@ -27,7 +27,11 @@ export function SiteShell({
       {/* Two components, not a prop: the home header and the standard header keep their own state and hooks. */}
       {layout.header === "home" ? <HomeHeader /> : <SiteHeader layout={layout} />}
       {layout.strip !== "none" ? <GlobalCategories visibility={layout.strip} brands={menuBrands} /> : null}
-      <main id="contenido" tabIndex={-1} className="flex-1">{children}</main>
+      <main id="contenido" tabIndex={-1} className="flex-1">
+        {/* The route can arrive after the shell. Keep its hydration inside a boundary so a retry cannot
+            complete <main> before React claims the server-rendered page (React #418). */}
+        <Suspense fallback={null}>{children}</Suspense>
+      </main>
       {layout.footer === "full" ? fullFooter : layout.footer === "slim" ? slimFooter : null}
     </div>
   );
