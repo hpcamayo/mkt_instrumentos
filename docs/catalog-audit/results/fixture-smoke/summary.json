@@ -1,0 +1,614 @@
+{
+ "overall": {
+  "cases": 311,
+  "known_model_cases_resolved": 258,
+  "label_unresolved_model_cases": 0,
+  "recall@1": 92.6,
+  "recall@3": 96.1,
+  "recall@5": 97.7,
+  "resolution_accuracy": 75.9,
+  "resolution_denominator": 311,
+  "auto_coverage_on_AUTO_OK": 73.2,
+  "auto_ok_denominator": 239,
+  "unsafe_auto": 11,
+  "unsafe_auto_rate_on_no_auto_cases": 15.3,
+  "no_auto_denominator": 72,
+  "auto_wrong_product": 0,
+  "auto_unjudged": 0,
+  "family_model_confusion": 2,
+  "ooc_cases": 45,
+  "ooc_tiers": {
+   "AUTO": 6,
+   "INSUFFICIENT": 36,
+   "REVIEW": 3
+  },
+  "tiers": {
+   "AUTO": 186,
+   "REVIEW": 36,
+   "INSUFFICIENT": 89
+  },
+  "decisions": {
+   "MATCH": 191,
+   "INSUFFICIENT": 111,
+   "FAMILY": 7,
+   "CONFLICTING": 2
+  }
+ },
+ "by_origin": {
+  "authored": {
+   "cases": 234,
+   "known_model_cases_resolved": 181,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 91.7,
+   "recall@3": 95.0,
+   "recall@5": 97.2,
+   "resolution_accuracy": 80.3,
+   "resolution_denominator": 234,
+   "auto_coverage_on_AUTO_OK": 78.4,
+   "auto_ok_denominator": 162,
+   "unsafe_auto": 11,
+   "unsafe_auto_rate_on_no_auto_cases": 15.3,
+   "no_auto_denominator": 72,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 1,
+   "ooc_cases": 45,
+   "ooc_tiers": {
+    "AUTO": 6,
+    "INSUFFICIENT": 36,
+    "REVIEW": 3
+   },
+   "tiers": {
+    "AUTO": 138,
+    "REVIEW": 29,
+    "INSUFFICIENT": 67
+   },
+   "decisions": {
+    "MATCH": 142,
+    "INSUFFICIENT": 84,
+    "FAMILY": 7,
+    "CONFLICTING": 1
+   }
+  },
+  "perturbation": {
+   "cases": 77,
+   "known_model_cases_resolved": 77,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 94.8,
+   "recall@3": 98.7,
+   "recall@5": 98.7,
+   "resolution_accuracy": 62.3,
+   "resolution_denominator": 77,
+   "auto_coverage_on_AUTO_OK": 62.3,
+   "auto_ok_denominator": 77,
+   "unsafe_auto": 0,
+   "unsafe_auto_rate_on_no_auto_cases": null,
+   "no_auto_denominator": 0,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 1,
+   "ooc_cases": 0,
+   "ooc_tiers": {},
+   "tiers": {
+    "REVIEW": 7,
+    "AUTO": 48,
+    "INSUFFICIENT": 22
+   },
+   "decisions": {
+    "INSUFFICIENT": 27,
+    "MATCH": 49,
+    "CONFLICTING": 1
+   }
+  }
+ },
+ "by_category": {
+  "amplifiers": {
+   "cases": 39,
+   "known_model_cases_resolved": 34,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 94.1,
+   "recall@3": 100.0,
+   "recall@5": 100.0,
+   "resolution_accuracy": 82.1,
+   "resolution_denominator": 39,
+   "auto_coverage_on_AUTO_OK": 81.2,
+   "auto_ok_denominator": 32,
+   "unsafe_auto": 1,
+   "unsafe_auto_rate_on_no_auto_cases": 14.3,
+   "no_auto_denominator": 7,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 3,
+   "ooc_tiers": {
+    "INSUFFICIENT": 3
+   },
+   "tiers": {
+    "AUTO": 27,
+    "REVIEW": 4,
+    "INSUFFICIENT": 8
+   },
+   "decisions": {
+    "MATCH": 27,
+    "INSUFFICIENT": 11,
+    "FAMILY": 1
+   }
+  },
+  "audio interfaces": {
+   "cases": 32,
+   "known_model_cases_resolved": 26,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 88.5,
+   "recall@3": 96.2,
+   "recall@5": 100.0,
+   "resolution_accuracy": 81.2,
+   "resolution_denominator": 32,
+   "auto_coverage_on_AUTO_OK": 73.9,
+   "auto_ok_denominator": 23,
+   "unsafe_auto": 0,
+   "unsafe_auto_rate_on_no_auto_cases": 0.0,
+   "no_auto_denominator": 9,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 2,
+   "ooc_cases": 4,
+   "ooc_tiers": {
+    "INSUFFICIENT": 4
+   },
+   "tiers": {
+    "INSUFFICIENT": 9,
+    "REVIEW": 6,
+    "AUTO": 17
+   },
+   "decisions": {
+    "INSUFFICIENT": 13,
+    "MATCH": 18,
+    "FAMILY": 1
+   }
+  },
+  "basses": {
+   "cases": 18,
+   "known_model_cases_resolved": 17,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 88.2,
+   "recall@3": 100.0,
+   "recall@5": 100.0,
+   "resolution_accuracy": 72.2,
+   "resolution_denominator": 18,
+   "auto_coverage_on_AUTO_OK": 70.6,
+   "auto_ok_denominator": 17,
+   "unsafe_auto": 0,
+   "unsafe_auto_rate_on_no_auto_cases": 0.0,
+   "no_auto_denominator": 1,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 1,
+   "ooc_tiers": {
+    "INSUFFICIENT": 1
+   },
+   "tiers": {
+    "AUTO": 12,
+    "REVIEW": 3,
+    "INSUFFICIENT": 3
+   },
+   "decisions": {
+    "MATCH": 12,
+    "INSUFFICIENT": 6
+   }
+  },
+  "cymbals": {
+   "cases": 21,
+   "known_model_cases_resolved": 18,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 61.1,
+   "recall@3": 72.2,
+   "recall@5": 77.8,
+   "resolution_accuracy": 52.4,
+   "resolution_denominator": 21,
+   "auto_coverage_on_AUTO_OK": 33.3,
+   "auto_ok_denominator": 15,
+   "unsafe_auto": 0,
+   "unsafe_auto_rate_on_no_auto_cases": 0.0,
+   "no_auto_denominator": 6,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 2,
+   "ooc_tiers": {
+    "REVIEW": 1,
+    "INSUFFICIENT": 1
+   },
+   "tiers": {
+    "REVIEW": 8,
+    "AUTO": 5,
+    "INSUFFICIENT": 8
+   },
+   "decisions": {
+    "INSUFFICIENT": 15,
+    "MATCH": 5,
+    "FAMILY": 1
+   }
+  },
+  "drums": {
+   "cases": 20,
+   "known_model_cases_resolved": 16,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 93.8,
+   "recall@3": 93.8,
+   "recall@5": 100.0,
+   "resolution_accuracy": 90.0,
+   "resolution_denominator": 20,
+   "auto_coverage_on_AUTO_OK": 86.7,
+   "auto_ok_denominator": 15,
+   "unsafe_auto": 0,
+   "unsafe_auto_rate_on_no_auto_cases": 0.0,
+   "no_auto_denominator": 5,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 3,
+   "ooc_tiers": {
+    "INSUFFICIENT": 3
+   },
+   "tiers": {
+    "AUTO": 13,
+    "REVIEW": 3,
+    "INSUFFICIENT": 4
+   },
+   "decisions": {
+    "MATCH": 14,
+    "FAMILY": 1,
+    "INSUFFICIENT": 5
+   }
+  },
+  "guitars": {
+   "cases": 84,
+   "known_model_cases_resolved": 64,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 96.9,
+   "recall@3": 98.4,
+   "recall@5": 100.0,
+   "resolution_accuracy": 76.2,
+   "resolution_denominator": 84,
+   "auto_coverage_on_AUTO_OK": 71.7,
+   "auto_ok_denominator": 60,
+   "unsafe_auto": 3,
+   "unsafe_auto_rate_on_no_auto_cases": 12.5,
+   "no_auto_denominator": 24,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 19,
+   "ooc_tiers": {
+    "INSUFFICIENT": 15,
+    "AUTO": 2,
+    "REVIEW": 2
+   },
+   "tiers": {
+    "AUTO": 46,
+    "REVIEW": 7,
+    "INSUFFICIENT": 31
+   },
+   "decisions": {
+    "MATCH": 47,
+    "INSUFFICIENT": 35,
+    "FAMILY": 2
+   }
+  },
+  "microphones": {
+   "cases": 34,
+   "known_model_cases_resolved": 30,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 100.0,
+   "recall@3": 100.0,
+   "recall@5": 100.0,
+   "resolution_accuracy": 94.1,
+   "resolution_denominator": 34,
+   "auto_coverage_on_AUTO_OK": 100.0,
+   "auto_ok_denominator": 28,
+   "unsafe_auto": 2,
+   "unsafe_auto_rate_on_no_auto_cases": 33.3,
+   "no_auto_denominator": 6,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 4,
+   "ooc_tiers": {
+    "INSUFFICIENT": 3,
+    "AUTO": 1
+   },
+   "tiers": {
+    "AUTO": 30,
+    "INSUFFICIENT": 4
+   },
+   "decisions": {
+    "MATCH": 30,
+    "INSUFFICIENT": 4
+   }
+  },
+  "pedals": {
+   "cases": 63,
+   "known_model_cases_resolved": 53,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 96.2,
+   "recall@3": 96.2,
+   "recall@5": 96.2,
+   "resolution_accuracy": 63.5,
+   "resolution_denominator": 63,
+   "auto_coverage_on_AUTO_OK": 63.3,
+   "auto_ok_denominator": 49,
+   "unsafe_auto": 5,
+   "unsafe_auto_rate_on_no_auto_cases": 35.7,
+   "no_auto_denominator": 14,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 9,
+   "ooc_tiers": {
+    "AUTO": 3,
+    "INSUFFICIENT": 6
+   },
+   "tiers": {
+    "AUTO": 36,
+    "INSUFFICIENT": 22,
+    "REVIEW": 5
+   },
+   "decisions": {
+    "MATCH": 38,
+    "INSUFFICIENT": 22,
+    "CONFLICTING": 2,
+    "FAMILY": 1
+   }
+  }
+ },
+ "by_ambiguity": {
+  "adversarial": {
+   "cases": 12,
+   "known_model_cases_resolved": 2,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 100.0,
+   "recall@3": 100.0,
+   "recall@5": 100.0,
+   "resolution_accuracy": 100.0,
+   "resolution_denominator": 12,
+   "auto_coverage_on_AUTO_OK": 100.0,
+   "auto_ok_denominator": 2,
+   "unsafe_auto": 0,
+   "unsafe_auto_rate_on_no_auto_cases": 0.0,
+   "no_auto_denominator": 10,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 10,
+   "ooc_tiers": {
+    "INSUFFICIENT": 9,
+    "REVIEW": 1
+   },
+   "tiers": {
+    "AUTO": 2,
+    "INSUFFICIENT": 9,
+    "REVIEW": 1
+   },
+   "decisions": {
+    "MATCH": 2,
+    "INSUFFICIENT": 9,
+    "FAMILY": 1
+   }
+  },
+  "contradiction": {
+   "cases": 10,
+   "known_model_cases_resolved": 8,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 62.5,
+   "recall@3": 62.5,
+   "recall@5": 75.0,
+   "resolution_accuracy": 40.0,
+   "resolution_denominator": 10,
+   "auto_coverage_on_AUTO_OK": null,
+   "auto_ok_denominator": 0,
+   "unsafe_auto": 6,
+   "unsafe_auto_rate_on_no_auto_cases": 60.0,
+   "no_auto_denominator": 10,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 2,
+   "ooc_tiers": {
+    "AUTO": 2
+   },
+   "tiers": {
+    "AUTO": 6,
+    "REVIEW": 4
+   },
+   "decisions": {
+    "MATCH": 7,
+    "INSUFFICIENT": 3
+   }
+  },
+  "family_level": {
+   "cases": 6,
+   "known_model_cases_resolved": 0,
+   "label_unresolved_model_cases": 0,
+   "recall@1": null,
+   "recall@3": null,
+   "recall@5": null,
+   "resolution_accuracy": 100.0,
+   "resolution_denominator": 6,
+   "auto_coverage_on_AUTO_OK": null,
+   "auto_ok_denominator": 0,
+   "unsafe_auto": 0,
+   "unsafe_auto_rate_on_no_auto_cases": 0.0,
+   "no_auto_denominator": 6,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 0,
+   "ooc_tiers": {},
+   "tiers": {
+    "INSUFFICIENT": 1,
+    "REVIEW": 5
+   },
+   "decisions": {
+    "INSUFFICIENT": 1,
+    "FAMILY": 5
+   }
+  },
+  "out_of_catalog": {
+   "cases": 33,
+   "known_model_cases_resolved": 0,
+   "label_unresolved_model_cases": 0,
+   "recall@1": null,
+   "recall@3": null,
+   "recall@5": null,
+   "resolution_accuracy": 87.9,
+   "resolution_denominator": 33,
+   "auto_coverage_on_AUTO_OK": null,
+   "auto_ok_denominator": 0,
+   "unsafe_auto": 4,
+   "unsafe_auto_rate_on_no_auto_cases": 12.1,
+   "no_auto_denominator": 33,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 33,
+   "ooc_tiers": {
+    "INSUFFICIENT": 27,
+    "AUTO": 4,
+    "REVIEW": 2
+   },
+   "tiers": {
+    "INSUFFICIENT": 27,
+    "AUTO": 4,
+    "REVIEW": 2
+   },
+   "decisions": {
+    "INSUFFICIENT": 28,
+    "MATCH": 4,
+    "FAMILY": 1
+   }
+  },
+  "unambiguous": {
+   "cases": 242,
+   "known_model_cases_resolved": 242,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 94.6,
+   "recall@3": 97.5,
+   "recall@5": 98.3,
+   "resolution_accuracy": 73.6,
+   "resolution_denominator": 242,
+   "auto_coverage_on_AUTO_OK": 72.6,
+   "auto_ok_denominator": 234,
+   "unsafe_auto": 0,
+   "unsafe_auto_rate_on_no_auto_cases": 0.0,
+   "no_auto_denominator": 8,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 2,
+   "ooc_cases": 0,
+   "ooc_tiers": {},
+   "tiers": {
+    "AUTO": 170,
+    "REVIEW": 22,
+    "INSUFFICIENT": 50
+   },
+   "decisions": {
+    "MATCH": 174,
+    "INSUFFICIENT": 66,
+    "CONFLICTING": 2
+   }
+  },
+  "variant_ambiguous": {
+   "cases": 8,
+   "known_model_cases_resolved": 6,
+   "label_unresolved_model_cases": 0,
+   "recall@1": 50.0,
+   "recall@3": 83.3,
+   "recall@5": 100.0,
+   "resolution_accuracy": 87.5,
+   "resolution_denominator": 8,
+   "auto_coverage_on_AUTO_OK": 100.0,
+   "auto_ok_denominator": 3,
+   "unsafe_auto": 1,
+   "unsafe_auto_rate_on_no_auto_cases": 20.0,
+   "no_auto_denominator": 5,
+   "auto_wrong_product": 0,
+   "auto_unjudged": 0,
+   "family_model_confusion": 0,
+   "ooc_cases": 0,
+   "ooc_tiers": {},
+   "tiers": {
+    "AUTO": 4,
+    "INSUFFICIENT": 2,
+    "REVIEW": 2
+   },
+   "decisions": {
+    "MATCH": 4,
+    "INSUFFICIENT": 4
+   }
+  }
+ },
+ "conflict_detection": {
+  "cases": 18,
+  "not_auto": 8,
+  "decisions": {
+   "MATCH": 11,
+   "INSUFFICIENT": 7
+  }
+ },
+ "latency": {
+  "lookup": {
+   "p50_ms": 23.1,
+   "p95_ms": 43.1,
+   "max_ms": 5424.6,
+   "n": 311
+  },
+  "match": {
+   "p50_ms": 23.9,
+   "p95_ms": 44.9,
+   "max_ms": 4670.7,
+   "n": 311
+  },
+  "jev": {
+   "p50_ms": 23.9,
+   "p95_ms": 43.8,
+   "max_ms": 4739.2,
+   "n": 311
+  }
+ },
+ "jev_payload": {
+  "avg_bytes": 536.7,
+  "max_bytes": 600,
+  "null_rate": {
+   "decision": 0.0,
+   "tier": 0.0,
+   "reasons": 59.8,
+   "score": 7.7,
+   "match_type": 7.7,
+   "warning": 96.8,
+   "brand_mentioned": 0.0,
+   "product_id": 7.7,
+   "manufacturer": 7.7,
+   "model": 7.7,
+   "category_id": 7.7,
+   "entity_level": 7.7,
+   "verification_status": 7.7,
+   "publish_ready": 7.7,
+   "detail_status": 7.7,
+   "detailed": 7.7,
+   "missing_attributes": 92.6,
+   "untrusted_attributes": 100.0,
+   "runner_up_product_id": 99.0,
+   "runner_up_score": 99.0
+  },
+  "decision_vs_tier": {
+   "MATCH/AUTO": 186,
+   "INSUFFICIENT/REVIEW": 23,
+   "INSUFFICIENT/INSUFFICIENT": 88,
+   "FAMILY/REVIEW": 7,
+   "MATCH/REVIEW": 4,
+   "CONFLICTING/REVIEW": 2,
+   "MATCH/INSUFFICIENT": 1
+  }
+ }
+}

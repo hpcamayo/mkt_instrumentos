@@ -1,0 +1,45 @@
+instrument_type,attribute_key,stability_class,prefill_rule,withhold_when,evidence_needed,example,coverage_on_real_catalog
+electric_guitar,body_type,model_stable,prefill on AUTO,provenance default or untrusted; seller text contradicts,spec or name,Player Stratocaster = solid body,not measured (run catalog_audit.py autofill)
+electric_guitar,shape,model_stable,prefill on AUTO,provenance default; product is a family,spec or name or category,Stratocaster line = strat,not measured
+electric_guitar,strings,model_stable,prefill on AUTO only from spec or name; never from default,provenance default (E4 '6 strings' norm) unless the seller confirms; title has 7/8/12,spec or name,'7-string' models are separate products,not measured
+electric_guitar,bridge,variant_or_model,prefill on AUTO when not in variant_attributes,listed in variant_attributes; line has HT and tremolo versions under one product,spec,Squier Bullet Strat HT vs tremolo,not measured
+electric_guitar,pickups,variant_or_model,prefill on AUTO when the product name states it (HSS/SSS/HH) or spec is trusted,listed in variant_attributes; name lacks the configuration and siblings differ,name or spec,Affinity Strat exists in SSS and HSS,not measured
+electric_guitar,handedness,variant,never prefill from the product; only from the seller's text (zurdo / left) or a matched left-handed variant,always unless a left-handed variant SKU/name matched,variant,Player Stratocaster LH,not measured
+electric_guitar,frets,model_stable,prefill on AUTO,untrusted or conflicting,spec,RG = 24 frets,not measured
+acoustic_guitar,acoustic_type,model_stable,prefill on AUTO,model code lacks the E/CE suffix that decides electro; seller says otherwise,spec or name,F310 acoustic vs FX310 electro,not measured
+acoustic_guitar,body_shape,model_stable,prefill on AUTO,value outside the V1 enum (cutaway is not a shape),spec,FG800 dreadnought,not measured
+acoustic_guitar,strings_material,model_stable,prefill on AUTO,never from default,spec or category,classical = nylon,not measured
+acoustic_guitar,has_preamp,model_stable,prefill on AUTO only when spec or name (E/CE) says it,derived from name only when the code is ambiguous,spec or name,214ce = yes,not measured
+acoustic_guitar,handedness,variant,never prefill from the product,always unless variant matched,variant,,not measured
+bass,strings,model_stable,prefill on AUTO from spec or name (V = 5),provenance default ('4 strings' norm) unless seller confirms,spec or name,Player Jazz Bass V = 5,not measured
+bass,bass_type,model_stable,prefill on AUTO,product is a family,spec or name,Jazz Bass line,not measured
+bass,pickups,model_stable,prefill on AUTO,untrusted,spec,PJ basses,not measured
+bass,scale_length,model_stable,prefill on AUTO,short-scale versions share the line name,spec,Mustang / short scale,not measured
+bass,handedness,variant,never prefill from the product,always unless variant matched,variant,,not measured
+drums,drum_type,model_stable,prefill on AUTO or FAMILY (category-level),never wrong for the line; still withhold on REVIEW,category,TD-07KV electronic,not measured
+drums,configuration,unit_specific,never prefill,always: shell pack vs complete depends on what this seller sells,seller,Export sold as shell pack or with hardware,n/a
+drums,pieces,unit_specific,never prefill,always: kits are sold in many configurations,seller,5 or 7 pieces,n/a
+drums,material,model_stable,prefill on AUTO,line spans several shell woods across generations,spec,Stage Custom Birch,not measured
+drums,includes_hardware,unit_specific,never prefill,always,seller,,n/a
+drums,includes_cymbals,unit_specific,never prefill,always,seller,,n/a
+drums,kick_size,variant,prefill only from a matched variant/configuration,always at product level,variant,22 or 20 inch,not measured
+cymbals,cymbal_type,model_stable,prefill on AUTO,product is a family (A Custom line),name or spec,18 A Custom Crash,not measured
+cymbals,size,model_stable_if_size_level,prefill on AUTO only when the product is size-level (size in its name),product is a line without size; seller's size differs,name,18 vs 16 inch,not measured
+cymbals,alloy,model_stable,prefill on AUTO,untrusted,spec,B20 / B8,not measured
+cymbals,finish,model_stable,prefill on AUTO,line sells both finishes under one product,spec or name,Brilliant,not measured
+microphones,microphone_type,model_stable,prefill on AUTO,untrusted,spec,SM57 dynamic,not measured
+microphones,use_case,marketing,do not prefill (suggest only),always: intended use is the seller's or buyer's choice,n/a,SM57 is used on voice too,n/a
+microphones,polar_pattern,model_stable,prefill on AUTO,multi-pattern microphones (value is a list),spec,Beta 58A supercardioid,not measured
+microphones,connection,model_stable,prefill on AUTO,USB and XLR versions share a name,spec or name,AT2020 vs AT2020USB+,not measured
+audio_interface,inputs,model_stable_definition_risk,prefill on AUTO only if the catalog counts inputs the way the V1 filter does,definition differs (mic preamps vs all inputs),spec,Scarlett Solo: 1 mic + 1 instrument,not measured
+audio_interface,connection,generation_stable,prefill only when the generation is identified,generation not named (2i2 2nd gen USB-B vs 3rd gen USB-C),spec,Scarlett 2i2 generations,not measured
+audio_interface,phantom_power,model_stable,prefill on AUTO,untrusted,spec,,not measured
+audio_interface,midi,model_stable,prefill on AUTO,untrusted,spec,4i4 has MIDI,not measured
+pedals,pedal_type,model_stable,prefill on AUTO,multi-effect or dual pedals,spec or name or category,DS-1 distortion,not measured
+pedals,format,model_stable,prefill on AUTO,untrusted,spec,compact,not measured
+pedals,true_bypass,weak_evidence,do not prefill unless spec states it,maker spec rarely states it; buffered designs,spec only,Boss pedals are buffered,not measured
+amplifiers,amplifier_type,model_stable,prefill on AUTO,head and combo versions share a name,spec or name,DSL40CR combo,not measured
+amplifiers,technology,model_stable,prefill on AUTO,hybrid amps,spec,AC15C1 tube,not measured
+amplifiers,power,model_stable,prefill on AUTO,switchable power; watts in the name that are not output power,spec or name,Katana-50 = 50 W,not measured
+amplifiers,use_case,model_stable,prefill on AUTO,keyboard/acoustic amps,category,Rumble 40 bass,not measured
+any,condition / price / photos / description / location / modifications / included items,unit_specific,never prefill,always (functional-spec.md: details of the specific unit come from the seller),seller,,n/a
