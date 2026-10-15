@@ -188,6 +188,10 @@ Current behavior:
 - Seller and admin forms reuse `lib/instrument-filters.ts` for `instrument_type` and labeled `attributes` controls.
 - Owners can hide an approved listing, restore only an owner-hidden listing, and mark it sold. Sold rows are immutable and can only be copied by the relist RPC.
 - Relisted rows reference the sold source through `relisted_from_listing_id`; the source row is retained.
+- `stock_state text` (STORE-1a, local only): `null` unless a store links the listing to an inventory item, then
+  `in_stock` or `out_of_stock`. Controlled field, written only by the inventory functions. Stock never changes
+  `status`; an out-of-stock listing keeps its URL with "Agotado" but leaves discovery and the index. A linked listing
+  cannot become `sold`. See "Store inventory (STORE-1a)" below.
 
 ### `public.listing_photos`
 
@@ -524,6 +528,7 @@ Current migrations:
 - `20260918120000_sprint_6_transactions_reviews.sql`: verified-transaction claims, buyer confirmation, immutable double-blind reviews, review reports/moderation, typed notifications, verified funnel metrics, guarded event transport, RLS and concurrency indexes. All 17 migrations are synchronized locally and in production; the Sprint 6 release history was verified on 2026-09-19.
 - `20260921120000_sprint_7_marketplace_email_alerts.sql`: normalized owner alerts, prospective first-public matching, private match/outbox records, notification/price-drop email eligibility, service-only daily/claim/complete/fail RPCs and pending-buyer account count. All 18 migrations apply from a clean local reset and are synchronized with production; Sprint 7 production history was verified on 2026-09-22.
 - `20260923120000_sprint_8_admin_reports_legacy.sql`: general private reports, report moderation, bounded Admin workbench/domain reads, append-only privileged-action audit and atomic one-time legacy ownership linking. All 19 migrations apply from a clean local reset; this nineteenth migration is local-only and production remains at the synchronized Sprint 7 history.
+- `20261023120000_store_inventory_foundation.sql` (STORE-1a, local only, not applied to production): store inventory tables, append-only stock ledger, owner and Admin functions, `listings.stock_state` and its listing triggers. See "Store inventory (STORE-1a)".
 
 Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
 
@@ -613,4 +618,28 @@ conflicts stay empty; provenance is kept only for review pairs. That is about 80
   `catalog_products`.
 - **Details:** sizes, guards and procedure are in that branch's `catalog/docs/production_footprint.md`.
 - `lib/supabase/database.types.ts` is regenerated for these tables in the sprint that first reads them.
+
+## Store inventory (STORE-1a)
+
+Added by `20261023120000_store_inventory_foundation.sql`; local only until the owner approves a production apply.
+Design: `docs/store-operations/design.md`; implementation notes, deviations, rollback runbook and review guide:
+`docs/store-operations/store-1a.md`.
+
+- **Tables:** `store_operation_settings` (pilot gate `inventory_enabled`, default off; missing row = off),
+  `store_inventory_items` (one per SKU; stock, price, threshold, catalog product FK and variant soft link, optional
+  link to one listing of the same store through the composite FK `(listing_id, store_id) → listings(id, store_id)`),
+  `store_stock_movements` and `store_inventory_changes` (append-only: no browser grants, triggers raise on update,
+  delete and truncate), `laria_private.store_inventory_batch_receipts` (bulk idempotency).
+- **RLS:** owner `SELECT` through `is_store_owner(store_id)`, Admin `SELECT` through `is_admin()`; no browser writes.
+- **Owner functions:** `create_inventory_item`, `update_inventory_item`, `change_inventory_sku`,
+  `record_stock_movement`, `apply_bulk_stock_operations`, `preview_inventory_price_bulk`, `set_inventory_price_bulk`,
+  `link_inventory_listing`, `unlink_inventory_listing`, `archive_inventory_item`, `unarchive_inventory_item`,
+  `get_inventory_page`, `get_inventory_summary`. Admin: `admin_set_store_inventory_enabled` (reason required,
+  audited). Lock order on every path: idempotency key (advisory) → linked listing → item.
+- **Listing triggers:** `listings_guard_inventory_managed` (no `stock_state` on insert; a linked listing cannot become
+  `sold`), `listings_sync_inventory_price` (listing price edits write through to the item). Changed functions:
+  `protect_listing_admin_fields`, `notify_favorite_price_drop`, `capture_listing_alert_publication` (and its trigger,
+  now also on `stock_state`), `capture_store_alert_publication`, `complete_public_submission` (`inventory_item_id`).
+- **Tests:** `tests/store-ops-1.sql` (rolled back) and `tests/store-ops-concurrency.integration.cjs` (separate
+  connections, local only).
 

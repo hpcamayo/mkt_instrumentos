@@ -384,6 +384,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
+          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
           store_id: string | null
           title: string
@@ -419,6 +420,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at?: string | null
+          stock_state?: string | null
           status?: Database["public"]["Enums"]["listing_status"]
           store_id?: string | null
           title: string
@@ -453,6 +455,7 @@ export type Database = {
           seller_type?: Database["public"]["Enums"]["seller_type"]
           slug?: string
           sold_at?: string | null
+          stock_state?: string | null
           status?: Database["public"]["Enums"]["listing_status"]
           store_id?: string | null
           title?: string
@@ -1596,6 +1599,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
+          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
           store_id: string | null
           title: string
@@ -1749,6 +1753,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
+          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
           store_id: string | null
           title: string
@@ -1842,6 +1847,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
+          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
           store_id: string | null
           title: string
@@ -1964,6 +1970,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
+          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
           store_id: string | null
           title: string

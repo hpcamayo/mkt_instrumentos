@@ -23,10 +23,12 @@ import { StatusTag, Tag } from "@/components/ui/tag";
 import { getSpecStrip, getSpecTable } from "@/lib/listing-specs";
 import { formatMonthYear, formatPublishedAgo, listingCountLabel } from "@/lib/listing-page";
 import {
+  DISCOVERABLE_STOCK_FILTER,
   buildWhatsAppUrl,
   getConditionLabel,
   getListingDisplayTitle,
   getListingSecondaryTitle,
+  isOutOfStock,
   normalizeStore,
   parseListingFilters,
   resolveParticularSeller,
@@ -118,6 +120,7 @@ const loadPublicListing = cache(async (slug: string) => {
       `
         id,
         status,
+        stock_state,
         sold_at,
         store_id,
         owner_user_id,
@@ -321,6 +324,7 @@ function ListingDetail({
   const displayTitle = getListingDisplayTitle(listing);
   const secondaryTitle = getListingSecondaryTitle(listing);
   const isSold = listing.status === "sold";
+  const outOfStock = !isSold && isOutOfStock(listing);
   const place = `${listing.city}, ${listing.region}`;
   const seller: SellerSummary = {
     name: (isStore ? store?.name : particular.name) || (isStore ? "Tienda" : "Particular"),
@@ -359,9 +363,15 @@ function ListingDetail({
                 {displayTitle}
               </h1>
               {secondaryTitle ? <p className="mt-1 t-ui text-ink-2">{secondaryTitle}</p> : null}
-              <p className="mt-3">
+              <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <Price value={listing.price_pen} size="detail" />
+                {outOfStock ? <StatusTag domain="stock" status="out_of_stock" /> : null}
               </p>
+              {outOfStock ? (
+                <p className="mt-2 t-ui text-ink-2">
+                  Sin unidades disponibles por ahora. Puedes consultar a la tienda cuándo volverá a estar disponible.
+                </p>
+              ) : null}
               <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
                 {listing.condition ? <Tag>{getConditionLabel(listing.condition)}</Tag> : null}
                 <ListingDetailMetadata listingId={listing.id} trackView={!isSold}>
@@ -457,6 +467,7 @@ async function getSimilarListings(
     .from("listings")
     .select(relatedListingSelect)
     .eq("status", "approved")
+    .or(DISCOVERABLE_STOCK_FILTER)
     .neq("id", listing.id)
     .eq(primaryFilterColumn, primaryFilterValue)
     .order("published_at", { ascending: false, nullsFirst: false })
@@ -483,6 +494,7 @@ async function getSimilarListings(
       .from("listings")
       .select(relatedListingSelect)
       .eq("status", "approved")
+      .or(DISCOVERABLE_STOCK_FILTER)
       .neq("id", listing.id)
       .eq("brand", listing.brand)
       .order("published_at", { ascending: false, nullsFirst: false })
@@ -548,6 +560,7 @@ const getMoreFromSellerListings = cache(
       .from("listings")
       .select(relatedListingSelect, { count: "exact" })
       .eq("status", "approved")
+      .or(DISCOVERABLE_STOCK_FILTER)
       .neq("id", listing.id);
 
     const query =

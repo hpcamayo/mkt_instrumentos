@@ -1,5 +1,5 @@
 import { LISTINGS_PAGE_SIZE } from "@/lib/pagination";
-import type { ListingCardData, ListingFilters } from "@/lib/listings";
+import { DISCOVERABLE_STOCK_FILTER, type ListingCardData, type ListingFilters } from "@/lib/listings";
 import type { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClient>>;
@@ -46,7 +46,8 @@ export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: 
       `,
       { count: "exact" },
     )
-    .eq("status", "approved");
+    .eq("status", "approved")
+    .or(DISCOVERABLE_STOCK_FILTER);
 
   if (filters.category) {
     query = query.eq("category", filters.category);

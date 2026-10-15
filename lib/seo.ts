@@ -5,6 +5,7 @@ import { instrumentFilterGroups } from "@/lib/instrument-filters";
 import {
   formatPrice,
   getCategoryLabel,
+  isOutOfStock,
   normalizeStore,
   type ListingDetailData,
 } from "@/lib/listings";
@@ -120,7 +121,7 @@ export function listingSummary(listing: ListingDetailData) {
     listing.condition,
     `${getCategoryLabel(listing.category)}${location ? ` en ${location}` : ""}`,
   ].filter(Boolean).join(" · ");
-  const prefix = listing.status === "sold" ? "Vendido. " : "";
+  const prefix = listing.status === "sold" ? "Vendido. " : isOutOfStock(listing) ? "Agotado. " : "";
   const detail = listing.description ? ` ${listing.description}` : " Contacta al vendedor directo por WhatsApp.";
   return truncateDescription(`${prefix}${facts}.${detail}`);
 }
@@ -134,8 +135,9 @@ export function buildListingMetadata(listing: ListingDetailData): Metadata {
     title,
     description,
     alternates: { canonical },
-    // Sold listings remain at their direct URL as history but leave the index.
-    ...(listing.status === "sold" ? { robots: NOINDEX_FOLLOW_ROBOTS } : {}),
+    // Sold listings remain at their direct URL as history but leave the index; out-of-stock ones leave it until
+    // restocked, keeping the same URL.
+    ...(listing.status === "sold" || isOutOfStock(listing) ? { robots: NOINDEX_FOLLOW_ROBOTS } : {}),
     openGraph: {
       ...OPEN_GRAPH_BASE,
       title: `${title} | ${SITE_NAME}`,
@@ -168,7 +170,12 @@ export function buildListingJsonLd(listing: ListingDetailData) {
             url,
             price: listing.price_pen,
             priceCurrency: "PEN",
-            availability: listing.status === "sold" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
+            availability:
+              listing.status === "sold"
+                ? "https://schema.org/SoldOut"
+                : isOutOfStock(listing)
+                  ? "https://schema.org/OutOfStock"
+                  : "https://schema.org/InStock",
             itemCondition: listing.condition === "Nuevo" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
             // Individual sellers are not named in structured data; stores are public businesses.
             ...(store ? { seller: { "@type": "Organization", name: store.name } } : {}),

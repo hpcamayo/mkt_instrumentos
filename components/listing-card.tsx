@@ -9,10 +9,12 @@ import type { EventSource } from "@/lib/marketplace-event-payload";
 import { getCardSpecLine } from "@/lib/listing-specs";
 import { formatPrice } from "@/lib/price";
 import { Price } from "@/components/ui/price";
+import { StatusTag } from "@/components/ui/tag";
 import { VerifiedIcon } from "@/components/ui/verified-mark";
 import {
   getCategoryLabel,
   getListingDisplayTitle,
+  isOutOfStock,
   normalizeStore,
   type ListingCardData,
 } from "@/lib/listings";
@@ -85,8 +87,9 @@ export function ListingCard({ listing, variant = "grid", source = "catalog", hea
 
       <div className="mt-2 flex min-w-0 flex-col gap-1">
         <Heading className="line-clamp-2 min-h-[38px] t-card-title text-ink">{titleLink}</Heading>
-        <p>
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <Price value={listing.price_pen} />
+          {isOutOfStock(listing) ? <StatusTag domain="stock" status="out_of_stock" /> : null}
         </p>
         {specLine ? <p className="truncate t-meta">{specLine}</p> : null}
         <SellerLine listing={listing} />
