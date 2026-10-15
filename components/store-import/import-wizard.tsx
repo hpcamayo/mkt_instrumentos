@@ -11,6 +11,7 @@ import { Checkbox, Field, FileInput, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
 import { ImportPhotos } from "@/components/store-import/import-photos";
+import { ImportPublish } from "@/components/store-import/import-publish";
 import { IMPORT_FILE_ACCEPT, importFileFormat, importFileProblem, uploadImportFile } from "@/components/store-import/import-start";
 import { importStatus } from "@/lib/store-import/labels";
 import { IMPORT_ATTRIBUTE_FIELDS, IMPORT_FIELDS, mappingProblems, type ImportMapping } from "@/lib/store-import/mapping";
@@ -714,6 +715,7 @@ function ResultStep({ session, onReopen }: { session: ImportSession; onReopen: (
         <Link href="/mi-cuenta/tienda/inventario" className={buttonClasses()}>Ir al inventario</Link>
       </div>
       {session.status === "committed" || session.status === "partially_committed" ? <ResultPhotos session={session} /> : null}
+      {session.status === "committed" || session.status === "partially_committed" ? <ImportPublish sessionId={session.id} /> : null}
       {session.status === "committed" || session.status === "partially_committed" ? (
         <RowsList sessionId={session.id} filter={filter} onFilter={setFilter} counts={counts} editable={false} version={session.version} filters={RESULT_FILTERS} />
       ) : null}

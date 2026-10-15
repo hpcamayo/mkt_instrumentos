@@ -10,6 +10,7 @@ import {
 } from "@/components/listing-management-table";
 import { getAccountContext } from "@/lib/account-context";
 import { getAccountAnalytics } from "@/lib/account-analytics";
+import { getStoreListingQuota } from "@/lib/store-allowance";
 import { buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
@@ -155,14 +156,15 @@ async function PublicationsView({ store, summary }: { store: { id: string; name:
     inventoryItemId: linkedItems.get(listing.id) ?? null,
   }));
   const concurrent = listings?.filter((item) => item.status === "pending" || item.status === "approved").length ?? 0;
+  const quota = await getStoreListingQuota(supabase, concurrent);
   return (
     <section className="rounded-panel border border-subtle bg-white">
       <PageHeader
         className="border-b border-subtle p-5"
         eyebrow="Mi tienda"
         title={summary?.inventory_enabled ? "Publicaciones" : "Inventario"}
-        meta={`${store.name} · ${concurrent} de 50 publicaciones concurrentes`}
-        actions={concurrent < 50 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar</Link> : null}
+        meta={`${store.name} · ${concurrent} de ${quota.allowance} publicaciones concurrentes`}
+        actions={quota.remaining > 0 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar</Link> : null}
       />
       {summary?.inventory_enabled ? <ViewTabs current="publicaciones" /> : null}
       <ListingManagementTable listings={managedListings} emptyMessage="Aún no hay publicaciones en el inventario" canControlStock={Boolean(summary?.can_write)} />
