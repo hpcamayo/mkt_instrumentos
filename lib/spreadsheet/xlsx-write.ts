@@ -18,6 +18,7 @@ export type XlsxSheet = {
 };
 
 // XML 1.0 forbids most C0 control characters; drop them instead of producing a file Excel refuses to open.
+// eslint-disable-next-line no-control-regex
 const INVALID_XML_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g;
 
 export function escapeXml(value: string) {

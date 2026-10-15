@@ -96,7 +96,7 @@ Owner RPCs (`security definer`, bound to `auth.uid()`, gated by STORE-1a's `requ
 | `ErrorSummary` for the whole wizard | Used for start, column and step errors; row problems are listed on each row | Row problems are data, not form errors. |
 
 `lib/supabase/database.types.ts` is not regenerated: the import code casts to an untyped client, so the combined
-prototype regenerates types once. `tests/ux-copy.test.cjs` skips `lib/spreadsheet/xlsx-write.ts` (OOXML markup such
+prototype regenerates types once. `tests/ux-copy.test.cjs` skips `lib/spreadsheet/`, the same one-line change STORE-1b made (OOXML markup such
 as `version=` and `Extension=` reads as Spanish words to the scan).
 
 ## How to test
