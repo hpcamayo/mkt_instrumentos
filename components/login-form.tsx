@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
@@ -14,6 +15,7 @@ type LoginMode = "password" | "magic-link";
 
 export function LoginForm() {
   const searchParams = useSearchParams();
+  const [validation, errorSummary] = useFormErrors("login", "ingresar");
   const [mode, setMode] = useState<LoginMode>("password");
   const [state, setState] = useState<FormState>("idle");
   const [message, setMessage] = useState<string | null>(
@@ -32,6 +34,10 @@ export function LoginForm() {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const password = String(formData.get("password") ?? "");
+    if (!validation.validate(event.currentTarget)) {
+      setState("idle");
+      return;
+    }
     if (!email) {
       setState("error");
       setMessage("Ingresa un correo válido.");
@@ -95,6 +101,7 @@ export function LoginForm() {
 
   function switchMode(nextMode: LoginMode) {
     setMode(nextMode);
+    validation.clear();
     setState("idle");
     setMessage(null);
   }
@@ -121,13 +128,14 @@ export function LoginForm() {
         {modeButton("magic-link", "Enlace mágico")}
       </div>
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <Field id="login-email" label="Correo">
+      <form ref={validation.formRef} noValidate className="space-y-4" onSubmit={handleSubmit} onChange={validation.onChange}>
+        {errorSummary}
+        <Field id="login-email" error={validation.errorFor("email")} label="Correo">
           <Input type="email" name="email" required autoComplete="email" placeholder="tu@email.com" />
         </Field>
 
         {mode === "password" ? (
-          <Field id="login-password" label="Contraseña">
+          <Field id="login-password" error={validation.errorFor("password")} label="Contraseña">
             <Input type="password" name="password" required autoComplete="current-password" placeholder="Tu contraseña" />
           </Field>
         ) : (

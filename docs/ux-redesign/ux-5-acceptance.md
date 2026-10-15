@@ -1,6 +1,8 @@
 # UX-5 · Selling — acceptance package
 
-**State: built in the cloud session of 10 Oct (N17), waiting for the owner's review.** Answers S1–S11 provisional (`ux-5-selling.md`); product flags F1, F2, F4, F6 and the "producto" string unchanged; build choices U9–U13 in `decisions.md` (U10 pending).
+**Update, 14 Oct:** implementation is live and the read-only production gate passes. New local rendered/a11y/workflow evidence and the owner review checklist are in `ux-4-8-closure-review.md`; the owner-authorized U10 listing-edit validation and two accessibility corrections are built locally and await publication. Owner acceptance and canonical row statuses are not inferred. The original cloud evidence and limitations below remain as dated history.
+
+**State: built in the cloud session of 10 Oct (N17), waiting for the owner's review.** Answers S1–S11 provisional (`ux-5-selling.md`); product flags F1, F2, F4, F6 and the "producto" string unchanged; build choices U9–U13 in `decisions.md` (U10 approved for implementation 14 Oct; local follow-up above).
 
 ## What was built
 

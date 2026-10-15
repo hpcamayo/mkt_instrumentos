@@ -7,7 +7,7 @@ export type ErrorSummaryItem = { id: string; message: string };
 
 // The errors of a form that failed its own checks, listed in field order. It takes focus each time a submit fails
 // (the `attempt` counter changes) so screen-reader and keyboard users hear it; each link moves focus to its field.
-export function ErrorSummary({ title, errors, attempt }: { title: string; errors: ErrorSummaryItem[]; attempt: number }) {
+export function ErrorSummary({ id = "resumen-errores", title, errors, attempt }: { id?: string; title: string; errors: ErrorSummaryItem[]; attempt: number }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -18,10 +18,10 @@ export function ErrorSummary({ title, errors, attempt }: { title: string; errors
 
   if (!errors.length) return null;
   return (
-    <div ref={ref} tabIndex={-1} role="alert" aria-labelledby="resumen-errores" className={noticeClassName("danger")}>
+    <div ref={ref} tabIndex={-1} role="alert" aria-labelledby={id} className={noticeClassName("danger")}>
       <NoticeIcon tone="danger" />
       <div className={noticeBodyClassName}>
-        <h2 id="resumen-errores" className="font-semibold">{title}</h2>
+        <h2 id={id} className="font-semibold">{title}</h2>
         <ul className="mt-2 grid gap-1.5">
           {errors.map((error) => (
             <li key={`${error.id}-${error.message}`}>

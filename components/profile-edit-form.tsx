@@ -3,10 +3,12 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { profileFieldErrors } from "@/lib/form-validation";
 import { PageNotice } from "@/components/page-notice";
 import { upsertSellerProfile, upsertStoreOwnerProfile } from "@/lib/auth/profile";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 
@@ -20,6 +22,7 @@ export function ProfileEditForm({
   accountType?: "seller" | "store_owner";
 }) {
   const router = useRouter();
+  const [validation, errorSummary] = useFormErrors("perfil", "guardar tu perfil");
   const searchParams = useSearchParams();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -27,6 +30,12 @@ export function ProfileEditForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
+    const profileInput = {
+      fullName: String(data.get("fullName") ?? ""), phone: String(data.get("phone") ?? ""),
+      city: String(data.get("city") ?? ""), region: String(data.get("region") ?? ""),
+    };
+    setMessage("");
+    if (!validation.validate(event.currentTarget, profileFieldErrors(profileInput))) return;
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
       setMessage("No se pudo conectar con Laria.");
@@ -52,15 +61,16 @@ export function ProfileEditForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-5">
-      <Field id="perfil-full-name" label="Nombre completo">
+    <form ref={validation.formRef} noValidate onSubmit={handleSubmit} onChange={validation.onChange} className="grid gap-5">
+      {errorSummary}
+      <Field id="perfil-full-name" error={validation.errorFor("fullName")} label="Nombre completo">
         <Input name="fullName" required defaultValue={profile.fullName} autoComplete="name" />
       </Field>
-      <Field id="perfil-phone" label="WhatsApp">
+      <Field id="perfil-phone" error={validation.errorFor("phone")} label="WhatsApp">
         <Input name="phone" required defaultValue={profile.phone} inputMode="tel" autoComplete="tel" />
       </Field>
       <div className="grid gap-5 sm:grid-cols-2">
-        <LocationFields defaultCity={profile.city} defaultRegion={profile.region} />
+        <LocationFields idPrefix="perfil" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} defaultCity={profile.city} defaultRegion={profile.region} />
       </div>
       {message ? <PageNotice kind="error" message={message} /> : null}
       <Button type="submit" block className="sm:w-auto sm:justify-self-start" loading={busy} loadingLabel="Guardando…">Guardar perfil</Button>

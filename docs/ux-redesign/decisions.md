@@ -3,6 +3,16 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## UX closure decisions (owner, 2026-10-14)
+
+Henri explicitly chose “Implementar ambos ahora” for U10/U15 and “Implementar U18 ahora”. These supersede the provisional deferrals below. Implemented and verified locally; evidence in `ux-4-8-closure-review.md`; this is not owner acceptance or production publication approval.
+
+| ID | Owner decision | Boundary |
+| --- | --- | --- |
+| U10 | Implement per-field errors and a focused error summary on listing edit now | Preserve photo retry/cleanup, immediate/moderated split and all existing validation rules |
+| U15 | Implement per-field errors and a focused error summary in onboarding now | Sign-in, signup, store application, invitation/profile setup and password forms; existing auth flows and password minimums stay |
+| U18 | Implement the Admin master-detail queue, review checklist and decision bar now | Existing six queues, bounded payloads, permissions and moderation RPCs; checklist is an aid, not a new approval requirement |
+
 ## Marketplace categories (owner, 2026-10-12)
 
 Henri asked for separate Percusión, Vientos and Audio categories and confirmed the full proposed set on 12 Oct.
@@ -37,7 +47,7 @@ Brief `ux-7-admin.md`. Under N17 the recommendations W1–W9 are taken provision
 
 | ID | Choice | Why | Status |
 | --- | --- | --- | --- |
-| U18 | The queue keeps its card list; the concept's master-detail, review checklist and decision bar wait | `sprint-8` pins about 170 source assertions on today's markup; the layout is worth deciding with real moderation volume | pending (owner) |
+| U18 | The queue keeps its card list; the concept's master-detail, review checklist and decision bar wait | `sprint-8` pins about 170 source assertions on today's markup; the layout is worth deciding with real moderation volume | superseded 2026-10-14: owner chose implementation now |
 | U19 | Approvals stay one click; only verify/revoke gains a confirmation | Approving is the queue's main job and is reversible from the record; verification changes every new listing of a store | provisional (Claude Code) |
 
 ## UX-6 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-6 review)
@@ -47,7 +57,7 @@ Brief `ux-6-accounts.md`. Under N17 the recommendations A1–A9 are taken provis
 | ID | Choice | Why | Status |
 | --- | --- | --- | --- |
 | U14 | Confirmation copy: a question title, a one-line body, a verb on the button ("Ocultar", "Marcar vendida", "Republicar copia", "Eliminar alerta", "Registrar venta", "Cancelar solicitud" with "Volver", "Enviar reseña"). "Registro" dropped from the mark-sold and relist questions (glossary) | The old questions kept; the button names the action instead of "Aceptar" | provisional (Claude Code) |
-| U15 | Onboarding forms (sign-in, sign-up, store application, password) keep their single top notice; per-field errors wait | They run on auth flows the overnight rules keep unchanged | pending (owner: UX-8 or later) |
+| U15 | Onboarding forms (sign-in, sign-up, store application, password) keep their single top notice; per-field errors wait | They run on auth flows the overnight rules keep unchanged | decided 2026-10-14 by owner: implement now (see closure decisions) |
 | U16 | Resumen is not turned into a to-do list | It needs new reads across transactions and reviews | pending (owner) |
 | U17 | Favoritos keeps its own card | A favourite can be sold or unavailable; the catalog card has no state for that | pending (owner) |
 
@@ -58,7 +68,7 @@ Brief `ux-5-selling.md`. Under N17 every question S1–S11 takes its recommendat
 | ID | Choice | Why | Status |
 | --- | --- | --- | --- |
 | U9 | Spanish attribute labels: Cuerpo sólido, Semihueca, Hueca, Distorsión, Compresor, Afinador, Multiefectos, Gabinete, De cinta, Corbatero, Cañón. Kept: Single coil, Humbucker, P90, Overdrive, Fuzz, Delay, Reverb, Chorus, Wah, True bypass, Phantom power, Shell pack, Dark and the shape names | S9 A; the design system welcomes musician vocabulary ("cuerpo sólido"), and the kept names are what Peruvian musicians search. Values and URLs unchanged; the labels change wherever they show (filters, chips, cards, spec table) | provisional (Claude Code) |
-| U10 | The edit page gets the condition cards and Spanish labels only; per-field errors and the error summary on edit wait for UX-8 | The edit form's save flow and photo editor are pinned by `photo-editor.test.cjs` (a hook-level harness); reworking its validation overnight risks the edit rules | pending (owner: keep for UX-8 or drop) |
+| U10 | The edit page gets the condition cards and Spanish labels only; per-field errors and the error summary on edit wait for UX-8 | The edit form's save flow and photo editor are pinned by `photo-editor.test.cjs` (a hook-level harness); reworking its validation overnight risks the edit rules | decided 2026-10-14 by owner: implement now (see closure decisions) |
 | U11 | Type chips appear once a category with more than one type is chosen; a single-type category selects its type silently, as today | No one-chip question to answer | provisional (Claude Code) |
 | U12 | The description's label is visually hidden under the "Descripción" section heading; the hint carries a live count "N de 40 caracteres mínimos" | One visible name per field; the count answers "why won't it send" before the summary does | provisional (Claude Code) |
 | U13 | After sending, the confirmation offers "Ver mis publicaciones" / "Ver inventario", "Publicar otro instrumento" and "Volver al resumen" | S6 A; the old links kept, plus a way to start again | provisional (Claude Code) |

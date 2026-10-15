@@ -1,5 +1,7 @@
 # UX-4a · The listing page — acceptance package
 
+**Update, 14 Oct:** implementation is live and the read-only production gate passes. New local rendered/a11y/workflow evidence and the owner review checklist are in `ux-4-8-closure-review.md`; two local accessibility fixes await publication. Owner acceptance and canonical row statuses are not inferred. The original cloud evidence and limitations below remain as dated history.
+
 **State: built in the cloud session of 10 Oct (N17), waiting for the owner's review.** Built on the provisional answers L1–L21 (`ux-4-listing-store.md`) and the build choices U1–U8 (`decisions.md`). Nothing here sets a status in `acceptance/cases.tsv`.
 
 ## Commits

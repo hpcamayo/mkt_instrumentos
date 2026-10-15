@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { profileFieldErrors } from "@/lib/form-validation";
 import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   upsertSellerProfile,
   validateSellerProfileInput,
 } from "@/lib/auth/profile";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
@@ -24,6 +26,7 @@ type FormState =
 
 export function SellerSignupForm() {
   const router = useRouter();
+  const [validation, errorSummary] = useFormErrors("signup", "crear tu cuenta");
   const [state, setState] = useState<FormState>("loading");
   const [message, setMessage] = useState<string | null>(null);
   useEffect(() => {
@@ -71,6 +74,13 @@ export function SellerSignupForm() {
     const region = String(formData.get("region") ?? "");
     const password = String(formData.get("password") ?? "");
     const acceptedRules = formData.get("acceptedRules") === "on";
+    if (!validation.validate(event.currentTarget, {
+      ...profileFieldErrors({ fullName, phone, city, region }),
+      ...(!acceptedRules ? { acceptedRules: "Debes aceptar las reglas del marketplace para continuar." } : {}),
+    })) {
+      setState("idle");
+      return;
+    }
     const supabase = getSupabaseBrowserClient();
 
     if (!supabase) {
@@ -108,6 +118,7 @@ export function SellerSignupForm() {
     const emailCheck = await checkEmailAvailability(email);
 
     if (emailCheck === "exists") {
+      validation.setFieldError("email", "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.");
       setState("duplicate");
       setMessage(
         "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.",
@@ -145,6 +156,7 @@ export function SellerSignupForm() {
     }
 
     if (data.user?.identities && data.user.identities.length === 0) {
+      validation.setFieldError("email", "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.");
       setState("duplicate");
       setMessage(
         "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.",
@@ -175,29 +187,30 @@ export function SellerSignupForm() {
   }
 
   return (
-    <form className="space-y-5" onSubmit={handleSubmit}>
+    <form ref={validation.formRef} noValidate className="space-y-5" onSubmit={handleSubmit} onChange={validation.onChange}>
+      {errorSummary}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="signup-full-name" label="Nombre completo" className="sm:col-span-2">
+        <Field id="signup-full-name" error={validation.errorFor("fullName")} label="Nombre completo" className="sm:col-span-2">
           <Input name="fullName" required autoComplete="name" placeholder="Tu nombre" />
         </Field>
 
-        <Field id="signup-email" label="Correo">
+        <Field id="signup-email" error={validation.errorFor("email")} label="Correo">
           <Input type="email" name="email" required autoComplete="email" placeholder="tu@email.com" />
         </Field>
 
-        <Field id="signup-password" label="Contraseña">
+        <Field id="signup-password" error={validation.errorFor("password")} label="Contraseña">
           <Input type="password" name="password" required minLength={6} autoComplete="new-password" placeholder="Mínimo 6 caracteres" />
         </Field>
 
-        <Field id="signup-phone" label="WhatsApp">
+        <Field id="signup-phone" error={validation.errorFor("phone")} label="WhatsApp">
           <Input type="tel" name="phone" required autoComplete="tel" placeholder="+51 999 999 999" />
         </Field>
 
-        <LocationFields />
+        <LocationFields idPrefix="signup" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} />
       </div>
 
       <label className="flex gap-3 rounded-panel bg-canvas p-3 t-ui text-ink-2">
-        <input type="checkbox" name="acceptedRules" required className="mt-0.5 h-5 w-5 shrink-0 accent-ink" />
+        <input id="signup-rules" data-error-label="Términos y privacidad" type="checkbox" name="acceptedRules" required aria-invalid={validation.errorFor("acceptedRules") ? true : undefined} aria-describedby={validation.errorFor("acceptedRules") ? "signup-rules-error" : undefined} className="mt-0.5 h-5 w-5 shrink-0 accent-ink" />
         <span>
           Acepto los{" "}
           <a href="/terminos" target="_blank" rel="noopener" className="link font-semibold">
@@ -211,6 +224,7 @@ export function SellerSignupForm() {
           Laria no procesa pagos, no gestiona envíos ni garantiza transacciones.
         </span>
       </label>
+      {validation.errorFor("acceptedRules") ? <p id="signup-rules-error" className="t-ui font-semibold text-danger">{validation.errorFor("acceptedRules")}</p> : null}
 
       {message ? (
         <Notice tone={state === "sent" ? "success" : "warning"}>

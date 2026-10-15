@@ -3,12 +3,14 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { profileFieldErrors } from "@/lib/form-validation";
 import {
   upsertSellerProfile,
   upsertStoreOwnerProfile,
 } from "@/lib/auth/profile";
 import { normalizePeruRegion } from "@/lib/location";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
@@ -56,6 +58,7 @@ export function InviteProfileSetupForm({
   initialValues,
 }: InviteProfileSetupFormProps) {
   const router = useRouter();
+  const [validation, errorSummary] = useFormErrors("invite", "continuar");
   const [state, setState] = useState<FormState>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const content = modeContent[mode];
@@ -72,6 +75,10 @@ export function InviteProfileSetupForm({
     const region = normalizePeruRegion(
       String(formData.get("region") ?? "").trim(),
     );
+    if (!validation.validate(event.currentTarget, profileFieldErrors({ fullName, phone, city, region: region ?? "" }))) {
+      setState("idle");
+      return;
+    }
     const supabase = getSupabaseBrowserClient();
 
     if (!supabase) {
@@ -126,7 +133,8 @@ export function InviteProfileSetupForm({
   }
 
   return (
-    <form className="space-y-5" onSubmit={handleSubmit}>
+    <form ref={validation.formRef} noValidate className="space-y-5" onSubmit={handleSubmit} onChange={validation.onChange}>
+      {errorSummary}
       <div className="rounded-panel bg-canvas px-3 py-2 t-ui text-ink-2">
         <span className="font-semibold text-ink">Tipo de cuenta:</span>{" "}
         {content.accountLabel}
@@ -139,7 +147,7 @@ export function InviteProfileSetupForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field id="invite-full-name" label={content.nameLabel} className="sm:col-span-2">
+        <Field id="invite-full-name" error={validation.errorFor("fullName")} label={content.nameLabel} className="sm:col-span-2">
           <Input
             name="fullName"
             required
@@ -149,11 +157,12 @@ export function InviteProfileSetupForm({
           />
         </Field>
 
-        <Field id="invite-phone" label="WhatsApp">
+        <Field id="invite-phone" error={validation.errorFor("phone")} label="WhatsApp">
           <Input type="tel" name="phone" required autoComplete="tel" defaultValue={initialValues.phone} placeholder="+51 999 999 999" />
         </Field>
 
         <LocationFields
+          idPrefix="invite" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")}
           defaultCity={initialValues.city}
           defaultRegion={initialValues.region}
         />

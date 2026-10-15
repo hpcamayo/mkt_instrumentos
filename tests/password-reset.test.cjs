@@ -14,7 +14,15 @@ function loadTypeScript(filename, overrides = {}) {
   }).outputText;
   const mod = { exports: {} };
   new Function("require", "module", "exports", "FormData", "window", compiled)(
-    (name) => overrides[name] ?? require(name),
+    (name) => {
+      if (name in overrides) return overrides[name];
+      if (name.startsWith("@/")) {
+        const file = path.resolve(name.slice(2));
+        const resolved = [file, file + ".ts", file + ".tsx"].find((value) => fs.existsSync(value));
+        return loadTypeScript(resolved, overrides);
+      }
+      return require(name);
+    },
     mod,
     mod.exports,
     class {
@@ -37,10 +45,15 @@ function formHarness({ mode = "reset", error = null, session = { user: { id: "qa
   let hookIndex = 0;
   const { PasswordUpdateForm } = loadTypeScript(path.resolve("components/password-form.tsx"), {
     react: {
+      useRef(initial) {
+        const index = hookIndex++;
+        if (!(index in state)) state[index] = { current: initial };
+        return state[index];
+      },
       useState(initial) {
         const index = hookIndex++;
         if (!(index in state)) state[index] = initial;
-        return [state[index], (value) => { state[index] = value; }];
+        return [state[index], (value) => { state[index] = typeof value === "function" ? value(state[index]) : value; }];
       },
     },
     "next/link": { __esModule: true, default: () => null },
@@ -70,8 +83,19 @@ function formHarness({ mode = "reset", error = null, session = { user: { id: "qa
     async submit(value = "new-password", confirmation = value) {
       await render().props.onSubmit({
         preventDefault() {},
-        currentTarget: { password: value, confirmation },
+        currentTarget: {
+          password: value, confirmation,
+          elements: [["password", value], ["confirmation", confirmation]].map(([name, input]) => ({
+            tagName: "INPUT", name, id: "clave-" + name, value: input, type: "password", required: true,
+            minLength: 8, dataset: {}, validity: {}, matches: () => false, closest: () => null,
+            labels: [{ textContent: name === "password" ? "Nueva contraseña" : "Confirmar contraseña" }],
+          })),
+        },
       });
+    },
+    fieldError(name) {
+      const summary = render().props.children.find((child) => child.type?.name === "ErrorSummary");
+      return summary.props.errors.find((error) => error.id === "clave-" + name)?.message;
     },
     message() {
       return render().props.children.find((child) => child.type?.name === "Status").props.message;
@@ -98,7 +122,8 @@ for (const mode of ["reset", "change"]) {
   test(`${mode} form shows same-password guidance without redirecting or comparing stored passwords`, async () => {
     const form = formHarness({ mode, error: { code: "same_password", message: "Raw provider copy" } });
     await form.submit("current-password");
-    assert.equal(form.message(), samePasswordError);
+    assert.ok(form.fieldError("password").endsWith(samePasswordError));
+    assert.equal(form.message(), "");
     assert.deepEqual(form.calls.updates, [{ password: "current-password" }]);
     assert.deepEqual(form.calls.destinations, []);
     assert.equal(form.calls.refreshes, 0);
@@ -133,8 +158,8 @@ test("valid reset retains safe account redirect and success feedback", async () 
 test("password confirmation validation remains before any provider request", async () => {
   const form = formHarness();
   await form.submit("short");
-  assert.equal(form.message(), "Usa al menos 8 caracteres.");
+  assert.ok(form.fieldError("password").endsWith("Usa al menos 8 caracteres."));
   await form.submit("new-password", "other-password");
-  assert.equal(form.message(), "Las contraseñas no coinciden.");
+  assert.ok(form.fieldError("confirmation").endsWith("Las contraseñas no coinciden."));
   assert.deepEqual(form.calls.updates, []);
 });

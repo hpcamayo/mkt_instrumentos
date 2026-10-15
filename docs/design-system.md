@@ -257,17 +257,20 @@ The brief is `docs/ux-redesign/ux-4-listing-store.md` (answers L1–L21, provisi
 - **Photos first**, with a four-item checklist (`PHOTO_GUIDANCE`). Each photo card: preview 4:3, "Principal" on the first, "Foto N de M", then Anterior / Siguiente / Reemplazar / Quitar named "Mover foto N antes/después", "Reemplazar foto N", "Quitar foto N" (create and edit alike).
 - **Type** is `TypeChips`: native radios inside 44 px chip labels (accent fill and check when chosen). **Condition** is `ConditionCards`: three radio cards with a one-line definition; the stored values do not change.
 - **Errors**: the form validates itself (`noValidate`). Each field shows its error under the label (`Field error`, `aria-invalid`, `aria-describedby`); `ErrorSummary` sits at the top of the form, takes focus on every failed submit, titles "Revisa N datos antes de publicar" and lists links that focus each field. An error clears when its field changes. Server errors stay in `PageNotice`.
+- **Editing (U10, owner 14 Oct)**: the same field-error/summary pattern applies to listing edit. Links follow DOM field order, including the photo picker. Saving keeps the immediate/moderated split, version checks, upload retry and cleanup.
 - **Sending**: the button reads "Publicando…" and a status line says "Subiendo foto N de M…", then "Enviando la publicación…".
 - **After sending**: the form is replaced by a `PageNotice` that says what happens next; listings that go to review promise the email, never a speed.
 
 ## Accounts (UX-6)
 
 - **Inventory** (`ListingManagementTable`, Mis publicaciones and Inventario): a table from 768 px; below it each row is a card: the title, then one row per value with its column name on the left (`data-label`), then the actions. No sideways scroll.
+- **Onboarding errors (U15, owner 14 Oct)**: sign-in, both signup forms, profile/invitation setup, password and store application use `useFormErrors` with `Field` and `ErrorSummary`. Each form has its own summary ID; invalid input sends no workflow request. Known field-specific provider errors attach to that field, other server errors stay at page level. Existing six-character signup and eight-character password-update minimums stay.
 - Store names are never uppercase eyebrows: the eyebrow is "Mi tienda"; the name goes in the summary line.
 
 ## Admin (UX-7)
 
-- Queue cards show photos inline (4:3 thumbnails, two columns on phones, four from 640 px), each opening full size in a new tab.
+- **Queue layout (U18, owner 14 Oct)**: from 1280 px, a 280 px pending list and one selected detail share the view. Below 1280 px, selecting a record opens its detail; "Volver a la cola" returns focus to that record. Previous/next controls traverse the current page. The four-checkbox review guide resets when the selected record or its payload changes, persists nothing and does not block decisions. Existing decision controls sit in the detail footer; reasons, confirmations and expected-version checks stay.
+- Queue details show photos inline (4:3 thumbnails, two columns on phones, four from 640 px), each opening full size in a new tab.
 - Decisions: reject, hide, dismiss, revoke and hiding a review use the `danger` button; approve, restore, verify and resolve the `secondary` one. No yellow in the queue (several cards share a view).
 - Verify and revoke ask first with the consequence; reasons stay required for reject, hide, resolve and dismiss.
 - Admin times are always America/Lima. Identifiers sit on their own "Identificador" line, never in a title line.

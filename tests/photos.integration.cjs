@@ -1,6 +1,7 @@
 // Sprint 4 actual-storage/API photo lifecycle proof. Local Supabase only.
 // LARIA_TEST_ENV_FILE=/absolute/local.env node tests/photos.integration.cjs http://localhost:3100
 // Add LARIA_PHOTO_BROWSER=1 for optional actual browser editor proof (agent-browser required).
+// LARIA_TEST_DB_CONTAINER selects an isolated local stack; defaults to the documented local project.
 const assert = require("node:assert/strict");
 const { loadEnvFile } = require("node:process");
 const { createClient } = require("@supabase/supabase-js");
@@ -25,6 +26,8 @@ const objects = [];
 const suffix = crypto.randomUUID();
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9S8AAAAASUVORK5CYII=", "base64");
 const privateBucket = "listing-edit-photos";
+const databaseContainer = process.env.LARIA_TEST_DB_CONTAINER ?? "supabase_db_mkt_instrumentos";
+assert.match(databaseContainer, /^supabase_db_[a-zA-Z0-9_-]+$/, "Use a local Supabase database container.");
 
 (async () => {
   try {
@@ -273,8 +276,9 @@ async function testNonpublicStates(session, adminSession) {
       // Draft is legacy-only, not a product action. Seed exactly this local fixture
       // through Postgres rather than weakening the protected-field trigger.
       assert.match(created.id, /^[0-9a-f-]{36}$/);
-      const fixture = spawnSync("docker", ["exec", "-i", "supabase_db_mkt_instrumentos", "psql", "-U", "postgres", "-v", "ON_ERROR_STOP=1"], { encoding: "utf8", input: `begin; select set_config('app.allow_listing_admin_fields','true',true); update public.listings set status='draft' where id='${created.id}'; commit;` });
+      const fixture = spawnSync("docker", ["exec", "-i", databaseContainer, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1"], { encoding: "utf8", input: `begin; do $$ begin if not exists (select 1 from public.listings where id='${created.id}') then raise exception 'Draft fixture missing in selected local container'; end if; end $$; select set_config('app.allow_listing_admin_fields','true',true); update public.listings set status='draft' where id='${created.id}' returning id; commit;` });
       assert.equal(fixture.status, 0, fixture.stderr);
+      assert.ok(fixture.stdout.includes(created.id), "The selected local database must contain and update this exact fixture.");
     }
     const existing = await livePhotos(created.id);
     const staged = await uploadEdit(session, created.id, 0);

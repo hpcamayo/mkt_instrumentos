@@ -1,5 +1,7 @@
 # UX-7 · Admin workbench — brief
 
+**Owner update, 14 Oct 2026:** Henri authorized U10/U15 ("Implementar ambos ahora") and U18 ("Implementar U18 ahora"). Listing edit and onboarding now have field errors and focused summaries; Admin now has a master-detail queue, a local review guide and a decision bar. These additions are implemented locally, awaiting publication and owner acceptance; current evidence is in `ux-4-8-closure-review.md`. The dated overnight scope below is history.
+
 **Status: provisional (written and built overnight, 10 Oct 2026, under N17).** Every question takes its recommendation as a provisional answer and every product flag its no-change option; the owner confirms or reverses them at the UX-7 review (`ux-7-acceptance.md`).
 
 UX-7 makes moderation faster to read and safer to act on. It changes no access rule (`requireAdmin`, `is_admin`), no moderation function or argument (`review_listing`, `review_listing_revision` with `p_expected_version`, `review_store_application`, `set_store_verification`, `moderate_report`, `moderate_review`, `link_legacy_listing_owner`), no record-editor allowlist, no invite flow and no queue query; every queue still shows a truthful zero state.
@@ -22,7 +24,7 @@ UX-7 makes moderation faster to read and safer to act on. It changes no access r
 | W3 | Confirmation policy | A confirm only what changes more than one record or is hard to see undone: verify/revoke (new); reasons stay required for reject, hide, resolve, dismiss; the mark-sold confirmation stays · B confirm everything | **A.** Approvals stay one click: they are the queue's main job and are reversible from the record |
 | W4 | Time zone | A Lima time everywhere in Admin | **A.** The audit page joins `adminDate` |
 | W5 | Identifiers | A out of title lines, kept in a labelled "Identificador" line (support needs them) · B hide | **A** |
-| W6 | Queue layout (master-detail, checklist, decision bar from the concept) | A keep the card list this sprint · B master-detail now | **A.** `sprint-8` pins about 170 source assertions on today's markup; a master-detail rework is better done with the owner reviewing moderation volume (pending, U18) |
+| W6 | Queue layout (master-detail, checklist, decision bar from the concept) | A keep the card list this sprint · B master-detail now | **Superseded 14 Oct:** owner chose master-detail now (U18). Bounded queue payloads and moderation RPCs stay; the checklist adds no approval requirement |
 | W7 | Per-section counts | A only "Moderación" as today · B counts per section | **A** (no new queries; UX-2 deviation 9 stays) |
 | W8 | F7 bulk actions | — | **Not built** (authority and audit implications; flag) |
 | W9 | Move UX-7 earlier | — | Moot overnight (built in order) |

@@ -5,10 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { PageNotice } from "@/components/page-notice";
-import {
-  getPasswordUpdateErrorMessage,
-  getPasswordValidationMessage,
-} from "@/lib/auth/password";
+import { useFormErrors } from "@/components/use-form-errors";
+import { getPasswordUpdateErrorMessage, getPasswordValidationMessage } from "@/lib/auth/password";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -16,18 +14,31 @@ import { Field, Input } from "@/components/ui/field";
 export function ForgotPasswordForm() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [validation, errorSummary] = useFormErrors("recuperar", "enviar el enlace");
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setMessage("");
+    if (!validation.validate(event.currentTarget)) return;
     const email = String(new FormData(event.currentTarget).get("email") ?? "").trim().toLowerCase();
     const supabase = getSupabaseBrowserClient();
     if (!email || !supabase) return setMessage("Ingresa un correo válido.");
     setBusy(true);
-    const redirectTo = `${window.location.origin}/auth/callback?next=/restablecer-contrasena`;
+    const redirectTo = window.location.origin + "/auth/callback?next=/restablecer-contrasena";
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     setBusy(false);
     setMessage(error ? "No se pudo enviar el enlace. Intenta nuevamente." : "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.");
   }
-  return <form onSubmit={submit} className="mt-6 grid gap-4"><AuthInput label="Correo" name="email" type="email" autoComplete="email" /><Status message={message} /><Button type="submit" loading={busy} loadingLabel="Enviando…">Enviar enlace</Button><Link href="/login" className="link text-center t-ui font-semibold">Volver a ingresar</Link></form>;
+
+  return (
+    <form ref={validation.formRef} noValidate onSubmit={submit} onChange={validation.onChange} className="mt-6 grid gap-4">
+      {errorSummary}
+      <AuthInput label="Correo" name="email" type="email" autoComplete="email" error={validation.errorFor("email")} />
+      <Status message={message} />
+      <Button type="submit" loading={busy} loadingLabel="Enviando…">Enviar enlace</Button>
+      <Link href="/login" className="link text-center t-ui font-semibold">Volver a ingresar</Link>
+    </form>
+  );
 }
 
 export function PasswordUpdateForm({ mode }: { mode: "reset" | "change" }) {
@@ -35,11 +46,15 @@ export function PasswordUpdateForm({ mode }: { mode: "reset" | "change" }) {
   const searchParams = useSearchParams();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [validation, errorSummary] = useFormErrors("clave-" + mode, "guardar tu contraseña");
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const password = String(data.get("password") ?? "");
     const confirmation = String(data.get("confirmation") ?? "");
+    setMessage("");
+    if (!validation.validate(event.currentTarget, password !== confirmation ? { confirmation: "Las contraseñas no coinciden." } : {})) return;
     const validationMessage = getPasswordValidationMessage(password, confirmation);
     if (validationMessage) return setMessage(validationMessage);
     const supabase = getSupabaseBrowserClient();
@@ -54,19 +69,35 @@ export function PasswordUpdateForm({ mode }: { mode: "reset" | "change" }) {
     }
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
-    if (error) return setMessage(getPasswordUpdateErrorMessage(error));
+    if (error) {
+      if (error.code === "same_password") {
+        validation.setFieldError("password", getPasswordUpdateErrorMessage(error));
+        return;
+      }
+      return setMessage(getPasswordUpdateErrorMessage(error));
+    }
     const next = getSafeAuthRedirect(searchParams.get("next"), "/mi-cuenta");
     const destination = new URL(next, window.location.origin);
     destination.searchParams.set("password", "updated");
-    router.push(`${destination.pathname}${destination.search}`);
+    router.push(destination.pathname + destination.search);
     router.refresh();
   }
-  return <form onSubmit={submit} className="mt-6 grid gap-4"><AuthInput label="Nueva contraseña" name="password" type="password" autoComplete="new-password" /><AuthInput label="Confirmar contraseña" name="confirmation" type="password" autoComplete="new-password" /><Status message={message} /><Button type="submit" loading={busy} loadingLabel="Guardando…">Guardar contraseña</Button></form>;
+
+  return (
+    <form ref={validation.formRef} noValidate onSubmit={submit} onChange={validation.onChange} className="mt-6 grid gap-4">
+      {errorSummary}
+      <AuthInput label="Nueva contraseña" name="password" type="password" autoComplete="new-password" error={validation.errorFor("password")} />
+      <AuthInput label="Confirmar contraseña" name="confirmation" type="password" autoComplete="new-password" error={validation.errorFor("confirmation")} />
+      <Status message={message} />
+      <Button type="submit" loading={busy} loadingLabel="Guardando…">Guardar contraseña</Button>
+    </form>
+  );
 }
 
-function AuthInput({ label, name, type, autoComplete }: { label: string; name: string; type: string; autoComplete: string }) {
-  return <Field id={`clave-${name}`} label={label}><Input name={name} type={type} required minLength={type === "password" ? 8 : undefined} autoComplete={autoComplete} /></Field>;
+function AuthInput({ label, name, type, autoComplete, error }: { label: string; name: string; type: string; autoComplete: string; error?: string }) {
+  return <Field id={"clave-" + name} label={label} error={error}><Input name={name} type={type} required minLength={type === "password" ? 8 : undefined} autoComplete={autoComplete} /></Field>;
 }
+
 function Status({ message }: { message: string }) {
   if (!message) return null;
   return <PageNotice kind={message.startsWith("Si el correo") ? "success" : "error"} message={message} />;

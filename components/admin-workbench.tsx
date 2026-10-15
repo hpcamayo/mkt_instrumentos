@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   type FormEvent,
   type KeyboardEvent,
+  type ReactNode,
+  type Ref,
   useEffect,
   useId,
   useMemo,
@@ -28,7 +30,8 @@ import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice, noticeClassName } from "@/components/ui/notice";
-import { Field } from "@/components/ui/field";
+import { Checkbox, Field } from "@/components/ui/field";
+import { getCategoryLabel, getConditionLabel } from "@/lib/listings";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
@@ -108,7 +111,7 @@ export function AdminRevisionComparison({ item }: { item: AdminJsonItem }) {
 
   return (
     <div className="grid gap-4 sm:col-span-2">
-      <div className="overflow-x-auto">
+      <div role="region" aria-label="Comparación de cambios" tabIndex={0} className="overflow-x-auto rounded-control">
       <table className="w-full min-w-[520px] border-collapse text-left text-meta">
         <caption className="mb-2 text-left font-semibold text-ink">Comparación de cambios</caption>
         <thead><tr className="border-b border-subtle"><th className="p-2">Campo</th><th className="p-2">Actual</th><th className="p-2">Propuesto</th></tr></thead>
@@ -485,14 +488,45 @@ function QueueActions({
   );
 }
 
+const REVIEW_CHECKS: Record<AdminQueue, readonly string[]> = {
+  publicaciones: ["Fotos y descripción corresponden al equipo.", "Categoría, tipo y condición son coherentes.", "Precio y ubicación están completos.", "La publicación cumple las reglas del marketplace."],
+  revisiones: ["Comparé los campos actuales y propuestos.", "Revisé las fotos actuales y propuestas.", "La categoría, el tipo y la condición son coherentes.", "Los cambios cumplen las reglas del marketplace."],
+  tiendas: ["Revisé el RUC y la razón social.", "Comprobé el correo y el teléfono de contacto.", "Revisé la dirección y la ubicación.", "Identifiqué a la persona de contacto."],
+  verificacion: ["Verifiqué el RUC y la identidad del negocio.", "Verifiqué el correo y el teléfono de contacto.", "Verifiqué la dirección y la ubicación.", "Revisé a la persona de contacto y las fotos disponibles."],
+  reportes: ["Leí el motivo y el detalle del reporte.", "Revisé el contenido y su estado actual.", "Consulté los reportes y la auditoría relacionados.", "Preparé un motivo claro para la decisión."],
+  resenas: ["Leí la reseña y su contexto.", "Evalué si corresponde ocultarla según las reglas.", "Consulté el historial relacionado.", "Preparé un motivo claro para ocultarla."],
+};
+
+export function ReviewChecklist({ queue }: { queue: AdminQueue }) {
+  const [checked, setChecked] = useState<number[]>([]);
+  return (
+    <fieldset className="grid gap-2 rounded-panel border border-subtle bg-canvas p-4">
+      <legend className="px-1 t-ui font-semibold text-ink">Guía de revisión</legend>
+      <p className="t-meta">Marca lo que ya revisaste. Tus marcas sirven para esta revisión.</p>
+      {REVIEW_CHECKS[queue].map((label, index) => (
+        <Checkbox key={label} label={label} checked={checked.includes(index)} onChange={(event) => setChecked((current) => event.target.checked ? [...current, index] : current.filter((value) => value !== index))} className="t-ui" />
+      ))}
+      <p className="t-meta font-semibold" aria-live="polite">{checked.length} de {REVIEW_CHECKS[queue].length} puntos revisados.</p>
+    </fieldset>
+  );
+}
+
+function queueItemTitle(item: AdminJsonItem) {
+  return adminString(item, "title") || adminString(item, "listing_title") || adminString(item, "target_title") || adminString(item, "name") || "Registro de moderación";
+}
+
 function QueueItem({
   queue,
   item,
   onComplete,
+  headingRef,
+  navigation,
 }: {
   queue: AdminQueue;
   item: AdminJsonItem;
   onComplete: (message: string) => void;
+  headingRef: Ref<HTMLHeadingElement>;
+  navigation: ReactNode;
 }) {
   const id = adminString(item, "id");
   const dateKey =
@@ -548,7 +582,7 @@ function QueueItem({
           <p className="t-micro text-ink-2">
             {ADMIN_QUEUE_LABELS[queue]}
           </p>
-          <h2 className="mt-1 break-words t-section text-ink">
+          <h2 ref={headingRef} tabIndex={-1} className="mt-1 break-words t-section text-ink">
             {title}
           </h2>
           <p className="mt-1 text-meta text-ink-2">
@@ -561,6 +595,15 @@ function QueueItem({
           </Tag>
         ) : null}
       </div>
+
+      {firstPhotoUrl || storePhotos.length || adminString(item, "logo_url") || adminString(item, "banner_url") ? (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Fotos para revisar">
+          {firstPhotoUrl ? <QueuePhoto href={firstPhotoUrl} label="Foto principal" /> : null}
+          {adminString(item, "logo_url") ? <QueuePhoto href={adminString(item, "logo_url")} label="Logo" /> : null}
+          {adminString(item, "banner_url") ? <QueuePhoto href={adminString(item, "banner_url")} label="Banner" /> : null}
+          {storePhotos.map((photo, index) => typeof photo.image_url === "string" ? <QueuePhoto key={String(photo.id ?? photo.image_url)} href={photo.image_url} label={`Foto de tienda ${index + 1}`} /> : null)}
+        </ul>
+      ) : null}
 
       <div className="grid gap-2 text-sm leading-6 text-ink-2 sm:grid-cols-2">
         {adminString(item, "owner_name") ? (
@@ -576,9 +619,9 @@ function QueueItem({
         {adminString(item, "detail") ? <p className="sm:col-span-2"><strong>Detalle:</strong> {adminString(item, "detail")}</p> : null}
         {adminString(item, "reporter_name") ? <p><strong>Reportado por:</strong> {adminString(item, "reporter_name")}</p> : null}
         {adminString(item, "target_owner_name") ? <p><strong>Responsable del objetivo:</strong> {adminString(item, "target_owner_name")}</p> : null}
-        {adminString(item, "category") ? <p><strong>Categoría:</strong> {adminString(item, "category")}</p> : null}
+        {adminString(item, "category") ? <p><strong>Categoría:</strong> {getCategoryLabel(adminString(item, "category"))}</p> : null}
         {adminString(item, "brand") || adminString(item, "model") ? <p><strong>Marca / modelo:</strong> {[adminString(item, "brand"), adminString(item, "model")].filter(Boolean).join(" ")}</p> : null}
-        {adminString(item, "condition") ? <p><strong>Condición:</strong> {adminString(item, "condition")}</p> : null}
+        {adminString(item, "condition") ? <p><strong>Condición:</strong> {getConditionLabel(adminString(item, "condition"))}</p> : null}
         {adminNumber(item, "price_pen") ? <p><strong>Precio:</strong> S/ {adminNumber(item, "price_pen").toLocaleString("es-PE")}</p> : null}
         {adminString(item, "description") ? <p className="sm:col-span-2"><strong>Descripción:</strong> {adminString(item, "description")}</p> : null}
         {stringList(item, "changed_fields").length ? <p className="sm:col-span-2"><strong>Cambios:</strong> {stringList(item, "changed_fields").map(adminValueLabel).join(", ")}</p> : null}
@@ -595,15 +638,6 @@ function QueueItem({
         {adminString(item, "comment") ? <p className="sm:col-span-2"><strong>Reseña:</strong> {adminString(item, "comment")}</p> : null}
       </div>
 
-      {firstPhotoUrl || storePhotos.length || adminString(item, "logo_url") || adminString(item, "banner_url") ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Fotos para revisar">
-          {firstPhotoUrl ? <QueuePhoto href={firstPhotoUrl} label="Foto principal" /> : null}
-          {adminString(item, "logo_url") ? <QueuePhoto href={adminString(item, "logo_url")} label="Logo" /> : null}
-          {adminString(item, "banner_url") ? <QueuePhoto href={adminString(item, "banner_url")} label="Banner" /> : null}
-          {storePhotos.map((photo, index) => typeof photo.image_url === "string" ? <QueuePhoto key={String(photo.id ?? photo.image_url)} href={photo.image_url} label={`Foto de tienda ${index + 1}`} /> : null)}
-        </ul>
-      ) : null}
-
       <div className="flex flex-wrap gap-3 text-meta font-semibold">
         <Link href={managementHref} className="link">Abrir en gestión</Link>
         {targetHref ? <Link href={targetHref} className="link">Inspeccionar objetivo</Link> : null}
@@ -611,7 +645,12 @@ function QueueItem({
       </div>
       <p className="text-meta text-ink-2">Identificador: <code className="break-all font-mono text-[13px]">{id}</code></p>
 
-      <QueueActions queue={queue} item={item} onComplete={onComplete} />
+      <ReviewChecklist queue={queue} />
+      <footer aria-label="Decisiones del pendiente" className="grid gap-4 border-t border-subtle pt-4">
+        <p className="t-meta">La decisión y el motivo quedan en el historial.</p>
+        <QueueActions queue={queue} item={item} onComplete={onComplete} />
+        {navigation}
+      </footer>
     </article>
   );
 }
@@ -640,6 +679,25 @@ export function AdminWorkbench({
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const noticeRef = useRef<HTMLParagraphElement>(null);
   const tabRefs = useRef<Array<HTMLAnchorElement | null>>([]);
+  const [selection, setSelection] = useState<{ queue: AdminQueue; page: number; id: string; open: boolean } | null>(null);
+  const detailHeadingRef = useRef<HTMLHeadingElement>(null);
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const selectionMatches = selection?.queue === selectedQueue && selection.page === page;
+  const selectedItem = (selectionMatches ? items.find((item) => adminString(item, "id") === selection.id) : null) ?? items[0];
+  const selectedId = selectedItem ? adminString(selectedItem, "id") : "";
+  const selectedIndex = items.findIndex((item) => adminString(item, "id") === selectedId);
+  const detailOpen = selectionMatches && selection.open && items.some((item) => adminString(item, "id") === selection.id);
+
+  function selectItem(item: AdminJsonItem) {
+    setSelection({ queue: selectedQueue, page, id: adminString(item, "id"), open: true });
+    requestAnimationFrame(() => detailHeadingRef.current?.focus());
+  }
+
+  function backToQueue() {
+    setSelection({ queue: selectedQueue, page, id: selectedId, open: false });
+    requestAnimationFrame(() => itemRefs.current[selectedId]?.focus());
+  }
+
 
   useEffect(() => {
     if (!notice) return;
@@ -738,14 +796,55 @@ export function AdminWorkbench({
           </Button>
         </div>
 
-        {items.map((item) => (
-          <QueueItem
-            key={adminString(item, "id")}
-            queue={selectedQueue}
-            item={item}
-            onComplete={complete}
-          />
-        ))}
+        {items.length ? (
+          <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+            <div className={(detailOpen ? "hidden xl:block " : "") + "min-w-0 rounded-panel border border-subtle bg-white"}>
+              <p className="border-b border-subtle px-4 py-3 t-meta">Más antiguos primero · {items.length} en esta página</p>
+              <ul aria-label="Pendientes de la cola" className="divide-y divide-subtle">
+                {items.map((item) => {
+                  const id = adminString(item, "id");
+                  const active = id === selectedId;
+                  const thumbnail = adminString(item, "first_photo_url") || adminString(item, "logo_url");
+                  return (
+                    <li key={id}>
+                      <button
+                        type="button"
+                        data-queue-item-id={id}
+                        ref={(node) => { itemRefs.current[id] = node; }}
+                        aria-pressed={active}
+                        aria-controls="moderation-detail"
+                        onClick={() => selectItem(item)}
+                        className={"flex min-h-11 w-full items-start gap-3 border-l-4 p-4 text-left transition-colors duration-120 " + (active ? "border-accent bg-accent-tint" : "border-transparent hover:bg-canvas")}
+                      >
+                        {thumbnail ? <Image src={thumbnail} alt="" width={48} height={48} sizes="48px" loading="lazy" unoptimized={thumbnail.startsWith("/api/listing-images/")} className="h-12 w-12 shrink-0 rounded-tag border border-subtle object-cover" /> : null}
+                        <span className="grid min-w-0 gap-1">
+                          <span className="line-clamp-2 t-ui font-semibold text-ink">{queueItemTitle(item)}</span>
+                          {adminString(item, "owner_name") || adminString(item, "reporter_name") ? <span className="t-meta">{adminString(item, "owner_name") || adminString(item, "reporter_name")}</span> : null}
+                          <span className="t-meta">{adminDate(adminString(item, selectedQueue === "revisiones" || selectedQueue === "resenas" ? "submitted_at" : "created_at"))}</span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            <section id="moderation-detail" aria-label="Detalle del pendiente" className={(detailOpen ? "grid " : "hidden xl:grid ") + "min-w-0 gap-3"}>
+              <Button variant="secondary" size="sm" className="w-fit xl:hidden" onClick={backToQueue}>Volver a la cola</Button>
+              {selectedItem ? <QueueItem
+                key={selectedQueue + ":" + selectedId + ":" + JSON.stringify(selectedItem)}
+                queue={selectedQueue}
+                item={selectedItem}
+                headingRef={detailHeadingRef}
+                onComplete={complete}
+                navigation={<nav aria-label="Recorrer pendientes" className="flex flex-wrap items-center justify-between gap-3 border-t border-subtle pt-3">
+                  <Button variant="quiet" size="sm" disabled={selectedIndex <= 0} onClick={() => selectItem(items[selectedIndex - 1])}>Anterior pendiente</Button>
+                  <span className="t-meta">{selectedIndex + 1} de {items.length} en esta página</span>
+                  <Button variant="quiet" size="sm" disabled={selectedIndex >= items.length - 1} onClick={() => selectItem(items[selectedIndex + 1])}>Siguiente pendiente</Button>
+                </nav>}
+              /> : null}
+            </section>
+          </div>
+        ) : null}
         {!items.length && !loadError ? (
           <EmptyState headingLevel={3} title="No hay acciones pendientes" description="Esta cola está al día." />
         ) : null}

@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { buttonClasses } from "@/components/ui/button";
+
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 // An in-page confirmation in place of window.confirm (docs/ux-redesign/ux-6-accounts.md A3). A native modal <dialog>:
 // the page behind is inert, focus starts on "Cancelar" (the safe choice), Esc and the backdrop cancel, and focus returns
@@ -31,6 +33,19 @@ export function ConfirmDialog({ options, onClose }: { options: ConfirmOptions; o
     };
   }, []);
 
+  // Keep both Tab directions inside the dialog, including WebKit configurations that skip buttons.
+  function onKeyDown(event: KeyboardEvent<HTMLDialogElement>) {
+    if (event.key !== "Tab") return;
+    const items = [...(ref.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])].filter((item) => item.getClientRects().length > 0);
+    if (!items.length) return;
+    const current = items.findIndex((item) => item === document.activeElement);
+    const next = current < 0
+      ? (event.shiftKey ? items.length - 1 : 0)
+      : (current + (event.shiftKey ? -1 : 1) + items.length) % items.length;
+    event.preventDefault();
+    items[next].focus();
+  }
+
   return (
     <dialog
       ref={ref}
@@ -39,6 +54,7 @@ export function ConfirmDialog({ options, onClose }: { options: ConfirmOptions; o
       aria-labelledby={titleId}
       aria-describedby={options.body ? bodyId : undefined}
       className="confirm-dialog"
+      onKeyDown={onKeyDown}
       onCancel={(event) => {
         event.preventDefault();
         onClose(false);

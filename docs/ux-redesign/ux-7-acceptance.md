@@ -1,6 +1,8 @@
 # UX-7 · Admin workbench — acceptance package
 
-**State: built in the cloud session of 10 Oct (N17), waiting for the owner's review.** Answers W1–W9 provisional (`ux-7-admin.md`); F7 not built; build choice U18 (pending) in `decisions.md`.
+**Update, 14 Oct:** implementation is live and the read-only production gate passes. New local rendered/a11y/workflow evidence and the owner review checklist are in `ux-4-8-closure-review.md`; the owner-authorized U18 Admin master-detail, guide and decision bar and two accessibility corrections are built locally and await publication. Owner acceptance and canonical row statuses are not inferred. The original cloud evidence and limitations below remain as dated history.
+
+**State: built in the cloud session of 10 Oct (N17), waiting for the owner's review.** Answers W1–W9 provisional (`ux-7-admin.md`); F7 not built; build choice U18 (approved for implementation 14 Oct; local follow-up above) in `decisions.md`.
 
 ## What was built
 

@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { profileFieldErrors } from "@/lib/form-validation";
 import {
   STORE_OWNER_ACCOUNT_TYPE,
   upsertStoreOwnerProfile,
   validateSellerProfileInput,
 } from "@/lib/auth/profile";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
@@ -18,6 +20,7 @@ type State = "checking" | "idle" | "submitting" | "sent" | "error";
 
 export function StoreOwnerSignupForm() {
   const router = useRouter();
+  const [validation, errorSummary] = useFormErrors("tienda-cuenta", "crear tu cuenta");
   const [state, setState] = useState<State>("checking");
   const [message, setMessage] = useState("");
 
@@ -45,12 +48,17 @@ export function StoreOwnerSignupForm() {
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const password = String(formData.get("password") ?? "");
-    const validated = validateSellerProfileInput({
+    const profileInput = {
       fullName: String(formData.get("fullName") ?? ""),
       phone: String(formData.get("phone") ?? ""),
       city: String(formData.get("city") ?? ""),
       region: String(formData.get("region") ?? ""),
-    });
+    };
+    if (!validation.validate(event.currentTarget, profileFieldErrors(profileInput))) {
+      setState("idle");
+      return;
+    }
+    const validated = validateSellerProfileInput(profileInput);
     if (!validated.ok) {
       setState("error");
       setMessage(validated.message);
@@ -72,10 +80,15 @@ export function StoreOwnerSignupForm() {
     if (!available) {
       setState("error");
       setMessage("Ese correo ya está registrado o no pudo verificarse. Usa un correo exclusivo para la Tienda.");
+      validation.setFieldError("email", "Usa un correo exclusivo para la Tienda que pueda verificarse.");
       return;
     }
     const supabase = getSupabaseBrowserClient();
-    if (!supabase) return;
+    if (!supabase) {
+      setState("error");
+      setMessage("No se pudo conectar con Laria. Intenta nuevamente.");
+      return;
+    }
     const profile = validated.profile;
     const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/mi-cuenta?confirmed=1")}`;
     const { data, error } = await supabase.auth.signUp({
@@ -113,13 +126,14 @@ export function StoreOwnerSignupForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-5">
+    <form ref={validation.formRef} noValidate onSubmit={handleSubmit} onChange={validation.onChange} className="grid gap-5">
+      {errorSummary}
       <div className="grid gap-4 sm:grid-cols-2">
-        <SignupField label="Nombre de la persona responsable" name="fullName" autoComplete="name" />
-        <SignupField label="Correo exclusivo de la cuenta" name="email" type="email" autoComplete="email" />
-        <SignupField label="Contraseña" name="password" type="password" autoComplete="new-password" minLength={6} />
-        <SignupField label="WhatsApp de contacto" name="phone" type="tel" autoComplete="tel" />
-        <LocationFields />
+        <SignupField label="Nombre de la persona responsable" name="fullName" error={validation.errorFor("fullName")} autoComplete="name" />
+        <SignupField label="Correo exclusivo de la cuenta" name="email" error={validation.errorFor("email")} type="email" autoComplete="email" />
+        <SignupField label="Contraseña" name="password" error={validation.errorFor("password")} type="password" autoComplete="new-password" minLength={6} />
+        <SignupField label="WhatsApp de contacto" name="phone" error={validation.errorFor("phone")} type="tel" autoComplete="tel" />
+        <LocationFields idPrefix="tienda-cuenta" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} />
       </div>
       {message ? (
         <Notice tone={state === "sent" ? "success" : "warning"}>{message}</Notice>
@@ -139,9 +153,9 @@ export function StoreOwnerSignupForm() {
   );
 }
 
-function SignupField({ label, ...props }: { label: string; name: string; type?: string; autoComplete?: string; minLength?: number }) {
+function SignupField({ label, error, ...props }: { label: string; error?: string; name: string; type?: string; autoComplete?: string; minLength?: number }) {
   return (
-    <Field id={`tienda-${props.name}`} label={label}>
+    <Field id={`tienda-${props.name}`} label={label} error={error}>
       <Input required {...props} />
     </Field>
   );

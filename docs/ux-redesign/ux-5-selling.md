@@ -1,5 +1,7 @@
 # UX-5 · Selling — brief
 
+**Owner update, 14 Oct 2026:** Henri authorized U10/U15 ("Implementar ambos ahora") and U18 ("Implementar U18 ahora"). Listing edit and onboarding now have field errors and focused summaries; Admin now has a master-detail queue, a local review guide and a decision bar. These additions are implemented locally, awaiting publication and owner acceptance; current evidence is in `ux-4-8-closure-review.md`. The dated overnight scope below is history.
+
 **Status: provisional (written and built overnight, 10 Oct 2026, under N17).** The owner was away: every question below takes its recommendation as a provisional answer, every product-behaviour flag takes its no-change option, and the owner confirms or reverses each answer at the UX-5 review (`ux-5-acceptance.md`). Where this brief and the concept screenshots differ, this brief wins.
 
 UX-5 helps a seller get from "Vender" to a complete, attractive listing without guessing, and tells them what happens next:
@@ -36,7 +38,7 @@ It changes no schema, migration, RLS, auth, moderation, lifecycle or submission 
 | S8 | One verb | A "Publicar" for the action everywhere in the flow · B mixed | **A.** The button says "Publicar"; what happens next is said once, near it ("Un administrador la revisará antes de mostrarla" or, for an active verified store, "Aparecerá en el catálogo al publicarla") |
 | S9 | Attribute labels | A Spanish where it is what musicians say, keep established gear names · B translate everything · C as today | **A.** Values unchanged. Spanish: Cuerpo sólido, Semihueca, Hueca, Distorsión, Compresor, Afinador, Multiefectos, Gabinete, De cinta, Corbatero, Cañón. Kept as gear names: Single coil, Humbucker, P90, Overdrive, Fuzz, Delay, Reverb, Chorus, Wah, Floyd Rose, Strat, Tele… |
 | S10 | Per-photo names on create | A the same names as edit · B as today | **A.** "Mover foto N antes/después", "Reemplazar foto N", "Quitar foto N"; alt "Foto N"; a "Foto N de M · Principal" line instead of the file name |
-| S11 | Edit page | A condition cards and Spanish labels shared with create; validation unchanged · B full rework | **A**, narrowed: condition cards and the Spanish labels only. The edit page's photo controls, save flow and the "Cambios en revisión" note are unchanged (they are pinned by `photo-editor.test.cjs` and the lifecycle tests). Per-field errors on edit are left for UX-8 (pending item U10) |
+| S11 | Edit page | A condition cards and Spanish labels shared with create; validation unchanged · B full rework | **A**, narrowed: condition cards and the Spanish labels only. The edit page's photo controls, save flow and the "Cambios en revisión" note are unchanged (they are pinned by `photo-editor.test.cjs` and the lifecycle tests). Superseded by the 14 Oct owner decision: U10 field errors and a focused summary are now built locally; photo/save semantics remain |
 
 ## Product-behaviour flags (no-change option taken)
 

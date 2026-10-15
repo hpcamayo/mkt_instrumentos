@@ -3,7 +3,7 @@
 Durable memory for the UX/web-design engagement. Chat history is not memory; this folder is.
 Read this file first, then only the file your task needs. **External reviewers: start at `review-guide.md`.**
 
-## Status (2026-10-13)
+## Status (2026-10-14)
 
 | Sub-sprint | Name | State |
 | --- | --- | --- |
@@ -14,12 +14,14 @@ Read this file first, then only the file your task needs. **External reviewers: 
 | UX-4 | Listing and store pages | **Live in production (13 Oct)**: UX-4a/4b listing and store pages, React #418 listing fix (0/10 production trials). Brief and evidence remain in `ux-4-listing-store.md`, `ux-4a-acceptance.md`, `ux-4b-acceptance.md`. Production screenshots inspected; pre-existing content-quality issues remain |
 | UX-5 | Selling: create, edit, revise | **Live in production (13 Oct)**: `ux-5-selling.md`, choices U9–U13 and `ux-5-acceptance.md`. Production write flows were not exercised; local-build evidence and owner/manual rows remain separate |
 | UX-6 | Accounts | **Live in production (13 Oct)**: in-page confirmations, mobile inventory cards and store eyebrows (`ux-6-accounts.md`, `ux-6-acceptance.md`, U14–U17). Production account/write QA was not performed |
-| UX-7 | Admin workbench | **Live in production (13 Oct)**: inline queue photos, decision styles, verification confirmations and Lima audit times (`ux-7-admin.md`, `ux-7-acceptance.md`, U18–U19). No production Admin session/actions; master-detail layout remains pending (U18) |
+| UX-7 | Admin workbench | **Live in production (13 Oct)**: inline queue photos, decision styles, verification confirmations and Lima audit times (`ux-7-admin.md`, `ux-7-acceptance.md`, U18–U19). No production Admin session/actions; owner-authorized master-detail/checklist/decision bar now built locally (U18), awaiting publication |
 | UX-8 | Coherence and hardening | **Live in production (13 Oct); read-only gate PASS (14 Oct)**: coherence changes and ten marketplace categories shipped with the category migration. Henri authorized including empty-category URLs in the sitemap. Owner-authorized correction `5e66fb0` passes signup/listing hydration and exact HTTP redirects in production; only the Admin-session SEO waiver applies; device/screen-reader/CWV and owner/manual follow-ups remain. See `../ux-4-8-production-release-gate.md` |
 
 Repo: Sprint 9 is closed (owner, 30 Sep). Its owner/manual acceptance rows remain as recorded in `acceptance/cases.tsv`. The UX work was built on `ux/redesign`, rebased onto the catalog production base `313fb7e` on 9 Oct (N13), then independently audited at `d993f5d`. Henri authorized the release; `main` was fast-forwarded to `50963fb` and Vercel deployed it READY to `laria.audio` on 9 Oct. See [the production release gate](../ux-production-release-gate.md). Earlier commit IDs cited in this workspace are mapped in `commit-ids.md`. The `ux/redesign` branch remains checked out in `../mkt_instrumentos-ux`; the catalog worktree was not changed by this release.
 
-UX-4–UX-8 release (13 Oct): coordinated source `b37aadd`, category migration `20261022120000` (45/45 synchronized), then the explicitly authorized sitemap correction `4b6b2ed`. All ten category pages are live; the release gate remains Fix-forward for the intermittent store-signup hydration failure. Production write flows, owner/manual acceptance and go-live infrastructure are separate. See [the production release record](../ux-4-8-production-release-gate.md).
+UX-4–UX-8 release (13 Oct): coordinated source `b37aadd`, category migration `20261022120000` (45/45 synchronized), then the explicitly authorized sitemap correction `4b6b2ed`. All ten category pages are live. The owner-authorized hydration/HTTP-redirect correction `5e66fb0` passed the 14 Oct read-only gate; the docs-only live SHA is `4e5ba95`. Production write flows, owner/manual acceptance and go-live infrastructure are separate. See [the production release record](../ux-4-8-production-release-gate.md).
+
+Local closure follow-up (14 Oct): [UX-4–UX-8 review package](ux-4-8-closure-review.md) records the automated accessibility/device-engine/reflow checks, local write-flow proof and the owner-authorized U10/U15/U18 implementation plus two **unreleased** accessibility corrections. Owner/manual acceptance and real-device/screen-reader/field-CWV checks remain pending.
 
 Every sub-sprint has two owner gates: approval before implementation, acceptance after.
 Never start the next sub-sprint without explicit owner acceptance of the previous one.
@@ -36,9 +38,10 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `ux-1-acceptance.md` | UX-1 acceptance package: commits, criteria with evidence, performance, changed labels, open items |
 | `ux-2-shell.md` | UX-2 brief (approved 30 Sep): header, category strip, account menu, breadcrumbs, page frames, footers, 404/500, decisions N1–N5 and G1, acceptance criteria |
 | `reviews/ux-2-external-review.md` | The independent review of UX-2 (3 Oct): findings UX2-R01–R03, fixes and their verification |
-| `../ux-4-8-production-release-gate.md` | UX-4–UX-8 coordinated production release, category counts, read-only smoke, sitemap correction and open hydration failure |
+| `../ux-4-8-production-release-gate.md` | UX-4–UX-8 coordinated production release, category counts, read-only smoke, sitemap correction and the final passing hydration/redirect retest |
 | `review-guide.md` | For an independent external review: scope and commit ranges, reading order, local setup (Supabase, test accounts), checks, how to reproduce every piece of evidence, traceability from the brief to code and tests, decided vs open, risk areas, report format |
 | `ux-2-acceptance.md` | UX-2 acceptance package: commits, criteria with evidence, measurements, layout shift, deviations for the owner, spec and acceptance rows affected, changed tests, the owner's 7 Oct answers and what they changed |
+| `ux-4-8-closure-review.md` | Current local verification, U10/U15/U18 implementation, accessibility corrections, owner review checklist and remaining manual checks |
 | `ux-8-coherence.md` | UX-8 (10 Oct, provisional): cloud sweep, the Mac checklist, and the V1 record reconciliation for UX-4–UX-7 |
 | `ux-7-admin.md` | UX-7 brief (10 Oct, provisional): questions W1–W9 |
 | `ux-7-acceptance.md` | UX-7 acceptance package |
@@ -85,6 +88,7 @@ Never start the next sub-sprint without explicit owner acceptance of the previou
 | `screenshots/ux3-after/` | The same frames after UX-3a, plus the sort menu and sheet, the location row of the filter sheet, the pending state, pagination (a scratch build with 2 per page) and the error and empty states (a scratch build that forces them) |
 | `screenshots/ux1-audit/` | Concept vs build, side by side (16 pairs) after the audit fixes; `index.html` lists the layout differences per pair |
 | `../../scripts/ux-snapshots.cjs` | The screenshot harness (D10): fixed route list at 390 / 768 / 1280 / 1440, anonymous and signed in (each signed-in group also on the catalog); output in the gitignored `.ux-snapshots/` |
+| `../../scripts/ux-form-admin-smoke.cjs` | Local-only field-error and master-detail regression; GET/HEAD-only browser interactions after explicit local login, optional Chromium/Firefox/WebKit |
 | `../../scripts/ux-local-accounts.cjs` | Creates the local Particular, Store Owner (with a store) and Admin test accounts; local Supabase only; writes the gitignored `.ux-accounts.local.json` |
 | `../../scripts/ux-pub-rerun.cjs` | Re-runs PUB-008 to PUB-015 on a local build following each row's steps (since 3b: the home header and its "Categorías" panel, the banner search, applied chips instead of the old filter selects; 1440 / 768 / 390, all four visitors); observations only, never a status; output `.ux-snapshots/<label>/pub-rerun.json` |
 | `../../scripts/ux-transition-trials.cjs` | The catalog transition trials (UX-3 brief appendix): fresh-session `window.next.router.push` trials per move, 6 s each, reading `location` and the router's own state; output `.ux-snapshots/<label>/transitions.json` |

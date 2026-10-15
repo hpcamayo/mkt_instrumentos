@@ -193,8 +193,9 @@ function assertLocalTargetMatches(appBase, supabaseUrl) {
     assert.equal(storeAccount.status, 200);
     assert.match(storeHtml, /Mi tienda/);
     assert.match(storeHtml, /Inventario/);
-    assert.match(storeHtml, /Solicitud pendiente/);
-    assert.match(storeHtml, /requiere moderación/);
+    assert.match(storeHtml, /En revisión/);
+    assert.match(storeHtml, /Tus publicaciones nuevas pasan por revisión antes de aparecer/);
+    assert.match(storeHtml, /La tienda y sus publicaciones siguen ocultas al público hasta que se apruebe la solicitud/);
     assert.doesNotMatch(storeHtml, /Publicar instrumento/);
     const staleRegistration = await fetch(`${base}/registrar-tienda`, { headers: { Cookie: storeCookie }, redirect: 'manual' });
     assert.equal(staleRegistration.status, 307);

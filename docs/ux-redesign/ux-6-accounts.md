@@ -1,5 +1,7 @@
 # UX-6 · Accounts — brief
 
+**Owner update, 14 Oct 2026:** Henri authorized U10/U15 ("Implementar ambos ahora") and U18 ("Implementar U18 ahora"). Listing edit and onboarding now have field errors and focused summaries; Admin now has a master-detail queue, a local review guide and a decision bar. These additions are implemented locally, awaiting publication and owner acceptance; current evidence is in `ux-4-8-closure-review.md`. The dated overnight scope below is history.
+
 **Status: provisional (written and built overnight, 10 Oct 2026, under N17).** The owner was away: every question takes its recommendation as a provisional answer, every product-behaviour flag takes its no-change option, and the owner confirms or reverses each answer at the UX-6 review (`ux-6-acceptance.md`).
 
 UX-6 makes the account areas consistent for Particular and Tienda. It changes no auth, invitation, store-application, favourites, alerts, notification, transaction or review rule, and no query.
@@ -14,7 +16,7 @@ UX-6 makes the account areas consistent for Particular and Tienda. It changes no
 
 ## Split (6a / 6b)
 
-The roadmap recommended 6a (onboarding + Particular) and 6b (Store). Overnight the scope below is small enough for one review, but it is still committed as two steps: **6a** the shared account pieces (confirmations, the inventory table) and **6b** the store pages (eyebrows). Onboarding forms are not changed (A6).
+The roadmap recommended 6a (onboarding + Particular) and 6b (Store). Overnight the scope below is small enough for one review, but it is still committed as two steps: **6a** the shared account pieces (confirmations, the inventory table) and **6b** the store pages (eyebrows). The original overnight build left onboarding unchanged (A6); the 14 Oct U15 follow-up implements its errors locally.
 
 ## Questions (provisional answers in bold)
 
@@ -25,7 +27,7 @@ The roadmap recommended 6a (onboarding + Particular) and 6b (Store). Overnight t
 | A3 | Confirmations | A an in-page modal (`ConfirmDialog`) with the same question, a body and a verb on the button · B inline confirm rows | **A.** Same semantics: nothing runs unless the person confirms; Cancel is focused first; Esc and the backdrop cancel; focus returns to the control. Danger tone for deleting an alert and cancelling a claim |
 | A4 | Inventory on phones | A the same table restyled as cards below 768 px (each cell labelled) · B a separate list | **A.** One DOM, the cells keep their order (the analytics smoke reads them), no sideways scroll |
 | A5 | Store-name eyebrows | A "Mi tienda" as the eyebrow, the store name in the summary line · B sentence-case store name | **A** |
-| A6 | Onboarding forms (per-field errors, error summary) | A leave for UX-8 · B now | **A.** They sit on auth flows the rules keep unchanged; the `ErrorSummary` from UX-5 is ready for them (U15, pending) |
+| A6 | Onboarding forms (per-field errors, error summary) | A leave for UX-8 · B now | **Superseded 14 Oct:** owner chose implementation now (U15). Shared field errors and summaries preserve existing auth calls, role separation and password minimums |
 | A7 | Favoritos with the catalog card | A keep its card · B the catalog card | **A** for now: a favourite can be sold or unavailable, which the catalog card does not show (U17, pending) |
 | A8 | Statistics scope | A real counts only, as today | **A** (no change) |
 | A9 | SDASH-002/003 (editing store fields and media) | A no new UI | **A** (no change; Admin edits them) |

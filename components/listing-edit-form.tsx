@@ -18,7 +18,8 @@ import {
 import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
-import { conditionChoices } from "@/lib/sell-form";
+import { conditionChoices, validateSellDraft } from "@/lib/sell-form";
+import { useFormErrors } from "@/components/use-form-errors";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
@@ -82,6 +83,7 @@ export function ListingEditForm({
   initialNotice?: string;
 }) {
   const router = useRouter();
+  const [validation, errorSummary] = useFormErrors("editar", "guardar los cambios");
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [category, setCategory] = useState(listing.category);
   const [instrumentType, setInstrumentType] = useState(listing.instrument_type ?? "");
@@ -149,6 +151,7 @@ export function ListingEditForm({
       })),
     ]);
     setPhotosChanged(true);
+    validation.clear("photos");
     setState("idle");
     setMessage("");
   }
@@ -201,6 +204,7 @@ export function ListingEditForm({
     }
     setPhotos(existingPhotoItems(livePhotos));
     setPhotosChanged(true);
+    validation.clear("photos");
     setState("idle");
     setMessage("");
   }
@@ -222,9 +226,6 @@ export function ListingEditForm({
     event.preventDefault();
     if (busyRef.current) return;
     if (!supabase) return showMessage("error", "No se pudo conectar con Laria.");
-    if (photos.length < MIN_LISTING_PHOTOS || photos.length > MAX_LISTING_PHOTOS) {
-      return showMessage("error", `Agrega entre ${MIN_LISTING_PHOTOS} y ${MAX_LISTING_PHOTOS} fotos.`);
-    }
     const formData = new FormData(event.currentTarget);
     const values = {
       title: read(formData, "title"),
@@ -239,8 +240,17 @@ export function ListingEditForm({
       description: read(formData, "description"),
       attributes: readAttributes(formData, instrumentType),
     };
-    if (!values.title || !values.category || !values.instrument_type || !values.brand || !values.model || !values.condition || !values.city || !values.region || values.description.length < 40 || values.price_pen === null) {
-      return showMessage("error", "Completa los datos obligatorios y usa una descripción de al menos 40 caracteres.");
+    const errors = validateSellDraft({
+      photoCount: photos.length, category, instrumentType,
+      brand: values.brand, model: values.model, title: values.title, condition: values.condition,
+      price: read(formData, "price_pen"), priceValue: values.price_pen,
+      city: values.city, region: read(formData, "region"), regionValue: values.region,
+      description: values.description, acceptedRules: true,
+    });
+    if (!validation.validate(event.currentTarget, Object.fromEntries(errors.map((error) => [error.field, error.message])))) {
+      setMessage("");
+      setState("idle");
+      return;
     }
 
     const immediate = changedValues(values, listing, ["price_pen", "description", "city", "region", "attributes"]);
@@ -342,36 +352,38 @@ export function ListingEditForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} aria-busy={busy} className="grid gap-6 rounded-panel border border-subtle bg-white p-5 sm:p-6">
+    <form ref={validation.formRef} noValidate onSubmit={handleSubmit} onChange={validation.onChange} aria-busy={busy} className="grid gap-6 rounded-panel border border-subtle bg-white p-5 sm:p-6">
       {message ? (
         <PageNotice kind={state === "error" ? "error" : "success"} message={message}>
           {state === "success" ? <Link href={returnHref} className="link mt-3 inline-block font-semibold">Volver al inventario</Link> : null}
         </PageNotice>
       ) : null}
 
+      {errorSummary}
       <fieldset disabled={busy} className="grid min-w-0 gap-6">
       <Notice tone="info" role="note">{moderatedNote}</Notice>
-      <TextField label="Título" name="title" defaultValue={listing.title} />
+      <TextField label="Título" name="title" defaultValue={listing.title} error={validation.errorFor("title")} />
       <div className="grid gap-5 sm:grid-cols-2">
-        <SelectField label="Categoría" name="category" value={category} onChange={(value) => { setCategory(value); const options = getInstrumentTypeOptions(value); if (!options.some((option) => option.value === instrumentType)) setInstrumentType(options[0]?.value ?? ""); }} options={categoryOptions} />
-        <SelectField label="Tipo de instrumento" name="instrument_type" value={instrumentType} onChange={setInstrumentType} options={getInstrumentTypeOptions(category)} />
-        <TextField label="Marca" name="brand" defaultValue={listing.brand ?? ""} />
-        <TextField label="Modelo" name="model" defaultValue={listing.model ?? ""} />
-        <Field id="editar-price_pen" label="Precio en soles"><Input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" required defaultValue={listing.price_pen ?? ""} /></Field>
-        <LocationFields defaultCity={listing.city} defaultRegion={listing.region} />
+        <SelectField label="Categoría" name="category" error={validation.errorFor("category")} value={category} onChange={(value) => { setCategory(value); validation.clear("instrument_type"); const options = getInstrumentTypeOptions(value); if (!options.some((option) => option.value === instrumentType)) setInstrumentType(options[0]?.value ?? ""); }} options={categoryOptions} />
+        <SelectField label="Tipo de instrumento" name="instrument_type" error={validation.errorFor("instrument_type")} value={instrumentType} onChange={setInstrumentType} options={getInstrumentTypeOptions(category)} />
+        <TextField label="Marca" name="brand" defaultValue={listing.brand ?? ""} error={validation.errorFor("brand")} />
+        <TextField label="Modelo" name="model" defaultValue={listing.model ?? ""} error={validation.errorFor("model")} />
+        <Field id="editar-price_pen" label="Precio en soles" error={validation.errorFor("price_pen")}><Input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" required defaultValue={listing.price_pen ?? ""} /></Field>
+        <LocationFields idPrefix="editar" defaultCity={listing.city} defaultRegion={listing.region} cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} />
       </div>
-      <ConditionCards id="editar-condition" name="condition" legend="Condición" options={conditionChoices(conditionOptions)} defaultValue={listing.condition ?? ""} />
+      <ConditionCards id="editar-condition" name="condition" legend="Condición" options={conditionChoices(conditionOptions)} defaultValue={listing.condition ?? ""} error={validation.errorFor("condition")} />
       {attributeGroup ? (
         <fieldset className="grid gap-4 rounded-panel border border-subtle bg-canvas p-4 sm:grid-cols-2">
           <legend className="px-2 t-ui font-semibold text-ink">Características del instrumento</legend>
           {attributeGroup.filters.map((filter) => <AttributeField key={filter.key} filter={filter} value={listing.attributes?.[filter.key]} />)}
         </fieldset>
       ) : null}
-      <Field id="editar-description" label="Descripción" hint="Mínimo 40 caracteres. Describe el estado real, detalles y accesorios incluidos."><Textarea name="description" required minLength={40} rows={6} defaultValue={listing.description ?? ""} /></Field>
+      <Field id="editar-description" label="Descripción" error={validation.errorFor("description")} hint="Mínimo 40 caracteres. Describe el estado real, detalles y accesorios incluidos."><Textarea name="description" required minLength={40} rows={6} defaultValue={listing.description ?? ""} /></Field>
 
       <section className="grid gap-4" aria-labelledby="edit-photo-heading">
         <div><h2 id="edit-photo-heading" className="t-section text-ink">Fotos</h2><p className="mt-1 t-meta">Entre 2 y 10. La primera es la principal. Las fotos propuestas no reemplazan la versión pública antes de aprobarse.</p></div>
-        <div className="flex flex-wrap gap-3"><label className={buttonClasses({ variant: "secondary", className: "w-fit cursor-pointer" })}>Agregar fotos<input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={busy} className="sr-only" onChange={addPhotos} /></label>{hasPendingRevision && (listing.status === "approved" || listing.status === "hidden") ? <button type="button" disabled={busy} onClick={restoreLivePhotos} className={buttonClasses({ variant: "secondary" })}>Restaurar fotos aprobadas</button> : null}</div>
+        <div className="flex flex-wrap gap-3"><label className={buttonClasses({ variant: "secondary", className: "w-fit cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-ink focus-within:outline-offset-2" })}>Agregar fotos<input id="editar-photos" name="photos" data-error-label="Fotos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-invalid={validation.errorFor("photos") ? true : undefined} aria-describedby={validation.errorFor("photos") ? "editar-photos-error" : undefined} disabled={busy} className="sr-only" onChange={addPhotos} /></label>{hasPendingRevision && (listing.status === "approved" || listing.status === "hidden") ? <button type="button" disabled={busy} onClick={restoreLivePhotos} className={buttonClasses({ variant: "secondary" })}>Restaurar fotos aprobadas</button> : null}</div>
+        {validation.errorFor("photos") ? <p id="editar-photos-error" className="t-ui font-semibold text-danger">{validation.errorFor("photos")}</p> : null}
         <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {photos.map((photo, index) => (
             <li key={photo.key} className="rounded-panel border border-subtle bg-white p-3">
@@ -413,12 +425,12 @@ function AttributeField({ filter, value }: { filter: AttributeFilter; value: unk
   return <SelectField label={filter.label} name={`attribute:${filter.key}`} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} options={filter.options ?? []} required={false} />;
 }
 
-function TextField({ label, name, defaultValue }: { label: string; name: string; defaultValue: string }) {
-  return <Field id={`editar-${name}`} label={label}><Input type="text" name={name} required defaultValue={defaultValue} /></Field>;
+function TextField({ label, name, defaultValue, error }: { label: string; name: string; defaultValue: string; error?: string }) {
+  return <Field id={`editar-${name}`} label={label} error={error}><Input type="text" name={name} required defaultValue={defaultValue} /></Field>;
 }
 
-function SelectField({ label, name, options, value, defaultValue, onChange, required = true }: { label: string; name: string; options: readonly { value: string; label: string }[]; value?: string; defaultValue?: string; onChange?: (value: string) => void; required?: boolean }) {
-  return <Field id={`editar-${name.replace(/[^a-z0-9_-]/gi, "-")}`} label={label}><Select name={name} required={required} value={value} defaultValue={value === undefined ? defaultValue : undefined} onChange={onChange ? (event) => onChange(event.target.value) : undefined}><option value="">Selecciona una opción</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select></Field>;
+function SelectField({ label, name, options, value, defaultValue, onChange, required = true, error }: { label: string; name: string; options: readonly { value: string; label: string }[]; value?: string; defaultValue?: string; onChange?: (value: string) => void; required?: boolean; error?: string }) {
+  return <Field id={`editar-${name.replace(/[^a-z0-9_-]/gi, "-")}`} label={label} error={error}><Select name={name} required={required} value={value} defaultValue={value === undefined ? defaultValue : undefined} onChange={onChange ? (event) => onChange(event.target.value) : undefined}><option value="">Selecciona una opción</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select></Field>;
 }
 
 function readAttributes(formData: FormData, instrumentType: string) {
