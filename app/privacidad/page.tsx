@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PrivacyAssistedCommerceSection } from "@/components/legal/assisted-commerce-legal";
 import { LegalContact, LegalPage, LegalSection } from "@/components/legal-page";
 import { OPEN_GRAPH_BASE } from "@/lib/site";
 
@@ -57,6 +58,8 @@ export default function PrivacyPage() {
           <li>Tu correo, tus favoritos, tus alertas y tu actividad de navegación no se muestran a otros usuarios. Vendedores y tiendas ven estadísticas agregadas, no la identidad de quienes vieron sus publicaciones.</li>
         </ul>
       </LegalSection>
+
+      <PrivacyAssistedCommerceSection />
 
       <LegalSection title="5. Cookies">
         <ul>

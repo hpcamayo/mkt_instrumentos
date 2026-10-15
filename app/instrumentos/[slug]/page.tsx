@@ -14,6 +14,7 @@ import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@
 import { SpecStrip, SpecTable } from "@/components/listing/spec-table";
 import { TrustNote } from "@/components/listing/trust-note";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
+import { AcceptedPaymentMethods } from "@/components/payment/accepted-payment-methods";
 import { PageContainer } from "@/components/page-container";
 import { StripCurrent } from "@/components/strip-current";
 import { NoticeIcon, noticeClassName } from "@/components/ui/notice";
@@ -38,6 +39,12 @@ import {
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
+import {
+  assistedCommerceEnabled,
+  buildPurchaseWhatsAppUrl,
+  readPurchaseRequest,
+  type PurchaseRequest,
+} from "@/lib/payment-methods";
 import { fetchCatalogPage } from "@/lib/catalog";
 import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
 import {
@@ -253,12 +260,23 @@ export default async function ListingDetailPage({
     ? await supabase.rpc("get_public_reputation", reputationTarget)
     : null;
   const reputation = reputationResult && !reputationResult.error ? readPublicReputation(reputationResult.data) : null;
+  const purchase = await loadPurchaseRequest(supabase, listing);
   return (
     <>
       <JsonLd data={buildListingJsonLd(listing)} />
-      <ListingDetail listing={listing} supabase={supabase} reputation={reputation} />
+      <ListingDetail listing={listing} supabase={supabase} reputation={reputation} purchase={purchase} />
     </>
   );
+}
+
+// PAY-1 (design §11.1): "Solicitar compra" and the accepted payment methods, only while the pilot is on, the listing has
+// units and its verified store shows at least one approved method. A failed call leaves the ordinary contact.
+async function loadPurchaseRequest(supabase: PublicSupabaseClient, listing: ListingDetailData): Promise<PurchaseRequest | null> {
+  if (!assistedCommerceEnabled() || listing.status !== "approved" || listing.seller_type !== "store" || isOutOfStock(listing)) {
+    return null;
+  }
+  const { data, error } = await supabase.rpc("get_listing_purchase_request", { p_listing_id: listing.id });
+  return error ? null : readPurchaseRequest(data);
 }
 
 const loadCategoryPage = cache(async (category: string, page: number) => {
@@ -313,10 +331,12 @@ function ListingDetail({
   listing,
   supabase,
   reputation,
+  purchase,
 }: {
   listing: ListingDetailData;
   supabase: PublicSupabaseClient;
   reputation: PublicReputation | null;
+  purchase: PurchaseRequest | null;
 }) {
   const store = normalizeStore(listing);
   const particular = resolveParticularSeller(listing);
@@ -341,6 +361,7 @@ function ListingDetail({
     since: formatMonthYear(isStore ? store?.created_at : particular.createdAt ?? listing.created_at),
   };
   const strip = getSpecStrip(listing);
+  const contactHref = purchase ? buildPurchaseWhatsAppUrl(listing.whatsapp_phone, listing, purchase.sku) : buildWhatsAppUrl(listing);
   const typeHref = listing.instrument_type
     ? categoryTypePath(listing.category, listing.instrument_type)
     : categoryLandingPath(listing.category);
@@ -388,7 +409,7 @@ function ListingDetail({
                 <Link href="#similares" className="link w-fit t-ui font-semibold">Ver publicaciones similares</Link>
               </div>
             ) : (
-              <ContactModule listingId={listing.id} href={buildWhatsAppUrl(listing)} className="order-3 lg:order-3" />
+              <ContactModule listingId={listing.id} href={contactHref} purchase={Boolean(purchase)} className="order-3 lg:order-3" />
             )}
 
             <a href="#vendedor" className="order-4 -my-1 flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-control py-1 lg:hidden">
@@ -398,6 +419,8 @@ function ListingDetail({
             </a>
 
             <SpecStrip specs={strip} className="order-5 lg:order-2" />
+
+            {purchase ? <AcceptedPaymentMethods methods={purchase.methods} className="order-6 lg:order-4" /> : null}
 
             {isSold ? null : <TrustNote surface="listing" className="order-6 lg:order-4" />}
 

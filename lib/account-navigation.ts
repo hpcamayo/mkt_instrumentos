@@ -20,7 +20,8 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
   if (accountType === "store_owner") {
     return [
       { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
-      { href: "/mi-cuenta/tienda", label: hasStore ? "Mi tienda" : "Solicitud de tienda", icon: "store", exact: true },
+      // PAY-1: "Medios de pago" is reached from Mi tienda and belongs to it.
+      { href: "/mi-cuenta/tienda", label: hasStore ? "Mi tienda" : "Solicitud de tienda", icon: "store", exact: true, activePaths: ["/mi-cuenta/tienda/medios-de-pago"] },
       ...(hasStore ? [
         { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory" } as const,
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar", icon: "publish" } as const,

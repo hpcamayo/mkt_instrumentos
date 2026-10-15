@@ -134,7 +134,10 @@ test("every WhatsApp contact button shares one label and the glyph, one per page
     assert.equal(bodies.length, 1, file);
     for (const body of bodies) {
       assert.match(body, /<WhatsAppGlyph \/>/, file);
-      assert.equal(body.replace(/<WhatsAppGlyph \/>/, "").trim(), "Contactar por WhatsApp", file);
+      // PAY-1: the listing's one button reads "Solicitar compra" while its verified store shows accepted payment methods.
+      const label = body.replace(/<WhatsAppGlyph \/>/, "").trim();
+      if (file === "components/listing/contact-module.tsx") assert.equal(label, '{purchase ? "Solicitar compra" : "Contactar por WhatsApp"}', file);
+      else assert.equal(label, "Contactar por WhatsApp", file);
     }
   }
   const listingPage = fs.readFileSync("app/instrumentos/[slug]/page.tsx", "utf8");
