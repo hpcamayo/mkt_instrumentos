@@ -540,7 +540,7 @@ Current migrations:
 - `20261024120000_store_inventory_ui.sql` (STORE-1b, local only): `get_inventory_summary()` adds recorded sales and recent movements; bulk threshold and bulk hide functions. See "Store operations: later sub-sprints".
 - `20261025120000_store_inventory_import.sql` (STORE-2, local only): spreadsheet import sessions and staged rows, private `store-imports` bucket, step/commit functions, ledger FK `import_session_id`, saved column mapping, retention job. See "Store operations: later sub-sprints".
 - `20261026120000_store_import_photos.sql` (STORE-3a, local only): import photo assets and assignments, private `store-import-photos` bucket, matching, listing-photo validator branch and attachment guard, photo cleanup. See "Store operations: later sub-sprints".
-- `20261027120000_store_import_publish.sql` (STORE-3b, local only): per-store listing allowance read by the cap trigger, Admin allowance function, shared `insert_store_listing`, publication of import rows. See "Store operations: later sub-sprints".
+- `20261027120000_store_import_publication.sql` (STORE-3b, local only): per-store listing allowance read by the cap trigger, Admin allowance function, shared `insert_store_listing`, publication of import rows. See "Store operations: later sub-sprints".
 - `20261028120000_pay_1_store_payment_methods.sql` (PAY-1, local only): accepted payment methods with Admin review and history, public read functions, purchase-intent metadata on `whatsapp_contact`. See "Store operations: later sub-sprints".
 
 Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
@@ -697,7 +697,7 @@ sub-sprint detail, deviations, rollback and review guides: `docs/store-operation
     manual placements are kept. `listing_photo_set_is_valid` gains an import-photo branch, and a trigger on
     `listing_photos` and `listing_revision_photos` refuses any import-photo URL not valid for that listing's owner and
     store. Cancel, expiry, failure or the 30-day purge discards assets no listing or revision references.
-- **STORE-3b, publication from an import and the listing allowance** (`20261027120000_store_import_publish.sql`):
+- **STORE-3b, publication from an import and the listing allowance** (`20261027120000_store_import_publication.sql`):
   - `enforce_store_inventory_cap()` replaced: reads `laria_private.store_listing_allowance(store)` (the store's
     `store_operation_settings.listing_allowance`, default 50) after the existing per-store advisory lock; what counts
     is unchanged (pending + approved listings of the store). Message `STORE_INVENTORY_LIMIT_REACHED: La tienda ya
