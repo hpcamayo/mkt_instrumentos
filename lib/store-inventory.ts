@@ -311,7 +311,8 @@ export async function getInventorySummary(supabase: AnyClient): Promise<Inventor
   return data as InventorySummary;
 }
 
-// "Errores de importación" tile: rows the latest committed import could not apply (conflicts and failures). RLS limits
+// "Errores de importación" tile: rows of the latest committed import that did not apply (validation errors, conflicts
+// and failures; rows the owner excluded are not errors). RLS limits
 // the read to the owner's own store. Null when the store has never finished an import, so the tile is not shown.
 export async function getLastImportErrors(supabase: AnyClient): Promise<{ errors: number; href: string } | null> {
   const { data, error } = await (supabase as unknown as SupabaseClient)
@@ -324,7 +325,7 @@ export async function getLastImportErrors(supabase: AnyClient): Promise<{ errors
   if (error || !data) return null;
   const summary = (data.result_summary ?? {}) as Record<string, number | undefined>;
   return {
-    errors: (summary.conflict ?? 0) + (summary.failed ?? 0),
+    errors: (summary.error ?? 0) + (summary.conflict ?? 0) + (summary.failed ?? 0),
     href: `/mi-cuenta/tienda/inventario/importar/${data.id}`,
   };
 }

@@ -34,6 +34,7 @@ fi
 
 pkill -f "postgrest $LOG_DIR/postgrest.conf" 2>/dev/null || true
 pkill -f "scripts/prototype/local-gateway.cjs" 2>/dev/null || true
+sleep 1
 nohup "$PGRST_DIR/postgrest" "$LOG_DIR/postgrest.conf" > "$LOG_DIR/postgrest.log" 2>&1 &
 JWT_SECRET="$SECRET" PGURL="$PGURL" STORAGE_DIR="$LOG_DIR/storage" nohup node scripts/prototype/local-gateway.cjs > "$LOG_DIR/gateway.log" 2>&1 &
 
