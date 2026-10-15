@@ -540,6 +540,7 @@ Current migrations:
 - `20261024120000_store_inventory_ui.sql` (STORE-1b, local only): `get_inventory_summary()` adds recorded sales and recent movements; bulk threshold and bulk hide functions. See "Store operations: later sub-sprints".
 - `20261025120000_store_inventory_import.sql` (STORE-2, local only): spreadsheet import sessions and staged rows, private `store-imports` bucket, step/commit functions, ledger FK `import_session_id`, saved column mapping, retention job. See "Store operations: later sub-sprints".
 - `20261026120000_store_import_photos.sql` (STORE-3a, local only): import photo assets and assignments, private `store-import-photos` bucket, matching, listing-photo validator branch and attachment guard, photo cleanup. See "Store operations: later sub-sprints".
+- `20261027120000_store_import_publish.sql` (STORE-3b, local only): per-store listing allowance read by the cap trigger, Admin allowance function, shared `insert_store_listing`, publication of import rows. See "Store operations: later sub-sprints".
 - `20261028120000_pay_1_store_payment_methods.sql` (PAY-1, local only): accepted payment methods with Admin review and history, public read functions, purchase-intent metadata on `whatsapp_contact`. See "Store operations: later sub-sprints".
 
 Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
@@ -660,7 +661,7 @@ Design: `docs/store-operations/design.md`; implementation notes, deviations, rol
 
 Combined on branch `store-ops/prototype` for the owner's review; local only, nothing applied to production. Per
 sub-sprint detail, deviations, rollback and review guides: `docs/store-operations/store-1b.md`, `store-2.md`,
-`pay-1.md`, `store-3a.md` (and `store-3b.md` when it lands). The combined review package is
+`pay-1.md`, `store-3a.md`, `store-3b.md`. The combined review package is
 `docs/store-operations/prototype-review.md`.
 
 - **STORE-1b, Inventario screens** (`20261024120000_store_inventory_ui.sql`): `get_inventory_summary()` replaced
@@ -696,6 +697,20 @@ sub-sprint detail, deviations, rollback and review guides: `docs/store-operation
     manual placements are kept. `listing_photo_set_is_valid` gains an import-photo branch, and a trigger on
     `listing_photos` and `listing_revision_photos` refuses any import-photo URL not valid for that listing's owner and
     store. Cancel, expiry, failure or the 30-day purge discards assets no listing or revision references.
+- **STORE-3b, publication from an import and the listing allowance** (`20261027120000_store_import_publish.sql`):
+  - `enforce_store_inventory_cap()` replaced: reads `laria_private.store_listing_allowance(store)` (the store's
+    `store_operation_settings.listing_allowance`, default 50) after the existing per-store advisory lock; what counts
+    is unchanged (pending + approved listings of the store). Message `STORE_INVENTORY_LIMIT_REACHED: La tienda ya
+    tiene N publicaciones concurrentes.`
+  - `get_store_listing_quota(p_store_id default null)` (owner's own store, any store for Admin) and
+    `admin_set_store_listing_allowance(store, allowance 1–2000, reason)` (same advisory lock, audited as
+    `store_listing_allowance_changed`; lowering hides nothing).
+  - `laria_private.insert_store_listing(id, store, fields, photos)`: the store-listing body of
+    `complete_public_submission`, now shared by the sell form and the import; optional `inventory_item_id` link.
+  - `publish_store_import_rows(owner, session, rows, rules_accepted)` (service role, ≤ 20 rows, one subtransaction
+    per row; price from the SKU, photos from the row's validated import photos, contact data from the store; "Sin cupo"
+    over the allowance; idempotent). `store_import_rows` gains `publish_status`, `publish_message`,
+    `published_listing_id` (unique), `published_at`; `store_import_sessions` gains `publish_counts`.
 - **PAY-1, accepted payment methods** (`20261028120000_pay_1_store_payment_methods.sql`):
   - Enum `store_payment_method` (`efectivo_al_recoger`, `yape_plin`, `pos_tarjeta_al_recoger`, `link_de_pago`);
     `store_payment_methods` (one row per store and method: status `pending_review` / `approved` / `rejected` /

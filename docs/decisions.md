@@ -384,3 +384,20 @@ instead of a new event type.
 
 Why: Sprint 6 uses `whatsapp_contact` to decide who may be named as buyer in a sale claim; a new type would make
 purchase-request buyers ineligible, and contact counts stay comparable.
+
+## Store listings are inserted by one function
+
+Decision (STORE-3b, 2026-10-15): the store-listing body of `complete_public_submission` became
+`laria_private.insert_store_listing`, called by both the sell form and import publication.
+
+Why: one implementation keeps verified direct approval, pending-store privacy, photo rules, contact data and the
+allowance check identical for both paths. The Sprint 4 submission suites and `store-ops-3b.sql` run the form path
+unchanged.
+
+## The listing allowance is read inside the cap lock
+
+Decision (STORE-3b, 2026-10-15): `enforce_store_inventory_cap()` reads the store's allowance after taking the existing
+per-store advisory lock, and `admin_set_store_listing_allowance` takes the same lock.
+
+Why: two publishes (form, import chunks, restore) cannot pass the limit together, and a lowered allowance is never read
+stale.

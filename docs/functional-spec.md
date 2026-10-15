@@ -366,6 +366,15 @@ Spreadsheet import:
   list. Laria checks each file on the server, matches what is certain (2–10 photos per SKU) and sets aside anything
   uncertain for the owner to place, reorder or drop by hand; nothing is guessed. Photos can be added after confirming
   and stay until the import is purged; any photo a listing uses stays with the listing.
+- Publishing (optional, after confirming, until the import is purged): the store selects rows that meet the sell
+  form's requirements (category, type, brand, model, condition, a 40-character description, a price on the SKU and
+  2–10 photos) and accepts the marketplace rules. Each publication goes through the existing rules: verified active
+  store publishes directly, other Tiendas go to review, a store in review publishes privately. Each new listing is
+  linked to its SKU. A row that fails does not stop the others.
+
+Listing allowance: a store holds up to 50 pending or published listings (Store Listing Cap) unless an Admin sets
+another allowance for it (1–2000, with a reason, audited). Lowering it hides nothing; only new publications are
+refused, including import rows, which show "Sin cupo". Inventory SKUs, stock and import rows never count.
 
 Accepted payment methods (Pilot A, verified stores only, behind a deployment switch that stays off until legal
 review):
