@@ -1,5 +1,0 @@
-{
-  "crons": [
-    { "path": "/api/internal/store-imports/cleanup", "schedule": "30 9 * * *" }
-  ]
-}

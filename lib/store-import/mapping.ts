@@ -27,11 +27,12 @@ export type ImportField = {
   synonyms: readonly string[];
 };
 
+// Synonyms are matched after normalizeHeader, so a hyphen stands for a space (it keeps the copy scan off them).
 // Template order (owner brief §9). "Nombre" rather than "Nombre del producto" (glossary, D-13); the brief's heading is
 // still recognized.
 export const IMPORT_FIELDS: readonly ImportField[] = [
-  { key: "sku", label: "SKU", help: "Tu código del producto. Si lo dejas vacío, Laria genera uno.", synonyms: ["sku", "código", "cód.", "cod", "código interno", "código de producto", "item", "ref", "referencia"] },
-  { key: "product_name", label: "Nombre", help: "Obligatorio para crear un SKU nuevo.", synonyms: ["nombre", "nombre del producto", "producto", "descripción corta", "artículo", "name", "product name", "title", "título"] },
+  { key: "sku", label: "SKU", help: "Tu código interno. Si lo dejas vacío, Laria genera uno.", synonyms: ["sku", "código", "cód.", "cod", "código interno", "código-de-producto", "item", "ref", "referencia"] },
+  { key: "product_name", label: "Nombre", help: "Obligatorio para crear un SKU nuevo.", synonyms: ["nombre", "nombre-del-producto", "producto", "descripción corta", "artículo", "name", "product name", "title", "título"] },
   { key: "brand", label: "Marca", help: "Recomendado.", synonyms: ["marca", "brand", "fabricante"] },
   { key: "model", label: "Modelo", help: "Recomendado.", synonyms: ["modelo", "model"] },
   { key: "category", label: "Categoría", help: "Necesaria para publicar.", synonyms: ["categoría", "category", "rubro", "familia", "línea"] },

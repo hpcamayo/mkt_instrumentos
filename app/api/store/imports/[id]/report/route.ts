@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       headers: {
         ...NO_STORE,
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="resultado-importacion-${day}.csv"`,
+        "Content-Disposition": `attachment; filename="inventario-resultado-${day}.csv"`,
       },
     });
   } catch (error) {

@@ -1452,8 +1452,10 @@ end;
 $$;
 
 -- Daily at 09:15 UTC (04:15 Lima). cron.schedule() with a job name replaces the job of that name. The cleanup route
--- (Vercel cron, vercel.json) runs the same retention before it deletes files, so either schedule alone is enough for
--- the database part; only the route can remove the files themselves.
+-- (/api/internal/store-imports/cleanup, CRON_SECRET) runs the same retention before it deletes files, so either
+-- schedule alone is enough for the database part; only the route can remove the files themselves. The route has no
+-- schedule yet: the pre-go-live Hobby release registers no Vercel cron (sprint-7 test), so it is called by the same
+-- external scheduler as the email worker once one exists; until then queued files simply wait.
 select cron.schedule('store-import-retention', '15 9 * * *', $$select laria_private.run_store_import_retention()$$);
 
 -- ------------------------------------------------------------------ function privileges

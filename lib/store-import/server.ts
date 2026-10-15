@@ -347,3 +347,15 @@ export async function readImportRows(db: Db, sessionId: string, filter: RowFilte
   if (error) throw importErrorFrom(error);
   return data ?? [];
 }
+
+// The first rows as read from the file, so the column step can show an example value under each heading.
+export async function readImportSample(db: Db, sessionId: string, limit = 3) {
+  const { data, error } = await db
+    .from("store_import_rows")
+    .select("row_number,raw")
+    .eq("session_id", sessionId)
+    .order("row_number", { ascending: true })
+    .limit(limit);
+  if (error) throw importErrorFrom(error);
+  return (data ?? []).map((row) => ({ row_number: row.row_number as number, raw: (row.raw ?? []) as ImportCell[] }));
+}
