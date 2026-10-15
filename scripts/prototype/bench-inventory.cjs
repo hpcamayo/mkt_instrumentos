@@ -9,7 +9,6 @@
 // It creates its own store, owner and listings (ids starting bbbb…) and leaves them in place: run it on a database
 // you will reset afterwards. Output is a Markdown table on stdout.
 const { Client } = require("pg");
-const crypto = require("node:crypto");
 
 const url = process.argv[2] || process.env.LARIA_TEST_DATABASE_URL || "postgresql://postgres@127.0.0.1:54322/postgres";
 if (!["127.0.0.1", "localhost", "::1"].includes(new URL(url).hostname)) throw new Error(`Refusing non-local database ${url}`);
@@ -66,7 +65,7 @@ async function asUser(db, sub, admin = false) {
     const ids = (await db.query("select id, version from public.store_inventory_items where store_id = $1 order by merchant_sku", [STORE])).rows;
     t = process.hrtime.bigint();
     for (let n = 0; n < linked; n++) {
-      const r = await db.query("select public.link_inventory_listing($1, $2, $3, $4)", [ids[n].id, `bbbb2000-0000-4000-8000-${String(n + 1).padStart(12, "0")}`, ids[n].version, 101 + n]);
+      await db.query("select public.link_inventory_listing($1, $2, $3, $4)", [ids[n].id, `bbbb2000-0000-4000-8000-${String(n + 1).padStart(12, "0")}`, ids[n].version, 101 + n]);
     }
     out.push(["link_inventory_listing", linked, (ms(t) / linked).toFixed(2), "", ""]);
 
