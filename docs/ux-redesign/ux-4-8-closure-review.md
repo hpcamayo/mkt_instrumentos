@@ -1,19 +1,48 @@
 # UX-4–UX-8 closure review — 14 October 2026
 
-**State: U10/U15/U18 implemented and verified locally by owner request; publication and owner acceptance pending.** This is an observation and review package, not owner acceptance. No canonical acceptance status or functional-spec wording was changed.
+**State: U10/U15/U18 published with owner approval; read-only production gate PASS. Owner/manual acceptance remains pending.** This is an observation and review package, not owner acceptance. No canonical acceptance status or functional-spec wording was changed.
 
-## Release and local boundary
+## Production publication — 14 October 2026
 
-- Last verified production release: `4e5ba95c249a784f7b80eccc2c55c2b31a4ddd0e`, deployment `dpl_D1FaMpnG81unBp1CjhAosE5UzbqV`. Its read-only release gate passed; the signup hydration and redirect failures are closed. See `../ux-4-8-production-release-gate.md`.
-- This follow-up starts from that commit. The U10/U15/U18 implementation and accessibility corrections below are **local and not deployed**.
+Henri explicitly answered **“Publicar el parche”** after reviewing the implementation and local proof. A normal fast-forward moved `main` from `4e5ba95` to **`7a50f060fd73306ca26ebf8123125ab7556cc190`**. Vercel automatically built **`dpl_EdziuxY3chGeioMEvumzN7d1bk6c`**, READY; the Git metadata names that exact SHA, repo and `main` branch. `laria.audio`, `www.laria.audio`, `laria.pro` and `www.laria.pro` all resolved to it. The pre-push rollback target was `dpl_D1FaMpnG81unBp1CjhAosE5UzbqV` (`4e5ba95`). No rollback was needed.
+
+**Decision: PASS for the read-only production gate; keep live.** U10/U15/U18 are shipped. Formal owner acceptance and manual checks remain open; authenticated/write-flow proof is local only. No production session, form submission, publishing, favorite, alert, report, Admin action or WhatsApp navigation occurred.
+
+| Check | Result | Production evidence |
+| --- | --- | --- |
+| 13. Migration synchronization | Pass | 45/45 through `20261022120000`; this patch applies no migration |
+| 14. Categories/data | Pass | Privileged GET-only PostgREST exact counts; identical to the last verified snapshot. Listings 55 → 55, revisions 2 → 2, live alerts 2 → 2; no retired values |
+| 15. Rendered SEO | Pass; Admin waived | CLI exit 0; both crawlers, seven populated and three empty categories, public sold listing, structured data. Only `admin-records` waived for the absent Admin session. The first invocation lacked the required sold-listing argument; it was corrected and rerun with the existing public URL |
+| 16. Pages/layout | Pass | 46/46 navigations at 390/1440; 42 HTML visits with one main/h1, Spanish UI, no overflow, broken completed image, page error, unexpected console error or failed application GET. Ten required screenshots inspected |
+| 17. Legacy URLs/sitemap | Pass | Exact permanent redirects, legacy filtered catalog noindex, all ten new sitemap landings and no retired landing; 21 HTTP checks across browser/Googlebot/Bingbot user agents |
+| 18. Navigation | Pass | Ten panels at both widths, phone category menu, one row at 1280 including Teclados; desktop home tiles two rows of five |
+| 19. Listing hydration | Pass | Ten fresh contexts, zero React #418 or other page errors |
+| 20. Signed-out guards | Pass | Account, publish and Admin end at login; no 500 |
+| 21. WhatsApp | Pass | Listing/store anchors use wa.me with Spanish text naming the rendered listing/store; never clicked |
+| 22. Runtime health | Pass, bounded window | 2026-10-15 00:42:40Z–00:46:25Z: 50 returned records, separate error/fatal/5xx queries each zero |
+| Signup hydration | Pass | 20 fresh contexts / 100 full-document visits at 390/1440, normal/delayed account and JavaScript timing; zero page errors |
+| Production writes | None | 80 attempted `POST /api/events/session` calls aborted before leaving the browser; zero completed non-GET/HEAD requests |
+
+The comparison above uses the last verified pre-patch release snapshot (2026-10-14 19:12:30Z) and the new GET-only snapshot (2026-10-15 00:42:25Z); it is not an atomic database snapshot around the push. Both contain: guitars 20, basses 3, percussion 11, pedals 5, amplifiers 6, microphones 5, audio 5; keyboards/winds/strings zero. Both revisions retain null category. Alerts are one basses and one percussion. No duplicate alert was deleted by this patch. The original migration's 54-listing snapshot and the intervening owner activity remain in the prior release record.
+
+Sample response times (390 / 1440): home 1576 / 1355 ms, catalog 621 / 600 ms, Percusión 516 / 509 ms. These are sampled navigation times, not field Core Web Vitals. Existing seller-supplied test text, mismatched photos and placeholders remain untouched.
+
+Production-changing actions in order: **(1)** authorized `git push origin 7a50f06:main`, triggering the automatic application deployment; **(2)** a later docs-only fast-forward publishes this record and current release boundaries, triggering the same application code again. That final deployment SHA/ID and final GET checks are verified in the handoff, avoiding a recursive documentation deployment. No production setting, environment variable, auth/email/cron configuration, catalog table or data was changed, and no production SQL write was executed. All acceptance TSV and XLSX files remain untouched.
+
+Raw evidence: `/private/tmp/laria-ux-closure-release-7a50f06/` (not committed). Local U10/U15/U18 proof remains below.
+
+## Implementation and local verification boundary
+
+- Pre-follow-up verified production release: `4e5ba95c249a784f7b80eccc2c55c2b31a4ddd0e`, deployment `dpl_D1FaMpnG81unBp1CjhAosE5UzbqV`. Its read-only release gate passed; the signup hydration and redirect failures are closed. See `../ux-4-8-production-release-gate.md`.
+- This follow-up starts from that commit. The implementation and corrections below shipped as `7a50f06`, verified above.
 - A separate local Supabase project, `laria_ux8_closure`, runs on API `127.0.0.1:55421` and DB port `55422`; the compiled app runs at `http://localhost:3108`. It has all 45 committed migrations and marketplace seed fixtures. No catalog build, loader or catalog data was used.
 - Local catalog tables contain no loaded catalog; this audit does not re-prove production brand-list contents. The already-passed release gate covers that surface.
 - The pre-existing local stack on ports 54321/54322 was at 44 migrations. It was not upgraded or reset. The photo suite's initial hard-coded container selection failed to prepare its draft fixture in the isolated stack; the harness now accepts an explicit container and fails unless the exact fixture exists and is updated.
-- Production requests, data writes, deployments, settings changes and GitHub pushes in this follow-up: **none**. Auth, storage and marketplace mutations below occurred only in the isolated local stack. No external email provider credentials were configured.
+- During the implementation/local-verification phase, production requests, data writes, deployments, settings changes and GitHub pushes were **none**; subsequent authorized publication is recorded above. Auth, storage and marketplace mutations below occurred only in the isolated local stack. No external email provider credentials were configured.
 
 ## Owner-authorized implementation
 
-Henri answered **“Implementar ambos ahora”** for U10/U15 and **“Implementar U18 ahora”** for U18. These answers supersede the overnight deferrals in the briefs; they authorize implementation, not production publication or owner acceptance.
+Henri answered **“Implementar ambos ahora”** for U10/U15 and **“Implementar U18 ahora”** for U18. These answers supersede the overnight deferrals in the briefs; Henri subsequently authorized publication separately, recorded above. Neither decision implies formal owner acceptance.
 
 | Item | Implemented locally | Preserved boundary |
 | --- | --- | --- |
@@ -111,7 +140,7 @@ Selected screenshots: `screenshots/particular-publicar-390.png`, `particular-edi
 | U16/U17 | Summary is not a to-do list; favorites keep their availability-aware card | Confirm these existing choices at UX-6 review |
 | N16 | UX-5–UX-7 write-flow proof is local only | Owner decides the standing production-test-account policy; no production account is created here |
 
-U10/U15/U18 scope decisions are resolved and implemented above. Publishing this patch still needs Henri’s OK under the original fix-forward rule. Formal UX acceptance, U16/U17 and the manual checks remain open.
+U10/U15/U18 scope decisions are resolved and implemented above. Henri separately authorized and completed publication; the read-only production result is above. Formal UX acceptance, U16/U17 and the manual checks remain open.
 
 ## Acceptance and launch follow-ups
 
@@ -142,7 +171,7 @@ node tests/photos.integration.cjs http://localhost:3108
 
 The keyboard script refuses non-local app and database URLs, permits only browser GET/HEAD requests after an explicit local login, opens/cancels confirmations and never confirms a mutation. Fixture setup and the separate browser write-flow proof are local-only and preserved in the raw-evidence directory.
 
-## Changed files (local)
+## Changed files
 
 - Listing edit, auth/onboarding/profile/password/store form components; new `components/use-form-errors.tsx`, `lib/form-validation.ts` and updated `components/ui/error-summary.tsx`: U10/U15 and RUC error presentation.
 - `components/admin-workbench.tsx`, `components/ui/confirm-dialog.tsx`: U18 and the two accessibility corrections.
@@ -154,4 +183,4 @@ The keyboard script refuses non-local app and database URLs, permits only browse
 
 ## Decision
 
-Automated local checks pass for U10/U15/U18 and the accessibility corrections. **Ready for Henri's review and explicit publication approval; UX-4–UX-8 are not marked formally accepted.** Production remains on the already-passed release. No production or GitHub operation is part of this follow-up.
+U10/U15/U18 and the accessibility corrections are published with Henri's explicit approval. **Read-only production gate PASS; keep live. UX-4–UX-8 are not marked formally accepted.** Authenticated/write flows remain proven locally only, and the owner/manual checks above still apply.

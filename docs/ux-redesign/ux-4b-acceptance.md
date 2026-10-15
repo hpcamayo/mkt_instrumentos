@@ -1,6 +1,6 @@
 # UX-4b · The store page — acceptance package
 
-**Update, 14 Oct:** implementation is live and the read-only production gate passes. New local rendered/a11y/workflow evidence and the owner review checklist are in `ux-4-8-closure-review.md`; two local accessibility fixes await publication. Owner acceptance and canonical row statuses are not inferred. The original cloud evidence and limitations below remain as dated history.
+**Update, 14 Oct:** implementation is live and the read-only production gate passes. New local rendered/a11y/workflow evidence and the owner review checklist are in `ux-4-8-closure-review.md`; the accessibility corrections shipped in `7a50f06` with owner approval and a passing read-only production smoke. Owner acceptance and canonical row statuses are not inferred. The original cloud evidence and limitations below remain as dated history.
 
 **State: built in the cloud session of 10 Oct (N17), waiting for the owner's review** (4b was built before 4a's acceptance because the owner is away; N17). Answers L16–L20 provisional; choices U2, U6, U7 in `decisions.md`.
 

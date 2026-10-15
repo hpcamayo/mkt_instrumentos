@@ -5,7 +5,7 @@ Record who decided and when. A decided item changes only through a new entry.
 
 ## UX closure decisions (owner, 2026-10-14)
 
-Henri explicitly chose “Implementar ambos ahora” for U10/U15 and “Implementar U18 ahora”. These supersede the provisional deferrals below. Implemented and verified locally; evidence in `ux-4-8-closure-review.md`; this is not owner acceptance or production publication approval.
+Henri explicitly chose “Implementar ambos ahora” for U10/U15 and “Implementar U18 ahora”. These supersede the provisional deferrals below. Implemented and verified locally; Henri subsequently answered **“Publicar el parche”**. Shipped as `7a50f06` on 14 Oct; read-only production gate passes (`ux-4-8-closure-review.md`). Formal owner acceptance remains separate.
 
 | ID | Owner decision | Boundary |
 | --- | --- | --- |

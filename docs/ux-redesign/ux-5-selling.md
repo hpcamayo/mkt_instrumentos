@@ -1,6 +1,6 @@
 # UX-5 · Selling — brief
 
-**Owner update, 14 Oct 2026:** Henri authorized U10/U15 ("Implementar ambos ahora") and U18 ("Implementar U18 ahora"). Listing edit and onboarding now have field errors and focused summaries; Admin now has a master-detail queue, a local review guide and a decision bar. These additions are implemented locally, awaiting publication and owner acceptance; current evidence is in `ux-4-8-closure-review.md`. The dated overnight scope below is history.
+**Owner update, 14 Oct 2026:** Henri authorized U10/U15 ("Implementar ambos ahora") and U18 ("Implementar U18 ahora"). Listing edit and onboarding now have field errors and focused summaries; Admin now has a master-detail queue, a local review guide and a decision bar. These additions shipped in `7a50f06` on 14 Oct with explicit publication approval; authenticated/write proof is local only and formal owner acceptance remains pending; current evidence is in `ux-4-8-closure-review.md`. The dated overnight scope below is history.
 
 **Status: provisional (written and built overnight, 10 Oct 2026, under N17).** The owner was away: every question below takes its recommendation as a provisional answer, every product-behaviour flag takes its no-change option, and the owner confirms or reverses each answer at the UX-5 review (`ux-5-acceptance.md`). Where this brief and the concept screenshots differ, this brief wins.
 

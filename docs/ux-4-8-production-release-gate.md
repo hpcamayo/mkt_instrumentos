@@ -259,3 +259,10 @@ Runtime window: `2026-10-14T19:07:02Z`–`2026-10-14T19:39:24Z`, deployment `dpl
 | `/instrumentos/percusion` | 697 ms | 536 ms |
 | approved listing | 765 ms | 693 ms |
 | Casa Musical Grau | 625 ms | 627 ms |
+
+
+## Owner-authorized UX closure patch — 14 October 2026
+
+Henri authorized publishing `7a50f06` (U10/U15 field errors, U18 Admin master-detail/checklist/decision bar, keyboard accessibility corrections). Vercel built it as READY `dpl_EdziuxY3chGeioMEvumzN7d1bk6c`; all four domains were verified. Its separate read-only smoke passes: 46 public page visits, 100 anonymous hydration visits, SEO with only the Admin-session waiver, exact redirects/navigation/guards, ten listing trials and no error/fatal/5xx runtime records in the bounded window. Eight local integrations and 359 unit tests passed before publication. Migration status stays 45/45; no new migration or production data/settings/catalog write occurred. Data totals remain 55 listings, 2 revisions and 2 live alerts, matching the last verified correction snapshot. No acceptance TSV or functional-spec text was changed.
+
+Full evidence, data categories, production action order, limitations and remaining owner/manual checks: `ux-redesign/ux-4-8-closure-review.md`. The following documentation-only commit redeploys identical application code; the final deployment identity and two final GETs are verified in the handoff.
