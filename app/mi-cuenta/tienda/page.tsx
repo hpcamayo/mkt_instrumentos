@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { StoreRegistrationForm, type StoreApplication } from "@/components/store-registration-form";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusEntryTag } from "@/components/ui/tag";
 import { getAccountContext } from "@/lib/account-context";
+import { assistedCommerceEnabled } from "@/lib/payment-methods";
 import { storeStatusEntry } from "@/lib/ui/status";
 
 export const metadata = { title: "Mi tienda" };
@@ -21,6 +23,11 @@ export default async function StoreAccountPage() {
         meta={<p className="max-w-[68ch]">La información queda vinculada a esta cuenta. Cada cuenta puede tener una tienda.</p>}
       />
       {store ? <StoreStatus store={store as StoreApplication} /> : null}
+      {store && assistedCommerceEnabled() ? (
+        <p className="rounded-panel border border-subtle bg-white p-4 t-ui text-ink-2">
+          <Link href="/mi-cuenta/tienda/medios-de-pago" className="link font-semibold">Medios de pago</Link>: indica cómo pueden pagarte los compradores.
+        </p>
+      ) : null}
       <StoreRegistrationForm store={(store as StoreApplication | null) ?? null} photos={photos ?? []} defaultEmail={user.email ?? ""} />
     </div>
   );

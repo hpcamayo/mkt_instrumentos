@@ -7,12 +7,14 @@ import { ReputationSection } from "@/components/listing/reputation-section";
 import { StoreVisitTelemetry } from "@/components/marketplace-telemetry";
 import { PageContainer } from "@/components/page-container";
 import { Pagination } from "@/components/pagination";
+import { AcceptedPaymentMethods } from "@/components/payment/accepted-payment-methods";
 import { StoreHeader, type StoreHeaderData } from "@/components/store/store-header";
 import { StoreAboutSection, StoreSectionLinks, type StoreAbout } from "@/components/store/store-sections";
 import { StripCurrent } from "@/components/strip-current";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { DISCOVERABLE_STOCK_FILTER, type ListingCardData } from "@/lib/listings";
+import { assistedCommerceEnabled, readPublicPaymentMethods, type PublicPaymentMethod } from "@/lib/payment-methods";
 import { LISTINGS_PAGE_SIZE, getPageRedirect, pageHref, parsePage } from "@/lib/pagination";
 import { buildStoreJsonLd, buildStoreMetadata } from "@/lib/seo";
 import { NOINDEX_ROBOTS } from "@/lib/site";
@@ -188,6 +190,10 @@ export default async function StorePage({
     p_limit: 5,
   });
   const reputation = reputationResult.error ? null : readPublicReputation(reputationResult.data);
+  // PAY-1: approved methods of a verified store, while the pilot is on; the read itself re-checks verification.
+  const paymentMethods = assistedCommerceEnabled() && store.is_verified
+    ? readPublicPaymentMethods((await supabase.rpc("get_store_payment_methods", { p_store_id: store.id })).data)
+    : [];
 
   return (
     <>
@@ -199,6 +205,7 @@ export default async function StorePage({
       total={error ? null : count ?? 0}
       hasError={Boolean(error)}
       reputation={reputation}
+      paymentMethods={paymentMethods}
     />
     </>
   );
@@ -214,6 +221,7 @@ function StoreView({
   total,
   hasError,
   reputation,
+  paymentMethods,
 }: {
   store: StoreData;
   listings: ListingCardData[];
@@ -221,6 +229,7 @@ function StoreView({
   total: number | null;
   hasError: boolean;
   reputation: PublicReputation | null;
+  paymentMethods: PublicPaymentMethod[];
 }) {
   const rating =
     reputation && reputation.review_count > 0 && reputation.average_rating !== null
@@ -265,7 +274,10 @@ function StoreView({
 
         <div className="grid gap-10 lg:grid-cols-2 lg:gap-12">
           <ReputationSection reputation={reputation} title={`Reseñas de ${store.name}`} className="min-w-0" />
-          <StoreAboutSection store={store} className="min-w-0" />
+          <div className="grid min-w-0 content-start gap-6">
+            <StoreAboutSection store={store} className="min-w-0" />
+            <AcceptedPaymentMethods methods={paymentMethods} />
+          </div>
         </div>
       </PageContainer>
     </>
