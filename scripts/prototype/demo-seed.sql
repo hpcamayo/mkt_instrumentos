@@ -38,6 +38,30 @@ values
   '{"account_type":"seller","full_name":"Lucía Particular","phone":"51999000104","city":"Miraflores","region":"Lima"}', '', '', now(), now())
 on conflict (id) do nothing;
 
+-- On real local Supabase (GoTrue), token columns must be '' rather than null and each user needs an email identity.
+-- The Docker-free shim has neither, so both steps check first.
+do $gotrue$
+declare col text;
+begin
+  foreach col in array array['email_change', 'email_change_token_new', 'email_change_token_current', 'phone_change',
+                             'phone_change_token', 'reauthentication_token'] loop
+    if exists (select 1 from information_schema.columns where table_schema = 'auth' and table_name = 'users' and column_name = col) then
+      execute format('update auth.users set %I = coalesce(%I, %L) where email like %L', col, col, '', '%@laria.test');
+    end if;
+  end loop;
+  if to_regclass('auth.identities') is not null then
+    execute $q$
+      insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
+      select gen_random_uuid(), u.id, u.id::text, 'email',
+             jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true), now(), now(), now()
+      from auth.users u
+      where u.email like '%@laria.test'
+        and not exists (select 1 from auth.identities i where i.user_id = u.id and i.provider = 'email')
+    $q$;
+  end if;
+end
+$gotrue$;
+
 -- ------------------------------------------------------------------ store
 insert into public.stores (id, slug, name, razon_social, ruc, email, contact_person, contact_name, whatsapp_phone,
   city, district, region, address, description, owner_user_id, status, listing_plan, is_verified)
