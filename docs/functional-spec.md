@@ -362,6 +362,10 @@ Spreadsheet import:
   import reconciliation); blank cells keep current values; SKUs missing from the file are untouched; a sale made
   after the preview is never overwritten (the row becomes a conflict to review again). Formulas are never evaluated.
 - The file stays private to the owner and is deleted after the retention period. One open import per store.
+- Photos (optional): the store adds photos or a ZIP, named `SKU__01.jpg` … or listed in a `Foto(s)` column or a photo
+  list. Laria checks each file on the server, matches what is certain (2–10 photos per SKU) and sets aside anything
+  uncertain for the owner to place, reorder or drop by hand; nothing is guessed. Photos can be added after confirming
+  and stay until the import is purged; any photo a listing uses stays with the listing.
 
 Accepted payment methods (Pilot A, verified stores only, behind a deployment switch that stays off until legal
 review):

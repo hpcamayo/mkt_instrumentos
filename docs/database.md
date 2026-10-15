@@ -490,6 +490,10 @@ Admin policies:
 - Private bucket, ≤5 MB, `text/csv` and `.xlsx` only.
 - The owner may insert exactly `{auth.uid()}/{sessionId}/source.{csv|xlsx}` while that import session awaits its file, and read it; no update or delete. Files are deleted through the service-role cleanup route after the 30-day retention.
 
+`store-import-photos` (STORE-3a, local only):
+- Private bucket, ≤5 MB, JPEG/PNG/WebP. The owner may insert only at a server-issued path `{auth.uid()}/{sessionId}/{assetId}.{ext}`, once, while that asset waits for its upload and the import is between `ready` and `partially_committed`; owner and Admin read; no browser update or delete.
+- Served publicly only through `/api/listing-images/{uid}/import-photos/{session}/{asset}.{ext}` when a public listing references it (owner/Admin otherwise), with the stored MIME type, `nosniff` and a sandbox CSP.
+
 Legacy limitation: initial listing photos and store assets remain in public buckets for existing URL/image compatibility. Database moderation prevents discovery but cannot make a known existing public Storage URL private. Sprint 4 guarantees private staging/access gating for new listing edit objects; it does not claim to revoke previously public URLs. Abandoned initial uploads still require operational retention cleanup.
 
 ## Indexes and Metadata
@@ -535,6 +539,7 @@ Current migrations:
 - `20261023120000_store_inventory_foundation.sql` (STORE-1a, local only, not applied to production): store inventory tables, append-only stock ledger, owner and Admin functions, `listings.stock_state` and its listing triggers. See "Store inventory (STORE-1a)".
 - `20261024120000_store_inventory_ui.sql` (STORE-1b, local only): `get_inventory_summary()` adds recorded sales and recent movements; bulk threshold and bulk hide functions. See "Store operations: later sub-sprints".
 - `20261025120000_store_inventory_import.sql` (STORE-2, local only): spreadsheet import sessions and staged rows, private `store-imports` bucket, step/commit functions, ledger FK `import_session_id`, saved column mapping, retention job. See "Store operations: later sub-sprints".
+- `20261026120000_store_import_photos.sql` (STORE-3a, local only): import photo assets and assignments, private `store-import-photos` bucket, matching, listing-photo validator branch and attachment guard, photo cleanup. See "Store operations: later sub-sprints".
 - `20261028120000_pay_1_store_payment_methods.sql` (PAY-1, local only): accepted payment methods with Admin review and history, public read functions, purchase-intent metadata on `whatsapp_contact`. See "Store operations: later sub-sprints".
 
 Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
@@ -655,7 +660,7 @@ Design: `docs/store-operations/design.md`; implementation notes, deviations, rol
 
 Combined on branch `store-ops/prototype` for the owner's review; local only, nothing applied to production. Per
 sub-sprint detail, deviations, rollback and review guides: `docs/store-operations/store-1b.md`, `store-2.md`,
-`pay-1.md` (and `store-3a.md`, `store-3b.md` as they land). The combined review package is
+`pay-1.md`, `store-3a.md` (and `store-3b.md` when it lands). The combined review package is
 `docs/store-operations/prototype-review.md`.
 
 - **STORE-1b, Inventario screens** (`20261024120000_store_inventory_ui.sql`): `get_inventory_summary()` replaced
@@ -678,6 +683,19 @@ sub-sprint detail, deviations, rollback and review guides: `docs/store-operation
     `cancel_store_import`. Service role: `claim_store_import_file_deletions`, `complete_store_import_file_deletions`.
   - `pg_cron` job `store-import-retention` daily at 09:15 UTC (`laria_private.run_store_import_retention()`): idle
     imports expire after 7 days; rows purged and files queued 30 days after close.
+- **STORE-3a, import photos** (`20261026120000_store_import_photos.sql`):
+  - `store_import_photo_assets` (one per file: sanitized name, claim from the name, the `Foto(s)` column or a photo
+    list, server check result, sha256, match outcome, cleanup timestamps) and `store_import_photo_assignments`
+    (asset → row, order 1–10, deferrable unique order); `store_import_rows.photo_state` / `photo_count`,
+    `store_import_sessions.photo_counts`. RLS: owner and Admin read; writes through functions.
+  - Owner functions: `request_store_import_photo_uploads` (≤ 25 per call, 600 per import), `place_store_import_photo`,
+    `order_store_import_photos`, `reset_store_import_photo_matching`. Service role only:
+    `record_store_import_photo_checks` (the owner can never validate their own bytes),
+    `claim_store_import_photo_deletions`, `complete_store_import_photo_deletions`.
+  - `laria_private.match_import_photos` re-runs after every upload; uncertain photos are set aside, never guessed;
+    manual placements are kept. `listing_photo_set_is_valid` gains an import-photo branch, and a trigger on
+    `listing_photos` and `listing_revision_photos` refuses any import-photo URL not valid for that listing's owner and
+    store. Cancel, expiry, failure or the 30-day purge discards assets no listing or revision references.
 - **PAY-1, accepted payment methods** (`20261028120000_pay_1_store_payment_methods.sql`):
   - Enum `store_payment_method` (`efectivo_al_recoger`, `yape_plin`, `pos_tarjeta_al_recoger`, `link_de_pago`);
     `store_payment_methods` (one row per store and method: status `pending_review` / `approved` / `rejected` /
