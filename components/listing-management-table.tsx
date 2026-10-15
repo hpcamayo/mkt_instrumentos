@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ControlStockButton } from "@/components/inventory/inventory-actions";
 import { PageNotice } from "@/components/page-notice";
 import { useConfirm, type ConfirmOptions } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -25,14 +26,18 @@ export type ManagedListing = {
   hidden_reason: string | null;
   revisionStatus: "pending" | "rejected" | null;
   revisionReason: string | null;
+  // Store listings only: the inventory SKU that controls this listing's stock (design §5.3, D-15).
+  inventoryItemId?: string | null;
 };
 
 export function ListingManagementTable({
   listings,
   emptyMessage,
+  canControlStock = false,
 }: {
   listings: ManagedListing[];
   emptyMessage: string;
+  canControlStock?: boolean;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -108,6 +113,8 @@ export function ListingManagementTable({
             {listings.map((listing) => {
               const isAdminHidden = listing.status === "hidden" && listing.hidden_source === "admin";
               const canEdit = !["sold", "archived"].includes(listing.status) && !isAdminHidden;
+              // A listing whose stock Inventario controls goes "Agotado" at zero units; it is never marked sold (D-15).
+              const stockManaged = Boolean(listing.inventoryItemId);
               return (
                 <tr key={listing.id} className="grid gap-2 px-4 py-4 align-top md:table-row md:p-0">
                   <td className="block md:table-cell md:px-5 md:py-4">
@@ -123,6 +130,12 @@ export function ListingManagementTable({
                     ) : null}
                     {isAdminHidden ? (
                       <p className="mt-1 max-w-sm text-meta text-danger">Ocultada por moderación: {listing.hidden_reason}</p>
+                    ) : null}
+                    {stockManaged ? (
+                      <p className="mt-1 t-meta">
+                        Stock controlado en Inventario.{" "}
+                        <Link href={`/mi-cuenta/tienda/inventario/${listing.inventoryItemId}`} className="link font-semibold">Ver SKU</Link>
+                      </p>
                     ) : null}
                   </td>
                   <td data-label="Estado" className={CELL}><div className="text-right md:text-left"><StatusTag domain="listing" status={listing.status} />{listing.status === "sold" && listing.sold_at ? <p className="mt-1 whitespace-nowrap text-meta text-ink-2">Marcada vendida: {formatDate(listing.sold_at)}</p> : null}</div></td>
@@ -142,7 +155,7 @@ export function ListingManagementTable({
                       {listing.status === "approved" ? (
                         <>
                           <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "hide")}>Ocultar</ActionButton>
-                          <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "sold")}>Marcar vendida</ActionButton>
+                          {stockManaged ? null : <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "sold")}>Marcar vendida</ActionButton>}
                         </>
                       ) : null}
                       {listing.status === "hidden" && listing.hidden_source === "owner" ? (
@@ -157,6 +170,7 @@ export function ListingManagementTable({
                       {listing.status === "rejected" ? (
                         <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "resubmit")}>Enviar nuevamente</ActionButton>
                       ) : null}
+                      {!stockManaged && canControlStock && canEdit ? <ControlStockButton listing={{ id: listing.id, title: listing.title }} /> : null}
                     </div>
                     {isAdminHidden ? <p className="mt-2 text-meta text-ink-2">Solo administración puede restaurarla.</p> : null}
                     {listing.status === "sold" ? <p className="mt-2 text-meta text-ink-2">El original es historial inmutable.</p> : null}

@@ -315,8 +315,17 @@ Glossary (one name per concept; `tests/ux-copy.test.cjs` rejects the retired nam
 | Purchases and sales | Compras y ventas | Transacciones, Atribuciones |
 | Pending edit | Cambios en revisión | propuesta, Cambio de publicación |
 | Account home | Resumen | panel, dashboard, "Mi cuenta" as a page title |
+| Inventory row (store operations, D-13) | SKU in tables and labels; "referencia" in running sentences | producto, artículo, ítem |
+| Inventory section | Inventario; its tabs are Inventario and Publicaciones | Almacén, Stock as a page title |
+| Inventory quantities | Disponible (on hand minus reserved), En tienda (on hand), Reservado only once reservations exist | existencias, cantidad on its own |
+| A store's own sale record | Registrar venta, always with "es una anotación de tu tienda" nearby; the ledger line reads "Venta registrada por la tienda" | Vender, Venta verificada, anything implying Laria confirmed the sale or payment |
+| Incoming units | Reponer stock | Agregar stock, Agregar inventario |
+| Correcting units | Ajustar stock; the absolute count is Conteo | Editar cantidad |
+| Low-stock warning | Avisar con stock bajo desde (field), Umbral de stock bajo (bulk action) | alerta (alerts are saved searches) |
+| Spreadsheet import (STORE-2) | Importar desde Excel, Revisar importación, Asignar fotos, Publicar seleccionados, Requiere revisión | Subir inventario, Cargar productos |
+| Public stock (D-14) | Agotado; "Disponibilidad informada por la tienda" | exact unit counts on public pages |
 
-Status labels (from `lib/ui/status.ts`; only the visible label changes, meanings stay as in the functional spec): Borrador, En revisión, Publicada (stored as `approved`), Cambios en revisión, Rechazada, Oculta, Vendida, Archivada. A store reads En revisión, Activa, Rechazada, Oculta or Tienda verificada everywhere (account summary, store page and Admin).
+Status labels (from `lib/ui/status.ts`; only the visible label changes, meanings stay as in the functional spec): Borrador, En revisión, Publicada (stored as `approved`), Cambios en revisión, Rechazada, Oculta, Vendida, Archivada. A store reads En revisión, Activa, Rechazada, Oculta or Tienda verificada everywhere (account summary, store page and Admin). An inventory SKU reads Disponible, Stock bajo, Agotado or Archivado (the `inventory` domain); a linked publication at zero units also carries Agotado (the `stock` domain) and keeps its own publication status.
 
 Orthography: tildes, ñ and opening ¿ are required; the copy test checks the common misses. No system jargon in the interface: V1, legacy, Store Owner, metadata, Supabase, CTR, "base de datos". Internal errors stay in logs.
 
