@@ -320,3 +320,23 @@ Every significant feature should update docs.
 ## Performance and retry handling
 
 Catalog/store results are paginated, images use responsive Next Image delivery, and recommendation sections stream independently. Public submissions upload first and finalize atomically with a signed retry token; they still enter admin review. See `docs/performance.md`.
+
+## Store inventory guards live in listing triggers
+
+Decision (STORE-1a, 2026-10-15): the rule "a listing linked to inventory cannot become sold" and the price
+write-through from a listing edit to its inventory item are `listings` triggers, not edits to
+`set_owned_listing_lifecycle`, `review_listing` or `update_owned_listing`.
+
+Why:
+- One place covers the owner, Admin and every future path that changes a listing.
+- The trigger runs after the listing row is locked, so the lock order stays listing → item everywhere.
+
+## Inventory items soft-link catalog variants
+
+Decision (STORE-1a, 2026-10-15): `store_inventory_items.catalog_product_id` is a foreign key (`on delete set null`);
+`catalog_variant_id` is a plain uuid checked when it is written.
+
+Why:
+- The production catalog loader upserts products by stable id and never deletes them, but it deletes variants that a
+  new build no longer has. A variant FK would make a catalog reload fail or silently change merchant data.
+

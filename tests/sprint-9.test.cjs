@@ -253,6 +253,7 @@ function fakeSupabase({ counts, stores, listings: rows }) {
       const builder = {
         select(_columns, options) { state.head = Boolean(options?.head); return builder; },
         eq(column, value) { state.filters.push([column, value]); return builder; },
+        or(filter) { state.filters.push(["or", filter]); return builder; },
         order() { return builder; },
         range(from, to) { state.range = [from, to]; return builder; },
         then(resolve) {
@@ -287,6 +288,8 @@ test("sitemap lists all ten category landings and bounded public inventory, even
   assert.equal(urls.some((url) => /mi-cuenta|admin|login|api/.test(url)), false);
   for (const call of client.calls) {
     if (call.table === "listings") assert.ok(call.filters.some(([column, value]) => column === "status" && value === "approved"));
+    // Out-of-stock inventory listings stay reachable but are not submitted (STORE-1a).
+    if (call.table === "listings" && !call.head) assert.ok(call.filters.some(([column, value]) => column === "or" && value === "stock_state.is.null,stock_state.eq.in_stock"));
     if (call.table === "stores") assert.ok(call.filters.some(([column, value]) => column === "status" && value === "active"));
     if (call.range) assert.ok(call.range[1] - call.range[0] < 1000);
   }

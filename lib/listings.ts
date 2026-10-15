@@ -111,9 +111,21 @@ export type ListingCardData = {
   seller_type: "individual" | "store";
   created_at: string;
   photo_count?: number;
+  // Null unless a store links the listing to an inventory item (STORE-1a).
+  stock_state?: StockState | null;
   stores: StoreSummary | StoreSummary[] | null;
   listing_photos: ListingPhotoData[];
 };
+
+export type StockState = "in_stock" | "out_of_stock";
+
+// PostgREST filter for discovery (catalog, home, sitemap, related strips): a listing without inventory, or one with
+// units available. An approved listing at zero stock stays reachable at its URL and on its store page (design §5.2).
+export const DISCOVERABLE_STOCK_FILTER = "stock_state.is.null,stock_state.eq.in_stock";
+
+export function isOutOfStock(listing: { stock_state?: StockState | null }) {
+  return listing.stock_state === "out_of_stock";
+}
 
 export type ListingDetailData = ListingCardData & {
   status: "approved" | "sold";
@@ -171,7 +183,9 @@ export function buildWhatsAppUrl(listing: ListingDetailData) {
   const contact = resolveParticularSeller(listing);
   const phone = String(contact.phone ?? listing.whatsapp_phone).replace(/\D/g, "");
   const message = encodeURIComponent(
-    `Hola, vi tu publicación "${listing.title}" en Laria. ¿Sigue disponible?`,
+    isOutOfStock(listing)
+      ? `Hola, vi tu publicación "${listing.title}" en Laria y aparece agotada. ¿Volverá a estar disponible?`
+      : `Hola, vi tu publicación "${listing.title}" en Laria. ¿Sigue disponible?`,
   );
 
   return `https://wa.me/${phone}?text=${message}`;

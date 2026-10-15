@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { categoryLandingPages } from "@/lib/category-pages";
 import { legalPages } from "@/lib/legal-pages";
+import { DISCOVERABLE_STOCK_FILTER } from "@/lib/listings";
 import { absoluteUrl, isIndexableDeployment } from "@/lib/site";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
@@ -44,12 +45,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (data.length < BATCH_SIZE) break;
   }
 
-  // Approved public listings only; sold listings stay reachable but are not submitted.
+  // Approved public listings only; sold and out-of-stock listings stay reachable but are not submitted.
   for (let offset = 0; offset < MAX_LISTINGS; offset += BATCH_SIZE) {
     const { data, error } = await supabase
       .from("listings")
       .select("id,slug,updated_at")
       .eq("status", "approved")
+      .or(DISCOVERABLE_STOCK_FILTER)
       .order("id")
       .range(offset, offset + BATCH_SIZE - 1);
     if (error || !data) break;

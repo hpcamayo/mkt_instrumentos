@@ -294,6 +294,9 @@ function rpcFailure(message: string) {
   if (message.includes("ADMIN_HIDDEN_LISTING")) {
     return failure("Esta publicación fue ocultada por moderación y no puede modificarse.", 409);
   }
+  if (message.includes("INVENTORY_MANAGED_LISTING")) {
+    return failure("Esta publicación está vinculada a Inventario. Registra la venta desde Inventario.", 409);
+  }
   if (message.includes("SOLD_LISTING_IMMUTABLE")) {
     return failure("La publicación vendida es un registro histórico y no puede modificarse.", 409);
   }
