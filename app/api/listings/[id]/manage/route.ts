@@ -13,6 +13,7 @@ import type { Json } from "@/lib/supabase/database.types";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import { createListingEditToken, readListingEditToken } from "@/lib/submission-token";
 import { cleanupListingEditUploads } from "@/lib/listing-photo-cleanup";
+import { listingLimitMessage } from "@/lib/store-allowance";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -288,7 +289,7 @@ function rpcFailure(message: string) {
   if (message.includes("LISTING_PHOTO_INVALID")) return failure("Revisa las fotos, su orden y su origen.", 409);
   if (message.includes("LISTING_EDIT_RETRY_CHANGED")) return failure("Los datos de este intento cambiaron. Prepara una nueva edición.", 409);
   if (message.includes("STORE_INVENTORY_LIMIT_REACHED")) {
-    return failure("Tu tienda alcanzó el límite de 50 publicaciones concurrentes.", 409);
+    return failure(listingLimitMessage(message), 409);
   }
   if (message.includes("LISTING_REVISION_STALE")) return failure("La propuesta cambió. Recarga la página e intenta nuevamente.", 409);
   if (message.includes("ADMIN_HIDDEN_LISTING")) {

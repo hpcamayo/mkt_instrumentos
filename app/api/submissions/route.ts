@@ -9,6 +9,7 @@ import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import { listingLimitMessage } from "@/lib/store-allowance";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import type { Json } from "@/lib/supabase/database.types";
 import { getMarketplaceSession, recordMarketplaceEvent } from "@/lib/marketplace-events-server";
@@ -273,7 +274,7 @@ export async function POST(request: Request) {
   if (error?.message.includes("stores_owner_user_unique_idx"))
     return failure("Esta cuenta ya tiene una solicitud de tienda.", 409);
   if (error?.message.includes("STORE_INVENTORY_LIMIT_REACHED"))
-    return failure("Tu tienda alcanzó el límite de 50 publicaciones concurrentes.", 409);
+    return failure(listingLimitMessage(error.message), 409);
   if (error)
     return failure(
       "No se pudo guardar el envío. Reintenta sin cerrar esta página.",

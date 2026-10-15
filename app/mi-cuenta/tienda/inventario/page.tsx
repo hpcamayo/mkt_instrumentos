@@ -6,6 +6,7 @@ import {
 } from "@/components/listing-management-table";
 import { getAccountContext } from "@/lib/account-context";
 import { getAccountAnalytics } from "@/lib/account-analytics";
+import { getStoreListingQuota } from "@/lib/store-allowance";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -37,14 +38,15 @@ export default async function StoreInventoryPage() {
     revisionReason: revisionByListing.get(listing.id)?.reason ?? null,
   }));
   const concurrent = listings?.filter((item) => item.status === "pending" || item.status === "approved").length ?? 0;
+  const quota = await getStoreListingQuota(supabase, concurrent);
   return (
     <section className="rounded-panel border border-subtle bg-white">
       <PageHeader
         className="border-b border-subtle p-5"
         eyebrow="Mi tienda"
         title="Inventario"
-        meta={`${store.name} · ${concurrent} de 50 publicaciones concurrentes`}
-        actions={concurrent < 50 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar</Link> : null}
+        meta={`${store.name} · ${concurrent} de ${quota.allowance} publicaciones concurrentes`}
+        actions={quota.remaining > 0 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar</Link> : null}
       />
       <ListingManagementTable listings={managedListings} emptyMessage="Aún no hay publicaciones en el inventario" />
       <p className="border-t border-subtle p-5 text-meta leading-6 text-ink-2">{analytics ? "Vistas acumuladas de todo el historial, incluidas las históricas. Contactos por WhatsApp registrados desde el inicio del seguimiento; no equivalen a mensajes ni ventas." : "Las métricas no están disponibles en este momento; no se muestran ceros estimados."} La fecha de publicación corresponde a la primera publicación. <Link href="/mi-cuenta/tienda/estadisticas" className="link font-semibold">Ver estadísticas por periodo</Link>.</p>
