@@ -17,6 +17,8 @@ import {
   readSubmissionToken,
 } from "@/lib/submission-token";
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function POST(request: Request) {
   const client = getSupabaseAdminClient();
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -185,6 +187,11 @@ export async function POST(request: Request) {
       if (!storeAccount.ok) return failure(storeAccount.message, storeAccount.status);
       fields.owner_user_id = storeAccount.userId;
       fields.store_id = storeAccount.store.id;
+      // Publishing an inventory SKU (STORE-1b): complete_public_submission checks the item is this store's, active and
+      // unlinked, and links it in the same transaction.
+      if (typeof input.inventory_item_id === "string" && UUID_PATTERN.test(input.inventory_item_id)) {
+        fields.inventory_item_id = input.inventory_item_id;
+      }
     }
     fields.marketplace_rules_accepted = true;
   } else {

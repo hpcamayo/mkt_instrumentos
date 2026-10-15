@@ -149,6 +149,20 @@ figcaption {
   max-height: 88vh;
   max-height: 88dvh;
 }
+@media (min-width: 768px) {
+  .sheet[data-layout="responsive"] {
+    inset: 0;
+    width: min(36rem, calc(100% - 2rem));
+    height: fit-content;
+    max-height: 85vh;
+    margin: auto;
+    border-radius: 8px;
+    animation: none;
+  }
+  .sheet[data-layout="responsive"] .sheet-body {
+    max-height: 85vh;
+  }
+}
 @keyframes sheet-up {
   from {
     transform: translateY(100%);

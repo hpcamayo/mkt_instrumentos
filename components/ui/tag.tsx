@@ -1,4 +1,4 @@
-import { Archive, Check, Clock, EyeOff, PackageX, Pause, Pencil, Tag as TagIcon, X } from "lucide-react";
+import { AlertTriangle, Archive, Check, Clock, EyeOff, PackageX, Pause, Pencil, Tag as TagIcon, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { statusEntry, type StatusDomain, type StatusEntry, type StatusIcon, type StatusTone } from "@/lib/ui/status";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,7 @@ const ICONS: Record<StatusIcon, ReactNode> = {
   archive: <Archive aria-hidden />,
   pause: <Pause aria-hidden />,
   stockout: <PackageX aria-hidden />,
+  low: <AlertTriangle aria-hidden />,
 };
 
 export function Tag({

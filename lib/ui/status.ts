@@ -1,9 +1,9 @@
 // The one status dictionary (docs/ux-redesign/ux-1-foundations.md, decision D8). Only the visible label
 // and its tone live here; meanings and transitions stay as in docs/functional-spec.md.
 export type StatusTone = "neutral" | "accent" | "warning" | "danger" | "solid" | "line";
-export type StatusIcon = "draft" | "review" | "check" | "reject" | "hidden" | "sold" | "archive" | "pause" | "stockout";
+export type StatusIcon = "draft" | "review" | "check" | "reject" | "hidden" | "sold" | "archive" | "pause" | "stockout" | "low";
 export type StatusEntry = { label: string; tone: StatusTone; icon?: StatusIcon };
-export type StatusDomain = "listing" | "revision" | "store" | "claim" | "transaction" | "report" | "review" | "alert" | "stock" | "payment";
+export type StatusDomain = "listing" | "revision" | "store" | "claim" | "transaction" | "report" | "review" | "alert" | "stock" | "inventory" | "payment";
 
 const LISTING: Record<string, StatusEntry> = {
   draft: { label: "Borrador", tone: "line", icon: "draft" },
@@ -83,6 +83,14 @@ const PAYMENT: Record<string, StatusEntry> = {
   withdrawn: { label: "Retirado por la tienda", tone: "line" },
 };
 
+// An inventory SKU's stock level (get_inventory_page's stock_level, or "archived" for an archived SKU), D-13.
+const INVENTORY: Record<string, StatusEntry> = {
+  in_stock: { label: "Disponible", tone: "accent", icon: "check" },
+  low: { label: "Stock bajo", tone: "warning", icon: "low" },
+  out: { label: "Agotado", tone: "neutral", icon: "stockout" },
+  archived: { label: "Archivado", tone: "line", icon: "archive" },
+};
+
 const DICTIONARY: Record<StatusDomain, Record<string, StatusEntry>> = {
   listing: LISTING,
   revision: REVISION,
@@ -93,6 +101,7 @@ const DICTIONARY: Record<StatusDomain, Record<string, StatusEntry>> = {
   review: REVIEW,
   alert: ALERT,
   stock: STOCK,
+  inventory: INVENTORY,
   payment: PAYMENT,
 };
 
