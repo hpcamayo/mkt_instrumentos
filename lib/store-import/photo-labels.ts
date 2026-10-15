@@ -19,7 +19,7 @@ export const PHOTO_ISSUE_LABELS: Record<string, string> = {
   duplicate_sequence: "Otra foto ya usa ese número para el mismo SKU",
   duplicate_image: "Es la misma foto que otra ya subida",
   over_limit: "El SKU ya tiene 10 fotos",
-  removed: "La quitaste",
+  removed: "Marcada como No usar",
 };
 
 export const PHOTO_SOURCE_LABELS: Record<string, string> = {

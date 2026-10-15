@@ -349,7 +349,7 @@ function UploadForm({ busy, onUpload }: { busy: boolean; onUpload: (files: File[
         </ul>
       </details>
       <div>
-        <Button type="submit" icon={<ImageUp aria-hidden />} loading={busy} loadingLabel="Subiendo fotos…">Subir fotos</Button>
+        <Button type="submit" variant="secondary" icon={<ImageUp aria-hidden />} loading={busy} loadingLabel="Subiendo fotos…">Subir fotos</Button>
       </div>
     </form>
   );
@@ -448,8 +448,8 @@ function MovePanel({ rows, current, onMove, onCancel, busy }: {
         </Select>
       </Field>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" disabled={!target} loading={busy} loadingLabel="Moviendo…" onClick={() => onMove(Number(target))}>Mover</Button>
-        <Button size="sm" variant="secondary" onClick={onCancel}>Cancelar</Button>
+        <Button size="sm" variant="secondary" disabled={!target} loading={busy} loadingLabel="Moviendo…" onClick={() => onMove(Number(target))}>Mover</Button>
+        <Button size="sm" variant="quiet" onClick={onCancel}>Cancelar</Button>
       </div>
     </div>
   );
@@ -513,8 +513,8 @@ function RowsWithPhotos({ sessionId, view, disabled, busyAsset, onPlace, onOrder
               {claimants.length ? (
                 <p className="t-ui text-danger">
                   {row.photo_state === "too_many"
-                    ? `${plural(claimants.length, "foto más quedó", "fotos más quedaron")} fuera: quita alguna o muévela a otro SKU.`
-                    : `${plural(claimants.length, "foto pide", "fotos piden")} el mismo número que otra. Quita la que sobra o muévela.`}
+                    ? `${plural(claimants.length, "foto más quedó", "fotos más quedaron")} fuera (están en Fotos sin asignar). Quita alguna de este SKU o marca las que sobran con No usar.`
+                    : `${plural(claimants.length, "foto pide", "fotos piden")} el mismo número. En Fotos sin asignar, asigna la que va y marca la otra con No usar.`}
                 </p>
               ) : null}
               {assets.length ? (
@@ -534,7 +534,7 @@ function RowsWithPhotos({ sessionId, view, disabled, busyAsset, onPlace, onOrder
                             onClick={() => void onOrder(row.row_number, swap(assets.map((a) => a.id), index, index + 1))} />
                           <IconButton size="sm" label={`Quitar ${asset.original_name}`} icon={<X aria-hidden />} disabled={busyAsset !== null}
                             onClick={() => void onPlace(asset, null)} />
-                          <Button size="sm" variant="quiet" disabled={busyAsset !== null} onClick={() => setMoving(moving === asset.id ? null : asset.id)}>Mover</Button>
+                          <Button size="sm" variant="quiet" disabled={busyAsset !== null} onClick={() => setMoving(moving === asset.id ? null : asset.id)}>Cambiar de SKU</Button>
                         </div>
                       ) : null}
                       {moving === asset.id ? (
@@ -584,7 +584,12 @@ function SetAside({ sessionId, view, disabled, busyAsset, onPlace }: {
             <p className="t-ui text-ink">{PHOTO_ISSUE_LABELS[asset.match_issue ?? ""] ?? "Sin asignar"}</p>
             {asset.match_note === "explicit_over_filename" ? <p className="t-meta">{PHOTO_SOURCE_LABELS.column}</p> : null}
             {!disabled ? (
-              <Button size="sm" variant="secondary" disabled={busyAsset !== null} onClick={() => setMoving(moving === asset.id ? null : asset.id)}>Asignar a un SKU</Button>
+              <div className="flex flex-wrap gap-1">
+                <Button size="sm" variant="secondary" disabled={busyAsset !== null} onClick={() => setMoving(moving === asset.id ? null : asset.id)}>Asignar a un SKU</Button>
+                {asset.match_issue !== "removed" ? (
+                  <Button size="sm" variant="quiet" disabled={busyAsset !== null} onClick={() => void onPlace(asset, null)}>No usar</Button>
+                ) : null}
+              </div>
             ) : null}
             {moving === asset.id ? (
               <MovePanel rows={view.rows} current={null} busy={busyAsset === asset.id}
