@@ -1,8 +1,10 @@
 # UX-6 · Accounts — acceptance package
 
-**Update, 14 Oct:** implementation is live and the read-only production gate passes. New local rendered/a11y/workflow evidence and the owner review checklist are in `ux-4-8-closure-review.md`; the owner-authorized U15 onboarding validation and two accessibility corrections shipped in `7a50f06` with owner approval and a passing read-only production smoke. Authenticated/write QA remains local only. Owner acceptance and canonical row statuses are not inferred. The original cloud evidence and limitations below remain as dated history.
+**Owner acceptance, 14 Oct 2026: CLOSED / ACCEPTED.** Henri reports all manual checks Pass on web and mobile and explicitly closes the UX sprint. Local authenticated/write-flow evidence suffices under N16. Current implemented choices are accepted as built; sign-off and evidence limits: `ux-4-8-closure-review.md`. This does not update canonical V1 row statuses or the functional specification.
 
-**State: built in the cloud session of 10 Oct (N17), waiting for the owner's review.** Answers A1–A9 provisional (`ux-6-accounts.md`); flags G3, "artículo" and "Compras y ventas" unchanged; build choices U14–U17 in `decisions.md`.
+**Update, 14 Oct:** implementation is live and the read-only production gate passes. New local rendered/a11y/workflow evidence and the owner review checklist are in `ux-4-8-closure-review.md`; the owner-authorized U15 onboarding validation and two accessibility corrections shipped in `7a50f06` with owner approval and a passing read-only production smoke. Authenticated/write QA remains local only. Owner acceptance is explicit above; canonical row statuses remain unchanged. The original cloud evidence and limitations below remain as dated history.
+
+**Historical state (10 Oct): built in the cloud session of 10 Oct (N17), waiting for the owner's review.** Answers A1–A9 provisional (`ux-6-accounts.md`); flags G3, "artículo" and "Compras y ventas" unchanged; build choices U14–U17 in `decisions.md`.
 
 ## What was built
 

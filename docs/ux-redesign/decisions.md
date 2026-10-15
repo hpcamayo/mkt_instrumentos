@@ -3,9 +3,19 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## UX redesign closed (owner, 2026-10-14)
+
+Henri: “all my manual checks pass. on web and mobile.” / “lets close the UX sprint.” / “as for N16, the local evidence suffices.” UX-4a/4b and UX-5–UX-8 are **CLOSED / ACCEPTED**; UX-1–UX-3 were already accepted. R01–R15 are recorded as owner-reported Pass, with no invented device/tool/metric detail. Current implemented choices are accepted as built, including U16/U17. See `ux-4-8-closure-review.md` for the complete sign-off, retained evidence limits and separate launch follow-ups.
+
+| ID | Decision | Status |
+| --- | --- | --- |
+| N16 | Option B: local authenticated/write-flow evidence suffices alongside the read-only production gate; no production test account or production write smoke is required to close UX-5–UX-7 | decided by owner, 14 Oct |
+| U16 | Keep the current Resumen; no new to-do-list implementation | accepted as built by owner, 14 Oct |
+| U17 | Keep the existing availability-aware favourites card | accepted as built by owner, 14 Oct |
+
 ## UX closure decisions (owner, 2026-10-14)
 
-Henri explicitly chose “Implementar ambos ahora” for U10/U15 and “Implementar U18 ahora”. These supersede the provisional deferrals below. Implemented and verified locally; Henri subsequently answered **“Publicar el parche”**. Shipped as `7a50f06` on 14 Oct; read-only production gate passes (`ux-4-8-closure-review.md`). Formal owner acceptance remains separate.
+Henri explicitly chose “Implementar ambos ahora” for U10/U15 and “Implementar U18 ahora”. These supersede the provisional deferrals below. Implemented and verified locally; Henri subsequently answered **“Publicar el parche”**. Shipped as `7a50f06` on 14 Oct; read-only production gate passes (`ux-4-8-closure-review.md`). Subsequent formal owner acceptance is recorded in the closure entry above.
 
 | ID | Owner decision | Boundary |
 | --- | --- | --- |
@@ -58,8 +68,8 @@ Brief `ux-6-accounts.md`. Under N17 the recommendations A1–A9 are taken provis
 | --- | --- | --- | --- |
 | U14 | Confirmation copy: a question title, a one-line body, a verb on the button ("Ocultar", "Marcar vendida", "Republicar copia", "Eliminar alerta", "Registrar venta", "Cancelar solicitud" with "Volver", "Enviar reseña"). "Registro" dropped from the mark-sold and relist questions (glossary) | The old questions kept; the button names the action instead of "Aceptar" | provisional (Claude Code) |
 | U15 | Onboarding forms (sign-in, sign-up, store application, password) keep their single top notice; per-field errors wait | They run on auth flows the overnight rules keep unchanged | decided 2026-10-14 by owner: implement now (see closure decisions) |
-| U16 | Resumen is not turned into a to-do list | It needs new reads across transactions and reviews | pending (owner) |
-| U17 | Favoritos keeps its own card | A favourite can be sold or unavailable; the catalog card has no state for that | pending (owner) |
+| U16 | Resumen is not turned into a to-do list | It needs new reads across transactions and reviews | accepted as built 2026-10-14; see closure entry |
+| U17 | Favoritos keeps its own card | A favourite can be sold or unavailable; the catalog card has no state for that | accepted as built 2026-10-14; see closure entry |
 
 ## UX-5 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-5 review)
 
@@ -124,7 +134,7 @@ UX-1 to UX-3 reached production together on 9 Oct (`50963fb`, deployment `dpl_57
 | --- | --- | --- | --- |
 | N15 | When the redesign reaches production. N13 kept one rebase and one merge for the end of UX-8 | Each sub-sprint is audited and released once the owner accepts it: Codex's blind audit of that sub-sprint's diff, the owner's push (a fast-forward of `main`), a read-only production smoke and a release record. `ux/redesign` is fast-forwarded to `origin/main` before each sub-sprint starts (done 9 Oct to `568b07a`). Supersedes N13's "rebase once, at merge time" from UX-4 on; the commit IDs in the UX-1 to UX-3 docs stay mapped in `commit-ids.md` | decided 2026-10-09 by owner |
 | N17 | Work while the owner travels (night of 9 to 10 Oct, no internet) | The session moves to a Claude Code cloud session and keeps working: UX-4 built on the recommendations (L1–L21 provisional), then UX-5 onward briefed and built on Claude Code's own recommendations, each sub-sprint in its own commits, every answer marked provisional for the owner's review. `ux/redesign` is pushed to GitHub as a backup (owner's go-ahead for a possible Vercel preview, the N14 condition); `main` and production are never touched (production stays at UX-3). No migrations, schema, RLS, auth, moderation or product-rule changes; flags take their no-change options. Evidence that needs the local Supabase stack (browser captures, audits, row re-runs) is prepared and run on the owner's Mac afterwards if the cloud has no database | decided 2026-10-09 by owner (session answers) |
-| N16 | How a release proves write flows. A read-only production smoke cannot exercise publishing, account changes or moderation, which UX-5 to UX-7 redesign | A: a scripted production smoke with a dedicated test account, cleaned up afterwards · B: local evidence only, as for UX-1 to UX-3 | pending (owner; needed before UX-5 ships) |
+| N16 | How a release proves write flows. A read-only production smoke cannot exercise publishing, account changes or moderation, which UX-5 to UX-7 redesign | B: local evidence only, accepted by Henri (“the local evidence suffices”); the read-only production boundary remains | decided 2026-10-14 by owner; see closure entry |
 
 ## UX-3b accepted (owner, 2026-10-09)
 

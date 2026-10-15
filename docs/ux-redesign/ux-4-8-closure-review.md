@@ -1,12 +1,24 @@
 # UX-4–UX-8 closure review — 14 October 2026
 
-**State: U10/U15/U18 published with owner approval; read-only production gate PASS. Owner/manual acceptance remains pending.** This is an observation and review package, not owner acceptance. No canonical acceptance status or functional-spec wording was changed.
+**State: CLOSED / ACCEPTED by Henri on 14 October 2026.** Owner web/mobile checks pass, N16 accepts local evidence, and the read-only production gate passes. Canonical acceptance statuses and functional-spec wording remain unchanged.
+
+## Owner acceptance — 14 October 2026
+
+Henri reported: **“all my manual checks pass. on web and mobile.”** He instructed: **“please update the documentation accordingly and lets close the UX sprint.”** For N16 he explicitly chose **“the local evidence suffices.”**
+
+**UX-4a, UX-4b and UX-5–UX-8 are CLOSED / ACCEPTED. The UX redesign gate is closed.** Earlier UX-1–UX-3 acceptance remains in force. The shipped UI is accepted as built, including U10/U15/U18, the current account summary (U16) and the availability-aware favourites card (U17). N16 is resolved as option B: the recorded local authenticated/write-flow evidence plus the read-only production gate suffices; this closure requires no production test account or production write smoke.
+
+The R01–R15 owner review below is recorded as Pass on Henri's attestation. This is an owner-reported result, separate from the agent's automated evidence. No device/browser inventory, individual assistive-technology transcripts, new field Core Web Vitals statistics, independent review report or legal opinion was supplied, so none is invented here. Additional field measurements and independent review are follow-ups outside this closed UX gate, not uncompleted acceptance blockers.
+
+This closes the UX redesign, not the separate V1 go-live infrastructure/legal/SEO checklist. Email scheduling/deliverability, natural ALERT-005, Search Console and operational legal checks stay as recorded in `../go-live-checklist.md`. The canonical acceptance registry, functional specification and XLSX remain untouched under the release instruction; no blanket Pass is inferred for those V1 rows. Their detailed wording/evidence reconciliation and the separate catalog/PR #3 follow-up remain documentation/product follow-ups rather than UX sprint blockers.
+
+Accepted application code: `7a50f060fd73306ca26ebf8123125ab7556cc190`. The last verified pre-closure docs deployment was `937009bc85d39c3fa41da3a2c5b12cf0a8f024c8`, READY as `dpl_E8NuD3xuNHqR6XTEuWMMMV5ujMBE` on all four domains; final GETs returned 200 for `/` and `/instrumentos/percusion`. This closure changes documentation only; its automatic deployment is verified in the handoff without changing application code or production data/settings.
 
 ## Production publication — 14 October 2026
 
 Henri explicitly answered **“Publicar el parche”** after reviewing the implementation and local proof. A normal fast-forward moved `main` from `4e5ba95` to **`7a50f060fd73306ca26ebf8123125ab7556cc190`**. Vercel automatically built **`dpl_EdziuxY3chGeioMEvumzN7d1bk6c`**, READY; the Git metadata names that exact SHA, repo and `main` branch. `laria.audio`, `www.laria.audio`, `laria.pro` and `www.laria.pro` all resolved to it. The pre-push rollback target was `dpl_D1FaMpnG81unBp1CjhAosE5UzbqV` (`4e5ba95`). No rollback was needed.
 
-**Decision: PASS for the read-only production gate; keep live.** U10/U15/U18 are shipped. Formal owner acceptance and manual checks remain open; authenticated/write-flow proof is local only. No production session, form submission, publishing, favorite, alert, report, Admin action or WhatsApp navigation occurred.
+**Decision: PASS for the read-only production gate; keep live.** U10/U15/U18 are shipped. Owner acceptance and manual web/mobile checks are now recorded above; local authenticated/write-flow proof is accepted under N16. No production session, form submission, publishing, favorite, alert, report, Admin action or WhatsApp navigation occurred.
 
 | Check | Result | Production evidence |
 | --- | --- | --- |
@@ -42,7 +54,7 @@ Raw evidence: `/private/tmp/laria-ux-closure-release-7a50f06/` (not committed). 
 
 ## Owner-authorized implementation
 
-Henri answered **“Implementar ambos ahora”** for U10/U15 and **“Implementar U18 ahora”** for U18. These answers supersede the overnight deferrals in the briefs; Henri subsequently authorized publication separately, recorded above. Neither decision implies formal owner acceptance.
+Henri answered **“Implementar ambos ahora”** for U10/U15 and **“Implementar U18 ahora”** for U18. These answers supersede the overnight deferrals in the briefs; Henri subsequently authorized publication separately, recorded above. These earlier implementation/publication approvals are distinct from the subsequent formal owner acceptance above.
 
 | Item | Implemented locally | Preserved boundary |
 | --- | --- | --- |
@@ -80,8 +92,8 @@ Raw follow-up evidence: `/private/tmp/laria-ux-implementation/` (not committed).
 | Eight integration suites | Pass | `integration-results.json`: photos, submissions, listing-lifecycle, analytics, favorites, alerts, transactions, sprint-8-admin-reports. Exact local fixture cleanup; submissions rerun after the RUC presentation correction |
 | Final keyboard regression | Pass | `keyboard-final.log`: all three engines × two widths × confirmation/revision. Each page explicitly foregrounded before keyboard input |
 | Acceptance registry | Valid, unchanged | `python3 -B acceptance/validate.py`: 403 valid cases. No row marked by this task |
-| Production authenticated/write QA | Not run | Production was untouched; N16 remains open |
-| Owner/manual acceptance | Pending | Agent observations do not mark an owner review Pass |
+| Production authenticated/write QA | Not run; accepted under N16 | Owner chose local evidence; production write testing is not required for UX closure |
+| Owner/manual acceptance | Pass — owner report | Henri explicitly accepted the web/mobile manual checks and closed the sprint; see sign-off above |
 
 Seven new screenshots were visually inspected: Particular signup errors at 390, store errors at 1440, listing-edit errors at 390, Admin publications/revisions at 390 and publications/stores at 1440. Additional reported-review screenshots are retained. The pictures use local placeholder media.
 
@@ -104,49 +116,50 @@ Raw local evidence: `/private/tmp/laria-ux8-closure/` (not committed). This dire
 | Persistent keyboard regression | Pass | `scripts/ux-closure-keyboard-smoke.cjs`: 12 cases, 3 engines × 2 widths × confirmation/revision. Final artifacts copied to the raw-evidence directory |
 | Browser → API → local DB flows | Pass | `flows.json`, 9 checks: Particular publication pending, verified-store publication approved, 3 photos each, all upload-progress messages, one finalization each, fresh form, hide/restore, alert pause/resume/delete, revoke/verify and table scrolling |
 | Performance | Local measurements only | `performance.json`: 8 cold browser contexts, LCP 56–136 ms, CLS 0, TTFB 28–86 ms on localhost. No field CWV, real-device network/CPU or INP claim |
-| Production authenticated/write QA | Not run | The release's read-only boundary is unchanged; N16 remains open |
-| Owner/manual acceptance | Pending | This package records agent observations only |
+| Production authenticated/write QA | Not run; accepted under N16 | The release stays read-only; the owner accepts local write-flow evidence |
+| Owner/manual acceptance | Pass — owner report | Subsequent owner sign-off above; the initial evidence remains dated history |
 
 ## Owner review — Correct / Wrong / Follow-up
 
-Use the local build and screenshots. A check below remains pending until Henri records an answer; no box is inferred from automation.
+Henri reports all his manual web/mobile checks passed and explicitly closes the sprint. The answers below record that attestation, not a new agent-run manual test or detailed tool-specific certification.
 
 | ID | Review | Local observation | Owner answer |
 | --- | --- | --- | --- |
-| R01 | UX-4 listing hierarchy, photo gallery and phone contact bar | Listing screenshots at 390/1440; gallery arrows/Escape and one contact module verified | Pending |
-| R02 | UX-4 seller/store identity, trust wording and public information | Store/listing screenshots; no guarantee or Laria-managed payment/delivery claim added | Pending |
-| R03 | UX-4 sold listing has clear history and no WhatsApp contact action | Lifecycle/photo integrations pass | Pending |
-| R04 | UX-5 photos-first numbered form and Spanish category/type/condition labels | Publishing screenshots; Percusión / Baterías persisted correctly | Pending |
-| R05 | UX-5 create/edit error summary, field focus and upload/confirmation copy | U10 edit errors, invalid-submit no-write and immediate/moderated save verified; create and upload evidence retained | Pending |
-| R06 | UX-5 editing and review preserve the public approved version | Photo/lifecycle integrations pass; edit screenshots available | Pending |
-| R07 | UX-6 onboarding errors, inventory cards and account hierarchy | U15 forms, valid signup/profile/invitation/store request and provider errors verified locally; inventory evidence retained | Pending |
-| R08 | UX-6 confirmations start safely, retain keyboard focus and cancel/return correctly | Three-engine keyboard regression passes | Pending |
-| R09 | UX-6 alert controls and hide/restore communicate the persisted result | Actual local browser actions pass | Pending |
-| R10 | UX-7 master-detail, checklist, decision footer and comparison | U18 responsive/focus behavior, reasons, selected-record decisions and stale revisions verified locally | Pending |
-| R11 | UX-7 verification consequence appears before mutation | Opening confirmation does not mutate; explicit confirm revokes/verifies in local DB | Pending |
-| R12 | UX-7 Lima dates and visible identifiers | Existing source/unit evidence plus rendered Admin screenshots | Pending |
-| R13 | UX-8 real Safari/Firefox, real iPhone/Android and touch behavior | Headless engines supplement, not replace, the manual pass | Pending |
-| R14 | UX-8 VoiceOver/TalkBack/NVDA, keyboard and actual 200–400% zoom | Automated axe/keyboard/reflow complete; real assistive technology remains | Pending |
-| R15 | UX-8 performance and legal language | Local measurements available; field CWV and owner/legal reading remain | Pending |
+| R01 | UX-4 listing hierarchy, photo gallery and phone contact bar | Listing screenshots at 390/1440; gallery arrows/Escape and one contact module verified | Pass — owner report, 14 Oct |
+| R02 | UX-4 seller/store identity, trust wording and public information | Store/listing screenshots; no guarantee or Laria-managed payment/delivery claim added | Pass — owner report, 14 Oct |
+| R03 | UX-4 sold listing has clear history and no WhatsApp contact action | Lifecycle/photo integrations pass | Pass — owner report, 14 Oct |
+| R04 | UX-5 photos-first numbered form and Spanish category/type/condition labels | Publishing screenshots; Percusión / Baterías persisted correctly | Pass — owner report, 14 Oct |
+| R05 | UX-5 create/edit error summary, field focus and upload/confirmation copy | U10 edit errors, invalid-submit no-write and immediate/moderated save verified; create and upload evidence retained | Pass — owner report, 14 Oct |
+| R06 | UX-5 editing and review preserve the public approved version | Photo/lifecycle integrations pass; edit screenshots available | Pass — owner report, 14 Oct |
+| R07 | UX-6 onboarding errors, inventory cards and account hierarchy | U15 forms, valid signup/profile/invitation/store request and provider errors verified locally; inventory evidence retained | Pass — owner report, 14 Oct |
+| R08 | UX-6 confirmations start safely, retain keyboard focus and cancel/return correctly | Three-engine keyboard regression passes | Pass — owner report, 14 Oct |
+| R09 | UX-6 alert controls and hide/restore communicate the persisted result | Actual local browser actions pass | Pass — owner report, 14 Oct |
+| R10 | UX-7 master-detail, checklist, decision footer and comparison | U18 responsive/focus behavior, reasons, selected-record decisions and stale revisions verified locally | Pass — owner report, 14 Oct |
+| R11 | UX-7 verification consequence appears before mutation | Opening confirmation does not mutate; explicit confirm revokes/verifies in local DB | Pass — owner report, 14 Oct |
+| R12 | UX-7 Lima dates and visible identifiers | Existing source/unit evidence plus rendered Admin screenshots | Pass — owner report, 14 Oct |
+| R13 | UX-8 real Safari/Firefox, real iPhone/Android and touch behavior | Headless evidence retained; owner reports manual web/mobile Pass, without a device/browser inventory | Pass — owner report, 14 Oct |
+| R14 | UX-8 VoiceOver/TalkBack/NVDA, keyboard and actual 200–400% zoom | Automated axe/keyboard/reflow complete; owner reports all manual checks Pass, without per-tool transcripts | Pass — owner report, 14 Oct |
+| R15 | UX-8 performance and legal language | Local measurements retained; owner reports manual Pass, without new field CWV statistics or legal opinion | Pass — owner report, 14 Oct |
 
 Ten selected screenshots were visually inspected for hierarchy, Spanish UI copy, controls and mobile/desktop layout; this is agent review, not owner acceptance. Populated store inventory also passed axe and overflow checks at 390/1440 (`filled-inventory.json`).
 
 Selected screenshots: `screenshots/particular-publicar-390.png`, `particular-editar-1440.png`, `particular-publicaciones-390.png`, `store-inventario-filled-1440.png`, `admin-revisiones-390.png`, `confirm-hide-390.png`, `published-particular-390.png`, `published-store-390.png`, `admin-confirm-false-390.png` and `admin-confirm-true-390.png` under the raw-evidence directory. Images use explicitly local placeholder photo fixtures, not real instrument photos.
 
-## Decisions and closure checks still needed
+## Closure decisions — resolved
 
-| ID | Current implementation | Closure proposal, not an owner decision |
+| ID | Accepted implementation / evidence | Owner decision, 14 Oct |
 | --- | --- | --- |
-| U16/U17 | Summary is not a to-do list; favorites keep their availability-aware card | Confirm these existing choices at UX-6 review |
-| N16 | UX-5–UX-7 write-flow proof is local only | Owner decides the standing production-test-account policy; no production account is created here |
+| U16 | Summary stays as currently shipped, without a new to-do list | Accepted as built through the explicit UX closure |
+| U17 | Favourites keep the availability-aware card | Accepted as built through the explicit UX closure |
+| N16 | UX-5–UX-7 authenticated/write-flow proof is local only | Option B: local evidence suffices; no production test account/write gate required |
 
-U10/U15/U18 scope decisions are resolved and implemented above. Henri separately authorized and completed publication; the read-only production result is above. Formal UX acceptance, U16/U17 and the manual checks remain open.
+U10/U15/U18 are implemented and published. R01–R15 and the current UI are owner-accepted; no UX sprint acceptance blocker remains.
 
 ## Acceptance and launch follow-ups
 
-- Re-run and reconcile the exact UX-4–UX-7 row groups in `ux-8-coherence.md`; category follow-ups are SEO-001–007, PUB-011/PUB-012, LIST-* and ALERT-* (`category-restructure.md`). This bounded run is not proof of every row or owner/manual Pass.
+- Re-run and reconcile the exact UX-4–UX-7 row groups in `ux-8-coherence.md`; category follow-ups are SEO-001–007, PUB-011/PUB-012, LIST-* and ALERT-* (`category-restructure.md`). The owner has accepted UX manual checks; this does not individually rewrite or certify every canonical V1 row.
 - `acceptance/cases.tsv`, `docs/functional-spec.md` and all XLSX remain untouched. Owner wording still needs category examples, labels and confirmation-text reconciliation.
-- Real devices, screen readers, native Safari mouse-focus behavior, actual zoom, field CWV and the external review listed in UX-8 remain separate closure checks. The full local screenshot baseline has been generated; only the selected screenshots received visual inspection.
+- Owner manual web/mobile checks are reported Pass. Preserve the lack of a detailed device/assistive-tool inventory and field CWV/external-review report; future measurements/reviews are outside the closed UX gate. The full local screenshot baseline exists; only the selected frames received agent visual inspection.
 - Email scheduling/deliverability, natural ALERT-005, Search Console and owner SEO/legal checks remain in `../go-live-checklist.md`.
 - The catalog category-metadata / PR #3 follow-up remains separate; no catalog work ships here.
 
@@ -183,4 +196,4 @@ The keyboard script refuses non-local app and database URLs, permits only browse
 
 ## Decision
 
-U10/U15/U18 and the accessibility corrections are published with Henri's explicit approval. **Read-only production gate PASS; keep live. UX-4–UX-8 are not marked formally accepted.** Authenticated/write flows remain proven locally only, and the owner/manual checks above still apply.
+U10/U15/U18 and the accessibility corrections are published with Henri's explicit approval. **UX-4–UX-8 CLOSED / ACCEPTED; read-only production gate PASS; keep live.** Henri reports manual web/mobile checks Pass and accepts the local authenticated/write evidence under N16. The separate go-live checklist and evidence limits above remain.

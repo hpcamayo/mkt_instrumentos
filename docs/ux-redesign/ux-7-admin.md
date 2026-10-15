@@ -1,8 +1,8 @@
 # UX-7 · Admin workbench — brief
 
-**Owner update, 14 Oct 2026:** Henri authorized U10/U15 ("Implementar ambos ahora") and U18 ("Implementar U18 ahora"). Listing edit and onboarding now have field errors and focused summaries; Admin now has a master-detail queue, a local review guide and a decision bar. These additions shipped in `7a50f06` on 14 Oct with explicit publication approval; authenticated/write proof is local only and formal owner acceptance remains pending; current evidence is in `ux-4-8-closure-review.md`. The dated overnight scope below is history.
+**Owner update, 14 Oct 2026:** Henri authorized U10/U15 ("Implementar ambos ahora") and U18 ("Implementar U18 ahora"). Listing edit and onboarding now have field errors and focused summaries; Admin now has a master-detail queue, a local review guide and a decision bar. These additions shipped in `7a50f06` on 14 Oct with explicit publication approval; authenticated/write proof is local only and formal owner acceptance is recorded on 14 Oct (all manual web/mobile checks Pass; N16 local evidence accepted); current evidence is in `ux-4-8-closure-review.md`. The dated overnight scope below is history.
 
-**Status: provisional (written and built overnight, 10 Oct 2026, under N17).** Every question takes its recommendation as a provisional answer and every product flag its no-change option; the owner confirms or reverses them at the UX-7 review (`ux-7-acceptance.md`).
+**Historical status: provisional (written and built overnight, 10 Oct 2026, under N17).** Every question takes its recommendation as a provisional answer and every product flag its no-change option; the owner confirms or reverses them at the UX-7 review (`ux-7-acceptance.md`).
 
 UX-7 makes moderation faster to read and safer to act on. It changes no access rule (`requireAdmin`, `is_admin`), no moderation function or argument (`review_listing`, `review_listing_revision` with `p_expected_version`, `review_store_application`, `set_store_verification`, `moderate_report`, `moderate_review`, `link_legacy_listing_owner`), no record-editor allowlist, no invite flow and no queue query; every queue still shows a truthful zero state.
 

@@ -1,8 +1,8 @@
 # UX-8 · Coherence and hardening — brief, cloud part and V1 record reconciliation
 
-**Current state (14 Oct 2026):** the application changes are live and the read-only production release gate passes. The local closure run now supplies automated axe, keyboard, browser-engine, reflow and authenticated/write-flow evidence, with owner-authorized U10/U15/U18 and accessibility corrections shipped as `7a50f06`; its read-only production smoke also passes. See `ux-4-8-closure-review.md` for results and the owner checklist. Real devices, screen readers, actual zoom, field CWV and owner/manual acceptance remain pending. The dated cloud-only status and commands below are historical, not the current release boundary.
+**Current state (14 Oct 2026): CLOSED / ACCEPTED by Henri.** All owner manual checks are reported Pass on web/mobile, N16 accepts the local authenticated/write-flow evidence, and the read-only production gate passes. The shipped UI (including U10/U15/U18 and current U16/U17) is accepted as built. `ux-4-8-closure-review.md` records the exact owner sign-off and evidence limits. Field CWV statistics and an additional independent report were not supplied and are not claimed; future measurement/review is outside this closed UX gate. Canonical V1 acceptance/spec reconciliation and go-live dependencies remain separate.
 
-**Historical status: provisional (written overnight, 10 Oct 2026, under N17).** Most of UX-8 needs real browsers, devices, screen readers, a preview deployment or the owner (`roadmap.md` § UX-8). The cloud session did the code-level part and prepared the rest; everything else is listed below as **pending on the Mac** with its command, never as a result.
+**Historical status: provisional (written overnight, 10 Oct 2026, under N17).** Most of UX-8 needs real browsers, devices, screen readers, a preview deployment or the owner (`roadmap.md` § UX-8). The cloud session did the code-level part and prepared the remaining checks. The current closure disposition below supersedes that historical pending state.
 
 ## Questions (provisional answers in bold)
 
@@ -12,7 +12,7 @@
 | C2 | Button heights in Admin (40 px hand-rolled buttons) | A `buttonClasses` sm (36 px), the Q17 scale · B leave | **A** |
 | C3 | Loading labels ("Guardando...", three dots) | A one ellipsis character everywhere · B leave | **A** |
 | C4 | Preview deployment for N14 (devices) | — | **Owner's go-ahead** (pushing `ux/redesign` may create a Vercel preview; nothing is deployed on purpose) |
-| C5 | Release order | A one release per sub-sprint after each review (N15) · B one release for UX-4–UX-7 | **A**, unchanged; N16 (how a release proves write flows) is still the owner's and blocks UX-5 to UX-7 releases |
+| C5 | Release order | A one release per sub-sprint after each review (N15) · B one release for UX-4–UX-7 | **A**, unchanged; superseded for closure by the 14 Oct owner N16 decision: local evidence suffices |
 
 ## Done in the cloud
 
@@ -21,24 +21,22 @@
 - `tests/ux-coherence.test.cjs` pins both, and that no `window.confirm` returns (UX-6).
 - Cross-sub-sprint consistency already enforced by tests: the glossary and status dictionary (`ux-copy`), contrast roles (`ux-contrast`), primitives with consumers (`ux-primitives`), one WhatsApp component per contact surface (UX-4), one error summary pattern (UX-5), one confirmation pattern (UX-6).
 
-## Pending on the Mac (owner)
+## Closure disposition (owner, 14 Oct)
 
-| Item | Command or step |
+| Item | Result / evidence boundary |
 | --- | --- |
-| Harness baseline refresh (`screenshots/`) | `node scripts/ux-snapshots.cjs --label ux8-baseline` on the local stack, all four visitors |
-| Accessibility audit, keyboard, 200–400% zoom | `node scripts/ux-audit.cjs --axe <axe.min.js>`; manual keyboard pass per acceptance package |
-| Real screen readers (VoiceOver, TalkBack, NVDA) | Manual, per `review-guide.md` |
-| Real browsers and devices (N14) | Needs a preview deployment: owner's go-ahead (C4) |
-| Core Web Vitals | On that preview; first-load budgets already met in the build table (listing 146 kB, store 132 kB) |
-| External review | `review-guide.md` § 1 (UX-1's still pending) |
-| G2 legal wording | Owner or legal |
-| Releases | N15 per sub-sprint; N16 decides how UX-5–UX-7 write flows are proven |
+| Harness baseline, automated a11y/keyboard/reflow and local integration proof | Completed; evidence in `ux-4-8-closure-review.md` |
+| Manual web/mobile checks, including the owner review checklist | Pass — owner report; no per-device or per-assistive-tool inventory supplied |
+| UX visual/copy acceptance | Accepted as built; no legal opinion or regulatory certification inferred |
+| N16 production write-flow policy | Resolved: local evidence suffices; no production test account or write smoke required |
+| Field CWV and additional external review | No new metrics/report supplied; follow-ups outside the owner-closed UX gate |
+| Canonical V1 row/spec reconciliation and launch checklist | Separate follow-ups; unchanged by this UX closure |
 
 ## V1 record reconciliation (drafts for the owner; nothing recorded)
 
 `acceptance/cases.tsv` and `docs/functional-spec.md` were not edited. This is the list of rows and spec lines the redesign touched since UX-3, for the owner to re-run and record as in N12 (`ux-2-reconciliation.md` shows the method).
 
-**Rows to re-run, by sub-sprint** (all **pending on the Mac**; none changes behaviour on purpose):
+**Canonical V1 rows to reconcile, by sub-sprint** (registry maintenance remains separate from the owner-accepted UX sprint; no individual status is inferred):
 
 | Sub-sprint | Rows | Why |
 | --- | --- | --- |

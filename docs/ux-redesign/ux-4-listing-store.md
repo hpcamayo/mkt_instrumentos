@@ -1,6 +1,8 @@
 # UX-4 · Listing and store pages — brief
 
-**Status: provisionally approved (owner, 9 Oct 2026, evening):** before travelling the owner took every recommendation ("Yes, all recommendations"; § Owner answers). UX-4 is built on them while the owner is away (N17), and each answer is confirmed or reversed at the 4a and 4b reviews. The questions are on the review page https://claude.ai/artifact/T2pej3FqaGD3Nimwi5VGcY (§ Questions). Where this brief and the concept screenshots differ, this brief wins.
+**Owner acceptance, 14 Oct 2026: CLOSED / ACCEPTED as built.** Henri reports all manual web/mobile checks Pass and closes the UX sprint; see `ux-4-8-closure-review.md`.
+
+**Historical status: provisionally approved (owner, 9 Oct 2026, evening):** before travelling the owner took every recommendation ("Yes, all recommendations"; § Owner answers). UX-4 is built on them while the owner is away (N17), and each answer is confirmed or reversed at the 4a and 4b reviews. The questions are on the review page https://claude.ai/artifact/T2pej3FqaGD3Nimwi5VGcY (§ Questions). Where this brief and the concept screenshots differ, this brief wins.
 
 UX-4 helps a buyer decide with confidence and contact the seller in one obvious step:
 - the listing page `/instrumentos/<publicación>`;
