@@ -577,7 +577,7 @@ end;
 $$;
 
 -- Recounts a session's rows into counts {total, create, update, adopt_listing, unchanged, error, excluded, to_apply,
--- warnings, applied, conflict, failed, pending_plan}.
+-- warnings, publication_incomplete, stock_changes, applied, conflict, failed, pending_plan}.
 create or replace function laria_private.refresh_import_counts(p_session_id uuid)
 returns jsonb
 language plpgsql
@@ -598,6 +598,8 @@ begin
                                    and owner_decision = 'include' and commit_status = 'pending'),
     'warnings', count(*) filter (where planned_action <> 'error' and exists (
                   select 1 from jsonb_array_elements(issues) issue where issue->>'severity' = 'warning')),
+    'publication_incomplete', count(*) filter (where planned_action in ('create', 'update', 'adopt_listing', 'unchanged')
+                                 and issues @> '[{"code":"IMPORT_PUBLICATION_MISSING"}]'),
     'stock_changes', count(*) filter (where planned_action in ('create', 'update', 'adopt_listing')
                                         and owner_decision = 'include' and changes ? 'quantity_on_hand'),
     'applied', count(*) filter (where commit_status = 'applied'),
