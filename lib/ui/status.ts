@@ -3,7 +3,7 @@
 export type StatusTone = "neutral" | "accent" | "warning" | "danger" | "solid" | "line";
 export type StatusIcon = "draft" | "review" | "check" | "reject" | "hidden" | "sold" | "archive" | "pause" | "stockout";
 export type StatusEntry = { label: string; tone: StatusTone; icon?: StatusIcon };
-export type StatusDomain = "listing" | "revision" | "store" | "claim" | "transaction" | "report" | "review" | "alert" | "stock";
+export type StatusDomain = "listing" | "revision" | "store" | "claim" | "transaction" | "report" | "review" | "alert" | "stock" | "payment";
 
 const LISTING: Record<string, StatusEntry> = {
   draft: { label: "Borrador", tone: "line", icon: "draft" },
@@ -74,6 +74,15 @@ const STOCK: Record<string, StatusEntry> = {
   out_of_stock: { label: "Agotado", tone: "neutral", icon: "stockout" },
 };
 
+// A store's accepted payment method (PAY-1, store_payment_methods.status). Only "Aprobado" is shown to buyers.
+const PAYMENT: Record<string, StatusEntry> = {
+  pending_review: { label: "En revisión", tone: "warning", icon: "review" },
+  approved: { label: "Aprobado", tone: "accent", icon: "check" },
+  rejected: { label: "Rechazado", tone: "danger", icon: "reject" },
+  disabled: { label: "Desactivado por Laria", tone: "neutral", icon: "hidden" },
+  withdrawn: { label: "Retirado por la tienda", tone: "line" },
+};
+
 const DICTIONARY: Record<StatusDomain, Record<string, StatusEntry>> = {
   listing: LISTING,
   revision: REVISION,
@@ -84,6 +93,7 @@ const DICTIONARY: Record<StatusDomain, Record<string, StatusEntry>> = {
   review: REVIEW,
   alert: ALERT,
   stock: STOCK,
+  payment: PAYMENT,
 };
 
 // Admin reports and the audit history name their target by type; its status reads from that type's domain.
