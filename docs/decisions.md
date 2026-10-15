@@ -340,3 +340,47 @@ Why:
 - The production catalog loader upserts products by stable id and never deletes them, but it deletes variants that a
   new build no longer has. A variant FK would make a catalog reload fail or silently change merchant data.
 
+
+## Spreadsheet imports run as leased steps driven by the open page
+
+Decision (STORE-2, 2026-10-15): an import is a session that the open import page advances with short `/step` calls.
+Each call takes a 90-second lease, does bounded work for up to 20 seconds (stage 500 rows, plan 100, commit 50),
+checkpoints and releases. Closing the page pauses at the last checkpoint.
+
+Why:
+- Vercel Hobby has no queue and short function limits; a 2,000-row file still finishes in seconds locally.
+- The lease stops two tabs from processing one import, and each committed row has its own idempotency key, so a retried
+  chunk never applies twice.
+
+## XLSX is read with fflate and an own bounded reader
+
+Decision (STORE-2, 2026-10-15): `lib/store-import/xlsx-read.ts` inflates only allowlisted parts through `fflate`'s
+streaming API with a 40 MB total and 100:1 per-part budget, refuses macros, `.xls`, DTDs and entities, and never
+evaluates formulas. No SheetJS or ExcelJS.
+
+Why: only a streaming reader bounds decompression before the bytes exist; merchant files are untrusted.
+
+## One CSV writer for merchant files
+
+Decision (combined prototype, 2026-10-15): the inventory export, the import template and the import report all write
+CSV through `lib/spreadsheet/csv-write.ts`: formula-like text gets a leading apostrophe, numbers stay numbers, fields
+with `,`, `;`, quotes or line breaks are quoted, UTF-8 BOM and CRLF.
+
+Why: STORE-1b and STORE-2 each had a copy with slightly different quoting (only one quoted `;`, which Excel with a
+Spanish locale treats as a separator). One writer keeps the formula guard in one place for review.
+
+## Assisted commerce is one deployment switch
+
+Decision (PAY-1, 2026-10-15): every buyer- and store-facing payment surface is behind `LARIA_ASSISTED_COMMERCE=1`
+(off by default). The Admin review page works either way.
+
+Why: the Terms and Privacy additions need legal review before any store shows payment methods; the Admin approval per
+method is already the per-store gate.
+
+## A purchase request is a WhatsApp contact with an intent
+
+Decision (PAY-1, 2026-10-15): "Solicitar compra" records `whatsapp_contact` with metadata `{"intent":"purchase"}`
+instead of a new event type.
+
+Why: Sprint 6 uses `whatsapp_contact` to decide who may be named as buyer in a sale claim; a new type would make
+purchase-request buyers ineligible, and contact counts stay comparable.

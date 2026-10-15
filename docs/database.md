@@ -486,6 +486,10 @@ Admin policies:
 - Store applications and profile edits upload optional logo, banner, and physical-store photos under `{auth.uid()}/{submissionOrStoreId}/...`.
 - Authenticated Store Owners can upload/update/delete only beneath their own top-level folder.
 
+`store-imports` (STORE-2, local only):
+- Private bucket, ≤5 MB, `text/csv` and `.xlsx` only.
+- The owner may insert exactly `{auth.uid()}/{sessionId}/source.{csv|xlsx}` while that import session awaits its file, and read it; no update or delete. Files are deleted through the service-role cleanup route after the 30-day retention.
+
 Legacy limitation: initial listing photos and store assets remain in public buckets for existing URL/image compatibility. Database moderation prevents discovery but cannot make a known existing public Storage URL private. Sprint 4 guarantees private staging/access gating for new listing edit objects; it does not claim to revoke previously public URLs. Abandoned initial uploads still require operational retention cleanup.
 
 ## Indexes and Metadata
@@ -529,6 +533,9 @@ Current migrations:
 - `20260921120000_sprint_7_marketplace_email_alerts.sql`: normalized owner alerts, prospective first-public matching, private match/outbox records, notification/price-drop email eligibility, service-only daily/claim/complete/fail RPCs and pending-buyer account count. All 18 migrations apply from a clean local reset and are synchronized with production; Sprint 7 production history was verified on 2026-09-22.
 - `20260923120000_sprint_8_admin_reports_legacy.sql`: general private reports, report moderation, bounded Admin workbench/domain reads, append-only privileged-action audit and atomic one-time legacy ownership linking. All 19 migrations apply from a clean local reset; this nineteenth migration is local-only and production remains at the synchronized Sprint 7 history.
 - `20261023120000_store_inventory_foundation.sql` (STORE-1a, local only, not applied to production): store inventory tables, append-only stock ledger, owner and Admin functions, `listings.stock_state` and its listing triggers. See "Store inventory (STORE-1a)".
+- `20261024120000_store_inventory_ui.sql` (STORE-1b, local only): `get_inventory_summary()` adds recorded sales and recent movements; bulk threshold and bulk hide functions. See "Store operations: later sub-sprints".
+- `20261025120000_store_inventory_import.sql` (STORE-2, local only): spreadsheet import sessions and staged rows, private `store-imports` bucket, step/commit functions, ledger FK `import_session_id`, saved column mapping, retention job. See "Store operations: later sub-sprints".
+- `20261028120000_pay_1_store_payment_methods.sql` (PAY-1, local only): accepted payment methods with Admin review and history, public read functions, purchase-intent metadata on `whatsapp_contact`. See "Store operations: later sub-sprints".
 
 Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
 
@@ -643,3 +650,44 @@ Design: `docs/store-operations/design.md`; implementation notes, deviations, rol
 - **Tests:** `tests/store-ops-1.sql` (rolled back) and `tests/store-ops-concurrency.integration.cjs` (separate
   connections, local only).
 
+
+## Store operations: later sub-sprints
+
+Combined on branch `store-ops/prototype` for the owner's review; local only, nothing applied to production. Per
+sub-sprint detail, deviations, rollback and review guides: `docs/store-operations/store-1b.md`, `store-2.md`,
+`pay-1.md` (and `store-3a.md`, `store-3b.md` as they land). The combined review package is
+`docs/store-operations/prototype-review.md`.
+
+- **STORE-1b, Inventario screens** (`20261024120000_store_inventory_ui.sql`): `get_inventory_summary()` replaced
+  (adds `sales_30d_units`, `sales_30d_count`, `hidden`, `recent_movements`); `set_inventory_threshold_bulk(ids,
+  threshold, key)` and `hide_inventory_listings_bulk(ids, key)` (receipt + replay, all-or-nothing for the threshold;
+  hide calls the V1 `set_owned_listing_lifecycle` per listing and reports skipped SKU). No new tables.
+- **STORE-2, spreadsheet import** (`20261025120000_store_inventory_import.sql`):
+  - `store_import_sessions` (status machine `awaiting_upload` → `parsing` → `mapping_required` → `validating` →
+    `ready` → `committing` → `committed` / `partially_committed`, or `failed` / `cancelled` / `expired`; lease
+    `lock_token` + `locked_until`; `version`; one open import per store by partial unique index) and
+    `store_import_rows` (raw ≤ 32 KB, parsed values, issues, planned action and changes, owner decision, commit
+    status). RLS: owner and Admin `SELECT`; writes only through functions.
+  - `store_stock_movements.import_session_id` (FK) with a check that import movements carry their row number;
+    `store_operation_settings.import_mapping_default`; `laria_private.store_import_file_deletions` (cleanup queue).
+  - Owner functions: `create_store_import_session`, `claim_store_import_step` / `release_store_import_step` (90 s
+    lease), `begin_store_import_parse`, `stage_store_import_rows`, `finish_store_import_parse`, `fail_store_import`,
+    `confirm_store_import_mapping`, `plan_store_import_rows`, `finish_store_import_validation`,
+    `set_store_import_rows_decision`, `start_store_import_commit`, `commit_store_import_chunk` (≤ 50 rows, savepoint
+    per row, key `import:{session}:{row}`), `finish_store_import_commit`, `reopen_store_import`,
+    `cancel_store_import`. Service role: `claim_store_import_file_deletions`, `complete_store_import_file_deletions`.
+  - `pg_cron` job `store-import-retention` daily at 09:15 UTC (`laria_private.run_store_import_retention()`): idle
+    imports expire after 7 days; rows purged and files queued 30 days after close.
+- **PAY-1, accepted payment methods** (`20261028120000_pay_1_store_payment_methods.sql`):
+  - Enum `store_payment_method` (`efectivo_al_recoger`, `yape_plin`, `pos_tarjeta_al_recoger`, `link_de_pago`);
+    `store_payment_methods` (one row per store and method: status `pending_review` / `approved` / `rejected` /
+    `disabled` / `withdrawn`, `holder_name` owner/Admin only, public `provider_label`, `owner_note`, review fields);
+    `store_payment_method_changes` (append-only history). RLS: owner and Admin read; no direct writes.
+  - Trigger `stores_review_payment_methods_on_business_change`: a RUC or razón social change sends approved methods
+    back to review.
+  - Functions: `set_store_payment_method`, `withdraw_store_payment_method` (owner),
+    `admin_review_store_payment_method`, `get_admin_store_payment_methods` (Admin), `get_store_payment_methods`,
+    `get_listing_purchase_request` (anyone; approved methods only while the store is active and verified, checked at
+    read time; never the holder). `laria_private.record_marketplace_event_service` accepts exactly
+    `{"intent":"purchase"}` as metadata on `whatsapp_contact`.
+  - No amount, paid state, payment URL, reservation or order is stored anywhere.
