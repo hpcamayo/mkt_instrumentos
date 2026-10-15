@@ -22,6 +22,7 @@ import {
   inventoryHref,
   parseInventoryFilters,
   type InventorySummary,
+  getLastImportErrors,
 } from "@/lib/store-inventory";
 import { cn } from "@/lib/utils";
 
@@ -29,8 +30,8 @@ export const metadata = { title: "Inventario de tienda" };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-// Import wizard (STORE-2). Until it is wired the "Importar" action is not shown; the combined prototype sets the route.
-const IMPORT_HREF: string | null = null;
+// Import wizard (STORE-2).
+const IMPORT_HREF = "/mi-cuenta/tienda/inventario/importar";
 
 export default async function StoreInventoryPage({ searchParams }: { searchParams?: SearchParams }) {
   const { profile, store, supabase } = await getAccountContext();
@@ -48,7 +49,9 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
 async function InventoryView({ summary, storeName, params }: { summary: InventorySummary; storeName: string; params: Record<string, string | string[] | undefined> }) {
   const { supabase } = await getAccountContext();
   const { filters, cursor } = parseInventoryFilters(params);
-  const page = supabase ? await getInventoryPage(supabase, filters, cursor) : null;
+  const [page, lastImport] = supabase
+    ? await Promise.all([getInventoryPage(supabase, filters, cursor), getLastImportErrors(supabase)])
+    : [null, null];
   const filtered = activeFilterCount(filters) > 0 || Boolean(filters.q);
   return (
     <section className="rounded-panel border border-subtle bg-white">
@@ -70,7 +73,7 @@ async function InventoryView({ summary, storeName, params }: { summary: Inventor
           <Notice tone="warning" role="note">Tu tienda no puede registrar cambios de inventario en este momento. Puedes consultar el stock y exportarlo.</Notice>
         </div>
       ) : null}
-      <InventorySummaryTiles summary={summary} />
+      <InventorySummaryTiles summary={summary} importErrors={lastImport?.errors ?? null} importHref={lastImport?.href} />
       <InventoryToolbar filters={filters} />
       {!page ? (
         <div className="p-5"><Notice tone="danger" role="alert">No se pudo cargar el inventario. Vuelve a intentarlo en unos minutos.</Notice></div>

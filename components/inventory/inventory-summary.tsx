@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 // Summary tiles (design §13.1, §5.5). Each count opens the table filtered to it. Sales are the store's own records,
 // labelled as such: never revenue or sales verified by Laria (brief §8).
-export function InventorySummaryTiles({ summary, importErrors }: { summary: InventorySummary; importErrors?: number | null }) {
+export function InventorySummaryTiles({ summary, importErrors, importHref }: { summary: InventorySummary; importErrors?: number | null; importHref?: string }) {
   const tiles: { label: string; value: number; href?: string; note?: string; attention?: boolean }[] = [
     { label: "SKU activos", value: summary.skus, href: "/mi-cuenta/tienda/inventario", note: summary.archived ? `${numbers.format(summary.archived)} archivados` : undefined },
     { label: "Publicadas", value: summary.published, href: "/mi-cuenta/tienda/inventario?publicacion=published", note: summary.unlinked ? `${numbers.format(summary.unlinked)} SKU sin publicación` : undefined },
@@ -14,9 +14,9 @@ export function InventorySummaryTiles({ summary, importErrors }: { summary: Inve
     { label: "En revisión", value: summary.in_review, href: "/mi-cuenta/tienda/inventario?publicacion=pending", note: summary.rejected ? `${numbers.format(summary.rejected)} rechazadas` : undefined, attention: summary.rejected > 0 },
     { label: "Ventas registradas por la tienda", value: summary.sales_30d_units, note: `Unidades, últimos 30 días. Anotadas por tu tienda; Laria no las verifica.` },
   ];
-  // Import errors arrive with the spreadsheet import (STORE-2); until then the tile is omitted rather than shown as 0.
+  // Rows the store's latest finished import could not apply (STORE-2). A store that never imported has no tile.
   if (typeof importErrors === "number") {
-    tiles.push({ label: "Errores de importación", value: importErrors, attention: importErrors > 0 });
+    tiles.push({ label: "Errores de importación", value: importErrors, href: importHref, note: "Última importación", attention: importErrors > 0 });
   }
   return (
     <section aria-labelledby="resumen-inventario" className="border-b border-subtle p-4 md:p-5">

@@ -219,7 +219,8 @@ test("inventory pages keep the V1 table for stores outside the pilot and never c
   const page = fs.readFileSync(path.join(root, "app/mi-cuenta/tienda/inventario/page.tsx"), "utf8");
   assert.match(page, /summary\?\.inventory_enabled && params\.vista !== "publicaciones"/);
   assert.doesNotMatch(page, /\.rpc\(/);
-  assert.match(page, /const IMPORT_HREF: string \| null = null;/, "Importar stays hidden until the import wizard is wired");
+  assert.match(page, /const IMPORT_HREF = "\/mi-cuenta\/tienda\/inventario\/importar";/, "Importar opens the STORE-2 wizard");
+  assert.match(page, /importErrors=\{lastImport\?\.errors \?\? null\}/, "the import-errors tile reads the latest finished import");
   const item = fs.readFileSync(path.join(root, "app/mi-cuenta/tienda/inventario/[itemId]/page.tsx"), "utf8");
   assert.match(item, /if \(!item \|\| item\.store_id !== store\.id\) notFound\(\);/);
 });

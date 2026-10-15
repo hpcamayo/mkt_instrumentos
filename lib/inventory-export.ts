@@ -1,6 +1,7 @@
 import { categoryOptions } from "@/lib/listings";
 import { absoluteUrl } from "@/lib/site";
 import type { XlsxCell, XlsxSheet } from "@/lib/spreadsheet/xlsx-write";
+import { csvDocument } from "@/lib/spreadsheet/csv-write";
 import { statusLabel } from "@/lib/ui/status";
 
 // Inventory export (design §7.8). Pure functions, so the formula guard and the column contract are unit-tested
@@ -63,24 +64,11 @@ export function exportRows(items: ExportItem[]): ExportCell[][] {
   ]);
 }
 
-// OWASP CSV injection guidance: a text cell that a spreadsheet could read as a formula (=, +, -, @, tab, CR) gets a
-// leading apostrophe. Genuine numbers (stock, price) are written as plain digits and are never prefixed.
-const FORMULA_START = /^[=+\-@\t\r]/;
+// CSV writing (formula guard, quoting, BOM) is shared with the import template and report: lib/spreadsheet/csv-write.ts.
+export { formulaSafe } from "@/lib/spreadsheet/csv-write";
 
-export function formulaSafe(value: string) {
-  return FORMULA_START.test(value) ? `'${value}` : value;
-}
-
-function csvField(value: ExportCell) {
-  if (value === null) return "";
-  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "";
-  const safe = formulaSafe(value);
-  return /[",\r\n]/.test(safe) || safe !== safe.trim() ? `"${safe.replace(/"/g, '""')}"` : safe;
-}
-
-// RFC 4180 with CRLF and a UTF-8 BOM, so Excel opens the tildes correctly.
 export function toCsv(rows: ExportCell[][], headers: readonly string[] = EXPORT_HEADERS) {
-  return "﻿" + [headers as readonly ExportCell[], ...rows].map((row) => row.map(csvField).join(",")).join("\r\n") + "\r\n";
+  return csvDocument([headers, ...rows]);
 }
 
 // XLSX cells are inline strings or numbers (lib/spreadsheet/xlsx-write.ts never writes a formula), so text keeps the

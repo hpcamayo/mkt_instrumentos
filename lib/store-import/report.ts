@@ -1,20 +1,10 @@
-// Import result report (design §7.6) and the CSV writing it needs. Cells that a spreadsheet could read as a formula
-// (starting with =, +, -, @, tab or carriage return) are prefixed with an apostrophe (OWASP CSV injection guidance);
-// genuine numbers are written as plain digits.
+// Import result report (design §7.6).
+import { csvCell, csvLine } from "@/lib/spreadsheet/csv-write";
 import type { XlsxCell } from "@/lib/spreadsheet/xlsx-write";
 
-const FORMULA_START = /^[=+\-@\t\r]/;
-
-export function csvSafeCell(value: XlsxCell) {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "";
-  const text = FORMULA_START.test(value) ? `'${value}` : value;
-  return /[",\r\n;]/.test(text) || text !== text.trim() ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-export function csvRow(cells: XlsxCell[]) {
-  return cells.map(csvSafeCell).join(",");
-}
+// Shared with the inventory export: lib/spreadsheet/csv-write.ts.
+export const csvSafeCell = (value: XlsxCell) => csvCell(value);
+export const csvRow = (cells: XlsxCell[]) => csvLine(cells);
 
 export type ReportRow = {
   row_number: number;

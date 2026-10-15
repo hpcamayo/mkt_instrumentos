@@ -1,0 +1,10 @@
+Código;Producto;Marca;Modelo;Categoría;Precio;Cant;Estado;Descripción;Color
+BOSS-DS1;Boss DS-1 Distortion;Boss;DS-1;Pedales;289;10;Nuevo;Pedal de distorsión clásico, nuevo en caja sellada, con garantía de la tienda.;
+YAM-C40;Yamaha C40;Yamaha;C40;Guitarras;459;14;Nuevo;Guitarra clásica de estudio, ideal para colegios y principiantes, nueva.;Natural
+BOSS-SD1;Boss SD-1 Super OverDrive;Boss;SD-1;Pedales;319;5;Nuevo;Overdrive clásico de Boss, nuevo con garantía de la tienda por un año.;
+FEN-MUSTLT25;Fender Mustang LT25;Fender;Mustang LT25;Amplificadores;899;3;Nuevo;Amplificador de modelado de 25 W con presets y afinador, nuevo en caja.;
+VF-5A;Baquetas Vic Firth 5A;Vic Firth;5A;Percusión;65;30;Nuevo;Par de baquetas de nogal americano, punta de madera, las más vendidas.;
+SHU-SM57;Shure SM57;Shure;SM57;Micrófonos;520;-2;Nuevo;Micrófono dinámico para instrumentos y voz, nuevo, con pinza y bolsa.;
+BOSS-SD1;Boss SD-1 (repetido);Boss;SD-1;Pedales;319;4;Nuevo;Fila repetida a propósito para mostrar la validación del importador.;
+;Correa de guitarra negra;Ernie Ball;Polypro;Accesorios;35;20;Nuevo;Correa de polipropileno negra ajustable, la tienda genera el SKU.;Negro
+=1+1;Cejilla Kyser;Kyser;KG6;Accesorios;79;6;Nuevo;Celda que parece fórmula: el importador la trata como texto.;
