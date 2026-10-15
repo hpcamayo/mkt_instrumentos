@@ -10,6 +10,7 @@ import { ErrorSummary } from "@/components/ui/error-summary";
 import { Checkbox, Field, FileInput, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
+import { ImportPhotos } from "@/components/store-import/import-photos";
 import { IMPORT_FILE_ACCEPT, importFileFormat, importFileProblem, uploadImportFile } from "@/components/store-import/import-start";
 import { importStatus } from "@/lib/store-import/labels";
 import { IMPORT_ATTRIBUTE_FIELDS, IMPORT_FIELDS, mappingProblems, type ImportMapping } from "@/lib/store-import/mapping";
@@ -19,12 +20,13 @@ import type { ImportCell, ImportIssue } from "@/lib/store-import/types";
 import type { StatusTone } from "@/lib/ui/status";
 import { cn } from "@/lib/utils";
 
-// The wizard's steps (design §13.4). STORE-3a inserts "Fotos" between Revisar and Confirmar by adding an entry here
-// and a view for it; the step loop and the server do not change.
+// The wizard's steps (design §13.4). "Fotos" (STORE-3a) sits between Revisar and Confirmar; the step loop and the
+// server do not change.
 export const IMPORT_WIZARD_STEPS = [
   { key: "upload", label: "Subir archivo" },
   { key: "mapping", label: "Columnas" },
   { key: "review", label: "Revisar" },
+  { key: "photos", label: "Fotos" },
   { key: "confirm", label: "Confirmar" },
   { key: "result", label: "Resultado" },
 ] as const;
@@ -63,7 +65,7 @@ async function api<T>(path: string, init?: { method?: "GET" | "POST"; body?: unk
   }
 }
 
-type ReadyView = "mapping" | "review" | "confirm";
+type ReadyView = "mapping" | "review" | "photos" | "confirm";
 
 function stepFor(status: string, reviewing: ReadyView): StepKey {
   switch (status) {
@@ -223,14 +225,22 @@ export function ImportWizard({ initialSession, initialNext }: { initialSession: 
           session={session}
           onDecision={async (rows, decision) => act({ action: "decision", rows, decision, version: session.version })}
           onBack={() => setReviewing("mapping")}
-          onContinue={() => { setReviewing("confirm"); window.scrollTo({ top: 0 }); }}
+          onContinue={() => { setReviewing("photos"); window.scrollTo({ top: 0 }); }}
+        />
+      ) : null}
+
+      {session.status === "ready" && !working && reviewing === "photos" ? (
+        <ImportPhotos
+          sessionId={session.id}
+          onBack={() => setReviewing("review")}
+          onContinue={() => { setReviewing("confirm"); window.scrollTo({ top: 0 }); void reload(); }}
         />
       ) : null}
 
       {session.status === "ready" && !working && reviewing === "confirm" ? (
         <ConfirmStep
           session={session}
-          onBack={() => setReviewing("review")}
+          onBack={() => setReviewing("photos")}
           onConfirm={() => act({ action: "confirm", version: session.version })}
         />
       ) : null}
@@ -631,6 +641,7 @@ function ConfirmStep({ session, onBack, onConfirm }: { session: ImportSession; o
     counts.stock_changes ? `Cambia el stock de ${plural(counts.stock_changes, "SKU", "SKU")}; cada cambio queda en el historial como ajuste por importación.` : null,
     counts.error ? `${plural(counts.error, "fila con errores no se aplicará", "filas con errores no se aplicarán")}.` : null,
     counts.excluded ? `${plural(counts.excluded, "fila excluida no se aplicará", "filas excluidas no se aplicarán")}.` : null,
+    session.photo_counts?.rows_ready ? `${plural(session.photo_counts.rows_ready, "SKU tiene", "SKU tienen")} sus fotos listas para publicarse.` : null,
   ].filter(Boolean) as string[];
   return (
     <div className="grid gap-5">
@@ -702,10 +713,29 @@ function ResultStep({ session, onReopen }: { session: ImportSession; onReopen: (
         <a href={`/api/store/imports/${session.id}/report`} className={buttonClasses({ variant: "secondary" })}><Download aria-hidden />Descargar informe (CSV)</a>
         <Link href="/mi-cuenta/tienda/inventario" className={buttonClasses()}>Ir al inventario</Link>
       </div>
+      {session.status === "committed" || session.status === "partially_committed" ? <ResultPhotos session={session} /> : null}
       {session.status === "committed" || session.status === "partially_committed" ? (
         <RowsList sessionId={session.id} filter={filter} onFilter={setFilter} counts={counts} editable={false} version={session.version} filters={RESULT_FILTERS} />
       ) : null}
       <p className="t-ui"><Link href="/mi-cuenta/tienda/inventario/importar" className="link font-semibold">Nueva importación</Link></p>
+    </div>
+  );
+}
+
+// After the commit the photos can still be added or corrected until the import's staged rows are cleaned up (30 days),
+// so publication (STORE-3b) can use them.
+function ResultPhotos({ session }: { session: ImportSession }) {
+  const [open, setOpen] = useState(false);
+  const ready = session.photo_counts?.rows_ready ?? 0;
+  return (
+    <div className="grid gap-4 rounded-panel border border-subtle p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="t-body">
+          {ready ? `${plural(ready, "SKU tiene", "SKU tienen")} sus fotos listas.` : "Todavía no hay SKU con fotos listas."}
+        </p>
+        <Button size="sm" variant="secondary" onClick={() => setOpen((value) => !value)}>{open ? "Ocultar fotos" : "Revisar fotos"}</Button>
+      </div>
+      {open ? <ImportPhotos sessionId={session.id} /> : null}
     </div>
   );
 }

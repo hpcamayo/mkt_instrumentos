@@ -40,6 +40,7 @@ export type ImportSession = {
   file_warnings: string[];
   counts: Record<string, number>;
   result_summary: Record<string, number> | null;
+  photo_counts?: Record<string, number>;
   version: number;
   error_code: string | null;
   error_message: string | null;
