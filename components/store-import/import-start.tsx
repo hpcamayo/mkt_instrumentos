@@ -36,7 +36,8 @@ export function importFileFormat(file: File): SpreadsheetFormat {
 export async function uploadImportFile(path: string, file: File) {
   const supabase = getSupabaseBrowserClient();
   if (!supabase) return "No pudimos conectar con Laria. Vuelve a intentarlo.";
-  const { error } = await supabase.storage.from("store-imports").upload(path, file, {
+  // Raw bytes rather than the File: supabase-js then sends the body as is instead of a multipart form.
+  const { error } = await supabase.storage.from("store-imports").upload(path, await file.arrayBuffer(), {
     contentType: CONTENT_TYPES[importFileFormat(file)],
     upsert: false,
   });
@@ -79,9 +80,9 @@ export function ImportStartForm() {
         setBusy(false);
         return;
       }
-      const uploadError = await uploadImportFile(body.upload.path, file);
-      // Even if the upload failed, the session page offers to upload again.
-      router.push(`/mi-cuenta/tienda/inventario/importar/${body.session.id}${uploadError ? "?subida=fallida" : ""}`);
+      // Even if the upload fails, the session page notices the missing file and offers to upload it again.
+      await uploadImportFile(body.upload.path, file);
+      router.push(`/mi-cuenta/tienda/inventario/importar/${body.session.id}`);
     } catch {
       setError("No pudimos conectar con Laria. Revisa tu conexión y vuelve a intentarlo.");
       setAttempt((value) => value + 1);

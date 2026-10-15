@@ -188,7 +188,7 @@ test("mapping proposes fields from Spanish and English headers, once each", () =
   assert.equal(mapping.description, 1);
   assert.equal(mapping.unit_price_pen, 3, "the leftmost price column wins");
   assert.equal(mapping.brand, 4);
-  assert.equal(mapping.quantity, 5);
+  assert.equal(mapping.quantity, 2, "\"Cant.\" is the leftmost stock column");
   assert.equal(mapping["attribute:body_type"], 6, "attribute columns map to existing attribute keys");
   assert.equal(mapping.category, 7);
   assert.equal(Object.values(mapping).length, new Set(Object.values(mapping)).size);
@@ -229,6 +229,7 @@ test("Excel coercions of identifiers are caught, never repaired", () => {
   assert.equal(numeric.parsed.sku, "123");
   assert.ok(codes(numeric.issues).includes("IMPORT_IDENTIFIER_NUMBER"), "numeric SKU warns about leading zeros");
   assert.ok(codes(parseImportRow(row([{ v: "45000", k: "d" }, "Nombre", "1"]), MAPPING).issues).includes("IMPORT_IDENTIFIER_DATE"));
+  assert.ok(codes(parseImportRow(row([{ v: "123456789012345680", k: "n" }, "Nombre", "1"]), MAPPING).issues).includes("IMPORT_IDENTIFIER_SCIENTIFIC"), "more than 15 digits lost precision");
   assert.ok(codes(parseImportRow(row(["SKU CON ESPACIO", "Nombre", "1"]), MAPPING).issues).includes("IMPORT_SKU_INVALID"));
   assert.ok(codes(parseImportRow(row(["A", "Nombre", "1", "", "", "", "", { v: "7.5E+12", k: "n" }]), MAPPING).issues).includes("IMPORT_IDENTIFIER_SCIENTIFIC"));
 });

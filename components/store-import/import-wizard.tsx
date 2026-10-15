@@ -97,7 +97,7 @@ function plural(count: number, one: string, many: string) {
 
 // ------------------------------------------------------------------ the wizard
 
-export function ImportWizard({ initialSession, initialNext, uploadFailed }: { initialSession: ImportSession; initialNext: StepNext; uploadFailed: boolean }) {
+export function ImportWizard({ initialSession, initialNext }: { initialSession: ImportSession; initialNext: StepNext }) {
   const [session, setSession] = useState(initialSession);
   const [next, setNext] = useState<StepNext>(initialNext);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +105,7 @@ export function ImportWizard({ initialSession, initialNext, uploadFailed }: { in
   const [tick, setTick] = useState(0);
   // An awaiting_upload session is checked once (the start page normally uploaded the file); if the file is not there,
   // the page asks for it.
-  const [checkUpload, setCheckUpload] = useState(!uploadFailed);
+  const [checkUpload, setCheckUpload] = useState(true);
   const [reviewing, setReviewing] = useState<ReadyView>("review");
   const [confirm, confirmDialog] = useConfirm();
 

@@ -10,11 +10,8 @@ import { nextFor, readImportSession } from "@/lib/store-import/server";
 
 export const metadata = { title: "Importar desde Excel" };
 
-export default async function StoreImportSessionPage({ params, searchParams }: {
-  params: Promise<{ sessionId: string }>;
-  searchParams: Promise<{ subida?: string }>;
-}) {
-  const [{ sessionId }, { subida }] = await Promise.all([params, searchParams]);
+export default async function StoreImportSessionPage({ params }: { params: Promise<{ sessionId: string }> }) {
+  const { sessionId } = await params;
   const { profile, store, supabase } = await getAccountContext();
   if (profile?.account_type !== "store_owner") redirect("/mi-cuenta/publicaciones");
   if (!store) redirect("/mi-cuenta/tienda");
@@ -31,7 +28,7 @@ export default async function StoreImportSessionPage({ params, searchParams }: {
         actions={<Link href="/mi-cuenta/tienda/inventario" className={buttonClasses({ variant: "secondary" })}>Volver al inventario</Link>}
       />
       <div className="p-5">
-        <ImportWizard initialSession={session} initialNext={nextFor(session)} uploadFailed={subida === "fallida"} />
+        <ImportWizard initialSession={session} initialNext={nextFor(session)} />
       </div>
     </section>
   );

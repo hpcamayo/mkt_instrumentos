@@ -131,6 +131,12 @@ function identifier(cells: ImportCell[], mapping: ImportMapping, field: "sku" | 
       `Excel convirtió ${label} a notación científica (${value}) y el valor original se perdió. Guarda esa columna como texto.`);
     return null;
   }
+  // A spreadsheet number keeps 15 significant digits; a longer numeric code has already lost its last digits.
+  if (cell.k === "n" && value.replace(/^0+|\D/g, "").length > 15) {
+    issue(context, field, "IMPORT_IDENTIFIER_SCIENTIFIC", "error",
+      `Excel guardó ${label} como número y perdió los últimos dígitos (${value}). Guarda esa columna como texto.`);
+    return null;
+  }
   if (cell.k === "n" || cell.k === "b") {
     issue(context, field, "IMPORT_IDENTIFIER_NUMBER", "warning", `Excel guardó ${label} como número; revisa los ceros a la izquierda.`);
   }

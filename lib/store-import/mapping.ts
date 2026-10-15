@@ -39,7 +39,7 @@ export const IMPORT_FIELDS: readonly ImportField[] = [
   { key: "instrument_type", label: "Tipo de instrumento", help: "Opcional.", synonyms: ["tipo de instrumento", "tipo", "subcategoría", "type", "instrument type"] },
   { key: "variant_label", label: "Variante", help: "Color, acabado, medida u otra versión.", synonyms: ["variante", "variant", "color", "acabado", "versión"] },
   { key: "unit_price_pen", label: "Precio (PEN)", help: "En soles enteros, sin decimales. Necesario para publicar.", synonyms: ["precio (pen)", "precio pen", "precio", "precio de venta", "precio venta", "p. venta", "pvp", "price", "precio s/", "precio s/.", "precio unitario"] },
-  { key: "quantity", label: "Stock", help: "Total contado de unidades, de 0 a 100000.", synonyms: ["stock", "cantidad", "existencias", "unidades", "qty", "quantity", "stock actual", "inventario", "saldo"] },
+  { key: "quantity", label: "Stock", help: "Total contado de unidades, de 0 a 100000.", synonyms: ["stock", "cantidad", "cant", "existencias", "unidades", "qty", "quantity", "stock actual", "inventario", "saldo"] },
   { key: "condition", label: "Condición", help: "Nuevo, Usado - buen estado o Usado - con detalles. Necesaria para publicar.", synonyms: ["condición", "estado", "condition"] },
   { key: "description", label: "Descripción", help: "Al menos 40 caracteres para publicar.", synonyms: ["descripción", "description", "detalle", "detalles"] },
   { key: "low_stock_threshold", label: "Umbral de stock bajo", help: "Opcional: avisa cuando el stock llega a este número.", synonyms: ["umbral de stock bajo", "umbral", "stock mínimo", "mínimo", "min", "punto de reorden"] },
