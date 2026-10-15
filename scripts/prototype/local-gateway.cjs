@@ -142,6 +142,28 @@ function safePath(bucket, name) {
   if (!p.startsWith(path.resolve(STORAGE_DIR, bucket) + path.sep)) throw new Error("bad path");
   return p;
 }
+// supabase-js sends a File or Blob as multipart/form-data (the file in the part that has a filename) and raw bytes as is.
+function fileFromRequest(req, raw) {
+  const contentType = req.headers["content-type"] || "application/octet-stream";
+  const boundary = /multipart\/form-data;.*boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
+  if (!boundary) return { body: raw, type: contentType };
+  const delimiter = Buffer.from(`--${boundary[1] || boundary[2]}`);
+  let start = raw.indexOf(delimiter);
+  while (start !== -1) {
+    const next = raw.indexOf(delimiter, start + delimiter.length);
+    if (next === -1) break;
+    const part = raw.subarray(start + delimiter.length + 2, next - 2);
+    const split = part.indexOf("\r\n\r\n");
+    const headers = part.subarray(0, split).toString();
+    if (/filename=/i.test(headers)) {
+      const partType = /content-type:\s*([^\r\n]+)/i.exec(headers);
+      return { body: part.subarray(split + 4), type: partType ? partType[1].trim() : "application/octet-stream" };
+    }
+    start = next;
+  }
+  return { body: raw, type: contentType };
+}
+
 async function handleStorage(req, res, url) {
   await ready;
   const parts = decodeURIComponent(url.pathname.replace(/^\/storage\/v1\//, "")).split("/");
@@ -171,13 +193,14 @@ async function handleStorage(req, res, url) {
     const name = (isPublic ? parts.slice(3) : parts.slice(2)).join("/");
     const file = safePath(bucket, name);
     if (req.method === "POST" || req.method === "PUT") {
-      const body = await readBody(req);
+      const { body, type } = fileFromRequest(req, await readBody(req));
       if (req.method === "POST" && fs.existsSync(file) && req.headers["x-upsert"] !== "true") return send(res, 400, { statusCode: "409", error: "Duplicate", message: "The resource already exists" });
+      await db.query(`insert into storage.objects (bucket_id, name, owner, owner_id, metadata) values ($1,$2,$3::uuid,$5::text,$4)
+        on conflict (bucket_id, name) do update set updated_at = now(), metadata = excluded.metadata`,
+        [bucket, name, owner, JSON.stringify({ size: body.length, mimetype: type }), owner]);
+      // The row first, so an unknown bucket fails before anything reaches the disk.
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, body);
-      await db.query(`insert into storage.objects (bucket_id, name, owner, owner_id, metadata) values ($1,$2,$3,$3::text,$4)
-        on conflict (bucket_id, name) do update set updated_at = now(), metadata = excluded.metadata`,
-        [bucket, name, owner, JSON.stringify({ size: body.length, mimetype: req.headers["content-type"] })]);
       return send(res, 200, { Key: `${bucket}/${name}`, Id: crypto.randomUUID() });
     }
     if (!fs.existsSync(file)) return send(res, 404, { statusCode: "404", error: "not_found", message: "Object not found" });

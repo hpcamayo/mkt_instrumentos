@@ -133,17 +133,28 @@ on conflict do nothing;
 
 -- ------------------------------------------------------------------ PAY-1: accepted payment methods (Pilot A)
 -- Visible only with LARIA_ASSISTED_COMMERCE=1. Three approved methods, one still in review.
-set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"d0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
-select public.set_store_payment_method('efectivo_al_recoger', null, null, 'En tienda, Av. Larco 1234');
-select public.set_store_payment_method('yape_plin', 'Laria Demo Música SAC', null, null);
-select public.set_store_payment_method('pos_tarjeta_al_recoger', 'Laria Demo Música SAC', 'Izipay', 'Visa y Mastercard');
-select public.set_store_payment_method('link_de_pago', 'Laria Demo Música SAC', 'Mercado Pago', 'Te enviamos el link por WhatsApp');
-select set_config('request.jwt.claims',
-  '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"admin"}}', true);
-select public.admin_review_store_payment_method(m.store_id, m.method, 'approve', 'Titular coincide con la razón social', m.updated_at)
-from public.store_payment_methods m
-where m.store_id = 'd1000000-0000-4000-8000-000000000001' and m.method <> 'link_de_pago' and m.status = 'pending_review';
-reset role;
+do $pay$
+begin
+  -- Skipped on a branch without PAY-1.
+  if to_regprocedure('public.set_store_payment_method(public.store_payment_method,text,text,text)') is null then
+    raise notice 'PAY-1 not present; skipping payment methods';
+    return;
+  end if;
+  perform set_config('request.jwt.claims', '{"sub":"d0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  execute $q$
+    select public.set_store_payment_method('efectivo_al_recoger', null, null, 'En tienda, Av. Larco 1234');
+    select public.set_store_payment_method('yape_plin', 'Laria Demo Música SAC', null, null);
+    select public.set_store_payment_method('pos_tarjeta_al_recoger', 'Laria Demo Música SAC', 'Izipay', 'Visa y Mastercard');
+    select public.set_store_payment_method('link_de_pago', 'Laria Demo Música SAC', 'Mercado Pago', 'Te enviamos el link por WhatsApp');
+  $q$;
+  perform set_config('request.jwt.claims',
+    '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+  execute $q$
+    select public.admin_review_store_payment_method(m.store_id, m.method, 'approve', 'Titular coincide con la razón social', m.updated_at)
+    from public.store_payment_methods m
+    where m.store_id = 'd1000000-0000-4000-8000-000000000001' and m.method <> 'link_de_pago' and m.status = 'pending_review'
+  $q$;
+end
+$pay$;
 
 commit;
