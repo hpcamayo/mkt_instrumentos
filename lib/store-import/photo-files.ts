@@ -1,13 +1,19 @@
 // Browser side of import photos (design §8.1, §8.2): which files in a selection or ZIP are photos, reading a ZIP one
 // entry at a time with hard caps, and the optional manifest. Nothing here is trusted by the server: names only become
 // display text and matching hints, and every uploaded object is checked again server-side.
-import { Unzip, UnzipInflate, type UnzipFile } from "fflate";
+import { Inflate, Unzip, type AsyncFlateStreamHandler, type FlateError, type UnzipDecoder, type UnzipFile } from "fflate";
 
 export const PHOTO_MAX_FILES = 600; // D-3, per import
 export const PHOTO_MAX_FILE_BYTES = 5 * 1024 * 1024; // D-3, per photo
 export const PHOTO_SLOT_BATCH = 10; // photos per upload round (the server takes up to 25)
 export const PHOTO_MAX_ARCHIVE_ENTRIES = 5000; // entries looked at in one ZIP, photos or not
-const ZIP_READ_SLICE = 64 * 1024;
+// The ZIP reader takes the archive 16 KiB at a time and inflates an entry in slices small enough that, even at
+// deflate's ~1:1032 ceiling, one slice cannot produce more than what is left of the entry's 5 MB budget (and never
+// below 1 KiB, about 1 MiB of output). The running total is checked after every slice, so whatever an entry's header
+// claims, no single step produces more than the cap and the entry stops within about 1 MiB of it.
+const ZIP_READ_STEP = 16 * 1024;
+const DEFLATE_MAX_RATIO = 1032;
+const INFLATE_MIN_SLICE = 1024;
 
 export type PhotoMimeType = "image/jpeg" | "image/png" | "image/webp";
 
@@ -75,10 +81,56 @@ export function parseManifest(text: string): { entries: Map<string, ManifestEntr
 export type ArchivePhoto = { name: string; type: PhotoMimeType; data: Uint8Array };
 export type ArchiveSkip = { name: string; reason: SkipReason };
 
-// Reads a ZIP from a stream, one entry at a time, and hands each photo to `onPhoto` before reading on (so at most one
-// slice of the archive is in memory beyond what onPhoto keeps). Entries are capped by declared and actual size; a
-// lying header or a bomb stops at 5 MB for that entry. Only the base name of an entry is kept. A manifest is chosen as
-// its own file, not read from inside the ZIP, so it is known before the first photo is sent.
+// Deflate for ZIP entries, inflated in budget-sized slices (above) and stoppable: terminate() (an entry over its cap,
+// or one that is not wanted) stops the inflating. fflate's own UnzipInflate inflates whatever chunk it is handed in
+// one go, whatever it expands to, and cannot be stopped.
+class SlicedInflate implements UnzipDecoder {
+  static compression = 8;
+  ondata: AsyncFlateStreamHandler = () => {};
+  private stopped = false;
+  private produced = 0;
+  private readonly inflater = new Inflate((data, final) => {
+    this.produced += data.length;
+    this.ondata(null, data, final);
+  });
+
+  push(data: Uint8Array, final: boolean) {
+    for (let offset = 0, size = 0; !this.stopped; offset += size) {
+      size = Math.max(INFLATE_MIN_SLICE, Math.floor((PHOTO_MAX_FILE_BYTES - this.produced) / DEFLATE_MAX_RATIO));
+      const last = offset + size >= data.length;
+      try {
+        this.inflater.push(data.subarray(offset, offset + size), final && last);
+      } catch (error) {
+        this.stopped = true;
+        this.ondata(error as FlateError, new Uint8Array(0), final);
+      }
+      if (last) return;
+    }
+  }
+
+  terminate() {
+    this.stopped = true;
+  }
+}
+
+// fflate keeps every byte of an entry that is never started, so an unwanted entry is started into nothing and stopped
+// at once: its bytes are dropped as they stream past and it is never inflated.
+function discard(file: UnzipFile) {
+  file.ondata = () => {};
+  try {
+    file.start();
+    file.terminate();
+  } catch {
+    // Unknown compression method: fflate cannot start it and keeps its bytes until the reader is done.
+  }
+}
+
+// Reads a ZIP from a stream, one small step at a time, and hands each photo to `onPhoto` before reading on (so at most
+// one read of the archive and the photos finished in one step are in memory beyond what onPhoto keeps). Entries are
+// capped by declared and actual size; a declared size is only a shortcut, never trusted: a lying header, an entry
+// without sizes (data descriptor) or a bomb stops within about 1 MiB of 5 MB for that entry. Only the base name of an
+// entry is kept. A manifest is chosen as its own file, not read from inside the ZIP, so it is known before the first
+// photo is sent.
 export async function readPhotoArchive(
   stream: ReadableStream<Uint8Array>,
   handlers: {
@@ -94,25 +146,25 @@ export async function readPhotoArchive(
   let invalid = false;
 
   const unzipper = new Unzip();
-  unzipper.register(UnzipInflate);
+  unzipper.register(SlicedInflate);
   unzipper.onfile = (file: UnzipFile) => {
     entries += 1;
-    if (entries > PHOTO_MAX_ARCHIVE_ENTRIES) return;
+    if (entries > PHOTO_MAX_ARCHIVE_ENTRIES) return discard(file);
     const name = baseName(file.name);
     const problem = photoEntryProblem(file.name);
-    if (problem === "directory" || problem === "hidden") return;
+    if (problem === "directory" || problem === "hidden") return discard(file);
     if (problem) {
       skipped.push({ name, reason: problem });
-      return;
+      return discard(file);
     }
     const cap = PHOTO_MAX_FILE_BYTES;
     if (remaining <= 0) {
       skipped.push({ name, reason: "over_limit" });
-      return;
+      return discard(file);
     }
     if ((file.originalSize ?? 0) > cap) {
       skipped.push({ name, reason: "too_large" });
-      return;
+      return discard(file);
     }
     remaining -= 1;
     const chunks: Uint8Array[] = [];
@@ -152,8 +204,8 @@ export async function readPhotoArchive(
     for (;;) {
       const { value, done } = await reader.read();
       if (value) pending = pending.length ? join([pending, value], pending.length + value.length) : value;
-      while (pending.length >= ZIP_READ_SLICE || (done && pending.length)) {
-        const slice = pending.subarray(0, ZIP_READ_SLICE);
+      while (pending.length >= ZIP_READ_STEP || (done && pending.length)) {
+        const slice = pending.subarray(0, ZIP_READ_STEP);
         pending = pending.subarray(slice.length);
         finished = done && pending.length === 0;
         unzipper.push(slice, finished);

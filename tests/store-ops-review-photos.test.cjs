@@ -1,11 +1,59 @@
 // Review fixes for import photos (Codex review of 2026-10-16, item 4). The server-side check walks each format to its
 // real end (JPEG segments and scans up to EOI, every PNG chunk with its CRC, every WebP chunk) and refuses anything
-// incomplete or appended. Runs with `pnpm test`.
+// incomplete or appended; the browser ZIP reader inflates in small steps, so a size header that lies cannot make it
+// produce more than about 1 MiB before the cap is checked, and entries it skips are not kept in memory. Runs with
+// `pnpm test`.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { zipSync, strToU8 } = require("fflate");
+const Module = require("node:module");
+const fflate = require("fflate");
+const { zipSync, deflateSync, strToU8 } = fflate;
+
+// What the ZIP reader is handed for each entry, by entry name: total bytes and the largest single step. Watching
+// fflate's Unzip from the outside keeps production code free of test hooks.
+const inflated = new Map();
+const unzippers = [];
+const HANDLER = Symbol("onfile");
+class WatchedUnzip extends fflate.Unzip {
+  constructor(...args) {
+    super(...args);
+    unzippers.push(this);
+  }
+  set onfile(handler) {
+    this[HANDLER] = handler;
+  }
+  get onfile() {
+    const handler = this[HANDLER];
+    return handler && ((file) => {
+      const log = { total: 0, largest: 0 };
+      inflated.set(file.name, log);
+      let ondata;
+      Object.defineProperty(file, "ondata", {
+        configurable: true,
+        get: () => ondata,
+        set: (next) => {
+          ondata = (error, data, final) => {
+            if (data) {
+              log.total += data.length;
+              log.largest = Math.max(log.largest, data.length);
+            }
+            next(error, data, final);
+          };
+        },
+      });
+      handler(file);
+    });
+  }
+}
+
+const load = Module._load;
+Module._load = function stubModules(request, ...rest) {
+  if (request === "fflate") return { ...fflate, Unzip: WatchedUnzip };
+  return load.call(this, request, ...rest);
+};
 
 const { checkPhoto, readHeader } = require("@/lib/store-import/photo-check");
+const { readPhotoArchive, PHOTO_MAX_FILE_BYTES } = require("@/lib/store-import/photo-files");
 
 // ------------------------------------------------------------------ fixtures
 
@@ -382,5 +430,153 @@ test("damaged copies of real files never throw and never pass with impossible va
       assert.ok(["image/jpeg", "image/png", "image/webp"].includes(result.mime_type));
       assert.ok(result.width >= 400 && result.width <= 8000 && result.height >= 400 && result.height <= 8000);
     }
+  }
+});
+
+// ------------------------------------------------------------------ browser ZIP reader: bounded inflating
+
+// How far past its cap an entry may get: the last slice (1 KiB at deflate's ~1:1032 ceiling) or one stored deflate
+// block (64 KiB). No single step may produce more than the cap itself.
+const OVERSHOOT = 1032 * 1024 + 64 * 1024;
+
+function streamOf(bytes, chunk = 64 * 1024) {
+  return new ReadableStream({
+    start(controller) {
+      for (let offset = 0; offset < bytes.length; offset += chunk) controller.enqueue(bytes.subarray(offset, offset + chunk));
+      controller.close();
+    },
+  });
+}
+
+async function readArchive(bytes, remaining) {
+  inflated.clear();
+  const photos = [];
+  const result = await readPhotoArchive(streamOf(bytes), { remaining, onPhoto: async (photo) => { photos.push(photo); } });
+  return { ...result, photos, names: photos.map((photo) => photo.name) };
+}
+
+// Rewrites the uncompressed size of one entry in its local header and in the central directory, as a hostile archive
+// would, leaving everything else (compressed size included) intact.
+function understateSize(zip, name, size) {
+  const bytes = Buffer.from(zip);
+  for (let offset = 0; offset + 46 <= bytes.length; offset += 1) {
+    const signature = bytes.readUInt32LE(offset);
+    if (signature === 0x04034b50 && bytes.toString("latin1", offset + 30, offset + 30 + bytes.readUInt16LE(offset + 26)) === name) {
+      bytes.writeUInt32LE(size, offset + 22);
+    }
+    if (signature === 0x02014b50 && bytes.toString("latin1", offset + 46, offset + 46 + bytes.readUInt16LE(offset + 28)) === name) {
+      bytes.writeUInt32LE(size, offset + 24);
+    }
+  }
+  return bytes;
+}
+
+// A deflate ZIP whose entries use a data descriptor (flag bit 3): the local header carries no CRC and no sizes, the
+// way macOS and streaming zippers write them.
+function zipWithDescriptors(entries) {
+  const parts = [];
+  const directory = [];
+  let offset = 0;
+  for (const [name, data] of Object.entries(entries)) {
+    const body = Buffer.from(deflateSync(data, { level: 9 }));
+    const crc = crc32(data);
+    const nameBytes = Buffer.from(name, "latin1");
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0x0008, 6);
+    local.writeUInt16LE(8, 8);
+    local.writeUInt16LE(nameBytes.length, 26);
+    const descriptor = Buffer.alloc(16);
+    descriptor.writeUInt32LE(0x08074b50, 0);
+    descriptor.writeUInt32LE(crc, 4);
+    descriptor.writeUInt32LE(body.length, 8);
+    descriptor.writeUInt32LE(data.length, 12);
+    const record = Buffer.alloc(46);
+    record.writeUInt32LE(0x02014b50, 0);
+    record.writeUInt16LE(20, 4);
+    record.writeUInt16LE(20, 6);
+    record.writeUInt16LE(0x0008, 8);
+    record.writeUInt16LE(8, 10);
+    record.writeUInt32LE(crc, 16);
+    record.writeUInt32LE(body.length, 20);
+    record.writeUInt32LE(data.length, 24);
+    record.writeUInt16LE(nameBytes.length, 28);
+    record.writeUInt32LE(offset, 42);
+    parts.push(local, nameBytes, body, descriptor);
+    directory.push(record, nameBytes);
+    offset += local.length + nameBytes.length + body.length + descriptor.length;
+  }
+  const central = Buffer.concat(directory);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(Object.keys(entries).length, 8);
+  end.writeUInt16LE(Object.keys(entries).length, 10);
+  end.writeUInt32LE(central.length, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...parts, central, end]);
+}
+
+test("a ZIP entry whose header understates its size stops at the cap while inflating", async () => {
+  const zip = understateSize(zipSync({
+    "bomba__01.jpg": [new Uint8Array(40 * 1024 * 1024), { level: 9 }],
+    "ok__01.jpg": new Uint8Array(REAL.jpegRestart),
+  }), "bomba__01.jpg", 1000);
+  assert.ok(zip.length < 64 * 1024, "the whole bomb fits in one read");
+  const result = await readArchive(zip);
+  assert.deepEqual(result.skipped, [{ name: "bomba__01.jpg", reason: "too_large" }]);
+  assert.deepEqual(result.names, ["ok__01.jpg"]);
+  assert.deepEqual(Buffer.from(result.photos[0].data), REAL.jpegRestart, "the next entry still reads intact");
+  const bomb = inflated.get("bomba__01.jpg");
+  assert.ok(bomb.largest <= PHOTO_MAX_FILE_BYTES, `largest step ${bomb.largest} bytes`);
+  assert.ok(bomb.total <= PHOTO_MAX_FILE_BYTES + OVERSHOOT, `inflated ${bomb.total} bytes before stopping`);
+});
+
+test("an entry with a data descriptor (no sizes in its header) is capped the same way", async () => {
+  const zip = zipWithDescriptors({ "bomba__01.jpg": new Uint8Array(40 * 1024 * 1024), "ok__01.jpg": REAL.jpegProgressive });
+  const result = await readArchive(zip);
+  assert.deepEqual(result.skipped, [{ name: "bomba__01.jpg", reason: "too_large" }]);
+  assert.deepEqual(result.names, ["ok__01.jpg"]);
+  assert.deepEqual(Buffer.from(result.photos[0].data), REAL.jpegProgressive);
+  const bomb = inflated.get("bomba__01.jpg");
+  assert.ok(bomb.largest <= PHOTO_MAX_FILE_BYTES, `largest step ${bomb.largest} bytes`);
+  assert.ok(bomb.total <= PHOTO_MAX_FILE_BYTES + OVERSHOOT, `inflated ${bomb.total} bytes before stopping`);
+  // Honest descriptor entries read normally.
+  const honest = await readArchive(zipWithDescriptors({ "a__01.png": REAL.png, "b__01.webp": REAL.webpAlpha }));
+  assert.deepEqual(honest.names, ["a__01.png", "b__01.webp"]);
+  assert.equal(checkPhoto(honest.photos[1].data).ok, true);
+});
+
+test("entries the reader skips are not kept in memory", async () => {
+  const zip = zipSync({
+    "fotos/video.mp4": [new Uint8Array(8 * 1024 * 1024).fill(7), { level: 0 }],
+    "fotos/grande__01.jpg": [new Uint8Array(6 * 1024 * 1024), { level: 9 }],
+    "fotos/.oculto.jpg": [new Uint8Array(1024 * 1024).fill(1), { level: 0 }],
+    "fotos/a__01.jpg": new Uint8Array(REAL.jpegRestart),
+    "fotos/b__01.jpg": [new Uint8Array(REAL.jpegProgressive), { level: 0 }],
+  });
+  const result = await readArchive(zip, 1);
+  assert.deepEqual(result.names, ["a__01.jpg"]);
+  assert.deepEqual(result.skipped.map((item) => item.reason), ["not_image", "too_large", "over_limit"]);
+  // fflate 0.8.2 keeps the bytes of every entry that is never started in Unzip#k until the reader is dropped.
+  const unzipper = unzippers[unzippers.length - 1];
+  assert.ok(Array.isArray(unzipper.k), "fflate's internal buffer moved; update this check");
+  const held = unzipper.k.reduce((sum, chunks) => sum + chunks.reduce((total, chunk) => total + chunk.length, 0), 0);
+  assert.ok(held < 64 * 1024, `the reader still holds ${held} bytes of skipped entries`);
+  assert.equal(inflated.get("fotos/grande__01.jpg").total, 0, "a skipped entry is never inflated");
+});
+
+test("honest photos come through byte for byte in small steps", async () => {
+  const entries = {
+    "a__01.jpg": new Uint8Array(REAL.jpegRestart),
+    "a__02.jpg": [new Uint8Array(REAL.jpegProgressive), { level: 0 }],
+    "b__01.png": new Uint8Array(REAL.png),
+    "c__01.webp": new Uint8Array(REAL.webpLossy),
+  };
+  const result = await readArchive(Buffer.from(zipSync(entries)));
+  assert.deepEqual(result.names, Object.keys(entries));
+  for (const photo of result.photos) {
+    const source = entries[photo.name];
+    assert.deepEqual(Buffer.from(photo.data), Buffer.from(Array.isArray(source) ? source[0] : source), photo.name);
   }
 });
