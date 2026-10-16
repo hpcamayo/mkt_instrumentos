@@ -28,7 +28,7 @@ export function PrivacyAssistedCommerceSection() {
   return (
     <LegalSection title="4 bis. Medios de pago y solicitudes de compra (piloto)">
       <ul>
-        <li>Cuando una tienda verificada indica un medio de pago, Laria guarda el tipo de medio, el nombre del proveedor que verán los compradores, el titular que recibe el pago y una nota opcional. El titular solo lo ve el equipo de Laria, para compararlo con la razón social. No guardamos números de teléfono, cuentas, tarjetas ni enlaces de pago.</li>
+        <li>Cuando una tienda verificada indica un medio de pago, Laria guarda el tipo de medio, el nombre del proveedor que verán los compradores, el titular que recibe el pago y una nota opcional. El titular no se muestra a los compradores: solo tú y el equipo autorizado de Laria pueden verlo, y Laria lo usa para compararlo con la razón social. No guardamos números de teléfono, cuentas, tarjetas ni enlaces de pago.</li>
         <li>Cuando usas «Solicitar compra», registramos que se inició una solicitud de compra desde esa publicación, igual que un contacto por WhatsApp: la fecha, la publicación, la tienda y, si iniciaste sesión, tu cuenta. No vemos el mensaje ni sabemos si la compra se concretó o se pagó.</li>
         <li>Lo que compartas con la tienda por WhatsApp para pagar, recibir tu comprobante o coordinar la entrega lo trata la tienda bajo su propia responsabilidad.</li>
       </ul>

@@ -99,10 +99,36 @@ test("owner screens are hidden while the pilot is off; Admin review is always gu
   }
 });
 
+// Review fix A2: the provider is chosen from a list, the same one the database enforces.
+test("the provider choices match the database's list for each method", () => {
+  const sql = read("supabase/migrations/20261029120000_review_fixes_payment_methods.sql");
+  const body = /function laria_private\.payment_provider_options[\s\S]*?\$\$([\s\S]*?)\$\$/.exec(sql)[1];
+  const database = Object.fromEntries(
+    [...body.matchAll(/when '([a-z_]+)' then array\[([^\]]*)\]/g)].map(([, method, list]) => [method, [...list.matchAll(/'([^']+)'/g)].map((m) => m[1])]),
+  );
+  for (const method of payments.PAYMENT_METHODS) {
+    assert.deepEqual([...payments.PAYMENT_PROVIDER_OPTIONS[method]], database[method] ?? [], method);
+  }
+  assert.equal(payments.isPaymentProvider("yape_plin", "Plin"), true);
+  assert.equal(payments.isPaymentProvider("pos_tarjeta_al_recoger", "PayPal"), false);
+  assert.equal(payments.isPaymentProvider("efectivo_al_recoger", "Izipay"), false);
+});
+
+// Review fix A14: the Admin decides on the revision they saw, not on a timestamp two changes can share.
+test("Admin decisions carry the method's revision", () => {
+  const route = read("app/api/admin/payment-methods/route.ts");
+  assert.match(route, /p_expected_revision: body\.expectedRevision/);
+  assert.match(route, /Number\.isSafeInteger\(body\.expectedRevision\)/);
+  assert.doesNotMatch(route, /expectedUpdatedAt|p_expected_updated_at/);
+});
+
 test("the Terms and Privacy drafts render only with the pilot and stay marked for legal review", () => {
   const legal = read("components/legal/assisted-commerce-legal.tsx");
   assert.match(legal, /DRAFT PENDING LEGAL REVIEW/);
   assert.equal((legal.match(/if \(!assistedCommerceEnabled\(\)\) return null;/g) ?? []).length, 2);
   assert.match(read("app/terminos/page.tsx"), /<TermsAssistedCommerceSection \/>/);
   assert.match(read("app/privacidad/page.tsx"), /<PrivacyAssistedCommerceSection \/>/);
+  // Review fix A14: the owner sees the holder they entered too.
+  assert.match(legal, /solo tú y el equipo autorizado de Laria pueden verlo/);
+  assert.doesNotMatch(legal, /solo lo ve el equipo de Laria/);
 });

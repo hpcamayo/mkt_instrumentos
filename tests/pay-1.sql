@@ -25,8 +25,8 @@ begin perform set_config('qa.' || p_name, p_id::text, true); end $$;
 create function pg_temp.method_status(p_store uuid, p_method text) returns text language sql security definer as $$
   select status from public.store_payment_methods where store_id = p_store and method = p_method::public.store_payment_method
 $$;
-create function pg_temp.method_updated(p_store uuid, p_method text) returns timestamptz language sql security definer as $$
-  select updated_at from public.store_payment_methods where store_id = p_store and method = p_method::public.store_payment_method
+create function pg_temp.method_revision(p_store uuid, p_method text) returns integer language sql security definer as $$
+  select revision from public.store_payment_methods where store_id = p_store and method = p_method::public.store_payment_method
 $$;
 create function pg_temp.changes(p_store uuid, p_type text) returns bigint language sql security definer as $$
   select count(*) from public.store_payment_method_changes where store_id = p_store and change_type = p_type
@@ -91,10 +91,45 @@ do $$ begin
   perform pg_temp.expect_error('select 1 from public.store_payment_method_changes', 'permission denied');
   perform pg_temp.expect_error($q$select public.set_store_payment_method('yape_plin', 'Anon', null, null)$q$, 'permission denied');
   perform pg_temp.expect_error($q$select public.withdraw_store_payment_method('yape_plin')$q$, 'permission denied');
-  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Anon', now())$q$, 'permission denied');
+  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Anon', 1)$q$, 'permission denied');
   perform pg_temp.expect_error($q$select public.get_admin_store_payment_methods('pending_review', 1, 24)$q$, 'permission denied');
   perform pg_temp.check(public.get_store_payment_methods(pg_temp.id('store_a')) = '[]'::jsonb, 'anon read: no methods yet');
   perform pg_temp.check(public.get_listing_purchase_request(pg_temp.id('l1')) is null, 'anon read: no purchase request yet');
+end $$;
+
+-- ------------------------------------------------------------------ pilot switch (review fix A14)
+
+-- Off by default in the database too (Codex item 6, finding 4): a direct call cannot propose a method while the pilot
+-- is off, and only the database owner turns it on.
+set local role authenticated;
+select pg_temp.as_user('owner_a');
+do $$ begin
+  perform pg_temp.expect_error($q$select public.set_store_payment_method('efectivo_al_recoger')$q$, 'PAYMENT_PILOT_OFF');
+  perform pg_temp.expect_error($q$select laria_private.set_assisted_commerce_pilot(true, 'Yo mismo')$q$, 'permission denied');
+end $$;
+select pg_temp.as_admin();
+do $$ begin
+  perform pg_temp.expect_error($q$select laria_private.set_assisted_commerce_pilot(true, 'Admin')$q$, 'permission denied');
+end $$;
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ begin
+  perform pg_temp.expect_error($q$select laria_private.set_assisted_commerce_pilot(true, 'Servicio')$q$, 'permission denied');
+end $$;
+reset role;
+do $$ begin
+  perform pg_temp.expect_error($q$select laria_private.set_assisted_commerce_pilot(true, null)$q$, 'Indica si el piloto');
+  perform pg_temp.check(laria_private.set_assisted_commerce_pilot(true, 'Prueba PAY-1'), 'pilot not turned on');
+  perform pg_temp.check(laria_private.assisted_commerce_pilot_enabled()
+    and (select reason from laria_private.assisted_commerce_settings) = 'Prueba PAY-1', 'pilot change not recorded');
+  -- Ordinary business names and notes still pass.
+  perform pg_temp.check(laria_private.payment_method_text('Inversiones Música & Arte S.A.C.', 140) = 'Inversiones Música & Arte S.A.C.'
+    and laria_private.payment_method_text('Paga con Visa o Mastercard; mínimo S/ 50 (sin recargo).', 280) is not null
+    and laria_private.payment_method_text('Ñandú E.I.R.L.', 140) is not null, 'ordinary text refused');
+  perform pg_temp.check(laria_private.payment_provider_label('yape_plin', 'YAPE Y PLIN') = 'Yape y Plin'
+    and laria_private.payment_provider_label('link_de_pago', 'mercadopago') = 'Mercado Pago'
+    and laria_private.payment_provider_label('link_de_pago', 'PayPal') = 'PayPal'
+    and laria_private.payment_provider_label('link_de_pago', ' ') is null, 'provider names not matched');
 end $$;
 
 -- ------------------------------------------------------------------ owner proposals
@@ -112,23 +147,46 @@ do $$ begin
 end $$;
 
 select pg_temp.as_user('owner_a');
-do $$ declare result jsonb; begin
+do $$ declare result jsonb; v text; begin
   perform pg_temp.expect_error($q$select public.set_store_payment_method('yape_plin', null, 'Yape', null)$q$, 'PAYMENT_HOLDER_REQUIRED');
   perform pg_temp.expect_error($q$select public.set_store_payment_method('yape_plin', '  ', 'Yape', null)$q$, 'PAYMENT_HOLDER_REQUIRED');
   -- Nothing that could be a phone, account or card number, a link or an e-mail is stored.
   perform pg_temp.expect_error($q$select public.set_store_payment_method('yape_plin', 'Tienda 987 654 321', 'Yape', null)$q$, 'PAYMENT_METHOD_SENSITIVE_DATA');
   perform pg_temp.expect_error($q$select public.set_store_payment_method('yape_plin', 'Tienda Pago A SAC', 'Yape', 'Cuenta 191-12345678-0-12')$q$, 'PAYMENT_METHOD_SENSITIVE_DATA');
   perform pg_temp.expect_error($q$select public.set_store_payment_method('link_de_pago', 'Tienda Pago A SAC', 'Izipay', 'Paga en https://pago.example.invalid/x')$q$, 'PAYMENT_METHOD_SENSITIVE_DATA');
-  perform pg_temp.expect_error($q$select public.set_store_payment_method('link_de_pago', 'Tienda Pago A SAC', 'pagos.pe', null)$q$, 'PAYMENT_METHOD_SENSITIVE_DATA');
+  perform pg_temp.expect_error($q$select public.set_store_payment_method('link_de_pago', 'Tienda Pago A SAC', 'pagos.pe', null)$q$, 'PAYMENT_PROVIDER_INVALID');
   perform pg_temp.expect_error($q$select public.set_store_payment_method('link_de_pago', 'Tienda Pago A SAC', 'Izipay', 'Escribe a caja@tienda.example')$q$, 'PAYMENT_METHOD_SENSITIVE_DATA');
   perform pg_temp.expect_error($q$select public.set_store_payment_method('yape_plin', 'Tienda Pago A SAC', 'Yape', repeat('a', 281))$q$, 'PAYMENT_METHOD_TEXT_LENGTH');
+  -- Review fix A2 (Codex item 6, finding 1): other separators, other hosts and look-alike characters, in the holder and
+  -- in the note.
+  foreach v in array array['987/654/321', '4111/1111/1111/1111', '4111_1111_1111_1111', '98 76 54 32 1', '９８７６５４３２１',
+      '987' || chr(8203) || '654' || chr(8203) || '321', 'Caja 12, mesa 345, piso 6789', 'pago.xyz/abc', 'pago.pe?ref=abc',
+      'caja.xn--p1ai/abc', 'pago[.]pe', 'pago (punto) pe', 'caja。pe', 'ｐａｇｏ．ｐｅ', 'wa.me/51', 'tel:+51', 'pago.pe', 'caja@tienda.pe'] loop
+    perform pg_temp.expect_error(format('select public.set_store_payment_method(%L, %L, %L, %L)', 'link_de_pago', 'Tienda Pago A SAC', 'Izipay', 'Datos ' || v),
+      'PAYMENT_METHOD_SENSITIVE_DATA');
+    perform pg_temp.expect_error(format('select public.set_store_payment_method(%L, %L, %L, %L)', 'yape_plin', 'Tienda ' || v, 'Yape', null),
+      'PAYMENT_METHOD_SENSITIVE_DATA');
+  end loop;
+  -- Only letters, digits and common punctuation: no invisible characters, other scripts or emoji.
+  foreach v in array array['Tienda' || chr(8238) || 'Pago', 'Tienda' || chr(8203) || 'Pago', 'Тienda Pago', 'Paga al recoger 💳', 'Tienda <b>Pago</b>'] loop
+    perform pg_temp.expect_error(format('select public.set_store_payment_method(%L, %L, %L, %L)', 'link_de_pago', 'Tienda Pago A SAC', 'Izipay', v),
+      'PAYMENT_METHOD_TEXT_INVALID');
+  end loop;
+  -- The provider is one of Laria's names for that method, stored in its usual spelling.
+  foreach v in array array['pago.xyz/abc', 'Yape', 'Izipay 987654', 'Banco'] loop
+    perform pg_temp.expect_error(format('select public.set_store_payment_method(%L, %L, %L, %L)', 'pos_tarjeta_al_recoger', 'Tienda Pago A SAC', v, null),
+      'PAYMENT_PROVIDER_INVALID');
+  end loop;
+  perform pg_temp.expect_error($q$select public.set_store_payment_method('pos_tarjeta_al_recoger', 'Tienda Pago A SAC', 'PayPal', null)$q$, 'PAYMENT_PROVIDER_INVALID');
+  perform pg_temp.expect_error($q$select public.set_store_payment_method('efectivo_al_recoger', null, 'Izipay', null)$q$, 'PAYMENT_PROVIDER_INVALID');
 
   result := public.set_store_payment_method('yape_plin', '  Tienda   Pago A SAC ', 'Yape', 'Confirma el pago antes de recoger.');
   perform pg_temp.check(result->>'status' = 'pending_review' and result->>'holder_name' = 'Tienda Pago A SAC', 'yape proposal not stored');
   -- Cash needs no holder; one given is not kept.
   result := public.set_store_payment_method('efectivo_al_recoger', 'Alguien', null, null);
   perform pg_temp.check(result->>'status' = 'pending_review' and result->'holder_name' = 'null'::jsonb, 'cash proposal kept a holder');
-  result := public.set_store_payment_method('pos_tarjeta_al_recoger', 'Tienda Pago A SAC', 'Izipay', null);
+  result := public.set_store_payment_method('pos_tarjeta_al_recoger', 'Tienda Pago A SAC', '  izipay ', null);
+  perform pg_temp.check(result->>'provider_label' = 'Izipay' and (result->>'revision')::int = 1, 'provider not stored in its usual spelling');
   perform pg_temp.check(pg_temp.changes(pg_temp.id('store_a'), 'proposed') = 3, 'proposals not in the history');
   -- An identical resubmission changes nothing.
   result := public.set_store_payment_method('yape_plin', 'Tienda Pago A SAC', 'Yape', 'Confirma el pago antes de recoger.');
@@ -137,7 +195,7 @@ do $$ declare result jsonb; begin
   -- The owner reads its own rows and history, and cannot review them.
   perform pg_temp.check((select count(*) from public.store_payment_methods) = 3, 'owner does not see exactly its own methods');
   perform pg_temp.check((select count(*) from public.store_payment_method_changes) = 3, 'owner does not see its own history');
-  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Yo mismo', now())$q$, 'ADMIN_REQUIRED');
+  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Yo mismo', 1)$q$, 'ADMIN_REQUIRED');
   perform pg_temp.expect_error($q$select public.get_admin_store_payment_methods('pending_review', 1, 24)$q$, 'ADMIN_REQUIRED');
   -- No direct writes.
   perform pg_temp.expect_error($q$update public.store_payment_methods set status = 'approved'$q$, 'permission denied');
@@ -164,23 +222,23 @@ do $$ declare result jsonb; page jsonb; begin
       and item->>'ruc' = '20999998001' and item->>'razon_social' = 'Tienda Pago A SAC' and item->>'holder_name' = 'Tienda Pago A SAC'),
     'Admin list lacks the business data to compare');
 
-  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', null, pg_temp.method_updated(pg_temp.id('store_a'), 'yape_plin'))$q$, 'PAYMENT_REASON_REQUIRED');
-  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'publish', 'Titular coincide', pg_temp.method_updated(pg_temp.id('store_a'), 'yape_plin'))$q$, 'PAYMENT_DECISION_INVALID');
+  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', null, pg_temp.method_revision(pg_temp.id('store_a'), 'yape_plin'))$q$, 'PAYMENT_REASON_REQUIRED');
+  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'publish', 'Titular coincide', pg_temp.method_revision(pg_temp.id('store_a'), 'yape_plin'))$q$, 'PAYMENT_DECISION_INVALID');
   -- The Admin decides on the version they saw.
-  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Titular coincide', now() - interval '1 minute')$q$, 'PAYMENT_METHOD_CHANGED');
+  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Titular coincide', 0)$q$, 'PAYMENT_METHOD_CHANGED');
   perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Titular coincide', null)$q$, 'PAYMENT_METHOD_CHANGED');
-  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'disable', 'No aplica', pg_temp.method_updated(pg_temp.id('store_a'), 'yape_plin'))$q$, 'PAYMENT_METHOD_NOT_APPROVED');
-  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'link_de_pago', 'approve', 'No existe', now())$q$, 'PAYMENT_METHOD_NOT_FOUND');
+  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'disable', 'No aplica', pg_temp.method_revision(pg_temp.id('store_a'), 'yape_plin'))$q$, 'PAYMENT_METHOD_NOT_APPROVED');
+  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'link_de_pago', 'approve', 'No existe', 1)$q$, 'PAYMENT_METHOD_NOT_FOUND');
 
   result := public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve',
-    'Titular coincide con la razón social', pg_temp.method_updated(pg_temp.id('store_a'), 'yape_plin'));
+    'Titular coincide con la razón social', pg_temp.method_revision(pg_temp.id('store_a'), 'yape_plin'));
   perform pg_temp.check(result->>'status' = 'approved', 'yape not approved');
   result := public.admin_review_store_payment_method(pg_temp.id('store_a'), 'efectivo_al_recoger', 'approve',
-    'Pago en tienda', pg_temp.method_updated(pg_temp.id('store_a'), 'efectivo_al_recoger'));
+    'Pago en tienda', pg_temp.method_revision(pg_temp.id('store_a'), 'efectivo_al_recoger'));
   result := public.admin_review_store_payment_method(pg_temp.id('store_a'), 'pos_tarjeta_al_recoger', 'reject',
-    'El titular no coincide con la razón social', pg_temp.method_updated(pg_temp.id('store_a'), 'pos_tarjeta_al_recoger'));
+    'El titular no coincide con la razón social', pg_temp.method_revision(pg_temp.id('store_a'), 'pos_tarjeta_al_recoger'));
   perform pg_temp.check(result->>'status' = 'rejected' and result->>'review_reason' = 'El titular no coincide con la razón social', 'reject not stored');
-  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Otra vez', pg_temp.method_updated(pg_temp.id('store_a'), 'yape_plin'))$q$, 'PAYMENT_METHOD_NOT_PENDING');
+  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Otra vez', pg_temp.method_revision(pg_temp.id('store_a'), 'yape_plin'))$q$, 'PAYMENT_METHOD_NOT_PENDING');
   perform pg_temp.check(pg_temp.audits('store_payment_method_approved', pg_temp.id('store_a')) = 2
     and pg_temp.audits('store_payment_method_rejected', pg_temp.id('store_a')) = 1, 'Admin decisions not audited');
   perform pg_temp.check(pg_temp.changes(pg_temp.id('store_a'), 'approved') = 2 and pg_temp.changes(pg_temp.id('store_a'), 'rejected') = 1,
@@ -193,7 +251,7 @@ insert into public.store_payment_methods(store_id, method, status) values (pg_te
 set local role authenticated;
 select pg_temp.as_admin();
 do $$ begin
-  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_b'), 'efectivo_al_recoger', 'approve', 'Pago en tienda', pg_temp.method_updated(pg_temp.id('store_b'), 'efectivo_al_recoger'))$q$, 'PAYMENT_STORE_NOT_VERIFIED');
+  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_b'), 'efectivo_al_recoger', 'approve', 'Pago en tienda', pg_temp.method_revision(pg_temp.id('store_b'), 'efectivo_al_recoger'))$q$, 'PAYMENT_STORE_NOT_VERIFIED');
 end $$;
 
 -- ------------------------------------------------------------------ public reads
@@ -240,6 +298,31 @@ select pg_temp.as_anon();
 do $$ begin
   perform pg_temp.check(jsonb_array_length(public.get_store_payment_methods(pg_temp.id('store_a'))) = 2, 'methods did not return with verification');
 end $$;
+-- With the pilot off (review fix A14), nothing is public and owners cannot propose; Admins can still review.
+reset role;
+select laria_private.set_assisted_commerce_pilot(false, 'Pausa de prueba');
+set local role anon;
+select pg_temp.as_anon();
+do $$ begin
+  perform pg_temp.check(public.get_store_payment_methods(pg_temp.id('store_a')) = '[]'::jsonb, 'methods shown with the pilot off');
+  perform pg_temp.check(public.get_listing_purchase_request(pg_temp.id('l1')) is null, 'purchase request with the pilot off');
+end $$;
+set local role authenticated;
+select pg_temp.as_user('owner_a');
+do $$ begin
+  perform pg_temp.expect_error($q$select public.set_store_payment_method('link_de_pago', 'Tienda Pago A SAC', 'Izipay', null)$q$, 'PAYMENT_PILOT_OFF');
+end $$;
+select pg_temp.as_admin();
+do $$ begin
+  perform pg_temp.check((public.get_admin_store_payment_methods('approved', 1, 24)->>'total')::int >= 2, 'Admin list hidden with the pilot off');
+end $$;
+reset role;
+select laria_private.set_assisted_commerce_pilot(true, 'Reanuda la prueba');
+set local role anon;
+select pg_temp.as_anon();
+do $$ begin
+  perform pg_temp.check(jsonb_array_length(public.get_store_payment_methods(pg_temp.id('store_a'))) = 2, 'methods did not return with the pilot');
+end $$;
 -- A verified store can still be hidden from the owner's side: it keeps rows, writes stay possible only while verified.
 set local role authenticated;
 select pg_temp.as_user('owner_a');
@@ -254,19 +337,49 @@ do $$ declare result jsonb; begin
   perform pg_temp.check(result->>'status' = 'pending_review', 'rejected method could not be proposed again');
 end $$;
 
--- A change of RUC or razón social sends approved methods back to review.
+-- Review fix A14 (Codex item 6, finding 3): two owner changes in one transaction get different revisions, so a review
+-- token read before the second change cannot approve it.
+select pg_temp.as_user('owner_a');
+do $$ declare seen integer; result jsonb; begin
+  seen := pg_temp.method_revision(pg_temp.id('store_a'), 'yape_plin');
+  perform set_config('qa.seen_revision', seen::text, true);
+  result := public.set_store_payment_method('yape_plin', 'Otro Titular SAC', 'Yape y Plin', 'Confirma el pago antes de recoger.');
+  perform pg_temp.check((result->>'revision')::int = seen + 1, 'an owner change in the same transaction kept the revision');
+end $$;
+select pg_temp.as_admin();
+do $$ begin
+  perform pg_temp.expect_error(format('select public.admin_review_store_payment_method(%L, %L, %L, %L, %s)', pg_temp.id('store_a'),
+    'yape_plin', 'approve', 'Titular coincide', current_setting('qa.seen_revision')), 'PAYMENT_METHOD_CHANGED');
+end $$;
+select pg_temp.as_user('owner_a');
+select public.set_store_payment_method('yape_plin', 'Tienda Pago A SAC', 'Yape y Plin', 'Confirma el pago antes de recoger.');
+
+-- A change of RUC or razón social sends approved methods back to review, and moves the revision of pending ones (Codex
+-- item 6, finding 2), so an Admin screen loaded against the old business data cannot approve.
 reset role;
+select set_config('qa.pos_revision', pg_temp.method_revision(pg_temp.id('store_a'), 'pos_tarjeta_al_recoger')::text, true);
 update public.stores set razon_social = 'Tienda Pago A EIRL' where id = pg_temp.id('store_a');
 do $$ begin
   perform pg_temp.check(pg_temp.method_status(pg_temp.id('store_a'), 'efectivo_al_recoger') = 'pending_review', 'razón social change kept the approval');
-  perform pg_temp.check(pg_temp.changes(pg_temp.id('store_a'), 'business_data_changed') = 1, 'business data change not in the history');
+  perform pg_temp.check(pg_temp.method_status(pg_temp.id('store_a'), 'pos_tarjeta_al_recoger') = 'pending_review'
+    and pg_temp.method_revision(pg_temp.id('store_a'), 'pos_tarjeta_al_recoger') = current_setting('qa.pos_revision')::int + 1,
+    'razón social change left the pending revision');
+  -- efectivo (approved), yape and pos (pending).
+  perform pg_temp.check(pg_temp.changes(pg_temp.id('store_a'), 'business_data_changed') = 3, 'business data change not in the history');
   perform pg_temp.check(public.get_store_payment_methods(pg_temp.id('store_a')) = '[]'::jsonb, 'methods public after a razón social change');
 end $$;
+set local role authenticated;
+select pg_temp.as_admin();
+do $$ begin
+  perform pg_temp.expect_error(format('select public.admin_review_store_payment_method(%L, %L, %L, %L, %s)', pg_temp.id('store_a'),
+    'pos_tarjeta_al_recoger', 'approve', 'Titular coincide con Tienda Pago A SAC', current_setting('qa.pos_revision')), 'PAYMENT_METHOD_CHANGED');
+end $$;
+reset role;
 -- Other store edits leave approvals alone.
 set local role authenticated;
 select pg_temp.as_admin();
-select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'efectivo_al_recoger', 'approve', 'Pago en tienda', pg_temp.method_updated(pg_temp.id('store_a'), 'efectivo_al_recoger'));
-select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Titular coincide con la nueva razón social', pg_temp.method_updated(pg_temp.id('store_a'), 'yape_plin'));
+select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'efectivo_al_recoger', 'approve', 'Pago en tienda', pg_temp.method_revision(pg_temp.id('store_a'), 'efectivo_al_recoger'));
+select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Titular coincide con la nueva razón social', pg_temp.method_revision(pg_temp.id('store_a'), 'yape_plin'));
 reset role;
 update public.stores set description = 'Otra descripción de la tienda' where id = pg_temp.id('store_a');
 do $$ begin
@@ -350,8 +463,8 @@ do $$ declare result jsonb; begin
 end $$;
 select pg_temp.as_admin();
 do $$ begin
-  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Titular coincide', pg_temp.method_updated(pg_temp.id('store_a'), 'yape_plin'))$q$, 'PAYMENT_METHOD_NOT_PENDING');
-  perform public.admin_review_store_payment_method(pg_temp.id('store_a'), 'efectivo_al_recoger', 'disable', 'Reclamos de compradores', pg_temp.method_updated(pg_temp.id('store_a'), 'efectivo_al_recoger'));
+  perform pg_temp.expect_error($q$select public.admin_review_store_payment_method(pg_temp.id('store_a'), 'yape_plin', 'approve', 'Titular coincide', pg_temp.method_revision(pg_temp.id('store_a'), 'yape_plin'))$q$, 'PAYMENT_METHOD_NOT_PENDING');
+  perform public.admin_review_store_payment_method(pg_temp.id('store_a'), 'efectivo_al_recoger', 'disable', 'Reclamos de compradores', pg_temp.method_revision(pg_temp.id('store_a'), 'efectivo_al_recoger'));
   perform pg_temp.check(public.get_store_payment_methods(pg_temp.id('store_a')) = '[]'::jsonb, 'disabled method stayed public');
   perform pg_temp.check(public.get_listing_purchase_request(pg_temp.id('l1')) is null, 'purchase request without any method');
   perform pg_temp.check(pg_temp.audits('store_payment_method_disabled', pg_temp.id('store_a')) = 1, 'disable not audited');
