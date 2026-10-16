@@ -528,6 +528,22 @@ test("categories, types and conditions map to Laria values; unknown ones warn", 
   assert.ok(codes(parse("", "", "usado").issues).includes("IMPORT_CONDITION_UNKNOWN"));
 });
 
+test("a row with other errors keeps its SKU, so every repeated SKU can be flagged (walkthrough note n-dup)", () => {
+  // laria_private.mark_import_duplicates groups rows by upper(parsed.sku); a row that already has an error must still
+  // carry its SKU for the database to mark it, and its twin, as duplicates.
+  const cases = [
+    [row(["DUP-2", "Repetido", "-1"]), "quantity"],
+    [row(["dup-2", { v: "#REF!", k: "e" }, "1", "1,500"]), "product_name"],
+    [row(["DUP-2", "Repetido", { v: "", f: 1 }]), "quantity"],
+    [row(["DUP 2", "Repetido", "1"]), "sku"],
+  ];
+  for (const [cells, field] of cases) {
+    const { parsed, issues } = parseImportRow(cells, MAPPING);
+    assert.ok(issues.some((item) => item.field === field && item.severity === "error"), `${cells[0].v}: error on ${field}`);
+    assert.equal(parsed.sku, cells[0].v, `${cells[0].v}: SKU kept for duplicate detection`);
+  }
+});
+
 test("cell problems: Excel errors, oversized cells, formulas, publication readiness", () => {
   assert.ok(codes(parseImportRow(row(["A", { v: "#REF!", k: "e" }, "1"]), MAPPING).issues).includes("IMPORT_CELL_ERROR"));
   assert.ok(codes(parseImportRow(row(["A", { v: "x".repeat(2001), t: 1 }, "1"]), MAPPING).issues).includes("IMPORT_CELL_TOO_LONG"));
