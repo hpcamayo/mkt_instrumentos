@@ -39,7 +39,8 @@ export function detectDelimiter(text: string): "," | ";" | "\t" {
 
 // RFC 4180 with the usual leniencies: CRLF, LF or CR line ends, quotes doubled inside quoted cells, a stray quote in
 // an unquoted cell kept as text. Bounded: a cell longer than the limit is cut and flagged (the row then fails
-// validation), and reading stops with an error once there are more rows than any import may hold.
+// validation), and reading stops with an error once there are more rows than any import may hold. A quote still
+// open at the end of the file refuses it: the rest of the file would otherwise become one cell of that row.
 export function parseCsv(text: string, delimiter: string): ImportRow[] {
   const rows: ImportRow[] = [];
   const maxRows = IMPORT_MAX_DATA_ROWS + IMPORT_HEADER_SEARCH_ROWS;
@@ -49,6 +50,7 @@ export function parseCsv(text: string, delimiter: string): ImportRow[] {
   let quoted = false;
   let atCellStart = true;
   let record = 1;
+  let quotedSince = 0;
 
   const pushCell = () => {
     if (cells.length >= IMPORT_MAX_COLUMNS) {
@@ -95,6 +97,7 @@ export function parseCsv(text: string, delimiter: string): ImportRow[] {
     }
     if (char === '"' && atCellStart) {
       quoted = true;
+      quotedSince = record;
       atCellStart = false;
     } else if (char === delimiter) {
       pushCell();
@@ -105,6 +108,10 @@ export function parseCsv(text: string, delimiter: string): ImportRow[] {
       append(char);
       atCellStart = false;
     }
+  }
+  if (quoted) {
+    throw new ImportFileError("IMPORT_CSV_UNCLOSED_QUOTE",
+      `El archivo CSV tiene comillas sin cerrar desde la fila ${quotedSince}. Revisa esa fila y vuelve a guardarlo.`);
   }
   if (cell || cells.length) pushRow();
   return rows;

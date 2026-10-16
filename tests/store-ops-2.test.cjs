@@ -160,6 +160,18 @@ test("CSV parsing keeps text, quotes, embedded newlines and record numbers", () 
   assert.equal(rows[2].cells[2].v, "=1+1", "a formula in a CSV is plain text");
 });
 
+test("CSV: a quote left open at the end of the file refuses the file instead of swallowing rows", () => {
+  // Codex review 3 finding 4: this read as one row named "Pedal\nB,Cable,2" with a blank stock.
+  assert.throws(() => parseCsv('SKU,Nombre,Stock\nA,"Pedal\nB,Cable,2\n', ","), (error) => error instanceof ImportFileError
+    && error.code === "IMPORT_CSV_UNCLOSED_QUOTE" && /comillas sin cerrar desde la fila 2\b/.test(error.userMessage));
+  expectFileError(() => parseCsv('SKU;Nombre\r\n"A;Pedal', ";"), "IMPORT_CSV_UNCLOSED_QUOTE");
+  expectFileError(() => parseCsv('SKU,Nombre\nA,"dos\nlíneas"\nB,"""', ","), "IMPORT_CSV_UNCLOSED_QUOTE");
+  expectFileError(() => readSpreadsheet(new Uint8Array(Buffer.from('SKU,Nombre,Stock\nA,"Pedal\nB,Cable,2\n')), "csv"), "IMPORT_CSV_UNCLOSED_QUOTE");
+  // Closed quotes still hold separators, line breaks and doubled quotes, up to the very last character.
+  assert.deepEqual(parseCsv('SKU,Nombre\nA,"dos\nlíneas, ""y"" más"\nB,"fin"', ",").map((row) => row.cells.map((cell) => cell.v)),
+    [["SKU", "Nombre"], ["A", 'dos\nlíneas, "y" más'], ["B", "fin"]]);
+});
+
 test("CSV limits: columns, rows and a 5 MB single-line cell", () => {
   expectFileError(() => parseCsv(`${Array.from({ length: 81 }, (_, i) => `c${i}`).join(",")}\n`, ","), "IMPORT_TOO_MANY_COLUMNS");
   // Empty trailing columns beyond the limit are fine (Excel pads rows).
