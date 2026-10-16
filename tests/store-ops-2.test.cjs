@@ -537,6 +537,7 @@ test("the report CSV neutralizes formulas and explains each row", () => {
   assert.equal(csvSafeCell("-3"), "'-3");
   assert.equal(csvSafeCell("@SUM(A1)"), "'@SUM(A1)");
   assert.equal(csvSafeCell("\tx"), "'\tx");
+  assert.equal(csvSafeCell("\n=1+1"), '"\'\n=1+1"', "a leading line feed (Codex review 3 finding 3)");
   assert.equal(csvSafeCell(-3), "-3", "real numbers stay numbers");
   assert.equal(csvSafeCell("a;b"), '"a;b"');
   assert.deepEqual(describeChanges({ quantity_on_hand: { from: 12, to: 9 }, unit_price_pen: { from: null, to: 300 } }),
@@ -546,11 +547,14 @@ test("the report CSV neutralizes formulas and explains each row", () => {
       commit_status: "applied", commit_message: null, issues: [], changes: { quantity_on_hand: { from: 1, to: 3 } } },
     { row_number: 3, sku_normalized: null, parsed: { sku: null }, planned_action: "error", owner_decision: "include",
       commit_status: "pending", commit_message: null, issues: [{ severity: "error", message: "Falta el nombre." }], changes: {} },
+    { row_number: 4, sku_normalized: "B", parsed: { sku: "B", product_name: "\n=HYPERLINK(\"http://x\")" }, planned_action: "create",
+      owner_decision: "include", commit_status: "applied", commit_message: null, issues: [], changes: {} },
   ]);
   const lines = csv.replace(/^﻿/, "").trim().split("\r\n");
   assert.equal(lines[0], "Fila,SKU,Nombre,Acción,Resultado,Cambios,Mensajes");
   assert.equal(lines[1], "2,'=cmd,Pedal,Actualizar,Aplicada,Stock: 1 → 3 (+2),");
   assert.equal(lines[2], "3,,,Con errores,No aplicada,,Falta el nombre.");
+  assert.equal(lines[3], '4,B,"\'\n=HYPERLINK(""http://x"")",Crear SKU,Aplicada,,', "a name starting with a line feed is prefixed");
 });
 
 test("the template has the brief's headings, category attributes and text identifier columns", () => {

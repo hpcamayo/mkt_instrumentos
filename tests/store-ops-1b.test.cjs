@@ -58,6 +58,21 @@ test("export prefixes formula-like text in CSV and never touches genuine numbers
   assert.match(line, /,7,7,1500,,'@ref,Activo,11111111-1111-4111-8111-111111111111,Publicada,https?:\/\/[^,]+\/instrumentos\/boss-ds-1$/);
 });
 
+test("export prefixes text that starts with a line feed before a formula (Codex review 3, finding 3)", () => {
+  const { formulaSafe, toCsv, exportRows } = load("lib/inventory-export.ts");
+  assert.equal(formulaSafe("\n=HYPERLINK(\"http://x\")"), "'\n=HYPERLINK(\"http://x\")");
+  assert.equal(formulaSafe("\r\n=1+1"), "'\r\n=1+1");
+  assert.equal(formulaSafe("Pedal\n=1"), "Pedal\n=1", "only a leading line feed matters");
+  const rows = exportRows([
+    { merchant_sku: "A-1", product_name: "\n=HYPERLINK(\"http://evil\",\"clic\")", variant_label: null, quantity_on_hand: 2,
+      quantity_available: 2, unit_price_pen: 10, low_stock_threshold: null, external_reference: "\n@ref", inventory_status: "active", listing: null },
+  ]);
+  const csv = toCsv(rows);
+  assert.ok(csv.includes('"\'\n=HYPERLINK(""http://evil"",""clic"")"'), csv);
+  assert.ok(csv.includes('"\'\n@ref"'), csv);
+  assert.match(csv, /,2,2,10,,/, "genuine numbers stay unprefixed");
+});
+
 test("XLSX export stores text as inline strings, numbers as numbers, identifiers as text, and never a formula", () => {
   const { exportRows, toXlsxSheet } = load("lib/inventory-export.ts");
   const { writeXlsx } = load("lib/spreadsheet/xlsx-write.ts");
