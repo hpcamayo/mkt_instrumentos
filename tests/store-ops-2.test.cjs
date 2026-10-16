@@ -445,6 +445,17 @@ test("mapping proposes fields from Spanish and English headers, once each", () =
   assert.equal(IMPORT_FIELDS[0].label, "SKU");
 });
 
+test("barcode headings map to Referencia externa (owner walkthrough note n-barcode)", () => {
+  for (const heading of ["cód. barras", "cod. barras", "código de barras", "Cód. Barras", "codigo de barras", "cod barras",
+    "COD.BARRAS", "Cód. de barras", "Código barras", "Código de barra"]) {
+    assert.deepEqual(proposeMapping([heading]), { external_reference: 0 }, heading);
+  }
+  // The messy POS export sample: "Cód." is the SKU, "Cód. barras" the barcode.
+  const pos = proposeMapping(["Cód.", "Artículo", "Marca", "Familia", "P. Venta", "Existencias", "Estado", "Detalle", "Cód. barras", "Imágenes"]);
+  assert.equal(pos.sku, 0);
+  assert.equal(pos.external_reference, 8);
+});
+
 // ------------------------------------------------------------------ row validation
 
 const MAPPING = { sku: 0, product_name: 1, quantity: 2, unit_price_pen: 3, category: 4, instrument_type: 5, condition: 6, external_reference: 7, listing_id: 8, low_stock_threshold: 9, description: 10, photos: 11, "attribute:body_type": 12 };
