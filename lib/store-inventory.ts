@@ -34,6 +34,8 @@ export type InventoryItem = {
   catalog_product_id: string | null;
   catalog_variant_id: string | null;
   listing_id: string | null;
+  // The SKU's own category (set by imports); Inventario shows the publication's category first when there is one.
+  category: string | null;
   version: number;
   last_movement_at: string | null;
   created_at: string;
@@ -330,6 +332,15 @@ export async function getLastImportErrors(supabase: AnyClient): Promise<{ errors
   };
 }
 
+// Category chips above the inventory table (review fix B4): active SKUs per category, "none" for SKUs without one.
+export const INVENTORY_NO_CATEGORY = "none";
+
+export async function getInventoryCategoryCounts(supabase: AnyClient): Promise<Record<string, number> | null> {
+  const { data, error } = await inventoryDb(supabase).rpc("get_inventory_category_counts");
+  if (error || !data || typeof data !== "object" || Array.isArray(data)) return null;
+  return data as Record<string, number>;
+}
+
 export async function getInventoryPage(
   supabase: AnyClient,
   filters: InventoryFilters,
@@ -354,7 +365,7 @@ export async function getInventoryPage(
 }
 
 const ITEM_COLUMNS =
-  "id,store_id,merchant_sku,sku_generated,product_name,variant_label,quantity_on_hand,quantity_reserved,quantity_available,low_stock_threshold,unit_price_pen,inventory_status,stock_source,external_reference,catalog_product_id,catalog_variant_id,listing_id,version,last_movement_at,created_at,updated_at";
+  "id,store_id,merchant_sku,sku_generated,product_name,variant_label,quantity_on_hand,quantity_reserved,quantity_available,low_stock_threshold,unit_price_pen,inventory_status,stock_source,external_reference,catalog_product_id,catalog_variant_id,listing_id,category,version,last_movement_at,created_at,updated_at";
 
 // One SKU with its linked publication, read through RLS (owner or Admin only).
 export async function getInventoryItem(supabase: AnyClient, itemId: string): Promise<InventoryItem | null> {

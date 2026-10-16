@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { AlertCircle, AlertTriangle, Download, Info, RotateCcw, Upload } from "lucide-react";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
@@ -13,7 +13,7 @@ import { Tag } from "@/components/ui/tag";
 import { ImportPhotos } from "@/components/store-import/import-photos";
 import { ImportPublish } from "@/components/store-import/import-publish";
 import { IMPORT_FILE_ACCEPT, importFileFormat, importFileProblem, uploadImportFile } from "@/components/store-import/import-start";
-import { importStatus } from "@/lib/store-import/labels";
+import { importCategoryChips, importStatus } from "@/lib/store-import/labels";
 import { IMPORT_ATTRIBUTE_FIELDS, IMPORT_FIELDS, mappingProblems, type ImportMapping } from "@/lib/store-import/mapping";
 import { ACTION_LABELS, describeChanges, resultLabel } from "@/lib/store-import/report";
 import type { ImportSession, RowFilter, StepNext } from "@/lib/store-import/server";
@@ -483,12 +483,20 @@ function ReviewStep({ session, onDecision, onBack, onContinue }: {
   const counts = session.counts ?? {};
   const [filter, setFilter] = useState<RowFilter>(counts.error ? "error" : "all");
   const toApply = (counts.create ?? 0) + (counts.update ?? 0) + (counts.adopt_listing ?? 0);
+  // Large files are long: the step's actions sit above the rows as well as after them (review fix B3).
+  const actions = (
+    <div className="flex flex-wrap gap-3">
+      <Button onClick={onContinue} disabled={toApply === 0}>Continuar</Button>
+      <Button variant="secondary" onClick={onBack}>Cambiar columnas</Button>
+    </div>
+  );
   return (
     <div className="grid gap-5">
       <div className="grid gap-2">
         <h2 className="t-section">Revisa los cambios</h2>
         <p className="t-body text-ink-2">Todavía no se aplicó nada. Las filas con errores no se importan; corrige el archivo y súbelo otra vez, o continúa sin ellas.</p>
       </div>
+      {(counts.total ?? 0) > 10 ? actions : null}
       <Tiles items={[
         ["Nuevos SKU", counts.create ?? 0],
         ["Actualizar", counts.update ?? 0],
@@ -503,10 +511,7 @@ function ReviewStep({ session, onDecision, onBack, onContinue }: {
         </Notice>
       ) : null}
       <RowsList sessionId={session.id} filter={filter} onFilter={setFilter} counts={counts} editable onDecision={onDecision} version={session.version} />
-      <div className="flex flex-wrap gap-3">
-        <Button onClick={onContinue} disabled={toApply === 0}>Continuar</Button>
-        <Button variant="secondary" onClick={onBack}>Cambiar columnas</Button>
-      </div>
+      {actions}
       {toApply === 0 ? <p className="t-meta">No hay filas para aplicar. Revisa los errores o incluye filas excluidas.</p> : null}
     </div>
   );
@@ -551,12 +556,26 @@ function RowsList({ sessionId, filter, onFilter, counts, editable, onDecision, v
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [pendingRow, setPendingRow] = useState<number | null>(null);
+  const [category, setCategory] = useState("");
+  const categoriesId = useId();
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const request = useRef(0);
+
+  // Category chips (review fix B3): which categories the file has, counted once per session version.
+  useEffect(() => {
+    let cancelled = false;
+    void api<{ categories: Record<string, number> }>(`/api/store/imports/${sessionId}/rows?categories=1`).then((result) => {
+      if (!cancelled && result.ok) setCategoryCounts(result.body.categories);
+    });
+    return () => { cancelled = true; };
+  }, [sessionId, version]);
+  const categoryChips = importCategoryChips(categoryCounts);
 
   const load = useCallback(async (after: number) => {
     const id = ++request.current;
     setLoading(true);
-    const result = await api<{ rows: StagedRow[]; nextAfter: number | null }>(`/api/store/imports/${sessionId}/rows?filter=${filter}&after=${after}&limit=50`);
+    const categoryParam = category ? `&category=${encodeURIComponent(category)}` : "";
+    const result = await api<{ rows: StagedRow[]; nextAfter: number | null }>(`/api/store/imports/${sessionId}/rows?filter=${filter}${categoryParam}&after=${after}&limit=50`);
     if (id !== request.current) return;
     setLoading(false);
     if (!result.ok) {
@@ -566,7 +585,7 @@ function RowsList({ sessionId, filter, onFilter, counts, editable, onDecision, v
     setLoadError(null);
     setRows((current) => (after ? [...current, ...result.body.rows] : result.body.rows));
     setNextAfter(result.body.nextAfter);
-  }, [sessionId, filter]);
+  }, [sessionId, filter, category]);
 
   // Reload from the top when the filter changes or a decision changed the session.
   useEffect(() => { void load(0); }, [load, version]);
@@ -580,6 +599,19 @@ function RowsList({ sessionId, filter, onFilter, counts, editable, onDecision, v
           </Chip>
         ))}
       </div>
+      {categoryChips.length ? (
+        <div className="grid gap-2">
+          <p className="t-ui font-semibold text-ink" id={categoriesId}>Categoría</p>
+          <div className="flex flex-wrap gap-2" role="group" aria-labelledby={categoriesId}>
+            <Chip selected={!category} onClick={() => setCategory("")}>Todas las categorías</Chip>
+            {categoryChips.map((chip) => (
+              <Chip key={chip.value} selected={category === chip.value} onClick={() => setCategory(category === chip.value ? "" : chip.value)}>
+                {chip.label} ({chip.count})
+              </Chip>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {loadError ? <Notice tone="danger">{loadError}</Notice> : null}
       {editable && onDecision && (counts.excluded ?? 0) > 0 ? (
         <div><Button size="sm" variant="secondary" onClick={() => void onDecision(null, "include")}>Incluir todas las filas excluidas</Button></div>

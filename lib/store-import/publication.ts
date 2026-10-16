@@ -31,7 +31,30 @@ export type PublicationFields = {
   attributes: ListingSubmissionAttributes;
 };
 
-export type PublicationPlan = { fields: PublicationFields | null; missing: string[]; warnings: string[] };
+// What a row still lacks, by key ("Completar datos" opens the matching fields) and by name (the list shown in the row).
+export type MissingField = "name" | "brand" | "model" | "category" | "instrument_type" | "condition" | "description" | "price";
+
+export type PublicationPlan = { fields: PublicationFields | null; missing: string[]; missingFields: MissingField[]; warnings: string[] };
+
+// The values the owner typed with "Completar datos" (review fix B5), stored on the staged row as publish_fields.
+export type PublishFieldOverrides = Partial<Record<"brand" | "model" | "category" | "instrument_type" | "condition" | "description", string>>;
+
+export const PUBLISH_FIELD_KEYS = ["brand", "model", "category", "instrument_type", "condition", "description"] as const;
+
+// The row's values with the owner's completed fields laid over them. A new category drops a type that does not belong
+// to it, so the type is asked for again (or defaulted for single-type categories).
+export function applyPublishFields(parsed: ParsedImportRow, overrides: PublishFieldOverrides | null | undefined): ParsedImportRow {
+  if (!overrides) return parsed;
+  const next: ParsedImportRow = { ...parsed };
+  for (const key of PUBLISH_FIELD_KEYS) {
+    const value = overrides[key];
+    if (typeof value === "string" && value.trim()) next[key] = value.trim();
+  }
+  if (next.category && next.instrument_type && !isInstrumentTypeValid(next.category, next.instrument_type)) {
+    next.instrument_type = null;
+  }
+  return next;
+}
 
 // The listing title is the SKU's current name, with the variant when the name does not already say it.
 export function publicationTitle(item: PublicationItem) {
@@ -93,6 +116,11 @@ export function publicationAttributes(instrumentType: string, raw: Record<string
 
 export function planPublication(parsed: ParsedImportRow, item: PublicationItem): PublicationPlan {
   const missing: string[] = [];
+  const missingFields: MissingField[] = [];
+  const lack = (key: MissingField, label: string) => {
+    missingFields.push(key);
+    missing.push(label);
+  };
   const title = publicationTitle(item);
   const brand = parsed.brand?.trim() ?? "";
   const model = parsed.model?.trim() ?? "";
@@ -102,22 +130,23 @@ export function planPublication(parsed: ParsedImportRow, item: PublicationItem):
   let instrumentType = parsed.instrument_type ?? "";
   if (!instrumentType && category) instrumentType = defaultInstrumentType(category) ?? "";
 
-  if (title.length < 2) missing.push("nombre");
-  if (!brand || brand.length > MAX_FIELD) missing.push("marca");
-  if (!model || model.length > MAX_FIELD) missing.push("modelo");
-  if (!category) missing.push("categoría");
-  else if (!instrumentType || !isInstrumentTypeValid(category, instrumentType)) missing.push("tipo de instrumento");
-  if (!condition) missing.push("condición");
-  if (description.length < MIN_DESCRIPTION || description.length > MAX_DESCRIPTION) missing.push("descripción de 40 caracteres");
-  if (!item.unit_price_pen || item.unit_price_pen <= 0) missing.push("precio");
+  if (title.length < 2) lack("name", "nombre");
+  if (!brand || brand.length > MAX_FIELD) lack("brand", "marca");
+  if (!model || model.length > MAX_FIELD) lack("model", "modelo");
+  if (!category) lack("category", "categoría");
+  else if (!instrumentType || !isInstrumentTypeValid(category, instrumentType)) lack("instrument_type", "tipo de instrumento");
+  if (!condition) lack("condition", "condición");
+  if (description.length < MIN_DESCRIPTION || description.length > MAX_DESCRIPTION) lack("description", "descripción de 40 caracteres");
+  if (!item.unit_price_pen || item.unit_price_pen <= 0) lack("price", "precio");
 
   const { attributes, warnings } = instrumentType && category && isInstrumentTypeValid(category, instrumentType)
     ? publicationAttributes(instrumentType, parsed.attributes ?? {})
     : { attributes: {}, warnings: [] };
-  if (missing.length) return { fields: null, missing, warnings };
+  if (missing.length) return { fields: null, missing, missingFields, warnings };
   return {
     fields: { title, brand, model, category, instrument_type: instrumentType, condition, description, attributes },
     missing,
+    missingFields,
     warnings,
   };
 }

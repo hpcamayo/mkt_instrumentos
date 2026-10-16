@@ -10,7 +10,6 @@ import { ErrorSummary } from "@/components/ui/error-summary";
 import { Field, FileInput, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import {
   PHOTO_MAX_FILE_BYTES,
   PHOTO_MAX_FILES,
@@ -27,8 +26,9 @@ import {
   type PhotoMimeType,
 } from "@/lib/store-import/photo-files";
 import { PHOTO_ISSUE_LABELS, PHOTO_REJECT_LABELS, PHOTO_ROW_STATES, PHOTO_SOURCE_LABELS } from "@/lib/store-import/photo-labels";
-import type { PhotoAsset, PhotoRow, PhotoView, UploadSlot } from "@/lib/store-import/photos-server";
+import type { PhotoAsset, PhotoRow, PhotoView } from "@/lib/store-import/photos-server";
 import { cn } from "@/lib/utils";
+import { sendPhotoBatch, type PendingPhoto } from "./photo-upload";
 
 // The Fotos step of the import wizard (design §8, §13.4). Photos are read in this browser, one at a time (a ZIP is
 // opened here, never on the server), re-encoded to JPEG when the browser can (drops location data, ≤ 2400 px), and
@@ -37,7 +37,6 @@ import { cn } from "@/lib/utils";
 
 type ApiResult<T> = { ok: true; body: T } | { ok: false; code: string; message: string };
 const NETWORK_MESSAGE = "No pudimos conectar con Laria. Revisa tu conexión y vuelve a intentarlo.";
-const MAX_SIDE = 2400;
 const ROWS_PAGE = 30;
 
 async function api<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
@@ -60,31 +59,6 @@ function plural(count: number, one: string, many: string) {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-// Re-encodes in the browser when it can decode the photo: JPEG, white background, longest side ≤ 2400 px. This drops
-// EXIF (including location) and shrinks uploads. The server does not rely on it.
-async function prepare(data: Blob, type: PhotoMimeType): Promise<{ data: Blob; type: PhotoMimeType }> {
-  if (typeof createImageBitmap !== "function") return { data, type };
-  try {
-    const bitmap = await createImageBitmap(data);
-    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-    const context = canvas.getContext("2d");
-    if (!context) return { data, type };
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    bitmap.close();
-    const encoded = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.88));
-    if (encoded && encoded.size <= PHOTO_MAX_FILE_BYTES) return { data: encoded, type: "image/jpeg" };
-  } catch {
-    // Not decodable here (for example HEIC on some browsers): send as is; the server decides.
-  }
-  return { data, type };
-}
-
-type Pending = { name: string; type: PhotoMimeType; data: Blob };
 type Progress = { sent: number; total: number | null; phase: string };
 
 // ------------------------------------------------------------------ the step
@@ -131,40 +105,7 @@ export function ImportPhotos({ sessionId, onBack, onContinue, continueLabel = "C
     return result.ok;
   }
 
-  // Sends one batch: slots, uploads (three at a time), then the server check.
-  async function sendBatch(batch: Pending[], manifest: Map<string, ManifestEntry>) {
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) throw new Error(NETWORK_MESSAGE);
-    const prepared = await Promise.all(batch.map(async (item) => ({ ...item, ...(await prepare(item.data, item.type)) })));
-    const slots = await api<{ uploads: UploadSlot[] }>(`/api/store/imports/${sessionId}/photo-uploads`, {
-      files: prepared.map((item) => {
-        const listed = manifest.get(item.name.toLowerCase());
-        return { name: item.name, type: item.type, bytes: item.data.size, manifest_sku: listed?.sku ?? null, manifest_order: listed?.order ?? null };
-      }),
-    });
-    if (!slots.ok) throw new Error(slots.message);
-    const uploaded: string[] = [];
-    let next = 0;
-    async function worker() {
-      while (next < prepared.length) {
-        const index = next++;
-        const slot = slots.ok ? slots.body.uploads[index] : null;
-        if (!slot) continue;
-        const item = prepared[index];
-        const { error } = await supabase!.storage.from(slot.bucket).upload(slot.path, await item.data.arrayBuffer(), {
-          contentType: item.type,
-          upsert: false,
-        });
-        if (!error || /exists|duplicate/i.test(error.message)) uploaded.push(slot.asset_id);
-      }
-    }
-    await Promise.all([worker(), worker(), worker()]);
-    if (uploaded.length) {
-      const checked = await api(`/api/store/imports/${sessionId}/photo-uploads/complete`, { assetIds: uploaded });
-      if (!checked.ok) throw new Error(checked.message);
-    }
-    return uploaded.length;
-  }
+  const sendBatch = (batch: PendingPhoto[], manifest: Map<string, ManifestEntry>) => sendPhotoBatch(sessionId, batch, manifest);
 
   async function upload(files: File[]) {
     setActionError(null);
@@ -193,7 +134,7 @@ export function ImportPhotos({ sessionId, onBack, onContinue, continueLabel = "C
     let remaining = PHOTO_MAX_FILES - (view?.counts.total ?? 0);
     let sent = 0;
     const totalKnown = archives.length ? null : photos.length;
-    let batch: Pending[] = [];
+    let batch: PendingPhoto[] = [];
     const flush = async () => {
       if (!batch.length) return;
       const current = batch;
@@ -255,6 +196,11 @@ export function ImportPhotos({ sessionId, onBack, onContinue, continueLabel = "C
           Opcional. Cada SKU necesita de 2 a 10 fotos para publicarse; el inventario se importa igual sin ellas.
         </p>
       </div>
+      {onContinue && view.rows.length > 10 ? (
+        <div className="flex flex-wrap gap-3">
+          <Button onClick={onContinue} disabled={Boolean(progress)}>{continueLabel}</Button>
+        </div>
+      ) : null}
       <ErrorSummary title="No pudimos completar la acción" errors={actionError ? [{ id: "fotos-subir", message: actionError }] : []} attempt={errorAttempt} />
 
       {view.accepting ? <UploadForm busy={Boolean(progress)} onUpload={upload} /> : (

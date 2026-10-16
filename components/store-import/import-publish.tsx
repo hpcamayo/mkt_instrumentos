@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Send } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PencilLine, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { ErrorSummary } from "@/components/ui/error-summary";
 import { Checkbox } from "@/components/ui/field";
-import { Notice } from "@/components/ui/notice";
+import { Notice, NoticeIcon, noticeBodyClassName, noticeClassName } from "@/components/ui/notice";
 import { StatusTag, Tag } from "@/components/ui/tag";
 import { PUBLISH_CHUNK_ROWS } from "@/lib/store-import/publication";
 import type { PublishOutcome, PublishRow, PublishView } from "@/lib/store-import/publication-server";
 import type { StatusTone } from "@/lib/ui/status";
+import { CompleteRowSheet, type CompleteRowOutcome } from "./complete-row-sheet";
 
 // "Publicar seleccionados" (design §7.7): after the inventory is applied, the owner picks which complete rows become
 // publications. The page sends the selection in chunks of 20; each chunk respects the store's allowance, and rows
@@ -75,18 +76,26 @@ export function ImportPublish({ sessionId }: { sessionId: string }) {
   const [problems, setProblems] = useState<Map<number, string>>(new Map());
   const [filter, setFilter] = useState<Filter>("ready");
   const [limit, setLimit] = useState(ROWS_PAGE);
+  const [completing, setCompleting] = useState<PublishRow | null>(null);
+  const [completed, setCompleted] = useState<{ tone: "success" | "warning"; text: string } | null>(null);
+  const completedRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     const result = await api<PublishView>(`/api/store/imports/${sessionId}/publication`);
     if (!result.ok) {
       setError(result.message);
       setAttempt((value) => value + 1);
-      return;
+      return null;
     }
     setView(result.body);
     const ready = new Set(result.body.rows.filter((row) => row.state === "ready").map((row) => row.row_number));
     setSelected((current) => new Set([...current].filter((row) => ready.has(row))));
+    return result.body;
   }, [sessionId]);
+
+  useEffect(() => {
+    if (completed) completedRef.current?.focus();
+  }, [completed]);
 
   useEffect(() => {
     void load();
@@ -139,6 +148,28 @@ export function ImportPublish({ sessionId }: { sessionId: string }) {
     await load();
   }
 
+  function closeCompleting() {
+    const row = completing?.row_number;
+    setCompleting(null);
+    if (row !== undefined) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-completar="${row}"]`)?.focus());
+  }
+
+  // After "Completar datos": the list is read again, and a row that became complete is selected for publishing.
+  async function onCompleted(outcome: CompleteRowOutcome) {
+    setCompleting(null);
+    const next = await load();
+    const row = next?.rows.find((item) => item.row_number === outcome.row);
+    const photos = outcome.photosAdded ? ` Se ${outcome.photosAdded === 1 ? "agregó 1 foto" : `agregaron ${outcome.photosAdded} fotos`}.` : "";
+    const photoProblem = outcome.photoError ? ` ${outcome.photoError}` : "";
+    if (row?.state === "ready") {
+      if (next?.open) setSelected((current) => new Set([...current, row.row_number]));
+      setCompleted({ tone: outcome.photoError ? "warning" : "success", text: `Fila ${outcome.row} lista para publicar: la dejamos seleccionada.${photos}${photoProblem}` });
+    } else {
+      const still = row?.missing.length ? ` Para publicar todavía falta: ${row.missing.join(", ")}.` : "";
+      setCompleted({ tone: "warning", text: `${outcome.savedFields ? `Guardamos los datos de la fila ${outcome.row}.` : `Fila ${outcome.row}.`}${photos}${photoProblem}${still}` });
+    }
+  }
+
   function toggle(row: number, on: boolean) {
     setSelected((current) => {
       const next = new Set(current);
@@ -174,18 +205,15 @@ export function ImportPublish({ sessionId }: { sessionId: string }) {
             : "Tu tienda está en revisión: las publicaciones quedan en revisión y no son públicas hasta que Laria apruebe la tienda."}
       </p>
 
-      {summary ? (
-        <Notice tone={summary.failed || summary.noQuota ? "warning" : "success"} title="Publicación terminada">
-          <ul className="list-disc pl-5">
-            {summary.published ? <li>{plural(summary.published, "SKU publicado", "SKU publicados")}.</li> : null}
-            {summary.review ? <li>{plural(summary.review, "SKU quedó en revisión", "SKU quedaron en revisión")}.</li> : null}
-            {summary.noQuota ? <li>{plural(summary.noQuota, "SKU quedó sin publicar", "SKU quedaron sin publicar")} por falta de cupo.</li> : null}
-            {summary.failed ? <li>{plural(summary.failed, "SKU no se pudo publicar", "SKU no se pudieron publicar")}; el motivo está en cada fila.</li> : null}
-          </ul>
-        </Notice>
-      ) : null}
+      {summary ? <PublishSummary summary={summary} /> : null}
 
       {error ? <ErrorSummary title="No pudimos publicar" errors={[{ id: "publicar-acciones", message: error }]} attempt={attempt} /> : null}
+
+      {completed ? (
+        <div ref={completedRef} tabIndex={-1} role="status" className="outline-none">
+          <Notice tone={completed.tone}>{completed.text}</Notice>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar SKU">
         <Chip selected={effective === "ready"} onClick={() => setFilter("ready")}>Listas ({groups.ready.length})</Chip>
@@ -209,11 +237,17 @@ export function ImportPublish({ sessionId }: { sessionId: string }) {
           {list.slice(0, limit).map((row) => (
             <PublishRowItem key={row.row_number} row={row} selectable={view.open && row.state === "ready" && !publishing}
               selected={selected.has(row.row_number)} problem={problems.get(row.row_number) ?? null}
-              onToggle={(on) => toggle(row.row_number, on)} />
+              onToggle={(on) => toggle(row.row_number, on)}
+              onComplete={view.open && row.state === "incomplete" && !publishing ? () => { setCompleted(null); setCompleting(row); } : null} />
           ))}
         </ul>
       ) : <p className="t-body text-ink-2">No hay SKU en este grupo.</p>}
       {list.length > limit ? <div><Button variant="secondary" onClick={() => setLimit((value) => value + ROWS_PAGE)}>Ver más SKU</Button></div> : null}
+
+      {completing ? (
+        <CompleteRowSheet sessionId={sessionId} row={completing.row_number} itemId={completing.item_id}
+          onClose={closeCompleting} onSaved={(outcome) => void onCompleted(outcome)} />
+      ) : null}
 
       {view.open && groups.ready.length ? (
         <div className="grid gap-3 border-t border-subtle pt-4">
@@ -238,12 +272,13 @@ export function ImportPublish({ sessionId }: { sessionId: string }) {
   );
 }
 
-function PublishRowItem({ row, selectable, selected, problem, onToggle }: {
+function PublishRowItem({ row, selectable, selected, problem, onToggle, onComplete }: {
   row: PublishRow;
   selectable: boolean;
   selected: boolean;
   problem: string | null;
   onToggle: (on: boolean) => void;
+  onComplete: (() => void) | null;
 }) {
   const state = STATES[row.state];
   const label = `${row.sku ? `${row.sku} · ` : ""}${row.name}`;
@@ -260,7 +295,15 @@ function PublishRowItem({ row, selectable, selected, problem, onToggle }: {
             <p className="t-meta">Fila {row.row_number} · {plural(row.photo_count, "foto", "fotos")}</p>
           </div>
         )}
-        {row.listing ? <StatusTag domain="listing" status={row.listing.status} /> : <Tag tone={state.tone}>{state.label}</Tag>}
+        <div className="flex flex-wrap items-center gap-2">
+          {row.listing ? <StatusTag domain="listing" status={row.listing.status} /> : <Tag tone={state.tone}>{state.label}</Tag>}
+          {onComplete ? (
+            <Button size="sm" variant="secondary" icon={<PencilLine aria-hidden />} data-completar={row.row_number} onClick={onComplete}
+              aria-label={`Completar datos de la fila ${row.row_number}`}>
+              Completar datos
+            </Button>
+          ) : null}
+        </div>
       </div>
       {row.state === "incomplete" && row.missing.length ? <p className="t-ui text-ink-2">Para publicar falta: {row.missing.join(", ")}.</p> : null}
       {row.state === "unavailable" ? <p className="t-ui text-ink-2">El SKU está archivado o ya no está en tu inventario.</p> : null}
@@ -270,5 +313,39 @@ function PublishRowItem({ row, selectable, selected, problem, onToggle }: {
         <p className="t-ui"><Link href={`/instrumentos/${row.listing.slug}`} className="link font-semibold">Ver publicación</Link></p>
       ) : null}
     </li>
+  );
+}
+
+// The outcome of "Publicar seleccionados" (review fix B2): a larger notice that takes focus and scrolls into view, since
+// the button that started it sits at the end of a long list.
+function PublishSummary({ summary }: { summary: Summary }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    element.focus({ preventScroll: true });
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    element.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
+  }, [summary]);
+  const pending = summary.failed + summary.noQuota;
+  const tone = pending ? "warning" : "success";
+  const title = pending
+    ? "Publicación terminada con SKU pendientes"
+    : summary.review && !summary.published
+      ? "Tus SKU quedaron en revisión"
+      : "Se publicaron los SKU seleccionados";
+  return (
+    <div ref={ref} tabIndex={-1} role="status" className={noticeClassName(tone, "gap-4 p-5 sm:p-6 [&>svg]:h-7 [&>svg]:w-7")}>
+      <NoticeIcon tone={tone} />
+      <div className={noticeBodyClassName}>
+        <p className="t-section">{title}</p>
+        <ul className="mt-2 grid list-disc gap-1 pl-5 t-body">
+          {summary.published ? <li>{plural(summary.published, "SKU publicado", "SKU publicados")}: ya se ven en Laria.</li> : null}
+          {summary.review ? <li>{plural(summary.review, "SKU quedó en revisión", "SKU quedaron en revisión")}: aparecen cuando Laria los aprueba.</li> : null}
+          {summary.noQuota ? <li>{plural(summary.noQuota, "SKU quedó sin publicar", "SKU quedaron sin publicar")} por falta de cupo.</li> : null}
+          {summary.failed ? <li>{plural(summary.failed, "SKU no se pudo publicar", "SKU no se pudieron publicar")}; el motivo está en cada fila.</li> : null}
+        </ul>
+      </div>
+    </div>
   );
 }

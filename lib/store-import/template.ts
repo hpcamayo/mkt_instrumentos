@@ -4,6 +4,7 @@ import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { instrumentTypesByCategory } from "@/lib/listing-submission";
 import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { writeXlsx, type XlsxCell } from "@/lib/spreadsheet/xlsx-write";
+import { columnGuideText } from "./columns-guide";
 import { IMPORT_FIELDS } from "./mapping";
 import { csvRow } from "./report";
 
@@ -39,7 +40,7 @@ function attributeColumns(category: string | null) {
 export function templateColumns(category: string | null) {
   const validCategory = categoryOptions.some((option) => option.value === category) ? category : null;
   return [
-    ...IMPORT_FIELDS.map((field) => ({ key: field.key as string, label: field.label, help: field.help })),
+    ...IMPORT_FIELDS.map((field) => ({ key: field.key as string, label: field.label, help: columnGuideText(field.key) ?? field.help })),
     ...attributeColumns(validCategory).map((column) => ({ key: `attribute:${column.key}`, label: column.label, help: "Atributo opcional." })),
   ];
 }

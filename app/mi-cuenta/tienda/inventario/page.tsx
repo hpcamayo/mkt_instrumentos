@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { InventoryCategoryChips } from "@/components/inventory/inventory-category-chips";
 import { InventorySummaryTiles } from "@/components/inventory/inventory-summary";
 import { InventoryTable } from "@/components/inventory/inventory-table";
 import { InventoryToolbar } from "@/components/inventory/inventory-toolbar";
@@ -17,6 +18,7 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   activeFilterCount,
+  getInventoryCategoryCounts,
   getInventoryPage,
   getInventorySummary,
   getLinkedItemsByListing,
@@ -50,9 +52,9 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
 async function InventoryView({ summary, storeName, params }: { summary: InventorySummary; storeName: string; params: Record<string, string | string[] | undefined> }) {
   const { supabase } = await getAccountContext();
   const { filters, cursor } = parseInventoryFilters(params);
-  const [page, lastImport] = supabase
-    ? await Promise.all([getInventoryPage(supabase, filters, cursor), getLastImportErrors(supabase)])
-    : [null, null];
+  const [page, lastImport, categoryCounts] = supabase
+    ? await Promise.all([getInventoryPage(supabase, filters, cursor), getLastImportErrors(supabase), getInventoryCategoryCounts(supabase)])
+    : [null, null, null];
   const filtered = activeFilterCount(filters) > 0 || Boolean(filters.q);
   return (
     <section className="rounded-panel border border-subtle bg-white">
@@ -76,6 +78,7 @@ async function InventoryView({ summary, storeName, params }: { summary: Inventor
       ) : null}
       <InventorySummaryTiles summary={summary} importErrors={lastImport?.errors ?? null} importHref={lastImport?.href} />
       <InventoryToolbar filters={filters} />
+      <InventoryCategoryChips filters={filters} counts={categoryCounts} />
       {!page ? (
         <div className="p-5"><Notice tone="danger" role="alert">No se pudo cargar el inventario. Vuelve a intentarlo en unos minutos.</Notice></div>
       ) : page.items.length ? (

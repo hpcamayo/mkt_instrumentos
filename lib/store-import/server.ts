@@ -10,6 +10,7 @@ import {
   IMPORT_PLAN_CHUNK_ROWS,
   IMPORT_STAGE_CHUNK_ROWS,
 } from "./limits";
+import { IMPORT_NO_CATEGORY } from "./labels";
 import { proposeMapping, type ImportMapping } from "./mapping";
 import { parseImportRow } from "./rows";
 import { readSpreadsheet } from "./sheet";
@@ -324,8 +325,9 @@ export async function applyImportAction(db: Db, sessionId: string, action: Impor
 export const ROW_FILTERS = ["all", "create", "update", "adopt_listing", "unchanged", "error", "warning", "excluded", "conflict", "failed", "applied"] as const;
 export type RowFilter = (typeof ROW_FILTERS)[number];
 
-// One page of staged rows for the review table, keyset-paginated by row number.
-export async function readImportRows(db: Db, sessionId: string, filter: RowFilter, after: number, limit: number) {
+// One page of staged rows for the review table, keyset-paginated by row number. `category` is a category value from
+// the file (as parsed) or IMPORT_NO_CATEGORY (empty or not recognized).
+export async function readImportRows(db: Db, sessionId: string, filter: RowFilter, after: number, limit: number, category: string | null = null) {
   let query = db
     .from("store_import_rows")
     .select("row_number,parsed,issues,sku_normalized,planned_action,changes,owner_decision,commit_status,commit_message")
@@ -333,6 +335,8 @@ export async function readImportRows(db: Db, sessionId: string, filter: RowFilte
     .gt("row_number", after)
     .order("row_number", { ascending: true })
     .limit(limit);
+  if (category === IMPORT_NO_CATEGORY) query = query.is("parsed->>category", null);
+  else if (category) query = query.eq("parsed->>category", category);
   if (filter === "create" || filter === "update" || filter === "adopt_listing") {
     query = query.eq("planned_action", filter).eq("owner_decision", "include");
   } else if (filter === "unchanged" || filter === "error") {
@@ -347,6 +351,28 @@ export async function readImportRows(db: Db, sessionId: string, filter: RowFilte
   const { data, error } = await query;
   if (error) throw importErrorFrom(error);
   return data ?? [];
+}
+
+// How many staged rows each category of the file has, for the category chips of the review (review fix B3). Read in
+// pages of 1,000 (the API's page size); an import has at most 2,000 rows.
+export async function readImportCategoryCounts(db: Db, sessionId: string) {
+  const counts: Record<string, number> = {};
+  for (let from = 0; from < 3000; from += 1000) {
+    const { data, error } = await db
+      .from("store_import_rows")
+      .select("category:parsed->>category")
+      .eq("session_id", sessionId)
+      .order("row_number", { ascending: true })
+      .range(from, from + 999);
+    if (error) throw importErrorFrom(error);
+    const rows = (data ?? []) as unknown as { category: string | null }[];
+    for (const row of rows) {
+      const key = row.category || IMPORT_NO_CATEGORY;
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    if (rows.length < 1000) break;
+  }
+  return counts;
 }
 
 // The first rows as read from the file, so the column step can show an example value under each heading.

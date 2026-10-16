@@ -11,6 +11,7 @@ import { CountBadge } from "@/components/ui/tag";
 import { categoryOptions } from "@/lib/listings";
 import {
   CATALOG_FILTERS,
+  INVENTORY_NO_CATEGORY,
   PUBLICATION_FILTERS,
   SORTS,
   STOCK_FILTERS,
@@ -79,7 +80,8 @@ function describe(filters: InventoryFilters) {
     filters.stock !== "all" ? STOCK_FILTERS.find((entry) => entry.value === filters.stock)?.label : null,
     filters.publication ? PUBLICATION_FILTERS.find((entry) => entry.value === filters.publication)?.label : null,
     filters.catalog ? CATALOG_FILTERS.find((entry) => entry.value === filters.catalog)?.label : null,
-    filters.category ? categoryOptions.find((entry) => entry.value === filters.category)?.label ?? filters.category : null,
+    filters.category === INVENTORY_NO_CATEGORY ? "Sin categoría"
+      : filters.category ? categoryOptions.find((entry) => entry.value === filters.category)?.label ?? filters.category : null,
   ].filter(Boolean);
   return `Mostrando: ${parts.join(" · ")}.`;
 }
@@ -109,10 +111,11 @@ function FilterSheet({ filters, onDismiss, onApply }: { filters: InventoryFilter
           <legend className="t-ui font-semibold text-ink">Publicación</legend>
           {PUBLICATION_FILTERS.map((entry) => <Radio key={entry.value || "any"} name={`${id}-publicacion`} label={entry.label} checked={draft.publication === entry.value} onChange={() => setDraft({ ...draft, publication: entry.value })} />)}
         </fieldset>
-        <Field id={`${id}-categoria`} label="Categoría de la publicación">
+        <Field id={`${id}-categoria`} label="Categoría" hint="La de la publicación; si el SKU no tiene, la de su importación.">
           <Select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>
             <option value="">Todas las categorías</option>
             {categoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            <option value={INVENTORY_NO_CATEGORY}>Sin categoría</option>
           </Select>
         </Field>
         <fieldset className="grid gap-0.5">
