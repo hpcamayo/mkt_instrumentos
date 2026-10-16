@@ -2,7 +2,7 @@
 // file's bytes, not from its name or declared type.
 import { decodeCsv, detectDelimiter, parseCsv } from "./csv";
 import { IMPORT_HEADER_SEARCH_ROWS, IMPORT_MAX_DATA_ROWS, IMPORT_MAX_FILE_BYTES } from "./limits";
-import { ImportFileError, type ImportRow, type ReadSpreadsheetResult, type SpreadsheetFormat } from "./types";
+import { ImportFileError, type ImportCell, type ImportRow, type ReadSpreadsheetResult, type SpreadsheetFormat } from "./types";
 import { columnLetter } from "@/lib/spreadsheet/xlsx-write";
 import { readXlsx, sniffSpreadsheet } from "./xlsx-read";
 
@@ -30,6 +30,15 @@ export function findHeaderRow(rows: ImportRow[]) {
     return filled.length >= 2 && filled.every((cell) => !cell.k);
   });
   return index >= 0 ? index : 0;
+}
+
+// Trailing empty cells are dropped to keep staged rows small; positions are kept by index. A formula cell with no
+// cached value ({ v: "", f: 1 }) is not empty: it keeps its flag so validation can refuse it.
+export function compactCells(cells: ImportCell[]) {
+  const kept = (cell: ImportCell) => Boolean(cell.v || cell.f);
+  let end = cells.length;
+  while (end > 0 && !kept(cells[end - 1])) end -= 1;
+  return cells.slice(0, end).map((cell) => (kept(cell) ? cell : { v: "" }));
 }
 
 export function readSpreadsheet(bytes: Uint8Array, expected: SpreadsheetFormat): ReadSpreadsheetResult & { format: SpreadsheetFormat } {

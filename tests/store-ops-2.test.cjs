@@ -2,17 +2,18 @@
 // validation of Excel coercions, the template and the formula-safe report. Runs with `pnpm test`.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { zipSync, strToU8 } = require("fflate");
+const { zipSync, deflateSync, strToU8 } = require("fflate");
 
 const { decodeCsv, detectDelimiter, parseCsv } = require("@/lib/store-import/csv");
 const { readXlsx, extractXlsxParts, isDateFormatCode, columnIndex, decodeXmlText } = require("@/lib/store-import/xlsx-read");
-const { readSpreadsheet, findHeaderRow } = require("@/lib/store-import/sheet");
+const { readSpreadsheet, findHeaderRow, compactCells } = require("@/lib/store-import/sheet");
 const { proposeMapping, mappingProblems, normalizeHeader, IMPORT_FIELDS } = require("@/lib/store-import/mapping");
 const { parseImportRow, parsePriceCell } = require("@/lib/store-import/rows");
 const { buildReportCsv, csvSafeCell, describeChanges } = require("@/lib/store-import/report");
 const { buildTemplateXlsx, buildTemplateCsv, templateColumns } = require("@/lib/store-import/template");
 const { writeXlsx } = require("@/lib/spreadsheet/xlsx-write");
 const { ImportFileError } = require("@/lib/store-import/types");
+const { XLSX_INFLATE_OVERSHOOT_BYTES, XLSX_MAX_UNCOMPRESSED_BYTES } = require("@/lib/store-import/limits");
 
 // ------------------------------------------------------------------ fixtures
 
@@ -24,7 +25,7 @@ const STYLES = '<?xml version="1.0"?><styleSheet xmlns="http://schemas.openxmlfo
 const SHARED = '<?xml version="1.0"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>SKU</t></si><si><t>Nombre</t></si><si><t>Stock</t></si><si><r><t>Pedal </t></r><r><rPr><b/></rPr><t>Boss &amp; co</t></r><rPh><t>ペダル</t></rPh></si><si><t>00123</t></si><si><t xml:space="preserve">línea_x000D_dos</t></si></sst>';
 const sheet = (rows) => `<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows}</sheetData></worksheet>`;
 
-function xlsx(parts) {
+function xlsx(parts, options) {
   return zipSync(Object.fromEntries(Object.entries({
     "[Content_Types].xml": CONTENT_TYPES,
     "xl/workbook.xml": WORKBOOK(),
@@ -32,7 +33,7 @@ function xlsx(parts) {
     "xl/styles.xml": STYLES,
     "xl/sharedStrings.xml": SHARED,
     ...parts,
-  }).filter(([, value]) => value !== null).map(([name, value]) => [name, typeof value === "string" ? strToU8(value) : value])));
+  }).filter(([, value]) => value !== null).map(([name, value]) => [name, typeof value === "string" ? strToU8(value) : value])), options);
 }
 
 const BASIC_SHEET = sheet(
@@ -41,6 +42,93 @@ const BASIC_SHEET = sheet(
   '<row r="4"><c r="A4"><v>1.23456789012E+17</v></c><c r="B4" t="inlineStr"><is><t>Inline</t></is></c><c r="C4"><f>SUM(1,2)</f><v>3</v></c><c r="E4" s="2"><v>45000</v></c></row>' +
   '<row r="5"><c r="A5" t="e"><v>#N/A</v></c><c r="B5" t="s"><v>5</v></c><c r="C5" s="3"><v>12</v></c></row>' +
   '<row r="6" spans="1:3"><c r="A6" s="1"/><c r="B6"/></row>');
+
+// A ZIP written field by field (APPNOTE 4.3) for layouts zipSync never writes: data descriptors (flag bit 3, as
+// LibreOffice and Go writers do), ZIP64 fields, bytes padded after an entry's data, and headers that lie. `central`
+// overrides the sizes the central directory claims; `localName`, `localMethod` and `localSizes` the local header's.
+function handZip(files, { zip64 = false } = {}) {
+  const out = [];
+  const central = [];
+  let offset = 0;
+  for (const file of files) {
+    const data = typeof file.data === "string" ? strToU8(file.data) : file.data;
+    const body = Buffer.concat([file.store ? data : deflateSync(data), file.padding ?? Buffer.alloc(0)]);
+    const name = Buffer.from(file.name);
+    const localName = Buffer.from(file.localName ?? file.name);
+    const flags = file.descriptor ? 8 : 0;
+    const method = file.store ? 0 : 8;
+    const claimed = { compressed: body.length, size: data.length, ...file.central };
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(flags, 6);
+    local.writeUInt16LE(file.localMethod ?? method, 8);
+    local.writeUInt32LE(file.descriptor ? 0 : file.localSizes?.compressed ?? claimed.compressed, 18);
+    local.writeUInt32LE(file.descriptor ? 0 : file.localSizes?.size ?? claimed.size, 22);
+    local.writeUInt16LE(localName.length, 26);
+    const descriptor = Buffer.alloc(file.descriptor ? 16 : 0);
+    if (file.descriptor) {
+      descriptor.writeUInt32LE(0x08074b50, 0);
+      descriptor.writeUInt32LE(body.length, 8);
+      descriptor.writeUInt32LE(data.length, 12);
+    }
+    out.push(local, localName, body, descriptor);
+    const extra = Buffer.alloc(zip64 ? 28 : 0);
+    if (zip64) {
+      extra.writeUInt16LE(1, 0);
+      extra.writeUInt16LE(24, 2);
+      extra.writeBigUInt64LE(BigInt(claimed.size), 4);
+      extra.writeBigUInt64LE(BigInt(claimed.compressed), 12);
+      extra.writeBigUInt64LE(BigInt(offset), 20);
+    }
+    const header = Buffer.alloc(46);
+    header.writeUInt32LE(0x02014b50, 0);
+    header.writeUInt16LE(20, 4);
+    header.writeUInt16LE(20, 6);
+    header.writeUInt16LE(flags, 8);
+    header.writeUInt16LE(method, 10);
+    header.writeUInt32LE(zip64 ? 0xffffffff : claimed.compressed, 20);
+    header.writeUInt32LE(zip64 ? 0xffffffff : claimed.size, 24);
+    header.writeUInt16LE(name.length, 28);
+    header.writeUInt16LE(extra.length, 30);
+    header.writeUInt32LE(zip64 ? 0xffffffff : offset, 42);
+    central.push(header, name, extra);
+    offset += local.length + localName.length + body.length + descriptor.length;
+  }
+  const directory = Buffer.concat(central);
+  const tail = [];
+  if (zip64) {
+    const record = Buffer.alloc(56);
+    record.writeUInt32LE(0x06064b50, 0);
+    record.writeBigUInt64LE(44n, 4);
+    record.writeUInt16LE(45, 12);
+    record.writeUInt16LE(45, 14);
+    record.writeBigUInt64LE(BigInt(files.length), 24);
+    record.writeBigUInt64LE(BigInt(files.length), 32);
+    record.writeBigUInt64LE(BigInt(directory.length), 40);
+    record.writeBigUInt64LE(BigInt(offset), 48);
+    const locator = Buffer.alloc(20);
+    locator.writeUInt32LE(0x07064b50, 0);
+    locator.writeBigUInt64LE(BigInt(offset + directory.length), 8);
+    locator.writeUInt32LE(1, 16);
+    tail.push(record, locator);
+  }
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(zip64 ? 0xffff : files.length, 8);
+  end.writeUInt16LE(zip64 ? 0xffff : files.length, 10);
+  end.writeUInt32LE(zip64 ? 0xffffffff : directory.length, 12);
+  end.writeUInt32LE(zip64 ? 0xffffffff : offset, 16);
+  return new Uint8Array(Buffer.concat([...out, directory, ...tail, end]));
+}
+
+// The fixture workbook through handZip; `sheetEntry` changes the worksheet's entry.
+function handXlsx(sheetEntry = {}, { descriptor = true, zip64 = false } = {}) {
+  const parts = [["[Content_Types].xml", CONTENT_TYPES], ["xl/workbook.xml", WORKBOOK()], ["xl/_rels/workbook.xml.rels", RELS],
+    ["xl/styles.xml", STYLES], ["xl/sharedStrings.xml", SHARED]];
+  return handZip([...parts.map(([name, data]) => ({ name, data, descriptor })),
+    { name: "xl/worksheets/sheet1.xml", data: BASIC_SHEET, descriptor, ...sheetEntry }], { zip64 });
+}
 
 function expectFileError(fn, code) {
   assert.throws(fn, (error) => error instanceof ImportFileError && error.code === code, `expected ${code}`);
@@ -72,6 +160,18 @@ test("CSV parsing keeps text, quotes, embedded newlines and record numbers", () 
   assert.equal(rows[2].cells[2].v, "=1+1", "a formula in a CSV is plain text");
 });
 
+test("CSV: a quote left open at the end of the file refuses the file instead of swallowing rows", () => {
+  // Codex review 3 finding 4: this read as one row named "Pedal\nB,Cable,2" with a blank stock.
+  assert.throws(() => parseCsv('SKU,Nombre,Stock\nA,"Pedal\nB,Cable,2\n', ","), (error) => error instanceof ImportFileError
+    && error.code === "IMPORT_CSV_UNCLOSED_QUOTE" && /comillas sin cerrar desde la fila 2\b/.test(error.userMessage));
+  expectFileError(() => parseCsv('SKU;Nombre\r\n"A;Pedal', ";"), "IMPORT_CSV_UNCLOSED_QUOTE");
+  expectFileError(() => parseCsv('SKU,Nombre\nA,"dos\nlíneas"\nB,"""', ","), "IMPORT_CSV_UNCLOSED_QUOTE");
+  expectFileError(() => readSpreadsheet(new Uint8Array(Buffer.from('SKU,Nombre,Stock\nA,"Pedal\nB,Cable,2\n')), "csv"), "IMPORT_CSV_UNCLOSED_QUOTE");
+  // Closed quotes still hold separators, line breaks and doubled quotes, up to the very last character.
+  assert.deepEqual(parseCsv('SKU,Nombre\nA,"dos\nlíneas, ""y"" más"\nB,"fin"', ",").map((row) => row.cells.map((cell) => cell.v)),
+    [["SKU", "Nombre"], ["A", 'dos\nlíneas, "y" más'], ["B", "fin"]]);
+});
+
 test("CSV limits: columns, rows and a 5 MB single-line cell", () => {
   expectFileError(() => parseCsv(`${Array.from({ length: 81 }, (_, i) => `c${i}`).join(",")}\n`, ","), "IMPORT_TOO_MANY_COLUMNS");
   // Empty trailing columns beyond the limit are fine (Excel pads rows).
@@ -97,6 +197,42 @@ test("XLSX reading: shared, rich and inline strings, numbers, formulas, dates, e
   assert.deepEqual(row4[4], { v: "45000", k: "d" }, "built-in date format");
   assert.deepEqual(result.rows[3].cells, [{ v: "#N/A", k: "e" }, { v: "línea\rdos" }, { v: "12", k: "d" }], "custom date format, Excel escapes");
   assert.ok(result.warnings.some((warning) => warning.includes("fórmulas")));
+});
+
+test("a formula cell without a cached value is flagged, survives staging and is refused for its field", () => {
+  // Codex review 3 finding 5: <c><f>2+2</f></c> was dropped before its formula flag was recorded, so the stock read as
+  // a blank (keep the current value) with no warning at all.
+  const inline = (ref, text) => `<c r="${ref}" t="inlineStr"><is><t>${text}</t></is></c>`;
+  const bytes = xlsx({ "xl/worksheets/sheet1.xml": sheet(
+    `<row r="1">${inline("A1", "SKU")}${inline("B1", "Nombre")}${inline("C1", "Stock")}${inline("D1", "Precio")}</row>` +
+    `<row r="2">${inline("A2", "A")}${inline("B2", "Pedal")}<c r="C2"><f>2+2</f></c><c r="D2"><f t="shared" si="0"/><v></v></c>` +
+    '<c r="CC2"><f>1</f></c></row>' +
+    `<row r="3">${inline("A3", "B")}<c r="B3" t="str"><f>IF(1,"","x")</f><v></v></c><c r="C3"><f>1+1</f><v>2</v></c></row>`) });
+  const result = readXlsx(bytes);
+  assert.ok(result.warnings.some((warning) => /fórmulas sin valor calculado/.test(warning)), "file-level warning");
+  assert.ok(result.warnings.some((warning) => /último valor calculado/.test(warning)), "C3 still has its cached value");
+  assert.deepEqual(result.rows[1].cells, [{ v: "A" }, { v: "Pedal" }, { v: "", f: 1 }, { v: "", f: 1 }], "flagged; past the column limit ignored");
+  assert.deepEqual(result.rows[2].cells, [{ v: "B" }, { v: "" }, { v: "2", k: "n", f: 1 }], "a cached empty string is a real blank");
+
+  // Staging drops trailing empty cells but keeps the flag; validation then refuses the field instead of keeping the
+  // current stock.
+  const staged = compactCells(result.rows[1].cells);
+  assert.deepEqual(staged, result.rows[1].cells);
+  const mapping = { sku: 0, product_name: 1, quantity: 2, unit_price_pen: 3 };
+  const { parsed, issues } = parseImportRow(staged, mapping);
+  assert.equal(parsed.quantity, null);
+  for (const field of ["quantity", "unit_price_pen"]) {
+    const found = issues.find((item) => item.field === field);
+    assert.equal(found?.code, "IMPORT_FORMULA_NO_VALUE", field);
+    assert.equal(found.severity, "error");
+    assert.match(found.message, /fórmula sin valor calculado\. Abre el archivo en Excel, guárdalo y vuelve a subirlo\./);
+  }
+  const computed = parseImportRow(compactCells(result.rows[2].cells), mapping);
+  assert.equal(computed.parsed.quantity, 2);
+  assert.equal(computed.parsed.product_name, null, "a formula that computed an empty string is an ordinary blank");
+  assert.deepEqual(computed.issues.map((item) => item.code).filter((code) => code.startsWith("IMPORT_FORMULA")), ["IMPORT_FORMULA"]);
+  assert.deepEqual(compactCells([{ v: "A" }, { v: "" }, { v: "", k: "n" }]), [{ v: "A" }], "plain trailing blanks still go");
+  assert.ok(readSpreadsheet(bytes, "xlsx").warnings.some((warning) => /sin valor calculado/.test(warning)));
 });
 
 test("XLSX: first visible sheet only, absolute relationship targets", () => {
@@ -141,6 +277,114 @@ test("XLSX decompression budget stops ZIP bombs before inflating them", () => {
   assert.ok(!ignored.parts.has("xl/media/bomb.bin"));
   // A tighter budget is respected exactly.
   expectFileError(() => extractXlsxParts(xlsx({ "xl/worksheets/sheet1.xml": BASIC_SHEET }), { maxUncompressedBytes: 100 }), "IMPORT_FILE_TOO_BIG_UNCOMPRESSED");
+});
+
+test("XLSX entries with data descriptors or ZIP64 fields read like any other", () => {
+  const expected = readXlsx(xlsx({ "xl/worksheets/sheet1.xml": BASIC_SHEET }));
+  assert.deepEqual(readXlsx(handXlsx()), expected, "every entry with a data descriptor");
+  assert.deepEqual(readXlsx(handXlsx({ store: true })), expected, "a stored entry with a data descriptor");
+  assert.deepEqual(readXlsx(handXlsx({}, { descriptor: false, zip64: true })), expected, "ZIP64 sizes and end record");
+});
+
+test("a data-descriptor ZIP bomb is refused from the central directory, before inflating", () => {
+  // Codex review 3 finding 2: 8 MB of zeros in an ~8 KB descriptor entry was accepted (no ratio check), and a 50 MB
+  // one inflated all 50 MB, in blocks over 16 MB, before the 40 MB budget refused it.
+  for (const size of [8 * 1024 * 1024, 50 * 1024 * 1024]) {
+    const bomb = handXlsx({ data: new Uint8Array(size) });
+    assert.ok(bomb.length < 64 * 1024, `bomb is small (${bomb.length} bytes)`);
+    let inflated = 0;
+    assert.throws(() => extractXlsxParts(bomb, { onInflate: (bytes) => { inflated += bytes; } }),
+      (error) => error instanceof ImportFileError && error.code === "IMPORT_FILE_TOO_BIG_UNCOMPRESSED", `${size} bytes`);
+    assert.ok(inflated > 0 && inflated < 16 * 1024, `only the small parts before it were inflated (${inflated} bytes)`);
+  }
+});
+
+test("XLSX headers that lie are refused, and inflation stops within the documented overshoot", () => {
+  const code = (fn) => {
+    try {
+      fn();
+      return "accepted";
+    } catch (error) {
+      return error instanceof ImportFileError ? error.code : String(error);
+    }
+  };
+  const lying = {
+    "local name differs from the directory": { localName: "xl/worksheets/sheet9.xml" },
+    "local method differs from the directory": { localMethod: 0 },
+    "local sizes differ from the directory": { descriptor: false, localSizes: { compressed: 10, size: 10 } },
+    "declared size too big": { central: { size: BASIC_SHEET.length + 1 } },
+    "declared size too small": { central: { size: 10 } },
+    "data runs into the central directory": { central: { compressed: 100000 } },
+  };
+  for (const [label, entry] of Object.entries(lying)) {
+    assert.equal(code(() => readXlsx(handXlsx(entry))), "IMPORT_FILE_INVALID", label);
+  }
+  const truncated = handXlsx();
+  assert.equal(code(() => readXlsx(truncated.subarray(0, truncated.length - 10))), "IMPORT_FILE_INVALID", "no end record");
+
+  // Bombs whose central directory lies stop within one inflater push (XLSX_INFLATE_OVERSHOOT_BYTES) of a limit:
+  // the declared size, the ratio measured on compressed bytes actually fed, or the budget.
+  const zeros = new Uint8Array(50 * 1024 * 1024);
+  const bombs = [
+    ["declares 1 KB, inflates 50 MB", { data: zeros, central: { size: 1024 } }, {}, "IMPORT_FILE_INVALID", 1024],
+    ["declares its true 30 MB but pads its compressed size past 100:1", { data: zeros.subarray(0, 30 * 1024 * 1024),
+      padding: Buffer.alloc(400 * 1024, 0xff) }, {}, "IMPORT_FILE_TOO_BIG_UNCOMPRESSED", 1024 * 1024],
+    ["declares 2 MB under a 2 MB budget with no ratio limit, inflates 50 MB", { data: zeros, central: { size: 2 * 1024 * 1024 } },
+      { maxUncompressedBytes: 2 * 1024 * 1024 + 4096, maxEntryRatio: 1e9 }, "IMPORT_FILE_INVALID", 2 * 1024 * 1024 + 4096],
+  ];
+  for (const [label, entry, budget, expected, limit] of bombs) {
+    let inflated = 0;
+    let largest = 0;
+    const result = code(() => extractXlsxParts(handXlsx(entry), { ...budget, onInflate: (bytes) => {
+      inflated += bytes;
+      largest = Math.max(largest, bytes);
+    } }));
+    assert.equal(result, expected, label);
+    assert.ok(inflated > limit / 2, `${label}: inflation started (${inflated} bytes)`);
+    assert.ok(inflated <= limit + XLSX_INFLATE_OVERSHOOT_BYTES, `${label}: ${inflated} bytes inflated`);
+    assert.ok(largest <= XLSX_INFLATE_OVERSHOOT_BYTES, `${label}: largest block ${largest} bytes`);
+  }
+  assert.ok(XLSX_INFLATE_OVERSHOOT_BYTES <= 1.1 * 1024 * 1024 && XLSX_INFLATE_OVERSHOOT_BYTES < XLSX_MAX_UNCOMPRESSED_BYTES / 32);
+});
+
+test("the XML tokenizer is linear and refuses unterminated comments, instructions, CDATA and tags", () => {
+  // Stored (not deflated) so the parts are big without tripping the decompression budget.
+  const stored = (parts) => xlsx({ "xl/worksheets/sheet1.xml": BASIC_SHEET, ...parts }, { level: 0 });
+  const hostile = {
+    comment: "<!--",
+    instruction: "<?",
+    cdata: "<![CDATA[",
+    "open tag": "<si ",
+    "attribute quote": '<si a="',
+    "unknown markup": "<!x",
+    "stray bracket": "< ",
+  };
+  const invalid = (error) => error instanceof ImportFileError && error.code === "IMPORT_FILE_INVALID";
+  for (const [label, opener] of Object.entries(hostile)) {
+    for (const count of [4000, 8000]) {
+      const repeated = opener.repeat(count);
+      assert.throws(() => readXlsx(stored({ "xl/sharedStrings.xml": SHARED.replace("</sst>", `${repeated}</sst>`) })), invalid, `${label} × ${count} in shared strings`);
+      assert.throws(() => readXlsx(stored({ "xl/worksheets/sheet1.xml": sheet(repeated) })), invalid, `${label} × ${count} in the sheet`);
+    }
+  }
+  // Well-formed XML still reads: comments, instructions, CDATA text, prefixes, either quote, spaces around "=", and an
+  // attribute value that looks like another attribute.
+  const valid = readXlsx(stored({ "xl/worksheets/sheet1.xml": sheet(
+    '<!-- nota --><x:row r = \'1\' spans="1:2"><?pi x?><x:c r="A1" t="inlineStr" ><is><t><![CDATA[<b>&amp;]]></t></is></x:c>' +
+    '<c x=\' r="Z1"\' t="inlineStr" r="B1"><is><t>B</t></is></c></x:row >') }));
+  assert.deepEqual(valid.rows[0].cells, [{ v: "<b>&amp;" }, { v: "B" }]);
+  expectFileError(() => readXlsx(stored({ "xl/worksheets/sheet1.xml": sheet('<row r="1"></row  x>') })), "IMPORT_FILE_INVALID");
+  expectFileError(() => readXlsx(stored({ "xl/worksheets/sheet1.xml": sheet('<row r="1" r2>') })), "IMPORT_FILE_INVALID");
+
+  // ~4 MB of openers, and ~4 MB of well-formed constructs ending in one opener: both refused in well under a second.
+  const big = 4 * 1024 * 1024;
+  for (const body of ["<!--".repeat(big / 4), "<!--x--><?p?><![CDATA[y]]><b c='d'/>".repeat(big / 36) + "<!--"]) {
+    const bytes = stored({ "xl/sharedStrings.xml": SHARED.replace("</sst>", `${body}</sst>`) });
+    const started = performance.now();
+    expectFileError(() => readXlsx(bytes), "IMPORT_FILE_INVALID");
+    const elapsed = performance.now() - started;
+    assert.ok(elapsed < 1500, `parsed ${bytes.length} bytes in ${Math.round(elapsed)} ms`);
+  }
 });
 
 test("XLSX helpers: column letters, date format codes, entity decoding", () => {
@@ -199,6 +443,17 @@ test("mapping proposes fields from Spanish and English headers, once each", () =
   assert.deepEqual(mappingProblems({ quantity: 0 }, 2).map((problem) => problem.field), ["sku"]);
   assert.ok(mappingProblems({ quantity: 0, sku: 0 }, 2).some((problem) => problem.field === null));
   assert.equal(IMPORT_FIELDS[0].label, "SKU");
+});
+
+test("barcode headings map to Referencia externa (owner walkthrough note n-barcode)", () => {
+  for (const heading of ["cód. barras", "cod. barras", "código de barras", "Cód. Barras", "codigo de barras", "cod barras",
+    "COD.BARRAS", "Cód. de barras", "Código barras", "Código de barra"]) {
+    assert.deepEqual(proposeMapping([heading]), { external_reference: 0 }, heading);
+  }
+  // The messy POS export sample: "Cód." is the SKU, "Cód. barras" the barcode.
+  const pos = proposeMapping(["Cód.", "Artículo", "Marca", "Familia", "P. Venta", "Existencias", "Estado", "Detalle", "Cód. barras", "Imágenes"]);
+  assert.equal(pos.sku, 0);
+  assert.equal(pos.external_reference, 8);
 });
 
 // ------------------------------------------------------------------ row validation
@@ -273,6 +528,22 @@ test("categories, types and conditions map to Laria values; unknown ones warn", 
   assert.ok(codes(parse("", "", "usado").issues).includes("IMPORT_CONDITION_UNKNOWN"));
 });
 
+test("a row with other errors keeps its SKU, so every repeated SKU can be flagged (walkthrough note n-dup)", () => {
+  // laria_private.mark_import_duplicates groups rows by upper(parsed.sku); a row that already has an error must still
+  // carry its SKU for the database to mark it, and its twin, as duplicates.
+  const cases = [
+    [row(["DUP-2", "Repetido", "-1"]), "quantity"],
+    [row(["dup-2", { v: "#REF!", k: "e" }, "1", "1,500"]), "product_name"],
+    [row(["DUP-2", "Repetido", { v: "", f: 1 }]), "quantity"],
+    [row(["DUP 2", "Repetido", "1"]), "sku"],
+  ];
+  for (const [cells, field] of cases) {
+    const { parsed, issues } = parseImportRow(cells, MAPPING);
+    assert.ok(issues.some((item) => item.field === field && item.severity === "error"), `${cells[0].v}: error on ${field}`);
+    assert.equal(parsed.sku, cells[0].v, `${cells[0].v}: SKU kept for duplicate detection`);
+  }
+});
+
 test("cell problems: Excel errors, oversized cells, formulas, publication readiness", () => {
   assert.ok(codes(parseImportRow(row(["A", { v: "#REF!", k: "e" }, "1"]), MAPPING).issues).includes("IMPORT_CELL_ERROR"));
   assert.ok(codes(parseImportRow(row(["A", { v: "x".repeat(2001), t: 1 }, "1"]), MAPPING).issues).includes("IMPORT_CELL_TOO_LONG"));
@@ -293,6 +564,7 @@ test("the report CSV neutralizes formulas and explains each row", () => {
   assert.equal(csvSafeCell("-3"), "'-3");
   assert.equal(csvSafeCell("@SUM(A1)"), "'@SUM(A1)");
   assert.equal(csvSafeCell("\tx"), "'\tx");
+  assert.equal(csvSafeCell("\n=1+1"), '"\'\n=1+1"', "a leading line feed (Codex review 3 finding 3)");
   assert.equal(csvSafeCell(-3), "-3", "real numbers stay numbers");
   assert.equal(csvSafeCell("a;b"), '"a;b"');
   assert.deepEqual(describeChanges({ quantity_on_hand: { from: 12, to: 9 }, unit_price_pen: { from: null, to: 300 } }),
@@ -302,11 +574,14 @@ test("the report CSV neutralizes formulas and explains each row", () => {
       commit_status: "applied", commit_message: null, issues: [], changes: { quantity_on_hand: { from: 1, to: 3 } } },
     { row_number: 3, sku_normalized: null, parsed: { sku: null }, planned_action: "error", owner_decision: "include",
       commit_status: "pending", commit_message: null, issues: [{ severity: "error", message: "Falta el nombre." }], changes: {} },
+    { row_number: 4, sku_normalized: "B", parsed: { sku: "B", product_name: "\n=HYPERLINK(\"http://x\")" }, planned_action: "create",
+      owner_decision: "include", commit_status: "applied", commit_message: null, issues: [], changes: {} },
   ]);
   const lines = csv.replace(/^﻿/, "").trim().split("\r\n");
   assert.equal(lines[0], "Fila,SKU,Nombre,Acción,Resultado,Cambios,Mensajes");
   assert.equal(lines[1], "2,'=cmd,Pedal,Actualizar,Aplicada,Stock: 1 → 3 (+2),");
   assert.equal(lines[2], "3,,,Con errores,No aplicada,,Falta el nombre.");
+  assert.equal(lines[3], '4,B,"\'\n=HYPERLINK(""http://x"")",Crear SKU,Aplicada,,', "a name starting with a line feed is prefixed");
 });
 
 test("the template has the brief's headings, category attributes and text identifier columns", () => {

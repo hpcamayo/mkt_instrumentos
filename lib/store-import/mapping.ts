@@ -43,7 +43,7 @@ export const IMPORT_FIELDS: readonly ImportField[] = [
   { key: "condition", label: "Condición", help: "Nuevo, Usado - buen estado o Usado - con detalles. Necesaria para publicar.", synonyms: ["condición", "estado", "condition"] },
   { key: "description", label: "Descripción", help: "Al menos 40 caracteres para publicar.", synonyms: ["descripción", "description", "detalle", "detalles"] },
   { key: "low_stock_threshold", label: "Umbral de stock bajo", help: "Opcional: avisa cuando el stock llega a este número.", synonyms: ["umbral de stock bajo", "umbral", "stock mínimo", "mínimo", "min", "punto de reorden"] },
-  { key: "external_reference", label: "Referencia externa", help: "Opcional: código de tu sistema o código de barras.", synonyms: ["referencia externa", "ref externa", "código externo", "código de barras", "ean", "upc", "barcode"] },
+  { key: "external_reference", label: "Referencia externa", help: "Opcional: código de tu sistema o código de barras.", synonyms: ["referencia externa", "ref externa", "código externo", "código de barras", "código de barra", "código barras", "cód. barras", "cód. de barras", "ean", "upc", "barcode"] },
   { key: "photos", label: "Foto(s)", help: "Opcional: nombres de archivo separados por punto y coma.", synonyms: ["foto(s)", "fotos", "foto", "imágenes", "imagen", "photos", "images"] },
   { key: "listing_id", label: "ID de publicación", help: "Solo para vincular publicaciones existentes (viene en la exportación).", synonyms: ["id de publicación", "id publicación", "listing id", "listing_id"] },
 ];

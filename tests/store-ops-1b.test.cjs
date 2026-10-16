@@ -58,6 +58,21 @@ test("export prefixes formula-like text in CSV and never touches genuine numbers
   assert.match(line, /,7,7,1500,,'@ref,Activo,11111111-1111-4111-8111-111111111111,Publicada,https?:\/\/[^,]+\/instrumentos\/boss-ds-1$/);
 });
 
+test("export prefixes text that starts with a line feed before a formula (Codex review 3, finding 3)", () => {
+  const { formulaSafe, toCsv, exportRows } = load("lib/inventory-export.ts");
+  assert.equal(formulaSafe("\n=HYPERLINK(\"http://x\")"), "'\n=HYPERLINK(\"http://x\")");
+  assert.equal(formulaSafe("\r\n=1+1"), "'\r\n=1+1");
+  assert.equal(formulaSafe("Pedal\n=1"), "Pedal\n=1", "only a leading line feed matters");
+  const rows = exportRows([
+    { merchant_sku: "A-1", product_name: "\n=HYPERLINK(\"http://evil\",\"clic\")", variant_label: null, quantity_on_hand: 2,
+      quantity_available: 2, unit_price_pen: 10, low_stock_threshold: null, external_reference: "\n@ref", inventory_status: "active", listing: null },
+  ]);
+  const csv = toCsv(rows);
+  assert.ok(csv.includes('"\'\n=HYPERLINK(""http://evil"",""clic"")"'), csv);
+  assert.ok(csv.includes('"\'\n@ref"'), csv);
+  assert.match(csv, /,2,2,10,,/, "genuine numbers stay unprefixed");
+});
+
 test("XLSX export stores text as inline strings, numbers as numbers, identifiers as text, and never a formula", () => {
   const { exportRows, toXlsxSheet } = load("lib/inventory-export.ts");
   const { writeXlsx } = load("lib/spreadsheet/xlsx-write.ts");
@@ -83,6 +98,59 @@ test("the export route is owner-scoped, bounded and downloads without caching", 
   assert.match(route, /MAX_ROWS = 10000/);
   assert.match(route, /"Cache-Control": "private, no-store"/);
   assert.match(route, /Content-Disposition/);
+});
+
+test("the export fails clearly instead of downloading blank columns when a lookup fails (Codex review 3, finding 7)", async () => {
+  // A Supabase client whose queries resolve to fixed { data, error } results per table.
+  let results = null;
+  const fakeSupabase = () => ({
+    auth: { getUser: async () => ({ data: { user: { id: "owner-1" } }, error: null }) },
+    from(table) {
+      const result = results[table];
+      const query = {
+        select: () => query, eq: () => query, in: () => query, order: () => query, range: () => query,
+        maybeSingle: async () => result,
+        then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
+      };
+      return query;
+    },
+  });
+  const { GET } = withMocks({ "@/lib/supabase/server-client": { getSupabaseServerClient: async () => fakeSupabase() } },
+    () => load("app/api/store/inventory/export/route.ts"));
+  const listingId = "11111111-1111-4111-8111-111111111111";
+  const ok = {
+    stores: { data: { id: "store-1", slug: "mi-tienda" }, error: null },
+    store_inventory_items: { data: [{ merchant_sku: "A-1", product_name: "Pedal", variant_label: null, quantity_on_hand: 1, quantity_available: 1,
+      unit_price_pen: 10, low_stock_threshold: null, external_reference: null, inventory_status: "active", listing_id: listingId }], error: null },
+    listings: { data: [{ id: listingId, slug: "pedal", status: "approved", brand: "Boss", model: "DS-1", category: "pedals" }], error: null },
+  };
+  const timeout = { data: null, error: { code: "57014", message: "canceling statement due to statement timeout" } };
+  const download = async (overrides) => {
+    results = { ...ok, ...overrides };
+    const logged = [];
+    const original = console.error;
+    console.error = (...args) => logged.push(args.join(" "));
+    try {
+      const response = await GET(new Request("http://localhost/api/store/inventory/export?format=csv"));
+      return { response, body: await response.text(), logged };
+    } finally {
+      console.error = original;
+    }
+  };
+
+  const fine = await download({});
+  assert.equal(fine.response.status, 200);
+  assert.match(fine.body, /^\uFEFF?SKU,/, "a CSV download (Response.text() drops the BOM)");
+  assert.match(fine.body, /A-1,Pedal,,Boss,DS-1,Pedales,1,1,10,,,Activo,11111111/);
+
+  for (const table of ["listings", "stores", "store_inventory_items"]) {
+    const failed = await download({ [table]: timeout });
+    assert.equal(failed.response.status, 500, `${table}: ${failed.response.status} ${failed.body.slice(0, 80)}`);
+    assert.match(failed.response.headers.get("content-type") ?? "", /application\/json/, table);
+    assert.equal(failed.response.headers.get("content-disposition"), null, `${table}: no download`);
+    assert.deepEqual(JSON.parse(failed.body), { message: "No se pudo preparar la exportación." }, table);
+    assert.ok(failed.logged.some((line) => line.includes("57014")), `${table}: the failure is logged`);
+  }
 });
 
 // ------------------------------------------------------------------ actions

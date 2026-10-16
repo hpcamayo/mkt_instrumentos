@@ -11,6 +11,12 @@ import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 const PAGE = 1000;
 const MAX_ROWS = 10000;
 
+// Any failed lookup stops the export: a file with blank columns would look complete (Codex review 3, finding 7).
+function exportFailed(step: string, error: { code?: string; message?: string }) {
+  console.error("inventory export failed", step, error.code, error.message);
+  return NextResponse.json({ message: "No se pudo preparar la exportación." }, { status: 500 });
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const format = url.searchParams.get("format") === "xlsx" ? "xlsx" : url.searchParams.get("format") === "csv" ? "csv" : null;
@@ -25,7 +31,8 @@ export async function GET(request: Request) {
   if (!supabase) return NextResponse.json({ message: "No se pudo validar tu cuenta." }, { status: 503 });
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return NextResponse.json({ message: "Ingresa a tu cuenta." }, { status: 401 });
-  const { data: store } = await supabase.from("stores").select("id,slug").eq("owner_user_id", userData.user.id).maybeSingle();
+  const { data: store, error: storeError } = await supabase.from("stores").select("id,slug").eq("owner_user_id", userData.user.id).maybeSingle();
+  if (storeError) return exportFailed("store", storeError);
   if (!store) return NextResponse.json({ message: "Necesitas una tienda para exportar inventario." }, { status: 404 });
 
   const db = inventoryDb(supabase);
@@ -39,10 +46,7 @@ export async function GET(request: Request) {
       .range(from, from + PAGE - 1);
     query = ids ? query.in("id", ids) : query.eq("inventory_status", "active");
     const { data, error } = await query;
-    if (error) {
-      console.error("inventory export failed", error.code, error.message);
-      return NextResponse.json({ message: "No se pudo preparar la exportación." }, { status: 500 });
-    }
+    if (error) return exportFailed("items", error);
     items.push(...((data ?? []) as typeof items));
     if (!data || data.length < PAGE) break;
   }
@@ -50,11 +54,12 @@ export async function GET(request: Request) {
   const listingIds = [...new Set(items.map((item) => item.listing_id).filter((id): id is string => Boolean(id)))];
   const listings = new Map<string, NonNullable<ExportItem["listing"]>>();
   for (let start = 0; start < listingIds.length; start += 200) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("listings")
       .select("id,slug,status,brand,model,category")
       .eq("store_id", store.id)
       .in("id", listingIds.slice(start, start + 200));
+    if (error) return exportFailed("listings", error);
     for (const row of data ?? []) listings.set(row.id, row);
   }
 

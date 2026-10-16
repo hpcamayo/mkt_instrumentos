@@ -136,9 +136,11 @@ do $$ declare summary jsonb; begin
             and (m->>'id')::uuid > lead((m->>'id')::uuid) over (order by n))
         or lead(m->>'id') over (order by n) is null as ok
       from jsonb_array_elements(summary->'recent_movements') with ordinality as t(m, n)) ordered), 'newest movement first');
-  perform pg_temp.check(exists (select 1 from jsonb_array_elements(summary->'recent_movements') m
-    where m->>'merchant_sku' = 'ds-1' and m->>'product_name' = 'Pedal uno' and m->>'actor_kind' = 'owner'
-      and m->>'movement_type' in ('sale', 'return', 'initial_stock')), 'movement rows carry their SKU');
+  -- Which five rows tie-break to the top is random (ids), so every row is checked against its own SKU.
+  perform pg_temp.check((select count(*) = 5 and bool_and(m->>'merchant_sku' = i.merchant_sku and m->>'product_name' = i.product_name
+      and m->>'actor_kind' = 'owner' and m->>'movement_type' in ('opening_balance', 'sale', 'return', 'damage_or_loss'))
+    from jsonb_array_elements(summary->'recent_movements') m join public.store_inventory_items i on i.id = (m->>'item_id')::uuid),
+    'movement rows carry their SKU');
   perform pg_temp.check(not exists (
     select 1 from jsonb_array_elements(summary->'recent_movements') m where m->>'item_id' = pg_temp.id('item_b')::text),
     'another store''s movements leaked into the summary');

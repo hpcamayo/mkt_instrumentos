@@ -3,7 +3,8 @@
 // One spreadsheet cell as read from the file, stored verbatim in store_import_rows.raw. `v` is always text: the
 // importer never trusts a spreadsheet's own idea of numbers. `k` says what the file claimed the cell was:
 // absent = text, "n" = number, "b" = boolean, "e" = Excel error, "d" = date. `f` = the cell had a formula (its cached
-// value is used, the formula is never evaluated). `t` = the text was cut at the cell limit.
+// value is used, the formula is never evaluated); `f` with an empty `v` = a formula with no cached value, which is not
+// a blank. `t` = the text was cut at the cell limit.
 export type ImportCell = { v: string; k?: "n" | "b" | "e" | "d"; f?: 1; t?: 1 };
 
 export type ImportRow = { rowNumber: number; cells: ImportCell[] };

@@ -1,11 +1,22 @@
 // Server-side check of one uploaded import photo (design §8.1 step 3). The browser may have re-encoded the photo, but
 // nothing it did is trusted: the type comes from the bytes, the dimensions from the header (no full decode), and a
 // file that also reads as a web page is refused. The database records the outcome (record_store_import_photo_checks).
+//
+// "From the bytes" means the whole file: each format is walked from its signature to its real end (JPEG segments and
+// scans up to EOI, every PNG chunk with its CRC, every WebP chunk), so a truncated image, a forged ending or anything
+// appended after the image (another file, an archive, a script) is refused. Only the structure is read; pixels are
+// never decoded.
 import { createHash } from "node:crypto";
 
 export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 export const PHOTO_MIN_SIDE = 400;
 export const PHOTO_MAX_SIDE = 8000;
+
+// Bounds on the walk. Every step moves forward, so a 5 MB file ends the walk anyway; these keep a crafted file from
+// making it long. Real files stay far below them (one IDAT per row of an interlaced 8000-row PNG is ~15,000 chunks).
+const JPEG_MAX_SEGMENTS = 10_000;
+const PNG_MAX_CHUNKS = 50_000;
+const WEBP_MAX_CHUNKS = 100;
 
 export type PhotoMime = "image/jpeg" | "image/png" | "image/webp";
 
@@ -42,6 +53,7 @@ export function checkPhoto(input: Uint8Array): PhotoCheck {
 
 type Header = { mime: PhotoMime; width: number; height: number };
 
+// The type and dimensions of a complete JPEG, PNG or WebP that ends exactly where the file ends; null otherwise.
 export function readHeader(data: Uint8Array): Header | null {
   if (data.length >= 4 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) return readJpeg(data);
   if (data.length >= 8 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((value, index) => data[index] === value)) {
@@ -51,66 +63,215 @@ export function readHeader(data: Uint8Array): Header | null {
   return null;
 }
 
-function readPng(data: Uint8Array): Header | null {
-  // The first chunk must be IHDR (13 bytes): width and height are big-endian at 16 and 20.
-  if (data.length < 33 || u32be(data, 8) !== 13 || ascii(data, 12, 4) !== "IHDR") return null;
-  const width = u32be(data, 16);
-  const height = u32be(data, 20);
+// ------------------------------------------------------------------ JPEG
+
+// Frame headers accepted (SOF0–SOF15 except DHT C4, JPG C8 and DAC CC).
+const JPEG_FRAMES = new Set([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]);
+
+// Segments a decoder reads or skips between the frame and scan headers: DHT, DAC, DQT, DNL, DRI, APP0–15 and COM.
+function isJpegTableOrMisc(marker: number) {
+  return marker === 0xc4 || marker === 0xcc || (marker >= 0xdb && marker <= 0xdd) || (marker >= 0xe0 && marker <= 0xef)
+    || marker === 0xfe;
+}
+
+// Walks the marker segments from SOI to EOI: one frame header with its dimensions, at least one scan (each followed
+// by its entropy-coded data; progressive files have several, with tables between them), and EOI as the last two
+// bytes of the file. Any other marker (a second SOI or frame, reserved or unsupported codes) is refused.
+function readJpeg(data: Uint8Array): Header | null {
+  let offset = 2;
+  let frame: Header | null = null;
+  let scans = 0;
+  for (let segments = 0; segments < JPEG_MAX_SEGMENTS; segments += 1) {
+    // A marker is 0xFF, optionally more 0xFF fill bytes, then its code.
+    if (data[offset] !== 0xff) return null;
+    while (data[offset] === 0xff) offset += 1;
+    if (offset >= data.length) return null;
+    const marker = data[offset];
+    offset += 1;
+    if (marker === 0xd9) return frame && scans && offset === data.length ? frame : null;
+    if ((marker >= 0xd0 && marker <= 0xd7) || marker === 0x01) continue; // RSTn and TEM stand alone
+    if (offset + 2 > data.length) return null;
+    const length = u16be(data, offset);
+    const end = offset + length;
+    if (length < 2 || end > data.length) return null;
+    if (JPEG_FRAMES.has(marker)) {
+      if (frame) return null;
+      frame = readJpegFrame(data, offset, length);
+      if (!frame) return null;
+    } else if (marker === 0xda) {
+      // Ns components, two bytes each, then Ss, Se and Ah/Al.
+      const components = data[offset + 2];
+      if (!frame || components < 1 || components > 4 || length !== 6 + 2 * components) return null;
+      const scanEnd = skipEntropyCodedData(data, end);
+      // -1: the file ends inside the scan. A scan without a single byte of image data is not an image either.
+      if (scanEnd <= end) return null;
+      scans += 1;
+      offset = scanEnd;
+      continue;
+    } else if (!isJpegTableOrMisc(marker)) {
+      return null;
+    }
+    offset = end;
+  }
+  return null;
+}
+
+// SOFn: length, precision, height, width, Nf components of three bytes each.
+function readJpegFrame(data: Uint8Array, offset: number, length: number): Header | null {
+  const components = data[offset + 7];
+  if (length < 8 || components < 1 || components > 4 || length !== 8 + 3 * components) return null;
+  const height = u16be(data, offset + 3);
+  const width = u16be(data, offset + 5);
   if (!width || !height) return null;
-  // A complete PNG ends with IEND; anything appended after it is refused.
-  if (ascii(data, data.length - 8, 4) !== "IEND") return null;
+  return { mime: "image/jpeg", width, height };
+}
+
+// Entropy-coded data runs until a marker: inside it, 0xFF is followed by 0x00 (a stuffed 0xFF byte) or by a restart
+// marker RST0–7, possibly after more 0xFF fill bytes. Returns where the marker that ends the scan starts, or -1 when
+// the file ends first.
+function skipEntropyCodedData(data: Uint8Array, start: number) {
+  let index = data.indexOf(0xff, start);
+  while (index !== -1) {
+    let next = index + 1;
+    while (data[next] === 0xff) next += 1;
+    if (next >= data.length) return -1;
+    const code = data[next];
+    if (code !== 0x00 && (code < 0xd0 || code > 0xd7)) return index;
+    index = data.indexOf(0xff, next + 1);
+  }
+  return -1;
+}
+
+// ------------------------------------------------------------------ PNG
+
+// Bit depths allowed for each colour type (PNG specification, table 11.1).
+const PNG_BIT_DEPTHS: Record<number, number[]> = { 0: [1, 2, 4, 8, 16], 2: [8, 16], 3: [1, 2, 4, 8], 4: [8, 16], 6: [8, 16] };
+
+// Walks every chunk (length, type, data, CRC): IHDR first, a PLTE before the image data of a palette image, one run
+// of consecutive IDAT chunks, and an empty IEND that is the last thing in the file. Ancillary chunks (lowercase first
+// letter) are skipped; an unknown critical chunk is refused, as a decoder would.
+function readPng(data: Uint8Array): Header | null {
+  let offset = 8;
+  let header: Header | null = null;
+  let colorType = -1;
+  let palette = false;
+  let imageData: "none" | "reading" | "done" = "none";
+  for (let chunks = 0; chunks < PNG_MAX_CHUNKS; chunks += 1) {
+    if (offset + 12 > data.length) return null;
+    const length = u32be(data, offset);
+    const type = ascii(data, offset + 4, 4);
+    const start = offset + 8;
+    const end = start + length;
+    if (length > 0x7fffffff || end + 4 > data.length || !/^[A-Za-z]{4}$/.test(type)) return null;
+    if (crc32(data, offset + 4, end) !== u32be(data, end)) return null;
+    if (!header && type !== "IHDR") return null;
+    if (imageData === "reading" && type !== "IDAT") imageData = "done";
+    if (type === "IHDR") {
+      if (header || length !== 13) return null;
+      header = readPngHeader(data, start);
+      if (!header) return null;
+      colorType = data[start + 9];
+    } else if (type === "PLTE") {
+      if (palette || imageData !== "none" || length === 0 || length > 768 || length % 3) return null;
+      palette = true;
+    } else if (type === "IDAT") {
+      if (imageData === "done" || (colorType === 3 && !palette)) return null;
+      imageData = "reading";
+    } else if (type === "IEND") {
+      return length === 0 && imageData !== "none" && end + 4 === data.length ? header : null;
+    } else if (type.charCodeAt(0) < 0x61) {
+      return null;
+    }
+    offset = end + 4;
+  }
+  return null;
+}
+
+// IHDR: width, height, bit depth, colour type, compression, filter and interlace methods.
+function readPngHeader(data: Uint8Array, start: number): Header | null {
+  const width = u32be(data, start);
+  const height = u32be(data, start + 4);
+  if (!width || !height || width > 0x7fffffff || height > 0x7fffffff) return null;
+  if (!PNG_BIT_DEPTHS[data[start + 9]]?.includes(data[start + 8])) return null;
+  if (data[start + 10] !== 0 || data[start + 11] !== 0 || data[start + 12] > 1) return null;
   return { mime: "image/png", width, height };
 }
 
-// Walks the marker segments up to the first frame header (SOF). No SOF before the scan, or a truncated segment,
-// means it is not a usable JPEG.
-function readJpeg(data: Uint8Array): Header | null {
-  let offset = 2;
-  while (offset + 4 <= data.length) {
-    if (data[offset] !== 0xff) return null;
-    let marker = data[offset + 1];
-    while (marker === 0xff && offset + 2 < data.length) {
-      offset += 1;
-      marker = data[offset + 1];
-    }
-    if (marker === 0xd8 || (marker >= 0xd0 && marker <= 0xd7) || marker === 0x01) {
-      offset += 2;
-      continue;
-    }
-    if (marker === 0xd9 || marker === 0xda) return null;
-    const length = u16be(data, offset + 2);
-    if (length < 2 || offset + 2 + length > data.length) return null;
-    const isFrame = marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
-    if (isFrame) {
-      if (length < 7) return null;
-      const height = u16be(data, offset + 5);
-      const width = u16be(data, offset + 7);
-      if (!width || !height) return null;
-      return { mime: "image/jpeg", width, height };
-    }
-    offset += 2 + length;
+// CRC-32 as PNG uses it (ISO 3309), table-driven so it does not depend on the runtime's zlib.
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let index = 0; index < 256; index += 1) {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    table[index] = value >>> 0;
   }
-  return null;
+  return table;
+})();
+
+function crc32(data: Uint8Array, start: number, end: number) {
+  let crc = 0xffffffff;
+  for (let index = start; index < end; index += 1) crc = CRC_TABLE[(crc ^ data[index]) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
 }
 
+// ------------------------------------------------------------------ WebP
+
+// RIFF container: the RIFF size covers exactly the rest of the file, and the chunks inside it are walked by size, an
+// odd-sized chunk being followed by one pad byte. A simple file is a single VP8 (lossy) or VP8L (lossless) chunk. An
+// extended file starts with VP8X and holds exactly one VP8 or VP8L image (ALPH, ICCP, EXIF, XMP and unknown chunks
+// are skipped) whose size matches the VP8X canvas. Animated WebP (the VP8X flag, ANIM or ANMF) is refused: a listing
+// photo is a still image.
 function readWebp(data: Uint8Array): Header | null {
-  // The RIFF size must cover exactly the file: no appended data.
-  if (u32le(data, 4) + 8 !== data.length || data.length < 30) return null;
-  const chunk = ascii(data, 12, 4);
-  if (chunk === "VP8 ") {
-    if (data[23] !== 0x9d || data[24] !== 0x01 || data[25] !== 0x2a) return null;
-    return { mime: "image/webp", width: u16le(data, 26) & 0x3fff, height: u16le(data, 28) & 0x3fff };
+  if (u32le(data, 4) + 8 !== data.length) return null;
+  let offset = 12;
+  let canvas: { width: number; height: number } | null = null;
+  let image: Header | null = null;
+  for (let chunks = 0; offset < data.length; chunks += 1) {
+    if (chunks >= WEBP_MAX_CHUNKS || offset + 8 > data.length) return null;
+    const type = ascii(data, offset, 4);
+    const size = u32le(data, offset + 4);
+    const start = offset + 8;
+    const next = start + size + (size & 1);
+    if (next > data.length) return null;
+    if (chunks === 0 && type === "VP8X") {
+      if (size !== 10 || data[start] & 0x02) return null;
+      canvas = { width: u24le(data, start + 4) + 1, height: u24le(data, start + 7) + 1 };
+    } else if (type === "VP8 " || type === "VP8L") {
+      // One image; in a simple file it is the only chunk.
+      if (image || (chunks > 0 && !canvas)) return null;
+      image = type === "VP8 " ? readVp8(data, start, size) : readVp8l(data, start, size);
+      if (!image) return null;
+    } else if (!canvas || type === "VP8X" || type === "ANIM" || type === "ANMF") {
+      return null;
+    }
+    offset = next;
   }
-  if (chunk === "VP8L") {
-    if (data[20] !== 0x2f) return null;
-    const bits = u32le(data, 21);
-    return { mime: "image/webp", width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 };
-  }
-  if (chunk === "VP8X") {
-    return { mime: "image/webp", width: u24le(data, 24) + 1, height: u24le(data, 27) + 1 };
-  }
-  return null;
+  if (!image || (canvas && (canvas.width !== image.width || canvas.height !== image.height))) return null;
+  return image;
 }
+
+// VP8 key frame header, checked as libwebp does: a key frame, a known profile, shown, a first partition that fits
+// the chunk, the start code 9d 01 2a, then 14-bit width and height.
+function readVp8(data: Uint8Array, start: number, size: number): Header | null {
+  if (size < 10) return null;
+  const bits = u24le(data, start);
+  if (bits & 1 || ((bits >> 1) & 7) > 3 || !((bits >> 4) & 1) || bits >> 5 >= size) return null;
+  if (data[start + 3] !== 0x9d || data[start + 4] !== 0x01 || data[start + 5] !== 0x2a) return null;
+  const width = u16le(data, start + 6) & 0x3fff;
+  const height = u16le(data, start + 8) & 0x3fff;
+  return width && height ? { mime: "image/webp", width, height } : null;
+}
+
+// VP8L header: signature 0x2f, then 14-bit width − 1, 14-bit height − 1, the alpha bit and a 3-bit version that must
+// be 0.
+function readVp8l(data: Uint8Array, start: number, size: number): Header | null {
+  if (size < 5 || data[start] !== 0x2f) return null;
+  const bits = u32le(data, start + 1);
+  if (bits >>> 29) return null;
+  return { mime: "image/webp", width: (bits & 0x3fff) + 1, height: ((bits >>> 14) & 0x3fff) + 1 };
+}
+
+// ------------------------------------------------------------------ helpers
 
 function containsMarkup(data: Uint8Array) {
   // Latin-1 keeps one character per byte, so a byte-level search works on the decoded text.
