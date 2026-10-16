@@ -5,7 +5,7 @@ import "server-only";
 // able to mark their own upload as valid.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
-import { checkPhoto } from "./photo-check";
+import { checkPhoto, PHOTO_MAX_BYTES, type PhotoCheck } from "./photo-check";
 import { ImportRequestError, importErrorFrom } from "./server";
 
 type Db = SupabaseClient;
@@ -86,6 +86,10 @@ export async function requestPhotoUploads(db: Db, sessionId: string, files: Phot
 // Reads each uploaded object (≤ 25, one at a time so at most one photo is in memory), checks its bytes and records the
 // outcome. Objects that are not there yet are left waiting. Rejected objects are deleted right away; if that fails,
 // the daily cleanup picks them up.
+//
+// Each object is read as a stream and never past the 5 MB photo limit: a larger object is reported as too large as
+// soon as it passes the limit, without being held in memory. The bucket's own 5 MB limit is the first bound; this
+// one does not rely on it.
 export async function completePhotoUploads(db: Db, ownerUserId: string, sessionId: string, assetIds: string[]) {
   const admin = getSupabaseAdminClient() as unknown as Db | null;
   if (!admin) throw new ImportRequestError("IMPORT_UNAVAILABLE", "No pudimos revisar las fotos. Intenta de nuevo.", 503);
@@ -103,10 +107,8 @@ export async function completePhotoUploads(db: Db, ownerUserId: string, sessionI
 
   const results: Record<string, unknown>[] = [];
   for (const asset of waiting) {
-    const { data: blob, error: downloadError } = await admin.storage.from(PHOTO_BUCKET).download(asset.object_path);
-    if (downloadError || !blob) continue;
-    const check = checkPhoto(new Uint8Array(await blob.arrayBuffer()));
-    results.push({ asset_id: asset.id, ...check });
+    const check = await checkStoredPhoto(admin, asset.object_path);
+    if (check) results.push({ asset_id: asset.id, ...check });
   }
 
   const recorded = await call<PhotoSummary & { validated: number; rejected: { asset_id: string; path: string; code: string }[] }>(
@@ -114,6 +116,30 @@ export async function completePhotoUploads(db: Db, ownerUserId: string, sessionI
   );
   if (recorded.rejected?.length) await deleteRejected(admin, sessionId);
   return { ...recorded, waiting: waiting.length - results.length };
+}
+
+// null: the object cannot be read right now (not uploaded yet, or the read failed); it stays waiting.
+async function checkStoredPhoto(admin: Db, path: string): Promise<PhotoCheck | null> {
+  const { data: stream, error } = await admin.storage.from(PHOTO_BUCKET).download(path).asStream();
+  if (error || !stream) return null;
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytes = 0;
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > PHOTO_MAX_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        return { ok: false, code: "PHOTO_TOO_LARGE", bytes };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return null;
+  }
+  return checkPhoto(Buffer.concat(chunks, bytes));
 }
 
 async function deleteRejected(admin: Db, sessionId: string) {

@@ -1,8 +1,8 @@
 // Review fixes for import photos (Codex review of 2026-10-16, item 4). The server-side check walks each format to its
 // real end (JPEG segments and scans up to EOI, every PNG chunk with its CRC, every WebP chunk) and refuses anything
 // incomplete or appended; the browser ZIP reader inflates in small steps, so a size header that lies cannot make it
-// produce more than about 1 MiB before the cap is checked, and entries it skips are not kept in memory. Runs with
-// `pnpm test`.
+// produce more than about 1 MiB before the cap is checked, and entries it skips are not kept in memory; completing an
+// upload never reads more than one photo's limit from storage. Runs with `pnpm test`.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const Module = require("node:module");
@@ -46,14 +46,18 @@ class WatchedUnzip extends fflate.Unzip {
   }
 }
 
+let admin = null;
 const load = Module._load;
 Module._load = function stubModules(request, ...rest) {
+  if (request === "server-only") return {};
+  if (request === "@/lib/supabase/admin-client") return { getSupabaseAdminClient: () => admin };
   if (request === "fflate") return { ...fflate, Unzip: WatchedUnzip };
   return load.call(this, request, ...rest);
 };
 
-const { checkPhoto, readHeader } = require("@/lib/store-import/photo-check");
+const { checkPhoto, readHeader, PHOTO_MAX_BYTES } = require("@/lib/store-import/photo-check");
 const { readPhotoArchive, PHOTO_MAX_FILE_BYTES } = require("@/lib/store-import/photo-files");
+const { completePhotoUploads } = require("@/lib/store-import/photos-server");
 
 // ------------------------------------------------------------------ fixtures
 
@@ -579,4 +583,67 @@ test("honest photos come through byte for byte in small steps", async () => {
     const source = entries[photo.name];
     assert.deepEqual(Buffer.from(photo.data), Buffer.from(Array.isArray(source) ? source[0] : source), photo.name);
   }
+});
+
+// ------------------------------------------------------------------ completion reads at most one photo's limit
+
+test("completing an upload never reads more than the photo limit from storage", async () => {
+  const CHUNK = 64 * 1024;
+  const assetIds = ["0b6b1f8e-6c43-4a8e-9c2f-0d2f5e0b9a11", "1b6b1f8e-6c43-4a8e-9c2f-0d2f5e0b9a11"];
+  const objects = {
+    "owner/session/grande.jpg": { bytes: Buffer.concat([REAL.jpegRestart, Buffer.alloc(PHOTO_MAX_BYTES * 4)]), read: 0 },
+    "owner/session/bien.jpg": { bytes: REAL.jpegRestart, read: 0 },
+  };
+  const stream = (object) => new ReadableStream({
+    pull(controller) {
+      if (object.read >= object.bytes.length) return controller.close();
+      const next = object.bytes.subarray(object.read, object.read + CHUNK);
+      object.read += next.length;
+      controller.enqueue(new Uint8Array(next));
+    },
+  }, { highWaterMark: 0 });
+  // Storage's download builder: awaited it yields a Blob; asStream() yields the body as a stream.
+  const download = (path) => ({
+    asStream: async () => ({ data: stream(objects[path]), error: null }),
+    then: (resolve, reject) => new Response(stream(objects[path])).blob().then((blob) => ({ data: blob, error: null })).then(resolve, reject),
+  });
+  const recorded = [];
+  admin = {
+    storage: { from: () => ({ download, remove: async () => ({ error: null }) }) },
+    rpc: async (name, args) => {
+      if (name === "record_store_import_photo_checks") {
+        recorded.push(...args.p_results);
+        return { data: { validated: 1, rejected: [], photo_counts: {} }, error: null };
+      }
+      return { data: [], error: null };
+    },
+  };
+  const db = {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          in: async () => ({
+            data: [
+              { id: assetIds[0], object_path: "owner/session/grande.jpg", status: "awaiting_upload" },
+              { id: assetIds[1], object_path: "owner/session/bien.jpg", status: "awaiting_upload" },
+            ],
+            error: null,
+          }),
+        }),
+      }),
+    }),
+  };
+  try {
+    await completePhotoUploads(db, "owner", "session", assetIds);
+  } finally {
+    admin = null;
+  }
+  const [large, fine] = recorded;
+  assert.equal(large.asset_id, assetIds[0]);
+  assert.equal(large.ok, false);
+  assert.equal(large.code, "PHOTO_TOO_LARGE");
+  assert.ok(objects["owner/session/grande.jpg"].read <= PHOTO_MAX_BYTES + CHUNK, `read ${objects["owner/session/grande.jpg"].read} bytes`);
+  assert.equal(fine.ok, true);
+  assert.equal(fine.width, 400);
+  assert.equal(fine.bytes, REAL.jpegRestart.length);
 });
