@@ -12,7 +12,7 @@ import {
 } from "./limits";
 import { proposeMapping, type ImportMapping } from "./mapping";
 import { parseImportRow } from "./rows";
-import { readSpreadsheet } from "./sheet";
+import { compactCells, readSpreadsheet } from "./sheet";
 import { ImportFileError, type ImportCell, type SpreadsheetFormat } from "./types";
 
 // Untyped on purpose: the import functions are not in the generated database types yet (the combined prototype
@@ -192,13 +192,6 @@ async function parseStep(db: Db, session: ImportSession, token: string) {
       warnings: sheet.warnings.slice(0, 20),
     },
   });
-}
-
-// Trailing empty cells are dropped to keep staged rows small; positions are kept by index.
-function compactCells(cells: ImportCell[]) {
-  let end = cells.length;
-  while (end > 0 && !cells[end - 1].v) end -= 1;
-  return cells.slice(0, end).map((cell) => (cell.v ? cell : { v: "" }));
 }
 
 async function planStep(db: Db, session: ImportSession, token: string, started: number) {
