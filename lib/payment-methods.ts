@@ -20,6 +20,19 @@ export const PAYMENT_METHOD_HINTS: Record<PaymentMethod, string> = {
   link_de_pago: "Envías el enlace de tu proveedor por WhatsApp. Laria no lo muestra.",
 };
 
+// The providers a store may name next to a method; the database accepts only these (laria_private.payment_provider_options,
+// review fix A2), stored in this spelling. Free text would let a phone number or a link through. Cash has none.
+export const PAYMENT_PROVIDER_OPTIONS: Record<PaymentMethod, readonly string[]> = {
+  efectivo_al_recoger: [],
+  yape_plin: ["Yape", "Plin", "Yape y Plin"],
+  pos_tarjeta_al_recoger: ["Izipay", "Niubiz", "Culqi", "Mercado Pago", "OpenPay"],
+  link_de_pago: ["Izipay", "Niubiz", "Culqi", "Mercado Pago", "OpenPay", "PayPal"],
+};
+
+export function isPaymentProvider(method: PaymentMethod, value: unknown): value is string {
+  return typeof value === "string" && PAYMENT_PROVIDER_OPTIONS[method].includes(value);
+}
+
 // Cash goes to the store's till; every other method has an account holder the Admin compares with the razón social.
 export function paymentMethodNeedsHolder(method: PaymentMethod) {
   return method !== "efectivo_al_recoger";
@@ -59,7 +72,9 @@ export function readPurchaseRequest(value: unknown): PurchaseRequest | null {
 }
 
 // Pilot switch. Off unless the deployment sets LARIA_ASSISTED_COMMERCE=1, so merging this code changes nothing for
-// buyers or stores until the owner turns the pilot on (after the legal review of the Terms and Privacy drafts).
+// buyers or stores until the owner turns the pilot on (after the legal review of the Terms and Privacy drafts). The
+// database has its own switch (laria_private.set_assisted_commerce_pilot, off by default): with it off, owners cannot
+// propose methods and nothing is public, whatever the app shows. Turning the pilot on needs both.
 export function assistedCommerceEnabled() {
   return process.env.LARIA_ASSISTED_COMMERCE?.trim() === "1";
 }

@@ -948,6 +948,7 @@ export type Database = {
           review_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          revision: number
           status: string
           store_id: string
           updated_at: string
@@ -961,6 +962,7 @@ export type Database = {
           review_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          revision?: number
           status?: string
           store_id: string
           updated_at?: string
@@ -974,6 +976,7 @@ export type Database = {
           review_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          revision?: number
           status?: string
           store_id?: string
           updated_at?: string
@@ -1416,7 +1419,7 @@ export type Database = {
       admin_review_store_payment_method: {
         Args: {
           p_decision: string
-          p_expected_updated_at: string
+          p_expected_revision: number
           p_method: Database["public"]["Enums"]["store_payment_method"]
           p_reason: string
           p_store_id: string

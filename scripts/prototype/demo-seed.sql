@@ -156,13 +156,17 @@ insert into public.favorites (user_id, listing_id) values
 on conflict do nothing;
 
 -- ------------------------------------------------------------------ PAY-1: accepted payment methods (Pilot A)
--- Visible only with LARIA_ASSISTED_COMMERCE=1. Three approved methods, one still in review.
+-- Visible only with LARIA_ASSISTED_COMMERCE=1. Three approved methods, one still in review. Turns the database's own
+-- pilot switch on (review fix A14); the demo database is local only.
 do $pay$
 begin
   -- Skipped on a branch without PAY-1.
   if to_regprocedure('public.set_store_payment_method(public.store_payment_method,text,text,text)') is null then
     raise notice 'PAY-1 not present; skipping payment methods';
     return;
+  end if;
+  if to_regprocedure('laria_private.set_assisted_commerce_pilot(boolean,text)') is not null then
+    perform laria_private.set_assisted_commerce_pilot(true, 'Prototipo local');
   end if;
   perform set_config('request.jwt.claims', '{"sub":"d0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
   execute $q$
@@ -173,11 +177,11 @@ begin
   $q$;
   perform set_config('request.jwt.claims',
     '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"admin"}}', true);
-  execute $q$
-    select public.admin_review_store_payment_method(m.store_id, m.method, 'approve', 'Titular coincide con la razón social', m.updated_at)
+  execute format($q$
+    select public.admin_review_store_payment_method(m.store_id, m.method, 'approve', 'Titular coincide con la razón social', m.%I)
     from public.store_payment_methods m
     where m.store_id = 'd1000000-0000-4000-8000-000000000001' and m.method <> 'link_de_pago' and m.status = 'pending_review'
-  $q$;
+  $q$, case when to_regprocedure('laria_private.set_assisted_commerce_pilot(boolean,text)') is null then 'updated_at' else 'revision' end);
 end
 $pay$;
 
