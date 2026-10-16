@@ -7,6 +7,10 @@ production. Branch: `store-ops/prototype`.
 
 The usual Laria setup (`docs/ux-redesign/review-guide.md`): Docker Desktop and the Supabase CLI.
 
+`supabase/config.toml` is not tracked in this repository; use the one from your existing local setup. To keep a review
+stack apart from your own, work in a separate worktree and give its `config.toml` another `project_id` and ports (for
+example API 56421, DB 56422), then use those ports below.
+
 ```sh
 git fetch origin store-ops/prototype && git switch store-ops/prototype
 pnpm install

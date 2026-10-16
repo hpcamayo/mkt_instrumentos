@@ -127,16 +127,20 @@ against `acceptance/cases.tsv` for clashes. Nothing is in the canonical registry
 
 ## Production steps, only after your approval
 
-1. Codex review of the six items; fixes land on the sub-sprint branches and are merged forward.
-2. Approve acceptance IDs, then add them to `acceptance/cases.tsv` (no renumbering of existing IDs).
-3. Legal review of the PAY-1 Terms and Privacy drafts (consumer protection, Ley 29733, e-invoicing); update the text
+Status 2026-10-16: Henri accepted the sub-sprints, kept every default and approved the acceptance IDs (now in
+`acceptance/cases.tsv` as `Not Run`, domain Store Operations, non-blocking). The six Codex reviews were run; every
+finding is fixed in PR #13 (security, concurrency, data) and Henri's screen changes are in PR #14, both merged into
+this branch. See `review-fixes.md`.
+
+1. Legal review of the PAY-1 Terms and Privacy drafts (consumer protection, Ley 29733, e-invoicing); update the text
    and `LEGAL_LAST_UPDATED`.
-4. Regenerate `database.types.ts`, merge the combined PR to `main`.
-5. Apply the six migrations in order (`20261023…` to `20261028…`) to production.
-6. Schedule the import-file cleanup route with whatever scheduler runs the e-mail worker.
-7. Enable inventory per pilot store from Admin; set allowances where needed.
-8. Turn on `LARIA_ASSISTED_COMMERCE` only after step 3 and the first approved methods.
-9. STORE-4: pilot with real stores and the production-tier benchmarks.
+2. Regenerate `database.types.ts`, merge the combined PR to `main`.
+3. Apply the migrations in order (`20261023…` to `20261030…`, eleven files) to production.
+4. Schedule the import-file cleanup route with whatever scheduler runs the e-mail worker.
+5. Enable inventory for two or three pilot stores from Admin; set allowances where needed.
+6. Payments pilot, only after step 1 and the first approved methods: set `LARIA_ASSISTED_COMMERCE=1` and, as the
+   database owner, run `select laria_private.set_assisted_commerce_pilot(true, '<reason>');`.
+7. STORE-4: pilot with real stores and the production-tier benchmarks.
 
 ## How to run it
 

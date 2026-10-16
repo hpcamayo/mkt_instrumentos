@@ -8,3 +8,4 @@ sprint	prefixes	focus
 7	ALERT,MAIL,PDA-009,TX-018	Search alerts + marketplace mail + price-drop email and Compras carry-over
 8	REP,ADMIN	Reports + full Admin Hub
 9	SEO,LEGAL,REL	Launch completion
+store-ops	INV,IMP,IPH,PAY	Store operations after V1: inventory, spreadsheet import, import photos, accepted payment methods (approved by owner 2026-10-16, Not Run)
