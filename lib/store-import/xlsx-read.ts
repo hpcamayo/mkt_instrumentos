@@ -5,9 +5,10 @@
 //     is skipped without decompressing it;
 //   * compressed bytes are fed to the inflater in small slices and the output is counted as it arrives, so the total
 //     (40 MB) and per-part ratio (100:1 past the first MB) budgets stop a ZIP bomb before it can allocate much;
-//   * the XML is scanned with a small tokenizer that knows the handful of SpreadsheetML elements it needs. Documents
-//     with a DTD are refused, and only the five predefined entities and numeric references are decoded, so there is
-//     no entity expansion or external fetch of any kind;
+//   * the XML is scanned with a small single-pass tokenizer (linear in the part's size, Codex review 3 finding 1) that
+//     refuses unterminated comments, instructions, CDATA sections and tags, and knows the handful of SpreadsheetML
+//     elements it needs. Documents with a DTD are refused, and only the five predefined entities and numeric
+//     references are decoded, so there is no entity expansion or external fetch of any kind;
 //   * formulas are never evaluated: a formula cell contributes its cached value and is flagged.
 import { Unzip, UnzipInflate, type UnzipFile } from "fflate";
 import {
@@ -153,28 +154,103 @@ export function decodeXmlText(value: string) {
     .replace(EXCEL_ESCAPE, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)));
 }
 
-function attribute(attributes: string, name: string) {
-  const match = new RegExp(`(?:^|\\s)${name.replace(":", "\\:")}\\s*=\\s*("([^"]*)"|'([^']*)')`).exec(attributes);
-  return match ? decodeXmlText(match[2] ?? match[3] ?? "") : null;
-}
+// XML whitespace, and the name characters SpreadsheetML uses (letters, digits, "_", ".", "-" and the ":" of a prefix).
+const isSpace = (code: number) => code === 0x20 || code === 0x09 || code === 0x0a || code === 0x0d;
+const isNameStart = (code: number) => (code >= 0x41 && code <= 0x5a) || (code >= 0x61 && code <= 0x7a) || code === 0x5f;
+const isNameChar = (code: number) => isNameStart(code) || (code >= 0x30 && code <= 0x3a) || code === 0x2e || code === 0x2d;
 
-// Tag or text tokens. Comments, processing instructions and CDATA are skipped (CDATA text is kept).
-const TOKEN = /<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!\[CDATA\[([\s\S]*?)\]\]>|<(\/?)([A-Za-z_][\w.:-]*)((?:\s+[^\s=>/]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>|([^<]+)/g;
+// One attribute of a tag the tokenizer already checked (name="value" pairs separated by whitespace). Walks the pairs
+// in order, so a value that happens to contain ` r="…"` is never mistaken for an attribute, and never reads a
+// character twice.
+function attribute(attributes: string, name: string) {
+  let index = 0;
+  while (index < attributes.length) {
+    const equals = attributes.indexOf("=", index);
+    if (equals === -1) return null;
+    let quoteAt = equals + 1;
+    while (isSpace(attributes.charCodeAt(quoteAt))) quoteAt += 1;
+    const quote = attributes[quoteAt];
+    const end = quote === '"' || quote === "'" ? attributes.indexOf(quote, quoteAt + 1) : -1;
+    if (end === -1) return null;
+    if (attributes.slice(index, equals).trim() === name) return decodeXmlText(attributes.slice(quoteAt + 1, end));
+    index = end + 1;
+  }
+  return null;
+}
 
 type Token = { kind: "open" | "close" | "self"; name: string; attributes: string } | { kind: "text"; text: string };
 
+// Tag or text tokens, in one forward pass: each terminator is found with indexOf from the current position and the
+// scan resumes after it, so no character is read twice whatever the document holds (a regex tokenizer rescans the
+// rest of the file for every unterminated "<!--"). Comments and processing instructions are skipped, CDATA text is
+// kept, and anything that is not a complete comment, instruction, CDATA section or tag refuses the file.
 function* tokens(xml: string): Generator<Token> {
-  TOKEN.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = TOKEN.exec(xml))) {
-    if (match[1] !== undefined) {
-      yield { kind: "text", text: match[1] };
-    } else if (match[3]) {
-      const name = match[3].includes(":") ? match[3].slice(match[3].indexOf(":") + 1) : match[3];
-      yield { kind: match[2] ? "close" : match[5] ? "self" : "open", name, attributes: match[4] ?? "" };
-    } else if (match[6] !== undefined) {
-      yield { kind: "text", text: decodeXmlText(match[6]) };
+  let index = 0;
+  while (index < xml.length) {
+    const open = xml.indexOf("<", index);
+    const textEnd = open === -1 ? xml.length : open;
+    if (textEnd > index) yield { kind: "text", text: decodeXmlText(xml.slice(index, textEnd)) };
+    if (open === -1) return;
+    if (xml.startsWith("<!--", open)) {
+      index = after(xml, "-->", open + 4);
+    } else if (xml.startsWith("<?", open)) {
+      index = after(xml, "?>", open + 2);
+    } else if (xml.startsWith("<![CDATA[", open)) {
+      index = after(xml, "]]>", open + 9);
+      yield { kind: "text", text: xml.slice(open + 9, index - 3) };
+    } else {
+      const tag = readTag(xml, open);
+      index = tag.end;
+      yield tag.token;
     }
+  }
+}
+
+function after(xml: string, terminator: string, from: number) {
+  const at = xml.indexOf(terminator, from);
+  if (at === -1) throw invalid();
+  return at + terminator.length;
+}
+
+// The tag starting at `start` ("<"): <name a="v" …>, <name …/> or </name>. A namespace prefix is dropped from the
+// name; the attributes are returned as their source text for attribute().
+function readTag(xml: string, start: number): { token: Token; end: number } {
+  let index = start + 1;
+  const close = xml.charCodeAt(index) === 0x2f;
+  if (close) index += 1;
+  const nameStart = index;
+  if (!isNameStart(xml.charCodeAt(index))) throw invalid();
+  while (isNameChar(xml.charCodeAt(index))) index += 1;
+  const qualified = xml.slice(nameStart, index);
+  const name = qualified.includes(":") ? qualified.slice(qualified.indexOf(":") + 1) : qualified;
+  const attributesStart = index;
+  let attributesEnd = index;
+  for (;;) {
+    const spaceStart = index;
+    while (isSpace(xml.charCodeAt(index))) index += 1;
+    const code = xml.charCodeAt(index);
+    if (code === 0x3e) {
+      const attributes = xml.slice(attributesStart, attributesEnd);
+      return { token: { kind: close ? "close" : "open", name, attributes }, end: index + 1 };
+    }
+    if (code === 0x2f && xml.charCodeAt(index + 1) === 0x3e && !close) {
+      return { token: { kind: "self", name, attributes: xml.slice(attributesStart, attributesEnd) }, end: index + 2 };
+    }
+    // An attribute: only in start tags, after whitespace, as name="value" or name='value'.
+    if (close || index === spaceStart) throw invalid();
+    const keyStart = index;
+    while (index < xml.length && !isSpace(xml.charCodeAt(index)) && !"=<>/\"'".includes(xml[index])) index += 1;
+    if (index === keyStart) throw invalid();
+    while (isSpace(xml.charCodeAt(index))) index += 1;
+    if (xml[index] !== "=") throw invalid();
+    index += 1;
+    while (isSpace(xml.charCodeAt(index))) index += 1;
+    const quote = xml[index];
+    if (quote !== '"' && quote !== "'") throw invalid();
+    const valueEnd = xml.indexOf(quote, index + 1);
+    if (valueEnd === -1) throw invalid();
+    index = valueEnd + 1;
+    attributesEnd = index;
   }
 }
 

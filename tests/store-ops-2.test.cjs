@@ -24,7 +24,7 @@ const STYLES = '<?xml version="1.0"?><styleSheet xmlns="http://schemas.openxmlfo
 const SHARED = '<?xml version="1.0"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><si><t>SKU</t></si><si><t>Nombre</t></si><si><t>Stock</t></si><si><r><t>Pedal </t></r><r><rPr><b/></rPr><t>Boss &amp; co</t></r><rPh><t>ペダル</t></rPh></si><si><t>00123</t></si><si><t xml:space="preserve">línea_x000D_dos</t></si></sst>';
 const sheet = (rows) => `<?xml version="1.0"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${rows}</sheetData></worksheet>`;
 
-function xlsx(parts) {
+function xlsx(parts, options) {
   return zipSync(Object.fromEntries(Object.entries({
     "[Content_Types].xml": CONTENT_TYPES,
     "xl/workbook.xml": WORKBOOK(),
@@ -32,7 +32,7 @@ function xlsx(parts) {
     "xl/styles.xml": STYLES,
     "xl/sharedStrings.xml": SHARED,
     ...parts,
-  }).filter(([, value]) => value !== null).map(([name, value]) => [name, typeof value === "string" ? strToU8(value) : value])));
+  }).filter(([, value]) => value !== null).map(([name, value]) => [name, typeof value === "string" ? strToU8(value) : value])), options);
 }
 
 const BASIC_SHEET = sheet(
@@ -141,6 +141,46 @@ test("XLSX decompression budget stops ZIP bombs before inflating them", () => {
   assert.ok(!ignored.parts.has("xl/media/bomb.bin"));
   // A tighter budget is respected exactly.
   expectFileError(() => extractXlsxParts(xlsx({ "xl/worksheets/sheet1.xml": BASIC_SHEET }), { maxUncompressedBytes: 100 }), "IMPORT_FILE_TOO_BIG_UNCOMPRESSED");
+});
+
+test("the XML tokenizer is linear and refuses unterminated comments, instructions, CDATA and tags", () => {
+  // Stored (not deflated) so the parts are big without tripping the decompression budget.
+  const stored = (parts) => xlsx({ "xl/worksheets/sheet1.xml": BASIC_SHEET, ...parts }, { level: 0 });
+  const hostile = {
+    comment: "<!--",
+    instruction: "<?",
+    cdata: "<![CDATA[",
+    "open tag": "<si ",
+    "attribute quote": '<si a="',
+    "unknown markup": "<!x",
+    "stray bracket": "< ",
+  };
+  const invalid = (error) => error instanceof ImportFileError && error.code === "IMPORT_FILE_INVALID";
+  for (const [label, opener] of Object.entries(hostile)) {
+    for (const count of [4000, 8000]) {
+      const repeated = opener.repeat(count);
+      assert.throws(() => readXlsx(stored({ "xl/sharedStrings.xml": SHARED.replace("</sst>", `${repeated}</sst>`) })), invalid, `${label} × ${count} in shared strings`);
+      assert.throws(() => readXlsx(stored({ "xl/worksheets/sheet1.xml": sheet(repeated) })), invalid, `${label} × ${count} in the sheet`);
+    }
+  }
+  // Well-formed XML still reads: comments, instructions, CDATA text, prefixes, either quote, spaces around "=", and an
+  // attribute value that looks like another attribute.
+  const valid = readXlsx(stored({ "xl/worksheets/sheet1.xml": sheet(
+    '<!-- nota --><x:row r = \'1\' spans="1:2"><?pi x?><x:c r="A1" t="inlineStr" ><is><t><![CDATA[<b>&amp;]]></t></is></x:c>' +
+    '<c x=\' r="Z1"\' t="inlineStr" r="B1"><is><t>B</t></is></c></x:row >') }));
+  assert.deepEqual(valid.rows[0].cells, [{ v: "<b>&amp;" }, { v: "B" }]);
+  expectFileError(() => readXlsx(stored({ "xl/worksheets/sheet1.xml": sheet('<row r="1"></row  x>') })), "IMPORT_FILE_INVALID");
+  expectFileError(() => readXlsx(stored({ "xl/worksheets/sheet1.xml": sheet('<row r="1" r2>') })), "IMPORT_FILE_INVALID");
+
+  // ~4 MB of openers, and ~4 MB of well-formed constructs ending in one opener: both refused in well under a second.
+  const big = 4 * 1024 * 1024;
+  for (const body of ["<!--".repeat(big / 4), "<!--x--><?p?><![CDATA[y]]><b c='d'/>".repeat(big / 36) + "<!--"]) {
+    const bytes = stored({ "xl/sharedStrings.xml": SHARED.replace("</sst>", `${body}</sst>`) });
+    const started = performance.now();
+    expectFileError(() => readXlsx(bytes), "IMPORT_FILE_INVALID");
+    const elapsed = performance.now() - started;
+    assert.ok(elapsed < 1500, `parsed ${bytes.length} bytes in ${Math.round(elapsed)} ms`);
+  }
 });
 
 test("XLSX helpers: column letters, date format codes, entity decoding", () => {
