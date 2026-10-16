@@ -91,7 +91,7 @@ the inventory imports the same with or without photos. Publishing the photograph
 ## How to test
 
 ```bash
-pnpm test                                   # includes tests/store-ops-3a.test.cjs (15 cases)
+pnpm test                                   # includes tests/store-ops-3a.test.cjs (15) and store-ops-review-photos.test.cjs (18)
 npx tsc --noEmit && pnpm lint && pnpm build
 bash /mnt/project-files/store-operations/local-db-setup/setup-local-db.sh reset
 bash /mnt/project-files/store-operations/local-db-setup/setup-local-db.sh test   # includes tests/store-ops-3a.sql
@@ -151,6 +151,22 @@ Codex (or another independent reviewer) should check these before the code merge
    so an object is never deleted?
 5. **Browser archive reading** — `lib/store-import/photo-files.ts`: the server never unzips; confirm the browser
    bounds (5 MB per entry, 600 photos, 5,000 entries) and that archive paths never reach a server path.
+
+### Codex result (2026-10-16)
+
+Codex reviewed this item on PR #12 at `2524829`. Every finding below was reproduced locally and fixed on
+`store-ops/review-fixes-core` with a regression test; details and defaults are in [`review-fixes.md`](review-fixes.md).
+
+- Finding 1: truncated images, forged endings and appended payloads passed the check. Fixed in `57a6599` (JPEG,
+  PNG and WebP walked structurally to their real end; trailing bytes refused).
+- Finding 2: the browser ZIP limit ran after an oversized inflate. Fixed in `0b6195d` (inflated in slices sized to
+  the remaining budget; skipped entries are not buffered).
+- Finding 3: photos a listing stopped using after the import closed were never cleaned up. Fixed in `7ae601d` (the
+  cleanup sweep re-checks validated photos of closed or purged imports once a day).
+- Answer 2: completion read the whole object before checking its size. Fixed in `78774c8` (read as a stream, stopped
+  past 5 MB).
+- From the STORE-3b review (item 5, finding 2): the guard now takes the asset row `FOR NO KEY UPDATE` instead of
+  `FOR SHARE` and refuses a photo another listing uses (`d216841`).
 
 ## Acceptance proposal (not in `acceptance/cases.tsv`)
 

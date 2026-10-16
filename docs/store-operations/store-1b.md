@@ -124,6 +124,20 @@ restored by its owner as in V1. Receipts with operation `threshold` or `hide` in
    argument shape; nothing from the request picks a function name. Unknown database errors are logged and returned
    as a generic message.
 
+### Codex result (2026-10-16)
+
+Codex reviewed this item on PR #12 at `2524829`. Every finding below was reproduced locally and fixed on
+`store-ops/review-fixes-core` with a regression test; details and defaults are in [`review-fixes.md`](review-fixes.md).
+
+- Export sanitization (item 3, finding 3): a leading line feed escaped the formula guard. Fixed in `0ca90d1` (LF added
+  to `FORMULA_START` in `lib/spreadsheet/csv-write.ts`, shared by the export, the import template and the report).
+- Export route (item 3, finding 7): a failed store or listing lookup returned 200 with blank columns. Fixed in
+  `a02e7e2` (500 "No se pudo preparar la exportación.").
+- Bulk functions (item 1): no direct inversion between hide and stock; the store lock deadlock of STORE-1a item 1,
+  finding 1 applied here too and is fixed in `d216841`; threshold and hide races were added to the harness there.
+- Unrelated to Codex: the `tests/store-ops-1b.sql` check "movement rows carry their SKU" failed about one run in four
+  (random tie order, wrong movement type name). Fixed in `7b89a22`.
+
 ## Acceptance proposal (not in `acceptance/cases.tsv`)
 
 | ID | Case | Expected | Evidence |

@@ -542,6 +542,7 @@ Current migrations:
 - `20261026120000_store_import_photos.sql` (STORE-3a, local only): import photo assets and assignments, private `store-import-photos` bucket, matching, listing-photo validator branch and attachment guard, photo cleanup. See "Store operations: later sub-sprints".
 - `20261027120000_store_import_publication.sql` (STORE-3b, local only): per-store listing allowance read by the cap trigger, Admin allowance function, shared `insert_store_listing`, publication of import rows. See "Store operations: later sub-sprints".
 - `20261028120000_pay_1_store_payment_methods.sql` (PAY-1, local only): accepted payment methods with Admin review and history, public read functions, purchase-intent metadata on `whatsapp_contact`. See "Store operations: later sub-sprints".
+- `20261029120000_review_fixes_payment_methods.sql` … `20261029120300_review_fixes_photo_cleanup.sql` (review fixes A, local only): fixes from the Codex review of the Store Operations prototype. See "Store operations: review fixes" and `docs/store-operations/review-fixes.md`.
 
 Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
 
@@ -724,3 +725,31 @@ sub-sprint detail, deviations, rollback and review guides: `docs/store-operation
     read time; never the holder). `laria_private.record_marketplace_event_service` accepts exactly
     `{"intent":"purchase"}` as metadata on `whatsapp_contact`.
   - No amount, paid state, payment URL, reservation or order is stored anywhere.
+
+## Store operations: review fixes
+
+Fixes from the Codex review of the prototype, branch `store-ops/review-fixes-core`; local only. What each one fixes and
+why is in `docs/store-operations/review-fixes.md`. Long functions are patched from their current definition by
+`pg_temp.review_fix(function, old, new, …)`, which fails unless each old text occurs exactly once.
+
+- `20261029120000_review_fixes_payment_methods.sql`: `laria_private.assisted_commerce_settings` (singleton,
+  `pilot_enabled` default false) with `laria_private.assisted_commerce_pilot_enabled()` and
+  `laria_private.set_assisted_commerce_pilot(enabled, reason)` (database owner only); `store_payment_methods.revision`
+  (bumped by trigger on every update); `admin_review_store_payment_method(store, method, decision, reason,
+  expected_revision integer)` replaces the `expected_updated_at` version; provider labels from a fixed list per method;
+  stricter free-text filter; a RUC or razón social change also moves pending methods' revision. With the pilot off,
+  `set_store_payment_method` refuses (`PAYMENT_PILOT_OFF`) and the public reads return nothing.
+- `20261029120100_review_fixes_lock_order.sql`: store rows are locked `FOR NO KEY UPDATE` (not `FOR UPDATE`) in
+  `complete_public_submission`, `resubmit_store_application`, `review_store_application`, `set_store_verification`,
+  `submit_listing_for_publication`, `admin_set_store_inventory_enabled`, `admin_set_store_listing_allowance` and
+  `publish_store_import_rows`; publication locks an unlinked SKU before reading its price; `link_inventory_listing`
+  locks the SKU directly; `guard_import_photo_reference()` locks the asset `FOR NO KEY UPDATE` and refuses a photo
+  another listing or another listing's revision uses.
+- `20261029120200_review_fixes_alerts_and_import.sql`: `search_alert_matches.suppression_reason` accepts
+  `listing_out_of_stock`, index `search_alert_matches_delivery_idx`; `claim_marketplace_email_deliveries` cancels
+  queued price-drop and search e-mails of out-of-stock listings and digests left empty; first-public matching during
+  an import row waits for its price (`laria_private.capture_deferred_listing_publication`); `confirm_store_import_mapping`
+  refuses once a row is applied (`IMPORT_MAPPING_LOCKED`); `mark_import_duplicates` includes rows already in error.
+- `20261029120300_review_fixes_photo_cleanup.sql`: `store_import_photo_assets.reference_checked_at` and a partial index;
+  `laria_private.discard_detached_import_photos(limit)`, run by `claim_store_import_photo_deletions` when called
+  without a session, discards validated photos of closed or purged imports that nothing references any more.
