@@ -135,8 +135,8 @@ tables is not planned: the ledger FK points at sessions.
 Codex (or another independent reviewer) should check these before the code merges.
 
 1. **XLSX reader and decompression bounds** — `lib/store-import/xlsx-read.ts`: `extractXlsxParts` (allowlisted parts
-   only, entry count, 16 KB input slices into `fflate`'s streaming `Unzip`, running 40 MB total budget, 100:1 per part
-   after the first 1 MB, abort on exceed), `readXlsx` (macro and `.xls` refusal, DTD/entity refusal, first visible
+   only, entry count, sizes read from the central directory and checked before inflating, 1 KiB input slices into
+   `fflate`, 40 MB total budget allocated once, 100:1 per part after the first 1 MB, abort on exceed; since `86832d6`), `readXlsx` (macro and `.xls` refusal, DTD/entity refusal, first visible
    sheet, cell types, cached formula values flagged `f`, column bound before allocating). Questions: can any input
    inflate more than the budget before the check fires (stored vs deflated entries, data descriptors, a lying central
    directory); can a crafted `sharedStrings.xml` or sheet make the tokenizer quadratic; is any external link, embedded
@@ -157,6 +157,25 @@ Codex (or another independent reviewer) should check these before the code merge
 5. **Access** — storage policies on `store-imports` (exact path, owner, session state, no update/delete), RLS on both
    tables, `import_session_json` dropping `lock_token`, every RPC's `revoke … grant execute`, the cleanup route's
    `CRON_SECRET` check and service-role-only claim functions.
+
+### Codex result (2026-10-16)
+
+Codex reviewed this item on PR #12 at `2524829`. Every finding below was reproduced locally and fixed on
+`store-ops/review-fixes-core` with a regression test; details and defaults are in [`review-fixes.md`](review-fixes.md).
+
+- Finding 1 (blocker): the XML tokenizer was quadratic on an unterminated `<!--` (1 MiB took 53 s). Fixed in
+  `3a02955` (single forward pass; unterminated constructs refuse the file with `IMPORT_FILE_INVALID`).
+- Finding 2: ZIP entries with data descriptors skipped the ratio check, and one inflate block could overshoot the
+  budget. Fixed in `86832d6`.
+- Finding 3: a leading line feed escaped the formula guard in the report and the export. Fixed in `0ca90d1`.
+- Finding 4: a quote still open at the end of a CSV was accepted. Fixed in `3d37978` (`IMPORT_CSV_UNCLOSED_QUOTE`).
+- Finding 5: a formula with no cached value became a blank. Fixed in `e669494` and `eb271a5` (file warning, and
+  `IMPORT_FORMULA_NO_VALUE` on a mapped cell).
+- Finding 6: remapping after a partial commit broke `import_row_applied_shape`. Fixed in `7ae601d`
+  (`IMPORT_MAPPING_LOCKED` once any row is applied).
+- Finding 7: the export ignored lookup errors. Fixed in `a02e7e2` (see STORE-1b).
+- Walkthrough notes: barcode headings ("Cód. barras") map to Referencia externa (`2945d95`); every row sharing a SKU
+  is flagged even when one already has another error (`f89324a`, `7ae601d`).
 
 ## Acceptance proposal (not in `acceptance/cases.tsv`)
 

@@ -26,9 +26,9 @@ Functions (all `security definer`):
 
 | Function | Who | What |
 | --- | --- | --- |
-| `set_store_payment_method(method, holder, provider, note)` | Owner of an active, verified store | Proposes or changes a method; any change goes (back) to `pending_review`. Holder required except for cash. Rejects digit runs of 6+, links and e-mails in every text field. |
+| `set_store_payment_method(method, holder, provider, note)` | Owner of an active, verified store, while the pilot is on | Proposes or changes a method; any change goes (back) to `pending_review`. Holder required except for cash. Provider from a fixed list per method. Rejects digit runs of 6+ (also split by separators), nine digits anywhere, host names, links and e-mails in the holder and note. |
 | `withdraw_store_payment_method(method)` | Owner (verified or not) | Stops offering it at once. |
-| `admin_review_store_payment_method(store, method, decision, reason, expected_updated_at)` | Admin | `approve` / `reject` a pending method, `disable` an approved one. Reason required; refuses if the method changed since the Admin loaded it; approval requires the store to be active and verified at that moment. Audited in `admin_audit_actions` and the history. |
+| `admin_review_store_payment_method(store, method, decision, reason, expected_revision)` | Admin | `approve` / `reject` a pending method, `disable` an approved one. Reason required; refuses if the method's `revision` changed since the Admin loaded it; approval requires the store to be active and verified at that moment. Audited in `admin_audit_actions` and the history. |
 | `get_admin_store_payment_methods(status, page, size)` | Admin | Review list with the store's razón social, RUC and verification. |
 | `get_store_payment_methods(store)` | Anyone | Approved methods only, and only while the store is `active` and `is_verified`, checked at read time. Never returns the holder. |
 | `get_listing_purchase_request(listing)` | Anyone | `{methods, sku}` when the listing is public, a store listing, not `out_of_stock`, and its store shows at least one method; otherwise `null`. `sku` is the linked inventory item's merchant SKU or `null`. No stock figure (D-14). |
@@ -38,7 +38,9 @@ Application:
 - Pilot switch `LARIA_ASSISTED_COMMERCE=1` (server environment). Off by default, so merging changes nothing for buyers or
   stores until the owner turns it on. While off: no methods or "Solicitar compra" on public pages, the owner page and its
   route return 404, the Terms and Privacy drafts do not render. The Admin page works either way, so a pilot can be
-  prepared before it is switched on.
+  prepared before it is switched on. Since review fix A14 the database has its own switch, off by default
+  (`laria_private.set_assisted_commerce_pilot(enabled, reason)`, database owner only): both must be on for owners to
+  propose methods and for buyers to see them.
 - Listing page (`app/instrumentos/[slug]/page.tsx`): when `get_listing_purchase_request` returns a value, the one contact
   button reads "Solicitar compra" and opens WhatsApp with the purchase message, and a "Medios de pago que acepta la
   tienda" block with the disclaimer sits above the trust note. Otherwise the page is exactly as on STORE-1a (including the
@@ -80,7 +82,7 @@ https://laria.audio/instrumentos/<slug>
 | RUC or razón social change | Approved methods go back to `pending_review` | The approval was a comparison with those fields. |
 | Verification revoked, store hidden | Hidden at read time, rows kept; they reappear if the store is verified again | Design §11.2 ("without touching the rows"). See review question 3. |
 | Statuses | Adds `rejected` and `withdrawn` to the design's three | Distinguishes "Laria said no" (with a reason) from "Laria withdrew it" and from "the store stopped". |
-| Pilot gate | One deployment switch, `LARIA_ASSISTED_COMMERCE` | The legal review must precede the public pilot (§11.4); a per-store gate is already the Admin's approval. |
+| Pilot gate | The deployment switch `LARIA_ASSISTED_COMMERCE` for the screens, plus `laria_private.assisted_commerce_settings.pilot_enabled` in the database (review fix A14) | The legal review must precede the public pilot (§11.4); a per-store gate is already the Admin's approval. |
 | Event route | `/api/contact` gains `intent`; response shape unchanged | Keeps the Sprint 6 telemetry contract. |
 
 ## How to test
@@ -159,6 +161,25 @@ noted.
    `app/api/admin/payment-methods/route.ts` (same-origin, allow-listed keys, errors mapped without leaking internals),
    and the switch in `lib/payment-methods.ts`.
 7. **Terms/Privacy diff.** `components/legal/assisted-commerce-legal.tsx` against design §11.4 and brief §22.
+
+### Codex result (2026-10-16)
+
+Codex reviewed this item on PR #12 at `2524829`. Every finding below was reproduced locally and fixed on
+`store-ops/review-fixes-core` with a regression test; details and defaults are in [`review-fixes.md`](review-fixes.md).
+
+- Finding 1 (blocker): separated digit runs, hosts, IDN and query strings passed the text filter. Fixed in `9a27bd8`
+  (NFKC folding, separated digits joined, nine digits anywhere refused, hosts, schemes and e-mails refused, character
+  whitelist; the provider is chosen from a fixed list per method). The filter is a guard; Admin review stays the
+  check for anything it cannot recognise.
+- Finding 2: a pending method kept its review version when the RUC or razón social changed. Fixed in `9a27bd8` (the
+  change moves the revision of pending methods and records it).
+- Finding 3: two updates in one transaction shared an `updated_at` token. Fixed in `9a27bd8` (`revision` column,
+  `expected_revision`).
+- Finding 4: the pilot switch existed only in the app. Fixed in `9a27bd8`: with the database switch off (the
+  default), owners cannot propose and public reads return nothing; withdrawal and Admin review keep working. Turning
+  the pilot on takes `select laria_private.set_assisted_commerce_pilot(true, '<reason>');` as the database owner.
+- Nit: privacy wording now says only the store and authorized Laria staff can see the holder (`9a27bd8`).
+- Answer 3 (re-verification): kept as designed (§11.2), as Codex recommended.
 
 ## Legal (human step, not code)
 

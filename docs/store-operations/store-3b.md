@@ -142,6 +142,19 @@ RPCs and the Admin form. Stored `listing_allowance` values can stay; nothing rea
 6. **Moderation load (D-1)** — a Tienda can put up to its allowance in the Admin queue at once; worth a look before
    granting pilot stores 500.
 
+### Codex result (2026-10-16)
+
+Codex reviewed this item on PR #12 at `2524829`. Every finding below was reproduced locally and fixed on
+`store-ops/review-fixes-core` with a regression test; details and defaults are in [`review-fixes.md`](review-fixes.md).
+
+- Finding 1: publication could deadlock with an inventory write (store `FOR UPDATE` against the ledger's `KEY SHARE`).
+  Fixed in `d216841`; the harness's "stock versus publication" and "price versus publication" cases deadlocked
+  before it.
+- Finding 2: photo exclusivity was checked without an atomic claim. Fixed in `d216841` (the asset row is locked in the
+  shared attachment guard, then a photo another listing uses is refused); harness case "photo: publication versus
+  edit".
+- Answers 1 to 6 found no other issue; the moderation-load note (D-1) stands.
+
 ## Acceptance proposal (not in `acceptance/cases.tsv`)
 
 Proposed cases for Henri's review; added to `acceptance/cases.tsv` only after it.

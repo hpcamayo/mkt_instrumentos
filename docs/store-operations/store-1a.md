@@ -141,6 +141,25 @@ unless noted.
    paths; `tests/store-sprint-2.sql`, `listing-sprint-3.sql`, `sprint-5-favorites.sql` and `sprint-7-email-alerts.sql`
    run unchanged.
 
+### Codex result (2026-10-16)
+
+Codex reviewed this item on PR #12 at `2524829`. Every finding below was reproduced locally and fixed on
+`store-ops/review-fixes-core` with a regression test; details and defaults are in [`review-fixes.md`](review-fixes.md).
+
+- Item 1, finding 1: the `KEY SHARE` lock that ledger, audit and receipt inserts take on the store row deadlocked
+  with publication, the publish form and the Admin store settings, which held the store `FOR UPDATE`. Fixed in
+  `d216841` (store rows locked `FOR NO KEY UPDATE`; publication locks an unlinked SKU before reading its price).
+- Item 1, finding 2: a stale `link_inventory_listing` could lock a second listing out of order. Fixed in `d216841`
+  (the SKU is locked directly; a linked SKU is refused without touching its listing).
+- Item 1, finding 3: the races only exercised linked inventory. Fixed in `d216841`: unlinked last-unit, stale count
+  and bulk races, threshold and hide races, deterministic lock-order cases. The quick check above was wrong: with the
+  SKU lock removed, the linked case stays masked by the listing lock; `--mutation` now shows the unlinked case
+  catching it.
+- Item 2, finding 1: price-drop and search e-mails queued while in stock went out after stock ran out. Fixed in
+  `7ae601d` (cancelled at claim, digests drop the listing, empty digests are cancelled).
+- Item 2, finding 2: an import row that gave a listing its first stock and a new price matched saved searches with
+  the old price. Fixed in `7ae601d`.
+
 ## Acceptance proposal (not in `acceptance/cases.tsv`)
 
 Proposed `INV-` cases for STORE-1a, for Henri's review. They are added to `acceptance/cases.tsv` only after that
