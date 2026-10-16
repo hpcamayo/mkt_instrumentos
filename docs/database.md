@@ -543,6 +543,7 @@ Current migrations:
 - `20261027120000_store_import_publication.sql` (STORE-3b, local only): per-store listing allowance read by the cap trigger, Admin allowance function, shared `insert_store_listing`, publication of import rows. See "Store operations: later sub-sprints".
 - `20261028120000_pay_1_store_payment_methods.sql` (PAY-1, local only): accepted payment methods with Admin review and history, public read functions, purchase-intent metadata on `whatsapp_contact`. See "Store operations: later sub-sprints".
 - `20261029120000_review_fixes_payment_methods.sql` … `20261029120300_review_fixes_photo_cleanup.sql` (review fixes A, local only): fixes from the Codex review of the Store Operations prototype. See "Store operations: review fixes" and `docs/store-operations/review-fixes.md`.
+- `20261030120000_store_review_fixes_ux.sql` (review fixes B, local only): SKU category and category counts for Inventario, owner-entered publication fields on import rows, no publication hint on rows with nothing to publish. See "Store operations: review fixes".
 
 Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
 
@@ -753,3 +754,12 @@ why is in `docs/store-operations/review-fixes.md`. Long functions are patched fr
 - `20261029120300_review_fixes_photo_cleanup.sql`: `store_import_photo_assets.reference_checked_at` and a partial index;
   `laria_private.discard_detached_import_photos(limit)`, run by `claim_store_import_photo_deletions` when called
   without a session, discards validated photos of closed or purged imports that nothing references any more.
+- `20261030120000_store_review_fixes_ux.sql` (branch `store-ops/review-fixes-ux`, section B of the review-fixes doc):
+  trigger `store_import_rows_drop_linked_publication_hint` clears the "Para publicar falta…" issue on planned update or
+  adopt rows whose SKU already has a publication; nullable `store_inventory_items.category` (valid taxonomy key), set
+  by trigger `store_import_rows_record_item_category` when an import row is applied; `get_inventory_category_counts()`
+  (owner, active SKUs, `none` for no category); `get_inventory_page` filters `category` by the publication's category,
+  else the SKU's; nullable `store_import_rows.publish_fields` (brand, model, category, instrument_type, condition,
+  description) written by the owner through `set_store_import_row_publish_fields(session, row, fields)`, refused once the
+  row is published (`IMPORT_ROW_PUBLISHED`) or publication is closed (`IMPORT_PUBLISH_CLOSED`). No function that locks
+  or writes stock is replaced.
