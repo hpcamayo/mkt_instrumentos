@@ -19,6 +19,8 @@ export type AdminPaymentMethodRow = {
   owner_note: string | null;
   review_reason: string | null;
   updated_at: string;
+  // Bumped on every change to the method or the store's RUC and razón social; a decision applies to this revision only.
+  revision: number;
   store_name: string;
   store_slug: string;
   store_status: string;
@@ -53,7 +55,7 @@ export function AdminPaymentMethodRow({ row }: { row: AdminPaymentMethodRow }) {
       const response = await fetch("/api/admin/payment-methods", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId: row.store_id, method: row.method, decision, reason, expectedUpdatedAt: row.updated_at }),
+        body: JSON.stringify({ storeId: row.store_id, method: row.method, decision, reason, expectedRevision: row.revision }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.ok) {

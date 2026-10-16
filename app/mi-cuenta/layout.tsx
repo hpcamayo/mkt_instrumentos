@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { NOINDEX_ROBOTS } from "@/lib/site";
 import { AccountNavigation } from "@/components/account-navigation";
 import { getAccountContext } from "@/lib/account-context";
+import { assistedCommerceEnabled } from "@/lib/payment-methods";
 
 // Private account/Admin surfaces are never indexable.
 export const metadata: Metadata = { robots: NOINDEX_ROBOTS };
@@ -20,6 +21,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
     <AccountNavigation
       accountType={accountType}
       hasStore={Boolean(store)}
+      payments={accountType === "store_owner" && Boolean(store) && assistedCommerceEnabled()}
       unreadNotifications={unreadNotifications ?? 0}
       pendingBuyerConfirmations={pendingBuyerConfirmations ?? 0}
       name={profile?.full_name?.trim() || user.email || undefined}

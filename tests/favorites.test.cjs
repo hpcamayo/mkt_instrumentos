@@ -35,13 +35,13 @@ test('favorite controls reflect actual saved state and anonymous safe login navi
 // the first account check has finished; hydrated with the live state, their favourite rendered a sign-in link where the
 // server had sent the disabled button. While a component hydrates, the account hook must hand it the server's state.
 test('account state while hydrating equals the server render (React #418)',()=>{
- const live={authenticated:true,storeOwner:true,hasStore:true,admin:true,name:'Ana',unreadNotifications:2,pendingBuyerConfirmations:1,ready:true,settled:true,favorites:{id:true},register:()=>()=>{},setFavorite:async()=>{}};
+ const live={authenticated:true,storeOwner:true,hasStore:true,payments:true,admin:true,name:'Ana',unreadNotifications:2,pendingBuyerConfirmations:1,ready:true,settled:true,favorites:{id:true},register:()=>()=>{},setFavorite:async()=>{}};
  const {useMarketplaceAccount}=load('components/marketplace-account-provider.tsx',{react:{...React,useContext:()=>live}});
  let seen;const Probe=()=>{seen=useMarketplaceAccount();return null;};
  // A server render reads useSyncExternalStore's server snapshot, exactly as hydration does.
  renderToStaticMarkup(React.createElement(Probe));
  const {register,setFavorite,...state}=seen;
- assert.deepEqual(state,{authenticated:false,storeOwner:false,hasStore:false,admin:false,name:null,unreadNotifications:0,pendingBuyerConfirmations:0,ready:false,settled:false,favorites:{}});
+ assert.deepEqual(state,{authenticated:false,storeOwner:false,hasStore:false,payments:false,admin:false,name:null,unreadNotifications:0,pendingBuyerConfirmations:0,ready:false,settled:false,favorites:{}});
  assert.equal(register,live.register);assert.equal(setFavorite,live.setFavorite);
  assert.match(fs.readFileSync('components/marketplace-account-provider.tsx','utf8'),/useSyncExternalStore\(subscribeToNothing, \(\) => false, \(\) => true\)/);
 });

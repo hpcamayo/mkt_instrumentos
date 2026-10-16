@@ -483,18 +483,24 @@ function ReviewStep({ session, onDecision, onBack, onContinue }: {
   const counts = session.counts ?? {};
   const [filter, setFilter] = useState<RowFilter>(counts.error ? "error" : "all");
   const toApply = (counts.create ?? 0) + (counts.update ?? 0) + (counts.adopt_listing ?? 0);
+  // Reopened after a partial apply: the columns are locked (the database refuses IMPORT_MAPPING_LOCKED).
+  const applied = counts.applied ?? 0;
   // Large files are long: the step's actions sit above the rows as well as after them (review fix B3).
   const actions = (
     <div className="flex flex-wrap gap-3">
       <Button onClick={onContinue} disabled={toApply === 0}>Continuar</Button>
-      <Button variant="secondary" onClick={onBack}>Cambiar columnas</Button>
+      {applied ? null : <Button variant="secondary" onClick={onBack}>Cambiar columnas</Button>}
     </div>
   );
   return (
     <div className="grid gap-5">
       <div className="grid gap-2">
         <h2 className="t-section">Revisa los cambios</h2>
-        <p className="t-body text-ink-2">Todavía no se aplicó nada. Las filas con errores no se importan; corrige el archivo y súbelo otra vez, o continúa sin ellas.</p>
+        <p className="t-body text-ink-2">
+          {applied
+            ? `${plural(applied, "fila ya se aplicó", "filas ya se aplicaron")}. Las que faltan se calcularon otra vez con los valores actuales; las filas con errores no se importan.`
+            : "Todavía no se aplicó nada. Las filas con errores no se importan; corrige el archivo y súbelo otra vez, o continúa sin ellas."}
+        </p>
       </div>
       {(counts.total ?? 0) > 10 ? actions : null}
       <Tiles items={[

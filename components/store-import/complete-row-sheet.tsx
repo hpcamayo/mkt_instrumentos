@@ -202,7 +202,11 @@ export function CompleteRowSheet({ sessionId, row, itemId, onClose, onSaved }: {
           </div>
         ) : <p className="pt-4 t-body text-ink-2" aria-live="polite">Cargando…</p>
       ) : (
-        <form id={formId} className="grid gap-4 pt-4" onSubmit={submit} noValidate>
+        <form id={formId} className="grid gap-4 pt-4" onSubmit={submit} noValidate onChange={(event) => {
+          // A corrected field drops its error; the rest wait for the next save.
+          const name = (event.target as unknown as HTMLInputElement).name as keyof Errors;
+          if (errors[name]) setErrors((current) => ({ ...current, [name]: undefined }));
+        }}>
           <div className="grid gap-0.5">
             <p className="t-body font-semibold break-words">{data.sku ? `${data.sku} · ` : ""}{data.name}</p>
             <p className="t-meta">Fila {data.row_number}. Completa lo que falta; al guardar, la fila se revisa otra vez.</p>
@@ -264,8 +268,8 @@ export function CompleteRowSheet({ sessionId, row, itemId, onClose, onSaved }: {
 
           {missing.has("description") ? (
             <Field id={`${formId}-description`} label="Descripción" error={errors.description}
-              hint={`Al menos ${MIN_DESCRIPTION} caracteres: estado, accesorios incluidos, detalles. Llevas ${description.trim().length}.`}>
-              <Textarea name="description" value={description} onChange={(event) => setDescription(event.target.value)} rows={5} required />
+              hint={`Al menos ${MIN_DESCRIPTION} caracteres: estado, accesorios incluidos, detalles.`}>
+              <Textarea name="description" value={description} onChange={(event) => setDescription(event.target.value)} rows={5} maxLength={MAX_DESCRIPTION} required />
             </Field>
           ) : null}
 

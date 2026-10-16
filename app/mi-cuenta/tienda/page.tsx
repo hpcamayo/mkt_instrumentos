@@ -25,7 +25,7 @@ export default async function StoreAccountPage() {
       {store ? <StoreStatus store={store as StoreApplication} /> : null}
       {store && assistedCommerceEnabled() ? (
         <p className="rounded-panel border border-subtle bg-white p-4 t-ui text-ink-2">
-          <Link href="/mi-cuenta/tienda/medios-de-pago" className="link font-semibold">Medios de pago</Link>: indica cómo pueden pagarte los compradores.
+          <Link href="/mi-cuenta/tienda/pagos" className="link font-semibold">Pagos</Link>: indica cómo pueden pagarte los compradores.
         </p>
       ) : null}
       <StoreRegistrationForm store={(store as StoreApplication | null) ?? null} photos={photos ?? []} defaultEmail={user.email ?? ""} />

@@ -127,6 +127,7 @@ export function ImportPublish({ sessionId }: { sessionId: string }) {
   async function publish() {
     setError(null);
     setSummary(null);
+    setCompleted(null);
     const rows = [...selected].sort((a, b) => a - b);
     const outcomes: PublishOutcome[] = [];
     setProgress({ done: 0, total: rows.length });

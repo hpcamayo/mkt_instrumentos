@@ -41,7 +41,7 @@ export default async function AdminPaymentMethodsPage({ searchParams }: { search
         <Notice tone="danger">No pudimos cargar los medios de pago. No asumiremos que no hay pendientes.</Notice>
       ) : rows.length ? (
         <ul className="grid gap-4">
-          {rows.map((row) => <AdminPaymentMethodRow key={`${row.store_id}:${row.method}:${row.updated_at}`} row={row} />)}
+          {rows.map((row) => <AdminPaymentMethodRow key={`${row.store_id}:${row.method}:${row.revision}`} row={row} />)}
         </ul>
       ) : (
         <EmptyState headingLevel={2} title="No hay medios de pago en este estado" description={total === 0 ? "Cuando una tienda verificada indique un medio, aparecerá aquí." : "Prueba con otro estado."} />
