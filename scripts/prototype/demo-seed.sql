@@ -21,20 +21,20 @@ do $$ begin
 end $$;
 
 -- ------------------------------------------------------------------ accounts
-insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, confirmed_at,
+insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, created_at, updated_at)
 values
  ('00000000-0000-0000-0000-000000000000','d0000000-0000-4000-8000-000000000001','authenticated','authenticated','demo-tienda@laria.test',
-  extensions.crypt('laria-demo-2026', extensions.gen_salt('bf')), now(), now(), '{"provider":"email","providers":["email"]}',
+  extensions.crypt('laria-demo-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}',
   '{"account_type":"store_owner","full_name":"Rosa Demo","phone":"51999000101","city":"Lima","region":"Lima"}', '', '', now(), now()),
  ('00000000-0000-0000-0000-000000000000','d0000000-0000-4000-8000-000000000002','authenticated','authenticated','admin@laria.test',
-  extensions.crypt('laria-demo-2026', extensions.gen_salt('bf')), now(), now(), '{"provider":"email","providers":["email"],"role":"admin"}',
+  extensions.crypt('laria-demo-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"],"role":"admin"}',
   '{"account_type":"seller","full_name":"Admin Laria","phone":"51999000102","city":"Lima","region":"Lima"}', '', '', now(), now()),
  ('00000000-0000-0000-0000-000000000000','d0000000-0000-4000-8000-000000000003','authenticated','authenticated','comprador@laria.test',
-  extensions.crypt('laria-demo-2026', extensions.gen_salt('bf')), now(), now(), '{"provider":"email","providers":["email"]}',
+  extensions.crypt('laria-demo-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}',
   '{"account_type":"seller","full_name":"Carlos Comprador","phone":"51999000103","city":"Lima","region":"Lima"}', '', '', now(), now()),
  ('00000000-0000-0000-0000-000000000000','d0000000-0000-4000-8000-000000000004','authenticated','authenticated','particular@laria.test',
-  extensions.crypt('laria-demo-2026', extensions.gen_salt('bf')), now(), now(), '{"provider":"email","providers":["email"]}',
+  extensions.crypt('laria-demo-2026', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}',
   '{"account_type":"seller","full_name":"Lucía Particular","phone":"51999000104","city":"Miraflores","region":"Lima"}', '', '', now(), now())
 on conflict (id) do nothing;
 
