@@ -85,6 +85,12 @@ function cellFor(cells: ImportCell[], mapping: ImportMapping, field: string, con
   const column = mapping[field];
   if (column === undefined) return null;
   const cell = cells[column];
+  // A formula with no cached value is unknown, not blank: a blank would keep the SKU's current value.
+  if (cell?.f && cell.v === "") {
+    issue(context, field, "IMPORT_FORMULA_NO_VALUE", "error",
+      `${fieldLabel(field)}: la celda tiene una fórmula sin valor calculado. Abre el archivo en Excel, guárdalo y vuelve a subirlo.`);
+    return null;
+  }
   if (!cell || !cell.v.trim()) return null;
   if (cell.f && !context.formulaWarned) {
     context.formulaWarned = true;

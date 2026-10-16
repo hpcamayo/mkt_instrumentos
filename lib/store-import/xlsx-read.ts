@@ -12,7 +12,8 @@
 //     refuses unterminated comments, instructions, CDATA sections and tags, and knows the handful of SpreadsheetML
 //     elements it needs. Documents with a DTD are refused, and only the five predefined entities and numeric
 //     references are decoded, so there is no entity expansion or external fetch of any kind;
-//   * formulas are never evaluated: a formula cell contributes its cached value and is flagged.
+//   * formulas are never evaluated: a formula cell contributes its cached value and is flagged; one with no cached
+//     value is flagged with an empty value, which validation refuses (Codex review 3 finding 5).
 import { Inflate } from "fflate";
 import {
   IMPORT_HEADER_SEARCH_ROWS,
@@ -425,10 +426,13 @@ function readSheet(xml: string, sharedStrings: string[], dateStyles: Set<number>
   const rows: ImportRow[] = [];
   const maxRows = IMPORT_MAX_DATA_ROWS + IMPORT_HEADER_SEARCH_ROWS;
   let formulas = 0;
+  let uncached = 0;
   let row: ImportRow | null = null;
   let nextRowNumber = 1;
   let nextColumn = 0;
-  let cell: { column: number; type: string; style: number; value: string; inline: string; formula: boolean } | null = null;
+  let cell: {
+    column: number; type: string; style: number; value: string; inline: string; formula: boolean; cached: boolean;
+  } | null = null;
   let inValue = false;
   let inInlineText = false;
   let phonetic = 0;
@@ -437,7 +441,16 @@ function readSheet(xml: string, sharedStrings: string[], dateStyles: Set<number>
     if (!row || !cell) return;
     const raw = cell.type === "inlineStr" ? cell.inline : cell.value;
     let out: ImportCell | null = null;
-    if (cell.type === "s") {
+    // A formula with no cached value (written by a program that does not calculate): kept as an empty value with the
+    // flag, so validation refuses it instead of reading a blank. A string formula whose cached result is "" (t="str"
+    // with an empty <v>) is an ordinary blank.
+    const noCachedValue = cell.formula && raw.trim() === "" && !(cell.type === "str" && cell.cached);
+    if (noCachedValue) {
+      if (cell.column < IMPORT_MAX_COLUMNS) {
+        out = { v: "", f: 1 };
+        uncached += 1;
+      }
+    } else if (cell.type === "s") {
       const index = Number(raw);
       if (!Number.isInteger(index) || index < 0 || index >= sharedStrings.length) throw invalid();
       out = { v: sharedStrings[index] };
@@ -452,8 +465,8 @@ function readSheet(xml: string, sharedStrings: string[], dateStyles: Set<number>
     } else if (raw.trim() !== "") {
       out = { v: raw.trim(), k: dateStyles.has(cell.style) ? "d" : "n" };
     }
-    if (out && out.v !== "") {
-      if (cell.formula) {
+    if (out && (out.v !== "" || noCachedValue)) {
+      if (cell.formula && !noCachedValue) {
         out.f = 1;
         formulas += 1;
       }
@@ -507,17 +520,21 @@ function readSheet(xml: string, sharedStrings: string[], dateStyles: Set<number>
           value: "",
           inline: "",
           formula: false,
+          cached: false,
         };
         if (kind === "self") finishCell();
       }
     } else if (cell) {
-      if (name === "v") inValue = kind === "open";
+      if (name === "v") {
+        inValue = kind === "open";
+        cell.cached = true;
+      }
       else if (name === "f") cell.formula = true;
       else if (name === "rPh") phonetic = kind === "open" ? phonetic + 1 : Math.max(0, phonetic - 1);
       else if (name === "t") inInlineText = kind === "open";
     }
   }
-  return { rows, formulas };
+  return { rows, formulas, uncached };
 }
 
 export function readXlsx(bytes: Uint8Array, budget: XlsxBudget = {}): XlsxReadResult {
@@ -544,8 +561,11 @@ export function readXlsx(bytes: Uint8Array, budget: XlsxBudget = {}): XlsxReadRe
     warnings.push("El archivo tiene vínculos a otros libros; no se abrieron y se usaron los valores guardados.");
   }
 
-  const { rows, formulas } = readSheet(sheetXml, readSharedStrings(xmlText(parts.get("xl/sharedStrings.xml"))),
+  const { rows, formulas, uncached } = readSheet(sheetXml, readSharedStrings(xmlText(parts.get("xl/sharedStrings.xml"))),
     readDateStyles(xmlText(parts.get("xl/styles.xml"))));
   if (formulas > 0) warnings.push("Algunas celdas tienen fórmulas; se usó el último valor calculado que guardó Excel.");
+  if (uncached > 0) {
+    warnings.push("Algunas celdas tienen fórmulas sin valor calculado y no se pueden importar. Abre el archivo en Excel, guárdalo y vuelve a subirlo.");
+  }
   return { sheetName: sheet.name, rows, warnings };
 }

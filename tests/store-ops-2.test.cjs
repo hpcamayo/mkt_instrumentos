@@ -6,7 +6,7 @@ const { zipSync, deflateSync, strToU8 } = require("fflate");
 
 const { decodeCsv, detectDelimiter, parseCsv } = require("@/lib/store-import/csv");
 const { readXlsx, extractXlsxParts, isDateFormatCode, columnIndex, decodeXmlText } = require("@/lib/store-import/xlsx-read");
-const { readSpreadsheet, findHeaderRow } = require("@/lib/store-import/sheet");
+const { readSpreadsheet, findHeaderRow, compactCells } = require("@/lib/store-import/sheet");
 const { proposeMapping, mappingProblems, normalizeHeader, IMPORT_FIELDS } = require("@/lib/store-import/mapping");
 const { parseImportRow, parsePriceCell } = require("@/lib/store-import/rows");
 const { buildReportCsv, csvSafeCell, describeChanges } = require("@/lib/store-import/report");
@@ -197,6 +197,42 @@ test("XLSX reading: shared, rich and inline strings, numbers, formulas, dates, e
   assert.deepEqual(row4[4], { v: "45000", k: "d" }, "built-in date format");
   assert.deepEqual(result.rows[3].cells, [{ v: "#N/A", k: "e" }, { v: "línea\rdos" }, { v: "12", k: "d" }], "custom date format, Excel escapes");
   assert.ok(result.warnings.some((warning) => warning.includes("fórmulas")));
+});
+
+test("a formula cell without a cached value is flagged, survives staging and is refused for its field", () => {
+  // Codex review 3 finding 5: <c><f>2+2</f></c> was dropped before its formula flag was recorded, so the stock read as
+  // a blank (keep the current value) with no warning at all.
+  const inline = (ref, text) => `<c r="${ref}" t="inlineStr"><is><t>${text}</t></is></c>`;
+  const bytes = xlsx({ "xl/worksheets/sheet1.xml": sheet(
+    `<row r="1">${inline("A1", "SKU")}${inline("B1", "Nombre")}${inline("C1", "Stock")}${inline("D1", "Precio")}</row>` +
+    `<row r="2">${inline("A2", "A")}${inline("B2", "Pedal")}<c r="C2"><f>2+2</f></c><c r="D2"><f t="shared" si="0"/><v></v></c>` +
+    '<c r="CC2"><f>1</f></c></row>' +
+    `<row r="3">${inline("A3", "B")}<c r="B3" t="str"><f>IF(1,"","x")</f><v></v></c><c r="C3"><f>1+1</f><v>2</v></c></row>`) });
+  const result = readXlsx(bytes);
+  assert.ok(result.warnings.some((warning) => /fórmulas sin valor calculado/.test(warning)), "file-level warning");
+  assert.ok(result.warnings.some((warning) => /último valor calculado/.test(warning)), "C3 still has its cached value");
+  assert.deepEqual(result.rows[1].cells, [{ v: "A" }, { v: "Pedal" }, { v: "", f: 1 }, { v: "", f: 1 }], "flagged; past the column limit ignored");
+  assert.deepEqual(result.rows[2].cells, [{ v: "B" }, { v: "" }, { v: "2", k: "n", f: 1 }], "a cached empty string is a real blank");
+
+  // Staging drops trailing empty cells but keeps the flag; validation then refuses the field instead of keeping the
+  // current stock.
+  const staged = compactCells(result.rows[1].cells);
+  assert.deepEqual(staged, result.rows[1].cells);
+  const mapping = { sku: 0, product_name: 1, quantity: 2, unit_price_pen: 3 };
+  const { parsed, issues } = parseImportRow(staged, mapping);
+  assert.equal(parsed.quantity, null);
+  for (const field of ["quantity", "unit_price_pen"]) {
+    const found = issues.find((item) => item.field === field);
+    assert.equal(found?.code, "IMPORT_FORMULA_NO_VALUE", field);
+    assert.equal(found.severity, "error");
+    assert.match(found.message, /fórmula sin valor calculado\. Abre el archivo en Excel, guárdalo y vuelve a subirlo\./);
+  }
+  const computed = parseImportRow(compactCells(result.rows[2].cells), mapping);
+  assert.equal(computed.parsed.quantity, 2);
+  assert.equal(computed.parsed.product_name, null, "a formula that computed an empty string is an ordinary blank");
+  assert.deepEqual(computed.issues.map((item) => item.code).filter((code) => code.startsWith("IMPORT_FORMULA")), ["IMPORT_FORMULA"]);
+  assert.deepEqual(compactCells([{ v: "A" }, { v: "" }, { v: "", k: "n" }]), [{ v: "A" }], "plain trailing blanks still go");
+  assert.ok(readSpreadsheet(bytes, "xlsx").warnings.some((warning) => /sin valor calculado/.test(warning)));
 });
 
 test("XLSX: first visible sheet only, absolute relationship targets", () => {
