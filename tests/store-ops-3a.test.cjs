@@ -21,12 +21,20 @@ const { parsePhotoAction, parsePhotoFiles } = require("@/lib/store-import/photos
 
 // ------------------------------------------------------------------ fixtures
 
-function jpeg(width, height, { trailer = "", pad = 1000 } = {}) {
+function jpeg(width, height, { trailer = "", comment = "", pad = 1000 } = {}) {
   const app0 = [0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00];
+  const com = comment ? [0xff, 0xfe, (comment.length + 2) >> 8, (comment.length + 2) & 0xff, ...Buffer.from(comment, "latin1")] : [];
   const sof = [0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1];
   const sos = [0xff, 0xda, 0x00, 0x0c, 0x03, 1, 0, 2, 0x11, 3, 0x11, 0, 0x3f, 0];
-  return Buffer.concat([Buffer.from([0xff, 0xd8, ...app0, ...sof, ...sos]), Buffer.alloc(pad, 0x55), Buffer.from([0xff, 0xd9]), Buffer.from(trailer, "latin1")]);
+  return Buffer.concat([Buffer.from([0xff, 0xd8, ...app0, ...com, ...sof, ...sos]), Buffer.alloc(pad, 0x55), Buffer.from([0xff, 0xd9]), Buffer.from(trailer, "latin1")]);
 }
+
+// CRC-32 of a PNG chunk's type and data.
+const CRC_TABLE = Array.from({ length: 256 }, (_, value) => {
+  for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  return value >>> 0;
+});
+const crc32 = (bytes) => (bytes.reduce((crc, byte) => CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8), 0xffffffff) ^ 0xffffffff) >>> 0;
 
 function png(width, height, { trailer = "" } = {}) {
   const ihdr = Buffer.alloc(25);
@@ -36,7 +44,9 @@ function png(width, height, { trailer = "" } = {}) {
   ihdr.writeUInt32BE(height, 12);
   ihdr[16] = 8;
   ihdr[17] = 2;
+  ihdr.writeUInt32BE(crc32(ihdr.subarray(4, 21)), 21);
   const idat = Buffer.concat([Buffer.from([0, 0, 0, 4]), Buffer.from("IDAT", "latin1"), Buffer.alloc(4, 1), Buffer.alloc(4)]);
+  idat.writeUInt32BE(crc32(idat.subarray(4, 12)), 12);
   const iend = Buffer.from([0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]);
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), ihdr, idat, iend, Buffer.from(trailer, "latin1")]);
 }
@@ -47,6 +57,7 @@ function webp(kind, width, height, { extra = 0 } = {}) {
     chunk = Buffer.alloc(30);
     chunk.write("VP8 ", 0, "latin1");
     chunk.writeUInt32LE(22, 4);
+    chunk[8] = 0x10; // a key frame that is shown
     chunk[11] = 0x9d; chunk[12] = 0x01; chunk[13] = 0x2a;
     chunk.writeUInt16LE(width, 14);
     chunk.writeUInt16LE(height, 16);
@@ -57,11 +68,13 @@ function webp(kind, width, height, { extra = 0 } = {}) {
     chunk[8] = 0x2f;
     chunk.writeUInt32LE(((width - 1) & 0x3fff) | (((height - 1) & 0x3fff) << 14), 9);
   } else {
-    chunk = Buffer.alloc(28);
-    chunk.write("VP8X", 0, "latin1");
-    chunk.writeUInt32LE(10, 4);
-    chunk.writeUIntLE(width - 1, 12, 3);
-    chunk.writeUIntLE(height - 1, 15, 3);
+    // An extended file: the VP8X header, then its image (a VP8L chunk of the same size).
+    const header = Buffer.alloc(18);
+    header.write("VP8X", 0, "latin1");
+    header.writeUInt32LE(10, 4);
+    header.writeUIntLE(width - 1, 12, 3);
+    header.writeUIntLE(height - 1, 15, 3);
+    chunk = Buffer.concat([header, webp("VP8L", width, height).subarray(12)]);
   }
   const body = Buffer.concat([Buffer.from("WEBP", "latin1"), chunk]);
   const header = Buffer.alloc(8);
@@ -131,10 +144,11 @@ test("over 5 MB is refused before reading", () => {
 });
 
 test("polyglots and appended data are refused", () => {
-  assert.equal(checkPhoto(new Uint8Array(jpeg(1000, 1000, { trailer: "<html><script>alert(1)</script></html>" }))).code, "PHOTO_SUSPICIOUS");
-  assert.equal(checkPhoto(new Uint8Array(jpeg(1000, 1000, { trailer: "<!DOCTYPE HTML>" }))).code, "PHOTO_SUSPICIOUS");
-  assert.equal(checkPhoto(new Uint8Array(jpeg(1000, 1000, { trailer: "<?php echo 1; ?>" }))).code, "PHOTO_SUSPICIOUS");
-  // Bytes after IEND or past the RIFF size are not part of the image.
+  assert.equal(checkPhoto(new Uint8Array(jpeg(1000, 1000, { comment: "<html><script>alert(1)</script></html>" }))).code, "PHOTO_SUSPICIOUS");
+  assert.equal(checkPhoto(new Uint8Array(jpeg(1000, 1000, { comment: "<!DOCTYPE HTML>" }))).code, "PHOTO_SUSPICIOUS");
+  assert.equal(checkPhoto(new Uint8Array(jpeg(1000, 1000, { comment: "<?php echo 1; ?>" }))).code, "PHOTO_SUSPICIOUS");
+  // Bytes after EOI or IEND, or past the RIFF size, are not part of the image.
+  assert.equal(checkPhoto(new Uint8Array(jpeg(1000, 1000, { trailer: "<html><script>alert(1)</script></html>" }))).code, "PHOTO_NOT_IMAGE");
   assert.equal(checkPhoto(new Uint8Array(png(900, 900, { trailer: "anything" }))).code, "PHOTO_NOT_IMAGE");
   assert.equal(checkPhoto(new Uint8Array(Buffer.concat([webp("VP8X", 900, 900), Buffer.from("tail")]))).code, "PHOTO_NOT_IMAGE");
   assert.equal(checkPhoto(new Uint8Array(webp("VP8X", 900, 900, { extra: 10 }))).code, "PHOTO_NOT_IMAGE");
