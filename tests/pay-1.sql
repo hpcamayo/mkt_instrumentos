@@ -311,6 +311,13 @@ set local role authenticated;
 select pg_temp.as_user('owner_a');
 do $$ begin
   perform pg_temp.expect_error($q$select public.set_store_payment_method('link_de_pago', 'Tienda Pago A SAC', 'Izipay', null)$q$, 'PAYMENT_PILOT_OFF');
+  -- Withdrawing still works (undone here; the withdrawal section below covers it).
+  begin
+    perform pg_temp.check(public.withdraw_store_payment_method('yape_plin')->>'status' = 'withdrawn', 'owner could not withdraw with the pilot off');
+    raise exception 'undo';
+  exception when raise_exception then
+    if sqlerrm <> 'undo' then raise; end if;
+  end;
 end $$;
 select pg_temp.as_admin();
 do $$ begin
