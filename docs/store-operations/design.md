@@ -191,7 +191,9 @@ Notes:
 - **Catalog references.** The FKs to `catalog_products`/`catalog_product_variants` assume catalog ids are stable
   across catalog reloads. `catalog/scripts/ops/load_production.sh` (on the catalog branch) must be checked before
   STORE-1a: if it truncates or re-creates products, these become plain uuid columns validated at write time instead
-  of FKs, so a catalog reload can never fail or silently null merchant data.
+  of FKs, so a catalog reload can never fail or silently null merchant data. *Resolved in STORE-1a: products keep
+  stable ids and are never deleted, so `catalog_product_id` keeps its FK; variants can be deleted by a reload, so
+  `catalog_variant_id` is a plain uuid checked on write (`store-1a.md`).*
 - **Variants.** One SKU per sellable variant. `variant_label` is the merchant's text ("Negro", "Zurdo");
   `catalog_variant_id` is set only when the variant was resolved (§9).
 

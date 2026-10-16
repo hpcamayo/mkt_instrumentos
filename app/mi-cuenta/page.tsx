@@ -8,6 +8,7 @@ import { AccountAnalyticsMetrics } from "@/components/account-analytics";
 import { buttonClasses } from "@/components/ui/button";
 import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
+import { getStoreListingQuota } from "@/lib/store-allowance";
 import { storeStatusEntry } from "@/lib/ui/status";
 
 export const metadata = { title: "Mi cuenta" };
@@ -28,7 +29,9 @@ export default async function AccountPage({
           .eq("store_id", store.id)
           .order("created_at", { ascending: false })
       : { data: [] };
-    return <StoreOwnerDashboard email={user.email ?? ""} confirmed={status.confirmed === "1"} store={store} inventory={inventory ?? []} />;
+    const concurrent = (inventory ?? []).filter((item) => item.status === "pending" || item.status === "approved").length;
+    const quota = await getStoreListingQuota(store ? supabase : null, concurrent);
+    return <StoreOwnerDashboard email={user.email ?? ""} confirmed={status.confirmed === "1"} store={store} inventory={inventory ?? []} allowance={quota.allowance} />;
   }
 
   const [{ data: listings }, analytics] = await Promise.all([supabase
@@ -72,11 +75,12 @@ export default async function AccountPage({
   );
 }
 
-function StoreOwnerDashboard({ email, confirmed, store, inventory }: {
+function StoreOwnerDashboard({ email, confirmed, store, inventory, allowance }: {
   email: string;
   confirmed: boolean;
   store: Awaited<ReturnType<typeof getAccountContext>>["store"];
   inventory: { id: string; title: string; status: string; slug: string; created_at: string }[];
+  allowance: number;
 }) {
   const pending = inventory.filter((item) => item.status === "pending").length;
   const approved = inventory.filter((item) => item.status === "approved").length;
@@ -95,8 +99,8 @@ function StoreOwnerDashboard({ email, confirmed, store, inventory }: {
         </div>
       </section>
       {store?.status === "rejected" ? <Notice tone="danger" role="note"><h2 className="font-semibold">Solicitud rechazada</h2><p className="mt-1">{store.rejection_reason || "La solicitud necesita correcciones antes de volver a revisión."}</p><Link href="/mi-cuenta/tienda" className="mt-3 inline-flex">Corregir y reenviar</Link></Notice> : null}
-      <section className="grid gap-4 sm:grid-cols-3"><Metric label="Estado" value={storeTrustLabel(store)} /><Metric label="Inventario concurrente" value={`${concurrent} / 50`} /><Metric label="En revisión" value={String(pending)} /></section>
-      {concurrent >= 50 ? <Notice tone="warning" role="note"><h2 className="font-semibold">Límite de inventario alcanzado</h2><p className="mt-1">Las 50 posiciones concurrentes están ocupadas.</p></Notice> : null}
+      <section className="grid gap-4 sm:grid-cols-3"><Metric label="Estado" value={storeTrustLabel(store)} /><Metric label="Inventario concurrente" value={`${concurrent} / ${allowance}`} /><Metric label="En revisión" value={String(pending)} /></section>
+      {concurrent >= allowance ? <Notice tone="warning" role="note"><h2 className="font-semibold">Límite de inventario alcanzado</h2><p className="mt-1">Las {allowance} posiciones concurrentes están ocupadas.</p></Notice> : null}
       <section className="rounded-panel border border-subtle bg-white p-5 text-sm leading-6 text-ink-2 sm:p-6">
         <h2 className="t-section text-ink">Cómo publica tu tienda</h2>
         {!store ? <p className="mt-2">Presenta la solicitud para vincular una tienda a esta cuenta. Cada cuenta puede tener una tienda.</p> : store.status === "active" && store.is_verified ? <p className="mt-2"><strong className="text-ink">Tienda verificada:</strong> tus publicaciones nuevas aparecen directamente si cumplen las reglas. La verificación no implica garantías de pago, entrega o condición.</p> : <p className="mt-2">Tus publicaciones nuevas pasan por revisión antes de aparecer. {store.status === "pending" ? "La tienda y sus publicaciones siguen ocultas al público hasta que se apruebe la solicitud." : "Las publicaciones aprobadas aparecen cuando la tienda está activa."}</p>}

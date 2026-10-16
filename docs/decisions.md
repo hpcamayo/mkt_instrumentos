@@ -320,3 +320,84 @@ Every significant feature should update docs.
 ## Performance and retry handling
 
 Catalog/store results are paginated, images use responsive Next Image delivery, and recommendation sections stream independently. Public submissions upload first and finalize atomically with a signed retry token; they still enter admin review. See `docs/performance.md`.
+
+## Store inventory guards live in listing triggers
+
+Decision (STORE-1a, 2026-10-15): the rule "a listing linked to inventory cannot become sold" and the price
+write-through from a listing edit to its inventory item are `listings` triggers, not edits to
+`set_owned_listing_lifecycle`, `review_listing` or `update_owned_listing`.
+
+Why:
+- One place covers the owner, Admin and every future path that changes a listing.
+- The trigger runs after the listing row is locked, so the lock order stays listing → item everywhere.
+
+## Inventory items soft-link catalog variants
+
+Decision (STORE-1a, 2026-10-15): `store_inventory_items.catalog_product_id` is a foreign key (`on delete set null`);
+`catalog_variant_id` is a plain uuid checked when it is written.
+
+Why:
+- The production catalog loader upserts products by stable id and never deletes them, but it deletes variants that a
+  new build no longer has. A variant FK would make a catalog reload fail or silently change merchant data.
+
+
+## Spreadsheet imports run as leased steps driven by the open page
+
+Decision (STORE-2, 2026-10-15): an import is a session that the open import page advances with short `/step` calls.
+Each call takes a 90-second lease, does bounded work for up to 20 seconds (stage 500 rows, plan 100, commit 50),
+checkpoints and releases. Closing the page pauses at the last checkpoint.
+
+Why:
+- Vercel Hobby has no queue and short function limits; a 2,000-row file still finishes in seconds locally.
+- The lease stops two tabs from processing one import, and each committed row has its own idempotency key, so a retried
+  chunk never applies twice.
+
+## XLSX is read with fflate and an own bounded reader
+
+Decision (STORE-2, 2026-10-15): `lib/store-import/xlsx-read.ts` inflates only allowlisted parts through `fflate`'s
+streaming API with a 40 MB total and 100:1 per-part budget, refuses macros, `.xls`, DTDs and entities, and never
+evaluates formulas. No SheetJS or ExcelJS.
+
+Why: only a streaming reader bounds decompression before the bytes exist; merchant files are untrusted.
+
+## One CSV writer for merchant files
+
+Decision (combined prototype, 2026-10-15): the inventory export, the import template and the import report all write
+CSV through `lib/spreadsheet/csv-write.ts`: formula-like text gets a leading apostrophe, numbers stay numbers, fields
+with `,`, `;`, quotes or line breaks are quoted, UTF-8 BOM and CRLF.
+
+Why: STORE-1b and STORE-2 each had a copy with slightly different quoting (only one quoted `;`, which Excel with a
+Spanish locale treats as a separator). One writer keeps the formula guard in one place for review.
+
+## Assisted commerce is one deployment switch
+
+Decision (PAY-1, 2026-10-15): every buyer- and store-facing payment surface is behind `LARIA_ASSISTED_COMMERCE=1`
+(off by default). The Admin review page works either way.
+
+Why: the Terms and Privacy additions need legal review before any store shows payment methods; the Admin approval per
+method is already the per-store gate.
+
+## A purchase request is a WhatsApp contact with an intent
+
+Decision (PAY-1, 2026-10-15): "Solicitar compra" records `whatsapp_contact` with metadata `{"intent":"purchase"}`
+instead of a new event type.
+
+Why: Sprint 6 uses `whatsapp_contact` to decide who may be named as buyer in a sale claim; a new type would make
+purchase-request buyers ineligible, and contact counts stay comparable.
+
+## Store listings are inserted by one function
+
+Decision (STORE-3b, 2026-10-15): the store-listing body of `complete_public_submission` became
+`laria_private.insert_store_listing`, called by both the sell form and import publication.
+
+Why: one implementation keeps verified direct approval, pending-store privacy, photo rules, contact data and the
+allowance check identical for both paths. The Sprint 4 submission suites and `store-ops-3b.sql` run the form path
+unchanged.
+
+## The listing allowance is read inside the cap lock
+
+Decision (STORE-3b, 2026-10-15): `enforce_store_inventory_cap()` reads the store's allowance after taking the existing
+per-store advisory lock, and `admin_set_store_listing_allowance` takes the same lock.
+
+Why: two publishes (form, import chunks, restore) cannot pass the limit together, and a lowered allowance is never read
+stale.

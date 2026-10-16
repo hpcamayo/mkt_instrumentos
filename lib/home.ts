@@ -1,4 +1,4 @@
-import { categoryOptions, type ListingCardData } from "@/lib/listings";
+import { DISCOVERABLE_STOCK_FILTER, categoryOptions, type ListingCardData } from "@/lib/listings";
 import type { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClient>>;
@@ -91,6 +91,7 @@ function newestApproved(supabase: PublicSupabaseClient) {
     .from("listings")
     .select(CARD_SELECT)
     .eq("status", "approved")
+    .or(DISCOVERABLE_STOCK_FILTER)
     .order("published_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
     .order("id")
@@ -99,7 +100,11 @@ function newestApproved(supabase: PublicSupabaseClient) {
 }
 
 function approvedCount(supabase: PublicSupabaseClient, category?: string) {
-  const query = supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "approved");
+  const query = supabase
+    .from("listings")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "approved")
+    .or(DISCOVERABLE_STOCK_FILTER);
   return category ? query.eq("category", category) : query;
 }
 

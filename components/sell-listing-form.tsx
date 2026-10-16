@@ -62,6 +62,9 @@ type StoreContext = {
   isVerified: boolean;
 };
 
+// Publishing an inventory SKU (design §4.2): the new listing is linked to it in the same transaction.
+type InventorySku = { id: string; sku: string; name: string; price: number | null; available: number };
+
 const ID = "venta";
 // Where each error's summary link lands. Location fields use the same prefix (LocationFields idPrefix).
 const FIELD_IDS: Record<SellField, string> = {
@@ -79,7 +82,7 @@ const FIELD_IDS: Record<SellField, string> = {
   marketplace_rules: `${ID}-marketplace_rules`,
 };
 
-export function SellListingForm({ profile, store }: { profile: SellerProfile; store?: StoreContext }) {
+export function SellListingForm({ profile, store, inventorySku }: { profile: SellerProfile; store?: StoreContext; inventorySku?: InventorySku }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const submit = useMemo(
     () => (supabase ? createPublicSubmission(supabase) : null),
@@ -234,6 +237,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
           region: draft.regionValue,
           description: draft.description,
           marketplace_rules_accepted: true,
+          ...(store && inventorySku ? { inventory_item_id: inventorySku.id } : {}),
         },
         photos,
         reportProgress,
@@ -294,6 +298,7 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
       <Notice tone="info" role="note">
         {store ? <>
           Publicarás en <strong className="text-ink">{store.name}</strong>. {direct ? "Como Tienda verificada, tus publicaciones aparecen directamente si cumplen las reglas." : "Tu publicación quedará en revisión antes de aparecer."}
+          {inventorySku ? <> La publicación quedará vinculada al SKU <strong className="text-ink">{inventorySku.sku}</strong>: su stock ({inventorySku.available} disponibles) decide si se muestra como Agotado y su precio sigue al SKU.</> : null}
         </> : <>
           Publicarás como <strong className="text-ink">{profile.fullName}</strong>. Las consultas llegarán al WhatsApp <strong className="text-ink">{profile.phone}</strong>. Puedes cambiar estos datos en <Link href="/mi-cuenta/perfil" className="link font-semibold">tu perfil</Link>.
         </>}
@@ -348,13 +353,13 @@ export function SellListingForm({ profile, store }: { profile: SellerProfile; st
             <TextField label="Marca" name="brand" error={errorFor("brand")} />
             <TextField label="Modelo" name="model" error={errorFor("model")} />
           </div>
-          <TextField label="Título" name="title" hint="Marca, modelo y lo que lo distingue. Ej.: Fender Player Stratocaster 2021, color Tidepool." error={errorFor("title")} />
+          <TextField label="Título" name="title" defaultValue={inventorySku?.name} hint="Marca, modelo y lo que lo distingue. Ej.: Fender Player Stratocaster 2021, color Tidepool." error={errorFor("title")} />
         </FormSection>
 
         <FormSection id={`${ID}-condicion`} step={3} title="Condición y precio">
           <ConditionCards id={FIELD_IDS.condition} name="condition" legend="Condición" options={conditionChoices(conditionOptions)} error={errorFor("condition")} />
           <Field id={FIELD_IDS.price_pen} label="Precio en soles" hint="Solo números, sin decimales." error={errorFor("price_pen")} className="sm:max-w-xs">
-            <Input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" required />
+            <Input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" defaultValue={inventorySku?.price ?? undefined} required />
           </Field>
         </FormSection>
 
@@ -443,8 +448,8 @@ function fieldId(name: string) {
   return `${ID}-${name.replace(/[^a-z0-9_-]/gi, "-")}`;
 }
 
-function TextField({ label, name, hint, error }: { label: string; name: string; hint?: string; error?: string }) {
-  return <Field id={fieldId(name)} label={label} hint={hint} error={error}><Input type="text" name={name} required /></Field>;
+function TextField({ label, name, hint, error, defaultValue }: { label: string; name: string; hint?: string; error?: string; defaultValue?: string }) {
+  return <Field id={fieldId(name)} label={label} hint={hint} error={error}><Input type="text" name={name} defaultValue={defaultValue} required /></Field>;
 }
 
 function SelectField({ label, name, options, value, onChange, error }: { label: string; name: string; options: readonly { value: string; label: string }[]; value?: string; onChange?: (value: string) => void; error?: string }) {

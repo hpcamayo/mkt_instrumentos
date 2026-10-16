@@ -14,6 +14,7 @@ import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@
 import { SpecStrip, SpecTable } from "@/components/listing/spec-table";
 import { TrustNote } from "@/components/listing/trust-note";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
+import { AcceptedPaymentMethods } from "@/components/payment/accepted-payment-methods";
 import { PageContainer } from "@/components/page-container";
 import { StripCurrent } from "@/components/strip-current";
 import { NoticeIcon, noticeClassName } from "@/components/ui/notice";
@@ -23,10 +24,12 @@ import { StatusTag, Tag } from "@/components/ui/tag";
 import { getSpecStrip, getSpecTable } from "@/lib/listing-specs";
 import { formatMonthYear, formatPublishedAgo, listingCountLabel } from "@/lib/listing-page";
 import {
+  DISCOVERABLE_STOCK_FILTER,
   buildWhatsAppUrl,
   getConditionLabel,
   getListingDisplayTitle,
   getListingSecondaryTitle,
+  isOutOfStock,
   normalizeStore,
   parseListingFilters,
   resolveParticularSeller,
@@ -36,6 +39,12 @@ import {
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
+import {
+  assistedCommerceEnabled,
+  buildPurchaseWhatsAppUrl,
+  readPurchaseRequest,
+  type PurchaseRequest,
+} from "@/lib/payment-methods";
 import { fetchCatalogPage } from "@/lib/catalog";
 import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
 import {
@@ -118,6 +127,7 @@ const loadPublicListing = cache(async (slug: string) => {
       `
         id,
         status,
+        stock_state,
         sold_at,
         store_id,
         owner_user_id,
@@ -250,12 +260,23 @@ export default async function ListingDetailPage({
     ? await supabase.rpc("get_public_reputation", reputationTarget)
     : null;
   const reputation = reputationResult && !reputationResult.error ? readPublicReputation(reputationResult.data) : null;
+  const purchase = await loadPurchaseRequest(supabase, listing);
   return (
     <>
       <JsonLd data={buildListingJsonLd(listing)} />
-      <ListingDetail listing={listing} supabase={supabase} reputation={reputation} />
+      <ListingDetail listing={listing} supabase={supabase} reputation={reputation} purchase={purchase} />
     </>
   );
+}
+
+// PAY-1 (design §11.1): "Solicitar compra" and the accepted payment methods, only while the pilot is on, the listing has
+// units and its verified store shows at least one approved method. A failed call leaves the ordinary contact.
+async function loadPurchaseRequest(supabase: PublicSupabaseClient, listing: ListingDetailData): Promise<PurchaseRequest | null> {
+  if (!assistedCommerceEnabled() || listing.status !== "approved" || listing.seller_type !== "store" || isOutOfStock(listing)) {
+    return null;
+  }
+  const { data, error } = await supabase.rpc("get_listing_purchase_request", { p_listing_id: listing.id });
+  return error ? null : readPurchaseRequest(data);
 }
 
 const loadCategoryPage = cache(async (category: string, page: number) => {
@@ -310,10 +331,12 @@ function ListingDetail({
   listing,
   supabase,
   reputation,
+  purchase,
 }: {
   listing: ListingDetailData;
   supabase: PublicSupabaseClient;
   reputation: PublicReputation | null;
+  purchase: PurchaseRequest | null;
 }) {
   const store = normalizeStore(listing);
   const particular = resolveParticularSeller(listing);
@@ -321,6 +344,7 @@ function ListingDetail({
   const displayTitle = getListingDisplayTitle(listing);
   const secondaryTitle = getListingSecondaryTitle(listing);
   const isSold = listing.status === "sold";
+  const outOfStock = !isSold && isOutOfStock(listing);
   const place = `${listing.city}, ${listing.region}`;
   const seller: SellerSummary = {
     name: (isStore ? store?.name : particular.name) || (isStore ? "Tienda" : "Particular"),
@@ -337,6 +361,7 @@ function ListingDetail({
     since: formatMonthYear(isStore ? store?.created_at : particular.createdAt ?? listing.created_at),
   };
   const strip = getSpecStrip(listing);
+  const contactHref = purchase ? buildPurchaseWhatsAppUrl(listing.whatsapp_phone, listing, purchase.sku) : buildWhatsAppUrl(listing);
   const typeHref = listing.instrument_type
     ? categoryTypePath(listing.category, listing.instrument_type)
     : categoryLandingPath(listing.category);
@@ -359,9 +384,15 @@ function ListingDetail({
                 {displayTitle}
               </h1>
               {secondaryTitle ? <p className="mt-1 t-ui text-ink-2">{secondaryTitle}</p> : null}
-              <p className="mt-3">
+              <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <Price value={listing.price_pen} size="detail" />
+                {outOfStock ? <StatusTag domain="stock" status="out_of_stock" /> : null}
               </p>
+              {outOfStock ? (
+                <p className="mt-2 t-ui text-ink-2">
+                  Sin unidades disponibles por ahora. Puedes consultar a la tienda cuándo volverá a estar disponible.
+                </p>
+              ) : null}
               <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
                 {listing.condition ? <Tag>{getConditionLabel(listing.condition)}</Tag> : null}
                 <ListingDetailMetadata listingId={listing.id} trackView={!isSold}>
@@ -378,7 +409,7 @@ function ListingDetail({
                 <Link href="#similares" className="link w-fit t-ui font-semibold">Ver publicaciones similares</Link>
               </div>
             ) : (
-              <ContactModule listingId={listing.id} href={buildWhatsAppUrl(listing)} className="order-3 lg:order-3" />
+              <ContactModule listingId={listing.id} href={contactHref} purchase={Boolean(purchase)} className="order-3 lg:order-3" />
             )}
 
             <a href="#vendedor" className="order-4 -my-1 flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-control py-1 lg:hidden">
@@ -388,6 +419,8 @@ function ListingDetail({
             </a>
 
             <SpecStrip specs={strip} className="order-5 lg:order-2" />
+
+            {purchase ? <AcceptedPaymentMethods methods={purchase.methods} className="order-6 lg:order-4" /> : null}
 
             {isSold ? null : <TrustNote surface="listing" className="order-6 lg:order-4" />}
 
@@ -457,6 +490,7 @@ async function getSimilarListings(
     .from("listings")
     .select(relatedListingSelect)
     .eq("status", "approved")
+    .or(DISCOVERABLE_STOCK_FILTER)
     .neq("id", listing.id)
     .eq(primaryFilterColumn, primaryFilterValue)
     .order("published_at", { ascending: false, nullsFirst: false })
@@ -483,6 +517,7 @@ async function getSimilarListings(
       .from("listings")
       .select(relatedListingSelect)
       .eq("status", "approved")
+      .or(DISCOVERABLE_STOCK_FILTER)
       .neq("id", listing.id)
       .eq("brand", listing.brand)
       .order("published_at", { ascending: false, nullsFirst: false })
@@ -548,6 +583,7 @@ const getMoreFromSellerListings = cache(
       .from("listings")
       .select(relatedListingSelect, { count: "exact" })
       .eq("status", "approved")
+      .or(DISCOVERABLE_STOCK_FILTER)
       .neq("id", listing.id);
 
     const query =

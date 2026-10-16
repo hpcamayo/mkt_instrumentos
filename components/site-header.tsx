@@ -213,7 +213,7 @@ function AccountMenu() {
   const pathname = usePathname();
   const menu = useDisclosure("account-menu");
   const accountType = account.storeOwner ? "store_owner" : "seller";
-  const items = getAccountNavigationItems(accountType, account.hasStore);
+  const items = getAccountNavigationItems(accountType, account.hasStore, { payments: account.payments });
   const monogram = account.name ? initials(account.name) : "";
 
   return (

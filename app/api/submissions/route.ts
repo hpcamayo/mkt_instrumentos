@@ -9,6 +9,7 @@ import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import { listingLimitMessage } from "@/lib/store-allowance";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import type { Json } from "@/lib/supabase/database.types";
 import { getMarketplaceSession, recordMarketplaceEvent } from "@/lib/marketplace-events-server";
@@ -16,6 +17,8 @@ import {
   createSubmissionToken,
   readSubmissionToken,
 } from "@/lib/submission-token";
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
   const client = getSupabaseAdminClient();
@@ -185,6 +188,11 @@ export async function POST(request: Request) {
       if (!storeAccount.ok) return failure(storeAccount.message, storeAccount.status);
       fields.owner_user_id = storeAccount.userId;
       fields.store_id = storeAccount.store.id;
+      // Publishing an inventory SKU (STORE-1b): complete_public_submission checks the item is this store's, active and
+      // unlinked, and links it in the same transaction.
+      if (typeof input.inventory_item_id === "string" && UUID_PATTERN.test(input.inventory_item_id)) {
+        fields.inventory_item_id = input.inventory_item_id;
+      }
     }
     fields.marketplace_rules_accepted = true;
   } else {
@@ -273,7 +281,7 @@ export async function POST(request: Request) {
   if (error?.message.includes("stores_owner_user_unique_idx"))
     return failure("Esta cuenta ya tiene una solicitud de tienda.", 409);
   if (error?.message.includes("STORE_INVENTORY_LIMIT_REACHED"))
-    return failure("Tu tienda alcanzó el límite de 50 publicaciones concurrentes.", 409);
+    return failure(listingLimitMessage(error.message), 409);
   if (error)
     return failure(
       "No se pudo guardar el envío. Reintenta sin cerrar esta página.",

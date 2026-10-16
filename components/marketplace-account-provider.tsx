@@ -7,6 +7,8 @@ export type HeaderState = {
   authenticated: boolean;
   storeOwner: boolean;
   hasStore: boolean;
+  // The store sees "Pagos" (PAY-1 pilot on).
+  payments: boolean;
   admin: boolean;
   name: string | null;
   unreadNotifications: number;
@@ -16,7 +18,7 @@ type FavoriteState = Record<string, boolean | undefined>;
 // `settled` turns true after the first account check (success or failure) and stays true, so the header's
 // account entry appears once instead of flashing "Ingresar" for a signed-in visitor.
 type ContextValue = HeaderState & { ready: boolean; settled: boolean; favorites: FavoriteState; register: (id: string) => () => void; setFavorite: (id: string, saved: boolean) => Promise<void> };
-const SIGNED_OUT: HeaderState = { authenticated: false, storeOwner: false, hasStore: false, admin: false, name: null, unreadNotifications: 0, pendingBuyerConfirmations: 0 };
+const SIGNED_OUT: HeaderState = { authenticated: false, storeOwner: false, hasStore: false, payments: false, admin: false, name: null, unreadNotifications: 0, pendingBuyerConfirmations: 0 };
 const Context = createContext<ContextValue | null>(null);
 
 export function MarketplaceAccountProvider({ children }: { children: ReactNode }) {

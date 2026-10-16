@@ -1,7 +1,7 @@
 export type AccountNavigationItem = {
   href: string;
   label: string;
-  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites" | "alerts";
+  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "payments" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites" | "alerts";
   exact?: boolean;
   // Additional sections that belong to the same navigation entry.
   activePaths?: readonly string[];
@@ -16,7 +16,13 @@ const sharedAccountItems: AccountNavigationItem[] = [
   { href: "/mi-cuenta/perfil", label: "Perfil y seguridad", icon: "profile", activePaths: ["/mi-cuenta/seguridad"] },
 ];
 
-export function getAccountNavigationItems(accountType: "seller" | "store_owner", hasStore: boolean): AccountNavigationItem[] {
+// `payments`: the assisted-commerce pilot is on (assistedCommerceEnabled(), read on the server), so a store sees "Pagos"
+// (PAY-1, review fix B6). Off, the entry does not exist, like the pages behind it.
+export function getAccountNavigationItems(
+  accountType: "seller" | "store_owner",
+  hasStore: boolean,
+  { payments = false }: { payments?: boolean } = {},
+): AccountNavigationItem[] {
   if (accountType === "store_owner") {
     return [
       { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
@@ -24,6 +30,7 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
       ...(hasStore ? [
         { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory" } as const,
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar", icon: "publish" } as const,
+        ...(payments ? [{ href: "/mi-cuenta/tienda/pagos", label: "Pagos", icon: "payments", activePaths: ["/mi-cuenta/tienda/medios-de-pago"] } as const] : []),
         { href: "/mi-cuenta/tienda/estadisticas", label: "Estadísticas", icon: "analytics" } as const,
       ] : []),
       ...sharedAccountItems,

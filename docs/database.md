@@ -188,6 +188,10 @@ Current behavior:
 - Seller and admin forms reuse `lib/instrument-filters.ts` for `instrument_type` and labeled `attributes` controls.
 - Owners can hide an approved listing, restore only an owner-hidden listing, and mark it sold. Sold rows are immutable and can only be copied by the relist RPC.
 - Relisted rows reference the sold source through `relisted_from_listing_id`; the source row is retained.
+- `stock_state text` (STORE-1a, local only): `null` unless a store links the listing to an inventory item, then
+  `in_stock` or `out_of_stock`. Controlled field, written only by the inventory functions. Stock never changes
+  `status`; an out-of-stock listing keeps its URL with "Agotado" but leaves discovery and the index. A linked listing
+  cannot become `sold`. See "Store inventory (STORE-1a)" below.
 
 ### `public.listing_photos`
 
@@ -482,6 +486,14 @@ Admin policies:
 - Store applications and profile edits upload optional logo, banner, and physical-store photos under `{auth.uid()}/{submissionOrStoreId}/...`.
 - Authenticated Store Owners can upload/update/delete only beneath their own top-level folder.
 
+`store-imports` (STORE-2, local only):
+- Private bucket, ≤5 MB, `text/csv` and `.xlsx` only.
+- The owner may insert exactly `{auth.uid()}/{sessionId}/source.{csv|xlsx}` while that import session awaits its file, and read it; no update or delete. Files are deleted through the service-role cleanup route after the 30-day retention.
+
+`store-import-photos` (STORE-3a, local only):
+- Private bucket, ≤5 MB, JPEG/PNG/WebP. The owner may insert only at a server-issued path `{auth.uid()}/{sessionId}/{assetId}.{ext}`, once, while that asset waits for its upload and the import is between `ready` and `partially_committed`; owner and Admin read; no browser update or delete.
+- Served publicly only through `/api/listing-images/{uid}/import-photos/{session}/{asset}.{ext}` when a public listing references it (owner/Admin otherwise), with the stored MIME type, `nosniff` and a sandbox CSP.
+
 Legacy limitation: initial listing photos and store assets remain in public buckets for existing URL/image compatibility. Database moderation prevents discovery but cannot make a known existing public Storage URL private. Sprint 4 guarantees private staging/access gating for new listing edit objects; it does not claim to revoke previously public URLs. Abandoned initial uploads still require operational retention cleanup.
 
 ## Indexes and Metadata
@@ -524,6 +536,14 @@ Current migrations:
 - `20260918120000_sprint_6_transactions_reviews.sql`: verified-transaction claims, buyer confirmation, immutable double-blind reviews, review reports/moderation, typed notifications, verified funnel metrics, guarded event transport, RLS and concurrency indexes. All 17 migrations are synchronized locally and in production; the Sprint 6 release history was verified on 2026-09-19.
 - `20260921120000_sprint_7_marketplace_email_alerts.sql`: normalized owner alerts, prospective first-public matching, private match/outbox records, notification/price-drop email eligibility, service-only daily/claim/complete/fail RPCs and pending-buyer account count. All 18 migrations apply from a clean local reset and are synchronized with production; Sprint 7 production history was verified on 2026-09-22.
 - `20260923120000_sprint_8_admin_reports_legacy.sql`: general private reports, report moderation, bounded Admin workbench/domain reads, append-only privileged-action audit and atomic one-time legacy ownership linking. All 19 migrations apply from a clean local reset; this nineteenth migration is local-only and production remains at the synchronized Sprint 7 history.
+- `20261023120000_store_inventory_foundation.sql` (STORE-1a, local only, not applied to production): store inventory tables, append-only stock ledger, owner and Admin functions, `listings.stock_state` and its listing triggers. See "Store inventory (STORE-1a)".
+- `20261024120000_store_inventory_ui.sql` (STORE-1b, local only): `get_inventory_summary()` adds recorded sales and recent movements; bulk threshold and bulk hide functions. See "Store operations: later sub-sprints".
+- `20261025120000_store_inventory_import.sql` (STORE-2, local only): spreadsheet import sessions and staged rows, private `store-imports` bucket, step/commit functions, ledger FK `import_session_id`, saved column mapping, retention job. See "Store operations: later sub-sprints".
+- `20261026120000_store_import_photos.sql` (STORE-3a, local only): import photo assets and assignments, private `store-import-photos` bucket, matching, listing-photo validator branch and attachment guard, photo cleanup. See "Store operations: later sub-sprints".
+- `20261027120000_store_import_publication.sql` (STORE-3b, local only): per-store listing allowance read by the cap trigger, Admin allowance function, shared `insert_store_listing`, publication of import rows. See "Store operations: later sub-sprints".
+- `20261028120000_pay_1_store_payment_methods.sql` (PAY-1, local only): accepted payment methods with Admin review and history, public read functions, purchase-intent metadata on `whatsapp_contact`. See "Store operations: later sub-sprints".
+- `20261029120000_review_fixes_payment_methods.sql` … `20261029120300_review_fixes_photo_cleanup.sql` (review fixes A, local only): fixes from the Codex review of the Store Operations prototype. See "Store operations: review fixes" and `docs/store-operations/review-fixes.md`.
+- `20261030120000_store_review_fixes_ux.sql` (review fixes B, local only): SKU category and category counts for Inventario, owner-entered publication fields on import rows, no publication hint on rows with nothing to publish. See "Store operations: review fixes".
 
 Sprint 4 release state: both migrations were applied to production in order on 2026-09-17 and the exact committed application `427ac8e8aa514ae10a47c0a4d2eee3dfe827ccaa` was promoted immediately afterward. All 15 migration versions are synchronized. Private staging, trusted event writes, owner-only aggregates and exact permission denials passed production checks without changing hosted `supautils.hint_roles` or broadening grants. Baseline 36 listings, 62 photos, 5 stores, 1 revision, 3 notifications and historical view total 2643 were preserved; temporary QA resources were removed. See `docs/sprint-4-production-verification.md`.
 
@@ -614,3 +634,132 @@ conflicts stay empty; provenance is kept only for review pairs. That is about 80
 - **Details:** sizes, guards and procedure are in that branch's `catalog/docs/production_footprint.md`.
 - `lib/supabase/database.types.ts` is regenerated for these tables in the sprint that first reads them.
 
+## Store inventory (STORE-1a)
+
+Added by `20261023120000_store_inventory_foundation.sql`; local only until the owner approves a production apply.
+Design: `docs/store-operations/design.md`; implementation notes, deviations, rollback runbook and review guide:
+`docs/store-operations/store-1a.md`.
+
+- **Tables:** `store_operation_settings` (pilot gate `inventory_enabled`, default off; missing row = off),
+  `store_inventory_items` (one per SKU; stock, price, threshold, catalog product FK and variant soft link, optional
+  link to one listing of the same store through the composite FK `(listing_id, store_id) → listings(id, store_id)`),
+  `store_stock_movements` and `store_inventory_changes` (append-only: no browser grants, triggers raise on update,
+  delete and truncate), `laria_private.store_inventory_batch_receipts` (bulk idempotency).
+- **RLS:** owner `SELECT` through `is_store_owner(store_id)`, Admin `SELECT` through `is_admin()`; no browser writes.
+- **Owner functions:** `create_inventory_item`, `update_inventory_item`, `change_inventory_sku`,
+  `record_stock_movement`, `apply_bulk_stock_operations`, `preview_inventory_price_bulk`, `set_inventory_price_bulk`,
+  `link_inventory_listing`, `unlink_inventory_listing`, `archive_inventory_item`, `unarchive_inventory_item`,
+  `get_inventory_page`, `get_inventory_summary`. Admin: `admin_set_store_inventory_enabled` (reason required,
+  audited). Lock order on every path: idempotency key (advisory) → linked listing → item.
+- **Listing triggers:** `listings_guard_inventory_managed` (no `stock_state` on insert; a linked listing cannot become
+  `sold`), `listings_sync_inventory_price` (listing price edits write through to the item). Changed functions:
+  `protect_listing_admin_fields`, `notify_favorite_price_drop`, `capture_listing_alert_publication` (and its trigger,
+  now also on `stock_state`), `capture_store_alert_publication`, `complete_public_submission` (`inventory_item_id`).
+- **Tests:** `tests/store-ops-1.sql` (rolled back) and `tests/store-ops-concurrency.integration.cjs` (separate
+  connections, local only).
+
+
+## Store operations: later sub-sprints
+
+Combined on branch `store-ops/prototype` for the owner's review; local only, nothing applied to production. Per
+sub-sprint detail, deviations, rollback and review guides: `docs/store-operations/store-1b.md`, `store-2.md`,
+`pay-1.md`, `store-3a.md`, `store-3b.md`. The combined review package is
+`docs/store-operations/prototype-review.md`.
+
+- **STORE-1b, Inventario screens** (`20261024120000_store_inventory_ui.sql`): `get_inventory_summary()` replaced
+  (adds `sales_30d_units`, `sales_30d_count`, `hidden`, `recent_movements`); `set_inventory_threshold_bulk(ids,
+  threshold, key)` and `hide_inventory_listings_bulk(ids, key)` (receipt + replay, all-or-nothing for the threshold;
+  hide calls the V1 `set_owned_listing_lifecycle` per listing and reports skipped SKU). No new tables.
+- **STORE-2, spreadsheet import** (`20261025120000_store_inventory_import.sql`):
+  - `store_import_sessions` (status machine `awaiting_upload` → `parsing` → `mapping_required` → `validating` →
+    `ready` → `committing` → `committed` / `partially_committed`, or `failed` / `cancelled` / `expired`; lease
+    `lock_token` + `locked_until`; `version`; one open import per store by partial unique index) and
+    `store_import_rows` (raw ≤ 32 KB, parsed values, issues, planned action and changes, owner decision, commit
+    status). RLS: owner and Admin `SELECT`; writes only through functions.
+  - `store_stock_movements.import_session_id` (FK) with a check that import movements carry their row number;
+    `store_operation_settings.import_mapping_default`; `laria_private.store_import_file_deletions` (cleanup queue).
+  - Owner functions: `create_store_import_session`, `claim_store_import_step` / `release_store_import_step` (90 s
+    lease), `begin_store_import_parse`, `stage_store_import_rows`, `finish_store_import_parse`, `fail_store_import`,
+    `confirm_store_import_mapping`, `plan_store_import_rows`, `finish_store_import_validation`,
+    `set_store_import_rows_decision`, `start_store_import_commit`, `commit_store_import_chunk` (≤ 50 rows, savepoint
+    per row, key `import:{session}:{row}`), `finish_store_import_commit`, `reopen_store_import`,
+    `cancel_store_import`. Service role: `claim_store_import_file_deletions`, `complete_store_import_file_deletions`.
+  - `pg_cron` job `store-import-retention` daily at 09:15 UTC (`laria_private.run_store_import_retention()`): idle
+    imports expire after 7 days; rows purged and files queued 30 days after close.
+- **STORE-3a, import photos** (`20261026120000_store_import_photos.sql`):
+  - `store_import_photo_assets` (one per file: sanitized name, claim from the name, the `Foto(s)` column or a photo
+    list, server check result, sha256, match outcome, cleanup timestamps) and `store_import_photo_assignments`
+    (asset → row, order 1–10, deferrable unique order); `store_import_rows.photo_state` / `photo_count`,
+    `store_import_sessions.photo_counts`. RLS: owner and Admin read; writes through functions.
+  - Owner functions: `request_store_import_photo_uploads` (≤ 25 per call, 600 per import), `place_store_import_photo`,
+    `order_store_import_photos`, `reset_store_import_photo_matching`. Service role only:
+    `record_store_import_photo_checks` (the owner can never validate their own bytes),
+    `claim_store_import_photo_deletions`, `complete_store_import_photo_deletions`.
+  - `laria_private.match_import_photos` re-runs after every upload; uncertain photos are set aside, never guessed;
+    manual placements are kept. `listing_photo_set_is_valid` gains an import-photo branch, and a trigger on
+    `listing_photos` and `listing_revision_photos` refuses any import-photo URL not valid for that listing's owner and
+    store. Cancel, expiry, failure or the 30-day purge discards assets no listing or revision references.
+- **STORE-3b, publication from an import and the listing allowance** (`20261027120000_store_import_publication.sql`):
+  - `enforce_store_inventory_cap()` replaced: reads `laria_private.store_listing_allowance(store)` (the store's
+    `store_operation_settings.listing_allowance`, default 50) after the existing per-store advisory lock; what counts
+    is unchanged (pending + approved listings of the store). Message `STORE_INVENTORY_LIMIT_REACHED: La tienda ya
+    tiene N publicaciones concurrentes.`
+  - `get_store_listing_quota(p_store_id default null)` (owner's own store, any store for Admin) and
+    `admin_set_store_listing_allowance(store, allowance 1–2000, reason)` (same advisory lock, audited as
+    `store_listing_allowance_changed`; lowering hides nothing).
+  - `laria_private.insert_store_listing(id, store, fields, photos)`: the store-listing body of
+    `complete_public_submission`, now shared by the sell form and the import; optional `inventory_item_id` link.
+  - `publish_store_import_rows(owner, session, rows, rules_accepted)` (service role, ≤ 20 rows, one subtransaction
+    per row; price from the SKU, photos from the row's validated import photos, contact data from the store; "Sin cupo"
+    over the allowance; idempotent). `store_import_rows` gains `publish_status`, `publish_message`,
+    `published_listing_id` (unique), `published_at`; `store_import_sessions` gains `publish_counts`.
+- **PAY-1, accepted payment methods** (`20261028120000_pay_1_store_payment_methods.sql`):
+  - Enum `store_payment_method` (`efectivo_al_recoger`, `yape_plin`, `pos_tarjeta_al_recoger`, `link_de_pago`);
+    `store_payment_methods` (one row per store and method: status `pending_review` / `approved` / `rejected` /
+    `disabled` / `withdrawn`, `holder_name` owner/Admin only, public `provider_label`, `owner_note`, review fields);
+    `store_payment_method_changes` (append-only history). RLS: owner and Admin read; no direct writes.
+  - Trigger `stores_review_payment_methods_on_business_change`: a RUC or razón social change sends approved methods
+    back to review.
+  - Functions: `set_store_payment_method`, `withdraw_store_payment_method` (owner),
+    `admin_review_store_payment_method`, `get_admin_store_payment_methods` (Admin), `get_store_payment_methods`,
+    `get_listing_purchase_request` (anyone; approved methods only while the store is active and verified, checked at
+    read time; never the holder). `laria_private.record_marketplace_event_service` accepts exactly
+    `{"intent":"purchase"}` as metadata on `whatsapp_contact`.
+  - No amount, paid state, payment URL, reservation or order is stored anywhere.
+
+## Store operations: review fixes
+
+Fixes from the Codex review of the prototype, branch `store-ops/review-fixes-core`; local only. What each one fixes and
+why is in `docs/store-operations/review-fixes.md`. Long functions are patched from their current definition by
+`pg_temp.review_fix(function, old, new, …)`, which fails unless each old text occurs exactly once.
+
+- `20261029120000_review_fixes_payment_methods.sql`: `laria_private.assisted_commerce_settings` (singleton,
+  `pilot_enabled` default false) with `laria_private.assisted_commerce_pilot_enabled()` and
+  `laria_private.set_assisted_commerce_pilot(enabled, reason)` (database owner only); `store_payment_methods.revision`
+  (bumped by trigger on every update); `admin_review_store_payment_method(store, method, decision, reason,
+  expected_revision integer)` replaces the `expected_updated_at` version; provider labels from a fixed list per method;
+  stricter free-text filter; a RUC or razón social change also moves pending methods' revision. With the pilot off,
+  `set_store_payment_method` refuses (`PAYMENT_PILOT_OFF`) and the public reads return nothing.
+- `20261029120100_review_fixes_lock_order.sql`: store rows are locked `FOR NO KEY UPDATE` (not `FOR UPDATE`) in
+  `complete_public_submission`, `resubmit_store_application`, `review_store_application`, `set_store_verification`,
+  `submit_listing_for_publication`, `admin_set_store_inventory_enabled`, `admin_set_store_listing_allowance` and
+  `publish_store_import_rows`; publication locks an unlinked SKU before reading its price; `link_inventory_listing`
+  locks the SKU directly; `guard_import_photo_reference()` locks the asset `FOR NO KEY UPDATE` and refuses a photo
+  another listing or another listing's revision uses.
+- `20261029120200_review_fixes_alerts_and_import.sql`: `search_alert_matches.suppression_reason` accepts
+  `listing_out_of_stock`, index `search_alert_matches_delivery_idx`; `claim_marketplace_email_deliveries` cancels
+  queued price-drop and search e-mails of out-of-stock listings and digests left empty; first-public matching during
+  an import row waits for its price (`laria_private.capture_deferred_listing_publication`); `confirm_store_import_mapping`
+  refuses once a row is applied (`IMPORT_MAPPING_LOCKED`); `mark_import_duplicates` includes rows already in error.
+- `20261029120300_review_fixes_photo_cleanup.sql`: `store_import_photo_assets.reference_checked_at` and a partial index;
+  `laria_private.discard_detached_import_photos(limit)`, run by `claim_store_import_photo_deletions` when called
+  without a session, discards validated photos of closed or purged imports that nothing references any more.
+- `20261030120000_store_review_fixes_ux.sql` (branch `store-ops/review-fixes-ux`, section B of the review-fixes doc):
+  trigger `store_import_rows_drop_linked_publication_hint` clears the "Para publicar falta…" issue on planned update or
+  adopt rows whose SKU already has a publication; nullable `store_inventory_items.category` (valid taxonomy key), set
+  by trigger `store_import_rows_record_item_category` when an import row is applied; `get_inventory_category_counts()`
+  (owner, active SKUs, `none` for no category); `get_inventory_page` filters `category` by the publication's category,
+  else the SKU's; nullable `store_import_rows.publish_fields` (brand, model, category, instrument_type, condition,
+  description) written by the owner through `set_store_import_row_publish_fields(session, row, fields)`, refused once the
+  row is published (`IMPORT_ROW_PUBLISHED`) or publication is closed (`IMPORT_PUBLISH_CLOSED`). No function that locks
+  or writes stock is replaced.

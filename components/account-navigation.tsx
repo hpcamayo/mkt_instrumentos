@@ -19,6 +19,7 @@ export type AccountCounts = { unreadNotifications: number; pendingBuyerConfirmat
 export function AccountNavigation({
   accountType,
   hasStore,
+  payments = false,
   unreadNotifications,
   pendingBuyerConfirmations,
   name,
@@ -27,6 +28,7 @@ export function AccountNavigation({
 }: {
   accountType: AccountType;
   hasStore: boolean;
+  payments?: boolean;
   unreadNotifications: number;
   pendingBuyerConfirmations: number;
   name?: string;
@@ -34,7 +36,7 @@ export function AccountNavigation({
   children?: ReactNode;
 }) {
   const pathname = usePathname();
-  const items = getAccountNavigationItems(accountType, hasStore);
+  const items = getAccountNavigationItems(accountType, hasStore, { payments });
   const active = items.find((item) => accountItemIsActive(pathname, item)) ?? items[0];
   const counts = { unreadNotifications, pendingBuyerConfirmations };
   const switcher = useDisclosure("account-switcher");

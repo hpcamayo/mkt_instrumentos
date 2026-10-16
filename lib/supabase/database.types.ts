@@ -384,6 +384,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
+          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
           store_id: string | null
           title: string
@@ -419,6 +420,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at?: string | null
+          stock_state?: string | null
           status?: Database["public"]["Enums"]["listing_status"]
           store_id?: string | null
           title: string
@@ -453,6 +455,7 @@ export type Database = {
           seller_type?: Database["public"]["Enums"]["seller_type"]
           slug?: string
           sold_at?: string | null
+          stock_state?: string | null
           status?: Database["public"]["Enums"]["listing_status"]
           store_id?: string | null
           title?: string
@@ -935,6 +938,59 @@ export type Database = {
           },
         ]
       }
+      store_payment_methods: {
+        Row: {
+          created_at: string
+          holder_name: string | null
+          method: Database["public"]["Enums"]["store_payment_method"]
+          owner_note: string | null
+          provider_label: string | null
+          review_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          revision: number
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          holder_name?: string | null
+          method: Database["public"]["Enums"]["store_payment_method"]
+          owner_note?: string | null
+          provider_label?: string | null
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision?: number
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          holder_name?: string | null
+          method?: Database["public"]["Enums"]["store_payment_method"]
+          owner_note?: string | null
+          provider_label?: string | null
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          revision?: number
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_payment_methods_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_photos: {
         Row: {
           alt_text: string | null
@@ -1360,6 +1416,16 @@ export type Database = {
       }
     }
     Functions: {
+      admin_review_store_payment_method: {
+        Args: {
+          p_decision: string
+          p_expected_revision: number
+          p_method: Database["public"]["Enums"]["store_payment_method"]
+          p_reason: string
+          p_store_id: string
+        }
+        Returns: Json
+      }
       apply_owned_listing_edit: {
         Args: {
           p_immediate?: Json
@@ -1475,6 +1541,10 @@ export type Database = {
         Args: { p_limit?: number; p_target_id: string; p_target_type: string }
         Returns: Json
       }
+      get_admin_store_payment_methods: {
+        Args: { p_page?: number; p_page_size?: number; p_status?: string }
+        Returns: Json
+      }
       get_admin_domain_page: {
         Args: {
           p_domain: string
@@ -1543,6 +1613,10 @@ export type Database = {
         Returns: Json
       }
       get_pending_buyer_confirmation_count: { Args: never; Returns: number }
+      get_listing_purchase_request: {
+        Args: { p_listing_id: string }
+        Returns: Json
+      }
       get_public_reputation: {
         Args: {
           p_limit?: number
@@ -1552,6 +1626,10 @@ export type Database = {
         Returns: Json
       }
       get_transaction_center: { Args: never; Returns: Json }
+      get_store_payment_methods: {
+        Args: { p_store_id: string }
+        Returns: Json
+      }
       get_transaction_detail: {
         Args: { p_reference_id: string }
         Returns: Json
@@ -1596,6 +1674,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
+          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
           store_id: string | null
           title: string
@@ -1749,6 +1828,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
+          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
           store_id: string | null
           title: string
@@ -1842,6 +1922,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
+          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
           store_id: string | null
           title: string
@@ -1964,6 +2045,7 @@ export type Database = {
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
+          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
           store_id: string | null
           title: string
@@ -2001,8 +2083,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_store_payment_method: {
+        Args: {
+          p_holder_name?: string
+          p_method: Database["public"]["Enums"]["store_payment_method"]
+          p_note?: string
+          p_provider_label?: string
+        }
+        Returns: Json
+      }
       set_store_verification: {
         Args: { p_store_id: string; p_verified: boolean }
+        Returns: Json
+      }
+      withdraw_store_payment_method: {
+        Args: { p_method: Database["public"]["Enums"]["store_payment_method"] }
         Returns: Json
       }
       store_application_is_complete: {
@@ -2087,6 +2182,11 @@ export type Database = {
         | "archived"
       seller_type: "individual" | "store"
       store_listing_plan: "free" | "starter_20" | "growth_50" | "pro_100"
+      store_payment_method:
+        | "efectivo_al_recoger"
+        | "yape_plin"
+        | "pos_tarjeta_al_recoger"
+        | "link_de_pago"
       store_status: "pending" | "active" | "hidden" | "rejected"
     }
     CompositeTypes: {
@@ -2229,6 +2329,12 @@ export const Constants = {
       ],
       seller_type: ["individual", "store"],
       store_listing_plan: ["free", "starter_20", "growth_50", "pro_100"],
+      store_payment_method: [
+        "efectivo_al_recoger",
+        "yape_plin",
+        "pos_tarjeta_al_recoger",
+        "link_de_pago",
+      ],
       store_status: ["pending", "active", "hidden", "rejected"],
     },
   },

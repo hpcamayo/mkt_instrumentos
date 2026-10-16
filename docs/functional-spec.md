@@ -326,6 +326,69 @@ Open product questions for those sprints:
   splitting `cutaway` out of the acoustic body-shape field.
 - How deep the navigation tree goes on mobile, and whether models without listings appear.
 
+## Planned After V1: Store Operations and Assisted Commerce
+
+Status: built as a prototype for the owner's review on branch `store-ops/prototype` (design
+`docs/store-operations/design.md`, owner decisions D-1…D-15 at their accepted defaults). It is **not** part of the V1
+contract or V1 acceptance until the owner accepts it, nothing is applied to production, and every part is off for
+existing stores and buyers until an Admin enables a store (inventory) or the deployment switches the pilot on
+(payments). Proposed acceptance families: `INV-`, `IMP-`, `IPH-`, `PAY-`.
+
+Inventory (Tiendas, enabled per store by an Admin during the pilot):
+
+- A store keeps one inventory record per SKU: its own SKU (unique per store, case-insensitive, letters, digits, `.`,
+  `_`, `-`; a `LAR-000001` code is generated when blank and changed only through an audited SKU change with a reason),
+  name, variant, price in whole soles, low-stock threshold, optional catalog product and external reference.
+- Stock is merchant-reported: units on hand, never below zero, changed only by recorded movements (sale, return,
+  restock, damage or loss, count, import reconciliation) with author, channel and reason in an append-only history.
+  Two buyers can never get the last unit through Laria, and a retried request never applies twice.
+- A SKU may control one publication of the same store. A controlled publication shows "Agotado" at zero stock, keeps
+  its URL, leaves the catalog, home, sitemap and related strips (`noindex, follow`), appears last on the store page,
+  and returns when restocked without re-sending alerts. Stock never changes a publication's status, and moderation
+  never changes stock. A controlled publication cannot be marked sold; the store unlinks it first to use the V1 sold
+  and verified-transaction flow. Particular listings and uncontrolled store listings behave exactly as in V1.
+- Buyers see only Disponible / Agotado, never unit counts. Sales recorded in Inventario are the store's own notes:
+  they never create verified transactions or unlock reviews.
+- Screens: Inventario (summary tiles, recent movements, search, filters, sort, bulk stock, price, threshold and hide,
+  CSV and Excel export with formula-safe text), the SKU page (stock actions, history, publication link, data, SKU
+  change, archive), and publishing a SKU as a listing through the existing form and moderation.
+
+Spreadsheet import:
+
+- An enabled store imports CSV or XLSX (up to 5 MB, 2,000 rows, 80 columns, first visible sheet) in steps: upload,
+  confirm columns (Spanish or English headings recognized, the mapping remembered), review every row as current →
+  new, exclude rows, confirm, result with a downloadable report.
+- Nothing changes until the owner confirms. Stock in the file is the counted total (a difference is recorded as an
+  import reconciliation); blank cells keep current values; SKUs missing from the file are untouched; a sale made
+  after the preview is never overwritten (the row becomes a conflict to review again). Formulas are never evaluated.
+- The file stays private to the owner and is deleted after the retention period. One open import per store.
+- Photos (optional): the store adds photos or a ZIP, named `SKU__01.jpg` … or listed in a `Foto(s)` column or a photo
+  list. Laria checks each file on the server, matches what is certain (2–10 photos per SKU) and sets aside anything
+  uncertain for the owner to place, reorder or drop by hand; nothing is guessed. Photos can be added after confirming
+  and stay until the import is purged; any photo a listing uses stays with the listing.
+- Publishing (optional, after confirming, until the import is purged): the store selects rows that meet the sell
+  form's requirements (category, type, brand, model, condition, a 40-character description, a price on the SKU and
+  2–10 photos) and accepts the marketplace rules. Each publication goes through the existing rules: verified active
+  store publishes directly, other Tiendas go to review, a store in review publishes privately. Each new listing is
+  linked to its SKU. A row that fails does not stop the others.
+
+Listing allowance: a store holds up to 50 pending or published listings (Store Listing Cap) unless an Admin sets
+another allowance for it (1–2000, with a reason, audited). Lowering it hides nothing; only new publications are
+refused, including import rows, which show "Sin cupo". Inventory SKUs, stock and import rows never count.
+
+Accepted payment methods (Pilot A, verified stores only, behind a deployment switch that stays off until legal
+review):
+
+- A verified store declares which methods it accepts (cash on pickup, Yape or Plin, card POS on pickup, a payment link
+  the store sends). Every method except cash names the account holder, which only the owner and Admin see; numbers,
+  links and e-mails are refused. An Admin approves each method against the store's RUC and razón social; any change,
+  or a change of RUC or razón social, sends it back to review. Revoking verification hides the methods at once.
+- Buyers see the approved methods on the store page and that store's in-stock listings, with a statement that they
+  pay the store directly and that Laria processes no payment, holds no money and issues no receipts. The listing's
+  one contact button reads "Solicitar compra" and opens WhatsApp with the title, the store's SKU, quantity 1 and the
+  link; it is recorded as a WhatsApp contact with the purchase intent. Laria stores no amount, paid state, payment
+  link, reservation or order.
+
 ## V1 Freeze Rule
 
 Once this specification is implemented, tested, and documented, Laria V1 is functionally frozen. Work then shifts to QA, reliability, visual polish, marketplace supply, store onboarding, real-user testing, analytics, and observing marketplace behavior.
