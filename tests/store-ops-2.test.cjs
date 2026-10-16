@@ -2,7 +2,7 @@
 // validation of Excel coercions, the template and the formula-safe report. Runs with `pnpm test`.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { zipSync, strToU8 } = require("fflate");
+const { zipSync, deflateSync, strToU8 } = require("fflate");
 
 const { decodeCsv, detectDelimiter, parseCsv } = require("@/lib/store-import/csv");
 const { readXlsx, extractXlsxParts, isDateFormatCode, columnIndex, decodeXmlText } = require("@/lib/store-import/xlsx-read");
@@ -13,6 +13,7 @@ const { buildReportCsv, csvSafeCell, describeChanges } = require("@/lib/store-im
 const { buildTemplateXlsx, buildTemplateCsv, templateColumns } = require("@/lib/store-import/template");
 const { writeXlsx } = require("@/lib/spreadsheet/xlsx-write");
 const { ImportFileError } = require("@/lib/store-import/types");
+const { XLSX_INFLATE_OVERSHOOT_BYTES, XLSX_MAX_UNCOMPRESSED_BYTES } = require("@/lib/store-import/limits");
 
 // ------------------------------------------------------------------ fixtures
 
@@ -41,6 +42,93 @@ const BASIC_SHEET = sheet(
   '<row r="4"><c r="A4"><v>1.23456789012E+17</v></c><c r="B4" t="inlineStr"><is><t>Inline</t></is></c><c r="C4"><f>SUM(1,2)</f><v>3</v></c><c r="E4" s="2"><v>45000</v></c></row>' +
   '<row r="5"><c r="A5" t="e"><v>#N/A</v></c><c r="B5" t="s"><v>5</v></c><c r="C5" s="3"><v>12</v></c></row>' +
   '<row r="6" spans="1:3"><c r="A6" s="1"/><c r="B6"/></row>');
+
+// A ZIP written field by field (APPNOTE 4.3) for layouts zipSync never writes: data descriptors (flag bit 3, as
+// LibreOffice and Go writers do), ZIP64 fields, bytes padded after an entry's data, and headers that lie. `central`
+// overrides the sizes the central directory claims; `localName`, `localMethod` and `localSizes` the local header's.
+function handZip(files, { zip64 = false } = {}) {
+  const out = [];
+  const central = [];
+  let offset = 0;
+  for (const file of files) {
+    const data = typeof file.data === "string" ? strToU8(file.data) : file.data;
+    const body = Buffer.concat([file.store ? data : deflateSync(data), file.padding ?? Buffer.alloc(0)]);
+    const name = Buffer.from(file.name);
+    const localName = Buffer.from(file.localName ?? file.name);
+    const flags = file.descriptor ? 8 : 0;
+    const method = file.store ? 0 : 8;
+    const claimed = { compressed: body.length, size: data.length, ...file.central };
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(flags, 6);
+    local.writeUInt16LE(file.localMethod ?? method, 8);
+    local.writeUInt32LE(file.descriptor ? 0 : file.localSizes?.compressed ?? claimed.compressed, 18);
+    local.writeUInt32LE(file.descriptor ? 0 : file.localSizes?.size ?? claimed.size, 22);
+    local.writeUInt16LE(localName.length, 26);
+    const descriptor = Buffer.alloc(file.descriptor ? 16 : 0);
+    if (file.descriptor) {
+      descriptor.writeUInt32LE(0x08074b50, 0);
+      descriptor.writeUInt32LE(body.length, 8);
+      descriptor.writeUInt32LE(data.length, 12);
+    }
+    out.push(local, localName, body, descriptor);
+    const extra = Buffer.alloc(zip64 ? 28 : 0);
+    if (zip64) {
+      extra.writeUInt16LE(1, 0);
+      extra.writeUInt16LE(24, 2);
+      extra.writeBigUInt64LE(BigInt(claimed.size), 4);
+      extra.writeBigUInt64LE(BigInt(claimed.compressed), 12);
+      extra.writeBigUInt64LE(BigInt(offset), 20);
+    }
+    const header = Buffer.alloc(46);
+    header.writeUInt32LE(0x02014b50, 0);
+    header.writeUInt16LE(20, 4);
+    header.writeUInt16LE(20, 6);
+    header.writeUInt16LE(flags, 8);
+    header.writeUInt16LE(method, 10);
+    header.writeUInt32LE(zip64 ? 0xffffffff : claimed.compressed, 20);
+    header.writeUInt32LE(zip64 ? 0xffffffff : claimed.size, 24);
+    header.writeUInt16LE(name.length, 28);
+    header.writeUInt16LE(extra.length, 30);
+    header.writeUInt32LE(zip64 ? 0xffffffff : offset, 42);
+    central.push(header, name, extra);
+    offset += local.length + localName.length + body.length + descriptor.length;
+  }
+  const directory = Buffer.concat(central);
+  const tail = [];
+  if (zip64) {
+    const record = Buffer.alloc(56);
+    record.writeUInt32LE(0x06064b50, 0);
+    record.writeBigUInt64LE(44n, 4);
+    record.writeUInt16LE(45, 12);
+    record.writeUInt16LE(45, 14);
+    record.writeBigUInt64LE(BigInt(files.length), 24);
+    record.writeBigUInt64LE(BigInt(files.length), 32);
+    record.writeBigUInt64LE(BigInt(directory.length), 40);
+    record.writeBigUInt64LE(BigInt(offset), 48);
+    const locator = Buffer.alloc(20);
+    locator.writeUInt32LE(0x07064b50, 0);
+    locator.writeBigUInt64LE(BigInt(offset + directory.length), 8);
+    locator.writeUInt32LE(1, 16);
+    tail.push(record, locator);
+  }
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(zip64 ? 0xffff : files.length, 8);
+  end.writeUInt16LE(zip64 ? 0xffff : files.length, 10);
+  end.writeUInt32LE(zip64 ? 0xffffffff : directory.length, 12);
+  end.writeUInt32LE(zip64 ? 0xffffffff : offset, 16);
+  return new Uint8Array(Buffer.concat([...out, directory, ...tail, end]));
+}
+
+// The fixture workbook through handZip; `sheetEntry` changes the worksheet's entry.
+function handXlsx(sheetEntry = {}, { descriptor = true, zip64 = false } = {}) {
+  const parts = [["[Content_Types].xml", CONTENT_TYPES], ["xl/workbook.xml", WORKBOOK()], ["xl/_rels/workbook.xml.rels", RELS],
+    ["xl/styles.xml", STYLES], ["xl/sharedStrings.xml", SHARED]];
+  return handZip([...parts.map(([name, data]) => ({ name, data, descriptor })),
+    { name: "xl/worksheets/sheet1.xml", data: BASIC_SHEET, descriptor, ...sheetEntry }], { zip64 });
+}
 
 function expectFileError(fn, code) {
   assert.throws(fn, (error) => error instanceof ImportFileError && error.code === code, `expected ${code}`);
@@ -141,6 +229,74 @@ test("XLSX decompression budget stops ZIP bombs before inflating them", () => {
   assert.ok(!ignored.parts.has("xl/media/bomb.bin"));
   // A tighter budget is respected exactly.
   expectFileError(() => extractXlsxParts(xlsx({ "xl/worksheets/sheet1.xml": BASIC_SHEET }), { maxUncompressedBytes: 100 }), "IMPORT_FILE_TOO_BIG_UNCOMPRESSED");
+});
+
+test("XLSX entries with data descriptors or ZIP64 fields read like any other", () => {
+  const expected = readXlsx(xlsx({ "xl/worksheets/sheet1.xml": BASIC_SHEET }));
+  assert.deepEqual(readXlsx(handXlsx()), expected, "every entry with a data descriptor");
+  assert.deepEqual(readXlsx(handXlsx({ store: true })), expected, "a stored entry with a data descriptor");
+  assert.deepEqual(readXlsx(handXlsx({}, { descriptor: false, zip64: true })), expected, "ZIP64 sizes and end record");
+});
+
+test("a data-descriptor ZIP bomb is refused from the central directory, before inflating", () => {
+  // Codex review 3 finding 2: 8 MB of zeros in an ~8 KB descriptor entry was accepted (no ratio check), and a 50 MB
+  // one inflated all 50 MB, in blocks over 16 MB, before the 40 MB budget refused it.
+  for (const size of [8 * 1024 * 1024, 50 * 1024 * 1024]) {
+    const bomb = handXlsx({ data: new Uint8Array(size) });
+    assert.ok(bomb.length < 64 * 1024, `bomb is small (${bomb.length} bytes)`);
+    let inflated = 0;
+    assert.throws(() => extractXlsxParts(bomb, { onInflate: (bytes) => { inflated += bytes; } }),
+      (error) => error instanceof ImportFileError && error.code === "IMPORT_FILE_TOO_BIG_UNCOMPRESSED", `${size} bytes`);
+    assert.ok(inflated > 0 && inflated < 16 * 1024, `only the small parts before it were inflated (${inflated} bytes)`);
+  }
+});
+
+test("XLSX headers that lie are refused, and inflation stops within the documented overshoot", () => {
+  const code = (fn) => {
+    try {
+      fn();
+      return "accepted";
+    } catch (error) {
+      return error instanceof ImportFileError ? error.code : String(error);
+    }
+  };
+  const lying = {
+    "local name differs from the directory": { localName: "xl/worksheets/sheet9.xml" },
+    "local method differs from the directory": { localMethod: 0 },
+    "local sizes differ from the directory": { descriptor: false, localSizes: { compressed: 10, size: 10 } },
+    "declared size too big": { central: { size: BASIC_SHEET.length + 1 } },
+    "declared size too small": { central: { size: 10 } },
+    "data runs into the central directory": { central: { compressed: 100000 } },
+  };
+  for (const [label, entry] of Object.entries(lying)) {
+    assert.equal(code(() => readXlsx(handXlsx(entry))), "IMPORT_FILE_INVALID", label);
+  }
+  const truncated = handXlsx();
+  assert.equal(code(() => readXlsx(truncated.subarray(0, truncated.length - 10))), "IMPORT_FILE_INVALID", "no end record");
+
+  // Bombs whose central directory lies stop within one inflater push (XLSX_INFLATE_OVERSHOOT_BYTES) of a limit:
+  // the declared size, the ratio measured on compressed bytes actually fed, or the budget.
+  const zeros = new Uint8Array(50 * 1024 * 1024);
+  const bombs = [
+    ["declares 1 KB, inflates 50 MB", { data: zeros, central: { size: 1024 } }, {}, "IMPORT_FILE_INVALID", 1024],
+    ["declares its true 30 MB but pads its compressed size past 100:1", { data: zeros.subarray(0, 30 * 1024 * 1024),
+      padding: Buffer.alloc(400 * 1024, 0xff) }, {}, "IMPORT_FILE_TOO_BIG_UNCOMPRESSED", 1024 * 1024],
+    ["declares 2 MB under a 2 MB budget with no ratio limit, inflates 50 MB", { data: zeros, central: { size: 2 * 1024 * 1024 } },
+      { maxUncompressedBytes: 2 * 1024 * 1024 + 4096, maxEntryRatio: 1e9 }, "IMPORT_FILE_INVALID", 2 * 1024 * 1024 + 4096],
+  ];
+  for (const [label, entry, budget, expected, limit] of bombs) {
+    let inflated = 0;
+    let largest = 0;
+    const result = code(() => extractXlsxParts(handXlsx(entry), { ...budget, onInflate: (bytes) => {
+      inflated += bytes;
+      largest = Math.max(largest, bytes);
+    } }));
+    assert.equal(result, expected, label);
+    assert.ok(inflated > limit / 2, `${label}: inflation started (${inflated} bytes)`);
+    assert.ok(inflated <= limit + XLSX_INFLATE_OVERSHOOT_BYTES, `${label}: ${inflated} bytes inflated`);
+    assert.ok(largest <= XLSX_INFLATE_OVERSHOOT_BYTES, `${label}: largest block ${largest} bytes`);
+  }
+  assert.ok(XLSX_INFLATE_OVERSHOOT_BYTES <= 1.1 * 1024 * 1024 && XLSX_INFLATE_OVERSHOOT_BYTES < XLSX_MAX_UNCOMPRESSED_BYTES / 32);
 });
 
 test("the XML tokenizer is linear and refuses unterminated comments, instructions, CDATA and tags", () => {

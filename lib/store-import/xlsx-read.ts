@@ -3,14 +3,17 @@
 // An XLSX file is a ZIP of XML parts, so this is an archive reader for untrusted input:
 //   * only an allowlist of parts is ever inflated; everything else (macros, external links, embedded objects, images)
 //     is skipped without decompressing it;
-//   * compressed bytes are fed to the inflater in small slices and the output is counted as it arrives, so the total
-//     (40 MB) and per-part ratio (100:1 past the first MB) budgets stop a ZIP bomb before it can allocate much;
+//   * the central directory says what each part will inflate to, so the total (40 MB) and per-part ratio (100:1 past
+//     the first MB) budgets refuse a ZIP bomb before inflating it, data-descriptor entries included. Local headers
+//     must agree with the directory. Compressed bytes are then fed to the inflater in 1 KB slices and the output is
+//     checked after each one: it may never pass the declared size, nor the ratio of the compressed bytes actually fed,
+//     so a lying header is caught within ~1 MB (Codex review 3 finding 2);
 //   * the XML is scanned with a small single-pass tokenizer (linear in the part's size, Codex review 3 finding 1) that
 //     refuses unterminated comments, instructions, CDATA sections and tags, and knows the handful of SpreadsheetML
 //     elements it needs. Documents with a DTD are refused, and only the five predefined entities and numeric
 //     references are decoded, so there is no entity expansion or external fetch of any kind;
 //   * formulas are never evaluated: a formula cell contributes its cached value and is flagged.
-import { Unzip, UnzipInflate, type UnzipFile } from "fflate";
+import { Inflate } from "fflate";
 import {
   IMPORT_HEADER_SEARCH_ROWS,
   IMPORT_MAX_CELL_CHARS,
@@ -35,7 +38,7 @@ const RATIO_FREE_BYTES = 1024 * 1024;
 
 export type XlsxReadResult = { sheetName: string; rows: ImportRow[]; warnings: string[] };
 
-export type XlsxBudget = { maxUncompressedBytes?: number; maxEntryRatio?: number };
+export type XlsxBudget = { maxUncompressedBytes?: number; maxEntryRatio?: number; onInflate?: (bytes: number) => void };
 
 const invalid = () => new ImportFileError("IMPORT_FILE_INVALID", "No pudimos leer el archivo como Excel (.xlsx). Guárdalo otra vez como .xlsx o .csv.");
 
@@ -45,78 +48,151 @@ export function sniffSpreadsheet(bytes: Uint8Array): "zip" | "ole" | "other" {
   return "other";
 }
 
-// Inflates the allowlisted parts of the archive within the budget. Exported for tests.
-export function extractXlsxParts(bytes: Uint8Array, budget: XlsxBudget = {}) {
-  const maxTotal = budget.maxUncompressedBytes ?? XLSX_MAX_UNCOMPRESSED_BYTES;
-  const maxRatio = budget.maxEntryRatio ?? XLSX_MAX_ENTRY_RATIO;
-  const parts = new Map<string, Uint8Array>();
-  const seen: string[] = [];
-  let total = 0;
-  let failure: ImportFileError | null = null;
+type ZipEntry = { name: string; flags: number; method: number; compressedSize: number; size: number; localOffset: number };
 
-  const unzipper = new Unzip();
-  unzipper.register(UnzipInflate);
-  unzipper.onfile = (file: UnzipFile) => {
-    if (failure) return;
-    seen.push(file.name);
-    if (seen.length > XLSX_MAX_ENTRIES) {
-      failure = invalid();
-      return;
+// The central directory, which is what Excel itself reads (APPNOTE 4.3.12-16). Its sizes are known before anything
+// is inflated, so a data-descriptor entry (sizes only after its data) is checked like any other, and the local
+// headers are then cross-checked against it.
+function readCentralDirectory(bytes: Uint8Array): { entries: ZipEntry[]; directoryOffset: number } {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const u16 = (at: number) => view.getUint16(at, true);
+  const u32 = (at: number) => view.getUint32(at, true);
+  const u64 = (at: number) => Number(view.getBigUint64(at, true));
+  // End record: the last one whose comment runs exactly to the end of the file.
+  let end = -1;
+  for (let at = bytes.length - 22; at >= 0 && at >= bytes.length - 22 - 0xffff; at -= 1) {
+    if (u32(at) === 0x06054b50 && at + 22 + u16(at + 20) === bytes.length) {
+      end = at;
+      break;
     }
-    if (!FIXED_PARTS.has(file.name) && !WORKSHEET_PART.test(file.name)) return;
-    if (parts.has(file.name)) {
-      failure = invalid();
-      return;
-    }
-    const chunks: Uint8Array[] = [];
-    let produced = 0;
-    file.ondata = (error, data, final) => {
-      if (failure) return;
-      if (error) {
-        failure = invalid();
-        return;
-      }
-      produced += data.length;
-      total += data.length;
-      const ratioExceeded = file.size !== undefined && file.size > 0 && produced > RATIO_FREE_BYTES
-        && produced > file.size * maxRatio;
-      if (total > maxTotal || ratioExceeded) {
-        failure = new ImportFileError("IMPORT_FILE_TOO_BIG_UNCOMPRESSED",
-          "El archivo es demasiado grande al descomprimirlo. Divide el inventario en archivos más pequeños.");
-        file.terminate();
-        return;
-      }
-      chunks.push(data);
-      if (final) parts.set(file.name, concat(chunks, produced));
-    };
-    try {
-      file.start();
-    } catch {
-      // Unsupported compression method (only stored and deflate are registered).
-      failure = invalid();
-    }
-  };
-
-  try {
-    for (let offset = 0; offset < bytes.length && !failure; offset += XLSX_INFLATE_SLICE_BYTES) {
-      const end = Math.min(offset + XLSX_INFLATE_SLICE_BYTES, bytes.length);
-      unzipper.push(bytes.subarray(offset, end), end === bytes.length);
-    }
-  } catch {
-    if (!failure) failure = invalid();
   }
-  if (failure) throw failure;
-  return { parts, entryNames: seen };
+  if (end < 0 || u16(end + 4) !== 0 || u16(end + 6) !== 0 || u16(end + 8) !== u16(end + 10)) throw invalid();
+  let count = u16(end + 10);
+  let directorySize = u32(end + 12);
+  let directoryOffset = u32(end + 16);
+  if (count === 0xffff || directorySize === 0xffffffff || directoryOffset === 0xffffffff) {
+    // ZIP64 end record, found through the locator just before the classic one.
+    const record = end >= 20 && u32(end - 20) === 0x07064b50 ? u64(end - 12) : -1;
+    if (record < 0 || record + 56 > end - 20 || u32(record) !== 0x06064b50) throw invalid();
+    count = u64(record + 32);
+    directorySize = u64(record + 40);
+    directoryOffset = u64(record + 48);
+  }
+  if (count > XLSX_MAX_ENTRIES || directoryOffset + directorySize > end) throw invalid();
+
+  const entries: ZipEntry[] = [];
+  const decoder = new TextDecoder();
+  let at = directoryOffset;
+  for (let index = 0; index < count; index += 1) {
+    if (at + 46 > directoryOffset + directorySize || u32(at) !== 0x02014b50) throw invalid();
+    const nameLength = u16(at + 28);
+    const extraEnd = at + 46 + nameLength + u16(at + 30);
+    if (extraEnd + u16(at + 32) > directoryOffset + directorySize) throw invalid();
+    const entry: ZipEntry = {
+      name: decoder.decode(bytes.subarray(at + 46, at + 46 + nameLength)),
+      flags: u16(at + 8),
+      method: u16(at + 10),
+      compressedSize: u32(at + 20),
+      size: u32(at + 24),
+      localOffset: u32(at + 42),
+    };
+    // ZIP64 extra field: the saturated values, in this order, as 8-byte numbers.
+    for (let extra = at + 46 + nameLength; extra + 4 <= extraEnd; extra += 4 + u16(extra + 2)) {
+      const fieldsEnd = extra + 4 + u16(extra + 2);
+      if (fieldsEnd > extraEnd) throw invalid();
+      if (u16(extra) !== 0x0001) continue;
+      let field = extra + 4;
+      for (const key of ["size", "compressedSize", "localOffset"] as const) {
+        if (entry[key] !== 0xffffffff) continue;
+        if (field + 8 > fieldsEnd) throw invalid();
+        entry[key] = u64(field);
+        field += 8;
+      }
+    }
+    entries.push(entry);
+    at = extraEnd + u16(at + 32);
+  }
+  return { entries, directoryOffset };
 }
 
-function concat(chunks: Uint8Array[], length: number) {
-  if (chunks.length === 1) return chunks[0];
-  const out = new Uint8Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, offset);
-    offset += chunk.length;
+// The entry's compressed bytes, after a local header that must agree with the central directory: same name and
+// method, the same sizes unless they come in a data descriptor, and data that ends before the directory starts.
+function entryData(bytes: Uint8Array, entry: ZipEntry, directoryOffset: number) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const at = entry.localOffset;
+  if (at + 30 > directoryOffset || view.getUint32(at, true) !== 0x04034b50) throw invalid();
+  const flags = view.getUint16(at + 6, true);
+  const nameLength = view.getUint16(at + 26, true);
+  const start = at + 30 + nameLength + view.getUint16(at + 28, true);
+  const localSizes = [view.getUint32(at + 18, true), view.getUint32(at + 22, true)];
+  const sizesAgree = (flags & 8) !== 0 || localSizes.includes(0xffffffff)
+    || (localSizes[0] === entry.compressedSize && localSizes[1] === entry.size);
+  const name = bytes.subarray(at + 30, at + 30 + nameLength);
+  if (view.getUint16(at + 8, true) !== entry.method || !sizesAgree || new TextDecoder().decode(name) !== entry.name
+    || start + entry.compressedSize > directoryOffset) {
+    throw invalid();
   }
+  return bytes.subarray(start, start + entry.compressedSize);
+}
+
+const tooBig = () => new ImportFileError("IMPORT_FILE_TOO_BIG_UNCOMPRESSED",
+  "El archivo es demasiado grande al descomprimirlo. Divide el inventario en archivos más pequeños.");
+
+// Inflates the allowlisted parts of the archive within the budget. Exported for tests; `onInflate` (tests only) sees
+// the size of every block the inflater hands over.
+export function extractXlsxParts(bytes: Uint8Array, budget: XlsxBudget = {}) {
+  try {
+    return extractParts(bytes, budget);
+  } catch (error) {
+    // A field pointing outside the file makes DataView throw: that is a damaged archive too.
+    throw error instanceof ImportFileError ? error : invalid();
+  }
+}
+
+function extractParts(bytes: Uint8Array, budget: XlsxBudget) {
+  const maxTotal = budget.maxUncompressedBytes ?? XLSX_MAX_UNCOMPRESSED_BYTES;
+  const maxRatio = budget.maxEntryRatio ?? XLSX_MAX_ENTRY_RATIO;
+  const { entries, directoryOffset } = readCentralDirectory(bytes);
+  const parts = new Map<string, Uint8Array>();
+  let total = 0;
+  for (const entry of entries) {
+    if (!FIXED_PARTS.has(entry.name) && !WORKSHEET_PART.test(entry.name)) continue;
+    // Encrypted, or neither stored nor deflated, or listed twice.
+    if ((entry.flags & 1) !== 0 || (entry.method !== 0 && entry.method !== 8) || parts.has(entry.name)) throw invalid();
+    const data = entryData(bytes, entry, directoryOffset);
+    // The declared size is checked before anything is allocated; what the inflater produces may never exceed it.
+    total += entry.size;
+    if (total > maxTotal || (entry.size > RATIO_FREE_BYTES && entry.size > entry.compressedSize * maxRatio)) throw tooBig();
+    if (entry.method === 0) {
+      if (entry.size !== entry.compressedSize) throw invalid();
+      parts.set(entry.name, data);
+      continue;
+    }
+    parts.set(entry.name, inflateEntry(data, entry.size, maxRatio, budget.onInflate));
+  }
+  return { parts, entryNames: entries.map((entry) => entry.name) };
+}
+
+// Feeds the compressed bytes in XLSX_INFLATE_SLICE_BYTES slices, so one push yields at most
+// XLSX_INFLATE_OVERSHOOT_BYTES. After each push the output must still fit the declared size, and past the first MB
+// it must stay within the ratio of the compressed bytes actually fed so far (not what a header claims).
+function inflateEntry(data: Uint8Array, size: number, maxRatio: number, onInflate?: (bytes: number) => void) {
+  const out = new Uint8Array(size);
+  let produced = 0;
+  let fed = 0;
+  const inflater = new Inflate((chunk) => {
+    onInflate?.(chunk.length);
+    if (produced + chunk.length > size) throw invalid();
+    out.set(chunk, produced);
+    produced += chunk.length;
+    if (produced > RATIO_FREE_BYTES && produced > fed * maxRatio) throw tooBig();
+  });
+  for (let offset = 0; offset < data.length; offset += XLSX_INFLATE_SLICE_BYTES) {
+    fed = Math.min(offset + XLSX_INFLATE_SLICE_BYTES, data.length);
+    inflater.push(data.subarray(offset, fed), fed === data.length);
+  }
+  if (data.length === 0) inflater.push(new Uint8Array(0), true);
+  if (produced !== size) throw invalid();
   return out;
 }
 
