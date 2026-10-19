@@ -32,6 +32,13 @@ export async function POST(request: Request) {
     if (error) return alertActionError(error.message);
     return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
   }
+  // save-05: rename and switch frequency.
+  if (body.action === "update" && ["immediate", "daily"].includes(body.frequency) && (body.name === null || typeof body.name === "string")) {
+    const name = typeof body.name === "string" ? body.name.trim().slice(0, 80) : "";
+    const { error } = await supabase.rpc("update_saved_search_alert", { p_alert_id: body.id, p_name: name || null, p_frequency: body.frequency });
+    if (error) return alertActionError(error.message);
+    return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
+  }
   if (body.action === "delete") {
     const { error } = await supabase.rpc("delete_saved_search_alert", { p_alert_id: body.id });
     if (error) return alertActionError(error.message);

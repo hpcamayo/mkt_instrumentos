@@ -29,7 +29,9 @@ test('favorite history accepts only redacted unavailable rows and bounded pages'
 test('favorite controls reflect actual saved state and anonymous safe login navigation',()=>{
  const button=state=>load('components/favorite-button.tsx',{'next/link':{default:Link},'next/navigation':{usePathname:()=>'/listados',useRouter:()=>({push(){},refresh(){}})},'@/components/marketplace-account-provider':{useMarketplaceAccount:()=>({ready:true,authenticated:true,favorites:{id:true},register:()=>()=>{},setFavorite:async()=>{},...state})}}).FavoriteButton;
  const html=renderToStaticMarkup(React.createElement(button({}),{listingId:'id'}));assert.match(html,/aria-pressed="true"/);assert.match(html,/Quitar de favoritos/);
- const anon=renderToStaticMarkup(React.createElement(button({authenticated:false}),{listingId:'id'}));assert.match(anon,/login\?next=%2Flistados/);assert.match(anon,/Ingresa para guardar/);
+ // Accounts batch, big-04: signed out, the heart saves on this device instead of sending to sign-in.
+ const anon=renderToStaticMarkup(React.createElement(button({authenticated:false,deviceFavoriteIds:[]}),{listingId:'id'}));assert.match(anon,/aria-pressed="false"/);assert.match(anon,/Guardar en favoritos/);assert.doesNotMatch(anon,/login\?next/);
+ const anonSaved=renderToStaticMarkup(React.createElement(button({authenticated:false,deviceFavoriteIds:['id']}),{listingId:'id'}));assert.match(anonSaved,/aria-pressed="true"/);
 });
 // React #418 on listing pages (docs/ux-redesign/ux-4-listing-store.md § First task): the related listings stream in after
 // the first account check has finished; hydrated with the live state, their favourite rendered a sign-in link where the
@@ -40,8 +42,8 @@ test('account state while hydrating equals the server render (React #418)',()=>{
  let seen;const Probe=()=>{seen=useMarketplaceAccount();return null;};
  // A server render reads useSyncExternalStore's server snapshot, exactly as hydration does.
  renderToStaticMarkup(React.createElement(Probe));
- const {register,setFavorite,...state}=seen;
- assert.deepEqual(state,{authenticated:false,storeOwner:false,hasStore:false,payments:false,admin:false,name:null,unreadNotifications:0,pendingBuyerConfirmations:0,ready:false,settled:false,favorites:{}});
+ const {register,setFavorite,flash,...state}=seen;assert.equal(typeof flash,'undefined');
+ assert.deepEqual(state,{authenticated:false,storeOwner:false,hasStore:false,payments:false,admin:false,name:null,unreadNotifications:0,pendingBuyerConfirmations:0,ready:false,settled:false,favorites:{},deviceFavoriteIds:[]});
  assert.equal(register,live.register);assert.equal(setFavorite,live.setFavorite);
  assert.match(fs.readFileSync('components/marketplace-account-provider.tsx','utf8'),/useSyncExternalStore\(subscribeToNothing, \(\) => false, \(\) => true\)/);
 });

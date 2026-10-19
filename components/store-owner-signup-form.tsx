@@ -64,9 +64,9 @@ export function StoreOwnerSignupForm() {
       setMessage(validated.message);
       return;
     }
-    if (!email || password.length < 6) {
+    if (!email || password.length < 8) {
       setState("error");
-      setMessage("Ingresa un correo y una contraseña de al menos 6 caracteres.");
+      setMessage("Ingresa un correo y una contraseña de al menos 8 caracteres.");
       return;
     }
     const available = await fetch("/api/auth/check-email", {
@@ -131,7 +131,7 @@ export function StoreOwnerSignupForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <SignupField label="Nombre de la persona responsable" name="fullName" error={validation.errorFor("fullName")} autoComplete="name" />
         <SignupField label="Correo exclusivo de la cuenta" name="email" error={validation.errorFor("email")} type="email" autoComplete="email" />
-        <SignupField label="Contraseña" name="password" error={validation.errorFor("password")} type="password" autoComplete="new-password" minLength={6} />
+        <SignupField label="Contraseña" name="password" error={validation.errorFor("password")} type="password" autoComplete="new-password" minLength={8} />
         <SignupField label="WhatsApp de contacto" name="phone" error={validation.errorFor("phone")} type="tel" autoComplete="tel" />
         <LocationFields idPrefix="tienda-cuenta" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} />
       </div>

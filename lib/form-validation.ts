@@ -1,12 +1,13 @@
 import { normalizeProfilePhone } from "@/lib/auth/profile";
 import { normalizePeruRegion } from "@/lib/location";
 
-export function profileFieldErrors(input: { fullName: string; phone: string; city: string; region: string }) {
+// Accounts batch, auth-02: `contactOptional` lets WhatsApp and city stay empty until the person publishes.
+export function profileFieldErrors(input: { fullName: string; phone: string; city: string; region: string }, contactOptional = false) {
   const errors: Record<string, string> = {};
   if (!input.fullName.trim()) errors.fullName = "Ingresa tu nombre completo.";
-  if (!normalizeProfilePhone(input.phone)) errors.phone = "Ingresa un WhatsApp válido.";
-  if (!input.city.trim()) errors.city = "Ingresa una ciudad válida.";
-  if (!normalizePeruRegion(input.region)) errors.region = "Selecciona una región válida de Perú.";
+  if ((!contactOptional || input.phone.trim()) && !normalizeProfilePhone(input.phone)) errors.phone = "Ingresa un WhatsApp válido.";
+  if (!contactOptional && !input.city.trim()) errors.city = "Ingresa una ciudad válida.";
+  if ((!contactOptional || input.city.trim()) && !normalizePeruRegion(input.region)) errors.region = "Selecciona una región válida de Perú.";
   return errors;
 }
 

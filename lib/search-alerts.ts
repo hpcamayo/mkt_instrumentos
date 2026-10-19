@@ -1,7 +1,6 @@
 import { instrumentFilterGroups, type InstrumentFilterConfig } from "@/lib/instrument-filters";
 import {
   categoryOptions,
-  conditionOptions,
   sellerTypeOptions,
   type ListingFilters,
 } from "@/lib/listings";
@@ -12,8 +11,9 @@ export type SearchAlertStatus = "active" | "paused";
 
 export type SearchAlertFilters = {
   category?: string;
-  location?: string;
-  condition?: string;
+  // save-05: one value, or several (a search for Lima or Arequipa).
+  location?: string | string[];
+  condition?: string | string[];
   brand?: string;
   seller_type?: "individual" | "store" | "verified_store";
   instrument_type?: string;
@@ -24,6 +24,11 @@ export type SearchAlertFilters = {
 
 export type SavedSearchAlert = {
   id: string;
+  name?: string | null;
+  // save-05: from get_account_search_alerts.
+  match_count?: number;
+  last_match_at?: string | null;
+  new_count?: number;
   search_filters: SearchAlertFilters;
   frequency: SearchAlertFrequency;
   status: SearchAlertStatus;
@@ -31,21 +36,17 @@ export type SavedSearchAlert = {
   created_at: string;
 };
 
-// What the alert entry says instead on a search it cannot save (owner, Q19).
-export const ONE_VALUE_PER_FILTER = "Para crear una alerta, elige un solo valor en cada filtro.";
+// Saved alerts are validated and matched in the database (Sprint 7). Since save-05 a search with several locations or
+// conditions (F11) is saved too: one value stays a string, several become a list.
+const oneOrMany = (values: string[]) => (values.length === 1 ? values[0] : values.length ? [...values] : undefined);
 
-// Saved alerts hold one value per filter, validated and matched in the database (Sprint 7). A search with several
-// conditions or locations (F11) is not offered as an alert (owner, Q19): it returns null.
-export function canSaveSearchAlert(filters: Pick<ListingFilters, "cities" | "conditions">) {
-  return filters.cities.length <= 1 && filters.conditions.length <= 1;
-}
-
-export function listingFiltersToSearchAlert(filters: ListingFilters): SearchAlertFilters | null {
-  if (!canSaveSearchAlert(filters)) return null;
+export function listingFiltersToSearchAlert(filters: ListingFilters): SearchAlertFilters {
   const normalized: SearchAlertFilters = {};
   if (filters.category) normalized.category = filters.category;
-  if (filters.cities[0]) normalized.location = filters.cities[0];
-  if (filters.conditions[0]) normalized.condition = filters.conditions[0];
+  const location = oneOrMany(filters.cities);
+  if (location) normalized.location = location;
+  const condition = oneOrMany(filters.conditions);
+  if (condition) normalized.condition = condition;
   if (filters.brand?.trim()) normalized.brand = filters.brand.trim();
   if (filters.sellerType) normalized.seller_type = filters.sellerType;
   if (filters.instrumentType) normalized.instrument_type = filters.instrumentType;
@@ -58,8 +59,8 @@ export function listingFiltersToSearchAlert(filters: ListingFilters): SearchAler
 export function searchAlertPath(filters: SearchAlertFilters) {
   const params = new URLSearchParams();
   append(params, "category", filters.category);
-  append(params, "location", filters.location);
-  append(params, "condition", filters.condition);
+  for (const value of asList(filters.location)) params.append("location", value);
+  for (const value of asList(filters.condition)) params.append("condition", value);
   append(params, "brand", filters.brand);
   append(params, "seller_type", filters.seller_type);
   append(params, "instrument_type", filters.instrument_type);
@@ -76,8 +77,8 @@ export function searchAlertSummary(filters: SearchAlertFilters) {
   pushLabel(parts, categoryOptions, filters.category);
   pushLabel(parts, instrumentFilterGroups, filters.instrument_type, "instrumentType");
   if (filters.brand) parts.push(`Marca: ${filters.brand}`);
-  if (filters.location) parts.push(filters.location);
-  pushLabel(parts, conditionOptions.map((value) => ({ value, label: value })), filters.condition);
+  if (filters.location) parts.push(asList(filters.location).join(" o "));
+  if (filters.condition) parts.push(asList(filters.condition).join(" o "));
   pushLabel(parts, sellerTypeOptions, filters.seller_type);
   if (filters.min_price !== undefined || filters.max_price !== undefined) {
     const low = filters.min_price === undefined ? "sin mínimo" : `S/ ${formatNumber(filters.min_price)}`;
@@ -99,11 +100,38 @@ export function searchAlertFrequencyLabel(value: SearchAlertFrequency) {
   return value === "immediate" ? "Inmediata" : "Resumen diario";
 }
 
+// save-05: the alert's own name, or what it searches for.
+export function searchAlertTitle(alert: Pick<SavedSearchAlert, "name" | "search_filters">) {
+  return alert.name?.trim() || searchAlertSummary(alert.search_filters);
+}
+
+// "última coincidencia hace 2 días · 7 en total".
+export function searchAlertActivity(alert: Pick<SavedSearchAlert, "match_count" | "last_match_at">, now = Date.now()) {
+  const total = alert.match_count ?? 0;
+  if (!total || !alert.last_match_at) return "Sin coincidencias todavía";
+  return `Última coincidencia ${timeAgo(alert.last_match_at, now)} · ${total} en total`;
+}
+
+function timeAgo(value: string, now: number) {
+  const minutes = Math.max(0, Math.round((now - Date.parse(value)) / 60000));
+  if (minutes < 60) return minutes <= 1 ? "hace un momento" : `hace ${minutes} minutos`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return hours === 1 ? "hace 1 hora" : `hace ${hours} horas`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return days === 1 ? "ayer" : `hace ${days} días`;
+  const months = Math.round(days / 30);
+  return months === 1 ? "hace 1 mes" : `hace ${months} meses`;
+}
+
 export function parseSavedSearchAlerts(value: unknown): SavedSearchAlert[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     if (!isRecord(item)
       || !isUuid(item.id)
+      || (item.name !== undefined && item.name !== null && typeof item.name !== "string")
+      || (item.match_count !== undefined && !Number.isSafeInteger(item.match_count))
+      || (item.new_count !== undefined && !Number.isSafeInteger(item.new_count))
+      || (item.last_match_at !== undefined && item.last_match_at !== null && !isDate(item.last_match_at))
       || (item.frequency !== "immediate" && item.frequency !== "daily")
       || (item.status !== "active" && item.status !== "paused")
       || !isDate(item.active_since)
@@ -117,12 +145,16 @@ export function searchAlertFiltersAsJson(filters: SearchAlertFilters): Json {
   return filters as Json;
 }
 
-function parseSearchAlertFilters(value: unknown): SearchAlertFilters | null {
+export function parseSearchAlertFilters(value: unknown): SearchAlertFilters | null {
   if (!isRecord(value)) return null;
   const allowed = new Set(["category", "location", "condition", "brand", "seller_type", "instrument_type", "min_price", "max_price", "advanced"]);
   if (Object.keys(value).some((key) => !allowed.has(key))) return null;
-  for (const key of ["category", "location", "condition", "brand", "instrument_type"] as const) {
+  for (const key of ["category", "brand", "instrument_type"] as const) {
     if (value[key] !== undefined && typeof value[key] !== "string") return null;
+  }
+  for (const key of ["location", "condition"] as const) {
+    const item = value[key];
+    if (item !== undefined && typeof item !== "string" && !(Array.isArray(item) && item.length > 0 && item.length <= 20 && item.every((entry) => typeof entry === "string"))) return null;
   }
   if (value.seller_type !== undefined && !["individual", "store", "verified_store"].includes(String(value.seller_type))) return null;
   for (const key of ["min_price", "max_price"] as const) {
@@ -139,6 +171,10 @@ function advancedConfigs(instrumentType?: string) {
     for (const filter of group.filters) if (!result.has(filter.key)) result.set(filter.key, filter);
   }
   return result;
+}
+
+function asList(value: string | string[] | undefined) {
+  return value === undefined ? [] : Array.isArray(value) ? value : [value];
 }
 
 function append(params: URLSearchParams, key: string, value: string | number | undefined) {

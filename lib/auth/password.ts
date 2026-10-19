@@ -1,8 +1,11 @@
+// auth-01: one minimum everywhere (sign-up, reset and change).
+export const PASSWORD_MIN_LENGTH = 8;
+
 export function getPasswordValidationMessage(
   password: string,
   confirmation: string,
 ) {
-  if (password.length < 8) return "Usa al menos 8 caracteres.";
+  if (password.length < PASSWORD_MIN_LENGTH) return `Usa al menos ${PASSWORD_MIN_LENGTH} caracteres.`;
   if (password !== confirmation) return "Las contraseñas no coinciden.";
   return null;
 }

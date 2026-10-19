@@ -412,8 +412,9 @@ async function stockVersusListingEdits() {
     assert.ok(results.every((result) => result.ok), results.map(code).join());
     await assertConsistent(items.c);
   }
-  // Exactly one price-drop record per actual decrease: every price change of a linked item is audited once, from
-  // whichever side made it.
+  // Every price change of a linked item is audited once, from whichever side made it. Since the accounts batch
+  // (save-08) a decrease alerts favorites only when it is 5% or more and at most once a day per listing, so the races
+  // leave at least one drop record, never more than the decreases, and never two within a day.
   const { rows } = await control.query(
     `select
        (select count(*)::int from public.store_inventory_changes
@@ -422,7 +423,8 @@ async function stockVersusListingEdits() {
     [items.c, listings.c],
   );
   assert.ok(rows[0].decreases > 0);
-  assert.equal(rows[0].drops, rows[0].decreases, "price-drop records must match actual decreases");
+  assert.ok(rows[0].drops >= 1 && rows[0].drops <= rows[0].decreases, "price-drop records must come from actual decreases");
+  assert.equal(rows[0].drops, 1, "at most one price-drop alert per listing per day");
 }
 
 // Linking, a stock movement and the V1 sold flow race on a fresh listing. Sold and linked are mutually exclusive; a

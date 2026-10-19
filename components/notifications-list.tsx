@@ -24,10 +24,28 @@ type AccountNotification = {
   new_price_pen?: number | null;
 };
 
-export function NotificationsList({ notifications }: { notifications: AccountNotification[] }) {
+export function NotificationsList({
+  notifications,
+  listings = {},
+  hasUnread = false,
+}: {
+  notifications: AccountNotification[];
+  // save-10: public title and slug of the listings behind price drops and alert matches.
+  listings?: Record<string, { title: string; slug: string }>;
+  hasUnread?: boolean;
+}) {
   const router = useRouter();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [markingAll, setMarkingAll] = useState(false);
+
+  async function markAllRead() {
+    if (!supabase || markingAll) return;
+    setMarkingAll(true);
+    const { error } = await supabase.rpc("mark_all_notifications_read");
+    setMarkingAll(false);
+    if (!error) router.refresh();
+  }
 
   async function markRead(notification: AccountNotification, refresh = true) {
     if (!supabase || notification.read_at) return;
@@ -50,12 +68,21 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
   }
 
   return (
+    <div className="grid gap-3">
+    {hasUnread ? (
+      <div className="flex justify-end">
+        <Button variant="secondary" size="sm" loading={markingAll} loadingLabel="Guardando…" onClick={() => void markAllRead()}>Marcar todo como leído</Button>
+      </div>
+    ) : null}
     <ol className="grid gap-3">
       {notifications.map((notification) => {
         const unread = !notification.read_at;
         const transactionReference = notification.transaction_id ?? notification.claim_id;
+        const listing = notification.listing_id ? listings[notification.listing_id] : undefined;
         const href = transactionReference
           ? `/mi-cuenta/transacciones/${transactionReference}`
+          : notification.event_type === "listing_alert_match"
+          ? listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/alertas"
           : notification.event_type === "listing_price_drop" && notification.listing_id
           ? `/mi-cuenta/favoritos/${notification.listing_id}`
           : notification.store_id && notification.event_type.startsWith("store_")
@@ -71,13 +98,13 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
                   <h2 className="t-ui font-semibold text-ink">{notificationLabel(notification.event_type)}</h2>
                   {unread ? <Tag tone="warning">Nueva</Tag> : null}
                 </div>
-                <p className="mt-2 t-ui text-ink-2">{notification.event_type === "listing_price_drop" && typeof notification.old_price_pen === "number" && typeof notification.new_price_pen === "number" ? `Una publicación de tus favoritos bajó de ${formatPrice(notification.old_price_pen)} a ${formatPrice(notification.new_price_pen)}.` : notification.message}</p>
+                <p className="mt-2 t-ui text-ink-2">{notification.event_type === "listing_price_drop" && typeof notification.old_price_pen === "number" && typeof notification.new_price_pen === "number" ? `${listing ? `«${listing.title}»` : "Una publicación de tus favoritos"} bajó de ${formatPrice(notification.old_price_pen)} a ${formatPrice(notification.new_price_pen)}.` : notification.message}</p>
                 <time suppressHydrationWarning className="mt-2 block t-meta" dateTime={notification.created_at}>
                   {new Date(notification.created_at).toLocaleString("es-PE")}
                 </time>
               </div>
               <div className="flex shrink-0 flex-wrap gap-3 t-ui">
-                <Link href={href} onClick={(event) => { event.preventDefault(); void openNotification(notification, href); }} className="link font-semibold">Ver detalle</Link>
+                <Link href={href} onClick={(event) => { event.preventDefault(); void openNotification(notification, href); }} className="link font-semibold">{notification.event_type === "listing_alert_match" && listing ? "Ver publicación" : "Ver detalle"}</Link>
                 {unread ? <Button variant="quiet" size="sm" loading={busyId === notification.id} loadingLabel="Guardando…" onClick={() => void markRead(notification)}>Marcar como leída</Button> : null}
               </div>
             </div>
@@ -85,12 +112,14 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
         );
       })}
     </ol>
+    </div>
   );
 }
 
 function notificationLabel(eventType: string) {
   return ({
     listing_price_drop: "Bajó de precio un favorito",
+    listing_alert_match: "Nueva coincidencia de tu alerta",
     listing_approved: "Publicación aprobada",
     listing_rejected: "Publicación rechazada",
     listing_hidden: "Publicación ocultada",

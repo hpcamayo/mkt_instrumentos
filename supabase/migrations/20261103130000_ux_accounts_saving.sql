@@ -595,7 +595,7 @@ begin
  insert into public.listing_price_drops(listing_id,old_price_pen,new_price_pen)
  values(new.id,old.price_pen,new.price_pen) returning id into transition_id;
  insert into public.notifications(user_id,event_type,message,listing_id,store_id,price_drop_id,old_price_pen,new_price_pen)
- select user_id,'listing_price_drop','«'||new.title||'» bajó de S/ '||old.price_pen::bigint::text||' a S/ '||new.price_pen::bigint::text||'.',
+ select user_id,'listing_price_drop','«'||new.title||'» bajó de S/ '||to_char(old.price_pen,'FM999,999,999')||' a S/ '||to_char(new.price_pen,'FM999,999,999')||'.',
  new.id,new.store_id,transition_id,old.price_pen,new.price_pen from public.favorites where listing_id=new.id
  on conflict do nothing;
  return new;

@@ -209,7 +209,8 @@ test("header: outline Vender, honest brand search, no Para tiendas, Ingresar whe
   assert.match(vender, /border border-white\/40 bg-transparent text-surface/);
   assert.doesNotMatch(html, /bg-action/);
   assert.doesNotMatch(html, /Para tiendas|Crear cuenta|Listados/);
-  assert.match(html, /href="\/login"[^>]*>.*Ingresar/);
+  // Accounts batch, save-02: "Ingresar" comes back to the page it was pressed on.
+  assert.match(html, /href="\/login(\?next=[^"]*)?"[^>]*>.*Ingresar/);
   assert.match(html, /aria-label="Laria inicio"/);
   // Brand search with the placeholder that says so: inline from 768 px, and a row under the bar on phones that
   // comes after the bar's actions in the markup, so Tab follows the visual order at both sizes.

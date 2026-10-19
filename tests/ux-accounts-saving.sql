@@ -63,7 +63,7 @@ update public.listings set price_pen = 2100 where slug = 'ux-strat';
 update public.listings set price_pen = 1900 where slug = 'ux-strat';
 do $$ begin
  if (select count(*) from public.notifications where event_type = 'listing_price_drop' and listing_id = 'a2040000-0000-4000-8000-000000000101') <> 1 then raise exception 'Daily limit broken'; end if;
- if (select message from public.notifications where event_type = 'listing_price_drop' and listing_id = 'a2040000-0000-4000-8000-000000000101') <> '«Fender Stratocaster» bajó de S/ 2450 a S/ 2100.' then raise exception 'Price-drop notice without the name'; end if;
+ if (select message from public.notifications where event_type = 'listing_price_drop' and listing_id = 'a2040000-0000-4000-8000-000000000101') <> '«Fender Stratocaster» bajó de S/ 2,450 a S/ 2,100.' then raise exception 'Price-drop notice without the name'; end if;
  if (select count(*) from laria_private.marketplace_email_deliveries where event_type = 'listing_price_drop' and recipient_user_id = 'a2040000-0000-4000-8000-000000000002') <> 1 then raise exception 'Price-drop e-mail missing'; end if;
 end $$;
 

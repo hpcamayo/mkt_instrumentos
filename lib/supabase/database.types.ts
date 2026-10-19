@@ -64,20 +64,71 @@ export type Database = {
         }
         Relationships: []
       }
+      email_preferences: {
+        Row: {
+          follow_digest_emails: boolean
+          price_drop_emails: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          follow_digest_emails?: boolean
+          price_drop_emails?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          follow_digest_emails?: boolean
+          price_drop_emails?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      favorite_shares: {
+        Row: {
+          created_at: string
+          id: string
+          revoked_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          revoked_at?: string | null
+          token?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          revoked_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string
           listing_id: string
+          note: string | null
+          saved_price_pen: number | null
           user_id: string
         }
         Insert: {
           created_at?: string
           listing_id: string
+          note?: string | null
+          saved_price_pen?: number | null
           user_id: string
         }
         Update: {
           created_at?: string
           listing_id?: string
+          note?: string | null
+          saved_price_pen?: number | null
           user_id?: string
         }
         Relationships: [
@@ -96,6 +147,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      follows: {
+        Row: {
+          brand: string | null
+          brand_key: string | null
+          created_at: string
+          id: string
+          store_id: string | null
+          user_id: string
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          id?: string
+          store_id?: string | null
+          user_id: string
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          id?: string
+          store_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       listing_edit_attempts: {
         Row: {
@@ -854,6 +930,7 @@ export type Database = {
           frequency: string
           id: string
           match_bucket: string
+          name: string | null
           paused_at: string | null
           search_filters: Json
           search_hash: string
@@ -882,6 +959,7 @@ export type Database = {
           frequency?: string
           id?: string
           match_bucket?: string
+          name?: string | null
           paused_at?: string | null
           search_filters?: Json
           search_hash?: string
@@ -1426,6 +1504,10 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_email_link_action: {
+        Args: { p_action: string; p_alert_id?: string; p_user_id: string }
+        Returns: boolean
+      }
       apply_owned_listing_edit: {
         Args: {
           p_immediate?: Json
@@ -1537,6 +1619,14 @@ export type Database = {
         Returns: Json
       }
       get_account_favorites: { Args: { p_page?: number }; Returns: Json }
+      get_account_follows: {
+        Args: never
+        Returns: Json
+      }
+      get_account_search_alerts: {
+        Args: { p_since?: string }
+        Returns: Json
+      }
       get_admin_audit_history: {
         Args: { p_limit?: number; p_target_id: string; p_target_type: string }
         Returns: Json
@@ -1600,6 +1690,10 @@ export type Database = {
         Args: { p_listing_id: string }
         Returns: string
       }
+      get_followed_arrivals: {
+        Args: { p_days?: number; p_limit?: number }
+        Returns: Json
+      }
       get_marketplace_admin_analytics: {
         Args: { p_days?: number }
         Returns: Json
@@ -1612,9 +1706,21 @@ export type Database = {
         Args: { p_days?: number }
         Returns: Json
       }
+      get_new_listing_counts: {
+        Args: { p_categories?: string[]; p_since: string }
+        Returns: Json
+      }
+      get_or_create_favorite_share: {
+        Args: never
+        Returns: string
+      }
       get_pending_buyer_confirmation_count: { Args: never; Returns: number }
       get_listing_purchase_request: {
         Args: { p_listing_id: string }
+        Returns: Json
+      }
+      get_public_listing_cards: {
+        Args: { p_ids?: string[]; p_slugs?: string[] }
         Returns: Json
       }
       get_public_reputation: {
@@ -1623,6 +1729,10 @@ export type Database = {
           p_subject_store_id?: string
           p_subject_user_id?: string
         }
+        Returns: Json
+      }
+      get_shared_favorite_list: {
+        Args: { p_token: string }
         Returns: Json
       }
       get_transaction_center: { Args: never; Returns: Json }
@@ -1727,6 +1837,10 @@ export type Database = {
         Args: { p_category: string; p_instrument_type: string }
         Returns: boolean
       }
+      mark_all_notifications_read: {
+        Args: never
+        Returns: number
+      }
       mark_notification_read: {
         Args: { p_notification_id: string }
         Returns: {
@@ -1751,6 +1865,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      merge_device_favorites: {
+        Args: { p_ids: string[] }
+        Returns: number
       }
       moderate_report: {
         Args: { p_reason: string; p_report_id: string; p_status: string }
@@ -1782,6 +1900,10 @@ export type Database = {
       }
       prepare_daily_search_alert_emails: {
         Args: { p_digest_date: string; p_limit?: number }
+        Returns: number
+      }
+      prepare_weekly_follow_emails: {
+        Args: { p_limit?: number; p_week_start: string }
         Returns: number
       }
       record_external_sale: { Args: { p_listing_id: string }; Returns: string }
@@ -2012,6 +2134,27 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      revoke_favorite_share: {
+        Args: never
+        Returns: boolean
+      }
+      set_email_preferences: {
+        Args: { p_follow_digest_emails: boolean; p_price_drop_emails: boolean }
+        Returns: {
+          follow_digest_emails: boolean
+          price_drop_emails: boolean
+          updated_at: string
+          user_id: string
+        }
+      }
+      set_favorite_note: {
+        Args: { p_listing_id: string; p_note: string }
+        Returns: string | null
+      }
+      set_follow: {
+        Args: { p_brand: string | null; p_follow: boolean; p_store_id: string | null }
+        Returns: boolean
+      }
       set_listing_favorite: {
         Args: { p_listing_id: string; p_saved: boolean }
         Returns: boolean
@@ -2094,6 +2237,10 @@ export type Database = {
       }
       set_store_verification: {
         Args: { p_store_id: string; p_verified: boolean }
+        Returns: Json
+      }
+      update_saved_search_alert: {
+        Args: { p_alert_id: string; p_frequency: string; p_name: string | null }
         Returns: Json
       }
       withdraw_store_payment_method: {

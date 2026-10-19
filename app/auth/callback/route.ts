@@ -9,6 +9,7 @@ import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   STORE_OWNER_ACCOUNT_TYPE,
   isSellerProfileComplete,
+  upsertBasicSellerProfile,
   upsertSellerProfile,
   upsertStoreOwnerProfile,
 } from "@/lib/auth/profile";
@@ -91,7 +92,10 @@ export async function GET(request: NextRequest) {
       .eq("id", data.user.id)
       .maybeSingle();
     const profileIsComplete = isSellerProfileComplete(profile);
-    if (!profileIsComplete) {
+    // auth-02: accounts created with only a name get a profile row with the name; WhatsApp comes at publishing.
+    if (!profile && !metadata.phone) {
+      await upsertBasicSellerProfile(supabase, data.user.id, String(metadata.full_name ?? ""));
+    } else if (!profileIsComplete && metadata.phone) {
       await upsertSellerProfile(supabase, data.user.id, {
         fullName: String(metadata.full_name ?? ""),
         phone: String(metadata.phone ?? ""),

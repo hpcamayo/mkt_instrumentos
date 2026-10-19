@@ -4,7 +4,7 @@ export function getSafeAuthRedirect(
   next: string | null | undefined,
   fallback = DEFAULT_AUTH_REDIRECT,
 ) {
-  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) {
     return fallback;
   }
 
