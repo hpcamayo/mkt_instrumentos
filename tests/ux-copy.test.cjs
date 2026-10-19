@@ -142,7 +142,7 @@ test("every WhatsApp contact button shares one label and the glyph, one per page
     }
   }
   const listingPage = fs.readFileSync("app/instrumentos/[slug]/page.tsx", "utf8");
-  assert.equal((listingPage.match(/<ContactModule /g) ?? []).length, 1);
+  assert.equal((listingPage.match(/<ContactModule\b/g) ?? []).length, 1);
   assert.doesNotMatch(listingPage, /<WhatsAppContactLink/);
   const storePage = fs.readFileSync("app/tiendas/[slug]/page.tsx", "utf8");
   assert.equal((storePage.match(/<StoreHeader /g) ?? []).length, 1);

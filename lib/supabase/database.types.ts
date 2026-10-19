@@ -1617,6 +1617,27 @@ export type Database = {
         Args: { p_listing_id: string }
         Returns: Json
       }
+      get_listing_stock_watch: {
+        Args: { p_listing_id: string }
+        Returns: boolean
+      }
+      get_public_review_page: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_subject_store_id?: string
+          p_subject_user_id?: string
+        }
+        Returns: Json
+      }
+      get_public_seller_facts: {
+        Args: { p_listing_id: string }
+        Returns: Json
+      }
+      set_listing_stock_watch: {
+        Args: { p_listing_id: string; p_watch: boolean }
+        Returns: boolean
+      }
       get_public_reputation: {
         Args: {
           p_limit?: number

@@ -72,6 +72,22 @@ function templateContent(payload: MarketplaceEmailPayload): TemplateContent {
       path: listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/alertas",
     };
     case "search_alert_daily": return dailyTemplate(payload);
+    // big-11: someone asked a public question on the seller's listing; the seller answers it on the listing.
+    case "listing_question_asked": return {
+      subject: "Te hicieron una pregunta en Laria",
+      heading: "Tienes una pregunta nueva",
+      body: `Alguien preguntó en “${listing?.title ?? "tu publicación"}”. Respóndela en la publicación: la respuesta queda visible para todos y ayuda a quien viene después.`,
+      ctaLabel: "Responder",
+      path: listing ? `/instrumentos/${listing.slug}#preguntas` : "/mi-cuenta/notificaciones",
+    };
+    // list-11: the buyer asked "Avísame cuando vuelva" on an Agotado listing; sent once.
+    case "listing_back_in_stock": return {
+      subject: "Volvió a estar disponible en Laria",
+      heading: "Lo que esperabas volvió",
+      body: `“${listing?.title ?? "La publicación que guardaste"}” vuelve a tener unidades. Te avisamos una sola vez, como pediste.`,
+      ctaLabel: "Ver publicación",
+      path: listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/notificaciones",
+    };
     default: throw new Error("EMAIL_TEMPLATE_UNSUPPORTED");
   }
 }

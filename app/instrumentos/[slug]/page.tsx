@@ -7,12 +7,15 @@ import { CategoryLanding } from "@/components/category-landing";
 import { ContentReport } from "@/components/content-report";
 import { JsonLd } from "@/components/json-ld";
 import { ContactModule } from "@/components/listing/contact-module";
+import { QuickQuestions, SignInHint } from "@/components/listing/contact-extras";
+import { OwnerBar, RestockAlert, SimilarAlert } from "@/components/listing/listing-viewer";
 import { ListingGallery } from "@/components/listing/listing-gallery";
-import { RelatedListings, RelatedListingsSkeleton } from "@/components/listing/related-listings";
+import { RELATED_ROW_MAX, RelatedListings, RelatedListingsSkeleton } from "@/components/listing/related-listings";
+import { ShareListing } from "@/components/listing/share-button";
+import { ListingQuestions } from "@/components/listing/listing-questions";
 import { ReputationSection } from "@/components/listing/reputation-section";
 import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@/components/listing/seller-card";
-import { SpecStrip, SpecTable } from "@/components/listing/spec-table";
-import { TrustNote } from "@/components/listing/trust-note";
+import { SpecTable } from "@/components/listing/spec-table";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
 import { AcceptedPaymentMethods } from "@/components/payment/accepted-payment-methods";
 import { PageContainer } from "@/components/page-container";
@@ -22,7 +25,22 @@ import { Price } from "@/components/ui/price";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusTag, Tag } from "@/components/ui/tag";
 import { getSpecStrip, getSpecTable } from "@/lib/listing-specs";
-import { formatMonthYear, formatPublishedAgo, listingCountLabel } from "@/lib/listing-page";
+import {
+  formatMonthYear,
+  formatPublishedAgo,
+  formatUpdatedAgo,
+  isQuietListing,
+  keySpecLine,
+  listingCountLabel,
+  rankSimilarListings,
+  readReviewPage,
+  readSellerFacts,
+  visiblePreviousPrice,
+  type ReviewPage,
+  type SellerFacts,
+} from "@/lib/listing-page";
+import { needsSafetySheet, quickQuestions } from "@/lib/contact-message";
+import { isEntityId } from "@/lib/marketplace-event-payload";
 import {
   DISCOVERABLE_STOCK_FILTER,
   buildWhatsAppUrl,
@@ -65,7 +83,8 @@ import {
   categoryFilterRedirect,
 } from "@/lib/seo";
 import { listingBreadcrumbs } from "@/lib/shell";
-import { NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
+import { formatPrice } from "@/lib/price";
+import { absoluteUrl, NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +108,8 @@ const relatedListingSelect = `
   model,
   condition,
   price_pen,
+  previous_price_pen,
+  price_dropped_at,
   instrument_type,
   attributes,
   published_at,
@@ -130,6 +151,9 @@ const loadPublicListing = cache(async (slug: string) => {
         status,
         stock_state,
         sold_at,
+        content_changed_at,
+        previous_price_pen,
+        price_dropped_at,
         store_id,
         owner_user_id,
         title,
@@ -248,6 +272,9 @@ export default async function ListingDetailPage({
   }
 
   if (!listing) {
+    // A notification links to /instrumentos/<listing id> (questions, restock): send it to the listing's address.
+    const moved = isEntityId(slug) ? await findListingSlug(slug) : null;
+    if (moved) redirect(`/instrumentos/${moved}`);
     notFound();
   }
 
@@ -256,18 +283,45 @@ export default async function ListingDetailPage({
     : listing.owner_user_id
       ? { p_subject_user_id: listing.owner_user_id, p_limit: 5 }
       : null;
-  // A failed reputation call leaves the reviews (and the rating figure) out instead of claiming there are none.
-  const reputationResult = reputationTarget
-    ? await supabase.rpc("get_public_reputation", reputationTarget)
-    : null;
+  const reviewSubject = listing.store_id
+    ? { store: listing.store_id }
+    : listing.owner_user_id
+      ? { user: listing.owner_user_id }
+      : null;
+  // fast-01: every call the page waits for runs at once. A failed reputation call leaves the reviews (and the rating
+  // figure) out instead of claiming there are none; failed facts or breakdown leave only those parts out.
+  const [reputationResult, reviewPageResult, factsResult, purchase] = await Promise.all([
+    reputationTarget ? supabase.rpc("get_public_reputation", reputationTarget) : null,
+    reviewSubject
+      ? supabase.rpc("get_public_review_page", { p_subject_user_id: reviewSubject.user, p_subject_store_id: reviewSubject.store, p_offset: 0, p_limit: 1 })
+      : null,
+    supabase.rpc("get_public_seller_facts", { p_listing_id: listing.id }),
+    loadPurchaseRequest(supabase, listing),
+  ]);
   const reputation = reputationResult && !reputationResult.error ? readPublicReputation(reputationResult.data) : null;
-  const purchase = await loadPurchaseRequest(supabase, listing);
+  const reviewPage = reviewPageResult && !reviewPageResult.error ? readReviewPage(reviewPageResult.data) : null;
+  const facts = factsResult.error ? null : readSellerFacts(factsResult.data);
   return (
     <>
       <JsonLd data={buildListingJsonLd(listing)} />
-      <ListingDetail listing={listing} supabase={supabase} reputation={reputation} purchase={purchase} />
+      <ListingDetail
+        listing={listing}
+        supabase={supabase}
+        reputation={reputation}
+        breakdown={reviewPage?.breakdown ?? null}
+        reviewSubject={reviewSubject}
+        facts={facts}
+        purchase={purchase}
+      />
     </>
   );
+}
+
+async function findListingSlug(id: string) {
+  const client = getSupabaseAdminClient();
+  if (!client) return null;
+  const { data } = await client.from("listings").select("slug").eq("id", id).in("status", ["approved", "sold"]).maybeSingle();
+  return data?.slug && data.slug !== id ? data.slug : null;
 }
 
 // PAY-1 (design §11.1): "Solicitar compra" and the accepted payment methods, only while the pilot is on, the listing has
@@ -324,21 +378,32 @@ async function renderCategoryLanding(
 }
 
 // The listing page (docs/ux-redesign/ux-4-listing-store.md § Listing page, answers L1–L21). From 1024 px two columns:
-// the gallery, "Especificaciones", "Descripción" and the reviews on the left (7 of 12); the decision column on the
-// right (identity, spec strip, the contact module, the trust statement, the seller card, "Reportar publicación"). Below
-// 1024 px one column, in the brief's order: the column wrappers become `contents` and each block takes its `order`;
-// the contact module becomes the bar at the bottom of the screen. Nothing is sticky.
+// the gallery, "Especificaciones", "Descripción", the questions and the reviews on the left (7 of 12); the decision
+// column on the right (identity, the quick questions, the contact module, the seller card, "Reportar publicación").
+// Below 1024 px one column, in the brief's order: the column wrappers become `contents` and each block takes its
+// `order`; the contact module becomes the bar at the bottom of the screen. Nothing is sticky.
+// Effortless Laria (docs/ux-effortless/listing.md): the key specs in one line under the title (list-03, replacing the
+// spec strip), dates people say (list-04), a real price drop (list-05), the one limitation line (list-02, the trust
+// note is gone), quick questions and the visitor hint (talk-02, talk-05), the seller's facts (list-10, trust-03), every
+// review (list-06), "Avísame" (list-11), the owner's shortcuts (mine-05) and eight similar listings (list-07).
 function ListingDetail({
   listing,
   supabase,
   reputation,
+  breakdown,
+  reviewSubject,
+  facts,
   purchase,
 }: {
   listing: ListingDetailData;
   supabase: PublicSupabaseClient;
   reputation: PublicReputation | null;
+  breakdown: ReviewPage["breakdown"] | null;
+  reviewSubject: { user?: string; store?: string } | null;
+  facts: SellerFacts | null;
   purchase: PurchaseRequest | null;
 }) {
+  const now = Date.now();
   const store = normalizeStore(listing);
   const particular = resolveParticularSeller(listing);
   const isStore = listing.seller_type === "store";
@@ -347,6 +412,9 @@ function ListingDetail({
   const isSold = listing.status === "sold";
   const outOfStock = !isSold && isOutOfStock(listing);
   const place = `${listing.city}, ${listing.region}`;
+  const published = listing.published_at ?? listing.created_at;
+  const updated = formatUpdatedAgo(listing.content_changed_at, published, now);
+  const quiet = !isSold && !outOfStock && isQuietListing(published, listing.content_changed_at, now);
   const seller: SellerSummary = {
     name: (isStore ? store?.name : particular.name) || (isStore ? "Tienda" : "Particular"),
     kind: isStore ? (store?.is_verified === true ? "verified" : "store") : "particular",
@@ -360,18 +428,26 @@ function ListingDetail({
         ? { average: reputation.average_rating, count: reputation.review_count }
         : null,
     since: formatMonthYear(isStore ? store?.created_at : particular.createdAt ?? listing.created_at),
+    facts,
   };
-  const strip = getSpecStrip(listing);
+  const specLine = keySpecLine(getSpecStrip(listing, 5));
   const contactHref = purchase ? buildPurchaseWhatsAppUrl(resolveContactPhone(listing), listing, purchase.sku) : buildWhatsAppUrl(listing);
   const typeHref = listing.instrument_type
     ? categoryTypePath(listing.category, listing.instrument_type)
     : categoryLandingPath(listing.category);
+  const alertFilters = {
+    category: listing.category,
+    ...(listing.instrument_type ? { instrument_type: listing.instrument_type } : {}),
+    ...(listing.brand?.trim() ? { brand: listing.brand.trim() } : {}),
+  };
 
   return (
     <section className="bg-surface">
       <StripCurrent value={listing.category} />
       <PageContainer className="pb-10 pt-3 md:pt-5 lg:pb-14">
         <Breadcrumbs items={listingBreadcrumbs(listing, displayTitle)} phoneBackLink />
+
+        <OwnerBar listingId={listing.id} sold={isSold} className="mt-2 md:mt-3" />
 
         <div className="mt-2 flex min-w-0 flex-col gap-6 md:mt-4 lg:grid lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:gap-x-8 lg:gap-y-10">
           <div className="order-1 min-w-0 lg:col-span-7 lg:row-start-1">
@@ -385,32 +461,56 @@ function ListingDetail({
                 {displayTitle}
               </h1>
               {secondaryTitle ? <p className="mt-1 t-ui text-ink-2">{secondaryTitle}</p> : null}
+              {specLine ? <p className="mt-1 t-ui font-semibold text-ink">{specLine}</p> : null}
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <Price value={listing.price_pen} size="detail" />
+                <Price value={listing.price_pen} previous={visiblePreviousPrice(listing, now)} size="detail" />
                 {outOfStock ? <StatusTag domain="stock" status="out_of_stock" /> : null}
               </p>
               {outOfStock ? (
                 <p className="mt-2 t-ui text-ink-2">
-                  Sin unidades disponibles por ahora. Puedes consultar a la tienda cuándo volverá a estar disponible.
+                  Sin unidades disponibles por ahora. Te avisamos cuando vuelva, o consulta a la tienda.
                 </p>
               ) : null}
               <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
                 {listing.condition ? <Tag>{getConditionLabel(listing.condition)}</Tag> : null}
                 <ListingDetailMetadata listingId={listing.id} trackView={!isSold}>
-                  {place} · {formatPublishedAgo(listing.published_at ?? listing.created_at, Date.now())}
+                  {place} · {formatPublishedAgo(published, now)}{updated ? ` · ${updated}` : ""}
                 </ListingDetailMetadata>
               </p>
+              {quiet ? <p className="mt-2 t-meta">Esta publicación tiene un tiempo: consulta si sigue disponible.</p> : null}
             </div>
 
             {isSold ? (
-              <div className="order-3 grid gap-2 rounded-panel bg-canvas p-4 lg:order-3">
+              <div className="order-3 grid gap-3 rounded-panel bg-canvas p-4 lg:order-3">
                 <p className="t-ui font-semibold text-ink">
                   Este instrumento fue marcado como vendido y ya no está disponible para consultas de compra.
                 </p>
+                <SimilarAlert filters={alertFilters} />
                 <Link href="#similares" className="link w-fit t-ui font-semibold">Ver publicaciones similares</Link>
               </div>
             ) : (
-              <ContactModule listingId={listing.id} href={contactHref} purchase={Boolean(purchase)} className="order-3 lg:order-3" />
+              <>
+                {outOfStock ? <RestockAlert listingId={listing.id} className="order-3 lg:order-2" /> : null}
+                <div className="order-3 grid gap-3 lg:order-2">
+                  {purchase ? null : <QuickQuestions listingId={listing.id} questions={quickQuestions(listing.seller_type)} />}
+                  <SignInHint />
+                </div>
+                <ContactModule
+                  listingId={listing.id}
+                  href={contactHref}
+                  purchase={Boolean(purchase)}
+                  safety={needsSafetySheet(listing.price_pen, Boolean(purchase))}
+                  className="order-3 lg:order-3"
+                />
+                <ShareListing
+                  url={absoluteUrl(`/instrumentos/${listing.slug}`)}
+                  title={listing.title}
+                  priceLabel={listing.price_pen !== null ? formatPrice(listing.price_pen) : null}
+                  storyImageUrl={`/instrumentos/${listing.slug}/historia`}
+                  variant="module"
+                  className="order-5 lg:order-3"
+                />
+              </>
             )}
 
             <a href="#vendedor" className="order-4 -my-1 flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-control py-1 lg:hidden">
@@ -419,15 +519,12 @@ function ListingDetail({
               {seller.rating ? <span className="t-meta"><RatingFigure rating={seller.rating} /></span> : null}
             </a>
 
-            <SpecStrip specs={strip} className="order-5 lg:order-2" />
-
             {purchase ? <AcceptedPaymentMethods methods={purchase.methods} className="order-6 lg:order-4" /> : null}
-
-            {isSold ? null : <TrustNote surface="listing" className="order-6 lg:order-4" />}
 
             <SellerCard
               seller={seller}
               sold={isSold}
+              now={now}
               className="order-9 lg:order-5"
               listingCount={
                 <Suspense fallback={<li aria-hidden="true"><Skeleton className="inline-block h-[18px] w-28 align-middle" /></li>}>
@@ -457,10 +554,20 @@ function ListingDetail({
               )}
             </section>
 
+            <div className="order-11 min-w-0">
+              <ListingQuestions
+                listingId={listing.id}
+                sold={isSold}
+                loginHref={`/login?next=${encodeURIComponent(`/instrumentos/${listing.slug}#preguntas`)}`}
+              />
+            </div>
+
             <ReputationSection
               reputation={reputation}
               title={`Reseñas de ${seller.name}`}
-              className="order-11 min-w-0"
+              breakdown={breakdown}
+              subject={reviewSubject}
+              className="order-12 min-w-0"
             />
           </div>
         </div>
@@ -479,100 +586,32 @@ function ListingDetail({
   );
 }
 
+// "Publicaciones similares" (list-07): candidates of the same type (or category), plus the same brand in the category
+// when that is thin, ranked by brand, a price within 30% and the city (lib/listing-page.ts). Eight at most.
 async function getSimilarListings(
   supabase: PublicSupabaseClient,
   listing: ListingDetailData,
 ) {
-  const primaryFilterColumn = listing.instrument_type
-    ? "instrument_type"
-    : "category";
+  const primaryFilterColumn = listing.instrument_type ? "instrument_type" : "category";
   const primaryFilterValue = listing.instrument_type ?? listing.category;
-  const primaryQuery = supabase
-    .from("listings")
-    .select(relatedListingSelect)
-    .eq("status", "approved")
-    .or(DISCOVERABLE_STOCK_FILTER)
-    .neq("id", listing.id)
-    .eq(primaryFilterColumn, primaryFilterValue)
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .order("sort_order", {
-      foreignTable: "listing_photos",
-      ascending: true,
-    })
-    .limit(1, { foreignTable: "listing_photos" })
-    .limit(12);
-
-  const { data: primaryData } = await primaryQuery.returns<ListingCardData[]>();
-  let listings = sortSimilarListings(
-    (primaryData ?? []) as ListingCardData[],
-    listing,
-  ).slice(0, 4);
-
-  if (listings.length < 4 && listing.brand) {
-    const currentIds = new Set([
-      listing.id,
-      ...listings.map((item) => item.id),
-    ]);
-    const { data: brandData } = await supabase
+  const base = () =>
+    supabase
       .from("listings")
       .select(relatedListingSelect)
       .eq("status", "approved")
       .or(DISCOVERABLE_STOCK_FILTER)
       .neq("id", listing.id)
-      .eq("brand", listing.brand)
       .order("published_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .order("sort_order", {
-        foreignTable: "listing_photos",
-        ascending: true,
-      })
-      .limit(1, { foreignTable: "listing_photos" })
-      .limit(8)
-      .returns<ListingCardData[]>();
+      .order("sort_order", { foreignTable: "listing_photos", ascending: true })
+      .limit(1, { foreignTable: "listing_photos" });
 
-    const brandListings = ((brandData ?? []) as ListingCardData[]).filter(
-      (item) => !currentIds.has(item.id),
-    );
-
-    listings = [...listings, ...brandListings].slice(0, 4);
-  }
-
-  return {
-    listings,
-  };
-}
-
-function sortSimilarListings(
-  listings: ListingCardData[],
-  sourceListing: ListingDetailData,
-) {
-  return [...listings].sort((listingA, listingB) => {
-    const listingABrandMatch = hasSameBrand(listingA, sourceListing);
-    const listingBBrandMatch = hasSameBrand(listingB, sourceListing);
-
-    if (listingABrandMatch !== listingBBrandMatch) {
-      return listingABrandMatch ? -1 : 1;
-    }
-
-    return getListingSortTime(listingB) - getListingSortTime(listingA);
-  });
-}
-
-function hasSameBrand(
-  listing: ListingCardData,
-  sourceListing: ListingDetailData,
-) {
-  const sourceBrand = sourceListing.brand?.trim().toLocaleLowerCase("es-PE");
-  const listingBrand = listing.brand?.trim().toLocaleLowerCase("es-PE");
-
-  return Boolean(sourceBrand && listingBrand && sourceBrand === listingBrand);
-}
-
-function getListingSortTime(listing: ListingCardData) {
-  const date = new Date(listing.published_at ?? listing.created_at);
-
-  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+  const [primary, brand] = await Promise.all([
+    base().eq(primaryFilterColumn, primaryFilterValue).limit(40).returns<ListingCardData[]>(),
+    listing.brand ? base().eq("category", listing.category).ilike("brand", listing.brand).limit(16).returns<ListingCardData[]>() : null,
+  ]);
+  const candidates = [...((primary.data ?? []) as ListingCardData[]), ...((brand?.data ?? []) as ListingCardData[])];
+  return { listings: rankSimilarListings(candidates, listing, RELATED_ROW_MAX) };
 }
 
 const getMoreFromSellerListings = cache(
@@ -653,6 +692,7 @@ async function SimilarListings({
       title="Publicaciones similares"
       link={{ href, label: "Ver todo" }}
       listings={result.listings}
+      layout="row"
       emptyText={listing.status === "sold" ? "Ahora no hay otras publicaciones de este tipo." : undefined}
     />
   );

@@ -1,4 +1,5 @@
 import { instrumentFilterGroups } from "@/lib/instrument-filters";
+import { listingContactMessage } from "@/lib/contact-message";
 import { resolveContactPhone, whatsAppUrl } from "@/lib/seller-contact";
 
 export { resolveContactPhone, resolveParticularSeller, whatsAppNumber } from "@/lib/seller-contact";
@@ -113,6 +114,9 @@ export type ListingCardData = {
   photo_count?: number;
   // Null unless a store links the listing to an inventory item (STORE-1a).
   stock_state?: StockState | null;
+  // list-05: a real price drop, kept by the database (listings_track_content_change); shown for 30 days.
+  previous_price_pen?: number | null;
+  price_dropped_at?: string | null;
   stores: StoreSummary | StoreSummary[] | null;
   listing_photos: ListingPhotoData[];
 };
@@ -129,6 +133,8 @@ export function isOutOfStock(listing: { stock_state?: StockState | null }) {
 
 export type ListingDetailData = ListingCardData & {
   status: "approved" | "sold";
+  // list-04: when the seller last changed what a buyer reads (never a view count).
+  content_changed_at?: string | null;
   sold_at: string | null;
   description: string | null;
   contact_name: string | null;
@@ -180,12 +186,7 @@ export function getListingSecondaryTitle(listing: {
 }
 
 export function buildWhatsAppUrl(listing: ListingDetailData) {
-  return whatsAppUrl(
-    resolveContactPhone(listing),
-    isOutOfStock(listing)
-      ? `Hola, vi tu publicación "${listing.title}" en Laria y aparece agotada. ¿Volverá a estar disponible?`
-      : `Hola, vi tu publicación "${listing.title}" en Laria. ¿Sigue disponible?`,
-  );
+  return whatsAppUrl(resolveContactPhone(listing), listingContactMessage(listing, { outOfStock: isOutOfStock(listing) }));
 }
 
 export function buildStoreWhatsAppUrl(store: {

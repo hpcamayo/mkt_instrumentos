@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { Lightbox } from "@/components/listing/lightbox";
 import { IconButton } from "@/components/ui/button";
@@ -17,13 +17,14 @@ export const THUMB_SIZES = "(max-width: 1023px) 56px, 72px";
 // The listing gallery (docs/ux-redesign/ux-4-listing-store.md § Gallery and lightbox). One sideways track of 4:3
 // frames, photo contained on white: phones swipe it (scroll snap; the counter follows), and from 1024 px two 44 px
 // arrows move it. Each frame is a button that opens the lightbox. The first photo is the page's LCP: eager with high
-// priority; the rest lazy. Thumbnails (PHOTO-017) choose the photo; past six (four on phones) a "+N" tile opens the
-// lightbox at the next photo.
+// priority; the second is eager too (Effortless list-01) so the first swipe or arrow shows it at once; the rest lazy.
+// Thumbnails (PHOTO-017) choose the photo; past six (four on phones) a "+N" tile opens the lightbox at the next photo.
 export function ListingGallery({ photos, title }: { photos: ListingPhotoData[]; title: string }) {
   const [active, setActive] = useState(0);
   const [lightboxAt, setLightboxAt] = useState<number | null>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
+  const returnFocus = useRef(false);
   const total = photos.length;
 
   const show = useCallback((index: number) => {
@@ -32,6 +33,15 @@ export function ListingGallery({ photos, title }: { photos: ListingPhotoData[]; 
     setActive(next);
     track?.scrollTo({ left: next * track.clientWidth, behavior: "auto" });
   }, [total]);
+
+  // Focus goes back to the opener once the lightbox has unmounted: while the modal is still open the page is inert and
+  // focus() does nothing.
+  useEffect(() => {
+    if (lightboxAt !== null || !returnFocus.current) return;
+    returnFocus.current = false;
+    // preventScroll keeps the track on the photo the lightbox ended on.
+    openerRef.current?.focus({ preventScroll: true });
+  }, [lightboxAt]);
 
   function onScroll() {
     const track = trackRef.current;
@@ -79,7 +89,7 @@ export function ListingGallery({ photos, title }: { photos: ListingPhotoData[]; 
                 alt={photo.alt_text ?? title}
                 priority={index === 0}
                 fetchPriority={index === 0 ? "high" : undefined}
-                loading={index === 0 ? undefined : "lazy"}
+                loading={index === 0 ? undefined : index === 1 ? "eager" : "lazy"}
                 className="object-contain"
               />
             </button>
@@ -144,9 +154,9 @@ export function ListingGallery({ photos, title }: { photos: ListingPhotoData[]; 
           title={title}
           start={lightboxAt}
           onClose={(index) => {
+            returnFocus.current = true;
             setLightboxAt(null);
             show(index);
-            openerRef.current?.focus();
           }}
         />
       ) : null}

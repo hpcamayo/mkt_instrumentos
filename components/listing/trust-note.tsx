@@ -10,8 +10,8 @@ export const TRUST_COPY = {
     "Coordinas el pago y la entrega directamente con quien vende. Laria no procesa pagos, no retiene dinero, no gestiona envíos ni garantiza el equipo o la transacción.",
   store: "Coordinas el pago y la entrega directamente con la tienda. Laria no procesa pagos ni envíos.",
   bar: "Laria no procesa pagos ni envíos",
-  reviews:
-    "Solo se reseña después de una compra que comprador y vendedor confirmaron en Laria. Laria no procesó el pago ni la entrega.",
+  // list-02: the payment limitation is said once, beside the contact button; the reviews keep only what is theirs.
+  reviews: "Solo se reseña después de una compra que comprador y vendedor confirmaron en Laria.",
   sold: "Este registro se conserva como historial. Laria no procesó ni garantizó la transacción.",
   verifiedStore: "Laria revisó a mano su RUC, razón social y contacto. No es una garantía sobre su equipo ni sus ventas.",
   approvedStore: "Laria aprobó esta tienda. Cada publicación suya se revisa antes de mostrarse.",

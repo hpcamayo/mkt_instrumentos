@@ -58,6 +58,10 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
           ? `/mi-cuenta/transacciones/${transactionReference}`
           : notification.event_type === "listing_price_drop" && notification.listing_id
           ? `/mi-cuenta/favoritos/${notification.listing_id}`
+          : isQuestionNotification(notification.event_type) && notification.listing_id
+          ? `/instrumentos/${notification.listing_id}#preguntas`
+          : notification.event_type === "listing_back_in_stock" && notification.listing_id
+          ? `/instrumentos/${notification.listing_id}`
           : notification.store_id && notification.event_type.startsWith("store_")
           ? "/mi-cuenta/tienda"
           : notification.store_id
@@ -105,5 +109,13 @@ function notificationLabel(eventType: string) {
     transaction_declined: "Confirmación rechazada",
     transaction_cancelled: "Solicitud cancelada",
     review_revealed: "Reseñas disponibles",
+    listing_question_asked: "Te hicieron una pregunta",
+    listing_question_answered: "Respondieron tu pregunta",
+    listing_back_in_stock: "Volvió a estar disponible",
   } as Record<string, string>)[eventType] ?? "Actualización de tu cuenta";
+}
+
+// big-11: a question on the seller's listing, or the answer to the buyer's question, opens the listing's "Preguntas".
+function isQuestionNotification(eventType: string) {
+  return eventType === "listing_question_asked" || eventType === "listing_question_answered";
 }

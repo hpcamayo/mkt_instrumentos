@@ -105,7 +105,7 @@ test("the reviews: verified-only wording, five latest, left out when the reputat
   assert.match(markup, /set\. 2026/);
   assert.equal((markup.match(/data-report="review"/g) ?? []).length, 5);
   assert.match(markup, /Mostrando las 5 más recientes de 9/);
-  assert.match(markup, /Solo se reseña después de una compra que comprador y vendedor confirmaron en Laria\. Laria no procesó el pago ni la entrega\./);
+  assert.match(markup, /Solo se reseña después de una compra que comprador y vendedor confirmaron en Laria\./);
   const none = html(React.createElement(ReputationSection, { reputation: { review_count: 0, average_rating: null, items: [] }, title: "Reseñas de Ana" }));
   assert.match(none, /Aún no tiene reseñas\./);
   assert.doesNotMatch(none, /Mostrando/);
@@ -148,7 +148,7 @@ test("L12: related sections show four cards in the catalog grid and are left out
   assert.doesNotMatch(source("app/instrumentos/[slug]/page.tsx"), /emptyMessage|Todavía no hay publicaciones similares/);
 });
 
-test("L3: the gallery has a button per photo, six thumbnails (four on phones), +N tiles and an eager first photo", () => {
+test("L3: the gallery has a button per photo, six thumbnails (four on phones), +N tiles and eager first two photos", () => {
   const { ListingGallery } = load("components/listing/listing-gallery.tsx", { ...mocks, "@/components/listing/lightbox": { Lightbox: () => null } });
   const photos = Array.from({ length: 8 }, (_, n) => ({ id: `p${n}`, image_url: `/p${n}.jpg`, alt_text: null, sort_order: n }));
   const markup = html(React.createElement(ListingGallery, { photos, title: "Strat" }));
@@ -161,14 +161,17 @@ test("L3: the gallery has a button per photo, six thumbnails (four on phones), +
   assert.match(markup, /Foto <\/span>1 \/ 8/);
   const images = [...markup.matchAll(/<img [^>]*>/g)].map(([tag]) => tag);
   assert.match(images[0], /data-priority=""/);
-  assert.ok(images.slice(1).every((tag) => /loading="lazy"/.test(tag)));
+  // Effortless list-01: the second photo is eager so the first swipe shows it at once; the rest stay lazy.
+  assert.match(images[1], /loading="eager"/);
+  assert.ok(images.slice(2).every((tag) => /loading="lazy"/.test(tag)));
   assert.ok(images.slice(8).every((tag) => /data-sizes="\(max-width: 1023px\) 56px, 72px"/.test(tag)));
   assert.match(html(React.createElement(ListingGallery, { photos: [], title: "Strat" })), /Sin foto/);
   const one = html(React.createElement(ListingGallery, { photos: photos.slice(0, 1), title: "Strat" }));
   assert.doesNotMatch(one, /Miniaturas|1 \/ 1|Foto siguiente/);
   const lightbox = source("components/listing/lightbox.tsx");
   for (const rule of [/showModal\(\)/, /onCancel=/, /ArrowLeft/, /ArrowRight/, /event\.key === "Tab"/, /aria-live="polite"/, /label="Cerrar"/, /sizes="100vw"/]) assert.match(lightbox, rule);
-  assert.match(source("components/listing/listing-gallery.tsx"), /openerRef\.current\?\.focus\(\)/);
+  // Focus returns to the opener after the lightbox unmounts (Effortless list-01: a focus() while the modal is open is lost).
+  assert.match(source("components/listing/listing-gallery.tsx"), /useEffect\(\(\) => \{\s*if \(lightboxAt !== null \|\| !returnFocus\.current\) return;[\s\S]*?openerRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
 });
 
 test("L4: one contact module, the phone bar is the same element, and sold pages have none", () => {
@@ -180,8 +183,10 @@ test("L4: one contact module, the phone bar is the same element, and sold pages 
   assert.match(css, /html:has\(\.contact-bar\) \{\s*scroll-padding-bottom/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
   const listing = source("app/instrumentos/[slug]/page.tsx");
-  assert.match(listing, /\{isSold \? \([\s\S]*ya no está disponible para consultas de compra[\s\S]*Ver publicaciones similares[\s\S]*\) : \(\s*<ContactModule/);
-  assert.match(listing, /\{isSold \? null : <TrustNote surface="listing"/);
+  assert.match(listing, /\{isSold \? \([\s\S]*ya no está disponible para consultas de compra[\s\S]*Ver publicaciones similares[\s\S]*\) : \(\s*<>[\s\S]*?<ContactModule\b/);
+  // Effortless list-02: the limitation statement is the line under the contact button (SafetyLine), so it goes with it.
+  assert.match(contact, /<SafetyLine /);
+  assert.doesNotMatch(listing, /<TrustNote/);
   assert.match(listing, /\{isSold \? null : <div aria-hidden="true" className="contact-bar-spacer" \/>\}/);
   // No public view count (L6 A).
   assert.doesNotMatch(listing, /initialViewCount|Visto/);

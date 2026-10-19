@@ -21,6 +21,8 @@ export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: 
         model,
         condition,
         price_pen,
+        previous_price_pen,
+        price_dropped_at,
         instrument_type,
         attributes,
         published_at,

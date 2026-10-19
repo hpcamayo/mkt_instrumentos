@@ -186,7 +186,9 @@ test("listing metadata/structured data: canonical detail, sold history not index
   assert.equal(approved.robots, undefined);
   assert.match(approved.description, /S\/.*3.?500/);
   assert.ok(approved.description.length <= 158);
-  assert.equal(approved.openGraph.images[0].url, "https://cdn.example.test/foto.webp");
+  // Effortless list-09: the preview is the generated card; the photo stays in the Product JSON-LD.
+  assert.equal(approved.openGraph.images[0].url, `/instrumentos/${approved.alternates.canonical.split("/").pop()}/opengraph-image`);
+  assert.equal(approved.twitter.card, "summary_large_image");
 
   const sold = seo.buildListingMetadata({ ...baseListing, status: "sold" });
   assert.deepEqual(sold.robots, { index: false, follow: true });
@@ -362,7 +364,7 @@ test("LEGAL-005/LEGAL-006: safety and trust copy states the limitations and neve
     "components/sell-listing-form.tsx", "components/seller-signup-form.tsx", "app/instrumentos/[slug]/page.tsx", "app/tiendas/[slug]/page.tsx",
     // UX-4: the listing and store pages' limitation texts live in their components (TrustNote holds them all).
     "components/listing/trust-note.tsx", "components/listing/contact-module.tsx", "components/listing/seller-card.tsx",
-    "components/listing/reputation-section.tsx", "components/store/store-header.tsx", "components/store/store-sections.tsx", ...legalRoutes.map(([file]) => file),
+    "components/listing/reputation-section.tsx", "components/listing/contact-extras.tsx", "components/listing/safety-sheet.tsx", "components/listing/verified-explainer.tsx", "components/store/store-header.tsx", "components/store/store-sections.tsx", ...legalRoutes.map(([file]) => file),
   ];
   const forbidden = /(garantizamos|te garantiza|compra (protegida|segura) con laria|pago (protegido|seguro) (en|con) laria|protección al comprador|devolución garantizada|autenticidad garantizada|envío gratis)/i;
   for (const file of trustSurfaces) assert.doesNotMatch(source(file), forbidden, file);
@@ -373,7 +375,9 @@ test("LEGAL-005/LEGAL-006: safety and trust copy states the limitations and neve
   // UX-4 L5 A: one trust statement per page, with the safety link, from TrustNote; the listing page renders it.
   assert.match(source("components/listing/trust-note.tsx"), /href="\/consejos-de-seguridad"/);
   assert.match(source("components/listing/trust-note.tsx"), /no procesa pagos, no retiene dinero, no gestiona envíos ni garantiza el equipo o la transacción/);
-  assert.match(source("app/instrumentos/[slug]/page.tsx"), /<TrustNote surface="listing"/);
+  // Effortless list-02: on the listing page that statement is the line under the contact button, with the safety link.
+  assert.match(source("components/listing/contact-extras.tsx"), /TRUST_COPY\.listing|no procesa pagos/);
+  assert.match(source("components/listing/contact-module.tsx"), /<SafetyLine /);
 });
 
 test("public footer, forms and navigation link to legal/safety pages and category landings", () => {

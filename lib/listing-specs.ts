@@ -75,14 +75,14 @@ export function getCardSpecLine(listing: Pick<ListingCardData, "condition" | "in
 
 // The listing page's spec strip (UX-4 L9 A): up to four of the type's attributes, starting with the card's two, then
 // the rest in the type's filter order. The condition, brand and model are in the identity block already.
-export function getSpecStrip(listing: Pick<ListingDetailData, "instrument_type" | "attributes">): ListingSpec[] {
+export function getSpecStrip(listing: Pick<ListingDetailData, "instrument_type" | "attributes">, limit = 4): ListingSpec[] {
   const specs = getAttributeSpecs(listing);
   const first = cardAttributeKeys[listing.instrument_type ?? ""] ?? [];
   const ranked = [
     ...first.flatMap((key) => specs.filter((spec) => spec.key === key)),
     ...specs.filter((spec) => !first.includes(spec.key)),
   ];
-  return ranked.slice(0, 4).map(({ label, value }) => ({ label, value }));
+  return ranked.slice(0, limit).map(({ label, value }) => ({ label, value }));
 }
 
 // "Especificaciones" (UX-4 L9 A): Tipo (the instrument type, or the category when there is none), Marca, Modelo,
