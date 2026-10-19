@@ -26,6 +26,7 @@ export const IMPORT_FILE_RULES: readonly string[] = [
   "Los encabezados pueden ser los tuyos: en el siguiente paso eliges qué dato tiene cada columna.",
   "No se aceptan .xls antiguos ni archivos con macros (.xlsm). En Excel, usa Guardar como → Libro de Excel (.xlsx).",
   "Las fotos no van dentro del archivo: se suben después, en el paso Fotos.",
+  "¿Solo quieres cambiar precios? Exporta tu inventario, cámbialos en Excel y súbelo: Laria no deshace las ventas que registres mientras tanto.",
 ];
 
 export const IMPORT_COLUMN_GROUPS: readonly ColumnGuideGroup[] = [

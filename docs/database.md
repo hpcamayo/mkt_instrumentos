@@ -763,3 +763,14 @@ why is in `docs/store-operations/review-fixes.md`. Long functions are patched fr
   description) written by the owner through `set_store_import_row_publish_fields(session, row, fields)`, refused once the
   row is published (`IMPORT_ROW_PUBLISHED`) or publication is closed (`IMPORT_PUBLISH_CLOSED`). No function that locks
   or writes stock is replaced.
+
+<!-- ux-effortless:listing (batch "listing", migration slot 20261102) -->
+## Effortless Laria: listing page and WhatsApp
+
+- `20261102120000_ux_store_listing_contact.sql` (fix-03): trigger `stores_sync_listing_contact_phone` (after update of
+  `stores.whatsapp_phone`) runs `laria_private.sync_store_listing_contact_phone()`, which copies the store's new number
+  to every unsold store listing (`status <> 'sold'`; sold rows stay immutable history). It opens the listing guard
+  (`app.allow_listing_admin_fields`) for that one statement and restores it. A one-time update brings listings that
+  had already drifted to their store's number. Not callable by `anon` or `authenticated`. The app also reads a store
+  listing's contact from the store (`lib/seller-contact.ts` `resolveContactPhone`). Suite: `tests/ux-listing-contact.sql`.
+<!-- /ux-effortless:listing -->

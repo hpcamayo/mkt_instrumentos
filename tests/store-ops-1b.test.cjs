@@ -52,10 +52,10 @@ test("export prefixes formula-like text in CSV and never touches genuine numbers
   ]);
   assert.equal(rows[0].length, EXPORT_HEADERS.length);
   const csv = toCsv(rows);
-  assert.ok(csv.startsWith("﻿SKU,Nombre,Variante,Marca,Modelo,Categoría,Stock,Disponible,Precio (PEN),Umbral de stock bajo,Referencia externa,Estado del SKU,ID de publicación,Estado de la publicación,Enlace\r\n"));
+  assert.ok(csv.startsWith("﻿SKU,Nombre,Variante,Marca,Modelo,Categoría,Stock,Disponible,Precio (PEN),Umbral de stock bajo,Referencia externa,Estado del SKU,ID de publicación,Estado de la publicación,Enlace,Exportado el\r\n"));
   const line = csv.split("\r\n")[1];
   assert.match(line, /^00123,"'=HYPERLINK\(""http:\/\/evil"",""clic""\)","Rojo, ""edición""",Boss,DS-1,/);
-  assert.match(line, /,7,7,1500,,'@ref,Activo,11111111-1111-4111-8111-111111111111,Publicada,https?:\/\/[^,]+\/instrumentos\/boss-ds-1$/);
+  assert.match(line, /,7,7,1500,,'@ref,Activo,11111111-1111-4111-8111-111111111111,Publicada,https?:\/\/[^,]+\/instrumentos\/boss-ds-1,\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/);
 });
 
 test("export prefixes text that starts with a line feed before a formula (Codex review 3, finding 3)", () => {

@@ -24,10 +24,17 @@ export const EXPORT_HEADERS = [
   "ID de publicación",
   "Estado de la publicación",
   "Enlace",
+  // fix-04 (Effortless Laria, stores): when the file was made, so re-importing it never undoes sales recorded since.
+  "Exportado el",
 ] as const;
 
 // Identifier columns are stored as text in XLSX so Excel keeps leading zeros (§7.3).
-export const EXPORT_TEXT_COLUMNS = [0, 10, 12];
+export const EXPORT_TEXT_COLUMNS = [0, 10, 12, 15];
+
+// UTC to the second, e.g. 2026-10-19T14:05:00Z: Excel keeps it as text, and the import reads exactly this shape.
+export function exportTimestamp(now = new Date()) {
+  return now.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
 
 export type ExportItem = {
   merchant_sku: string;
@@ -56,7 +63,7 @@ export function listingColumns(item: ExportItem): ExportCell[] {
 
 export type ExportCell = string | number | null;
 
-export function exportRows(items: ExportItem[]): ExportCell[][] {
+export function exportRows(items: ExportItem[], exportedAt = exportTimestamp()): ExportCell[][] {
   return items.map((item) => [
     item.merchant_sku,
     item.product_name,
@@ -73,6 +80,7 @@ export function exportRows(items: ExportItem[]): ExportCell[][] {
     item.listing?.id ?? null,
     item.listing ? statusLabel("listing", item.listing.status) : null,
     item.listing?.status === "approved" ? absoluteUrl(`/instrumentos/${item.listing.slug}`) : null,
+    exportedAt,
   ]);
 }
 
@@ -94,7 +102,7 @@ export function toXlsxSheet(rows: ExportCell[][], headers: readonly string[] = E
     name: "Inventario",
     rows: [[...headers], ...rows] as XlsxCell[][],
     textColumns: EXPORT_TEXT_COLUMNS,
-    widths: [16, 40, 18, 16, 18, 18, 8, 10, 12, 12, 18, 12, 38, 18, 48, 40, 12, 12, 14, 60].slice(0, headers.length),
+    widths: [16, 40, 18, 16, 18, 18, 8, 10, 12, 12, 18, 12, 38, 18, 48, 22, 40, 12, 12, 14, 60].slice(0, headers.length),
   };
 }
 

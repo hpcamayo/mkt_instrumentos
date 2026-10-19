@@ -32,6 +32,7 @@ import {
   isOutOfStock,
   normalizeStore,
   parseListingFilters,
+  resolveContactPhone,
   resolveParticularSeller,
   type ListingCardData,
   type ListingDetailData,
@@ -361,7 +362,7 @@ function ListingDetail({
     since: formatMonthYear(isStore ? store?.created_at : particular.createdAt ?? listing.created_at),
   };
   const strip = getSpecStrip(listing);
-  const contactHref = purchase ? buildPurchaseWhatsAppUrl(listing.whatsapp_phone, listing, purchase.sku) : buildWhatsAppUrl(listing);
+  const contactHref = purchase ? buildPurchaseWhatsAppUrl(resolveContactPhone(listing), listing, purchase.sku) : buildWhatsAppUrl(listing);
   const typeHref = listing.instrument_type
     ? categoryTypePath(listing.category, listing.instrument_type)
     : categoryLandingPath(listing.category);
@@ -652,6 +653,7 @@ async function SimilarListings({
       title="Publicaciones similares"
       link={{ href, label: "Ver todo" }}
       listings={result.listings}
+      emptyText={listing.status === "sold" ? "Ahora no hay otras publicaciones de este tipo." : undefined}
     />
   );
 }
