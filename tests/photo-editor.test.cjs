@@ -106,6 +106,8 @@ function editorHarness({ photos = existingPhotos(), livePhotos = photos, listing
     }) },
     "@/components/page-notice": { PageNotice },
     "@/components/location-fields": { LocationFields: () => null },
+    // FIX 02 re-encodes in the browser; the harness has no canvas, so photos pass through unchanged.
+    "@/components/selling/prepare-photo": { MAX_SOURCE_PHOTO_BYTES: 40 * 1024 * 1024, prepareListingPhoto: async (photo) => ({ file: photo }) },
     "@/lib/listings": { categoryOptions: [], conditionOptions: [] },
     "@/lib/supabase/browser-client": { getSupabaseBrowserClient: () => ({ storage: {
       from(bucket) {
@@ -198,7 +200,7 @@ test("photo editor sorts persisted proposal photos without mutating its input or
 
 test("photo editor adds supported files up to ten and rejects invalid, empty, oversized or eleventh files", () => {
   const form = editorHarness();
-  for (const invalid of [file("gear.gif", "image/gif"), file("empty.png", "image/png", 0), file("large.jpg", "image/jpeg", 5 * 1024 * 1024 + 1)]) {
+  for (const invalid of [file("gear.gif", "image/gif"), file("empty.png", "image/png", 0), file("large.jpg", "image/jpeg", 40 * 1024 * 1024 + 1)]) {
     assert.equal(form.add([invalid]).value, "");
     assert.equal(form.images().length, 2);
     assert.equal(form.notice().props.kind, "error");
