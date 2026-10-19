@@ -362,6 +362,14 @@ Inventory (Tiendas, enabled per store by an Admin during the pilot):
   CSV and Excel export with formula-safe text), the SKU page (stock actions, history, publication link, data, SKU
   change, archive), and publishing a SKU as a listing through the existing form and moderation.
 
+<!-- Effortless Laria, inventory batch (proposed; docs/ux-effortless/inventory.md) -->
+- Inventario search (fix-06) matches the SKU, name, variant, external reference (barcodes) and the linked
+  publication's title, brand and model; every word must appear, in any order, ignoring accents and case, and the
+  table follows the box as the owner types. The "En revisión" tile counts new publications and changes in review and
+  opens exactly those; rejected publications have their own tile. The catalog filter stays hidden until catalog
+  matching exists (fix-09).
+<!-- /Effortless Laria, inventory batch -->
+
 Spreadsheet import:
 
 - An enabled store imports CSV or XLSX (up to 5 MB, 2,000 rows, 80 columns, first visible sheet) in steps: upload,
