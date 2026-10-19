@@ -138,3 +138,13 @@ test("SHOP 06 and STOCK 09: store defaults prefill the form and SKUs remember th
 test("POST 15: the approval e-mail opens the live listing", () => {
   assert.match(source("lib/email/templates.ts"), /Tu publicación está en línea[\s\S]{0,300}\/instrumentos\/\$\{listing\.slug\}/);
 });
+
+test("fast-04: upload progress is announced politely, not every percent", () => {
+  const photos = source("components/selling/photo-step.tsx");
+  assert.match(photos, /role="status">\{photoSummary\(photos\)\}/);
+  assert.match(photos, /Subiendo \$\{Math\.min\(done \+ 1, photos\.length\)\} de \$\{photos\.length\} fotos…/);
+  assert.match(photos, /"Fotos subidas"/);
+  const clip = source("components/selling/sound-clip-field.tsx");
+  assert.doesNotMatch(clip, /aria-live="polite"/);
+  assert.match(clip, /<span aria-hidden> \{Math\.round\(clip\.progress \* 100\)\}%<\/span>/);
+});

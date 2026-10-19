@@ -105,8 +105,9 @@ export function SoundClipField({ id, clip, disabled, onClip, onRemove, onRetry }
         <div className="grid gap-2 rounded-panel border border-subtle bg-canvas p-3">
           {/* A short instrument sample has no speech to caption. */}
           <audio controls preload="none" src={clip.url} className="w-full" aria-label="Escuchar el sonido grabado" />
-          <p className="t-meta font-semibold" aria-live="polite">
-            {clip.duration.toLocaleString("es-PE", { maximumFractionDigits: 1 })} s · {clip.status === "done" ? "Subido" : clip.status === "error" ? (clip.error ?? "No se subió") : `Subiendo ${Math.round(clip.progress * 100)}%`}
+          <p className="t-meta font-semibold">
+            {clip.duration.toLocaleString("es-PE", { maximumFractionDigits: 1 })} s · <span role="status">{clip.status === "done" ? "Subido" : clip.status === "error" ? (clip.error ?? "No se subió") : "Subiendo…"}</span>
+            {clip.status === "uploading" ? <span aria-hidden> {Math.round(clip.progress * 100)}%</span> : null}
           </p>
           <div className="flex flex-wrap gap-2">
             {clip.status === "error" ? <button type="button" disabled={disabled} onClick={onRetry} className={buttonClasses({ variant: "secondary", size: "sm", className: "min-h-11" })}>Reintentar</button> : null}
@@ -129,7 +130,7 @@ export function SoundClipField({ id, clip, disabled, onClip, onRemove, onRetry }
             {working ? "Comprimiendo…" : "Elegir audio"}
             <input id={id} type="file" accept="audio/*" disabled={disabled || recording || working} className="sr-only" onChange={pickFile} />
           </label>
-          {recording ? <p className="t-ui font-semibold text-ink" aria-live="polite"><Mic className="mr-1 inline h-4 w-4" aria-hidden />Grabando… {elapsed} s</p> : null}
+          {recording ? <p className="t-ui font-semibold text-ink"><Mic className="mr-1 inline h-4 w-4" aria-hidden /><span role="status">Grabando…</span><span aria-hidden> {elapsed} s</span></p> : null}
         </div>
       )}
       {problem ? <p className="t-ui font-semibold text-danger" role="alert">{problem}</p> : null}

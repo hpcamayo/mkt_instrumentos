@@ -200,7 +200,7 @@ export function PhotoStep({ id, photos, shots, error, hint, disabled, onAdd, onR
           })}
         </ol>
       ) : null}
-      <p className="t-meta font-semibold" aria-live="polite">{photoSummary(photos)}</p>
+      <p className="t-meta font-semibold" role="status">{photoSummary(photos)}</p>
     </div>
   );
 }
@@ -227,11 +227,15 @@ function UploadState({ photo }: { photo: FormPhoto }) {
   );
 }
 
+// Announced politely (fast-04): which photo is uploading, then "Fotos subidas"; never every percent.
 export function photoSummary(photos: FormPhoto[]) {
   const uploading = photos.filter((photo) => photo.status === "preparing" || photo.status === "uploading").length;
+  const done = photos.filter((photo) => photo.status === "done").length;
   const failed = photos.filter((photo) => photo.status === "error").length;
-  const parts = [`${photos.length} de ${MAX_LISTING_PHOTOS} fotos`];
-  if (uploading) parts.push(`${uploading} subiendo`);
+  const count = `${photos.length} de ${MAX_LISTING_PHOTOS} fotos`;
+  const parts = uploading
+    ? [`Subiendo ${Math.min(done + 1, photos.length)} de ${photos.length} fotos…`]
+    : done && !failed ? ["Fotos subidas", count] : [count];
   if (failed) parts.push(`${failed} sin subir`);
   return parts.join(" · ");
 }
