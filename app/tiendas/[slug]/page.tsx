@@ -66,6 +66,7 @@ type StoreRow = StoreData & {
 const STORE_GRID = "grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-5";
 const STORE_GRID_SIZES = "(max-width: 767px) 50vw, (max-width: 1023px) 33vw, (max-width: 1279px) 25vw, 270px";
 
+// previous_price_pen and price_dropped_at give the card's "Antes S/" (list-05), as in the catalog.
 const STORE_LISTING_SELECT = `
   id,
   title,
@@ -75,6 +76,8 @@ const STORE_LISTING_SELECT = `
   model,
   condition,
   price_pen,
+  previous_price_pen,
+  price_dropped_at,
   instrument_type,
   attributes,
   published_at,

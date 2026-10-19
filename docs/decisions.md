@@ -417,7 +417,7 @@ Detail: [docs/ux-effortless/find.md](ux-effortless/find.md).
 - UXD-find-5: Locations come from listings and group into five zones, and cards show the store's district (find-05).
 - UXD-find-6: Menus and landings offer only brands, types and categories with listings, and when the counts fail they fall back to showing all (find-06).
 - UXD-find-7: The catalog gets two new sorts, "Bajaron de precio" (30 days) and "Tiendas verificadas primero" (find-10).
-- UXD-find-8: Personal signals (recently viewed, taste, "¿Qué tocas?", comparison, last visit, results trail) stay on the device, and each surface says so and can be cleared.
+- UXD-find-8: Personal signals (recently viewed, taste, "¿Qué tocas?", comparison, last visit, results trail) stay on the device, and each surface says so and can be cleared. The last visit is the accounts batch's first-party cookie, which the browser sends with each request and which Favoritos and Alertas read on the server (UXD-accounts-6, UXD-integration-9).
 - UXD-find-9: The home leads with instruments, and the vitrina and the category tiles are retired (big-01; replaces H1's "B Vitrina" and H2's automatic vitrina).
 - UXD-find-10: "Para ti" never shows two listings of the same seller in a row, and the server exposes only a hashed seller key (big-01).
 - UXD-find-11: Phones use "Ver 24 más", while numbered pages remain in the HTML for search engines (find-15).

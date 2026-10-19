@@ -140,7 +140,7 @@ export function HowItWorks() {
 }
 
 // Up to three active verified stores, newest first, without stats (Q18 A), and the "¿Tienes una tienda?" tile. "Ver
-// todas" opens the catalog filtered to verified stores: there is no stores directory (N7).
+// todas" opens the stores directory, /tiendas (find-13, which replaced N7's filtered catalog).
 export function VerifiedStoresSection({ stores }: { stores: HomeStore[] }) {
   return (
     <section aria-labelledby="tiendas-titulo">

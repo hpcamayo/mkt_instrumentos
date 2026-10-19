@@ -47,8 +47,9 @@ export const metadata: Metadata = {
     title: SITE_OG_TITLE,
     description: SITE_OG_DESCRIPTION,
   },
+  // The share cards are 1200 x 630 (list-09), so X shows them large on every page.
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Laria | Instrumentos musicales en Perú",
     description:
       "Marketplace peruano para instrumentos musicales con contacto directo por WhatsApp.",

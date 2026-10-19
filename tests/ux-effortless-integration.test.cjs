@@ -152,3 +152,17 @@ test("auth-02 on the account home: the profile notice waits until the person has
   assert.match(seller, /Completa tu perfil Particular/);
   assert.match(seller, /href="\/mi-cuenta\/perfil"/);
 });
+
+test("list-09 on other batches' pages: pages with their own openGraph name the Laria card; store cards show Antes", () => {
+  assert.match(source("lib/site.ts"), /export const DEFAULT_OG_IMAGES = \[\{ url: "\/opengraph-image", width: 1200, height: 630/);
+  assert.match(source("lib/seo.ts"), /openGraph: \{ \.\.\.OPEN_GRAPH_BASE, title: `\$\{titled\(title\)\} \| \$\{SITE_NAME\}`, description: pageDescription, url, images: DEFAULT_OG_IMAGES \}/);
+  for (const file of ["app/terminos/page.tsx", "app/privacidad/page.tsx", "app/articulos-prohibidos/page.tsx", "app/consejos-de-seguridad/page.tsx", "app/libro-de-reclamaciones/page.tsx"]) {
+    assert.match(source(file), /openGraph: \{[^}]*images: DEFAULT_OG_IMAGES \}/, file);
+  }
+  assert.match(source("app/favoritos/compartida/[token]/page.tsx"), /images: image \? \[image\] : DEFAULT_OG_IMAGES/);
+  // The home and the category landings keep their own file-based cards, so their metadata names none.
+  assert.doesNotMatch(source("lib/seo.ts").match(/export function buildCategoryMetadata[\s\S]*?\n}\n/)[0], /images/);
+  assert.doesNotMatch(source("lib/seo.ts").match(/export function buildHomeMetadata[\s\S]*?\n}\n/)[0], /images/);
+  assert.match(source("app/layout.tsx"), /card: "summary_large_image"/);
+  assert.match(source("app/tiendas/[slug]/page.tsx"), /price_pen,\s*previous_price_pen,\s*price_dropped_at,/);
+});

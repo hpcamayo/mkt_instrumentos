@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { LegalPage, LegalSection, MarketplaceLimitations } from "@/components/legal-page";
-import { OPEN_GRAPH_BASE } from "@/lib/site";
+import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
 
 const description = "Cómo comprar y vender instrumentos de forma más segura en Laria: qué revisar, cómo pagar y entregar, y señales de posible estafa.";
 
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Consejos de seguridad para comprar y vender",
   description,
   alternates: { canonical: "/consejos-de-seguridad" },
-  openGraph: { ...OPEN_GRAPH_BASE, title: "Consejos de seguridad | Laria", description, url: "/consejos-de-seguridad" },
+  openGraph: { ...OPEN_GRAPH_BASE, title: "Consejos de seguridad | Laria", description, url: "/consejos-de-seguridad", images: DEFAULT_OG_IMAGES },
 };
 
 export default function SafetyPage() {

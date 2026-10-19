@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { TermsAssistedCommerceSection } from "@/components/legal/assisted-commerce-legal";
 import { LegalContact, LegalPage, LegalSection, MarketplaceLimitations } from "@/components/legal-page";
-import { OPEN_GRAPH_BASE } from "@/lib/site";
+import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
 
 const description = "Términos de uso y reglas del marketplace Laria: cuentas, publicaciones, moderación, reseñas y lo que Laria no hace (pagos, escrow, envíos ni garantías).";
 
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: "Términos y reglas del marketplace",
   description,
   alternates: { canonical: "/terminos" },
-  openGraph: { ...OPEN_GRAPH_BASE, title: "Términos y reglas del marketplace | Laria", description, url: "/terminos" },
+  openGraph: { ...OPEN_GRAPH_BASE, title: "Términos y reglas del marketplace | Laria", description, url: "/terminos", images: DEFAULT_OG_IMAGES },
 };
 
 export default function TermsPage() {

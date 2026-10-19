@@ -26,9 +26,10 @@ UXD-find-n; the integrator moves them into `docs/decisions.md`. Proposed accepta
 - **Database.** `supabase/migrations/20261101120000_ux_find_search.sql` (never applied to a hosted database): the search,
   facet counts, suggestions, menu counts, the price-drop and verified-first fields, the gone-listing hint and the alerts'
   text query. `docs/database.md` § Effortless Laria: search and browse. Tests: `tests/ux-find-search.sql`.
-- **Device memory.** `lib/catalog-device.ts`: what this device remembers (recently viewed, taste, "¿Qué tocas?", "Sin
-  personalizar", last visit, the comparison, the results trail). Nothing is sent to Laria. Every read and write
-  tolerates blocked storage.
+- **Device memory.** `lib/catalog-device.ts`: what this device remembers (taste, "¿Qué tocas?", "Sin personalizar",
+  the comparison, the results trail). Nothing is sent to Laria. Every read and write tolerates blocked storage. At
+  integration (UXD-integration-9) "Vistos recientemente" moved to `lib/device-saves.ts`, still on the device, and the
+  last visit became the accounts batch's first-party cookie, which Favoritos and Alertas also read.
 - **Request cache.** `lib/catalog-data.ts` dedupes the catalog page, facets and rescue between `generateMetadata` and
   the page (React `cache`).
 - **Public JSON routes** (read-only, short cache headers): `/api/catalog/facets`, `/api/catalog/suggest`,
@@ -133,6 +134,9 @@ UXD-find-n; the integrator moves them into `docs/decisions.md`. Proposed accepta
 - **What changed.** "Vistos recientemente" (up to 12, newest first, "Solo en este dispositivo.", "Borrar") on the home,
   the catalog and the not-found page.
 - **Files.** `components/catalog-recently-viewed.tsx`, `components/listing-card.tsx` (`rememberOpened`).
+- **At integration** (UXD-integration-9 in `integration.md`): one list with the accounts batch's (big-04), every
+  listing page opened however it was reached, drawn from today's public cards, so a listing taken down drops out and a
+  sold one says "Vendido". Opening a listing from a card still feeds "Para ti".
 
 ## FIND 12: compare instruments side by side
 

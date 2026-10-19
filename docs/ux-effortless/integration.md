@@ -159,6 +159,13 @@ The accounts batch (#28) shipped shared pieces and listed where the other batche
 - **Store columns the public cannot read.** The store-details fix (#30) closes the stores table to the public except
   for the columns public pages use. The inventory batch's purchase requests page read the street address through the
   table; it now reads the owner's own row, which `get_own_store()` already gives the account pages.
+- **The Laria card on every shared page.** The listing batch's link previews (list-09) left two edits to other
+  batches' files: `/listados`, the legal pages and the Libro de Reclamaciones set their own `openGraph` without images,
+  so a link to them showed no picture. They now name the Laria card (`DEFAULT_OG_IMAGES` in `lib/site.ts`), a shared
+  favorites list without photos uses it too, and X shows the large card everywhere. The home, listings, categories and
+  stores keep their own.
+- **"Antes S/" on store pages.** The store page's cards did not select the two price-drop columns, so a store's
+  dropped prices showed no "Antes" there while the catalog and the home showed it.
 - **Selling's migrations drop their helper.** `20261104120100` and `20261104120200` each created
   `pg_temp.selling_fix` without dropping it. The local replay runs every migration in its own session, so it passed;
   the Supabase CLI applies them all over one connection, where the second `create` fails. Both now drop it after use,

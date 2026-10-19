@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { LegalPage, LegalSection } from "@/components/legal-page";
-import { OPEN_GRAPH_BASE } from "@/lib/site";
+import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
 
 const description = "Qué artículos y anuncios no se pueden publicar en Laria y qué artículos tienen condiciones especiales.";
 
@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: "Artículos prohibidos y restringidos",
   description,
   alternates: { canonical: "/articulos-prohibidos" },
-  openGraph: { ...OPEN_GRAPH_BASE, title: "Artículos prohibidos y restringidos | Laria", description, url: "/articulos-prohibidos" },
+  openGraph: { ...OPEN_GRAPH_BASE, title: "Artículos prohibidos y restringidos | Laria", description, url: "/articulos-prohibidos", images: DEFAULT_OG_IMAGES },
 };
 
 export default function ProhibitedItemsPage() {

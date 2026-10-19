@@ -8,7 +8,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { parseSharedFavoriteList } from "@/lib/favorites";
-import { NOINDEX_ROBOTS } from "@/lib/site";
+import { DEFAULT_OG_IMAGES, NOINDEX_ROBOTS } from "@/lib/site";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 const loadList = cache(async (token: string) => {
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
   const title = `${listTitle(list.owner_name)} en Laria`;
   const description = list.items.length === 1 ? "1 instrumento guardado." : `${list.items.length} instrumentos guardados.`;
   const image = list.items.find((item) => item.image_url)?.image_url;
-  return { title, description, robots: NOINDEX_ROBOTS, openGraph: { title, description, ...(image ? { images: [image] } : {}) } };
+  return { title, description, robots: NOINDEX_ROBOTS, openGraph: { title, description, images: image ? [image] : DEFAULT_OG_IMAGES } };
 }
 
 // save-11: a shared favorites list. Public listings only, with the owner's notes.

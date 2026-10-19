@@ -8,7 +8,7 @@ import {
   LISTING_SLUG_PATTERN,
   listingContextDescription,
 } from "@/lib/complaints-book";
-import { OPEN_GRAPH_BASE } from "@/lib/site";
+import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 // Libro de Reclamaciones virtual (EASE stores trust-05), in the format of Anexo I of the Reglamento del Libro de
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   title: "Libro de Reclamaciones",
   description,
   alternates: { canonical: COMPLAINTS_BOOK_PATH },
-  openGraph: { ...OPEN_GRAPH_BASE, title: "Libro de Reclamaciones | Laria", description, url: COMPLAINTS_BOOK_PATH },
+  openGraph: { ...OPEN_GRAPH_BASE, title: "Libro de Reclamaciones | Laria", description, url: COMPLAINTS_BOOK_PATH, images: DEFAULT_OG_IMAGES },
 };
 
 type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> };

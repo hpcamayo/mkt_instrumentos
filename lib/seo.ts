@@ -10,6 +10,7 @@ import {
   type ListingDetailData,
 } from "@/lib/listings";
 import {
+  DEFAULT_OG_IMAGES,
   NOINDEX_FOLLOW_ROBOTS,
   OPEN_GRAPH_BASE,
   SITE_OG_DESCRIPTION,
@@ -86,7 +87,7 @@ export function buildCatalogMetadata(searchParams: SearchParams, page: number, f
   const pageMetadata = (url: string, title: string, pageDescription: string, extra: Metadata = {}): Metadata => ({
     title: titled(title),
     description: pageDescription,
-    openGraph: { ...OPEN_GRAPH_BASE, title: `${titled(title)} | ${SITE_NAME}`, description: pageDescription, url },
+    openGraph: { ...OPEN_GRAPH_BASE, title: `${titled(title)} | ${SITE_NAME}`, description: pageDescription, url, images: DEFAULT_OG_IMAGES },
     ...extra,
   });
 
