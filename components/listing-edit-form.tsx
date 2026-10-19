@@ -20,6 +20,7 @@ import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
 import { conditionChoices, validateSellDraft } from "@/lib/sell-form";
 import { useFormErrors } from "@/components/use-form-errors";
+import { returnLabel } from "@/lib/listing-return";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
@@ -355,7 +356,7 @@ export function ListingEditForm({
     <form ref={validation.formRef} noValidate onSubmit={handleSubmit} onChange={validation.onChange} aria-busy={busy} className="grid gap-6 rounded-panel border border-subtle bg-white p-5 sm:p-6">
       {message ? (
         <PageNotice kind={state === "error" ? "error" : "success"} message={message}>
-          {state === "success" ? <Link href={returnHref} className="link mt-3 inline-block font-semibold">Volver al inventario</Link> : null}
+          {state === "success" ? <Link href={returnHref} className="link mt-3 inline-block font-semibold">{returnLabel(returnHref)}</Link> : null}
         </PageNotice>
       ) : null}
 
