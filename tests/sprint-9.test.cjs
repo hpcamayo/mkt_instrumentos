@@ -104,8 +104,12 @@ test("SEO-001: listing slugs can never equal a reserved category slug and the ro
 test("SEO-002..SEO-005: category pages use the shared catalog query, 24-item stable pages and URL-driven filters", () => {
   const catalog = source("lib/catalog.ts");
   assert.match(catalog, /\.eq\("status", "approved"\)/);
-  assert.match(catalog, /\.order\("id"\)\s*\.range\(\(page - 1\) \* LISTINGS_PAGE_SIZE, page \* LISTINGS_PAGE_SIZE - 1\)/);
-  assert.match(source("app/listados/page.tsx"), /fetchCatalogPage\(supabase, filters, page\)/);
+  // Effortless Laria (find batch): the page size is a parameter (the gone page asks for four), 24 by default.
+  assert.match(catalog, /page: number, pageSize = LISTINGS_PAGE_SIZE\)/);
+  assert.match(catalog, /\.order\("id"\)\s*\.range\(\(page - 1\) \* pageSize, page \* pageSize - 1\)/);
+  // Effortless Laria (find batch): /listados reads its page through the request-cached lib/catalog-data.ts.
+  assert.match(source("app/listados/page.tsx"), /getCatalogPage\(filters, page\)/);
+  assert.match(source("lib/catalog-data.ts"), /fetchCatalogPage\(supabase, fromKey\(value\), page\)/);
   const detail = source("app/instrumentos/[slug]/page.tsx");
   assert.match(detail, /parseListingFilters\(\{ category \}\)[\s\S]*fetchCatalogPage\(supabase, filters, page\)/);
   assert.match(detail, /getPageRedirect\(page, result\.count, result\.error\)/);
@@ -113,10 +117,10 @@ test("SEO-002..SEO-005: category pages use the shared catalog query, 24-item sta
   const landing = source("components/category-landing.tsx");
   assert.match(landing, /<CatalogView[\s\S]*filters=\{filters\}[\s\S]*scope=\{landingScope\(landing\.category\)\}[\s\S]*listings=\{listings\}[\s\S]*totalCount=\{totalCount\}[\s\S]*page=\{page\}[\s\S]*path=\{path\}/);
   const view = source("components/catalog-view.tsx");
-  assert.match(view, /<ListingFilters filters=\{filters\} scope=\{scope\} \/>/);
-  assert.match(view, /<Pagination page=\{page\} total=\{totalCount\} path=\{path\} params=\{params\} \/>/);
+  assert.match(view, /<ListingFilters filters=\{filters\} scope=\{scope\} facets=\{facets\} \/>/);
+  assert.match(view, /<Pagination page=\{page\} total=\{totalCount\} path=\{path\} params=\{params\} phoneLoadMore \/>/);
   // One card per listing, keyed by its id (the one card also takes the grid's eager row and image sizes).
-  assert.match(view, /\{listings\.map\(\(listing, index\) => \(\s*<ListingCard key=\{listing\.id\} listing=\{listing\} eager=\{index < 4\} sizes=\{LISTING_GRID_SIZES\} \/>/);
+  assert.match(view, /\{listings\.map\(\(listing, index\) => \(\s*<ListingCard key=\{listing\.id\} listing=\{listing\} eager=\{index < 4\} sizes=\{LISTING_GRID_SIZES\} compare \/>/);
   assert.match(landing, /<SearchTelemetry/);
   for (const text of [landing, view]) assert.doesNotMatch(text, /placehold|lorem|Ejemplo/i);
 

@@ -28,7 +28,9 @@ export function Pagination({
   total,
   path,
   params = {},
+  phoneLoadMore = false,
 }: {
+  phoneLoadMore?: boolean;
   page: number;
   total: number;
   path: string;
@@ -40,7 +42,9 @@ export function Pagination({
   const last = Math.min(page * LISTINGS_PAGE_SIZE, total);
   const href = (target: number) => pageHref(path, params, target);
   return (
-    <div className="mt-8 flex flex-col items-center gap-3">
+    // FIND 15: on phones the catalog shows "Ver 24 más" (components/catalog-load-more.tsx) instead; the links stay in
+    // the page for search engines. Pages without it (a store) keep the numbers on phones.
+    <div className={cn("mt-8 flex flex-col items-center gap-3", phoneLoadMore && pages > 1 && "max-md:hidden")}>
       <p className="text-center t-meta">
         Mostrando {first === last ? formatNumber(first) : `${formatNumber(first)}–${formatNumber(last)}`} de {formatNumber(total)}
       </p>

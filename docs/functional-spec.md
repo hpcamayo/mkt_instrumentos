@@ -189,13 +189,50 @@ Price-drop alerts apply to favorited approved listings. When the public price de
 
 ### Search alerts
 
-Authenticated users can save the exact state of a marketplace search, including query, category, supported filters and instrument attributes, location, price filters, and other supported search state.
+Authenticated users can save the exact state of a marketplace search, including the free-text query (`query`, find batch), category, supported filters and instrument attributes, location, price filters, and other supported search state.
 
 Frequency options are `immediate` and `daily digest`. Immediate alerts notify shortly after a new matching listing becomes public. Daily alerts bundle matching new listings. Only newly public matches qualify; the same user/alert/listing combination must not be notified repeatedly; empty emails are forbidden. Users can pause or delete alerts, and emails link directly to listings or matching search results.
 
 ## Category SEO Pages
 
 V1 includes useful, indexable category browsing pages such as `/instrumentos/guitarras`, `/instrumentos/baterias`, and `/instrumentos/microfonos`. They use the real listing and filter system and must not be fake-content SEO doorway pages. Exact routing may follow the existing Next.js conventions; implementation must also avoid ambiguity with current listing-detail slugs.
+
+## Search, Browse and the Home (Effortless Laria, find batch)
+
+Proposed with the find batch (`docs/ux-effortless/find.md`, UXD-find-1 to UXD-find-16); not part of V1 until merged.
+
+- **One search box.** The header, the home banner and the not-found page share one free-text search (`q`) over brand,
+  model, type, category words and title. It ignores accents and case, forgives small typos (trigram similarity) and
+  knows a small curated list of musicians' slang (strato, LP, ampli, bass…), all inside Postgres (`catalog_search`).
+  Every word must match. Results keep the usual newest-first order.
+- **Phrases become filters.** A phrase such as "bajo 5 cuerdas menos de 2000 en Lima" opens the catalog with those
+  filters as editable chips (Bajos · Número de cuerdas: 5 · Hasta S/ 2,000 · Lima); what is left stays as the text.
+- **The search keeps the filters.** Searching from the catalog or a category page keeps the filters already chosen;
+  the suggestion list offers "Buscar en todo el catálogo". Suggestions name categories, types, brands and models that
+  have listings, with their counts.
+- **The catalog counts.** Every filter option shows how many results choosing it gives; the phone sheet's button says
+  "Ver N resultados". Locations list the places that have listings, grouped into zones ("Todo Lima y Callao", Norte,
+  Centro, Sur, Oriente). Price shortcuts follow the prices on sale. Cards show the store's district when known.
+- **Headings say what was searched**, in the page and the tab ("Fender en Guitarras · Lima (34)").
+- **No results rescue the search:** one-tap ways out with their counts ("Sin “Arequipa” hay 12"), the closest
+  listings and the alert in one tap.
+- **Sorts:** "Bajaron de precio" (a lower price in the past 30 days first, with the previous price on the card) and
+  "Tiendas verificadas primero" join the existing three.
+- **No dead links:** menus and category pages offer only brands, types and categories that have listings.
+- **Back to results:** a listing opened from the results offers "Volver a resultados" (the same search and place) and
+  "Anterior" / "Siguiente" through them.
+- **Phones load more:** "Ver N más" adds the next page below; numbered pages remain as links for search engines.
+- **Recently viewed and compare:** "Vistos recientemente" on the home, the catalog and the not-found page; desktop
+  cards carry "Comparar" (up to three, side by side on `/comparar` with the spec table); phones compare from the
+  favorites. Both are kept on the device only.
+- **A gone listing** (once public, now hidden or removed) says "Esta publicación ya no está disponible" and shows live
+  listings of its type, revealing nothing else about it.
+- **The home starts with instruments:** the search, a row of category chips (empty ones hidden), then "Para ti",
+  ranked on the device from what this person opened (types, brands, price band, place) and an optional first-visit
+  "¿Qué tocas?" row; never two listings of one seller in a row. "¿Por qué veo esto?" explains the order, "Empezar de
+  cero" forgets it and "Sin personalizar" shows plain newest first. "Nuevo desde tu última visita", "Bajaron de
+  precio" and "Vistos recientemente" follow. Nothing of this leaves the device. The vitrina and the category tiles
+  are retired.
 
 ## WhatsApp Contact Tracking
 

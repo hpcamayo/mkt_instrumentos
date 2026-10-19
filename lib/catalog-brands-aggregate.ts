@@ -1,6 +1,7 @@
 // Brands per marketplace category from catalog rows (lib/catalog-brands.ts reads them). Pure, so tests pin it.
 
-export type CategoryBrand = { name: string; models: number };
+// listings: how many listings have the brand (FIND 06), when known.
+export type CategoryBrand = { name: string; models: number; listings?: number };
 // Listing category value ("guitars", "pedals"…) → its brands, the ones with the most catalog models first.
 export type CatalogBrandsByCategory = Record<string, CategoryBrand[]>;
 
@@ -61,4 +62,17 @@ export function aggregateCatalogBrands(
 // The landing lists every brand alphabetically; the strip takes the first ones of the count order.
 export function brandsAlphabetical(brands: readonly CategoryBrand[]) {
   return [...brands].sort((a, b) => a.name.localeCompare(b.name, "es", { sensitivity: "base" }));
+}
+
+// The catalog's brands kept to those with listings, plus listing brands the catalog does not know; most listings first.
+// The catalog's spelling wins when both have the brand.
+export function brandsWithListings(catalog: CatalogBrandsByCategory, listings: readonly { category: string; brand: string; listings: number }[]): CatalogBrandsByCategory {
+  const result: CatalogBrandsByCategory = {};
+  const fold = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+  for (const row of listings) {
+    const known = (catalog[row.category] ?? []).find((brand) => fold(brand.name) === fold(row.brand));
+    (result[row.category] ??= []).push({ name: known?.name ?? row.brand.trim(), models: known?.models ?? 0, listings: Number(row.listings) });
+  }
+  for (const brands of Object.values(result)) brands.sort((a, b) => (b.listings ?? 0) - (a.listings ?? 0) || a.name.localeCompare(b.name, "es"));
+  return result;
 }

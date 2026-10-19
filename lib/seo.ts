@@ -24,6 +24,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 // Query keys that change catalog results. Anything else (for example utm_*) is
 // ignored for indexing decisions and never forwarded.
 export const catalogFilterKeys: ReadonlySet<string> = new Set([
+  "q",
   "category",
   "location",
   "city",
@@ -74,7 +75,9 @@ export function buildCategoryMetadata(landing: CategoryLandingPage, page: number
   };
 }
 
-export function buildCatalogMetadata(searchParams: SearchParams, page: number): Metadata {
+// filteredTitle: what a filtered search's tab says (FIND 02, "Fender en Guitarras · Lima (34)"); filtered pages are
+// noindex, so it changes only what people see in their tabs and history.
+export function buildCatalogMetadata(searchParams: SearchParams, page: number, filteredTitle?: string): Metadata {
   const description = "Explora guitarras, bajos, baterías, pedales, amplificadores y equipos de audio de particulares y tiendas en Perú. Contacto directo por WhatsApp.";
   const heading = "Instrumentos musicales en venta en Perú";
   const keys = activeFilterKeys(searchParams);
@@ -103,7 +106,7 @@ export function buildCatalogMetadata(searchParams: SearchParams, page: number): 
   const params = new URLSearchParams();
   for (const key of keys) for (const item of values(searchParams[key])) params.append(key, item);
   if (page > 1) params.set("page", String(page));
-  return pageMetadata(`/listados?${params}`, heading, description, { robots: NOINDEX_FOLLOW_ROBOTS });
+  return pageMetadata(`/listados?${params}`, filteredTitle ?? heading, description, { robots: NOINDEX_FOLLOW_ROBOTS });
 }
 
 function listingImages(listing: ListingDetailData) {

@@ -6,7 +6,9 @@ import { SearchTelemetry } from "@/components/marketplace-telemetry";
 import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
+import { getListingCounts } from "@/lib/catalog-brands";
 import { brandsAlphabetical, type CategoryBrand } from "@/lib/catalog-brands-aggregate";
+import { formatNumber } from "@/lib/catalog-filters";
 import { BRANDS_ANCHOR, categoryBrandHref, subtypeLinks } from "@/lib/category-nav";
 import { categoryLandingPages, categoryTypePath, landingScope, type CategoryLandingPage } from "@/lib/category-pages";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
@@ -18,7 +20,7 @@ import { absoluteUrl } from "@/lib/site";
 // Crawlable category landing page backed by the real public catalog query. Same layout and components as the catalog
 // (components/catalog-view.tsx) with the category fixed: its filters, sort and pagination lead to
 // /listados?category=…, where filtering happens (categoryFilterRedirect); its own pages stay on the landing's path.
-export function CategoryLanding({
+export async function CategoryLanding({
   landing,
   brands = [],
   filters,
@@ -41,8 +43,12 @@ export function CategoryLanding({
   searchSignature: string;
 }) {
   const path = `/instrumentos/${landing.slug}`;
-  const types = getInstrumentTypeOptions(landing.category).filter((type) => type.value !== "other");
-  const otherCategories = categoryLandingPages.filter((item) => item.slug !== landing.slug);
+  // FIND 06 (Effortless Laria): the type chips say how many listings each has, and types without listings are left
+  // out (all of them show when the counts are unavailable).
+  const counts = await getListingCounts();
+  const typeCount = (type: string) => counts?.types[`${landing.category}:${type}`];
+  const types = getInstrumentTypeOptions(landing.category).filter((type) => type.value !== "other" && (!counts || (typeCount(type.value) ?? 0) > 0));
+  const otherCategories = categoryLandingPages.filter((item) => item.slug !== landing.slug && (!counts || (counts.categories[item.category] ?? 0) > 0));
 
   return (
     <>
@@ -83,7 +89,10 @@ export function CategoryLanding({
             <ul aria-label="Tipos" className="mt-4 flex flex-wrap gap-2">
               {types.map((type) => (
                 <li key={type.value}>
-                  <ChipLink href={categoryTypePath(landing.category, type.value)}>{type.label}</ChipLink>
+                  <ChipLink href={categoryTypePath(landing.category, type.value)}>
+                    {type.label}
+                    {typeCount(type.value) !== undefined ? <span className="ml-1.5 font-normal text-ink-2">{formatNumber(typeCount(type.value) ?? 0)}</span> : null}
+                  </ChipLink>
                 </li>
               ))}
             </ul>
@@ -173,7 +182,10 @@ function CategoryExplore({ landing, brands }: { landing: CategoryLandingPage; br
           <ul aria-label={`Marcas de ${label}`} className="mt-2 flex flex-wrap gap-2">
             {brandsAlphabetical(brands).map((brand) => (
               <li key={brand.name}>
-                <ChipLink href={categoryBrandHref(landing.category, brand.name)}>{brand.name}</ChipLink>
+                <ChipLink href={categoryBrandHref(landing.category, brand.name)}>
+                  {brand.name}
+                  {brand.listings !== undefined ? <span className="ml-1.5 font-normal text-ink-2">{formatNumber(brand.listings)}</span> : null}
+                </ChipLink>
               </li>
             ))}
           </ul>

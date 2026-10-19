@@ -33,7 +33,7 @@ export function parseClientEvent(value: unknown): ClientEvent | null {
 }
 
 export function searchEventMetadata(filters: ListingFilters, resultCount: number) {
-  // Only fields consumed by the actual catalog; there is no free-text q search.
+  // Only fields consumed by the actual catalog; the free-text q goes in `query` below.
   const supported: Record<string, string | number | string[] | Record<string, string | number | boolean | string[]>> = { sort: filters.sort };
   // F11: one condition or location stays a string, as before; several are a bounded list (the database checks the
   // filter keys, not their value types).
@@ -46,5 +46,6 @@ export function searchEventMetadata(filters: ListingFilters, resultCount: number
     advanced[key] = Array.isArray(value) ? value.slice(0, 20).map((item) => item.slice(0, 100)) : typeof value === "string" ? value.slice(0, 100) : value;
   }
   if (Object.keys(advanced).length) supported.advanced = advanced;
-  return { query: (filters.brand ?? "").slice(0, 200), filters: supported, result_count: Math.min(10000000, Math.max(0, Math.trunc(resultCount))), zero_results: resultCount === 0 };
+  // BIG 03: the free-text search is the query when there is one; the brand box otherwise, as before.
+  return { query: (filters.q ?? filters.brand ?? "").slice(0, 200), filters: supported, result_count: Math.min(10000000, Math.max(0, Math.trunc(resultCount))), zero_results: resultCount === 0 };
 }

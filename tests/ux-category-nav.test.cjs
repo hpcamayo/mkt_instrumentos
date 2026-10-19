@@ -131,9 +131,11 @@ test("catalog brands are grouped by marketplace category, most catalog models fi
 test("the catalog read is server-only, read-only, cached and fails soft", () => {
   const reader = source("lib/catalog-brands.ts");
   assert.match(reader, /^import "server-only";/);
-  assert.doesNotMatch(reader, /\.(insert|update|upsert|delete|rpc)\(/);
+  assert.doesNotMatch(reader, /\.(insert|update|upsert|delete)\(/);
+  // Effortless Laria FIND 06: the only functions called are the read-only listing counts.
+  assert.deepEqual([...reader.matchAll(/\.rpc\("([a-z_]+)"/g)].map((match) => match[1]), ["catalog_brand_counts", "catalog_type_counts"]);
   assert.match(reader, /unstable_cache\(loadCatalogBrands, \["catalog-brands-by-category-v2"\], \{ revalidate: REVALIDATE_SECONDS \}\)/);
-  assert.match(reader, /catch \(error\) \{[\s\S]*return \{\};/);
+  assert.match(reader, /cachedCatalogBrands\(\)\.catch\(\(error\) => \{[\s\S]*return \{\} as CatalogBrandsByCategory;/);
   assert.match(source("app/layout.tsx"), /const brands = await getCatalogBrandsByCategory\(\);/);
 });
 

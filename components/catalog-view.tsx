@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { CompareTray } from "@/components/catalog-compare";
+import { CatalogLoadMore } from "@/components/catalog-load-more";
 import { CatalogLink, CatalogNavigation, CatalogResults } from "@/components/catalog-navigation";
+import { RecentlyViewed } from "@/components/catalog-recently-viewed";
+import { CatalogTrail } from "@/components/catalog-trail";
 import { CreateSearchAlert } from "@/components/create-search-alert";
 import { FilterSheetButton } from "@/components/filter-sheet";
 import { ListingCard } from "@/components/listing-card";
@@ -12,18 +16,22 @@ import { buttonClasses } from "@/components/ui/button";
 import { AppliedChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NoticeIcon, noticeClassName } from "@/components/ui/notice";
+import { getCatalogFacets, getCatalogRescue } from "@/lib/catalog-data";
 import {
   RESULTS_STATUS_ID,
   appliedFilters,
   catalogHref,
+  catalogTitle,
   clearedFilters,
+  formatNumber,
   narrowsSearch,
   resultsLabel,
   sortShortLabels,
+  withQuery,
   type CatalogScope,
 } from "@/lib/catalog-filters";
 import type { ListingCardData, ListingFilters as ListingFiltersType } from "@/lib/listings";
-import { LISTINGS_PAGE_SIZE } from "@/lib/pagination";
+import { LISTINGS_PAGE_SIZE, pageHref } from "@/lib/pagination";
 import { listingFiltersToSearchAlert } from "@/lib/search-alerts";
 import type { Crumb } from "@/lib/shell";
 import { LISTING_GRID, LISTING_GRID_SIZES } from "@/lib/ui/listing-grid";
@@ -33,7 +41,10 @@ import { cn } from "@/lib/utils";
 // title row with the count, the alert entry and sort; the applied chips; the filter column on desktop and the
 // "Filtrar"/"Ordenar" sheets below 1024 px; the grid of cards with numbered pagination; and the error, empty and
 // no-results states. Every navigation inside it runs in CatalogNavigation's transition.
-export function CatalogView({
+// Effortless Laria (find batch): the filters carry their counts (FIND 07), a search names its scope with a way out to
+// the whole catalog (FIND 01), no results offers one-tap ways out and the closest listings (FIND 04), phones load the
+// next 24 below (FIND 15), desktop cards can be compared (FIND 12), and recently viewed listings close the page (FIND 11).
+export async function CatalogView({
   title,
   breadcrumbs,
   lead,
@@ -69,7 +80,13 @@ export function CatalogView({
   emptyState: ReactNode;
   after?: ReactNode;
 }) {
+  const facets = error ? null : await getCatalogFacets(filters);
+  const rescue = !error && listings.length === 0 && appliedFilters(filters, scope).length > 0 ? await getCatalogRescue(filters, scope) : null;
   const applied = appliedFilters(filters, scope);
+  // FIND 01: a text search inside other filters says so, with the escape to the whole catalog.
+  const scoped = filters.q && applied.some((chip) => chip.key !== "q") ? catalogTitle(withQuery({ ...filters, brand: undefined }, undefined)) : null;
+  // FIND 09: the address a listing page leads back to ("Volver a resultados").
+  const trailHref = pageHref(path, params ?? {}, page);
   const narrowed = narrowsSearch(filters);
   // Null when a filter has several values (F11): alerts save one value per filter (Q19).
   const alertFilters = listingFiltersToSearchAlert(filters);
@@ -96,7 +113,7 @@ export function CatalogView({
           {types}
 
           <div className="mt-4 grid grid-cols-2 gap-3 lg:hidden">
-            <FilterSheetButton filters={filters} scope={scope} appliedCount={applied.length} />
+            <FilterSheetButton filters={filters} scope={scope} appliedCount={applied.length} facets={facets} />
             <SortSheetButton filters={filters} scope={scope} />
           </div>
 
@@ -121,10 +138,18 @@ export function CatalogView({
               ) : null}
             </div>
           ) : null}
+          {scoped ? (
+            <p className="mt-3 t-meta">
+              Buscando “{filters.q}” en {scoped}.{" "}
+              <CatalogLink href={catalogHref({ cities: [], conditions: [], advanced: {}, sort: filters.sort, q: filters.q })} focusId={RESULTS_STATUS_ID} className="link font-semibold">
+                Buscar en todo el catálogo
+              </CatalogLink>
+            </p>
+          ) : null}
           <hr className="mt-4 border-line-deco" />
 
           <div className="mt-6 lg:grid lg:grid-cols-[272px_minmax(0,1fr)] lg:items-start lg:gap-8">
-            <ListingFilters filters={filters} scope={scope} />
+            <ListingFilters filters={filters} scope={scope} facets={facets} />
             <CatalogResults className="min-w-0">
               {error ? (
                 <div role="alert" className={noticeClassName("danger")}>
@@ -139,26 +164,58 @@ export function CatalogView({
                 </div>
               ) : listings.length === 0 ? (
                 applied.length > 0 ? (
-                  <EmptyState
-                    title="No encontramos resultados"
-                    description="Prueba quitar un filtro o buscar otra marca."
-                    actions={
-                      <>
-                        <CatalogLink href={clearHref} focusId={RESULTS_STATUS_ID} className={buttonClasses({ variant: "secondary" })}>
-                          Limpiar filtros
-                        </CatalogLink>
-                        <CreateSearchAlert filters={alertFilters} variant="inline" />
-                      </>
-                    }
-                  />
+                  <div className="flex flex-col gap-8">
+                    <EmptyState
+                      title="No encontramos resultados"
+                      description={
+                        rescue?.ways.length ? (
+                          <>
+                            <p>Prueba sin uno de tus filtros:</p>
+                            <ul className="mt-3 flex flex-wrap gap-2">
+                              {rescue.ways.map((way) => (
+                                <li key={way.chip.key}>
+                                  <CatalogLink href={way.chip.href} focusId={RESULTS_STATUS_ID} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                                    Sin {way.chip.text.startsWith("“") ? way.chip.text : `“${way.chip.text}”`} hay {formatNumber(way.count)}
+                                  </CatalogLink>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        ) : (
+                          "Prueba quitar un filtro o buscar con otras palabras."
+                        )
+                      }
+                      actions={
+                        <>
+                          <CatalogLink href={clearHref} focusId={RESULTS_STATUS_ID} className={buttonClasses({ variant: "quiet" })}>
+                            Limpiar filtros
+                          </CatalogLink>
+                          {alertFilters ? <p className="w-full t-ui text-ink-2">¿Lo quieres igual? Te avisamos cuando aparezca.</p> : null}
+                          <CreateSearchAlert filters={alertFilters} variant="inline" />
+                        </>
+                      }
+                    />
+                    {rescue?.closest.length ? (
+                      <section aria-labelledby="mas-parecido">
+                        <h2 id="mas-parecido" className="t-section text-ink">{rescue.closestLabel}</h2>
+                        <ul className={cn(LISTING_GRID, "mt-3")}>
+                          {rescue.closest.map((listing) => (
+                            <li key={listing.id} className="min-w-0">
+                              <ListingCard listing={listing} headingLevel={3} sizes={LISTING_GRID_SIZES} />
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ) : null}
+                  </div>
                 ) : (
                   emptyState
                 )
               ) : (
-                <>
+                <CatalogTrail href={trailHref} label={title}>
                   <div className={LISTING_GRID}>
                     {listings.map((listing, index) => (
-                      <ListingCard key={listing.id} listing={listing} eager={index < 4} sizes={LISTING_GRID_SIZES} />
+                      <ListingCard key={listing.id} listing={listing} eager={index < 4} sizes={LISTING_GRID_SIZES} compare />
                     ))}
                     {narrowed && alertFilters && lastPage ? (
                       <div className="col-span-2 flex flex-col items-start justify-center gap-3 rounded-panel bg-canvas p-6">
@@ -168,14 +225,17 @@ export function CatalogView({
                       </div>
                     ) : null}
                   </div>
-                  <Pagination page={page} total={totalCount} path={path} params={params} />
-                </>
+                  <CatalogLoadMore filters={filters} page={page} total={totalCount} />
+                  <Pagination page={page} total={totalCount} path={path} params={params} phoneLoadMore />
+                </CatalogTrail>
               )}
             </CatalogResults>
           </div>
+          <RecentlyViewed className="mt-12" />
           {after}
         </PageContainer>
       </div>
+      <CompareTray />
     </CatalogNavigation>
   );
 }
