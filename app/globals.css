@@ -230,9 +230,10 @@ figcaption {
 }
 
 /* The listing's contact module (components/listing/contact-module.tsx, UX-4 L4 A). Below 1024 px it is a bar at the
-   bottom of the screen: white, a 1 px line-deco top border, the safe area below. The page gets a matching spacer and
-   scroll padding, so the bar never hides a focused element. On short viewports (landscape, 200% zoom) it is not fixed:
-   the module stays in the page after the identity block. */
+   bottom of the screen: white, a 1 px line-deco top border, the safe area below. The page ends above it, footer
+   included, and gets matching scroll padding, so the bar never hides a focused element or the footer's links (fast-04;
+   --contact-bar-height is its measured height, components/ui/bar-height.tsx). On short viewports
+   (landscape, 200% zoom) it is not fixed: the module stays in the page after the identity block. */
 @media (max-width: 1023px) and (min-height: 560px) {
   .contact-bar {
     position: fixed;
@@ -243,10 +244,10 @@ figcaption {
     background: var(--surface);
   }
   html:has(.contact-bar) {
-    scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(var(--contact-bar-height, calc(104px + env(safe-area-inset-bottom))) + 16px);
   }
-  .contact-bar-spacer {
-    height: calc(104px + env(safe-area-inset-bottom));
+  body:has(.contact-bar) {
+    padding-bottom: var(--contact-bar-height, calc(104px + env(safe-area-inset-bottom)));
   }
 }
 
@@ -302,9 +303,11 @@ figcaption {
 }
 
 /* fast-04: a bar fixed to the bottom (or top) of the screen never covers the focused element. Mark it with
-   data-bottom-bar (or data-top-bar) and the page scrolls focused fields clear of it, as .contact-bar does above. */
+   data-bottom-bar (or data-top-bar) and the page scrolls focused fields clear of it, as .contact-bar does above. A bar
+   that puts <BarHeight variable="--bottom-bar-height" /> inside gives its measured height; 32 px covers a floating
+   bar's offset from the edge. */
 html:has([data-bottom-bar]) {
-  scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  scroll-padding-bottom: calc(var(--bottom-bar-height, 88px) + 32px + env(safe-area-inset-bottom));
 }
 html:has([data-top-bar]) {
   scroll-padding-top: 88px;

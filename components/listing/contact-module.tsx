@@ -2,6 +2,7 @@ import { FavoriteButton } from "@/components/favorite-button";
 import { SafetyLine } from "@/components/listing/contact-extras";
 import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
 import { PurchaseRequestLink } from "@/components/payment/purchase-request-link";
+import { BarHeight } from "@/components/ui/bar-height";
 import { buttonClasses } from "@/components/ui/button";
 import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ export function ContactModule({ listingId, href, purchase = false, maxQuantity =
         <FavoriteButton listingId={listingId} variant="module" />
       </div>
       <SafetyLine className="text-center lg:text-left" />
+      <BarHeight variable="--contact-bar-height" />
     </div>
   );
 }

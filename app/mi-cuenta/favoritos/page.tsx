@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
-import { parsePreviousVisit, PREVIOUS_VISIT_COOKIE } from "@/lib/device-saves";
+import { LAST_VISIT_COOKIE, previousVisitFrom, PREVIOUS_VISIT_COOKIE } from "@/lib/device-saves";
 import { favoritePriceDrop, parseAccountFavorites, similarListingsPath } from "@/lib/favorites";
 import { parseFollowedArrivals } from "@/lib/follows";
 import { categoryOptions } from "@/lib/listings";
@@ -39,7 +39,8 @@ export default async function FavoritesPage({ searchParams }: { searchParams: Pr
   if (favorites && page > Math.max(1, Math.ceil(favorites.total / 24))) redirect(pageHref("/mi-cuenta/favoritos", {}, Math.max(1, Math.ceil(favorites.total / 24))));
 
   // save-04: what is new in the categories of these favorites since the previous visit.
-  const since = parsePreviousVisit((await cookies()).get(PREVIOUS_VISIT_COOKIE)?.value);
+  const jar = await cookies();
+  const since = previousVisitFrom(jar.get(LAST_VISIT_COOKIE)?.value, jar.get(PREVIOUS_VISIT_COOKIE)?.value);
   const categories = [...new Set((favorites?.items ?? []).map((item) => item.category).filter((value): value is string => Boolean(value)))];
   const { data: counts } = supabase && since && categories.length
     ? await supabase.rpc("get_new_listing_counts", { p_since: since.toISOString(), p_categories: categories })

@@ -3,6 +3,7 @@
 import { Check, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { BarHeight } from "@/components/ui/bar-height";
 import { buttonClasses } from "@/components/ui/button";
 import { COMPARE_KEY, COMPARE_LIMIT, DEVICE_EVENT, readStore, rememberable, writeStore, type RememberedListing } from "@/lib/catalog-device";
 import type { ListingCardData } from "@/lib/listings";
@@ -65,7 +66,8 @@ export function CompareTray() {
   const { list, save } = useCompareList();
   if (list.length === 0) return null;
   return (
-    <aside aria-label="Comparación" className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-line-deco bg-surface shadow-level-2 lg:block">
+    <aside aria-label="Comparación" data-bottom-bar className="fixed inset-x-0 bottom-0 z-40 hidden border-t border-line-deco bg-surface shadow-level-2 lg:block">
+      <BarHeight variable="--bottom-bar-height" />
       <div className="mx-auto flex max-w-page items-center gap-4 px-8 py-3">
         <p className="shrink-0 t-ui font-semibold text-ink">Comparar ({list.length} de {COMPARE_LIMIT})</p>
         <ul className="flex min-w-0 flex-1 flex-wrap gap-2">

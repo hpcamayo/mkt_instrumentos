@@ -68,24 +68,36 @@ export function DataTable<T>({
     target.focus();
   }
 
+  const toggleAll = selection ? (
+    <input
+      type="checkbox"
+      className="h-5 w-5 shrink-0 cursor-pointer accent-ink"
+      aria-label={allSelected ? "Quitar la selección de esta página" : "Seleccionar todos los de esta página"}
+      checked={allSelected}
+      ref={(input) => {
+        if (input) input.indeterminate = !allSelected && someSelected;
+      }}
+      onChange={(event) => selection.onToggleAll(event.target.checked)}
+    />
+  ) : null;
+
   return (
     <div className="md:overflow-x-auto xl:overflow-visible">
+      {/* fast-04: on phones the rows are cards and the header is for screen readers only, so "select all" is its own
+          visible row above them; from 768 px it is the header's checkbox. */}
+      {selection ? (
+        <label className="flex min-h-11 cursor-pointer items-center gap-3 border-b border-subtle px-4 t-ui text-ink md:hidden">
+          {toggleAll}
+          <span aria-hidden="true">{allSelected ? "Quitar la selección" : "Seleccionar todos"}</span>
+        </label>
+      ) : null}
       <table className="block w-full text-left text-sm md:table md:min-w-full">
         <caption className="sr-only">{caption}</caption>
         <thead className="sr-only t-micro text-ink-2 md:not-sr-only md:table-header-group">
           <tr>
             {selection ? (
               <th scope="col" className={cn(HEAD, "w-12")}>
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 cursor-pointer accent-ink"
-                  aria-label={allSelected ? "Quitar la selección de esta página" : "Seleccionar todos los de esta página"}
-                  checked={allSelected}
-                  ref={(input) => {
-                    if (input) input.indeterminate = !allSelected && someSelected;
-                  }}
-                  onChange={(event) => selection.onToggleAll(event.target.checked)}
-                />
+                <span className="max-md:hidden">{toggleAll}</span>
               </th>
             ) : null}
             {columns.map((column) => (

@@ -609,7 +609,6 @@ function ListingDetail({
             <SellerListings supabase={supabase} listing={listing} storeHref={seller.storeHref ?? null} />
           </Suspense>
         </div>
-        {isSold ? null : <div aria-hidden="true" className="contact-bar-spacer" />}
       </PageContainer>
     </section>
   );

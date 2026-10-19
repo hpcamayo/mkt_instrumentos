@@ -30,6 +30,8 @@ EOF
 if [ "${1:-}" = "seed" ]; then
   psql "$PGURL" -v ON_ERROR_STOP=1 -q -o /dev/null -f supabase/seed.sql
   psql "$PGURL" -v ON_ERROR_STOP=1 -q -o /dev/null -f scripts/prototype/demo-seed.sql
+  # Effortless Laria: my listings' Pendientes, check-ins and drafts (docs/ux-effortless/my-listings.md).
+  psql "$PGURL" -v ON_ERROR_STOP=1 -q -o /dev/null -f scripts/prototype/ux-my-listings-seed.sql
 fi
 
 pkill -f "postgrest $LOG_DIR/postgrest.conf" 2>/dev/null || true
@@ -51,4 +53,4 @@ LARIA_ASSISTED_COMMERCE=1
 EOF
 fi
 sleep 2
-curl -sf -o /dev/null "http://127.0.0.1:54321/rest/v1/stores?limit=1" -H "apikey: local" && echo "Gateway ready on http://127.0.0.1:54321. Now run: pnpm dev"
+curl -sf -o /dev/null "http://127.0.0.1:54321/rest/v1/stores?select=id&limit=1" -H "apikey: local" && echo "Gateway ready on http://127.0.0.1:54321. Now run: pnpm dev"

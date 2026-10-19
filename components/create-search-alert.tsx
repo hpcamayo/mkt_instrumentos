@@ -9,6 +9,7 @@ import { PageNotice } from "@/components/page-notice";
 import { useDisclosure } from "@/components/use-disclosure";
 import { alertPromptDismissed, dismissAlertPrompt, recordSearch, savePendingIntent, takePendingIntent } from "@/lib/device-saves";
 import { searchAlertPath, searchAlertSummary, type SearchAlertFilters, type SearchAlertFrequency } from "@/lib/search-alerts";
+import { BarHeight } from "@/components/ui/bar-height";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Radio } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -117,7 +118,8 @@ export function CreateSearchAlert({
 
   // The owner instance may sit in a container hidden at this width, so the prompt is rendered on the page body.
   const repeatPrompt = prompt && typeof document !== "undefined" ? createPortal(
-    <div role="region" aria-label="Sugerencia de alerta" className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-md rounded-panel border border-line-deco bg-surface p-4 shadow-level-1">
+    <div role="region" aria-label="Sugerencia de alerta" data-bottom-bar className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-md rounded-panel border border-line-deco bg-surface p-4 shadow-level-1">
+      <BarHeight variable="--bottom-bar-height" />
       <p className="t-ui font-semibold text-ink">¿Te avisamos cuando aparezca otro?</p>
       <p className="mt-1 t-meta">Ya buscaste {searchAlertSummary(filters)} antes. Te enviamos un resumen diario solo si hay publicaciones nuevas.</p>
       <div className="mt-3 flex flex-wrap gap-2">

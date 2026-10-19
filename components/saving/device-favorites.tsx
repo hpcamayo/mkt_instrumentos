@@ -8,27 +8,15 @@ import { SavedCard } from "@/components/saving/saved-card";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { clearDeviceSaves, DEVICE_SAVES_EVENT, getDeviceFavorites, getViewed } from "@/lib/device-saves";
-import { parsePublicListingCards, similarListingsPath, type PublicListingCard } from "@/lib/favorites";
+import { clearDeviceSaves, DEVICE_SAVES_EVENT, getDeviceFavorites } from "@/lib/device-saves";
+import { similarListingsPath, type PublicListingCard } from "@/lib/favorites";
+import { loadListingCards, useViewedListings } from "@/lib/viewed-listings";
 
-async function loadCards(ids: string[], slugs: string[]) {
-  if (!ids.length && !slugs.length) return [];
-  const response = await fetch("/api/favorites", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cards", ids, slugs }) });
-  if (!response.ok) throw new Error("cards");
-  return parsePublicListingCards((await response.json()).cards);
-}
-
-// "Vistos recientemente" (big-04): the listings this device opened, newest first. Used on /favoritos and on the
-// account's Favoritos.
+// "Vistos recientemente" (big-04): the listings this device opened, newest first, as cards with their hearts. Used on
+// /favoritos and on the account's Favoritos; the home and the catalog show the same list as a row of tiles
+// (components/catalog-recently-viewed.tsx).
 export function RecentlyViewed({ exclude = [] }: { exclude?: string[] }) {
-  const [cards, setCards] = useState<PublicListingCard[] | null>(null);
-  useEffect(() => {
-    const slugs = getViewed().map((item) => item.slug);
-    loadCards([], slugs).then((found) => {
-      const bySlug = new Map(found.map((card) => [card.slug, card]));
-      setCards(slugs.map((slug) => bySlug.get(slug)).filter((card): card is PublicListingCard => Boolean(card)));
-    }).catch(() => setCards([]));
-  }, []);
+  const cards = useViewedListings();
   const visible = (cards ?? []).filter((card) => !exclude.includes(card.id)).slice(0, 12);
   if (!visible.length) return null;
   return (
@@ -58,7 +46,7 @@ export function DeviceFavorites() {
 
   useEffect(() => {
     const ids = getDeviceFavorites().map((item) => item.id);
-    loadCards(ids, []).then((found) => {
+    loadListingCards(ids, []).then((found) => {
       const byId = new Map(found.map((card) => [card.id, card]));
       setCards(ids.map((id) => byId.get(id)).filter((card): card is PublicListingCard => Boolean(card)));
       setFailed(false);

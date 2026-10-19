@@ -77,6 +77,10 @@ export function recordViewed(slug: string) {
   write(VIEWED_KEY, [{ slug, at: Date.now() }, ...rest].slice(0, MAX_VIEWED));
 }
 
+export function clearViewed() {
+  write(VIEWED_KEY, null);
+}
+
 export function clearDeviceSaves() {
   for (const key of [FAVORITES_KEY, VIEWED_KEY, INTENT_KEY, SEARCHES_KEY, DISMISSED_KEY]) write(key, null);
   try {
@@ -101,17 +105,22 @@ export function takePendingIntent<K extends PendingIntent["kind"]>(kind: K, path
   return intent as Extract<PendingIntent, { kind: K }>;
 }
 
-// save-04: the previous visit, as a cookie the server can read. A visit starts after 30 minutes away.
+// save-04: the previous visit, as a cookie the server can read. A visit starts after 30 minutes away; every page change
+// counts as being here (components/marketplace-account-provider.tsx).
 export const LAST_VISIT_COOKIE = "laria_ultima_visita";
 export const PREVIOUS_VISIT_COOKIE = "laria_visita_anterior";
 const VISIT_GAP_MS = 30 * 60 * 1000;
 
+function readCookies(): Record<string, string> {
+  return Object.fromEntries(document.cookie.split("; ").filter(Boolean).map((part) => {
+    const index = part.indexOf("=");
+    return [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
+  }));
+}
+
 export function touchVisit(now = Date.now()) {
   try {
-    const cookies = Object.fromEntries(document.cookie.split("; ").filter(Boolean).map((part) => {
-      const index = part.indexOf("=");
-      return [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
-    }));
+    const cookies = readCookies();
     const last = Number(cookies[LAST_VISIT_COOKIE]);
     const maxAge = 60 * 60 * 24 * 90;
     if (Number.isFinite(last) && last > 0 && now - last > VISIT_GAP_MS) {
@@ -126,6 +135,25 @@ export function touchVisit(now = Date.now()) {
 export function parsePreviousVisit(value: string | undefined) {
   const time = Number(value);
   return Number.isFinite(time) && time > 0 ? new Date(time) : null;
+}
+
+// The previous visit as of `now`: the last page view when it was more than 30 minutes ago (this page starts a new visit
+// and touchVisit has not run yet), otherwise the one already kept. It gives the same answer before and after
+// touchVisit, so Favoritos and Alertas on the server and the home's "Nuevo desde tu última visita" agree
+// (UXD-integration-9).
+export function previousVisitFrom(last: string | undefined, previous: string | undefined, now = Date.now()) {
+  const lastTime = Number(last);
+  if (Number.isFinite(lastTime) && lastTime > 0 && now - lastTime > VISIT_GAP_MS) return new Date(lastTime);
+  return parsePreviousVisit(previous);
+}
+
+export function previousVisit(now = Date.now()) {
+  try {
+    const cookies = readCookies();
+    return previousVisitFrom(cookies[LAST_VISIT_COOKIE], cookies[PREVIOUS_VISIT_COOKIE], now);
+  } catch {
+    return null;
+  }
 }
 
 // save-06: the same search seen on separate occasions (more than 10 minutes apart, or after another search).

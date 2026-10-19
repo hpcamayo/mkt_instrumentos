@@ -187,7 +187,10 @@ test("L4: one contact module, the phone bar is the same element, and sold pages 
   // Effortless list-02: the limitation statement is the line under the contact button (SafetyLine), so it goes with it.
   assert.match(contact, /<SafetyLine /);
   assert.doesNotMatch(listing, /<TrustNote/);
-  assert.match(listing, /\{isSold \? null : <div aria-hidden="true" className="contact-bar-spacer" \/>\}/);
+  // fast-04 (integration): the page, footer included, ends above the bar at its measured height; no spacer inside it.
+  assert.doesNotMatch(listing, /contact-bar-spacer/);
+  assert.match(contact, /<BarHeight variable="--contact-bar-height" \/>/);
+  assert.match(source("app/globals.css"), /body:has\(\.contact-bar\) \{\s*padding-bottom: var\(--contact-bar-height, calc\(104px \+ env\(safe-area-inset-bottom\)\)\);/);
   // No public view count (L6 A).
   assert.doesNotMatch(listing, /initialViewCount|Visto/);
 });

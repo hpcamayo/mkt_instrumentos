@@ -10,6 +10,7 @@ import {
 } from "@/components/inventory/bulk-actions";
 import { StockActionSheet, undoMovements, type StockActionItem, type StockActionType } from "@/components/inventory/stock-action-sheet";
 import { UndoNotice, type InventoryNotice, type UndoAction } from "@/components/inventory/undo-notice";
+import { BarHeight } from "@/components/ui/bar-height";
 import { buttonClasses } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -222,9 +223,9 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
                 <RowButton onClick={(event) => openStock(item, "stock_count", event.currentTarget)}>Ajustar</RowButton>
               </>
             ) : null}
-            <Link href={itemHref(item)} className="link font-semibold">Editar</Link>
+            <Link href={itemHref(item)} className={ROW_LINK}>Editar</Link>
             {item.listing && item.listing.status === "approved" ? (
-              <Link href={`/instrumentos/${item.listing.slug}`} className="link font-semibold">Ver publicación</Link>
+              <Link href={`/instrumentos/${item.listing.slug}`} className={ROW_LINK}>Ver publicación</Link>
             ) : null}
             {canWrite && item.listing?.status === "approved" ? (
               <RowButton disabled={busyId === item.id} onClick={() => hideListing(item)}>{busyId === item.id ? "Procesando…" : "Ocultar"}</RowButton>
@@ -283,7 +284,8 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
         }}
       />
       {selectedCount ? (
-        <div role="region" aria-label="Acciones para los SKU seleccionados" className="sticky bottom-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line-strong bg-surface px-4 py-3 shadow-[0_-4px_12px_rgb(5_6_8/0.08)]">
+        <div role="region" aria-label="Acciones para los SKU seleccionados" data-bottom-bar className="sticky bottom-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line-strong bg-surface px-4 py-3 shadow-[0_-4px_12px_rgb(5_6_8/0.08)]">
+          <BarHeight variable="--bottom-bar-height" />
           <p className="t-ui font-semibold text-ink" aria-live="polite">{numbers.format(selectedCount)} SKU seleccionados</p>
           {canWrite ? (
             archivedView ? (
@@ -298,19 +300,19 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
                 <RowButton onClick={(event) => setBulk({ kind: "restore", opener: event.currentTarget })}>Volver a publicar</RowButton>
                 <RowButton onClick={(event) => setBulk({ kind: "archive", opener: event.currentTarget })}>Archivar</RowButton>
                 {/* stock-10 (stores batch): only rows the owner ticked, like Ajustar stock; a whole filter is not sent. */}
-                {!matching ? <PublishSelectedButton itemIds={selectedItems.filter((item) => !item.listing && item.inventory_status === "active").map((item) => item.id)} className="link font-semibold disabled:cursor-not-allowed disabled:opacity-50" /> : null}
+                {!matching ? <PublishSelectedButton itemIds={selectedItems.filter((item) => !item.listing && item.inventory_status === "active").map((item) => item.id)} className={`${ROW_LINK} disabled:cursor-not-allowed disabled:opacity-50`} /> : null}
               </>
             )
           ) : null}
           {matching && filters ? (
             <>
-              <a href={exportViewHref(filters, "csv")} className="link font-semibold">Exportar CSV</a>
-              <a href={exportViewHref(filters, "xlsx")} className="link font-semibold">Exportar Excel</a>
+              <a href={exportViewHref(filters, "csv")} className={ROW_LINK}>Exportar CSV</a>
+              <a href={exportViewHref(filters, "xlsx")} className={ROW_LINK}>Exportar Excel</a>
             </>
           ) : (
             <>
-              <a href={`/api/store/inventory/export?format=csv&ids=${selectedItems.map((item) => item.id).join(",")}`} className="link font-semibold">Exportar CSV</a>
-              <a href={`/api/store/inventory/export?format=xlsx&ids=${selectedItems.map((item) => item.id).join(",")}`} className="link font-semibold">Exportar Excel</a>
+              <a href={`/api/store/inventory/export?format=csv&ids=${selectedItems.map((item) => item.id).join(",")}`} className={ROW_LINK}>Exportar CSV</a>
+              <a href={`/api/store/inventory/export?format=xlsx&ids=${selectedItems.map((item) => item.id).join(",")}`} className={ROW_LINK}>Exportar Excel</a>
             </>
           )}
           <button type="button" className={buttonClasses({ variant: "quiet", className: "ml-auto" })} onClick={clearSelection}>Quitar selección</button>
@@ -331,9 +333,12 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
   );
 }
 
+// fast-04: row and bar actions are text links at least 24 px tall, so a tap never lands on the neighbour.
+const ROW_LINK = "link inline-flex min-h-6 items-center font-semibold";
+
 function RowButton({ children, disabled, onClick }: { children: React.ReactNode; disabled?: boolean; onClick: (event: React.MouseEvent<HTMLButtonElement>) => void }) {
   return (
-    <button type="button" disabled={disabled} onClick={onClick} className="link font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+    <button type="button" disabled={disabled} onClick={onClick} className={`${ROW_LINK} disabled:cursor-not-allowed disabled:opacity-50`}>
       {children}
     </button>
   );

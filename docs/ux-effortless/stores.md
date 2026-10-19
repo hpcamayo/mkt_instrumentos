@@ -245,7 +245,7 @@ import's existing publication functions then work unchanged.
 inventory batch owns: `components/inventory/inventory-table.tsx` (one button in the bulk bar),
 `lib/store-inventory.ts` (the import-errors tile ignores these batches).
 
-**Defaults picked.** UXD-stores-10: at most 200 SKU per batch, the bulk bar's existing limit. Like an import, a batch's
+**Defaults picked.** UXD-stores-10: at most 200 SKU per batch, the bulk bar's limit when this was built. The inventory batch has since raised the bulk bar to 2,000 (UXD-inventory-6); publishing keeps 200, since a store's listing allowance is far lower and each new publication goes to review. Like an import, a batch's
 staged rows are purged 30 days after it is created.
 
 ## Storefront: find-13, find-14, list-12, shop-04

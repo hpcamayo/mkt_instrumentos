@@ -42,3 +42,30 @@ test("stock-10 with the bulk bar: Publicar seleccionados sends the rows the owne
   const table = source("components/inventory/inventory-table.tsx");
   assert.match(table, /\{!matching \? <PublishSelectedButton itemIds=\{selectedItems\.filter/);
 });
+
+test("FIND 11 with big-04: one Vistos recientemente, kept in lib/device-saves.ts and drawn from today's cards", () => {
+  const files = ["app", "components", "lib"].flatMap((dir) => fs.readdirSync(path.join(root, dir), { recursive: true }).map((file) => path.join(dir, String(file))));
+  const keyed = files.filter((file) => /\.(ts|tsx)$/.test(file) && source(file).includes('"laria:vistos"'));
+  assert.deepEqual(keyed, ["lib/device-saves.ts"], "one module owns the list");
+  const row = source("components/catalog-recently-viewed.tsx");
+  assert.match(row, /useViewedListings\(\)/);
+  assert.match(row, /onClick=\{clearViewed\}/);
+  assert.doesNotMatch(row, /@\/lib\/catalog-device/);
+  assert.match(source("components/saving/device-favorites.tsx"), /const cards = useViewedListings\(\);/);
+  assert.doesNotMatch(source("components/listing-card.tsx"), /RECENT_KEY|addRecent/);
+  assert.match(source("components/marketplace-account-provider.tsx"), /if \(match\) recordViewed\(match\[1\]\);/);
+});
+
+test("save-04 with the home's new listings: one previous visit, counted from every page change", () => {
+  const saves = source("lib/device-saves.ts");
+  assert.match(saves, /export function previousVisitFrom\(/);
+  for (const page of ["app/mi-cuenta/alertas/page.tsx", "app/mi-cuenta/favoritos/page.tsx"]) {
+    assert.match(source(page), /previousVisitFrom\(jar\.get\(LAST_VISIT_COOKIE\)\?\.value, jar\.get\(PREVIOUS_VISIT_COOKIE\)\?\.value\)/, page);
+  }
+  const home = source("components/home/home-for-you.tsx");
+  assert.match(home, /previousVisit: readPreviousVisit\(\)\?\.getTime\(\) \?\? null/);
+  assert.doesNotMatch(home, /LAST_VISIT_KEY|visita-anterior|startVisit/);
+  assert.doesNotMatch(source("lib/catalog-device.ts"), /ultima-visita/);
+  // The marker moves on every page change, in the same effect that records a viewed listing.
+  assert.match(source("components/marketplace-account-provider.tsx"), /useEffect\(\(\) => \{\n    touchVisit\(\);\n    const match = /);
+});

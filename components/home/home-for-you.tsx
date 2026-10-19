@@ -8,9 +8,7 @@ import { Chip } from "@/components/ui/chip";
 import {
   EMPTY_TASTE,
   INTEREST_KEY,
-  LAST_VISIT_KEY,
   PERSONALIZE_KEY,
-  RECENT_KEY,
   TASTE_KEY,
   DEVICE_EVENT,
   forYouReasons,
@@ -20,6 +18,7 @@ import {
   writeStore,
   type Taste,
 } from "@/lib/catalog-device";
+import { getViewed, previousVisit as readPreviousVisit } from "@/lib/device-saves";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { categoryOptions, getCategoryLabel } from "@/lib/listings";
 import type { HomeListing } from "@/lib/home";
@@ -36,9 +35,6 @@ import { cn } from "@/lib/utils";
 const SIZE = 12;
 const PHONE_SIZE = 6;
 const NEW_SIZE = 6;
-// A visit starts after 30 minutes away; within one, "Nuevo desde tu última visita" keeps the same starting point.
-const VISIT_GAP_MS = 30 * 60 * 1000;
-const SESSION_BASELINE_KEY = "laria:visita-anterior";
 
 // "¿Qué tocas?": the instruments a first-time visitor can pick, as categories.
 const INTEREST_CHOICES = [
@@ -62,26 +58,17 @@ function readDevice(): Device {
     taste: readStore<Taste>(TASTE_KEY, EMPTY_TASTE),
     interest: Array.isArray(interest?.categories) ? interest : NO_INTEREST,
     plain: readStore<boolean>(PERSONALIZE_KEY, false) === true,
-    previousVisit: readStore<number | null>(SESSION_BASELINE_KEY, null, "session"),
-    recent: readStore<unknown[]>(RECENT_KEY, []).length,
+    // "Nuevo desde tu última visita": the previous visit Favoritos and Alertas use too (lib/device-saves.ts). A visit
+    // starts after 30 minutes away, so within one the starting point stays put.
+    previousVisit: readPreviousVisit()?.getTime() ?? null,
+    // Listings this device opened ("Vistos recientemente", lib/device-saves.ts).
+    recent: getViewed().length,
   };
-}
-
-// The previous visit's time, kept for this browser session; the stored "last visit" moves to now.
-function startVisit(now = Date.now()) {
-  const kept = readStore<number | null>(SESSION_BASELINE_KEY, null, "session");
-  const last = readStore<number | null>(LAST_VISIT_KEY, null);
-  if (kept === null) {
-    const previous = last !== null && now - last > VISIT_GAP_MS ? last : null;
-    writeStore(SESSION_BASELINE_KEY, previous ?? 0, "session");
-  }
-  writeStore(LAST_VISIT_KEY, now);
 }
 
 function useDevice() {
   const [device, setDevice] = useState<Device | null>(null);
   useEffect(() => {
-    startVisit();
     const read = () => setDevice(readDevice());
     read();
     window.addEventListener(DEVICE_EVENT, read);

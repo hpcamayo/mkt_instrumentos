@@ -3,7 +3,7 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { cookies } from "next/headers";
 import { getAccountContext } from "@/lib/account-context";
-import { parsePreviousVisit, PREVIOUS_VISIT_COOKIE } from "@/lib/device-saves";
+import { LAST_VISIT_COOKIE, previousVisitFrom, PREVIOUS_VISIT_COOKIE } from "@/lib/device-saves";
 import { parseSavedSearchAlerts } from "@/lib/search-alerts";
 
 export const metadata = { title: "Alertas" };
@@ -11,7 +11,8 @@ export const metadata = { title: "Alertas" };
 export default async function AlertsPage() {
   const { supabase } = await getAccountContext();
   // save-05: matches since the previous visit are counted as new.
-  const since = parsePreviousVisit((await cookies()).get(PREVIOUS_VISIT_COOKIE)?.value);
+  const jar = await cookies();
+  const since = previousVisitFrom(jar.get(LAST_VISIT_COOKIE)?.value, jar.get(PREVIOUS_VISIT_COOKIE)?.value);
   const { data, error } = supabase
     ? await supabase.rpc("get_account_search_alerts", since ? { p_since: since.toISOString() } : {})
     : { data: null, error: new Error("Supabase unavailable") };

@@ -9,7 +9,7 @@ import { CompareToggle } from "@/components/catalog-compare";
 import { FavoriteButton } from "@/components/favorite-button";
 import { useListingImpression } from "@/components/marketplace-telemetry";
 import type { EventSource } from "@/lib/marketplace-event-payload";
-import { addRecent, addTaste, EMPTY_TASTE, readStore, rememberable, RECENT_KEY, TASTE_KEY, writeStore, type RememberedListing, type Taste } from "@/lib/catalog-device";
+import { addTaste, EMPTY_TASTE, readStore, rememberable, TASTE_KEY, writeStore, type Taste } from "@/lib/catalog-device";
 import { getCardSpecLine } from "@/lib/listing-specs";
 import { formatPrice } from "@/lib/price";
 import { Price } from "@/components/ui/price";
@@ -42,12 +42,10 @@ type ListingCardProps = {
   compare?: boolean;
 };
 
-// FIND 11 and BIG 01: opening a listing from a card remembers it on this device ("Vistos recientemente") and adds to
-// the taste behind "Para ti". Nothing leaves the device.
+// BIG 01: opening a listing from a card adds to the taste behind "Para ti". Nothing leaves the device. The listing
+// page itself goes in "Vistos recientemente", however it was opened (lib/device-saves.ts).
 export function rememberOpened(listing: ListingCardData) {
-  const item = rememberable(listing);
-  writeStore(RECENT_KEY, addRecent(readStore<RememberedListing[]>(RECENT_KEY, []), item));
-  writeStore(TASTE_KEY, addTaste(readStore<Taste>(TASTE_KEY, EMPTY_TASTE), item));
+  writeStore(TASTE_KEY, addTaste(readStore<Taste>(TASTE_KEY, EMPTY_TASTE), rememberable(listing)));
 }
 
 // FAST 02: hovering or focusing a card loads its page ahead (a full prefetch: the listing page has no loading

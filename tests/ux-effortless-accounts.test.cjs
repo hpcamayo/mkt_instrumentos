@@ -111,6 +111,11 @@ test("big-04 / save-01 / save-06: device saves, a pending intent used once, and 
   for (let index = 0; index < 40; index += 1) saves.recordViewed(`guitarra-${index}`);
   assert.equal(saves.getViewed().length, saves.MAX_VIEWED);
   assert.equal(saves.getViewed()[0].slug, "guitarra-39");
+  saves.recordViewed("guitarra-20");
+  assert.deepEqual(saves.getViewed().slice(0, 2).map((item) => item.slug), ["guitarra-20", "guitarra-39"], "opened again, it moves to the front once");
+  assert.equal(saves.getViewed().filter((item) => item.slug === "guitarra-20").length, 1);
+  saves.clearViewed();
+  assert.deepEqual(saves.getViewed(), [], "the row's Borrar forgets only what was viewed");
   saves.savePendingIntent({ kind: "report", path: "/instrumentos/a", targetType: "listing", targetId: id });
   assert.equal(saves.takePendingIntent("alert", "/instrumentos/a"), null, "another kind does not take it");
   assert.equal(saves.takePendingIntent("report", "/instrumentos/a", (intent) => intent.targetType === "review"), null, "another target leaves it");
@@ -125,6 +130,12 @@ test("big-04 / save-01 / save-06: device saves, a pending intent used once, and 
   assert.equal(saves.alertPromptDismissed("/listados?brand=Fender"), true);
   assert.equal(saves.parsePreviousVisit("abc"), null);
   assert.equal(saves.parsePreviousVisit(String(start)).getTime(), start);
+  // UXD-integration-9: the previous visit reads the same before and after touchVisit marks a new visit.
+  const minutes = (count) => count * 60_000;
+  assert.equal(saves.previousVisitFrom(undefined, undefined, start), null, "a first visit has none");
+  assert.equal(saves.previousVisitFrom(String(start - minutes(10)), String(start - minutes(3000)), start).getTime(), start - minutes(3000), "within a visit, the kept one");
+  assert.equal(saves.previousVisitFrom(String(start - minutes(120)), String(start - minutes(3000)), start).getTime(), start - minutes(120), "a new visit, before touchVisit: the last page view");
+  assert.equal(saves.previousVisitFrom(String(start), String(start - minutes(120)), start).getTime(), start - minutes(120), "the same visit, after touchVisit");
   delete global.window;
 });
 

@@ -123,19 +123,14 @@ test("BIG 01: taste, ranking, seller spread and the reasons", () => {
   assert.deepEqual(reasons, ["Tipos que miraste: Bajos eléctricos", "Marcas que miraste: Ibanez", "Lugares: Lima", "Precios cerca de lo que miraste"]);
 });
 
-// FIND 09, FIND 11, FIND 12: the results trail, the recently viewed list and the comparison's address.
-test("FIND 09, FIND 11, FIND 12: neighbours, recent list, compare slugs", () => {
+// FIND 09, FIND 12: the results trail and the comparison's address. FIND 11's list is lib/device-saves.ts
+// (UXD-integration-9), tested with the accounts batch.
+test("FIND 09, FIND 12: neighbours, compare slugs", () => {
   const device = require("@/lib/catalog-device");
   const trail = { href: "/listados?location=Lima", label: "Instrumentos", slugs: ["a", "b", "c"], titles: {}, scrollY: 0, at: 0 };
   assert.deepEqual(device.neighbours(trail, "b"), { index: 1, total: 3, previous: "a", next: "c" });
   assert.deepEqual(device.neighbours(trail, "a"), { index: 0, total: 3, previous: null, next: "b" });
   assert.equal(device.neighbours(trail, "z"), null);
-  const one = (id) => ({ id, slug: id, title: id, price_pen: 1, category: "guitars", instrument_type: null, brand: null, city: "Lima", seller_type: "individual", verified: false, photo: null, at: 0 });
-  let recent = [];
-  for (const id of ["a", "b", "a", ...Array.from({ length: 14 }, (_, index) => `x${index}`)]) recent = device.addRecent(recent, one(id));
-  assert.equal(recent.length, device.RECENT_LIMIT);
-  assert.equal(recent[0].id, "x13");
-  assert.equal(new Set(recent.map((entry) => entry.id)).size, recent.length);
   const { compareSlugs } = require("@/lib/catalog-compare");
   assert.deepEqual(compareSlugs("a-b,c,a-b,../x,d,e"), ["a-b", "c", "d"]);
   assert.deepEqual(compareSlugs(undefined), []);

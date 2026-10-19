@@ -108,6 +108,24 @@ Merge order (by migration slot): find (#27), listing (#24), accounts (#28), sell
 - **Files.** `lib/notifications.ts`, `components/notifications-list.tsx`, `lib/push/notice.ts`, and the tests that
   read the labels.
 
+## UXD-integration-9: one "Vistos recientemente" and one "last visit"
+
+- **What met.** The find batch (FIND 11) and the accounts batch (big-04) each built "Vistos recientemente" on the same
+  device key, `laria:vistos`, in two shapes: find kept a card's worth of each listing opened from a card, accounts kept
+  the address of every listing page opened. Each overwrote the other, so the home's row drew tiles with no title or
+  price (the not-found page showed empty links). Both batches also kept a "last visit": find for the home's "Nuevo
+  desde tu última visita" (on the device), accounts for what is new in Favoritos and Alertas (a cookie the server
+  reads), with different rules for when a visit starts.
+- **Decision.** One list: every listing page opened, however it was reached, in `lib/device-saves.ts`. Both rows draw
+  it from today's public cards (`lib/viewed-listings.ts`), so a listing taken down drops out and a sold one says
+  "Vendido"; "Borrar" on the row forgets the list, and "Borrar lo guardado en este dispositivo" forgets it with the
+  rest. One last visit: the cookie, moved on every page change, with one rule (`previousVisitFrom`) that gives the
+  same answer before and after the page marks a new visit; the home, Favoritos and Alertas all read it. Opening a
+  listing from a card still feeds "Para ti" (BIG 01).
+- **Files.** `lib/device-saves.ts`, `lib/viewed-listings.ts` (new), `components/catalog-recently-viewed.tsx`,
+  `components/saving/device-favorites.tsx`, `components/listing-card.tsx`, `components/home/home-for-you.tsx`,
+  `components/marketplace-account-provider.tsx`, `lib/catalog-device.ts`, `app/mi-cuenta/{alertas,favoritos}/page.tsx`.
+
 ## Fixed at integration
 
 - **Store columns the public cannot read.** The store-details fix (#30) closes the stores table to the public except

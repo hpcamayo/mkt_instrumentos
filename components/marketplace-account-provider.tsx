@@ -101,9 +101,8 @@ export function MarketplaceAccountProvider({ children }: { children: ReactNode }
     return () => { active = false; invalidate(); window.removeEventListener("focus", refresh); window.removeEventListener("storage", refresh); if (timer.current) clearTimeout(timer.current); };
   }, [pathname, loadStates, invalidate, mergeDeviceFavorites]);
 
-  // Device favorites and the visit marker (save-04), kept in step across tabs.
+  // Device favorites, kept in step across tabs.
   useEffect(() => {
-    touchVisit();
     const sync = () => setDeviceFavoriteIds(getDeviceFavorites().map((item) => item.id));
     sync();
     window.addEventListener(DEVICE_SAVES_EVENT, sync);
@@ -111,8 +110,10 @@ export function MarketplaceAccountProvider({ children }: { children: ReactNode }
     return () => { window.removeEventListener(DEVICE_SAVES_EVENT, sync); window.removeEventListener("storage", sync); };
   }, []);
 
-  // "Vistos recientemente" (big-04): the listing pages this device opened.
+  // The visit marker (save-04): every page change counts as being here, so a visit ends after 30 minutes away. And
+  // "Vistos recientemente" (big-04, FIND 11): the listing pages this device opened.
   useEffect(() => {
+    touchVisit();
     const match = /^\/instrumentos\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(pathname ?? "");
     if (match) recordViewed(match[1]);
   }, [pathname]);

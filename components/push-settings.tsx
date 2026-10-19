@@ -119,7 +119,7 @@ export function PushSettings({ publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_
   const copy = {
     install: "En iPhone, los avisos llegan cuando Laria está en tu pantalla de inicio: toca Compartir, luego “Agregar a inicio”, y abre Laria desde ese ícono.",
     denied,
-    off: "Te avisamos aquí de bajas de precio en tus favoritos, compras por confirmar y decisiones sobre tus publicaciones. Nunca de 10\u00a0p.\u00a0m. a 8\u00a0a.\u00a0m.: lo de la noche te llega junto en la mañana.",
+    off: "Te avisamos aquí de lo mismo que ves en esta página, como bajas de precio en tus favoritos, preguntas y compras por confirmar. Nunca de 10\u00a0p.\u00a0m. a 8\u00a0a.\u00a0m.: lo de la noche te llega junto en la mañana.",
     on: "Activados. Llegan de 8\u00a0a.\u00a0m. a 10\u00a0p.\u00a0m., varios juntos en uno, y los correos siguen como siempre.",
   }[state];
 

@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import { useEffect, useState, type KeyboardEvent } from "react";
+import { BarHeight } from "@/components/ui/bar-height";
 import { buttonClasses, IconButton } from "@/components/ui/button";
 
 export type UndoToastMessage = {
@@ -40,6 +41,7 @@ export function UndoToast({ toast, busy = false, onDismiss }: { toast: UndoToast
     >
       {toast ? (
         <div
+          data-bottom-bar
           className="surface-frame pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-panel bg-frame py-2 pl-4 pr-2 text-surface shadow-level-2"
           onMouseEnter={() => setHeld(true)}
           onMouseLeave={() => setHeld(false)}
@@ -49,6 +51,7 @@ export function UndoToast({ toast, busy = false, onDismiss }: { toast: UndoToast
           }}
           onKeyDown={onKeyDown}
         >
+          <BarHeight variable="--bottom-bar-height" />
           <p className="min-w-0 flex-1 t-ui">{toast.message}</p>
           {toast.onUndo ? (
             <button type="button" disabled={busy} onClick={toast.onUndo} className={buttonClasses({ variant: "onDark", size: "sm" })}>

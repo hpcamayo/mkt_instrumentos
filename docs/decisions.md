@@ -401,3 +401,168 @@ per-store advisory lock, and `admin_set_store_listing_allowance` takes the same 
 
 Why: two publishes (form, import chunks, restore) cannot pass the limit together, and a lowered allowance is never read
 stale.
+
+## Effortless Laria: proposed decisions (2026-10-19)
+
+These are the decisions taken while building the owner-approved UX ideas of the Effortless Laria program, and they remain proposals until the owner reviews the combined prototype. Each line gives the decision in short; the batch write-up in `docs/ux-effortless/` has the reasoning, files and limits. Where a decision replaces an earlier owner decision, its line says which.
+
+### Find and browse (find)
+
+Detail: [docs/ux-effortless/find.md](ux-effortless/find.md).
+
+- UXD-find-1: The catalog has one free-text search parameter, `q`, matched in Postgres (folding, curated synonyms, trigram similarity), and `brand` stays as a filter (big-03; supersedes N8's brand-only search).
+- UXD-find-2: A plain search phrase becomes filters through one redirect, and the remainder stays as `q` (big-03).
+- UXD-find-3: Searching from the catalog or a category page keeps the current filters, and "Buscar en todo el catálogo" escapes them (find-01).
+- UXD-find-4: Filter options show counts computed without their own facet, and empty options are dimmed, not hidden (find-07).
+- UXD-find-5: Locations come from listings and group into five zones, and cards show the store's district (find-05).
+- UXD-find-6: Menus and landings offer only brands, types and categories with listings, and when the counts fail they fall back to showing all (find-06).
+- UXD-find-7: The catalog gets two new sorts, "Bajaron de precio" (30 days) and "Tiendas verificadas primero" (find-10).
+- UXD-find-8: Personal signals (recently viewed, taste, "¿Qué tocas?", comparison, last visit, results trail) stay on the device, and each surface says so and can be cleared.
+- UXD-find-9: The home leads with instruments, and the vitrina and the category tiles are retired (big-01; replaces H1's "B Vitrina" and H2's automatic vitrina).
+- UXD-find-10: "Para ti" never shows two listings of the same seller in a row, and the server exposes only a hashed seller key (big-01).
+- UXD-find-11: Phones use "Ver 24 más", while numbered pages remain in the HTML for search engines (find-15).
+- UXD-find-12: A listing opened from the results offers "Volver a resultados" plus previous and next (find-09).
+- UXD-find-13: The comparison holds up to three public listings, picked from cards on desktop and from favorites on phones, and `/comparar` is noindex (find-12).
+- UXD-find-14: A gone listing's page reveals only that it is gone and its type, with live similar listings (find-16).
+- UXD-find-15: Search alerts can keep the text query, compared without case (big-03).
+- UXD-find-16: The search placeholder is "Busca guitarras, marcas, modelos…" and its label is "Buscar en el catálogo" (big-03; replaces N8's "Busca por marca: Yamaha, Fender…", since search now matches more than brands).
+
+### Listing page and WhatsApp (listing)
+
+Detail: [docs/ux-effortless/listing.md](ux-effortless/listing.md).
+
+- UXD-listing-1: Store listings use the store's current WhatsApp number, unsold listings' stored copy follows the store while sold ones keep theirs (fix-03), and wa.me links add 51 to 9-digit mobiles.
+- UXD-listing-2: A sold listing's "Publicaciones similares" stays as a one-line pointer to the catalog when nothing similar is public (fix-09; an exception to L12, which leaves empty sections out, for sold listings only).
+- UXD-listing-3: The listing page states the payment limitation once, as the line under the contact button with "Cómo comprar seguro", and TrustNote leaves the listing page (list-02).
+- UXD-listing-4: A price drop is public ("Antes") for 30 days only when the listing is approved, the drop is at least 5% and the old price had stood 7 days (list-05).
+- UXD-listing-5: The seller card shows only facts Laria records (activity bucket, confirmed sales, member age, confirmed e-mail; verified stores' checked RUC, razón social, address), never reply times (list-10, trust-03; showing confirmed sales replaces L20, "no public confirmed-sales count").
+- UXD-listing-6: The WhatsApp opening message carries title, price and link, and quick questions are optional, never preselected (talk-01, talk-02).
+- UXD-listing-7: Contact opens WhatsApp at once, recording is fire-and-forget, and a one-time safety sheet precedes contacts from S/ 1,000 and every purchase request (talk-03, talk-04).
+- UXD-listing-8: Public Q&A on listings (big-11) is allowed in V1 (public, one answer, contact details filtered, reportable and hideable by Admin), and it is not private messaging.
+- UXD-listing-9: Back-in-stock alerts are opt-in per listing, fire once and end, and sold listings offer a similar-listings search alert instead (list-11).
+- UXD-listing-10: The listing page offers "Compartir" again (reverses UX-4 L8), with generated link previews and a story image for public listings only (list-08, list-09).
+
+### Accounts, saving and alerts (accounts)
+
+Detail: [docs/ux-effortless/accounts.md](ux-effortless/accounts.md).
+
+- UXD-accounts-1: WhatsApp numbers are stored as digits with the country code, nine-digit Peruvian mobiles get 51 added on every write, and stored numbers are corrected once (fix-01).
+- UXD-accounts-2: Signing in with a correct password before confirming the e-mail says so and offers to resend the link, with 60 seconds between sends (fix-08).
+- UXD-accounts-3: Visitors save favorites on the device, and signing in merges them into the account (big-04).
+- UXD-accounts-4: An action interrupted by sign-in is finished on return, for up to one hour and only once (save-01).
+- UXD-accounts-5: `next` survives sign-in, sign-up and the confirmation e-mail, and the header's "Ingresar" sets it (save-02).
+- UXD-accounts-6: "New since your last visit" uses a first-party cookie and a 30-minute visit gap (save-04).
+- UXD-accounts-7: Alerts can be renamed, switch frequency and hold several values per filter, and daily is the default (save-05).
+- UXD-accounts-8: The repeat-search prompt appears from the second occasion of a search and never again for that search once declined (save-06).
+- UXD-accounts-9: Optional e-mails carry signed one-click links and RFC 8058 headers, and a GET never changes state (save-07).
+- UXD-accounts-10: Favorites are alerted on drops of 5% or more, at most once a day per listing (save-08).
+- UXD-accounts-11: Shared lists are revocable, unguessable links showing only public listings and the first name (save-11).
+- UXD-accounts-12: Follows cover stores and brands, and the weekly digest is opt-in (save-12).
+- UXD-accounts-13: Passwords have one minimum of 8 characters everywhere and a show/hide eye on every field (auth-01).
+- UXD-accounts-14: A Particular account needs only name, e-mail and password, and contact details come at publishing (auth-02).
+
+### Selling (selling)
+
+Detail: [docs/ux-effortless/selling.md](ux-effortless/selling.md).
+
+- UXD-selling-1: Every listing photo is stored as JPEG, and transparent PNG areas become white, as in the store import (fix-02).
+- UXD-selling-2: For "Publicar el siguiente SKU sin publicación", the next SKU is the first active, unlinked SKU by SKU code (fix-05).
+- UXD-selling-3: The seller's contact and store notice stay at the top of step 1, so who publishes is clear before the first photo (big-06).
+- UXD-selling-4: Drafts get their own owner-only table, not `listings.status = 'draft'`, so no listing reader, allowance or moderation query has to learn to skip them (post-01, post-02).
+- UXD-selling-5: A draft's id is its submission id, and resuming re-signs a token for that id, so its photos stay where they are (post-01, post-02).
+- UXD-selling-6: A seller can keep at most 20 drafts (post-01, post-02).
+- UXD-selling-7: A photo slot is never reused within a submission (a replacement is a new file), so no upload overwrites a photo another device still shows, and unused files are removed at completion (post-03, post-04).
+- UXD-selling-8: The usual review wait is the median for Particular listings published in the last 60 days and is shown only when there are at least 20 of them; otherwise nothing is promised (post-14).
+- UXD-selling-9: The live-listing confirmation has no exclamation marks, per the copy rules (`tests/ux-copy.test.cjs`), and no confetti (post-15).
+- UXD-selling-10: A sound clip's row is readable exactly when its listing is (its policy reads `listings` under the caller's RLS), and only Admins delete it (post-16).
+- UXD-selling-11: A store listing's location is the store's and is shown read-only on the sell form (shop-06).
+
+### My listings, sales and reviews (my-listings)
+
+Detail: [docs/ux-effortless/my-listings.md](ux-effortless/my-listings.md).
+
+- UXD-my-listings-1: The account home opens on Pendientes, not metrics, and metrics move to Estadísticas (big-09; supersedes U16, "Resumen is not turned into a to-do list").
+- UXD-my-listings-2: A buyer's "Sí, lo compré" from a check-in plus the seller's one-tap confirmation is a verified transaction, with no second buyer confirmation (big-08).
+- UXD-my-listings-3: Check-ins (purchase and availability) are skipped for stock-managed store listings, whose sales go through Inventario (big-08, mine-08).
+- UXD-my-listings-4: "Sí, sigue disponible" records the date and resets the 30-day clock, the first-publication date never changes, and the listing shows "Quien vende confirmó que sigue disponible el …" for 30 days (mine-08).
+- UXD-my-listings-5: "Lo vendí, retirar" archives a pending, draft or rejected listing with a sold date, and it never becomes public (mine-07).
+- UXD-my-listings-6: Republicar and Duplicar create a draft opened in the edit form and sent with the usual submission (mine-10, shop-08; replaces the direct relist copy).
+- UXD-my-listings-7: Vacation mode is all-or-nothing per account, runs until a date from tomorrow to 90 days ahead, keeps listings public with "Vuelve el …" and contact off, and ends by itself (mine-12).
+- UXD-my-listings-8: Rejections use ten fixed reasons plus an optional note (required when no reason is picked), stored as codes and as readable text (mine-03).
+- UXD-my-listings-9: Particular statistics offer 7, 30 and 90 days (lifetime totals stay below), and tips are at most two per listing, plain and rule-based (mine-11).
+- UXD-my-listings-10: Reminders are sent at most once per key (dedupe table) by one daily job at 14:00 UTC (09:00 Lima), and never for anything the person already answered (trust-01).
+- UXD-my-listings-11: No buyer is pre-selected when a seller attributes a sale (mine-09).
+- UXD-my-listings-12: The closing panel reads "Que lo disfrutes" without exclamation marks (trust-04).
+- UXD-my-listings-13: The store checklist shows until every step is done, then disappears, and "Medios de pago" is a step only while the payments pilot is on (shop-02).
+
+### Store profile, storefront and import (stores)
+
+Detail: [docs/ux-effortless/stores.md](ux-effortless/stores.md).
+
+- UXD-stores-1: The import asks "¿Qué actualiza este archivo en los SKU que ya tienes?" only when the file has both a stock and a price column, and no answer is preselected (fix-04).
+- UXD-stores-2: Stale stock is detected only in files that carry "Exportado el" (a Laria export), since a store's own POS file is a fresh count and applies as before (fix-04).
+- UXD-stores-3: "Usar el stock del archivo" is one choice for the whole file, not per row, and a store that recounted only some SKU can exclude the others in the review (fix-04).
+- UXD-stores-4: Under "Precios", a stock cell for a new SKU is still its opening stock, since a new SKU has no history to undo (fix-04).
+- UXD-stores-5: The application prefill fills only empty fields of a new application, and nothing is saved until the owner sends the form (shop-01).
+- UXD-stores-6: The RUC confirmation appears only when a payment method would actually go back to review (approved or pending), and otherwise the inline warning is enough (shop-03).
+- UXD-stores-7: "Ocultarlas" acts only on listings linked to an inventory SKU marked out of stock, since a store without inventory has no "Agotado" state to act on (shop-05).
+- UXD-stores-8: A "Pedir más cupo" request changes nothing by itself, and Admin still sets the allowance with an audited reason (shop-05).
+- UXD-stores-9: Correcting an import cell on the page re-plans only the edited row and duplicate rows, not the whole file, and other rows keep the plan they had (stock-12).
+- UXD-stores-10: "Publicar seleccionados" takes at most 200 SKU per batch (the store's listing allowance is far lower, and each new publication goes to review), and like an import a batch's staged rows are purged 30 days after it is created (stock-10).
+- UXD-stores-20: The directory lists all active stores (Tienda and Tienda verificada), verified first, then by name, and the entry keeps the label "Tiendas verificadas", though the owner may prefer "Tiendas" (find-13; replaces N7, where "Tiendas verificadas" opened the catalog filtered to verified stores because no directory existed).
+- UXD-stores-21: The directory's city chips (not grouped sections) are ordered by number of stores, then alphabetically, and shown only with two cities or more (find-13).
+- UXD-stores-22: The directory's listings tab has no filters or sort of its own and links to the catalog's verified-store filter, which has them all (find-13).
+- UXD-stores-23: Every store page's breadcrumb goes through "Tiendas" (find-13; replaces L19's per-type trail).
+- UXD-stores-24: The directory card shows the rating only with visible reviews and always "N publicaciones" (find-13; Q18/F12 kept stats off the home tiles, and the directory is where they now appear).
+- UXD-stores-25: The store page reads only `category`, `brand` and `sort` (the catalog's names) and ignores other catalog parameters, and brand matches "contains", like the catalog (find-14).
+- UXD-stores-26: Store category counts do not narrow with the brand filter and always describe the whole store (find-14).
+- UXD-stores-27: Out-of-stock listings stay last on the store page whatever the sort, per the store-operations design §5.2 (find-14).
+- UXD-stores-28: Opening hours show whenever the store wrote them (writing them is the consent), and only the address needs `show_address` (list-12).
+- UXD-stores-29: "Cómo llegar" appears only with a shown address (a district-only search is not useful), and its query is address, district, city and "Perú", with repeated parts once (list-12).
+- UXD-stores-30: Opening hours are free text, with no structured weekdays and no "Abierto ahora", which would need a timezone-aware schedule and could be wrong (list-12).
+- UXD-stores-31: The owner's store preview shows only approved listings, not ones in review, because it shows what the public will see (shop-04).
+- UXD-stores-32: In the preview, the WhatsApp button is shown inert with an explanation rather than hidden, so the owner sees the real layout (shop-04).
+- UXD-stores-33: The owner notice on an active store keeps visit telemetry as before, so owner self-visits still count, as today (shop-04).
+- UXD-stores-40: Laria keeps one complaints book for the platform, not one per store, because stores, as providers, keep their own books (trust-05).
+- UXD-stores-41: Sheets are numbered `LR-<año>-<6 digits>`, correlative per calendar year in Lima time, from a locked counter rather than a sequence, so a rollback never leaves a gap (trust-05).
+- UXD-stores-42: The answer goes to the consumer's e-mail (the field hint says "Aquí recibirás la respuesta"), and the form has no "respuesta por domicilio" option (trust-05).
+- UXD-stores-43: No e-mail copy of the sheet is sent and the visitor saves or prints it, since the e-mail outbox only serves registered users' fixed notification kinds and would need a new template (trust-05).
+- UXD-stores-44: A light abuse limit allows 5 sheets per e-mail address (and per account) in 24 hours, with no IP or CAPTCHA limit, so shared networks never block a legitimate consumer (trust-05).
+- UXD-stores-45: Accepted documents are DNI, carné de extranjería, pasaporte and RUC (trust-05).
+- UXD-stores-46: The page is indexable with its canonical URL, and it was not added to `legalPages` or the sitemap to keep edits minimal, though the coordinator can add it to the sitemap (trust-05).
+- UXD-stores-47: The footer has a text link only, with no Libro de Reclamaciones icon (trust-05).
+- UXD-stores-48: Admin has RPCs only (`get_admin_complaints_book_page`, `answer_complaints_book_entry`) and no Admin screen in this program (trust-05).
+- UXD-stores-49: `?publicacion=<slug>` is the only prefill, and signed-in users' names and e-mails are not prefilled, which is a possible follow-up (trust-05).
+
+### Store inventory and counter (inventory)
+
+Detail: [docs/ux-effortless/inventory.md](ux-effortless/inventory.md).
+
+- UXD-inventory-1: Inventario search matches SKU, name, variant, external reference and the linked publication's title, brand and model, needs every word (accents and case ignored) and updates the table as you type (fix-06).
+- UXD-inventory-2: "En revisión" in Inventario means new publications plus changes in review, rejected publications are a separate tile, and the catalog filter is hidden until catalog matching exists (fix-09).
+- UXD-inventory-3: Undo is a linked correction in the append-only ledger, offered for 10 s after each change and 15 min on the SKU page, and sales totals ignore corrected sales (stock-02, stock-03).
+- UXD-inventory-4: Purchase requests get their own page with marks and a one-step "Vendido", and the store gets ready replies without numbers or links (stock-04, stock-05).
+- UXD-inventory-5: Stores get a default low-stock threshold and an opt-in daily summary in Notificaciones, never by e-mail (stock-06).
+- UXD-inventory-6: The bulk limit is 2,000 SKUs, a view can be selected whole, and price changes are revertible campaigns with optional rounding to …9 (stock-14, stock-15).
+- UXD-inventory-7: The reorder list is a file round trip, and "Agotados con interés" ranks out-of-stock SKUs by favorites and contacts (stock-07, stock-08).
+- UXD-inventory-8: Inventario adds saved views, export of a view, keyboard shortcuts and the list position (stock-16 to stock-19).
+- UXD-inventory-9: "Solicitar compra" asks for a quantity up to what is available, capped at 10, without showing stock (stock-23).
+- UXD-inventory-10: Mostrador makes the browser the counter, with the camera where BarcodeDetector exists and an offline queue (big-10).
+
+### Integration (integration)
+
+Detail: [docs/ux-effortless/integration.md](ux-effortless/integration.md).
+
+- UXD-integration-1: The listing batch's price-drop rule (list-05) applies everywhere, so a listing never sits under "Bajaron de precio" (find-10) without the "Antes" its page shows, and a raise-then-drop cannot put it there.
+- UXD-integration-2: "Duplicar" is the my-listings batch's full copy (photos, specs and text into a new draft, shop-08), "Publicar uno parecido" keeps the selling batch's rule (post-13), and the sell form drops `?desde=`.
+- UXD-integration-3: Every batch adds notification and e-mail types through one helper, the listing batch's `laria_private.ux_extend_text_check`, which evaluates the allowed list instead of reading its text.
+- UXD-integration-4: "Solicitar compra" with a quantity uses the listing batch's link, so WhatsApp opens at once with the quantity in the message, the route still clamps it, and the safety sheet applies (stock-23).
+- UXD-integration-5: The ready WhatsApp replies use the pickup hours when the store wrote them, otherwise its opening hours, and the pickup field says so and stays, since pickup hours can still differ (stock-05, list-12).
+- UXD-integration-6: The SKU page shows "Datos para publicar" in Publicación, above "Publicar este SKU", while the SKU has no publication, and the category is edited once, in "Categoría del SKU" (stock-09, stock-20).
+- UXD-integration-7: The owner's store preview leaves out "Seguir", the account home says "Cupo de publicaciones" and points to Mi tienda at the limit, and "Publicar seleccionados" joins the new bulk bar, for ticked rows only.
+- UXD-integration-8: One module, `lib/notifications.ts`, names each notice and picks its page for both the notifications list and push, so a push reads and opens like its row and a new type is added in one place (big-12).
+- UXD-integration-9: "Vistos recientemente" is one list on the device (every listing page opened, drawn from today's public cards on the home, the catalog, the not-found page and Favoritos), and "your last visit" is one cookie with one rule for the home, Favoritos and Alertas (FIND 11, big-04, save-04).
+
+### Speed, install and push (speed)
+
+Detail: [docs/ux-effortless/speed.md](ux-effortless/speed.md).

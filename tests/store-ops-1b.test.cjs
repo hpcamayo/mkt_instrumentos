@@ -243,6 +243,9 @@ test("the data table is a captioned semantic table with labelled checkboxes and 
   assert.match(markup, /<table[^>]*><caption class="sr-only">SKU de tu inventario<\/caption>/);
   assert.match(markup, /<th scope="col"[^>]*md:sticky md:top-0/);
   assert.match(markup, /aria-label="Seleccionar todos los de esta página"/);
+  // fast-04: phones get "select all" as a visible row (the header is for screen readers there); one shows at each width.
+  assert.match(markup, /<label class="[^"]*md:hidden"><input type="checkbox"[^>]*aria-label="Seleccionar todos los de esta página"/);
+  assert.match(markup, /<span class="max-md:hidden"><input type="checkbox"[^>]*aria-label="Seleccionar todos los de esta página"/);
   assert.match(markup, /aria-label="Seleccionar Uno"/);
   assert.match(markup, /aria-label="Seleccionar Dos" checked=""/);
   assert.equal((markup.match(/<tr tabindex="0"/g) ?? []).length, 2, "one keyboard stop per row");

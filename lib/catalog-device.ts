@@ -1,20 +1,18 @@
 import type { ListingCardData } from "@/lib/listings";
 
-// What Laria remembers on this device only (Effortless Laria, find batch): the listings recently opened (FIND 11), the
-// taste signals behind "Para ti" (BIG 01), the optional "¿Qué tocas?" answer, the last visit, the comparison tray
-// (FIND 12) and the results a listing was opened from (FIND 09). Nothing here is sent to Laria's servers; every read
+// What Laria remembers on this device only (Effortless Laria, find batch): the taste signals behind "Para ti" (BIG 01),
+// the optional "¿Qué tocas?" answer, the comparison tray (FIND 12) and the results a listing was opened from (FIND 09).
+// The listings recently opened (FIND 11) and the last visit are the accounts batch's, in lib/device-saves.ts
+// (UXD-integration-9). Nothing here is sent to Laria's servers; every read
 // and write tolerates storage being unavailable (private windows, blocked site data). Browser-only helpers, pure
 // ranking functions.
 
-export const RECENT_KEY = "laria:vistos";
 export const TASTE_KEY = "laria:gustos";
 export const INTEREST_KEY = "laria:que-tocas";
 export const PERSONALIZE_KEY = "laria:sin-personalizar";
-export const LAST_VISIT_KEY = "laria:ultima-visita";
 export const COMPARE_KEY = "laria:comparar";
 export const RESULTS_KEY = "laria:resultados";
 export const RESTORE_KEY = "laria:volver-a";
-export const RECENT_LIMIT = 12;
 export const COMPARE_LIMIT = 3;
 export const DEVICE_EVENT = "laria:device";
 
@@ -70,11 +68,6 @@ export function rememberable(listing: ListingCardData): RememberedListing {
     photo: listing.listing_photos[0]?.image_url ?? null,
     at: Date.now(),
   };
-}
-
-// Newest first, one entry per listing, capped.
-export function addRecent(list: readonly RememberedListing[], item: RememberedListing, limit = RECENT_LIMIT) {
-  return [item, ...list.filter((entry) => entry.id !== item.id)].slice(0, limit);
 }
 
 // Taste: counts of what this person opened, decayed so recent interest weighs more. Keys are "c:<category>",
