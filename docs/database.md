@@ -795,3 +795,14 @@ Local only; never applied to a hosted database. SQL suite: `tests/ux-my-listings
   (per listing, 12 weekly buckets, contacts without sale in 30 days). `get_eligible_transaction_buyers` adds
   `phone_last3` and `reported_purchase`; `get_transaction_detail` adds `seller_verified_sales` for the seller.
 <!-- ux my-listings: end -->
+
+<!-- ux-effortless:listing (batch "listing", migration slot 20261102) -->
+## Effortless Laria: listing page and WhatsApp
+
+- `20261102120000_ux_store_listing_contact.sql` (fix-03): trigger `stores_sync_listing_contact_phone` (after update of
+  `stores.whatsapp_phone`) runs `laria_private.sync_store_listing_contact_phone()`, which copies the store's new number
+  to every unsold store listing (`status <> 'sold'`; sold rows stay immutable history). It opens the listing guard
+  (`app.allow_listing_admin_fields`) for that one statement and restores it. A one-time update brings listings that
+  had already drifted to their store's number. Not callable by `anon` or `authenticated`. The app also reads a store
+  listing's contact from the store (`lib/seller-contact.ts` `resolveContactPhone`). Suite: `tests/ux-listing-contact.sql`.
+<!-- /ux-effortless:listing -->

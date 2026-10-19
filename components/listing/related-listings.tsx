@@ -9,19 +9,33 @@ export const RELATED_GRID = "grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 md:
 export const RELATED_SIZES = "(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 320px";
 
 // "Publicaciones similares" and "Más de esta tienda / este vendedor": the title, a link at the right, four cards. A
-// section without listings is left out.
+// section without listings is left out, unless the page links to it (a sold listing's "Ver publicaciones similares",
+// fix-09): then it stays as a short line pointing at the catalog, so the link never lands on nothing.
 export function RelatedListings({
   id,
   title,
   link,
   listings,
+  emptyText,
 }: {
   id: string;
   title: string;
   link: { href: string; label: string } | null;
   listings: ListingCardData[];
+  emptyText?: string;
 }) {
-  if (listings.length === 0) return null;
+  if (listings.length === 0) {
+    if (!emptyText || !link) return null;
+    return (
+      <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-4">
+        <h2 id={`${id}-titulo`} className="t-section text-ink">{title}</h2>
+        <p className="mt-2 t-ui text-ink-2">
+          {emptyText}{" "}
+          <Link href={link.href} className="link font-semibold">Explorar el catálogo</Link>
+        </p>
+      </section>
+    );
+  }
   return (
     <section id={id} aria-labelledby={`${id}-titulo`} className="scroll-mt-4">
       <div className="flex items-baseline justify-between gap-4">

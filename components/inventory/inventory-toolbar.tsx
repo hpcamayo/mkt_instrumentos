@@ -3,7 +3,7 @@
 import { Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Input, Radio, Select } from "@/components/ui/field";
 import { Sheet } from "@/components/ui/sheet";
@@ -11,6 +11,7 @@ import { CountBadge } from "@/components/ui/tag";
 import { categoryOptions } from "@/lib/listings";
 import {
   CATALOG_FILTERS,
+  CATALOG_MATCHING_AVAILABLE,
   INVENTORY_NO_CATEGORY,
   PUBLICATION_FILTERS,
   SORTS,
@@ -21,14 +22,28 @@ import {
 } from "@/lib/store-inventory";
 
 // Search (SKU, marca, modelo, nombre), filters in a sheet and the sort (design §13.1). Everything lives in the URL, so
-// a filtered view can be reloaded or shared with the same result and the server reads one page at a time.
+// a filtered view can be reloaded or shared with the same result and the server reads one page at a time. The list
+// follows the search box as the owner types (fix-06): a pause of SEARCH_DELAY_MS replaces the URL, so the browser
+// history keeps one entry per search rather than one per letter. "Buscar" still submits at once.
+const SEARCH_DELAY_MS = 350;
+
 export function InventoryToolbar({ filters }: { filters: InventoryFilters }) {
   const router = useRouter();
   const searchId = useId();
   const sortId = useId();
   const [open, setOpen] = useState(false);
   const filterButton = useRef<HTMLButtonElement>(null);
+  const typing = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applied = activeFilterCount(filters);
+
+  useEffect(() => () => { if (typing.current) clearTimeout(typing.current); }, []);
+
+  function searchAsYouType(value: string) {
+    if (typing.current) clearTimeout(typing.current);
+    const q = value.trim();
+    if (q === filters.q) return;
+    typing.current = setTimeout(() => router.replace(inventoryHref({ ...filters, q }), { scroll: false }), SEARCH_DELAY_MS);
+  }
 
   function dismiss() {
     setOpen(false);
@@ -43,12 +58,13 @@ export function InventoryToolbar({ filters }: { filters: InventoryFilters }) {
           className="flex min-w-0 flex-1 basis-64 items-end gap-2"
           onSubmit={(event) => {
             event.preventDefault();
+            if (typing.current) clearTimeout(typing.current);
             const q = String(new FormData(event.currentTarget).get("q") ?? "").trim();
             router.push(inventoryHref({ ...filters, q }));
           }}
         >
           <Field id={searchId} label="Buscar en tu inventario" labelClassName="sr-only" className="min-w-0 flex-1">
-            <Input name="q" type="search" defaultValue={filters.q} maxLength={100} placeholder="SKU, marca, modelo o nombre" />
+            <Input name="q" type="search" defaultValue={filters.q} maxLength={100} placeholder="SKU, marca, modelo, nombre o código" onChange={(event) => searchAsYouType(event.target.value)} />
           </Field>
           <Button type="submit" variant="secondary" icon={<Search aria-hidden />}>Buscar</Button>
         </form>
@@ -118,10 +134,12 @@ function FilterSheet({ filters, onDismiss, onApply }: { filters: InventoryFilter
             <option value={INVENTORY_NO_CATEGORY}>Sin categoría</option>
           </Select>
         </Field>
-        <fieldset className="grid gap-0.5">
-          <legend className="t-ui font-semibold text-ink">Catálogo</legend>
-          {CATALOG_FILTERS.map((entry) => <Radio key={entry.value || "any"} name={`${id}-catalogo`} label={entry.label} checked={draft.catalog === entry.value} onChange={() => setDraft({ ...draft, catalog: entry.value })} />)}
-        </fieldset>
+        {CATALOG_MATCHING_AVAILABLE ? (
+          <fieldset className="grid gap-0.5">
+            <legend className="t-ui font-semibold text-ink">Catálogo</legend>
+            {CATALOG_FILTERS.map((entry) => <Radio key={entry.value || "any"} name={`${id}-catalogo`} label={entry.label} checked={draft.catalog === entry.value} onChange={() => setDraft({ ...draft, catalog: entry.value })} />)}
+          </fieldset>
+        ) : null}
       </div>
     </Sheet>
   );

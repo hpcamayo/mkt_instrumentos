@@ -11,7 +11,10 @@ export function InventorySummaryTiles({ summary, importErrors, importHref }: { s
     { label: "Unidades en tienda", value: summary.units, note: summary.available_units !== summary.units ? `${numbers.format(summary.available_units)} disponibles` : undefined },
     { label: "Stock bajo", value: summary.low_stock, href: "/mi-cuenta/tienda/inventario?stock=low", attention: summary.low_stock > 0 },
     { label: "Agotados", value: summary.out_of_stock, href: "/mi-cuenta/tienda/inventario?stock=out", attention: summary.out_of_stock > 0 },
-    { label: "En revisión", value: summary.in_review, href: "/mi-cuenta/tienda/inventario?publicacion=pending", note: summary.rejected ? `${numbers.format(summary.rejected)} rechazadas` : undefined, attention: summary.rejected > 0 },
+    // fix-09: the tile counts new publications and changes waiting for review, and opens exactly those; rejected
+    // publications have their own tile, which opens the rejected ones.
+    { label: "En revisión", value: summary.in_review, href: "/mi-cuenta/tienda/inventario?publicacion=in_review", note: "Publicaciones nuevas y cambios" },
+    ...(summary.rejected ? [{ label: "Rechazadas", value: summary.rejected, href: "/mi-cuenta/tienda/inventario?publicacion=rejected", note: "Corrige y vuelve a enviar", attention: true }] : []),
     { label: "Ventas registradas por la tienda", value: summary.sales_30d_units, note: `Unidades, últimos 30 días. Anotadas por tu tienda; Laria no las verifica.` },
   ];
   // Rows the store's latest finished import could not apply (STORE-2). A store that never imported has no tile.

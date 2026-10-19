@@ -11,10 +11,10 @@ import {
 } from "react";
 import { LocationFields } from "@/components/location-fields";
 import { ConditionCards, FormSection, TypeChips } from "@/components/selling/choice-fields";
+import { PhotoPrepareError, isAcceptedPhotoType, prepareListingPhoto } from "@/components/selling/prepare-photo";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import {
   MAX_LISTING_PHOTOS,
-  MAX_LISTING_PHOTO_BYTES,
   MIN_LISTING_PHOTOS,
   getInstrumentTypeOptions,
   type ListingSubmissionAttributes,
@@ -82,7 +82,7 @@ const FIELD_IDS: Record<SellField, string> = {
   marketplace_rules: `${ID}-marketplace_rules`,
 };
 
-export function SellListingForm({ profile, store, inventorySku }: { profile: SellerProfile; store?: StoreContext; inventorySku?: InventorySku }) {
+export function SellListingForm({ profile, store, inventorySku: initialSku }: { profile: SellerProfile; store?: StoreContext; inventorySku?: InventorySku }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const submit = useMemo(
     () => (supabase ? createPublicSubmission(supabase) : null),
@@ -98,6 +98,10 @@ export function SellListingForm({ profile, store, inventorySku }: { profile: Sel
   const [instrumentType, setInstrumentType] = useState("");
   const [descriptionLength, setDescriptionLength] = useState(0);
   const [photos, setPhotos] = useState<File[]>([]);
+  const [preparing, setPreparing] = useState(false);
+  // FIX 05: the SKU being published. "Publicar otro" clears it, so the next listing is never sent for a linked SKU.
+  const [inventorySku, setInventorySku] = useState(initialSku);
+  const [publishedSku, setPublishedSku] = useState<InventorySku | undefined>();
   const photoPreviews = useMemo(
     () => photos.map((photo) => URL.createObjectURL(photo)),
     [photos],
@@ -116,7 +120,7 @@ export function SellListingForm({ profile, store, inventorySku }: { profile: Sel
     ? getInstrumentFilterGroup(instrumentType)
     : null;
   const direct = store?.status === "active" && store.isVerified;
-  const busy = state === "submitting";
+  const busy = state === "submitting" || preparing;
   const errorFor = (field: SellField) => errors.find((error) => error.field === field)?.message;
 
   function clearError(field: SellField) {
@@ -135,28 +139,51 @@ export function SellListingForm({ profile, store, inventorySku }: { profile: Sel
     clearError("category");
   }
 
-  function addPhotos(event: ChangeEvent<HTMLInputElement>) {
-    const chosen = Array.from(event.target.files ?? []);
-    const selected = chosen.filter(isImageFile);
+  // FIX 02: each photo is shrunk and re-encoded in the browser before it is kept, which drops its location data and
+  // makes big phone photos fit. A photo that cannot be prepared is named; the others are kept.
+  async function preparePhotos(chosen: File[]) {
+    const prepared: File[] = [];
+    const failed: string[] = [];
+    for (const photo of chosen) {
+      try {
+        prepared.push((await prepareListingPhoto(photo)).file);
+      } catch (error) {
+        failed.push(error instanceof PhotoPrepareError ? `«${photo.name}»: ${error.message}` : `«${photo.name}»: no pudimos prepararla.`);
+      }
+    }
+    return { prepared, failed };
+  }
+
+  async function addPhotos(event: ChangeEvent<HTMLInputElement>) {
+    const chosen = Array.from(event.target.files ?? []).filter((photo) => photo.size > 0);
     event.target.value = "";
-    if (chosen.some((photo) => !isImageFile(photo))) return showMessage("Usa fotos JPEG, PNG o WebP.");
-    if (selected.some((photo) => photo.size > MAX_LISTING_PHOTO_BYTES)) return showMessage("Cada foto debe pesar 5 MB o menos.");
-    if (photos.length + selected.length > MAX_LISTING_PHOTOS) return showMessage(`Puedes subir hasta ${MAX_LISTING_PHOTOS} fotos por publicación.`);
-    setPhotos((current) => [...current, ...selected]);
-    if (photos.length + selected.length >= MIN_LISTING_PHOTOS) clearError("photos");
+    const accepted = chosen.filter((photo) => isAcceptedPhotoType(photo.type));
+    if (!accepted.length) return chosen.length ? showMessage("Usa fotos JPEG, PNG o WebP.") : undefined;
+    if (photos.length + accepted.length > MAX_LISTING_PHOTOS) return showMessage(`Puedes subir hasta ${MAX_LISTING_PHOTOS} fotos por publicación.`);
+    setPreparing(true);
+    const { prepared, failed } = await preparePhotos(accepted);
+    setPreparing(false);
+    setPhotos((current) => [...current, ...prepared]);
+    if (photos.length + prepared.length >= MIN_LISTING_PHOTOS) clearError("photos");
+    const skipped = chosen.length - accepted.length;
+    const problems = [...failed, ...(skipped ? [`${skipped === 1 ? "Una foto no es" : `${skipped} fotos no son`} JPEG, PNG o WebP.`] : [])];
+    if (problems.length) return showMessage(problems.join(" "));
     setState("idle");
     setMessage("");
   }
 
-  function replacePhoto(index: number, event: ChangeEvent<HTMLInputElement>) {
+  async function replacePhoto(index: number, event: ChangeEvent<HTMLInputElement>) {
     const chosen = Array.from(event.target.files ?? []);
-    const file = chosen.find(isImageFile);
+    const file = chosen.find((photo) => photo.size > 0 && isAcceptedPhotoType(photo.type));
     event.target.value = "";
     if (!file && chosen.length) return showMessage("Usa una foto JPEG, PNG o WebP.");
     if (!file) return;
-    if (file.size > MAX_LISTING_PHOTO_BYTES) return showMessage("Cada foto debe pesar 5 MB o menos.");
+    setPreparing(true);
+    const { prepared, failed } = await preparePhotos([file]);
+    setPreparing(false);
+    if (!prepared.length) return showMessage(failed.join(" "));
     setPhotos((current) =>
-      current.map((photo, photoIndex) => (photoIndex === index ? file : photo)),
+      current.map((photo, photoIndex) => (photoIndex === index ? prepared[0] : photo)),
     );
   }
 
@@ -248,11 +275,14 @@ export function SellListingForm({ profile, store, inventorySku }: { profile: Sel
       return;
     }
     setProgress("");
+    setPublishedSku(inventorySku);
     setState("success");
   }
 
   // A fresh, empty form: a new key remounts every uncontrolled field.
   function startAnother() {
+    setInventorySku(undefined);
+    setPublishedSku(undefined);
     setPhotos([]);
     setCategory("");
     setInstrumentType("");
@@ -272,7 +302,13 @@ export function SellListingForm({ profile, store, inventorySku }: { profile: Sel
         </PageNotice>
         <div className="flex flex-wrap gap-3">
           <Link href={store ? "/mi-cuenta/tienda/inventario" : "/mi-cuenta/publicaciones"} className={buttonClasses({ variant: "secondary" })}>{store ? "Ver inventario" : "Ver mis publicaciones"}</Link>
-          <button type="button" onClick={startAnother} className={buttonClasses({ variant: "secondary" })}>Publicar otro instrumento</button>
+          {publishedSku ? <>
+            <Link href={`/mi-cuenta/tienda/inventario/${publishedSku.id}`} className={buttonClasses({ variant: "secondary" })}>Volver al SKU</Link>
+            <Link href="/mi-cuenta/tienda/publicar?sku=siguiente" className={buttonClasses({ variant: "secondary" })}>Publicar el siguiente SKU sin publicación</Link>
+          </> : null}
+          {/* After a SKU the page header and address still name it, so a fresh page load starts clean. */}
+          {publishedSku ? <a href="/mi-cuenta/tienda/publicar" className={buttonClasses({ variant: "secondary" })}>Publicar otro instrumento</a>
+          : <button type="button" onClick={startAnother} className={buttonClasses({ variant: "secondary" })}>Publicar otro instrumento</button>}
           <Link href="/mi-cuenta" className="link self-center font-semibold">Volver al resumen</Link>
         </div>
       </div>
@@ -305,7 +341,7 @@ export function SellListingForm({ profile, store, inventorySku }: { profile: Sel
       </Notice>
 
       <fieldset disabled={busy} className="grid min-w-0 gap-6">
-        <FormSection id="photo-heading" step={1} title="Fotos" hint={<>Entre {MIN_LISTING_PHOTOS} y {MAX_LISTING_PHOTOS}, JPEG, PNG o WebP de 5 MB o menos. La primera es la principal.</>}>
+        <FormSection id="photo-heading" step={1} title="Fotos" hint={<>Entre {MIN_LISTING_PHOTOS} y {MAX_LISTING_PHOTOS}, JPEG, PNG o WebP. La primera es la principal. Las reducimos y les quitamos los datos de ubicación antes de subirlas.</>}>
           <ul className="grid gap-1 t-meta sm:grid-cols-2">
             {PHOTO_GUIDANCE.map((tip) => <li key={tip} className="flex gap-2"><span aria-hidden>·</span>{tip}</li>)}
           </ul>
@@ -333,7 +369,7 @@ export function SellListingForm({ profile, store, inventorySku }: { profile: Sel
               ))}
             </ol>
           ) : null}
-          <p className="t-meta font-semibold" aria-live="polite">{photos.length} de {MAX_LISTING_PHOTOS} fotos</p>
+          <p className="t-meta font-semibold" aria-live="polite">{preparing ? "Preparando fotos…" : `${photos.length} de ${MAX_LISTING_PHOTOS} fotos`}</p>
         </FormSection>
 
         <FormSection id={`${ID}-instrumento`} step={2} title="El instrumento">
@@ -459,8 +495,4 @@ function SelectField({ label, name, options, value, onChange, error }: { label: 
 function readValue(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
-}
-
-function isImageFile(value: FormDataEntryValue): value is File {
-  return value instanceof File && value.size > 0 && ["image/jpeg", "image/png", "image/webp"].includes(value.type);
 }
