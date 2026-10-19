@@ -56,8 +56,52 @@ Merge order (by migration slot): find (#27), listing (#24), accounts (#28), sell
   `20261105120000_ux_my_listings_lifecycle.sql`, `20261105120100_ux_my_listings_reminders.sql`,
   `20261107130100_ux_inventory_undo_and_bulk.sql`, `tests/ux-effortless-integration.sql`, `docs/database.md`.
 
+## UXD-integration-4: "Solicitar compra" with a quantity opens WhatsApp at once
+
+- **What met.** The listing batch made the contact button a plain link to the message the server already wrote, so
+  WhatsApp opens on the press and the contact is recorded in the background (talk-03), with the safety sheet first
+  when it applies (talk-04). The inventory batch's quantity stepper (stock-23) still opened a blank tab and waited up
+  to 0.9 s for the contact route to write the message with the quantity.
+- **Decision.** The listing batch's link everywhere. The stepper already rewrites the quantity in the message on the
+  page (`withPurchaseQuantity`), so nothing needs the route's answer; the quantity still goes to the route, which
+  clamps it as before, and the stepper's button shows the safety sheet like the plain one.
+- **Files.** `components/whatsapp-contact-link.tsx`, `components/listing/contact-module.tsx`,
+  `components/payment/purchase-request-link.tsx`, `app/instrumentos/[slug]/page.tsx`, `lib/payment-methods.ts`.
+
+## UXD-integration-5: a store types its hours once
+
+- **What met.** The stores batch added the opening hours a store shows on its page (list-12, `stores.opening_hours`).
+  The inventory batch added pickup hours for the ready-made WhatsApp replies (stock-05,
+  `store_inventory_preferences.pickup_hours`).
+- **Decision.** The replies use the pickup hours when the store wrote them, otherwise its opening hours; the pickup
+  field says so. Pickup hours can still differ, so the field stays.
+- **Files.** `app/mi-cuenta/tienda/solicitudes/page.tsx`, `components/payment/purchase-requests.tsx`.
+
+## UXD-integration-6: what a SKU remembers, shown where it is used
+
+- **What met.** The selling batch's "Datos para publicar" panel (STOCK 09) was meant for the SKU page but rendered
+  nowhere, and it carried its own category field next to the inventory batch's "Categoría del SKU" (stock-20), both
+  writing the same column.
+- **Decision.** The SKU page shows the panel in Publicación, above "Publicar este SKU", while the SKU has no
+  publication (a linked SKU's data is its publication's). The category is edited once, in "Categoría del SKU"; the
+  panel follows it to offer the instrument types.
+- **Files.** `app/mi-cuenta/tienda/inventario/[itemId]/page.tsx`, `components/inventory/sku-listing-details.tsx`,
+  `lib/store-inventory.ts` (`getSkuListingDetails`, also used by the store publish page).
+
+## UXD-integration-7: smaller meetings
+
+- **Seguir in the owner's preview.** The accounts batch's "Seguir" (save-12) sits in the store header; the stores
+  batch's owner preview (shop-04) shows a store that is not public. The preview leaves "Seguir" out.
+- **One name for the allowance.** My listings' new account home kept the old words for the listing limit; it now uses
+  the stores batch's "Cupo de publicaciones" and points to Mi tienda at the limit (shop-05).
+- **Publicar seleccionados.** The stores batch's button (stock-10) joins the inventory batch's new bulk bar, for rows
+  the owner ticked only, like "Ajustar stock": a whole filter across pages is not sent.
+
 ## Fixed at integration
 
+- **Store columns the public cannot read.** The store-details fix (#30) closes the stores table to the public except
+  for the columns public pages use. The inventory batch's purchase requests page read the street address through the
+  table; it now reads the owner's own row, which `get_own_store()` already gives the account pages.
 - **Selling's migrations drop their helper.** `20261104120100` and `20261104120200` each created
   `pg_temp.selling_fix` without dropping it. The local replay runs every migration in its own session, so it passed;
   the Supabase CLI applies them all over one connection, where the second `create` fails. Both now drop it after use,
