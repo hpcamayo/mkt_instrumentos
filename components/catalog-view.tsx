@@ -100,7 +100,7 @@ export async function CatalogView({
           <Breadcrumbs items={breadcrumbs} className="mb-3" />
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
             <h1 className="t-page min-w-0 text-ink">{title}</h1>
-            <p id={RESULTS_STATUS_ID} tabIndex={-1} className="ml-auto shrink-0 t-meta tabular-nums lg:ml-0">
+            <p id={RESULTS_STATUS_ID} tabIndex={-1} role="status" className="ml-auto shrink-0 t-meta tabular-nums lg:ml-0">
               {resultsLabel(totalCount)}
               <span className="lg:hidden"> · {sortShortLabels[filters.sort]}</span>
             </p>

@@ -4,6 +4,7 @@ import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { ImageOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useReducedData } from "@/lib/data-saver";
 import { CompareToggle } from "@/components/catalog-compare";
 import { FavoriteButton } from "@/components/favorite-button";
 import { useListingImpression } from "@/components/marketplace-telemetry";
@@ -50,9 +51,12 @@ export function rememberOpened(listing: ListingCardData) {
 
 // FAST 02: hovering or focusing a card loads its page ahead (a full prefetch: the listing page has no loading
 // boundary, so the default prefetch would bring only the layout).
-function usePrefetchOnIntent(href: string) {
+// Nothing loads ahead when the phone asks to save data or the connection is slow (fast-03, lib/data-saver.ts).
+function usePrefetchOnIntent(href: string, reducedData: boolean) {
   const router = useRouter();
-  return () => router.prefetch(href, { kind: "full" } as unknown as Parameters<typeof router.prefetch>[1]);
+  return () => {
+    if (!reducedData) router.prefetch(href, { kind: "full" } as unknown as Parameters<typeof router.prefetch>[1]);
+  };
 }
 
 // The one listing card (docs/ux-redesign/ux-3-discovery.md § The one listing card). Grid variant: a square photo,
@@ -67,12 +71,13 @@ export function ListingCard({ listing, variant = "grid", source = "catalog", hea
   const specLine = getCardSpecLine(listing);
   const Heading = headingLevel === 3 ? "h3" : "h2";
   const href = `/instrumentos/${listing.slug}`;
-  const prefetch = usePrefetchOnIntent(href);
+  const reducedData = useReducedData();
+  const prefetch = usePrefetchOnIntent(href, reducedData);
   const titleLink = (
     <Link
       href={href}
       // FAST 02: the first row loads ahead when it shows (phones and desktop); the rest on hover or focus.
-      prefetch={eager ? true : false}
+      prefetch={eager && !reducedData ? true : false}
       onMouseEnter={prefetch}
       onFocus={prefetch}
       onClick={() => rememberOpened(listing)}
