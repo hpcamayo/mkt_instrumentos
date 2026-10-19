@@ -108,7 +108,7 @@ export type InventoryChange = {
 export type InventoryFilters = {
   q: string;
   stock: "all" | StockLevel | "archived";
-  publication: "" | "none" | "pending" | "published" | "hidden" | "rejected" | "changes_pending";
+  publication: "" | "none" | "pending" | "in_review" | "published" | "hidden" | "rejected" | "changes_pending";
   catalog: "" | "matched" | "unmatched";
   category: string;
   sort: "updated" | "name" | "available_asc" | "available_desc" | "price_asc" | "price_desc";
@@ -128,11 +128,16 @@ export const PUBLICATION_FILTERS: readonly { value: InventoryFilters["publicatio
   { value: "", label: "Cualquier publicación" },
   { value: "none", label: "Sin publicación" },
   { value: "published", label: "Publicada" },
+  { value: "in_review", label: "En revisión o con cambios en revisión" },
   { value: "pending", label: "En revisión" },
   { value: "changes_pending", label: "Cambios en revisión" },
   { value: "rejected", label: "Rechazada" },
   { value: "hidden", label: "Oculta" },
 ];
+
+// fix-09: nothing matches SKUs to the catalog yet (the catalog autofill has not reached main), so the "Catálogo"
+// filter stays hidden and a catalogo= value in an old URL is ignored. Turn this on together with catalog matching.
+export const CATALOG_MATCHING_AVAILABLE = false;
 
 export const CATALOG_FILTERS: readonly { value: InventoryFilters["catalog"]; label: string }[] = [
   { value: "", label: "Con o sin catálogo" },
@@ -167,7 +172,7 @@ export function parseInventoryFilters(params: SearchParams): { filters: Inventor
     q: first(params.q).slice(0, 100),
     stock: pick(first(params.stock), STOCK_FILTERS, "all"),
     publication: pick(first(params.publicacion), PUBLICATION_FILTERS, ""),
-    catalog: pick(first(params.catalogo), CATALOG_FILTERS, ""),
+    catalog: CATALOG_MATCHING_AVAILABLE ? pick(first(params.catalogo), CATALOG_FILTERS, "") : "",
     category: first(params.categoria).slice(0, 80),
     sort: pick(first(params.orden), SORTS, "updated"),
   };

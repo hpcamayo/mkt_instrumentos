@@ -4,7 +4,8 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 import { getStoreListingQuota } from "@/lib/store-allowance";
-import { getInventoryItem } from "@/lib/store-inventory";
+import { getInventoryItem, inventoryDb } from "@/lib/store-inventory";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const metadata = { title: "Publicar" };
 
@@ -16,7 +17,9 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
     : { count: 0 };
   // "Publicar este SKU" from Inventario: only an active, unlinked SKU of this store is offered; the database checks
   // the same again when the publication is completed.
-  const skuId = (await searchParams)?.sku;
+  const requested = (await searchParams)?.sku;
+  // "Publicar el siguiente SKU sin publicación" (FIX 05) asks for ?sku=siguiente: the first active, unlinked SKU.
+  const skuId = requested === "siguiente" && eligible && supabase ? await nextUnpublishedSku(supabase, store.id) : requested;
   const item = eligible && supabase && typeof skuId === "string" ? await getInventoryItem(supabase, skuId) : null;
   const inventorySku = item && store && item.store_id === store.id && item.inventory_status === "active" && !item.listing_id
     ? { id: item.id, sku: item.merchant_sku, name: item.product_name, price: item.unit_price_pen, available: item.quantity_available }
@@ -26,6 +29,7 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
   return (
       <div className="grid w-full max-w-4xl gap-6">
         <PageHeader eyebrow="Inventario" title={inventorySku ? `Publicar ${inventorySku.sku}` : "Publicar en tu tienda"} />
+        {requested === "siguiente" && eligible && !inventorySku ? <Notice tone="success" role="note">Todos tus SKU activos ya tienen publicación. Puedes publicar un instrumento sin SKU.</Notice> : null}
         {!eligible ? <Notice tone="warning" role="note">Necesitas una cuenta de Tienda con una solicitud pendiente o aprobada.</Notice>
         : quota.remaining <= 0 ? <Notice tone="warning" role="note">Usaste todo tu cupo de publicaciones ({quota.allowance}). En <Link href="/mi-cuenta/tienda" className="link font-semibold">Mi tienda</Link> ves qué lo ocupa, puedes ocultar las agotadas o pedir más cupo.</Notice>
         : <SellListingForm
@@ -35,4 +39,19 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
           />}
       </div>
   );
+}
+
+// The first active SKU of the store with no listing yet, in SKU order (FIX 05).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function nextUnpublishedSku(supabase: SupabaseClient<any, any, any>, storeId: string) {
+  const { data } = await inventoryDb(supabase)
+    .from("store_inventory_items")
+    .select("id")
+    .eq("store_id", storeId)
+    .eq("inventory_status", "active")
+    .is("listing_id", null)
+    .order("merchant_sku", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return (data as { id: string } | null)?.id;
 }

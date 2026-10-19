@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { eventSources, isEntityId, isUuid, type EventSource } from "@/lib/marketplace-event-payload";
 import { getMarketplaceActor, getMarketplaceSession, logMarketplaceEventFailure, recordMarketplaceEvent, sameOriginEventRequest } from "@/lib/marketplace-events-server";
-import { buildStoreWhatsAppUrl, buildWhatsAppUrl, type ListingDetailData } from "@/lib/listings";
+import { buildStoreWhatsAppUrl, buildWhatsAppUrl, resolveContactPhone, type ListingDetailData } from "@/lib/listings";
 import { assistedCommerceEnabled, buildPurchaseWhatsAppUrl, readPurchaseRequest } from "@/lib/payment-methods";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
@@ -22,14 +22,14 @@ export async function POST(request: Request) {
   // contact, so a stale page never strands the buyer.
   let purchase = false;
   if (body.listingId) {
-    const { data, error } = await client.from("listings").select("id,title,slug,seller_type,owner_user_id,contact_name,whatsapp_phone,city,region,created_at,profiles!listings_owner_user_id_fkey(full_name,phone,city,region,created_at)").eq("id", body.listingId).eq("status", "approved").maybeSingle();
+    const { data, error } = await client.from("listings").select("id,title,slug,seller_type,owner_user_id,contact_name,whatsapp_phone,city,region,created_at,profiles!listings_owner_user_id_fkey(full_name,phone,city,region,created_at),stores(whatsapp_phone)").eq("id", body.listingId).eq("status", "approved").maybeSingle();
     if (error || !data) return failure(404, requestId);
     url = buildWhatsAppUrl(data as unknown as ListingDetailData);
     if (body.intent === "purchase" && assistedCommerceEnabled() && data.seller_type === "store") {
       const { data: context } = await client.rpc("get_listing_purchase_request", { p_listing_id: body.listingId });
       const request = readPurchaseRequest(context);
       if (request) {
-        url = buildPurchaseWhatsAppUrl(data.whatsapp_phone, data, request.sku);
+        url = buildPurchaseWhatsAppUrl(resolveContactPhone(data as unknown as ListingDetailData), data, request.sku);
         purchase = true;
       }
     }

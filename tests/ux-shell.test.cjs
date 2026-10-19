@@ -133,9 +133,9 @@ test("the catalog has no route-level loading boundary; its own links navigate in
   assert.equal(shell.isCatalogHref, undefined);
   const pendingReact = { ...React, useContext: () => ({ pending: true, navigate() {} }) };
   const pending = load("components/catalog-navigation.tsx", { react: pendingReact, "next/link": clientLinkMock, "next/navigation": navigationMock("/listados") });
-  assert.equal(renderToStaticMarkup(React.createElement(pending.CatalogResults, { className: "grid" }, "x")), '<p role="status" class="sr-only">Cargando resultados…</p><div aria-busy="true" class="catalog-results grid">x</div>');
+  assert.equal(renderToStaticMarkup(React.createElement(pending.CatalogResults, { className: "grid" }, "x")), '<p role="status" class="sr-only">Cargando resultados…</p><div id="resultados" aria-busy="true" class="catalog-results grid">x</div>');
   const idle = load("components/catalog-navigation.tsx", { "next/link": clientLinkMock, "next/navigation": navigationMock("/listados") });
-  assert.equal(renderToStaticMarkup(React.createElement(idle.CatalogResults, { className: "grid" }, "x")), '<p role="status" class="sr-only"></p><div class="catalog-results grid">x</div>');
+  assert.equal(renderToStaticMarkup(React.createElement(idle.CatalogResults, { className: "grid" }, "x")), '<p role="status" class="sr-only"></p><div id="resultados" class="catalog-results grid">x</div>');
   assert.match(source("app/globals.css"), /\.catalog-results\[aria-busy="true"\] \{\s*opacity: 0\.5;\s*transition-delay: 200ms;\s*\}/);
   // Applied chips and pagination are client links that report to the pending state.
   const { AppliedChip } = load("components/ui/chip.tsx", { "next/link": clientLinkMock });
