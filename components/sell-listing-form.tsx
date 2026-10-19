@@ -95,7 +95,6 @@ type Props = {
   brandsByCategory?: Record<string, string[]>;
   storeDefaults?: { condition: string | null; descriptionFooter: string };
   serverDraft?: ServerDraft;
-  similarFrom?: Partial<SellValues>;
   reviewWaitMinutes?: number | null;
 };
 
@@ -128,14 +127,14 @@ export const SELL_STEPS: { title: string; fields: SellField[] }[] = [
 // Photo paths allow slots 0–99 (app/api/submissions); a replaced photo never reuses its slot.
 const MAX_SLOT = 99;
 
-export function SellListingForm({ ownerId, profile, store, inventorySku: initialSku, brandsByCategory = {}, storeDefaults, serverDraft, similarFrom, reviewWaitMinutes = null }: Props) {
+export function SellListingForm({ ownerId, profile, store, inventorySku: initialSku, brandsByCategory = {}, storeDefaults, serverDraft, reviewWaitMinutes = null }: Props) {
   const kind = store ? "store_listing" : "listing";
   const direct = store?.status === "active" && store.isVerified;
   // FIX 05: the SKU being published. Starting another listing clears it, so the next one is never sent for a linked SKU.
   const [inventorySku, setInventorySku] = useState(initialSku);
   const storageKey = localDraftKey(ownerId, kind, inventorySku?.id);
 
-  const baseValues = useMemo(() => initialValues({ profile, store, sku: initialSku, storeDefaults, similarFrom }), [profile, store, initialSku, storeDefaults, similarFrom]);
+  const baseValues = useMemo(() => initialValues({ profile, store, sku: initialSku, storeDefaults }), [profile, store, initialSku, storeDefaults]);
   const [values, setValues] = useState<SellValues>(baseValues);
   const [photos, setPhotos] = useState<FormPhoto[]>([]);
   const [clip, setClip] = useState<Clip | null>(null);
@@ -1066,12 +1065,11 @@ function ReviewSteps({ waitMinutes }: { waitMinutes: number | null }) {
 
 // ------------------------------------------------------------------ helpers
 
-function initialValues({ profile, store, sku, storeDefaults, similarFrom }: {
+function initialValues({ profile, store, sku, storeDefaults }: {
   profile: SellerProfile;
   store?: StoreContext;
   sku?: InventorySku;
   storeDefaults?: { condition: string | null; descriptionFooter: string };
-  similarFrom?: Partial<SellValues>;
 }): SellValues {
   const details = sku?.details ?? {};
   const footer = store ? storeDefaults?.descriptionFooter.trim() ?? "" : "";
@@ -1082,9 +1080,6 @@ function initialValues({ profile, store, sku, storeDefaults, similarFrom }: {
     condition: store ? storeDefaults?.condition ?? "" : "",
     description: footer ? `\n\n${footer}` : "",
   });
-  if (similarFrom) {
-    return { ...base, ...similarFrom, title: similarFrom.title ?? titleFromBrandModel(similarFrom.brand ?? "", similarFrom.model ?? ""), titleEdited: false };
-  }
   if (!sku) return base;
   // STOCK 09: what the SKU remembers.
   const category = sku.category && categoryOptions.some((option) => option.value === sku.category) ? sku.category : "";

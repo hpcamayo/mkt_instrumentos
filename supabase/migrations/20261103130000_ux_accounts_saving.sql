@@ -31,23 +31,17 @@ as $$
   where c.conrelid = p_table and c.conname = p_name and word not in ('text', 'jsonb');
 $$;
 
+-- The event types go through the shared laria_private.ux_extend_text_check (20261102120500, UXD-integration-3).
+select laria_private.ux_extend_text_check('public.notifications', 'notifications_event_type_check', 'event_type',
+  array['listing_alert_match']);
+-- The weekly follow e-mail is a new delivery type whose context carries the week and its items.
+select laria_private.ux_extend_text_check('laria_private.marketplace_email_deliveries', 'marketplace_email_deliveries_event_type_check',
+  'event_type', array['follow_weekly']);
+
 do $$
 declare
   values_now text[];
 begin
-  values_now := laria_private.check_constraint_values('public.notifications', 'notifications_event_type_check', 'ANY (');
-  if values_now is null or not ('review_revealed' = any(values_now)) then raise exception 'notifications_event_type_check not readable'; end if;
-  alter table public.notifications drop constraint notifications_event_type_check;
-  execute format('alter table public.notifications add constraint notifications_event_type_check check (event_type = any (%L::text[]))',
-    array(select distinct unnest(values_now || array['listing_alert_match']) order by 1));
-
-  -- The weekly follow e-mail is a new delivery type whose context carries the week and its items.
-  values_now := laria_private.check_constraint_values('laria_private.marketplace_email_deliveries', 'marketplace_email_deliveries_event_type_check', 'ANY (');
-  if values_now is null or not ('search_alert_daily' = any(values_now)) then raise exception 'marketplace_email_deliveries_event_type_check not readable'; end if;
-  alter table laria_private.marketplace_email_deliveries drop constraint marketplace_email_deliveries_event_type_check;
-  execute format('alter table laria_private.marketplace_email_deliveries add constraint marketplace_email_deliveries_event_type_check check (event_type = any (%L::text[]))',
-    array(select distinct unnest(values_now || array['follow_weekly']) order by 1));
-
   values_now := laria_private.check_constraint_values('laria_private.marketplace_email_deliveries', 'marketplace_email_context_check', '(context - ');
   if values_now is null or not ('digest_date' = any(values_now)) then raise exception 'marketplace_email_context_check not readable'; end if;
   alter table laria_private.marketplace_email_deliveries drop constraint marketplace_email_context_check;

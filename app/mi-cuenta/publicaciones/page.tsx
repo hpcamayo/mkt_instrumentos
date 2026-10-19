@@ -82,7 +82,7 @@ export default async function ParticularListingsPage({ searchParams }: { searchP
           actions={<Link href={BASE} className={buttonClasses({ variant: "secondary" })}>Ver todas</Link>}
         />
       ) : (
-        <ListingManagementTable key={myListingsHref(BASE, query)} listings={page.items} emptyMessage="Aún no tienes publicaciones" publishPath="/mi-cuenta/publicar" />
+        <ListingManagementTable key={myListingsHref(BASE, query)} listings={page.items} emptyMessage="Aún no tienes publicaciones" />
       )}
       {page.pageCount > 1 ? <PageLinks query={query} page={page.page} pageCount={page.pageCount} from={page.from} to={page.to} total={page.total} /> : null}
       <p className="border-t border-subtle p-5 text-meta leading-6 text-ink-2">{analytics ? "Vistas acumuladas de todo el historial, incluidas las históricas. Contactos por WhatsApp registrados desde el inicio del seguimiento; no equivalen a mensajes ni ventas." : "Las métricas no están disponibles en este momento; no se muestran ceros estimados."} La fecha de publicación corresponde a la primera publicación.</p>

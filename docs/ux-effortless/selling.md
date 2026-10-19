@@ -127,6 +127,9 @@ errors.
   the store's listing table opens the form from an existing listing (`?desde=`), filtered to the seller's own listings.
 - **Files.** `components/listing-management-table.tsx` (my-listings: optional `publishPath` prop and the Duplicar link),
   `app/mi-cuenta/tienda/inventario/page.tsx` (inventory: passes `publishPath`).
+- **At integration.** Duplicar is the my-listings batch's full copy, photos included, as shop-08 was approved; the
+  `?desde=` start and the `publishPath` prop are gone. "Publicar uno parecido" stays as built here
+  (`docs/ux-effortless/integration.md`, UXD-integration-2).
 
 ### POST 14: know what happens while you wait
 

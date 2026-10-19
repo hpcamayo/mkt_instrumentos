@@ -17,7 +17,7 @@ export default async function PublishParticularPage({ searchParams }: { searchPa
   const params = (await searchParams) ?? {};
   const [data, drafts, brandsByCategory] = complete && supabase
     ? await Promise.all([
-      loadSellPageData(supabase, { ownerId: user.id, kind: "listing", params }),
+      loadSellPageData(supabase, { kind: "listing", params }),
       listSellDrafts(supabase, "listing"),
       loadSellBrands(),
     ])
@@ -32,14 +32,13 @@ export default async function PublishParticularPage({ searchParams }: { searchPa
       />
       {data?.draftMissing ? <Notice tone="warning" role="note">Ese borrador ya no existe: puede que ya lo hayas publicado o descartado.</Notice> : null}
       {complete && profile && data ? <>
-        {/* key: opening another draft or listing from the drafts list starts a fresh form. */}
+        {/* key: opening another draft from the drafts list starts a fresh form. */}
         <SellListingForm
-          key={data.serverDraft?.id ?? (typeof params.desde === "string" ? params.desde : "nuevo")}
+          key={data.serverDraft?.id ?? "nuevo"}
           ownerId={user.id}
           profile={{ fullName: profile.full_name!, phone: profile.phone!, city: profile.city!, region: profile.region }}
           brandsByCategory={brandsByCategory}
           serverDraft={data.serverDraft}
-          similarFrom={data.similarFrom}
           reviewWaitMinutes={data.reviewWaitMinutes}
         />
         <DraftList drafts={otherDrafts} href="/mi-cuenta/publicar" title={data.serverDraft ? "Otros borradores" : "Borradores"} />

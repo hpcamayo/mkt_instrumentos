@@ -11,38 +11,8 @@
 --              and nothing needs to run for the pause to end.
 --   * big-08   `purchase_checkins`: a signed-in buyer's own answer to "¿Compraste …?", and the seller's decision.
 --
--- Shared check constraints are extended with laria_private.ux_add_check_values(), which keeps every value already
--- allowed (also values other batches add), so the migrations of the batches can run in any order.
-
--- ------------------------------------------------------------------ additive check-constraint helper
-
--- Rebuilds a simple `column = any (array[...])` check constraint with extra values, keeping the existing ones.
-create or replace function laria_private.ux_add_check_values(p_table regclass, p_constraint text, p_values text[])
-returns void
-language plpgsql
-set search_path = public, laria_private
-as $$
-declare
-  definition text;
-  column_name text;
-  existing text[];
-  merged text[];
-begin
-  select pg_get_constraintdef(c.oid), a.attname into definition, column_name
-  from pg_constraint c
-  join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
-  where c.conrelid = p_table and c.conname = p_constraint and c.contype = 'c' and array_length(c.conkey, 1) = 1;
-  if definition is null then
-    raise exception 'UX_CHECK_CONSTRAINT_MISSING: %.%', p_table, p_constraint;
-  end if;
-  select coalesce(array_agg(match[1]), array[]::text[]) into existing
-  from regexp_matches(definition, '''([^'']+)''::text', 'g') as match;
-  select array_agg(distinct value order by value) into merged from unnest(existing || p_values) as value;
-  execute format('alter table %s drop constraint %I', p_table, p_constraint);
-  execute format('alter table %s add constraint %I check (%I = any (%L::text[]))', p_table, p_constraint, column_name, merged);
-end;
-$$;
-revoke all on function laria_private.ux_add_check_values(regclass, text, text[]) from public, anon, authenticated;
+-- Shared check constraints are extended with laria_private.ux_extend_text_check() (20261102120500), which keeps every
+-- value already allowed (also values other batches add), so the migrations of the batches can run in any order.
 
 -- ------------------------------------------------------------------ columns
 

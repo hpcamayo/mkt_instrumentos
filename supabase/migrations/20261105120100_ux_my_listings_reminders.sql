@@ -12,14 +12,14 @@
 
 -- ------------------------------------------------------------------ notification and e-mail types
 
-select laria_private.ux_add_check_values('public.notifications', 'notifications_event_type_check', array[
+select laria_private.ux_extend_text_check('public.notifications', 'notifications_event_type_check', 'event_type', array[
   'listing_purchase_check',               -- to the buyer: ¿Compraste …?
   'listing_buyer_reported_purchase',      -- to the seller: a buyer says they bought it
   'listing_availability_checkin',         -- to the seller: ¿Sigue disponible?
   'listing_purchase_confirmation_reminder', -- to the buyer: confirm the purchase the seller recorded
   'listing_review_reminder'               -- to either side: the review window closes soon
 ]);
-select laria_private.ux_add_check_values('laria_private.marketplace_email_deliveries', 'marketplace_email_deliveries_event_type_check', array[
+select laria_private.ux_extend_text_check('laria_private.marketplace_email_deliveries', 'marketplace_email_deliveries_event_type_check', 'event_type', array[
   'listing_purchase_check',
   'listing_buyer_reported_purchase',
   'listing_availability_checkin',

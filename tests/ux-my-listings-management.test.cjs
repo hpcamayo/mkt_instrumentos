@@ -203,7 +203,7 @@ test("bulk selection: labelled checkboxes for rows that can be hidden or restore
   assert.doesNotMatch(render([row("d", { status: "draft" })]), /Seleccionar todas/);
 });
 
-test("Republicar opens a prefilled draft through copy_owned_listing; Duplicar opens the sell form from the listing", () => {
+test("Republicar and Duplicar open a prefilled draft through copy_owned_listing", () => {
   const route = source("app/api/listings/[id]/manage/route.ts");
   assert.match(route, /body\.action === "relist" \|\| body\.action === "duplicate"/);
   assert.match(route, /rpc\("copy_owned_listing", \{\s*p_listing_id: id,\s*p_mode: body\.action,/);
@@ -214,13 +214,11 @@ test("Republicar opens a prefilled draft through copy_owned_listing; Duplicar op
   assert.match(route, /LISTING_COPY_INVALID/);
   const table = source("components/listing-management-table.tsx");
   assert.match(table, /router\.push\(`\/mi-cuenta\/publicaciones\/\$\{newId\}\/editar`\)/);
-  const [sold, approved, adminHidden] = rows(render([row("s", { status: "sold" }), row("a"), row("h", { status: "hidden", hidden_source: "admin" })], { publishPath: "/mi-cuenta/publicar" }));
+  const [sold, approved, adminHidden] = rows(render([row("s", { status: "sold" }), row("a"), row("h", { status: "hidden", hidden_source: "admin" })]));
   assert.match(sold, />Republicar</);
   assert.doesNotMatch(sold, /Duplicar/);
-  // UXD-integration-2: one Duplicar, the selling batch's (POST 13), which never copies photos, price, model or title.
-  assert.match(approved, /href="\/mi-cuenta\/publicar\?desde=a"[^>]*>Duplicar</);
+  assert.match(approved, />Duplicar</);
   assert.doesNotMatch(adminHidden, /Duplicar|Republicar/);
-  assert.doesNotMatch(rows(render([row("a")]))[0], /Duplicar/, "no sell form to open, no Duplicar");
 });
 
 test("the paused line shows only while the pause runs, with its return date", () => {

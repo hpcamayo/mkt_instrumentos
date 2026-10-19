@@ -21,7 +21,7 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
   const params = (await searchParams) ?? {};
   const [data, drafts, brandsByCategory, storeDefaults] = eligible && supabase
     ? await Promise.all([
-      loadSellPageData(supabase, { ownerId: user.id, kind: "store_listing", storeId: store.id, params }),
+      loadSellPageData(supabase, { kind: "store_listing", params }),
       listSellDrafts(supabase, "store_listing"),
       loadSellBrands(),
       loadStoreDefaults(supabase, store.id),
@@ -46,7 +46,7 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
         : quota.remaining <= 0 ? <Notice tone="warning" role="note">Tu tienda alcanzó el límite de {quota.allowance} publicaciones concurrentes. Cuando una deje de estar en revisión o publicada, podrás publicar otra.</Notice>
         : <>
           <SellListingForm
-            key={data?.serverDraft?.id ?? inventorySku?.id ?? (typeof params.desde === "string" ? params.desde : "nuevo")}
+            key={data?.serverDraft?.id ?? inventorySku?.id ?? "nuevo"}
             ownerId={user.id}
             profile={{ fullName: store.contact_person ?? store.name, phone: store.whatsapp_phone, city: store.city, region: store.region }}
             store={{ id: store.id, name: store.name, status: store.status as "pending" | "active", isVerified: store.is_verified }}
@@ -54,7 +54,6 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
             brandsByCategory={brandsByCategory}
             storeDefaults={storeDefaults}
             serverDraft={data?.serverDraft}
-            similarFrom={data?.similarFrom}
           />
           <DraftList drafts={drafts.filter((draft) => draft.id !== data?.serverDraft?.id)} href="/mi-cuenta/tienda/publicar" />
           <p className="t-meta">La condición y el texto que se agregan a cada publicación se ajustan en <a href="/mi-cuenta/tienda/valores-por-defecto" className="link font-semibold">valores por defecto</a>.</p>

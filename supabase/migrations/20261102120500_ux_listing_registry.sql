@@ -2,8 +2,9 @@
 --
 -- Several batches add notification and e-mail types in parallel. A plain `drop constraint … add constraint … in (…)`
 -- written against today's list would silently drop another batch's new values, depending on migration order. So the
--- allowed values are extended in place: laria_private.ux_extend_text_check reads the literals the constraint allows
+-- allowed values are extended in place: laria_private.ux_extend_text_check reads the values the constraint allows
 -- right now, adds the new ones and recreates it. Running it twice, or in any order with other batches, is harmless.
+-- Every Effortless Laria batch extends these lists with it (docs/ux-effortless/integration.md, UXD-integration-3).
 
 create or replace function laria_private.ux_extend_text_check(
   p_table regclass,
@@ -15,31 +16,30 @@ language plpgsql
 as $$
 declare
   current_def text;
+  list_expr text;
   allowed text[];
 begin
-  select pg_get_constraintdef(oid) into current_def
+  select pg_get_expr(conbin, conrelid) into current_def
   from pg_constraint
-  where conrelid = p_table and conname = p_constraint;
+  where conrelid = p_table and conname = p_constraint and contype = 'c';
 
   if current_def is null then
     raise exception 'Constraint % on % not found', p_constraint, p_table;
   end if;
 
-  select coalesce(array_agg(distinct value order by value), '{}')
-    into allowed
-  from (
-    select (regexp_matches(current_def, '''([^'']+)''::text', 'g'))[1] as value
-    union
-    select unnest(p_values)
-  ) values_list;
+  -- "(column = ANY (<list>))". Postgres prints the list as ARRAY['a'::text, …] or, once rewritten from a text[]
+  -- literal, as '{a,…}'::text[]. Evaluating the list reads both the same way; a pattern over the text reads the second
+  -- form as one value and would drop every other type.
+  list_expr := substring(current_def from '^\(\w+ = ANY \((.*)\)\)$');
+  if list_expr is null then
+    raise exception 'Constraint % on % is not a list of values: %', p_constraint, p_table, current_def;
+  end if;
+  execute format('select (%s)::text[]', list_expr) into allowed;
+
+  select array_agg(distinct value order by value) into allowed from unnest(allowed || p_values) value;
 
   execute format('alter table %s drop constraint %I', p_table, p_constraint);
-  -- Written as ARRAY['a'::text, …], the same shape Postgres prints back, so the next call reads it the same way.
-  execute format(
-    'alter table %s add constraint %I check (%I = any (array[%s]))',
-    p_table, p_constraint, p_column,
-    (select string_agg(quote_literal(value) || '::text', ', ' order by value) from unnest(allowed) value)
-  );
+  execute format('alter table %s add constraint %I check (%I = any (%L::text[]))', p_table, p_constraint, p_column, allowed);
 end;
 $$;
 

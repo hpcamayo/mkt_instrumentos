@@ -55,13 +55,10 @@ export function ListingManagementTable({
   listings,
   emptyMessage,
   canControlStock = false,
-  publishPath,
 }: {
   listings: ManagedListing[];
   emptyMessage: string;
   canControlStock?: boolean;
-  // POST 13 "Duplicar": the sell form that starts from a copy of a listing (?desde=).
-  publishPath?: string;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -127,7 +124,7 @@ export function ListingManagementTable({
   }
 
   // mine-10 / shop-08: "Republicar" (a sold listing) and "Duplicar" open a prefilled draft on the edit page.
-  async function runCopy(listing: ManagedListing, action: "relist") {
+  async function runCopy(listing: ManagedListing, action: "relist" | "duplicate") {
     setBusyId(listing.id);
     setError("");
     const result = await manage(listing.id, { action });
@@ -335,8 +332,7 @@ export function ListingManagementTable({
                       {actions.relist ? <ActionButton disabled={busy} onClick={() => runCopy(listing, "relist")}>Republicar</ActionButton> : null}
                       {actions.resubmit ? <ActionButton disabled={busy} onClick={() => runResubmit(listing)}>Enviar nuevamente</ActionButton> : null}
                       {actions.withdrawSold ? <ActionButton disabled={busy} onClick={() => runConfirmed(listing, "withdraw_sold")}>Lo vendí, retirar</ActionButton> : null}
-                      {/* One Duplicar (docs/ux-effortless/integration.md, UXD-integration-2): the sell form from this listing (POST 13). */}
-                      {actions.duplicate && publishPath ? <Link href={`${publishPath}?desde=${listing.id}`} className="link font-semibold" aria-label={`Duplicar ${listing.title}`}>Duplicar</Link> : null}
+                      {actions.duplicate ? <ActionButton disabled={busy} onClick={() => runCopy(listing, "duplicate")}>Duplicar</ActionButton> : null}
                       {actions.controlStock ? <ControlStockButton listing={{ id: listing.id, title: listing.title }} /> : null}
                     </div>
                     {actions.isAdminHidden ? <p className="mt-2 text-meta text-ink-2">Solo administración puede restaurarla.</p> : null}

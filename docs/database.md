@@ -780,8 +780,10 @@ alert changes; no new private data.
   listings only): total, per-option counts (each facet without its own filter), locations, top brands, price spread.
 - `public.catalog_brand_counts()`, `public.catalog_type_counts()`, `public.catalog_suggest(p_q, p_limit)`: menu counts
   and suggestions over public listings.
-- Computed fields `price_dropped_at(listings)`, `price_drop_from(listings)` (from `listing_price_drops`, past 30 days)
-  and `seller_verified_rank(listings)` for the new sorts and the "Antes" price.
+- Computed field `seller_verified_rank(listings)` for the "Tiendas verificadas primero" sort. The "Bajó de precio" sort,
+  the home's drops row and the "Antes" price read the listing batch's drop columns through
+  `recent_price_drop_at(listings)` (`20261109120000_ux_effortless_integration.sql`, UXD-integration-1): the drop time
+  when an approved listing's `previous_price_pen` is above its price and the drop is under 30 days old, else null.
 - `public.listing_gone_hint(p_slug)`: category and type of a listing that was public and no longer is; nothing else.
 - Saved search alerts accept `query` (up to 200 characters, compared without case in the duplicate hash) and match it
   with the catalog's rule (`normalize_saved_search`, `saved_search_hash`, `listing_matches_saved_search` patched).
@@ -795,8 +797,9 @@ Local only; never applied to a hosted database. SQL suite: `tests/ux-my-listings
 - `listings` gains `rejection_codes text[]`, `availability_confirmed_at`, `availability_checkin_at`, `paused_until date`;
   `listing_revisions` gains `rejection_codes`. Owners cannot write them directly (trigger
   `ux_protect_listing_owner_state`); codes clear when `rejection_reason` is cleared.
-- `laria_private.ux_add_check_values(table, constraint, values[])` extends a `col = any(array[...])` check additively, so
-  batches adding notification or e-mail types don't overwrite each other's constraint rebuilds.
+- Notification and e-mail types are added with the shared `laria_private.ux_extend_text_check` (listing batch,
+  `20261102120500`), which keeps every value already allowed, so batches adding types don't overwrite each other's
+  constraint rebuilds (UXD-integration-3).
 - `review_listing` and `review_listing_revision` take `p_reason_codes text[] default null` (ten codes, labels in
   `laria_private.ux_rejection_reason_label`; mirrored in `lib/rejection-reasons.ts`). The stored reason reads
   "Label; Label. Nota: note"; a rejection needs at least one code or a note.
