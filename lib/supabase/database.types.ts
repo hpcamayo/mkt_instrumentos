@@ -1048,6 +1048,7 @@ export type Database = {
           logo_url: string | null
           name: string
           opening_hours: string | null
+          public_address: string | null
           owner_user_id: string | null
           razon_social: string | null
           region: string
