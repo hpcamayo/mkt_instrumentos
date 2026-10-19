@@ -21,6 +21,8 @@ export function FavoriteButton({ listingId, initialSaved, removableOnly = false,
   const { authenticated, ready, favorites, deviceFavoriteIds, register, setFavorite, flash } = useMarketplaceAccount();
   const router = useRouter();
   const [message, setMessage] = useState("");
+  // fast-04: the result is announced to screen readers, not only shown by the filled heart.
+  const [announcement, setAnnouncement] = useState("");
   const pressed = useRef(false);
   useEffect(() => register(listingId), [listingId, register]);
   const saved = ready && !authenticated ? (deviceFavoriteIds ?? []).includes(listingId) : favorites[listingId] ?? initialSaved;
@@ -33,6 +35,7 @@ export function FavoriteButton({ listingId, initialSaved, removableOnly = false,
     setMessage("");
     try {
       await setFavorite(listingId, !saved);
+      setAnnouncement(saved ? "Quitado de favoritos" : "Guardado en favoritos");
       if (!saved && !pressed.current) {
         flash(authenticated
           ? { message: "Guardado en favoritos.", href: "/mi-cuenta/favoritos", linkLabel: "Ver favoritos" }
@@ -42,5 +45,5 @@ export function FavoriteButton({ listingId, initialSaved, removableOnly = false,
       if (initialSaved !== undefined) router.refresh();
     }
     catch (error) { setMessage(error instanceof Error ? error.message : "No se pudo guardar el favorito."); }
-  }}>{heart(Boolean(saved))}{moduleLabel(Boolean(saved))}</button>{message ? <span role="alert" className={variant === "overlay" ? "absolute right-1 top-12 w-44 rounded-tag bg-surface px-2 py-1 t-meta text-danger" : "max-w-52 text-meta text-danger"}>{message}</span> : null}</span>;
+  }}>{heart(Boolean(saved))}{moduleLabel(Boolean(saved))}</button><span role="status" aria-live="polite" className="sr-only">{announcement}</span>{message ? <span role="alert" className={variant === "overlay" ? "absolute right-1 top-12 w-44 rounded-tag bg-surface px-2 py-1 t-meta text-danger" : "max-w-52 text-meta text-danger"}>{message}</span> : null}</span>;
 }
