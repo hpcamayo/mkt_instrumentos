@@ -7,10 +7,10 @@ import { useRouter } from "next/navigation";
 import { LocationFields } from "@/components/location-fields";
 import { PageNotice } from "@/components/page-notice";
 import { ConditionCards } from "@/components/selling/choice-fields";
+import { MAX_SOURCE_PHOTO_BYTES, prepareListingPhoto } from "@/components/selling/prepare-photo";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import {
   MAX_LISTING_PHOTOS,
-  MAX_LISTING_PHOTO_BYTES,
   MIN_LISTING_PHOTOS,
   getInstrumentTypeOptions,
   type ListingSubmissionAttributes,
@@ -134,8 +134,8 @@ export function ListingEditForm({
       showMessage("error", "Usa fotos JPEG, PNG o WebP.");
       return;
     }
-    if (files.some((file) => file.size > MAX_LISTING_PHOTO_BYTES)) {
-      showMessage("error", "Cada foto debe pesar 5 MB o menos.");
+    if (files.some((file) => file.size > MAX_SOURCE_PHOTO_BYTES)) {
+      showMessage("error", "Una de las fotos es demasiado pesada. Prueba con otra.");
       return;
     }
     if (photos.length + files.length > MAX_LISTING_PHOTOS) {
@@ -163,7 +163,7 @@ export function ListingEditForm({
     event.target.value = "";
     if (!file) return;
     if (!isImageFile(file)) return showMessage("error", "Usa fotos JPEG, PNG o WebP.");
-    if (file.size > MAX_LISTING_PHOTO_BYTES) return showMessage("error", "Cada foto debe pesar 5 MB o menos.");
+    if (file.size > MAX_SOURCE_PHOTO_BYTES) return showMessage("error", "Esta foto es demasiado pesada. Prueba con otra.");
     setPhotos((current) => current.map((photo, photoIndex) => {
       if (photoIndex !== index) return photo;
       if (photo.kind === "new") URL.revokeObjectURL(photo.previewUrl);
@@ -299,12 +299,14 @@ export function ListingEditForm({
             attempt.photoPayload.push({ image_url: photo.imageUrl, alt_text: photo.altText });
             continue;
           }
-          const extension = extensionFor(photo.file.type);
+          // FIX 02 (selling batch): shrink and re-encode before upload, which drops the photo's location data.
+          const upload = (await prepareListingPhoto(photo.file)).file;
+          const extension = extensionFor(upload.type);
           const path = `${attempt.folder}/${index}.${extension}`;
           // Include uncertain upload responses in server-side, reference-checked cleanup.
           attempt.uploadedPaths.push(path);
           setProgress(`Subiendo foto ${index + 1} de ${photos.length}…`);
-          const { error } = await supabase.storage.from(attempt.bucket).upload(path, photo.file, { contentType: photo.file.type, upsert: false });
+          const { error } = await supabase.storage.from(attempt.bucket).upload(path, upload, { contentType: upload.type, upsert: false });
           if (error) throw new Error("No se pudo subir una de las fotos.");
           attempt.photoPayload.push({ path, alt_text: `Foto de ${values.title}` });
         }

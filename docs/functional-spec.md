@@ -83,7 +83,7 @@ Creation supports:
 
 Instrument attributes are generally optional. Only selected important attributes become required when an explicit product rule says so.
 
-Each listing requires 2–10 photos, with front and back views as the expected minimum coverage. The owner can reorder, replace, and remove photos, provided the listing continues to satisfy the two-photo minimum.
+Each listing requires 2–10 photos, with front and back views as the expected minimum coverage. The owner can reorder, replace, and remove photos, provided the listing continues to satisfy the two-photo minimum. Before upload the browser redraws every listing photo as a JPEG of at most 2,400 px on its longest side, which removes its metadata (including the camera's location) and keeps it under the 5 MB storage limit, so sellers can pick photos of any common size (Effortless Laria FIX 02).
 
 ## Listing Lifecycle
 
