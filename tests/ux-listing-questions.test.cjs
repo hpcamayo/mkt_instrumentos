@@ -120,7 +120,7 @@ test("the seller's e-mail opens the listing's questions", () => {
 });
 
 test("both question notifications have a label and open the listing's questions", () => {
-  const list = source("components/notifications-list.tsx");
+  const list = source("lib/notifications.ts");
   assert.match(list, /listing_question_asked: "Te hicieron una pregunta"/);
   assert.match(list, /listing_question_answered: "Respondieron tu pregunta"/);
   assert.match(list, /`\/instrumentos\/\$\{notification\.listing_id\}#preguntas`/);

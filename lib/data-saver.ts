@@ -30,3 +30,42 @@ function subscribe(onChange: () => void) {
 export function useReducedData(): boolean {
   return useSyncExternalStore(subscribe, prefersReducedData, () => false);
 }
+
+// Data-saving images ask for about 1.5 device pixels per CSS pixel: still sharp on a phone, and a third to a half of
+// the bytes on the 2x and 3x screens most phones have.
+const DATA_SAVING_DENSITY = 1.5;
+
+export function dataSavingScale(devicePixelRatio: number): number {
+  return devicePixelRatio > DATA_SAVING_DENSITY ? DATA_SAVING_DENSITY / devicePixelRatio : 1;
+}
+
+// "(max-width: 767px) 50vw, 270px" with each width multiplied by `scale` through calc(); an entry it cannot read
+// (a calc of its own) stays as it is. The browser then picks a smaller file from the same srcset.
+export function scaleImageSizes(sizes: string, scale: number): string {
+  if (scale >= 1) return sizes;
+  const factor = Math.round(scale * 1000) / 1000;
+  return splitTopLevel(sizes)
+    .map((entry) => {
+      const match = /^(.*?)(\d+(?:\.\d+)?(?:px|vw|vh|em|rem))$/.exec(entry);
+      return match ? `${match[1]}calc(${match[2]} * ${factor})` : entry;
+    })
+    .join(", ");
+}
+
+function splitTopLevel(value: string) {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const character of value) {
+    if (character === "(") depth += 1;
+    if (character === ")") depth = Math.max(0, depth - 1);
+    if (character === "," && depth === 0) {
+      parts.push(current.trim());
+      current = "";
+    } else {
+      current += character;
+    }
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}

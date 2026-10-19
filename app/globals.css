@@ -258,6 +258,58 @@ figcaption {
   display: none;
 }
 
+/* fast-01 (docs/ux-effortless/speed.md): the navigation bar and the slow-page skeleton (components/navigation-feedback.tsx).
+   A 3 px accent fill across the top that grows while the next page loads; under reduced motion the rule below makes
+   each step instant. The skeleton covers the page being left from the top of <main> (or of the screen when the
+   header has scrolled away), below the header's menus. */
+.navigation-bar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 100;
+  height: 3px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+.navigation-bar[data-state="start"] {
+  opacity: 1;
+  transform: scaleX(0.3);
+  transition: transform 200ms ease-out;
+}
+.navigation-bar[data-state="wait"] {
+  opacity: 1;
+  transform: scaleX(0.9);
+  transition: transform 12s cubic-bezier(0.1, 0.6, 0.2, 1);
+}
+.navigation-bar[data-state="done"] {
+  opacity: 0;
+  transform: scaleX(1);
+  transition: transform 150ms ease-out, opacity 200ms ease-in 150ms;
+}
+.navigation-skeleton {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  background: var(--surface);
+}
+@media (forced-colors: active) {
+  .navigation-bar {
+    background: Highlight;
+  }
+}
+
+/* fast-04: a bar fixed to the bottom (or top) of the screen never covers the focused element. Mark it with
+   data-bottom-bar (or data-top-bar) and the page scrolls focused fields clear of it, as .contact-bar does above. */
+html:has([data-bottom-bar]) {
+  scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom));
+}
+html:has([data-top-bar]) {
+  scroll-padding-top: 88px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

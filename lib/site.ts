@@ -72,4 +72,6 @@ export const NON_INDEXABLE_PATH_PREFIXES = [
   // Signup/onboarding flows, including their invitation sub-routes.
   "/registro/vendedor",
   "/registro/tienda",
+  // Photos shared from the phone to the installed app (big-12).
+  "/compartir",
 ] as const;

@@ -247,7 +247,7 @@ test("auth-01 / auth-02 / save-02 / save-03: passwords, a short sign-up, the way
 });
 
 test("save-10 / save-12: notifications name the listing, and follows explain themselves", () => {
-  const list = source("components/notifications-list.tsx");
+  const list = source("components/notifications-list.tsx") + source("lib/notifications.ts");
   assert.match(list, /mark_all_notifications_read/);
   assert.match(list, /listing_alert_match: "Nueva coincidencia de tu alerta"/);
   assert.doesNotMatch(source("app/mi-cuenta/notificaciones/page.tsx"), /\.limit\(100\)/);

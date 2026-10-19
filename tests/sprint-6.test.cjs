@@ -129,7 +129,8 @@ test("verified transaction UI uses account shell routes and preserves off-platfo
   const navigation = fs.readFileSync("lib/account-navigation.ts", "utf8");
   const detail = fs.readFileSync("components/transaction-detail.tsx", "utf8");
   const management = fs.readFileSync("components/listing-management-table.tsx", "utf8");
-  const notifications = fs.readFileSync("components/notifications-list.tsx", "utf8");
+  // The notification's page comes from lib/notifications.ts, shared by the list and the push notices.
+  const notifications = fs.readFileSync("components/notifications-list.tsx", "utf8") + fs.readFileSync("lib/notifications.ts", "utf8");
   // Compras y ventas is declared once in the shared account items used by both roles.
   assert.equal((navigation.match(/label: "Compras y ventas"/g) ?? []).length, 1);
   assert.equal((navigation.match(/\.\.\.sharedAccountItems/g) ?? []).length, 2);

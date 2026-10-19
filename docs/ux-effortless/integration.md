@@ -97,6 +97,17 @@ Merge order (by migration slot): find (#27), listing (#24), accounts (#28), sell
 - **Publicar seleccionados.** The stores batch's button (stock-10) joins the inventory batch's new bulk bar, for rows
   the owner ticked only, like "Ajustar stock": a whole filter across pages is not sent.
 
+## UXD-integration-8: one set of notice labels and pages
+
+- **What met.** The speed batch's push notices (big-12) kept their own copy of the notifications list's labels and
+  pages, taken before the other batches added notice types: questions, alert matches, the my-listings check-ins, the
+  stock summary. A push for one of those read "Actualización de tu cuenta" and opened Mis publicaciones.
+- **Decision.** One module, `lib/notifications.ts`, names each notice and picks its page; the list and the push both
+  use it, so a push reads and opens like its row, and a new notice type is added in one place. The list links an alert
+  match by the address it looked up; a push links listings by id, which the listing page forwards to the address.
+- **Files.** `lib/notifications.ts`, `components/notifications-list.tsx`, `lib/push/notice.ts`, and the tests that
+  read the labels.
+
 ## Fixed at integration
 
 - **Store columns the public cannot read.** The store-details fix (#30) closes the stores table to the public except

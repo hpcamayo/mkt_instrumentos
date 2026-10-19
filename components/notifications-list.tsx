@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { notificationHref, notificationLabel } from "@/lib/notifications";
 import { formatPrice } from "@/lib/price";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -77,30 +78,9 @@ export function NotificationsList({
     <ol className="grid gap-3">
       {notifications.map((notification) => {
         const unread = !notification.read_at;
-        const transactionReference = notification.transaction_id ?? notification.claim_id;
         const listing = notification.listing_id ? listings[notification.listing_id] : undefined;
-        const href = transactionReference
-          ? `/mi-cuenta/transacciones/${transactionReference}`
-          : notification.event_type === "listing_alert_match"
-          ? listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/alertas"
-          // ux my-listings: these are answered from Pendientes on the account home; rejections open the edit form.
-          : MY_LISTINGS_HOME_EVENTS.has(notification.event_type)
-          ? "/mi-cuenta"
-          : (notification.event_type === "listing_rejected" || notification.event_type === "listing_revision_rejected") && notification.listing_id
-          ? `/mi-cuenta/publicaciones/${notification.listing_id}/editar`
-          : notification.event_type === "listing_price_drop" && notification.listing_id
-          ? `/mi-cuenta/favoritos/${notification.listing_id}`
-          : isQuestionNotification(notification.event_type) && notification.listing_id
-          ? `/instrumentos/${notification.listing_id}#preguntas`
-          : notification.event_type === "listing_back_in_stock" && notification.listing_id
-          ? `/instrumentos/${notification.listing_id}`
-          : notification.event_type === "store_stock_summary"
-          ? "/mi-cuenta/tienda/inventario?stock=low"
-          : notification.store_id && notification.event_type.startsWith("store_")
-          ? "/mi-cuenta/tienda"
-          : notification.store_id
-            ? "/mi-cuenta/tienda/inventario"
-            : "/mi-cuenta/publicaciones";
+        // lib/notifications.ts: the same page a push of this notice opens.
+        const href = notificationHref(notification, listing?.slug ?? null);
         return (
           <li key={notification.id} className={`rounded-panel border p-5 ${unread ? "border-accent/40 bg-accent-tint" : "border-subtle bg-white"}`}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -127,41 +107,3 @@ export function NotificationsList({
   );
 }
 
-const MY_LISTINGS_HOME_EVENTS = new Set(["listing_purchase_check", "listing_buyer_reported_purchase", "listing_availability_checkin"]);
-
-function notificationLabel(eventType: string) {
-  return ({
-    listing_price_drop: "Bajó de precio un favorito",
-    listing_alert_match: "Nueva coincidencia de tu alerta",
-    listing_approved: "Publicación aprobada",
-    listing_rejected: "Publicación rechazada",
-    listing_hidden: "Publicación ocultada",
-    listing_revision_approved: "Cambios aprobados",
-    listing_revision_rejected: "Cambios rechazados",
-    store_approved: "Tienda aprobada",
-    store_rejected: "Solicitud rechazada",
-    store_verified: "Tienda verificada",
-    store_verification_revoked: "Verificación revocada",
-    // Effortless Laria, inventory batch, stock-06.
-    store_stock_summary: "Resumen de stock",
-    transaction_confirmation_requested: "Confirma una compra",
-    transaction_confirmed: "Transacción confirmada",
-    transaction_declined: "Confirmación rechazada",
-    transaction_cancelled: "Solicitud cancelada",
-    review_revealed: "Reseñas disponibles",
-    listing_question_asked: "Te hicieron una pregunta",
-    listing_question_answered: "Respondieron tu pregunta",
-    listing_back_in_stock: "Volvió a estar disponible",
-    // ux my-listings
-    listing_purchase_check: "¿Lo compraste?",
-    listing_buyer_reported_purchase: "Te reportaron una compra",
-    listing_availability_checkin: "¿Sigue disponible?",
-    listing_purchase_confirmation_reminder: "Confirma una compra",
-    listing_review_reminder: "Tu reseña vence pronto",
-  } as Record<string, string>)[eventType] ?? "Actualización de tu cuenta";
-}
-
-// big-11: a question on the seller's listing, or the answer to the buyer's question, opens the listing's "Preguntas".
-function isQuestionNotification(eventType: string) {
-  return eventType === "listing_question_asked" || eventType === "listing_question_answered";
-}

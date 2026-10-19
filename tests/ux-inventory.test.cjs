@@ -118,7 +118,7 @@ test("stock-19: the list says where you are", () => {
 
 test("stock-04 and stock-06: the new screens and notification are reachable", () => {
   assert.match(source("lib/account-navigation.ts"), /\/mi-cuenta\/tienda\/solicitudes/);
-  assert.match(source("components/notifications-list.tsx"), /store_stock_summary: "Resumen de stock"/);
+  assert.match(source("lib/notifications.ts"), /store_stock_summary: "Resumen de stock"/);
   assert.match(source("app/mi-cuenta/tienda/inventario/page.tsx"), /InventorySettingsButton/);
   for (const page of ["mostrador", "reponer", "precios"]) assert.ok(fs.existsSync(path.resolve(`app/mi-cuenta/tienda/inventario/${page}/page.tsx`)), page);
 });

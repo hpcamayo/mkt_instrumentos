@@ -86,7 +86,8 @@ test("notifications are typed, owner-readable, indexed, and read through a const
   assert.match(migration, /and user_id = auth\.uid\(\)/);
   assert.doesNotMatch(migration, /grant update on public\.notifications/);
 
-  const list = fs.readFileSync("components/notifications-list.tsx", "utf8");
+  // Labels and pages live in lib/notifications.ts, shared by the list and the push notices.
+  const list = fs.readFileSync("components/notifications-list.tsx", "utf8") + fs.readFileSync("lib/notifications.ts", "utf8");
   assert.match(list, /mark_notification_read/);
   assert.match(list, /Ver detalle/);
   assert.match(list, /Cambios rechazados/);

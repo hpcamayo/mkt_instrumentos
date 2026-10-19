@@ -139,7 +139,7 @@ test("rejection e-mails open the edit form; the five reminder e-mails render", (
 });
 
 test("notifications for the new reminders have labels and open the place they are answered", () => {
-  const list = source("components/notifications-list.tsx");
+  const list = source("lib/notifications.ts");
   for (const type of ["listing_purchase_check", "listing_buyer_reported_purchase", "listing_availability_checkin", "listing_purchase_confirmation_reminder", "listing_review_reminder"]) assert.match(list, new RegExp(`${type}: "`));
   assert.match(list, /MY_LISTINGS_HOME_EVENTS\.has/);
 });

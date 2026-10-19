@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NotificationsList } from "@/components/notifications-list";
+import { PushSettings } from "@/components/push-settings";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 import { parsePublicListingCards } from "@/lib/favorites";
@@ -40,6 +41,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         title="Notificaciones"
         meta={<p className="max-w-[68ch]">Decisiones de moderación, cambios de tu tienda o publicaciones, bajas de precio de tus favoritos y coincidencias de tus alertas.</p>}
       />
+      <PushSettings />
       <NotificationsList notifications={rows} listings={listings} hasUnread={hasUnread} />
       {total > PAGE_SIZE ? (
         <nav aria-label="Paginación de notificaciones" className="flex flex-wrap gap-4 text-sm">

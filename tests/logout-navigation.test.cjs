@@ -95,6 +95,33 @@ test("logout rejects foreign, missing, null and misleading Origins before access
   assert.equal(state.signOutCalls, 0);
 });
 
+test("big-12: logout turns off this device's notices and forgets its id; without the cookie nothing extra runs", async () => {
+  const device = "5d1c8a52-7a1e-4c3b-9f00-3f7d2b9c1e4a";
+  const calls = [];
+  const route = load("app/logout/route.ts", {
+    "@/lib/supabase/server-client": {
+      async getSupabaseServerClient() {
+        return {
+          rpc: async (name, args) => { calls.push({ name, args }); return { data: true, error: null }; },
+          auth: { async signOut() { calls.push({ name: "signOut" }); return { error: null }; } },
+        };
+      },
+    },
+  });
+  const response = await route.POST(new Request("https://laria.audio/logout", {
+    method: "POST",
+    headers: { origin: "https://laria.audio", cookie: `theme=dark; laria_push_device=${device}; sb-x-auth-token=abc` },
+  }));
+  assert.equal(response.status, 303);
+  assert.deepEqual(calls, [{ name: "delete_push_subscription", args: { p_subscription_id: device } }, { name: "signOut" }]);
+  assert.match(response.headers.get("set-cookie") ?? "", /laria_push_device=;.*(Max-Age=0|Expires=Thu, 01 Jan 1970)/i);
+
+  calls.length = 0;
+  const plain = await route.POST(new Request("https://laria.audio/logout", { method: "POST", headers: { origin: "https://laria.audio", cookie: "laria_push_device=not-an-id" } }));
+  assert.equal(plain.status, 303);
+  assert.deepEqual(calls, [{ name: "signOut" }], "a malformed id is never sent");
+});
+
 test("logout preserves the login redirect without a configured Supabase client", async () => {
   const route = load("app/logout/route.ts", {
     "@/lib/supabase/server-client": { getSupabaseServerClient: async () => null },

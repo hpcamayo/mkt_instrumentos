@@ -69,5 +69,5 @@ test('favorite API refuses anonymous sessions and cross-site actions',async()=>{
  }
 });
 test('price-drop notifications target safe recipient-specific listing navigation, not seller inventory',()=>{
- const source=fs.readFileSync('components/notifications-list.tsx','utf8');assert.match(source,/listing_price_drop/);assert.match(source,/\/mi-cuenta\/favoritos\/\$\{notification.listing_id\}/);assert.match(source,/Bajó de precio un favorito/);
+ const source=fs.readFileSync('components/notifications-list.tsx','utf8')+fs.readFileSync('lib/notifications.ts','utf8');assert.match(source,/listing_price_drop/);assert.match(source,/\/mi-cuenta\/favoritos\/\$\{notification.listing_id\}/);assert.match(source,/Bajó de precio un favorito/);
 });
