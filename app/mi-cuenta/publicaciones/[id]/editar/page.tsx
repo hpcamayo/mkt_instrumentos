@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ListingEditForm } from "@/components/listing-edit-form";
+import { returnLabel } from "@/lib/listing-return";
 import { getAccountContext } from "@/lib/account-context";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -44,7 +45,7 @@ export default async function ListingEditPage({
           title="Esta publicación no se puede editar"
           meta="Las publicaciones vendidas son historial inmutable. Las ocultadas por moderación solo pueden restaurarse desde administración."
         />
-        <Link href={returnHref} className={buttonClasses({ variant: "secondary", className: "mt-5" })}>Volver al inventario</Link>
+        <Link href={returnHref} className={buttonClasses({ variant: "secondary", className: "mt-5" })}>{returnLabel(returnHref)}</Link>
       </section>
     );
   }
