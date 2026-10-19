@@ -154,6 +154,19 @@ The accounts batch (#28) shipped shared pieces and listed where the other batche
   `components/inventory/item-detail.tsx`, `components/store-registration-form.tsx`,
   `components/store-owner-signup-form.tsx`, `app/mi-cuenta/page.tsx`.
 
+## UXD-integration-11: a store's street address only where the store shows it
+
+- **What met.** The listing batch's "Tienda verificada" explainer (list-10, trust-03) listed a verified store's RUC,
+  razón social and street address on every listing, read through `get_public_seller_facts`. The stores batch shows the
+  street on the store's page and listings only when the store agrees (list-12, `show_address`, off by default), and the
+  store-details fix (#30) stopped the public reading the address from the table.
+- **Decision.** The street follows the store's choice everywhere: the explainer shows it only while the store shows it
+  on its page, and otherwise says "Una dirección en Miraflores, Lima", the way it says a phone is on file without the
+  number. RUC and razón social stay, as trust-03 lists them.
+- **Files.** `supabase/migrations/20261109120000_ux_effortless_integration.sql` (`get_public_seller_facts` returns
+  `public_address` and `address_checked`), `lib/listing-page.ts`, `components/listing/verified-explainer.tsx`,
+  `tests/ux-listing-page.sql`, `tests/ux-effortless-listing-page.test.cjs`.
+
 ## Fixed at integration
 
 - **Store columns the public cannot read.** The store-details fix (#30) closes the stores table to the public except
@@ -178,7 +191,7 @@ The accounts batch (#28) shipped shared pieces and listed where the other batche
 
 ## Acceptance cases
 
-All 260 proposed cases, EASE-001 to EASE-765 and all Not Run, are in `acceptance-proposal.tsv`, built from the
+All 261 proposed cases, EASE-001 to EASE-766 and all Not Run, are in `acceptance-proposal.tsv`, built from the
 batches' files and checked with `python3 -B acceptance/validate.py --cases docs/ux-effortless/acceptance-proposal.tsv`.
-They join `acceptance/cases.tsv` only after Henri's review. The integration's own cases are EASE-750 to EASE-765
+They join `acceptance/cases.tsv` only after Henri's review. The integration's own cases are EASE-750 to EASE-766
 (`integration-acceptance.tsv`).

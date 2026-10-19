@@ -121,7 +121,17 @@ select pg_temp.check((select (f->>'email_confirmed')::boolean from facts_particu
 select pg_temp.check((select f->'store' from facts_particular) is null, 'a Particular has no store facts');
 select pg_temp.check((select f->>'last_active' from facts_store) = 'week', 'signed in three days ago reads this week');
 select pg_temp.check((select f #>> '{store,ruc}' from facts_store) = '20999993001', 'a verified store shows its RUC');
-select pg_temp.check((select f #>> '{store,address}' from facts_store) = 'Av. Larco 100', 'a verified store shows its address');
+-- UXD-integration-11 (20261109120000): the street only while the store shows it on its page (list-12).
+select pg_temp.check((select f #>> '{store,address}' from facts_store) is null, 'a verified store that keeps its street private shows no street');
+select pg_temp.check((select (f #>> '{store,address_checked}')::boolean from facts_store), 'it still says Laria checked an address');
+select pg_temp.check((select f #>> '{store,district}' from facts_store) = 'Miraflores', 'and names its district');
+update public.stores set show_address = true where id = 'e1031000-0000-4000-8000-000000000001';
+set local role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+create temp table facts_store_shown as select public.get_public_seller_facts('e1032000-0000-4000-8000-000000000002') as f;
+reset role;
+select pg_temp.check((select f #>> '{store,address}' from facts_store_shown) = 'Av. Larco 100', 'a store that shows its street shows it here too');
+update public.stores set show_address = false where id = 'e1031000-0000-4000-8000-000000000001';
 select pg_temp.check((select (f #>> '{store,verified_since}')::timestamptz from facts_store) = '2026-08-01T12:00:00Z', 'verified since the Admin verification');
 select pg_temp.check((select f from facts_pending) is null, 'a non-public listing reveals nothing');
 select pg_temp.check(not (select f ? 'last_sign_in_at' from facts_particular), 'no raw sign-in time');

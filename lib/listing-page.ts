@@ -120,7 +120,9 @@ export function safeExternalUrl(value: string | null | undefined) {
 export type StoreChecks = {
   ruc: string | null;
   razonSocial: string | null;
+  // The street only when the store shows it on its page (list-12); addressChecked says Laria checked one either way.
   address: string | null;
+  addressChecked: boolean;
   district: string | null;
   city: string | null;
   phoneOnFile: boolean;
@@ -150,6 +152,7 @@ export function readSellerFacts(value: unknown): SellerFacts | null {
           ruc: text(store.ruc),
           razonSocial: text(store.razon_social),
           address: text(store.address),
+          addressChecked: store.address_checked === true || text(store.address) !== null,
           district: text(store.district),
           city: text(store.city),
           phoneOnFile: store.phone_on_file === true,

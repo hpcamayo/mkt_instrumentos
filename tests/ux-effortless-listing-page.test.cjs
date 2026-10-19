@@ -160,6 +160,16 @@ test("list-10, trust-03: the seller card leads with verified facts and explains 
   assert.match(store, /Razón social: Casa Grau SAC/);
   assert.match(store, /Un teléfono de contacto/);
   assert.match(store, /verificada desde/);
+  assert.match(store, /Dirección: Av\. Grau 123, Barranco, Lima/);
+  // UXD-integration-11: a store that keeps its street private (list-12) shows only that Laria checked an address.
+  const quiet = page.readSellerFacts({ store: { ...facts.store, address: null, district: "Barranco", city: "Lima", address_checked: true } });
+  assert.equal(quiet.store.addressChecked, true);
+  const quietCard = html(React.createElement(SellerCard, {
+    now, listingCount: null,
+    seller: { name: "Casa Grau", kind: "verified", place: "Lima", rating: null, since: null, facts: { ...facts, store: { ...quiet.store, ruc: "20123456789" } }, storeHref: "/tiendas/casa-grau" },
+  }));
+  assert.match(quietCard, /Una dirección en Barranco, Lima/);
+  assert.doesNotMatch(quietCard, /Av\. Grau|Dirección:/);
 });
 
 test("talk-01/02: the opening message names the item, price and link; questions are optional and appended", () => {

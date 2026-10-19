@@ -435,7 +435,7 @@ Detail: [docs/ux-effortless/listing.md](ux-effortless/listing.md).
 - UXD-listing-2: A sold listing's "Publicaciones similares" stays as a one-line pointer to the catalog when nothing similar is public (fix-09; an exception to L12, which leaves empty sections out, for sold listings only).
 - UXD-listing-3: The listing page states the payment limitation once, as the line under the contact button with "Cómo comprar seguro", and TrustNote leaves the listing page (list-02).
 - UXD-listing-4: A price drop is public ("Antes") for 30 days only when the listing is approved, the drop is at least 5% and the old price had stood 7 days (list-05).
-- UXD-listing-5: The seller card shows only facts Laria records (activity bucket, confirmed sales, member age, confirmed e-mail; verified stores' checked RUC, razón social, address), never reply times (list-10, trust-03; showing confirmed sales replaces L20, "no public confirmed-sales count").
+- UXD-listing-5: The seller card shows only facts Laria records (activity bucket, confirmed sales, member age, confirmed e-mail; verified stores' checked RUC, razón social, address, the street only where the store shows it per UXD-integration-11), never reply times (list-10, trust-03; showing confirmed sales replaces L20, "no public confirmed-sales count").
 - UXD-listing-6: The WhatsApp opening message carries title, price and link, and quick questions are optional, never preselected (talk-01, talk-02).
 - UXD-listing-7: Contact opens WhatsApp at once, recording is fire-and-forget, and a one-time safety sheet precedes contacts from S/ 1,000 and every purchase request (talk-03, talk-04).
 - UXD-listing-8: Public Q&A on listings (big-11) is allowed in V1 (public, one answer, contact details filtered, reportable and hideable by Admin), and it is not private messaging.
@@ -563,6 +563,7 @@ Detail: [docs/ux-effortless/integration.md](ux-effortless/integration.md).
 - UXD-integration-8: One module, `lib/notifications.ts`, names each notice and picks its page for both the notifications list and push, so a push reads and opens like its row and a new type is added in one place (big-12).
 - UXD-integration-9: "Vistos recientemente" is one list on the device (every listing page opened, drawn from today's public cards on the home, the catalog, the not-found page and Favoritos), and "your last visit" is one cookie with one rule for the home, Favoritos and Alertas (FIND 11, big-04, save-04).
 - UXD-integration-10: What the accounts batch left for the others is in place: the home shows what a signed-in person follows above "Para ti" (save-12); every price field is the shared "S/ 1,250" input and brand and model are never autocorrected (auth-03); both store forms use the +51 WhatsApp field and the store sign-up has the password eye (auth-01, auth-03); and the account home asks to complete the profile only once the person has publications, since Publicar asks the first time (auth-02).
+- UXD-integration-11: A store's street address appears only where the store chose to show it (list-12): the "Tienda verificada" explainer (trust-03) keeps RUC and razón social and otherwise says the address was checked, with its district and city.
 
 ### Speed, install and push (speed)
 
