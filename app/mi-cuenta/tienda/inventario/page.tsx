@@ -170,7 +170,7 @@ async function PublicationsView({ store, summary }: { store: { id: string; name:
         actions={quota.remaining > 0 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar</Link> : null}
       />
       {summary?.inventory_enabled ? <ViewTabs current="publicaciones" /> : null}
-      <ListingManagementTable listings={managedListings} emptyMessage="Aún no hay publicaciones en el inventario" canControlStock={Boolean(summary?.can_write)} />
+      <ListingManagementTable listings={managedListings} emptyMessage="Aún no hay publicaciones en el inventario" canControlStock={Boolean(summary?.can_write)} publishPath="/mi-cuenta/tienda/publicar" />
       <p className="border-t border-subtle p-5 text-meta leading-6 text-ink-2">{analytics ? "Vistas acumuladas de todo el historial, incluidas las históricas. Contactos por WhatsApp registrados desde el inicio del seguimiento; no equivalen a mensajes ni ventas." : "Las métricas no están disponibles en este momento; no se muestran ceros estimados."} La fecha de publicación corresponde a la primera publicación. <Link href="/mi-cuenta/tienda/estadisticas" className="link font-semibold">Ver estadísticas por periodo</Link>.</p>
     </section>
   );

@@ -44,6 +44,18 @@ export async function POST(request: Request) {
       folder: `${account.userId}/${started.id}`,
     });
   }
+  // POST 02: continue a saved draft, possibly on another device. The draft id is the submission id, so its photos are
+  // already in the submission's folder; the draft is read with the caller's session, so only its owner gets a token.
+  if (body.action === "resume" && typeof body.draft_id === "string" && UUID_PATTERN.test(body.draft_id)) {
+    const supabase = await getSupabaseServerClient();
+    const { data: userData } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+    if (!supabase || !userData.user) return failure("Ingresa a tu cuenta para continuar tu borrador.", 401);
+    const db = supabase as unknown as import("@supabase/supabase-js").SupabaseClient;
+    const { data: draft } = await db.from("listing_drafts").select("id,kind").eq("id", body.draft_id).maybeSingle();
+    if (!draft) return failure("No encontramos ese borrador.", 404);
+    const resumed = createSubmissionToken(draft.kind as "listing" | "store_listing", secret, userData.user.id, draft.id);
+    return NextResponse.json({ ...resumed, folder: `${userData.user.id}/${draft.id}` });
+  }
   const submission =
     typeof body.token === "string"
       ? readSubmissionToken(body.token, secret)
@@ -74,7 +86,10 @@ export async function POST(request: Request) {
   if (lookupError)
     return failure("No se pudo verificar el envío. Intenta nuevamente.", 503);
   // A lost success response must never cause cleanup of a completed submission.
-  if (existing) return NextResponse.json({ ok: true, completed: true });
+  if (existing) {
+    if (kind !== "store" && body.action === "complete") await recordSoundClip(client, id, folder, body.sound_clip);
+    return NextResponse.json({ ok: true, completed: true, ...(await publishedListing(client, id)) });
+  }
   if (body.action === "cleanup") {
     const { data: objects, error } = await client.storage
       .from(bucket)
@@ -85,6 +100,7 @@ export async function POST(request: Request) {
         503,
       );
     const paths = (objects ?? []).map((object) => `${folder}/${object.name}`);
+    if (kind !== "store") await removeObjects(client, SOUND_BUCKET, folder, () => true);
     if (paths.length) {
       const { error: removeError } = await client.storage
         .from(bucket)
@@ -287,7 +303,56 @@ export async function POST(request: Request) {
       "No se pudo guardar el envío. Reintenta sin cerrar esta página.",
       503,
     );
-  return NextResponse.json({ ok: true, completed: true });
+  if (isListing) {
+    await recordSoundClip(client, id, folder, body.sound_clip);
+    // Photos uploaded while the seller was filling the form (POST 03) and then removed or replaced are not part of the
+    // listing: drop them from the public bucket. Best effort; the listing is already saved.
+    await removeObjects(client, bucket, folder, (path) => !paths.includes(path));
+  }
+  return NextResponse.json({ ok: true, completed: true, ...(isListing ? await publishedListing(client, id) : {}) });
+}
+
+type AdminClient = NonNullable<ReturnType<typeof getSupabaseAdminClient>>;
+const SOUND_BUCKET = "listing-sound-clips";
+const SOUND_TYPES: Record<string, string> = { webm: "audio/webm", ogg: "audio/ogg", m4a: "audio/mp4", wav: "audio/wav" };
+
+// The listing's slug and status, so the confirmation can link to it (POST 15) and say whether it is already live.
+async function publishedListing(client: AdminClient, id: string) {
+  const { data } = await client.from("listings").select("slug,status").eq("id", id).maybeSingle();
+  return data ? { slug: data.slug, status: data.status } : {};
+}
+
+// POST 16: the optional clip uploaded beside the photos. It must be in this submission's folder; the row is written
+// once (a retried completion finds it there) and follows its listing's visibility. Unused clips are removed.
+async function recordSoundClip(client: AdminClient, id: string, folder: string, value: unknown) {
+  const clip = value && typeof value === "object" ? value as Record<string, unknown> : null;
+  const match = typeof clip?.path === "string"
+    ? new RegExp(`^${escapeRegExp(folder)}/sonido-[0-9]{1,3}\\.(webm|ogg|m4a|wav)$`).exec(clip.path)
+    : null;
+  const duration = Number(clip?.duration);
+  if (match && Number.isFinite(duration) && duration >= 0.5 && duration <= 20.5) {
+    const { data: objects } = await client.storage.from(SOUND_BUCKET).list(folder, { limit: 100 });
+    if (objects?.some((object) => `${folder}/${object.name}` === clip!.path)) {
+      const db = client as unknown as import("@supabase/supabase-js").SupabaseClient;
+      await db.from("listing_sound_clips").upsert({
+        listing_id: id,
+        clip_url: client.storage.from(SOUND_BUCKET).getPublicUrl(clip!.path as string).data.publicUrl,
+        mime_type: SOUND_TYPES[match[1]],
+        duration_seconds: Math.round(duration * 10) / 10,
+      }, { onConflict: "listing_id", ignoreDuplicates: true });
+    }
+  }
+  await removeObjects(client, SOUND_BUCKET, folder, (path) => !(match && path === clip!.path));
+}
+
+async function removeObjects(client: AdminClient, bucket: string, folder: string, unused: (path: string) => boolean) {
+  try {
+    const { data: objects } = await client.storage.from(bucket).list(folder, { limit: 100 });
+    const stale = (objects ?? []).map((object) => `${folder}/${object.name}`).filter(unused);
+    if (stale.length) await client.storage.from(bucket).remove(stale);
+  } catch {
+    // Leftovers are harmless; a failed cleanup must not fail a saved submission.
+  }
 }
 
 async function getListingAccount() {

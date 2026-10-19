@@ -99,7 +99,8 @@ test("marketplace templates are branded, safe and preserve transaction/review li
   const approved = templates.renderMarketplaceEmail({ ...base, event_type: "listing_approved" }, "https://laria.audio");
   assert.match(approved.html, /Laria/);
   assert.match(approved.html, /Guitarra &lt;QA&gt;/);
-  assert.match(approved.destination, /^https:\/\/laria\.audio\/mi-cuenta\/publicaciones$/);
+  // POST 15: the approval e-mail opens the live listing.
+  assert.match(approved.destination, /^https:\/\/laria\.audio\/instrumentos\/guitarra-qa$/);
   assert.doesNotMatch(approved.html, /<img|tracking|buyer@example\.invalid/i);
   const review = templates.renderMarketplaceEmail({ ...base, event_type: "review_revealed", listing: null, transaction: { reference_id: "transaction", listing_title: "Pedal", review_deadline: null } }, "https://laria.audio");
   assert.match(review.text, /no procesa pagos|no verifica pago/i);

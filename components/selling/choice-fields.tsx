@@ -83,6 +83,8 @@ export function ConditionCards({
   legend,
   options,
   defaultValue,
+  value,
+  onChange,
   error,
 }: {
   id: string;
@@ -90,6 +92,8 @@ export function ConditionCards({
   legend: string;
   options: readonly Option[];
   defaultValue?: string;
+  value?: string;
+  onChange?: (value: string) => void;
   error?: ReactNode;
 }) {
   return (
@@ -110,7 +114,7 @@ export function ConditionCards({
               type="radio"
               name={name}
               value={option.value}
-              defaultChecked={defaultValue === option.value}
+              {...(value === undefined ? { defaultChecked: defaultValue === option.value } : { checked: value === option.value, onChange: () => onChange?.(option.value) })}
               id={index === 0 ? id : undefined}
               className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-ink"
               {...groupProps(id, error)}

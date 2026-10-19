@@ -34,10 +34,13 @@ export function ListingManagementTable({
   listings,
   emptyMessage,
   canControlStock = false,
+  publishPath,
 }: {
   listings: ManagedListing[];
   emptyMessage: string;
   canControlStock?: boolean;
+  // POST 13 "Duplicar": the sell form that starts from a copy of a listing (?desde=).
+  publishPath?: string;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -152,6 +155,7 @@ export function ListingManagementTable({
                       {canEdit ? (
                         <Link href={`/mi-cuenta/publicaciones/${listing.id}/editar`} className="link font-semibold">Editar</Link>
                       ) : null}
+                      {publishPath ? <Link href={`${publishPath}?desde=${listing.id}`} className="link font-semibold" aria-label={`Duplicar ${listing.title}`}>Duplicar</Link> : null}
                       {listing.status === "approved" ? (
                         <>
                           <ActionButton disabled={busyId === listing.id} onClick={() => runAction(listing, "hide")}>Ocultar</ActionButton>
