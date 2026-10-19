@@ -321,6 +321,7 @@ export async function getLastImportErrors(supabase: AnyClient): Promise<{ errors
     .from("store_import_sessions")
     .select("id,result_summary")
     .in("status", ["committed", "partially_committed"])
+    .is("options->>source", null) // not a "Publicar seleccionados" batch (Effortless Laria, stores: stock-10)
     .order("committed_at", { ascending: false })
     .limit(1)
     .maybeSingle();

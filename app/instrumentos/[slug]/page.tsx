@@ -11,6 +11,7 @@ import { ListingGallery } from "@/components/listing/listing-gallery";
 import { RelatedListings, RelatedListingsSkeleton } from "@/components/listing/related-listings";
 import { ReputationSection } from "@/components/listing/reputation-section";
 import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@/components/listing/seller-card";
+import { publicStoreLocation } from "@/lib/store-storefront";
 import { SpecStrip, SpecTable } from "@/components/listing/spec-table";
 import { TrustNote } from "@/components/listing/trust-note";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
@@ -166,7 +167,10 @@ const loadPublicListing = cache(async (slug: string) => {
           district,
           whatsapp_phone,
           logo_url,
-          created_at
+          created_at,
+          show_address,
+          address,
+          opening_hours
         ),
         photo_count:listing_photo_count,
         listing_photos (
@@ -426,6 +430,7 @@ function ListingDetail({
 
             <SellerCard
               seller={seller}
+              visit={isStore && store ? publicStoreLocation(store) : undefined}
               sold={isSold}
               className="order-9 lg:order-5"
               listingCount={

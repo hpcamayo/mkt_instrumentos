@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { ArrowLeft, ArrowRight, ImageUp, RotateCcw, X } from "lucide-react";
-import { Button, IconButton } from "@/components/ui/button";
+import { ArrowLeft, ArrowRight, Camera, ImageUp, RotateCcw, X } from "lucide-react";
+import { Button, IconButton, buttonClasses } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { ErrorSummary } from "@/components/ui/error-summary";
@@ -107,6 +107,27 @@ export function ImportPhotos({ sessionId, onBack, onContinue, continueLabel = "C
 
   const sendBatch = (batch: PendingPhoto[], manifest: Map<string, ManifestEntry>) => sendPhotoBatch(sessionId, batch, manifest);
 
+  // stock-13: photos taken for one row in the photo session go straight to that row, whatever the camera named them.
+  async function shootFor(row: number, files: File[]) {
+    setActionError(null);
+    const batch: PendingPhoto[] = files.slice(0, PHOTO_SLOT_BATCH).map((file, index) => ({
+      name: `fila-${row}-${Date.now()}-${index + 1}.${/png$/i.test(file.type) ? "png" : /webp$/i.test(file.type) ? "webp" : "jpg"}`,
+      type: (photoTypeFromName(file.name) ?? (file.type || "image/jpeg")) as PhotoMimeType,
+      data: file,
+    }));
+    try {
+      const { uploaded, rejected } = await sendBatch(batch, new Map());
+      for (const assetId of uploaded.filter((id) => !rejected.includes(id))) {
+        const placed = await api(`/api/store/imports/${sessionId}/photos`, { action: "place", assetId, row });
+        if (!placed.ok) fail(placed.message);
+      }
+      if (rejected.length) fail(`${plural(rejected.length, "foto no se pudo usar", "fotos no se pudieron usar")}. Prueba con otra toma.`);
+    } catch (error) {
+      fail(error instanceof Error && error.message ? error.message : NETWORK_MESSAGE);
+    }
+    await load();
+  }
+
   async function upload(files: File[]) {
     setActionError(null);
     setSkipped([]);
@@ -203,6 +224,7 @@ export function ImportPhotos({ sessionId, onBack, onContinue, continueLabel = "C
       ) : null}
       <ErrorSummary title="No pudimos completar la acción" errors={actionError ? [{ id: "fotos-subir", message: actionError }] : []} attempt={errorAttempt} />
 
+      {view.accepting ? <PhotoSession sessionId={sessionId} view={view} onShoot={shootFor} /> : null}
       {view.accepting ? <UploadForm busy={Boolean(progress)} onUpload={upload} /> : (
         <Notice tone="info"><p>Esta importación ya no acepta cambios de fotos.</p></Notice>
       )}
@@ -254,6 +276,93 @@ export function ImportPhotos({ sessionId, onBack, onContinue, continueLabel = "C
 }
 
 // ------------------------------------------------------------------ pieces
+
+// stock-13: the SKU without enough photos, one at a time. On a phone the button opens the rear camera (capture);
+// on a computer it opens the file picker. Each shot is sent and attached to the SKU on screen, then "Siguiente".
+const SESSION_MIN_PHOTOS = 2;
+
+function PhotoSession({ sessionId, view, onShoot }: {
+  sessionId: string;
+  view: PhotoView;
+  onShoot: (row: number, files: File[]) => Promise<void>;
+}) {
+  const needing = view.rows.filter((row) => row.planned_action !== "error" && row.owner_decision === "include" && row.photo_count < SESSION_MIN_PHOTOS);
+  // The queue is fixed when the session starts, so a SKU that reaches two photos stays on screen until "Siguiente".
+  const [queue, setQueue] = useState<number[] | null>(null);
+  const [position, setPosition] = useState(0);
+  const [busy, setBusy] = useState(false);
+  if (!queue) {
+    if (!needing.length) return null;
+    return (
+      <section className="flex flex-col gap-3 rounded-panel border border-subtle bg-canvas p-4 sm:flex-row sm:items-center sm:justify-between" aria-labelledby="sesion-fotos">
+        <div>
+          <h3 id="sesion-fotos" className="t-body font-semibold">Sesión de fotos</h3>
+          <p className="t-ui text-ink-2">
+            {plural(needing.length, "SKU necesita", "SKU necesitan")} fotos. Tómalas con el teléfono, SKU por SKU: se asignan solas, sin renombrar archivos.
+          </p>
+        </div>
+        <Button variant="secondary" icon={<Camera aria-hidden />} className="w-fit" onClick={() => { setQueue(needing.map((row) => row.row_number)); setPosition(0); }}>
+          Empezar sesión de fotos
+        </Button>
+      </section>
+    );
+  }
+  const current = view.rows.find((row) => row.row_number === queue[position]);
+  if (!current) {
+    return (
+      <Notice tone="success" title="Terminaste la sesión de fotos">
+        <p>Revisa abajo las fotos de cada SKU y su orden.</p>
+        <p className="mt-3"><Button size="sm" variant="secondary" onClick={() => setQueue(null)}>Cerrar</Button></p>
+      </Notice>
+    );
+  }
+  const assets = view.assets.filter((asset) => asset.row_number === current.row_number).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  const inputId = `sesion-foto-${current.row_number}`;
+  return (
+    <section className="grid gap-4 rounded-panel border border-line-strong bg-surface p-4" aria-labelledby="sesion-fotos-actual" aria-live="polite">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="t-meta">SKU {position + 1} de {queue.length}</p>
+          <h3 id="sesion-fotos-actual" className="t-body font-semibold break-words">{rowLabel(current)}</h3>
+        </div>
+        <Tag tone={assets.length >= SESSION_MIN_PHOTOS ? "accent" : "warning"}>{plural(assets.length, "foto", "fotos")}</Tag>
+      </div>
+      {assets.length ? (
+        <ol className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+          {assets.map((asset) => <li key={asset.id}><Thumb sessionId={sessionId} asset={asset} /></li>)}
+        </ol>
+      ) : <p className="t-ui text-ink-2">Toma al menos {SESSION_MIN_PHOTOS}: el instrumento completo y un detalle.</p>}
+      <div className="flex flex-wrap items-center gap-2">
+        <label htmlFor={inputId} className={cn(buttonClasses({ variant: assets.length >= SESSION_MIN_PHOTOS ? "secondary" : "primary" }), busy && "pointer-events-none opacity-60")}>
+          <Camera aria-hidden className="h-4 w-4" />
+          {busy ? "Subiendo…" : assets.length ? "Tomar otra foto" : "Tomar foto"}
+        </label>
+        <input
+          id={inputId}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          multiple
+          className="sr-only"
+          disabled={busy || assets.length >= 10}
+          onChange={async (event) => {
+            const files = Array.from(event.target.files ?? []).slice(0, 10 - assets.length);
+            event.target.value = "";
+            if (!files.length) return;
+            setBusy(true);
+            await onShoot(current.row_number, files);
+            setBusy(false);
+          }}
+        />
+        <Button variant={assets.length >= SESSION_MIN_PHOTOS ? "primary" : "quiet"} icon={<ArrowRight aria-hidden />} disabled={busy}
+          onClick={() => setPosition((value) => value + 1)}>
+          {assets.length >= SESSION_MIN_PHOTOS ? "Siguiente SKU" : "Saltar este SKU"}
+        </Button>
+        <Button variant="quiet" disabled={busy} onClick={() => setQueue(null)}>Terminar</Button>
+      </div>
+    </section>
+  );
+}
 
 function UploadForm({ busy, onUpload }: { busy: boolean; onUpload: (files: File[]) => Promise<void> }) {
   const [files, setFiles] = useState<File[]>([]);

@@ -7,15 +7,16 @@ import { Button, buttonClasses } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { ErrorSummary } from "@/components/ui/error-summary";
-import { Checkbox, Field, FileInput, Radio, Select } from "@/components/ui/field";
+import { Checkbox, Field, FileInput, Input, Radio, Select } from "@/components/ui/field";
 import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
 import { ImportPhotos } from "@/components/store-import/import-photos";
 import { ImportPublish } from "@/components/store-import/import-publish";
 import { IMPORT_FILE_ACCEPT, importFileFormat, importFileProblem, uploadImportFile } from "@/components/store-import/import-start";
-import { importCategoryChips, importStatus } from "@/lib/store-import/labels";
+import { importCategoryChips, importExpiryText, importStatus } from "@/lib/store-import/labels";
 import {
   EXPORTED_AT_FIELD,
+  fieldLabel,
   IMPORT_ATTRIBUTE_FIELDS,
   IMPORT_FIELDS,
   IMPORT_UPDATE_SCOPES,
@@ -45,6 +46,7 @@ type StepKey = (typeof IMPORT_WIZARD_STEPS)[number]["key"];
 
 type StagedRow = {
   row_number: number;
+  raw?: ImportCell[] | null;
   parsed: { sku?: string | null; product_name?: string | null } | null;
   issues: ImportIssue[];
   sku_normalized: string | null;
@@ -194,6 +196,7 @@ export function ImportWizard({ initialSession, initialNext }: { initialSession: 
       <div className="flex flex-wrap items-center gap-2 t-ui">
         <span className="font-semibold break-all">{session.file_name}</span>
         <Tag tone={status.tone}>{status.label}</Tag>
+        {open && session.status !== "committing" ? <span className="t-meta text-ink-2">{importExpiryText(session.updated_at)}</span> : null}
       </div>
 
       {error ? (
@@ -234,6 +237,7 @@ export function ImportWizard({ initialSession, initialNext }: { initialSession: 
         <ReviewStep
           session={session}
           onDecision={async (rows, decision) => act({ action: "decision", rows, decision, version: session.version })}
+          onEditCell={async (row, field, value) => act({ action: "edit_cell", row, field, value, version: session.version })}
           onStaleStock={async (staleStock) => act({
             action: "mapping", mapping: session.column_mapping ?? {}, updateScope: session.options?.update_scope ?? "both",
             staleStock, version: session.version,
@@ -567,9 +571,10 @@ function SinceExportNotice({ counts, staleStock, onShow, onChoose }: {
   );
 }
 
-function ReviewStep({ session, onDecision, onStaleStock, onBack, onContinue }: {
+function ReviewStep({ session, onDecision, onEditCell, onStaleStock, onBack, onContinue }: {
   session: ImportSession;
   onDecision: (rows: number[] | null, decision: "include" | "exclude") => Promise<boolean>;
+  onEditCell: (row: number, field: string, value: string) => Promise<boolean>;
   onStaleStock: (choice: "keep" | "apply") => Promise<boolean>;
   onBack: () => void;
   onContinue: () => void;
@@ -593,7 +598,7 @@ function ReviewStep({ session, onDecision, onStaleStock, onBack, onContinue }: {
         <p className="t-body text-ink-2">
           {applied
             ? `${plural(applied, "fila ya se aplicó", "filas ya se aplicaron")}. Las que faltan se calcularon otra vez con los valores actuales; las filas con errores no se importan.`
-            : "Todavía no se aplicó nada. Las filas con errores no se importan; corrige el archivo y súbelo otra vez, o continúa sin ellas."}
+            : "Todavía no se aplicó nada. Las filas con errores no se importan: corrígelas aquí con “Corregir”, o continúa sin ellas."}
         </p>
       </div>
       {(counts.total ?? 0) > 10 ? actions : null}
@@ -618,7 +623,8 @@ function ReviewStep({ session, onDecision, onStaleStock, onBack, onContinue }: {
           <p>Se importan igual. Para publicarlos faltan datos como precio, condición, categoría, descripción o fotos.</p>
         </Notice>
       ) : null}
-      <RowsList sessionId={session.id} filter={filter} onFilter={setFilter} counts={counts} editable onDecision={onDecision} version={session.version} />
+      <RowsList sessionId={session.id} filter={filter} onFilter={setFilter} counts={counts} editable onDecision={onDecision} version={session.version}
+        mapping={session.column_mapping ?? {}} onEditCell={onEditCell} />
       {actions}
       {toApply === 0 ? <p className="t-meta">No hay filas para aplicar. Revisa los errores o incluye filas excluidas.</p> : null}
     </div>
@@ -649,7 +655,54 @@ function IssueLine({ issue }: { issue: ImportIssue }) {
   );
 }
 
-function RowsList({ sessionId, filter, onFilter, counts, editable, onDecision, version, filters = REVIEW_FILTERS }: {
+// Filters whose rows can all be left out at once (stock-12); "Con errores" rows are never applied anyway.
+const EXCLUDABLE_FILTERS: RowFilter[] = ["create", "update", "adopt_listing", "warning", "since_export"];
+
+// stock-12: a row's failing cells, editable in place. Only cells of mapped columns that an error points at; saving
+// replaces the file's value in this import (the file itself is untouched) and the rows are checked again.
+function CellFixer({ row, mapping, onEditCell }: {
+  row: StagedRow;
+  mapping: Record<string, number>;
+  onEditCell: (row: number, field: string, value: string) => Promise<boolean>;
+}) {
+  const fields = [...new Set(row.issues.filter((issue) => issue.severity === "error" && issue.field && typeof mapping[issue.field] === "number")
+    .map((issue) => issue.field as string))];
+  const [field, setField] = useState<string | null>(null);
+  const [value, setValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const inputId = useId();
+  if (!fields.length) return null;
+  if (!field) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {fields.map((key) => (
+          <Button key={key} size="sm" variant="secondary" onClick={() => { setField(key); setValue(row.raw?.[mapping[key]]?.v ?? ""); }}>
+            Corregir {fieldLabel(key).toLowerCase()}
+          </Button>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <form className="grid gap-2 rounded-panel border border-subtle bg-canvas p-3 sm:max-w-md" onSubmit={async (event) => {
+      event.preventDefault();
+      setBusy(true);
+      const ok = await onEditCell(row.row_number, field, value);
+      setBusy(false);
+      if (ok) setField(null);
+    }}>
+      <Field id={inputId} label={`${fieldLabel(field)} (fila ${row.row_number})`} hint="Cambia solo esta importación; tu archivo queda igual.">
+        <Input autoFocus value={value} maxLength={2000} onChange={(event) => setValue(event.target.value)} />
+      </Field>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="sm" loading={busy} loadingLabel="Revisando…">Guardar y revisar</Button>
+        <Button size="sm" variant="quiet" onClick={() => setField(null)}>Cancelar</Button>
+      </div>
+    </form>
+  );
+}
+
+function RowsList({ sessionId, filter, onFilter, counts, editable, onDecision, version, filters = REVIEW_FILTERS, mapping = {}, onEditCell }: {
   sessionId: string;
   filter: RowFilter;
   onFilter: (filter: RowFilter) => void;
@@ -658,7 +711,11 @@ function RowsList({ sessionId, filter, onFilter, counts, editable, onDecision, v
   onDecision?: (rows: number[] | null, decision: "include" | "exclude") => Promise<boolean>;
   version: number;
   filters?: typeof REVIEW_FILTERS;
+  mapping?: Record<string, number>;
+  onEditCell?: (row: number, field: string, value: string) => Promise<boolean>;
 }) {
+  const [confirmExclude, excludeDialog] = useConfirm();
+  const [excluding, setExcluding] = useState(false);
   const [rows, setRows] = useState<StagedRow[]>([]);
   const [nextAfter, setNextAfter] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -721,8 +778,32 @@ function RowsList({ sessionId, filter, onFilter, counts, editable, onDecision, v
         </div>
       ) : null}
       {loadError ? <Notice tone="danger">{loadError}</Notice> : null}
-      {editable && onDecision && (counts.excluded ?? 0) > 0 ? (
-        <div><Button size="sm" variant="secondary" onClick={() => void onDecision(null, "include")}>Incluir todas las filas excluidas</Button></div>
+      {excludeDialog}
+      {editable && onDecision && ((counts.excluded ?? 0) > 0 || (EXCLUDABLE_FILTERS.includes(filter) && rows.length > 0)) ? (
+        <div className="flex flex-wrap gap-2">
+          {(counts.excluded ?? 0) > 0 ? <Button size="sm" variant="secondary" onClick={() => void onDecision(null, "include")}>Incluir todas las filas excluidas</Button> : null}
+          {EXCLUDABLE_FILTERS.includes(filter) && rows.length > 0 ? (
+            // stock-12: leave out a whole group at once (every row of this filter and category, not only the loaded page).
+            <Button size="sm" variant="secondary" loading={excluding} loadingLabel="Excluyendo…" onClick={async () => {
+              setExcluding(true);
+              const categoryParam = category ? `&category=${encodeURIComponent(category)}` : "";
+              const result = await api<{ rowNumbers: number[] }>(`/api/store/imports/${sessionId}/rows?filter=${filter}${categoryParam}&numbers=1`);
+              setExcluding(false);
+              if (!result.ok) { setLoadError(result.message); return; }
+              const numbers = result.body.rowNumbers;
+              if (!numbers.length) return;
+              const ok = await confirmExclude({
+                title: `¿Excluir ${plural(numbers.length, "fila", "filas")}?`,
+                body: "No se aplicarán. Puedes volver a incluirlas antes de confirmar.",
+                confirmLabel: "Excluir",
+                cancelLabel: "Volver",
+              });
+              if (ok) await onDecision(numbers, "exclude");
+            }}>
+              {category ? "Excluir todas estas filas" : `Excluir todas estas filas (${filters.find((option) => option.key === filter)?.count(counts) ?? rows.length})`}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
       <ul className="divide-y divide-subtle rounded-panel border border-subtle" aria-busy={loading || undefined}>
         {rows.map((row) => {
@@ -746,6 +827,7 @@ function RowsList({ sessionId, filter, onFilter, counts, editable, onDecision, v
               {changes.length ? <ul className="grid gap-0.5 t-ui text-ink">{changes.map((change) => <li key={change}>{change}</li>)}</ul> : null}
               {row.commit_message ? <p className="t-ui font-semibold text-danger">{row.commit_message}</p> : null}
               {row.issues.length ? <ul className="grid gap-1">{row.issues.map((issue, index) => <IssueLine key={`${issue.code}-${index}`} issue={issue} />)}</ul> : null}
+              {editable && onEditCell && row.commit_status !== "applied" ? <CellFixer row={row} mapping={mapping} onEditCell={onEditCell} /> : null}
               {editable && actionable && onDecision ? (
                 <Checkbox
                   checked={row.owner_decision === "include"}

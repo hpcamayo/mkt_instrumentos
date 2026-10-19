@@ -40,7 +40,8 @@ export type ImportSession = {
   parse_cursor: number;
   file_warnings: string[];
   counts: Record<string, number>;
-  options?: { update_scope?: ImportUpdateScope; stale_stock?: "keep" | "apply" } | null;
+  // source "inventory_selection": "Publicar seleccionados" from Inventario (stock-10), not a file.
+  options?: { update_scope?: ImportUpdateScope; stale_stock?: "keep" | "apply"; source?: string } | null;
   result_summary: Record<string, number> | null;
   photo_counts?: Record<string, number>;
   version: number;
@@ -255,6 +256,7 @@ export type ImportAction =
   | { action: "decision"; rows: number[] | null; decision: "include" | "exclude"; version: number }
   | { action: "confirm"; version: number }
   | { action: "reopen"; version: number }
+  | { action: "edit_cell"; row: number; field: string; value: string; version: number }
   | { action: "cancel" };
 
 export function parseImportAction(body: unknown): ImportAction | null {
@@ -287,6 +289,13 @@ export function parseImportAction(body: unknown): ImportAction | null {
     case "confirm":
     case "reopen":
       return hasVersion ? { action: input.action, version } : null;
+    case "edit_cell": {
+      // stock-12: one mapped cell of one row, typed in the review. The database checks the field is mapped.
+      const row = Number(input.row);
+      if (!hasVersion || !Number.isSafeInteger(row) || row < 1 || typeof input.field !== "string" || !/^[a-z_]{1,40}$/.test(input.field)
+        || typeof input.value !== "string" || input.value.length > 2000) return null;
+      return { action: "edit_cell", row, field: input.field, value: input.value, version };
+    }
     case "cancel":
       return { action: "cancel" };
     default:
@@ -314,6 +323,11 @@ export async function applyImportAction(db: Db, sessionId: string, action: Impor
     case "reopen":
       await call(db, "reopen_store_import", { p_session_id: sessionId, p_expected_version: action.version });
       break;
+    case "edit_cell":
+      await call(db, "edit_store_import_cell", {
+        p_session_id: sessionId, p_row_number: action.row, p_field: action.field, p_value: action.value, p_expected_version: action.version,
+      });
+      break;
     case "cancel":
       await call(db, "cancel_store_import", { p_session_id: sessionId });
       break;
@@ -327,10 +341,10 @@ export type RowFilter = (typeof ROW_FILTERS)[number];
 
 // One page of staged rows for the review table, keyset-paginated by row number. `category` is a category value from
 // the file (as parsed) or IMPORT_NO_CATEGORY (empty or not recognized).
-export async function readImportRows(db: Db, sessionId: string, filter: RowFilter, after: number, limit: number, category: string | null = null) {
+export async function readImportRows(db: Db, sessionId: string, filter: RowFilter, after: number, limit: number, category: string | null = null, columns = REVIEW_ROW_COLUMNS) {
   let query = db
     .from("store_import_rows")
-    .select("row_number,parsed,issues,sku_normalized,planned_action,changes,owner_decision,commit_status,commit_message")
+    .select(columns)
     .eq("session_id", sessionId)
     .gt("row_number", after)
     .order("row_number", { ascending: true })
@@ -352,7 +366,16 @@ export async function readImportRows(db: Db, sessionId: string, filter: RowFilte
   }
   const { data, error } = await query;
   if (error) throw importErrorFrom(error);
-  return data ?? [];
+  return (data ?? []) as unknown as Record<string, unknown>[];
+}
+
+// raw: the cells as staged, so the review can offer a failing cell for correction (stock-12).
+const REVIEW_ROW_COLUMNS = "row_number,raw,parsed,issues,sku_normalized,planned_action,changes,owner_decision,commit_status,commit_message";
+
+// stock-12 "Excluir todas estas filas": every row number of a filter (an import has at most 2,000 rows).
+export async function readImportRowNumbers(db: Db, sessionId: string, filter: RowFilter, category: string | null = null) {
+  const rows = await readImportRows(db, sessionId, filter, 0, 2000, category, "row_number");
+  return rows.map((row) => row.row_number as number);
 }
 
 // How many staged rows each category of the file has, for the category chips of the review (review fix B3). Read in

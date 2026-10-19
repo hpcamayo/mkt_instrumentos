@@ -10,7 +10,8 @@ const ROOTS = ["app", "components", "lib"];
 // Spreadsheet writers emit XML markup, never interface copy.
 const SKIP_FILES = [/lib\/supabase\/database\.types\.ts$/, /\.d\.ts$/, /lib\/spreadsheet\//];
 // Legal pages keep their approved wording and name the data processors (decisions.md, G2); only orthography applies there.
-const LEGAL = /^app\/(terminos|privacidad|articulos-prohibidos|consejos-de-seguridad)\//;
+// The Libro de Reclamaciones (Effortless Laria trust-05) quotes the regulation's own definitions ("productos o servicios").
+const LEGAL = /^app\/(terminos|privacidad|articulos-prohibidos|consejos-de-seguridad|libro-de-reclamaciones)\//;
 // Proper names that look like Spanish words without a tilde.
 const PROPER_NAMES = new Set(["Precision"]);
 

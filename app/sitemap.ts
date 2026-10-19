@@ -20,6 +20,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: Entry[] = [
     { url: absoluteUrl("/"), changeFrequency: "daily", priority: 1 },
     { url: absoluteUrl("/listados"), changeFrequency: "hourly", priority: 0.9 },
+    // find-13: the stores directory (its city and listings tabs are noindex and left out).
+    { url: absoluteUrl("/tiendas"), changeFrequency: "daily", priority: 0.7 },
     ...legalPages.map((page): Entry => ({ url: absoluteUrl(page.href), changeFrequency: "yearly", priority: 0.2 })),
     // Owner decision (13 Oct 2026): keep all ten landings discoverable before they have inventory.
     // Empty landing metadata still declares noindex until public listings are available.
