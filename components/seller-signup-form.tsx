@@ -15,6 +15,8 @@ import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { ResendConfirmation } from "@/components/auth/resend-confirmation";
 
 type FormState =
   | "idle"
@@ -29,6 +31,7 @@ export function SellerSignupForm() {
   const [validation, errorSummary] = useFormErrors("signup", "crear tu cuenta");
   const [state, setState] = useState<FormState>("loading");
   const [message, setMessage] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState("");
   useEffect(() => {
     let isMounted = true;
 
@@ -180,6 +183,7 @@ export function SellerSignupForm() {
       return;
     }
 
+    setSentTo(email);
     setState("sent");
     setMessage(
       "Revisa tu correo para confirmar tu cuenta Particular. El enlace te llevará directamente a Mi cuenta.",
@@ -203,7 +207,7 @@ export function SellerSignupForm() {
         </Field>
 
         <Field id="signup-phone" error={validation.errorFor("phone")} label="WhatsApp">
-          <Input type="tel" name="phone" required autoComplete="tel" placeholder="+51 999 999 999" />
+          <PhoneInput name="phone" required />
         </Field>
 
         <LocationFields idPrefix="signup" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} />
@@ -229,6 +233,12 @@ export function SellerSignupForm() {
       {message ? (
         <Notice tone={state === "sent" ? "success" : "warning"}>
           <p>{message}</p>
+          {state === "sent" && sentTo ? (
+            <>
+              <p className="mt-1 t-meta">¿No te llegó? Revisa la carpeta de spam o pide otro enlace.</p>
+              <ResendConfirmation email={sentTo} next="/mi-cuenta?confirmed=1" />
+            </>
+          ) : null}
           {state === "duplicate" ? (
             <Link className="mt-2 inline-flex" href="/login">
               Ir a ingresar

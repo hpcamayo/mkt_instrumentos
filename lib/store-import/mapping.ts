@@ -18,7 +18,8 @@ export type ImportFieldKey =
   | "low_stock_threshold"
   | "external_reference"
   | "photos"
-  | "listing_id";
+  | "listing_id"
+  | "exported_at";
 
 export type ImportField = {
   key: ImportFieldKey;
@@ -48,7 +49,33 @@ export const IMPORT_FIELDS: readonly ImportField[] = [
   { key: "listing_id", label: "ID de publicación", help: "Solo para vincular publicaciones existentes (viene en la exportación).", synonyms: ["id de publicación", "id publicación", "listing id", "listing_id"] },
 ];
 
-export const IMPORT_FIELD_KEYS = IMPORT_FIELDS.map((field) => field.key);
+// fix-04: a Laria export says when it was made, so a re-import can tell which stock cells predate sales recorded since.
+// It is a mapping target but not a template column (a store never types it).
+export const EXPORTED_AT_FIELD: ImportField = {
+  key: "exported_at",
+  label: "Exportado el",
+  help: "Viene en la exportación de Laria: evita deshacer ventas registradas después.",
+  synonyms: ["exportado el", "exportado", "fecha de exportación", "exported at"],
+};
+
+export const IMPORT_FIELD_KEYS = [...IMPORT_FIELDS, EXPORTED_AT_FIELD].map((field) => field.key);
+
+// fix-04: what the file updates on SKU that already exist. New SKU always take the row's stock and price.
+export type ImportUpdateScope = "prices" | "stock" | "both";
+
+export const IMPORT_UPDATE_SCOPES: readonly { value: ImportUpdateScope; label: string; hint: string }[] = [
+  { value: "prices", label: "Precios", hint: "El stock de tus SKU no cambia, aunque el archivo tenga una columna de stock." },
+  { value: "stock", label: "Stock", hint: "Los precios de tus SKU no cambian. El stock del archivo reemplaza al de hoy." },
+  { value: "both", label: "Ambos", hint: "Cambian el stock y los precios de tus SKU." },
+];
+
+// The question is asked only when the mapping leaves a real choice: without a stock column the file can only update
+// prices, without a price column only stock.
+export function impliedUpdateScope(mapping: ImportMapping): ImportUpdateScope | null {
+  if (mapping.quantity === undefined) return "prices";
+  if (mapping.unit_price_pen === undefined) return "stock";
+  return null;
+}
 
 export type AttributeField = { key: `attribute:${string}`; attribute: string; label: string };
 
@@ -84,7 +111,7 @@ function loose(value: string) {
 
 const SYNONYMS: Map<string, string> = (() => {
   const map = new Map<string, string>();
-  for (const field of IMPORT_FIELDS) {
+  for (const field of [...IMPORT_FIELDS, EXPORTED_AT_FIELD]) {
     for (const synonym of [field.label, ...field.synonyms]) {
       if (!map.has(loose(synonym))) map.set(loose(synonym), field.key);
     }
@@ -98,7 +125,7 @@ const SYNONYMS: Map<string, string> = (() => {
 })();
 
 export function fieldLabel(key: string) {
-  return IMPORT_FIELDS.find((field) => field.key === key)?.label
+  return [...IMPORT_FIELDS, EXPORTED_AT_FIELD].find((field) => field.key === key)?.label
     ?? IMPORT_ATTRIBUTE_FIELDS.find((field) => field.key === key)?.label
     ?? key;
 }
@@ -132,15 +159,25 @@ export function proposeMapping(headers: readonly string[], saved?: Record<string
 
 export type MappingProblem = { field: string | null; message: string };
 
-// Mirrors the checks of confirm_store_import_mapping so the wizard can explain them before submitting.
-export function mappingProblems(mapping: ImportMapping, columnCount: number): MappingProblem[] {
+// Mirrors the checks of confirm_store_import_mapping so the wizard can explain them before submitting. Without a scope
+// (an older caller) the file updates both, as before fix-04.
+export function mappingProblems(mapping: ImportMapping, columnCount: number, scope: ImportUpdateScope | null = "both"): MappingProblem[] {
   const problems: MappingProblem[] = [];
   const columns = Object.values(mapping);
   if (new Set(columns).size !== columns.length) problems.push({ field: null, message: "Cada columna se puede usar una sola vez." });
   if (columns.some((column) => !Number.isInteger(column) || column < 0 || column >= columnCount)) {
     problems.push({ field: null, message: "Revisa las columnas elegidas." });
   }
-  if (mapping.quantity === undefined) problems.push({ field: "quantity", message: "Elige la columna de stock." });
+  const effective = scope ?? impliedUpdateScope(mapping);
+  if (!scope && mapping.quantity === undefined && mapping.unit_price_pen === undefined) {
+    problems.push({ field: "quantity", message: "Elige la columna de stock o la de precio." });
+  } else if (!effective) {
+    problems.push({ field: "scope", message: "Elige qué actualiza este archivo." });
+  } else if (effective !== "prices" && mapping.quantity === undefined) {
+    problems.push({ field: "quantity", message: "Elige la columna de stock." });
+  } else if (effective === "prices" && mapping.unit_price_pen === undefined) {
+    problems.push({ field: "unit_price_pen", message: "Elige la columna de precio." });
+  }
   if (mapping.sku === undefined && mapping.product_name === undefined && mapping.listing_id === undefined) {
     problems.push({ field: "sku", message: "Elige la columna de SKU o de nombre." });
   }

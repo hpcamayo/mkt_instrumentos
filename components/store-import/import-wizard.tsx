@@ -7,14 +7,23 @@ import { Button, buttonClasses } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { ErrorSummary } from "@/components/ui/error-summary";
-import { Checkbox, Field, FileInput, Select } from "@/components/ui/field";
-import { Notice } from "@/components/ui/notice";
+import { Checkbox, Field, FileInput, Radio, Select } from "@/components/ui/field";
+import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
 import { ImportPhotos } from "@/components/store-import/import-photos";
 import { ImportPublish } from "@/components/store-import/import-publish";
 import { IMPORT_FILE_ACCEPT, importFileFormat, importFileProblem, uploadImportFile } from "@/components/store-import/import-start";
 import { importCategoryChips, importStatus } from "@/lib/store-import/labels";
-import { IMPORT_ATTRIBUTE_FIELDS, IMPORT_FIELDS, mappingProblems, type ImportMapping } from "@/lib/store-import/mapping";
+import {
+  EXPORTED_AT_FIELD,
+  IMPORT_ATTRIBUTE_FIELDS,
+  IMPORT_FIELDS,
+  IMPORT_UPDATE_SCOPES,
+  impliedUpdateScope,
+  mappingProblems,
+  type ImportMapping,
+  type ImportUpdateScope,
+} from "@/lib/store-import/mapping";
 import { ACTION_LABELS, describeChanges, resultLabel } from "@/lib/store-import/report";
 import type { ImportSession, RowFilter, StepNext } from "@/lib/store-import/server";
 import type { ImportCell, ImportIssue } from "@/lib/store-import/types";
@@ -212,8 +221,8 @@ export function ImportWizard({ initialSession, initialNext }: { initialSession: 
       {step === "mapping" && !working ? (
         <MappingStep
           session={session}
-          onSubmit={async (mapping, saveDefault) => {
-            const ok = await act({ action: "mapping", mapping, saveDefault, version: session.version });
+          onSubmit={async (mapping, saveDefault, updateScope) => {
+            const ok = await act({ action: "mapping", mapping, saveDefault, updateScope, staleStock: "keep", version: session.version });
             if (ok) setReviewing("review");
             return ok;
           }}
@@ -225,6 +234,10 @@ export function ImportWizard({ initialSession, initialNext }: { initialSession: 
         <ReviewStep
           session={session}
           onDecision={async (rows, decision) => act({ action: "decision", rows, decision, version: session.version })}
+          onStaleStock={async (staleStock) => act({
+            action: "mapping", mapping: session.column_mapping ?? {}, updateScope: session.options?.update_scope ?? "both",
+            staleStock, version: session.version,
+          })}
           onBack={() => setReviewing("mapping")}
           onContinue={() => { setReviewing("photos"); window.scrollTo({ top: 0 }); }}
         />
@@ -241,6 +254,7 @@ export function ImportWizard({ initialSession, initialNext }: { initialSession: 
       {session.status === "ready" && !working && reviewing === "confirm" ? (
         <ConfirmStep
           session={session}
+          scope={session.options?.update_scope ?? "both"}
           onBack={() => setReviewing("photos")}
           onConfirm={() => act({ action: "confirm", version: session.version })}
         />
@@ -351,7 +365,11 @@ function UploadAgain({ session, onUploaded, onError }: { session: ImportSession;
 
 // ------------------------------------------------------------------ Columnas
 
-function MappingStep({ session, onSubmit, onCancel }: { session: ImportSession; onSubmit: (mapping: ImportMapping, saveDefault: boolean) => Promise<boolean>; onCancel?: () => void }) {
+function MappingStep({ session, onSubmit, onCancel }: {
+  session: ImportSession;
+  onSubmit: (mapping: ImportMapping, saveDefault: boolean, scope: ImportUpdateScope) => Promise<boolean>;
+  onCancel?: () => void;
+}) {
   const headers = useMemo(() => session.headers ?? [], [session.headers]);
   const [byColumn, setByColumn] = useState<string[]>(() => {
     const initial = session.column_mapping ?? session.proposed_mapping ?? {};
@@ -361,6 +379,9 @@ function MappingStep({ session, onSubmit, onCancel }: { session: ImportSession; 
   });
   const [samples, setSamples] = useState<ImportCell[][]>([]);
   const [saveDefault, setSaveDefault] = useState(true);
+  // fix-04: asked once the mapping leaves a choice (a stock and a price column); a revisited mapping keeps the answer.
+  const [scopeChoice, setScopeChoice] = useState<ImportUpdateScope | null>(session.column_mapping ? session.options?.update_scope ?? null : null);
+  const scopeName = useId();
   const [attempt, setAttempt] = useState(0);
   const [showErrors, setShowErrors] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -378,7 +399,9 @@ function MappingStep({ session, onSubmit, onCancel }: { session: ImportSession; 
     byColumn.forEach((field, column) => { if (field) result[field] = column; });
     return result;
   }, [byColumn]);
-  const problems = mappingProblems(mapping, headers.length);
+  const implied = impliedUpdateScope(mapping);
+  const scope = implied ?? scopeChoice;
+  const problems = mappingProblems(mapping, headers.length, scope);
 
   function choose(column: number, field: string) {
     // A field goes to one column only: picking it here frees it elsewhere.
@@ -393,7 +416,7 @@ function MappingStep({ session, onSubmit, onCancel }: { session: ImportSession; 
       return;
     }
     setBusy(true);
-    await onSubmit(mapping, saveDefault);
+    await onSubmit(mapping, saveDefault, scope ?? "both");
     setBusy(false);
   }
 
@@ -403,8 +426,8 @@ function MappingStep({ session, onSubmit, onCancel }: { session: ImportSession; 
       <div className="grid gap-2">
         <h2 className="t-section">¿Qué dato tiene cada columna?</h2>
         <p className="t-body text-ink-2">
-          Propusimos una opción para cada columna según su encabezado. Corrige lo que haga falta. Se necesita la columna de stock y la
-          de SKU o de nombre; las columnas sin elegir no se importan.
+          Propusimos una opción para cada columna según su encabezado. Corrige lo que haga falta. Se necesita la columna de SKU o de
+          nombre, y la de stock o la de precio; las columnas sin elegir no se importan.
         </p>
       </div>
       {session.file_warnings?.length ? (
@@ -414,9 +437,35 @@ function MappingStep({ session, onSubmit, onCancel }: { session: ImportSession; 
       ) : null}
       <ErrorSummary
         title="Revisa las columnas"
-        errors={showErrors ? problems.map((problem) => ({ id: problem.field ? `columna-campo-${problem.field}` : "columna-0", message: problem.message })) : []}
+        errors={showErrors ? problems.map((problem) => ({
+          id: problem.field === "scope" ? `${scopeName}-0` : problem.field ? `columna-campo-${problem.field}` : "columna-0",
+          message: problem.message,
+        })) : []}
         attempt={attempt}
       />
+      {implied ? null : (
+        <fieldset className="grid gap-1 rounded-panel border border-subtle p-4">
+          <legend className="px-1 t-ui font-semibold text-ink">¿Qué actualiza este archivo en los SKU que ya tienes?</legend>
+          <p className="t-meta">Los SKU nuevos se crean con el stock y el precio del archivo. Nombre, variante y los demás datos se actualizan en los tres casos.</p>
+          {IMPORT_UPDATE_SCOPES.map((option, index) => (
+            <Radio
+              key={option.value}
+              id={`${scopeName}-${index}`}
+              name={scopeName}
+              value={option.value}
+              checked={scopeChoice === option.value}
+              onChange={() => setScopeChoice(option.value)}
+              label={option.label}
+              description={option.hint}
+            />
+          ))}
+          {mapping.exported_at !== undefined ? (
+            <p className="t-meta">
+              Es una exportación de Laria: si registraste ventas o ajustes después de exportarla, se mantiene el stock de hoy de esos SKU.
+            </p>
+          ) : null}
+        </fieldset>
+      )}
       <ul className="grid gap-3 sm:grid-cols-2">
         {headers.map((header, column) => {
           const example = samples.map((row) => row[column]?.v ?? "").find((value) => value.trim());
@@ -433,7 +482,7 @@ function MappingStep({ session, onSubmit, onCancel }: { session: ImportSession; 
                 <Select value={field} onChange={(event) => choose(column, event.target.value)}>
                   <option value="">No importar</option>
                   <optgroup label="Datos del SKU">
-                    {IMPORT_FIELDS.map((option) => (
+                    {[...IMPORT_FIELDS, EXPORTED_AT_FIELD].map((option) => (
                       <option key={option.key} value={option.key}>{option.label}{used.has(option.key) && option.key !== field ? " (en otra columna)" : ""}</option>
                     ))}
                   </optgroup>
@@ -472,11 +521,56 @@ const REVIEW_FILTERS: { key: RowFilter; label: string; count: (counts: Record<st
   { key: "warning", label: "Con advertencias", count: (counts) => counts.warnings ?? 0 },
   { key: "unchanged", label: "Sin cambios", count: (counts) => counts.unchanged ?? 0 },
   { key: "excluded", label: "Excluidas", count: (counts) => counts.excluded ?? 0 },
+  { key: "since_export", label: "Con ventas después de exportar", count: (counts) => counts.since_export ?? 0 },
 ];
 
-function ReviewStep({ session, onDecision, onBack, onContinue }: {
+// fix-04: a re-imported export whose SKU had sales or adjustments after it was made. Today's stock is kept unless the
+// store says it counted again; either way the choice re-reads the file with the same columns.
+function SinceExportNotice({ counts, staleStock, onShow, onChoose }: {
+  counts: Record<string, number>;
+  staleStock: "keep" | "apply";
+  onShow: () => void;
+  onChoose: (choice: "keep" | "apply") => Promise<boolean>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const total = counts.since_export ?? 0;
+  const choose = async (choice: "keep" | "apply") => {
+    setBusy(true);
+    await onChoose(choice);
+    setBusy(false);
+  };
+  const keeping = staleStock === "keep";
+  return (
+    <div className={cn(noticeClassName(keeping ? "info" : "warning"), "grid gap-3")} role="status">
+      <div className="flex items-start gap-2">
+        <NoticeIcon tone={keeping ? "info" : "warning"} />
+        <div className="grid gap-1">
+          <p className="t-body font-semibold text-ink">
+            {keeping
+              ? `${plural(total, "SKU tuvo", "SKU tuvieron")} ventas o ajustes después de que exportaste el archivo`
+              : `Usarás el stock del archivo en ${plural(total, "SKU", "SKU")} con ventas o ajustes posteriores`}
+          </p>
+          <p className="t-ui text-ink">
+            {keeping
+              ? "Mantuvimos su stock de hoy para no deshacer esas ventas. Si volviste a contar esos SKU, usa el stock del archivo."
+              : "El stock del archivo reemplazará al de hoy aunque hubo ventas o ajustes después de exportarlo."}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="secondary" onClick={onShow}>Ver esos SKU</Button>
+        <Button size="sm" variant="quiet" loading={busy} loadingLabel="Revisando otra vez…" onClick={() => void choose(keeping ? "apply" : "keep")}>
+          {keeping ? "Usar el stock del archivo" : "Mantener el stock de hoy"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ReviewStep({ session, onDecision, onStaleStock, onBack, onContinue }: {
   session: ImportSession;
   onDecision: (rows: number[] | null, decision: "include" | "exclude") => Promise<boolean>;
+  onStaleStock: (choice: "keep" | "apply") => Promise<boolean>;
   onBack: () => void;
   onContinue: () => void;
 }) {
@@ -511,6 +605,14 @@ function ReviewStep({ session, onDecision, onBack, onContinue }: {
         ["Con errores", counts.error ?? 0],
         ["Excluidas", counts.excluded ?? 0],
       ]} />
+      {counts.since_export && !applied ? (
+        <SinceExportNotice
+          counts={counts}
+          staleStock={session.options?.stale_stock ?? "keep"}
+          onShow={() => setFilter("since_export")}
+          onChoose={onStaleStock}
+        />
+      ) : null}
       {counts.publication_incomplete ? (
         <Notice tone="info" title={`${plural(counts.publication_incomplete, "SKU necesita", "SKU necesitan")} más datos para publicarse`}>
           <p>Se importan igual. Para publicarlos faltan datos como precio, condición, categoría, descripción o fotos.</p>
@@ -670,7 +772,13 @@ function RowsList({ sessionId, filter, onFilter, counts, editable, onDecision, v
 
 // ------------------------------------------------------------------ Confirmar
 
-function ConfirmStep({ session, onBack, onConfirm }: { session: ImportSession; onBack: () => void; onConfirm: () => Promise<boolean> }) {
+const SCOPE_CONFIRM: Record<ImportUpdateScope, string> = {
+  prices: "Este archivo cambia precios y datos: el stock de tus SKU no cambia. Los SKU nuevos se crean con el stock del archivo.",
+  stock: "El stock del archivo reemplaza al actual; los precios de tus SKU no cambian.",
+  both: "El stock del archivo reemplaza al actual.",
+};
+
+function ConfirmStep({ session, scope, onBack, onConfirm }: { session: ImportSession; scope: ImportUpdateScope; onBack: () => void; onConfirm: () => Promise<boolean> }) {
   const counts = session.counts ?? {};
   const [busy, setBusy] = useState(false);
   const lines = [
@@ -678,6 +786,7 @@ function ConfirmStep({ session, onBack, onConfirm }: { session: ImportSession; o
     counts.update ? `Se actualizarán ${plural(counts.update, "SKU", "SKU")}.` : null,
     counts.adopt_listing ? `Se vincularán ${plural(counts.adopt_listing, "publicación", "publicaciones")} a su SKU.` : null,
     counts.stock_changes ? `Cambia el stock de ${plural(counts.stock_changes, "SKU", "SKU")}; cada cambio queda en el historial como ajuste por importación.` : null,
+    counts.since_export_kept ? `Se mantiene el stock de hoy en ${plural(counts.since_export_kept, "SKU", "SKU")} con ventas o ajustes posteriores a la exportación.` : null,
     counts.error ? `${plural(counts.error, "fila con errores no se aplicará", "filas con errores no se aplicarán")}.` : null,
     counts.excluded ? `${plural(counts.excluded, "fila excluida no se aplicará", "filas excluidas no se aplicarán")}.` : null,
     session.photo_counts?.rows_ready ? `${plural(session.photo_counts.rows_ready, "SKU tiene", "SKU tienen")} sus fotos listas para publicarse.` : null,
@@ -688,8 +797,8 @@ function ConfirmStep({ session, onBack, onConfirm }: { session: ImportSession; o
       <ul className="grid list-disc gap-2 pl-5 t-body">{lines.map((line) => <li key={line}>{line}</li>)}</ul>
       <Notice tone="info">
         <p>
-          El stock del archivo reemplaza al actual. Si registras una venta mientras se aplica, esa fila queda en conflicto y
-          podrás revisarla con el valor nuevo; nunca se pisa una venta.
+          {SCOPE_CONFIRM[scope]} Si registras una venta mientras se aplica, esa fila queda en conflicto y podrás revisarla con el
+          valor nuevo; nunca se pisa una venta.
         </p>
       </Notice>
       <div className="flex flex-wrap gap-3">
