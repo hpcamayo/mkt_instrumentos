@@ -5,9 +5,9 @@
 -- What the database enforces and this file checks: the new columns' defaults and check; that owners (and only owners)
 -- can change them through the existing store update path; that a store that is not active, address included, is
 -- unreadable by anon; that the directory lists active stores only and returns no address or business data; that the
--- category counts follow row-level security. What it does not enforce: hiding the raw address column of an active
--- store from the API when show_address is false (anon keeps the table-level SELECT it had before); the application
--- renders the address only through publicStoreLocation (tests/ux-stores-storefront.test.cjs).
+-- category counts follow row-level security; that public_address holds the address only while show_address is true.
+-- Closing the raw address column itself is 20261022130000_store_public_columns.sql (tests/store-public-columns.sql);
+-- public pages read public_address only (tests/ux-stores-storefront.test.cjs).
 begin;
 
 create function pg_temp.expect_error(p_sql text, p_code text) returns void language plpgsql as $$
@@ -72,6 +72,7 @@ insert into public.listings (id,slug,title,seller_type,status,category,instrumen
 -- ------------------------------------------------------------------ list-12: columns and check
 
 select pg_temp.check((pg_temp.store(pg_temp.id('store_a'))).show_address = false, 'show_address is off by default');
+select pg_temp.check((pg_temp.store(pg_temp.id('store_a'))).public_address is null, 'public_address is empty while show_address is off');
 select pg_temp.check((pg_temp.store(pg_temp.id('store_a'))).opening_hours is null, 'opening_hours starts empty');
 select pg_temp.expect_error($$update public.stores set show_address = null where slug = 'ssf-tienda-a'$$, 'null value in column "show_address"');
 select pg_temp.expect_error($$update public.stores set opening_hours = '' where slug = 'ssf-tienda-a'$$, 'stores_opening_hours_length');
@@ -91,6 +92,8 @@ with changed as (
 select pg_temp.check((select count(*) from changed) = 1, 'the owner updates both columns through the store profile path');
 select pg_temp.check((pg_temp.store(pg_temp.id('store_a'))).show_address, 'show_address saved');
 select pg_temp.check((pg_temp.store(pg_temp.id('store_a'))).opening_hours = 'Lun a sáb de 10 a. m. a 7 p. m.', 'opening_hours saved');
+select pg_temp.check((pg_temp.store(pg_temp.id('store_a'))).public_address = (pg_temp.store(pg_temp.id('store_a'))).address,
+  'public_address carries the address while show_address is true');
 -- The owner of a store in review can set them before approval too.
 select pg_temp.as_user('owner_b');
 with changed as (update public.stores set opening_hours = 'Lun a vie de 9 a 6' where id = pg_temp.id('store_b') returning 1)

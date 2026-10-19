@@ -247,7 +247,7 @@ test("4b: the store header, breadcrumb by store type, section links and 'Sobre l
   assert.match(page, /source="store"/);
   for (const field of ["created_at", "instagram_url", "facebook_url", "tiktok_url", "website_url", "store_photos"]) assert.match(page, new RegExp(field));
   // Never the contact person (L18 A). list-12 replaces L18's "no street address": the address is read on the server and
-  // reaches the page only through publicStoreLocation, which returns it only when the store agreed (show_address).
+  // reaches the page only through publicStoreLocation, from public_address (set only when the store agreed).
   assert.doesNotMatch(page, /contact_person/);
   assert.match(page, /const location = publicStoreLocation\(store\);/);
   assert.match(page, /withoutPrivateStoreFields\(store\)/);

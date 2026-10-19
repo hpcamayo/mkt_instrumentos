@@ -52,13 +52,12 @@ type StorePageProps = {
 
 type StoreData = StoreHeaderData & StoreAbout;
 
-// The row as read: the public fields plus what the server needs and never renders (status, owner, and the address
-// with its consent flag, which only publicStoreLocation reads).
+// The row as read: the public fields plus what the server needs and never renders (status, and the address the store
+// agreed to show, which only publicStoreLocation reads). Never the raw address or the owner: the public cannot read
+// them (supabase/migrations/20261022130000_store_public_columns.sql).
 type StoreRow = StoreData & {
   status: StoreStatus;
-  owner_user_id: string | null;
-  show_address: boolean;
-  address: string | null;
+  public_address: string | null;
   opening_hours: string | null;
 };
 
@@ -106,13 +105,11 @@ const STORE_SELECT = `
   name,
   slug,
   status,
-  owner_user_id,
   description,
   city,
   district,
   region,
-  show_address,
-  address,
+  public_address,
   opening_hours,
   whatsapp_phone,
   logo_url,
@@ -226,6 +223,14 @@ const loadOwnedStore = cache(async (slug: string) => {
   return data ? { store: data, supabase: supabase as unknown as PublicSupabaseClient } : null;
 });
 
+// Whether the signed-in visitor owns this active store, with their own session (owners may filter on owner_user_id).
+const viewerOwnsStore = cache(async (viewerId: string, storeId: string) => {
+  const supabase = await getSupabaseServerClient();
+  if (!supabase) return false;
+  const { data } = await supabase.from("stores").select("id").eq("id", storeId).eq("owner_user_id", viewerId).maybeSingle();
+  return Boolean(data);
+});
+
 export async function generateMetadata({ params, searchParams }: StorePageProps): Promise<Metadata> {
   const { slug } = await params;
   const resolved = await searchParams;
@@ -264,7 +269,7 @@ export default async function StorePage({
 
   const preview = !activeStore;
   const viewerId = preview ? null : await getViewerId();
-  const isOwner = preview || (viewerId !== null && row.owner_user_id === viewerId);
+  const isOwner = preview || (viewerId !== null && (await viewerOwnsStore(viewerId, row.id)));
   // The preview reads the owner's own approved listings with their session; the public page reads public rows only.
   const listingClient = owned?.supabase ?? supabase;
   const path = `/tiendas/${slug}`;
@@ -292,8 +297,8 @@ export default async function StorePage({
   const paymentMethods = !preview && assistedCommerceEnabled() && store.is_verified
     ? readPublicPaymentMethods((await supabase.rpc("get_store_payment_methods", { p_store_id: store.id })).data)
     : [];
-  // list-12: the address leaves the server only through publicStoreLocation (only when show_address is true); the
-  // rest of the row goes on without the address, its flag and the owner.
+  // list-12: the address reaches the page only through publicStoreLocation (public_address is null unless the store
+  // agreed to show it); the rest of the row goes on without it.
   const location = publicStoreLocation(store);
   const publicStore = { ...withoutPrivateStoreFields(store), store_photos: store.store_photos ?? [] } as StoreData;
 

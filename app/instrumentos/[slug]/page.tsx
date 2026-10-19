@@ -168,8 +168,7 @@ const loadPublicListing = cache(async (slug: string) => {
           whatsapp_phone,
           logo_url,
           created_at,
-          show_address,
-          address,
+          public_address,
           opening_hours
         ),
         photo_count:listing_photo_count,

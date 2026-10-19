@@ -59,24 +59,24 @@ const casaGrau = {
 };
 
 test("list-12: the address is public only when the store agreed; the map link searches address, district and city", () => {
-  const row = { show_address: false, address: "Jr. Ica 455", district: "Cercado de Lima", city: "Lima", opening_hours: "  Lun a sáb de 10 a. m. a 7 p. m.  " };
+  // public_address is computed by the database: the street address while show_address is true, otherwise null.
+  const row = { public_address: null, district: "Cercado de Lima", city: "Lima", opening_hours: "  Lun a sáb de 10 a. m. a 7 p. m.  " };
   assert.deepEqual(storefront.publicStoreLocation(row), { address: null, mapsHref: null, hours: "Lun a sáb de 10 a. m. a 7 p. m." });
-  assert.equal(storefront.publicStoreLocation({ ...row, show_address: undefined }).address, null, "an older row without the flag shows no address");
-  assert.equal(storefront.publicStoreLocation({ ...row, show_address: null }).address, null);
-  const shown = storefront.publicStoreLocation({ ...row, show_address: true });
+  assert.equal(storefront.publicStoreLocation({ ...row, public_address: undefined }).address, null, "an older row without the column shows no address");
+  const shown = storefront.publicStoreLocation({ ...row, public_address: "Jr. Ica 455" });
   assert.equal(shown.address, "Jr. Ica 455");
   assert.equal(shown.mapsHref, "https://www.google.com/maps/search/?api=1&query=Jr.%20Ica%20455%2C%20Cercado%20de%20Lima%2C%20Lima%2C%20Per%C3%BA");
   // A repeated part (district equal to the city) is searched once.
   assert.equal(storefront.mapsSearchUrl({ address: "Av. Ejército 101", district: "Arequipa", city: "Arequipa" }), "https://www.google.com/maps/search/?api=1&query=Av.%20Ej%C3%A9rcito%20101%2C%20Arequipa%2C%20Per%C3%BA");
-  assert.deepEqual(storefront.publicStoreLocation({ show_address: true, address: "  ", opening_hours: "" }), { address: null, mapsHref: null, hours: null });
-  // The private fields leave the row before it is rendered.
-  const clean = storefront.withoutPrivateStoreFields({ ...casaGrau, address: "Jr. Ica 455", show_address: true, owner_user_id: "u1", status: "active" });
-  assert.equal("address" in clean || "show_address" in clean || "owner_user_id" in clean, false);
+  assert.deepEqual(storefront.publicStoreLocation({ public_address: "  ", opening_hours: "" }), { address: null, mapsHref: null, hours: null });
+  // The address leaves the row before it is rendered.
+  const clean = storefront.withoutPrivateStoreFields({ ...casaGrau, public_address: "Jr. Ica 455", status: "active" });
+  assert.equal("public_address" in clean, false);
   assert.equal(clean.status, "active");
 });
 
 test("list-12: 'Sobre la tienda', the header and the seller card show the address with Cómo llegar and the hours", () => {
-  const location = storefront.publicStoreLocation({ show_address: true, address: "Jr. Ica 455", district: "Cercado de Lima", city: "Lima", opening_hours: "Lun a vie 10–19\nSáb 10–14" });
+  const location = storefront.publicStoreLocation({ public_address: "Jr. Ica 455", district: "Cercado de Lima", city: "Lima", opening_hours: "Lun a vie 10–19\nSáb 10–14" });
   const sections = load("components/store/store-sections.tsx", mocks);
   const about = html(React.createElement(sections.StoreAboutSection, { store: casaGrau, location }));
   assert.match(about, /Dirección<\/dt><dd[^>]*><span class="break-words">Jr\. Ica 455<\/span>/);
@@ -84,7 +84,7 @@ test("list-12: 'Sobre la tienda', the header and the seller card show the addres
   assert.match(about, /Horario de atención<\/dt><dd[^>]*><span class="whitespace-pre-line break-words">Lun a vie 10–19\nSáb 10–14<\/span>/);
   assert.match(about, /data-report="store"/);
   // Not agreed: no address and no map link, the hours still show.
-  const hidden = html(React.createElement(sections.StoreAboutSection, { store: casaGrau, location: storefront.publicStoreLocation({ show_address: false, address: "Jr. Ica 455", opening_hours: "Lun a vie 10–19" }) }));
+  const hidden = html(React.createElement(sections.StoreAboutSection, { store: casaGrau, location: storefront.publicStoreLocation({ public_address: null, opening_hours: "Lun a vie 10–19" }) }));
   assert.doesNotMatch(hidden, /Jr\. Ica|Dirección|Cómo llegar|google/);
   assert.match(hidden, /Horario de atención/);
   // Without either, "Sobre la tienda" is as before.
@@ -106,6 +106,13 @@ test("list-12: 'Sobre la tienda', the header and the seller card show the addres
   // The listing page passes the store row through the same gate.
   const listingPage = source("app/instrumentos/[slug]/page.tsx");
   assert.match(listingPage, /visit=\{isStore && store \? publicStoreLocation\(store\) : undefined\}/);
+  // Public reads name public_address, never the raw address, its flag or the owner (the public cannot read them).
+  const storeColumns = [
+    ...[...listingPage.matchAll(/\bstores \(([^()]*)\)/g)].map((match) => match[1]),
+    source("app/tiendas/[slug]/page.tsx").match(/const STORE_SELECT = `([^`]*)`/)[1],
+  ].join(",");
+  assert.match(storeColumns, /\bpublic_address\b/);
+  assert.doesNotMatch(storeColumns, /^\s*(address|show_address|owner_user_id),?$/m);
 });
 
 test("find-14: the store page reads category, brand and sort only, and its links stay on the store page", () => {

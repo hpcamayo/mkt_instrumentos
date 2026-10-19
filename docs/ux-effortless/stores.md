@@ -359,18 +359,18 @@ and the safety advice says to check the instrument in person.
 
 **After.**
 
-- `public.stores` gains `show_address boolean not null default false` and `opening_hours text` (null, or 1–300
-  characters that are not only spaces: check `stores_opening_hours_length`).
+- `public.stores` gains `show_address boolean not null default false`, `opening_hours text` (null, or 1–300
+  characters that are not only spaces: check `stores_opening_hours_length`) and `public_address`, a generated column
+  that holds the trimmed address while `show_address` is true and null otherwise.
 - When `show_address` is true: the street address with "Cómo llegar" (a Google Maps search for address, district,
   city and "Perú", `target="_blank" rel="noopener noreferrer"`, "(abre Google Maps en otra pestaña)" for screen
   readers) in the store header under the place, in "Sobre la tienda" ("Dirección"), and in the seller card of that
   store's listings. Opening hours, when written, show in the same three places ("Horario de atención", line breaks
   kept). Icons (map pin, clock) are decorative; each line has a visually hidden label.
-- The address becomes public only through `publicStoreLocation()` (lib/store-storefront.ts), which returns it only
-  when `show_address === true`. The store page strips `address`, `show_address` and `owner_user_id` from the row
-  (`withoutPrivateStoreFields`) before anything renders. Public query paths checked: store page (selects the address
-  on the server, gated), listing page (service-role detail query now selects `show_address, address, opening_hours`,
-  gated before the seller card), home stores (`id, name, slug, city, district, logo_url`), the directory function (no
+- Public pages read `public_address`, never the raw `address`, `show_address` or `owner_user_id`, and show it through
+  `publicStoreLocation()` (lib/store-storefront.ts); the store page strips it from the row
+  (`withoutPrivateStoreFields`) before passing the rest on, and checks ownership with the viewer's own session.
+  Public query paths checked: store page, listing page (detail query selects `public_address, opening_hours`), home stores (`id, name, slug, city, district, logo_url`), the directory function (no
   address), sitemap (`id, slug, updated_at`), contact route (`name, whatsapp_phone`), listing embeds (`name, slug,
   status, is_verified`). Owner and Admin reads are not public.
 - Owners can save both columns through the existing path: RLS "Store members can update store profile fields", the
@@ -394,11 +394,12 @@ address and map link disappear, the hours stay. Run `tests/ux-stores-storefront.
 - UXD-stores-30: free-text hours (no structured weekdays, no "Abierto ahora": that would need a timezone-aware
   schedule and could be wrong).
 
-**Limitations.** The database does not hide the raw `address` column of an active store from the API: anon and
-authenticated keep the table-level SELECT they already had, so `GET /rest/v1/stores?select=address` returns it for
-active stores, as it already does today for `ruc`, `email`, `contact_person` and `razon_social`. This predates the
-batch. Closing it needs column-level grants for anon/authenticated (and RPCs for owner/Admin reads); I left it out as a
-separate, reviewed change and recommend it. In `next dev`, React's development-only debug data in the page payload
+**Limitations.** This batch alone does not hide the raw `address` column of an active store from the API: on main,
+anon and authenticated have table-level SELECT on `stores`, so `address`, `ruc`, `email`, `contact_person` and
+`razon_social` are readable for active stores. The separate change on branch `fix/store-public-columns` (migration
+`20261022130000_store_public_columns.sql`, based on main) closes them with column grants; this batch's migration
+grants `show_address`, `opening_hours` and `public_address` so its pages keep working once that change is merged, and
+works unchanged before it. In `next dev`, React's development-only debug data in the page payload
 includes awaited query results (the raw row, address included); production builds do not emit it. The form fields are
 yours (`components/store-registration-form.tsx`): send `opening_hours` as null when blank (trimmed), since the check
 rejects empty or space-only text.

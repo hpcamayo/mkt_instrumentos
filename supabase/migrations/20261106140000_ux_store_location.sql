@@ -6,15 +6,15 @@
 -- find-13: /tiendas lists the active stores with their number of public listings and their rating, in one call.
 -- find-14: the store page offers category chips, built from the categories the store actually has.
 --
--- Additive: two columns, one check, two read functions. Owners already update their store row through
+-- Additive: three columns, one check, two read functions. Owners already update their store row through
 -- "Store members can update store profile fields" and the table-level UPDATE grant; protect_store_admin_fields does
 -- not cover the new columns, so the store profile form can save them as it saves the others.
 --
--- Note on the address: anon and authenticated keep the table-level SELECT grant on public.stores they already had,
--- so the raw address of an active store stays readable through the API, as it was before this migration (and as
--- ruc, email and contact_person are). The application never renders it unless show_address is true; the directory
--- function below returns no address at all. Closing the raw column for anon needs column-level grants and is left to a
--- separate, reviewed change (docs/ux-effortless/stores.md, list-12 limitations).
+-- The address: public pages read public_address, a generated column that holds the street address only while
+-- show_address is true, never the raw address. The separate change 20261022130000_store_public_columns.sql (from
+-- main) closes the raw column, RUC, e-mail and the other private fields to the public with column grants; the grant
+-- at the end of this file makes the three new public columns readable under it. Before that change is merged the
+-- table-level grant still covers them, so this file works with or without it.
 
 alter table public.stores
   add column show_address boolean not null default false,
@@ -23,6 +23,11 @@ alter table public.stores
     opening_hours is null or (char_length(opening_hours) between 1 and 300 and btrim(opening_hours) <> '')
   );
 
+alter table public.stores
+  add column public_address text generated always as (case when show_address then nullif(btrim(address), '') end) stored;
+
+comment on column public.stores.public_address is
+  'list-12: the street address while show_address is true, otherwise null. Public pages read this, never address.';
 comment on column public.stores.show_address is
   'list-12: the store agreed to show its street address (and a map link) on its public page and listings. Off by default.';
 comment on column public.stores.opening_hours is
@@ -100,3 +105,7 @@ $$;
 
 revoke all on function public.get_store_listing_categories(uuid) from public;
 grant execute on function public.get_store_listing_categories(uuid) to anon, authenticated;
+
+-- Public columns of list-12 (see the note at the top). Column grants add to a table-level grant, so this is a no-op
+-- until the column-grant change is merged, and keeps them readable after it.
+grant select (show_address, opening_hours, public_address) on public.stores to anon, authenticated;

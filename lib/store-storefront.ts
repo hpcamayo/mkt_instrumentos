@@ -14,8 +14,9 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 // ------------------------------------------------------------------ list-12: address, map link, hours
 
 export type StoreLocationSource = {
-  show_address?: boolean | null;
-  address?: string | null;
+  // The street address only when the store agreed to show it (show_address), computed by the database; the raw
+  // address is not readable through the public API.
+  public_address?: string | null;
   district?: string | null;
   city?: string | null;
   region?: string | null;
@@ -40,10 +41,9 @@ export function mapsSearchUrl(parts: { address: string; district?: string | null
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
-// The only place the raw address becomes public: it comes back only when show_address is true. Every store query
-// that selects `address` passes its row through here before anything is rendered.
+// Where the store is and when it opens, from public_address (null unless the store agreed to show its address).
 export function publicStoreLocation(store: StoreLocationSource): PublicStoreLocation {
-  const address = store.show_address === true ? store.address?.trim() || null : null;
+  const address = store.public_address?.trim() || null;
   const hours = store.opening_hours?.trim() || null;
   return {
     address,
@@ -52,10 +52,10 @@ export function publicStoreLocation(store: StoreLocationSource): PublicStoreLoca
   };
 }
 
-// Drops the private columns from a store row once publicStoreLocation has read them.
-export function withoutPrivateStoreFields<T extends StoreLocationSource & { owner_user_id?: string | null; status?: string | null }>(store: T) {
+// Drops the address from a store row once publicStoreLocation has read it.
+export function withoutPrivateStoreFields<T extends StoreLocationSource>(store: T) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { address, show_address, owner_user_id, ...rest } = store;
+  const { public_address, ...rest } = store;
   return rest;
 }
 
