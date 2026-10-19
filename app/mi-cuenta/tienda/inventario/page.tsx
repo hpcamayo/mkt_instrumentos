@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { InventoryCategoryChips } from "@/components/inventory/inventory-category-chips";
 import { InventoryDemand } from "@/components/inventory/inventory-demand";
+import { InventorySettingsButton } from "@/components/inventory/inventory-settings";
 import { InventoryShortcuts } from "@/components/inventory/inventory-shortcuts";
 import { InventoryViews } from "@/components/inventory/inventory-views";
 import { InventorySummaryTiles } from "@/components/inventory/inventory-summary";
@@ -148,6 +149,7 @@ async function InventoryView({ summary, storeName, params }: { summary: Inventor
           <p className="flex flex-wrap gap-x-4 gap-y-2">
             <Link href={REORDER_HREF} className="link font-semibold">Reposición</Link>
             <Link href={PRICES_HREF} className="link font-semibold">Precios</Link>
+            {summary.can_write ? <InventorySettingsButton preferences={summary.preferences ?? null} /> : null}
             <InventoryShortcuts />
           </p>
         </div>
