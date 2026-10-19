@@ -1,6 +1,7 @@
 // PAY-1, assisted commerce Pilot A (docs/store-operations/pay-1.md): the payment methods a verified store accepts and
 // the "Solicitar compra" WhatsApp message. Laria shows methods as facts; it never handles money, links or accounts.
 import { absoluteUrl } from "@/lib/site";
+import { whatsAppUrl } from "@/lib/seller-contact";
 
 export const PAYMENT_METHODS = ["efectivo_al_recoger", "yape_plin", "pos_tarjeta_al_recoger", "link_de_pago"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
@@ -92,7 +93,7 @@ export function buildPurchaseMessage(listing: { title: string; slug: string }, s
 }
 
 export function buildPurchaseWhatsAppUrl(phone: string, listing: { title: string; slug: string }, sku: string | null) {
-  return `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(buildPurchaseMessage(listing, sku))}`;
+  return whatsAppUrl(phone, buildPurchaseMessage(listing, sku));
 }
 
 // Database errors read "PAYMENT_CODE: mensaje en español". Only those known messages reach the person; anything else

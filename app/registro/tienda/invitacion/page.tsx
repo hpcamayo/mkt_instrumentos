@@ -86,20 +86,23 @@ export default async function StoreInvitePage() {
     <InvitePageShell
       eyebrow="Cuenta de tienda"
       title="Activa la cuenta de tu tienda"
-      description="Completa los datos de contacto de la persona responsable. La tienda necesitará aprobación antes de publicar."
+      description="Completa los datos de contacto de la persona responsable. Después completas la solicitud de tienda y ya puedes publicar."
     >
       <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
         <div className="space-y-4 t-ui text-ink-2">
+          {/* fix-09: a store publishes from the start; its listings go through review until the store is approved
+              (functional spec, store onboarding step 5). Only the public store page waits for approval. */}
           <p>
-            Después de activar tu cuenta, completa la solicitud de tienda. El
-            equipo de Laria revisará la información antes de activar la página
-            pública o permitir publicaciones.
+            Después de activar tu cuenta, completa la solicitud de tienda. Puedes
+            publicar desde el primer día: tus publicaciones pasan por revisión
+            antes de verse en Laria.
           </p>
           <div className="rounded-panel border border-subtle bg-white p-4">
             <p className="font-semibold text-ink">Importante</p>
             <p className="mt-1">
-              Activar la cuenta no aprueba la tienda automáticamente. Un
-              administrador debe revisar y aprobar la solicitud.
+              Activar la cuenta no aprueba la tienda. El equipo de Laria revisa
+              la solicitud; hasta entonces, la página pública de tu tienda no se
+              muestra.
             </p>
           </div>
         </div>

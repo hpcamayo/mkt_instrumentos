@@ -11,6 +11,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 export function ProfileEditForm({
   userId,
@@ -67,7 +68,7 @@ export function ProfileEditForm({
         <Input name="fullName" required defaultValue={profile.fullName} autoComplete="name" />
       </Field>
       <Field id="perfil-phone" error={validation.errorFor("phone")} label="WhatsApp">
-        <Input name="phone" required defaultValue={profile.phone} inputMode="tel" autoComplete="tel" />
+        <PhoneInput name="phone" required defaultValue={profile.phone} />
       </Field>
       <div className="grid gap-5 sm:grid-cols-2">
         <LocationFields idPrefix="perfil" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} defaultCity={profile.city} defaultRegion={profile.region} />
