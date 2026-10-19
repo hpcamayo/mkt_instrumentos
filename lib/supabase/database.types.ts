@@ -1564,6 +1564,16 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_store: {
+        Args: { p_store_id: string }
+        Returns: Database["public"]["Tables"]["stores"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "stores"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       // Effortless Laria, batch "find" (20261101120000_ux_find_search.sql): search, facets, menus and the gone page.
       catalog_brand_counts: { Args: never; Returns: { brand: string; category: string; listings: number }[] }
       catalog_facets: { Args: { p_attribute_keys?: string[]; p_filters: Json; p_q?: string }; Returns: Json }
@@ -1833,6 +1843,16 @@ export type Database = {
       get_or_create_favorite_share: {
         Args: never
         Returns: string
+      }
+      get_own_store: {
+        Args: never
+        Returns: Database["public"]["Tables"]["stores"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "stores"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_pending_buyer_confirmation_count: { Args: never; Returns: number }
       get_listing_purchase_request: {

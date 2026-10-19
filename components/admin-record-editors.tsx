@@ -437,7 +437,7 @@ export function AdminStoreEditor({
     setExpanded(true);
     setBusy(true);
     setError("");
-    const { data, error: loadError } = await supabase.from("stores").select(storeSelect).eq("id", storeId).single();
+    const { data, error: loadError } = await supabase.rpc("admin_get_store", { p_store_id: storeId }).select(storeSelect).single();
     setBusy(false);
     if (loadError || !data) {
       setError("No pudimos cargar los datos editables de la tienda.");
