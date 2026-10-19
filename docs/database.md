@@ -360,7 +360,7 @@ RLS is enabled on:
 The `laria_private` schema is revoked from `public`, `anon`, and `authenticated`; its first-public markers, alert matches and marketplace outbox have no browser table access.
 
 Public read policies:
-- Active stores are readable by `anon` and `authenticated`.
+- Active stores are readable by `anon` and `authenticated`, but only through column grants (migration `20261022130000_store_public_columns.sql`): `id`, `name`, `slug`, `description`, `status`, `city`, `district`, `region`, `whatsapp_phone`, `logo_url`, `banner_url`, `is_verified`, `created_at`, `updated_at` and the four social/web URLs; `authenticated` also reads `owner_user_id`. RUC, razón social, e-mail, contact person, legacy contact name, street address, rejection reason and plan are private: the owner reads them with `get_own_store()`, Admin with `admin_get_store(p_store_id)`. A column added to `stores` later is private until a migration grants it.
 - Individual approved listings are public; store listings additionally require an active parent store.
 - Listing photos follow the same combined listing/store eligibility predicate. Store photos require an active store.
 
@@ -385,6 +385,9 @@ Admin policies:
 - Admin users must be created in Supabase Auth and given `app_metadata.role = "admin"`.
 
 ## RPC Functions
+
+`public.get_own_store()` / `public.admin_get_store(p_store_id)`:
+- Return every column of the signed-in owner's store, or of any store for Admin (raises `ADMIN_REQUIRED` otherwise). SECURITY DEFINER; not callable by `anon`.
 
 `public.is_admin()`:
 - Used by the admin panel to verify access.
