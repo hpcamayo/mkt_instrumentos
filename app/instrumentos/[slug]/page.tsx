@@ -409,7 +409,7 @@ function ListingDetail({
                 <Link href="#similares" className="link w-fit t-ui font-semibold">Ver publicaciones similares</Link>
               </div>
             ) : (
-              <ContactModule listingId={listing.id} href={contactHref} purchase={Boolean(purchase)} className="order-3 lg:order-3" />
+              <ContactModule listingId={listing.id} href={contactHref} purchase={Boolean(purchase)} maxQuantity={purchase?.maxQuantity} className="order-3 lg:order-3" />
             )}
 
             <a href="#vendedor" className="order-4 -my-1 flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-control py-1 lg:hidden">

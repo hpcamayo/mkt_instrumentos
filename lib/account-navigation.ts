@@ -1,7 +1,9 @@
 export type AccountNavigationItem = {
   href: string;
   label: string;
-  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "payments" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites" | "alerts";
+  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "payments" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites" | "alerts"
+    // Effortless Laria, inventory batch (stock-04): purchase requests.
+    | "requests";
   exact?: boolean;
   // Additional sections that belong to the same navigation entry.
   activePaths?: readonly string[];
@@ -30,6 +32,9 @@ export function getAccountNavigationItems(
       ...(hasStore ? [
         { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory" } as const,
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar", icon: "publish" } as const,
+        // Effortless Laria, inventory batch (stock-04): "Solicitudes" exists only while purchase requests do (the pilot).
+        ...(payments ? [{ href: "/mi-cuenta/tienda/solicitudes", label: "Solicitudes", icon: "requests" } as const] : []),
+        // /Effortless Laria, inventory batch
         ...(payments ? [{ href: "/mi-cuenta/tienda/pagos", label: "Pagos", icon: "payments", activePaths: ["/mi-cuenta/tienda/medios-de-pago"] } as const] : []),
         { href: "/mi-cuenta/tienda/estadisticas", label: "Estadísticas", icon: "analytics" } as const,
       ] : []),

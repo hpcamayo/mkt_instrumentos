@@ -126,8 +126,8 @@ as $$
       and not exists (select 1 from public.store_purchase_request_marks m where m.event_id = r.event_id)), 0);
 $$;
 
--- Marks a request answered or not sold, or clears the mark (p_status null). A request marked sold keeps its sale;
--- undo the sale from the SKU's history instead.
+-- Marks a request answered or not sold, or clears the mark (p_status null). A request marked sold keeps its mark
+-- while its sale stands; once the sale is undone (stock-03) the mark can change like any other.
 create or replace function public.mark_store_purchase_request(p_event_id uuid, p_status text)
 returns jsonb
 language plpgsql
@@ -146,7 +146,8 @@ begin
     perform laria_private.raise_inventory_error('PURCHASE_REQUEST_NOT_FOUND', 'No encontramos esa solicitud.');
   end if;
   select * into existing from public.store_purchase_request_marks where event_id = p_event_id;
-  if existing.status = 'sold' then
+  if existing.status = 'sold' and not exists (
+    select 1 from public.store_stock_movements c where c.corrects_movement_id = existing.sale_movement_id) then
     perform laria_private.raise_inventory_error('PURCHASE_REQUEST_SOLD',
       'Esta solicitud ya tiene una venta registrada. Si no se concretó, deshaz la venta desde el historial del SKU.');
   end if;
@@ -184,8 +185,10 @@ begin
     perform laria_private.raise_inventory_error('PURCHASE_REQUEST_NOT_FOUND', 'No encontramos esa solicitud.');
   end if;
   select * into existing from public.store_purchase_request_marks where event_id = p_event_id;
-  if existing.status = 'sold' then
-    -- A retry of the same "Vendido" (or a second tab): the sale is already recorded once.
+  -- A retry of the same "Vendido" (or a second tab): the sale is already recorded once. An undone sale can be
+  -- recorded again.
+  if existing.status = 'sold' and not exists (
+    select 1 from public.store_stock_movements c where c.corrects_movement_id = existing.sale_movement_id) then
     return jsonb_build_object('id', p_event_id, 'status', 'sold', 'quantity', existing.quantity,
       'movement_id', existing.sale_movement_id, 'replayed', true);
   end if;

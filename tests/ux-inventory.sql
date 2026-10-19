@@ -370,6 +370,13 @@ begin
   perform pg_temp.check((public.record_purchase_request_sale('e8610000-0000-4000-8000-000000000001', 2, null, 'qa-uxinv2-pr-2')->>'replayed')::boolean
     and (pg_temp.item('PED-001')).quantity_available = 3, 'a second "Vendido" never sells twice');
   perform pg_temp.expect_error($q$select public.mark_store_purchase_request('e8610000-0000-4000-8000-000000000001', 'answered')$q$, 'PURCHASE_REQUEST_SOLD');
+  -- Undo the sale: the request can be marked again, and sold again.
+  perform public.undo_stock_movements(array[(sale->>'movement_id')::uuid], 'qa-uxinv2-pr-undo');
+  perform pg_temp.check((pg_temp.item('PED-001')).quantity_available = 5, 'the undone sale gave the units back');
+  perform public.mark_store_purchase_request('e8610000-0000-4000-8000-000000000001', null);
+  perform pg_temp.check(public.get_store_purchase_request_count() = 1, 'back to waiting');
+  perform public.record_purchase_request_sale('e8610000-0000-4000-8000-000000000001', 1, null, 'qa-uxinv2-pr-4');
+  perform pg_temp.check((pg_temp.item('PED-001')).quantity_available = 4, 'sold again after the undo');
   perform pg_temp.expect_error($q$select public.mark_store_purchase_request('e8610000-0000-4000-8000-000000000003', 'answered')$q$, 'PURCHASE_REQUEST_NOT_FOUND');
   perform pg_temp.expect_error($q$select public.record_purchase_request_sale('e8610000-0000-4000-8000-000000000002', 99, null, 'qa-uxinv2-pr-3')$q$, 'STOCK_');
 end $$;

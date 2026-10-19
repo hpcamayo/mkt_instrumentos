@@ -3,15 +3,16 @@ import { randomUUID } from "node:crypto";
 import { eventSources, isEntityId, isUuid, type EventSource } from "@/lib/marketplace-event-payload";
 import { getMarketplaceActor, getMarketplaceSession, logMarketplaceEventFailure, recordMarketplaceEvent, sameOriginEventRequest } from "@/lib/marketplace-events-server";
 import { buildStoreWhatsAppUrl, buildWhatsAppUrl, type ListingDetailData } from "@/lib/listings";
-import { assistedCommerceEnabled, buildPurchaseWhatsAppUrl, readPurchaseRequest } from "@/lib/payment-methods";
+import { assistedCommerceEnabled, buildPurchaseWhatsAppUrl, clampPurchaseQuantity, readPurchaseRequest } from "@/lib/payment-methods";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 export async function POST(request: Request) {
   const requestId = randomUUID();
   if (!sameOriginEventRequest(request)) return failure(403, requestId);
   const body = await request.json().catch(() => null);
-  if (!body || Object.keys(body).some((key) => !["eventId", "listingId", "storeId", "source", "intent"].includes(key)) || !isUuid(body.eventId)
+  if (!body || Object.keys(body).some((key) => !["eventId", "listingId", "storeId", "source", "intent", "quantity"].includes(key)) || !isUuid(body.eventId)
     || (body.intent !== undefined && (body.intent !== "purchase" || !body.listingId))
+    || (body.quantity !== undefined && (body.intent !== "purchase" || !Number.isInteger(body.quantity)))
     || (body.source !== undefined && !eventSources.includes(body.source))
     || (isEntityId(body.listingId) === isEntityId(body.storeId))
     || (body.listingId !== undefined && !isEntityId(body.listingId)) || (body.storeId !== undefined && !isEntityId(body.storeId))) return failure(400, requestId);
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
       const { data: context } = await client.rpc("get_listing_purchase_request", { p_listing_id: body.listingId });
       const request = readPurchaseRequest(context);
       if (request) {
-        url = buildPurchaseWhatsAppUrl(data.whatsapp_phone, data, request.sku);
+        url = buildPurchaseWhatsAppUrl(data.whatsapp_phone, data, request.sku, clampPurchaseQuantity(body.quantity, request.maxQuantity));
         purchase = true;
       }
     }

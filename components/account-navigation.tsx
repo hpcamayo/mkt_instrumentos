@@ -12,7 +12,8 @@ import { accountItemIsActive, accountRoleLabel, getAccountNavigationItems, type 
 import { cn } from "@/lib/utils";
 
 type AccountType = "seller" | "store_owner";
-export type AccountCounts = { unreadNotifications: number; pendingBuyerConfirmations: number };
+// purchaseRequests (stock-04): requests waiting for the store's answer; only the account rail reads it.
+export type AccountCounts = { unreadNotifications: number; pendingBuyerConfirmations: number; purchaseRequests?: number };
 
 // The account frame (docs/ux-redesign/ux-2-shell.md): a 248 px rail on desktop; on phones and tablets a switcher
 // row under the header ("Mi cuenta · <section>") that opens the same list. Page content is UX-6.
@@ -22,6 +23,7 @@ export function AccountNavigation({
   payments = false,
   unreadNotifications,
   pendingBuyerConfirmations,
+  purchaseRequests = 0,
   name,
   city,
   children,
@@ -31,6 +33,7 @@ export function AccountNavigation({
   payments?: boolean;
   unreadNotifications: number;
   pendingBuyerConfirmations: number;
+  purchaseRequests?: number;
   name?: string;
   city?: string | null;
   children?: ReactNode;
@@ -38,7 +41,7 @@ export function AccountNavigation({
   const pathname = usePathname();
   const items = getAccountNavigationItems(accountType, hasStore, { payments });
   const active = items.find((item) => accountItemIsActive(pathname, item)) ?? items[0];
-  const counts = { unreadNotifications, pendingBuyerConfirmations };
+  const counts = { unreadNotifications, pendingBuyerConfirmations, purchaseRequests };
   const switcher = useDisclosure("account-switcher");
 
   return (
@@ -111,6 +114,9 @@ export function AccountSectionLinks({ items, pathname, counts, compact = false }
         <span className="min-w-0 flex-1">{item.label}</span>
         {item.icon === "notifications" ? (
           <CountBadge count={counts.unreadNotifications} label={`${counts.unreadNotifications} notificaciones sin leer`} />
+        ) : null}
+        {item.icon === "requests" && counts.purchaseRequests ? (
+          <CountBadge count={counts.purchaseRequests} label={`${counts.purchaseRequests} solicitudes de compra por atender`} />
         ) : null}
         {item.icon === "transactions" ? (
           <CountBadge count={counts.pendingBuyerConfirmations} label={`${counts.pendingBuyerConfirmations} compras requieren tu confirmación`} />

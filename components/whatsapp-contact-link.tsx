@@ -5,7 +5,8 @@ import { ensureMarketplaceSession } from "@/lib/marketplace-events-client";
 import type { EventSource } from "@/lib/marketplace-event-payload";
 
 // `intent="purchase"` (PAY-1) asks the contact route for the "Solicitar compra" message; the route checks eligibility.
-export function WhatsAppContactLink({ href, listingId, storeId, intent, source = "detail", className, children }: { href: string; listingId?: string; storeId?: string; intent?: "purchase"; source?: EventSource; className?: string; children: ReactNode }) {
+// `quantity` (stock-23) goes with a purchase request; the route clamps it to what the listing allows.
+export function WhatsAppContactLink({ href, listingId, storeId, intent, quantity, source = "detail", className, children }: { href: string; listingId?: string; storeId?: string; intent?: "purchase"; quantity?: number; source?: EventSource; className?: string; children: ReactNode }) {
   async function contact(event: MouseEvent<HTMLAnchorElement>) {
     const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
     let tab: Window | null = null;
@@ -20,7 +21,7 @@ export function WhatsAppContactLink({ href, listingId, storeId, intent, source =
     try {
       const record = async () => {
         await ensureMarketplaceSession();
-        const response = await fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal, body: JSON.stringify({ eventId: crypto.randomUUID(), ...(listingId ? { listingId } : { storeId }), ...(listingId && intent ? { intent } : {}), source }) });
+        const response = await fetch("/api/contact", { method: "POST", headers: { "Content-Type": "application/json" }, signal: controller.signal, body: JSON.stringify({ eventId: crypto.randomUUID(), ...(listingId ? { listingId } : { storeId }), ...(listingId && intent ? { intent } : {}), ...(listingId && intent && quantity && quantity > 1 ? { quantity } : {}), source }) });
         if (!response.ok) return;
         const payload = await response.json();
         if (typeof payload.url === "string" && payload.url.startsWith("https://wa.me/")) destination = payload.url;
