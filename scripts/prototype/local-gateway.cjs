@@ -140,7 +140,8 @@ async function handleAuth(req, res, url) {
 }
 
 const MIME = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".csv": "text/csv",
-  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".svg": "image/svg+xml" };
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".svg": "image/svg+xml",
+  ".webm": "audio/webm", ".ogg": "audio/ogg", ".m4a": "audio/mp4", ".wav": "audio/wav" };
 function safePath(bucket, name) {
   const p = path.resolve(STORAGE_DIR, bucket, name);
   if (!p.startsWith(path.resolve(STORAGE_DIR, bucket) + path.sep)) throw new Error("bad path");

@@ -91,6 +91,10 @@ Instrument attributes are generally optional. Only selected important attributes
 
 Each listing requires 2–10 photos, with front and back views as the expected minimum coverage. The owner can reorder, replace, and remove photos, provided the listing continues to satisfy the two-photo minimum. Before upload the browser redraws every listing photo as a JPEG of at most 2,400 px on its longest side, which removes its metadata (including the camera's location) and keeps it under the 5 MB storage limit, so sellers can pick photos of any common size (Effortless Laria FIX 02).
 
+The sell form (Effortless Laria, selling batch; docs/ux-effortless/selling.md) is four short steps on every screen size: Fotos, Qué es, Estado y precio, Revisar y publicar. Photos come first and upload in the background, three at a time, while the seller fills in the rest; on phones the photo step opens the camera and a per-category shot list names the photos buyers expect. iPhone HEIC photos are converted in the browser. The title follows brand and model until the seller edits it; brand suggestions come from the instrument catalog; description starters and a 40-character counter help write the description; advisory hints point out what usually gets a listing rejected (phone numbers, links, all-caps titles, symbolic prices) without blocking. Step 4 shows the catalog card and the listing page as buyers will see them, and Publicar only confirms. An optional sound clip of at most 20 seconds can be recorded or picked; it is compressed in the browser, played only when a buyer taps it, and reviewed with the listing.
+
+The form is saved on the device as the seller types and offered back on return. "Guardar borrador" also saves it to the account (`listing_drafts`, at most 20 per seller) so it can be finished on another device from Mis publicaciones or the publish page; publishing deletes the draft. After sending, a listing in review shows its steps (Enviada, En revisión, Publicada) and, once at least 20 Particular listings were reviewed in the last 60 days, the usual wait; a live listing offers Ver publicación and Compartir. "Publicar uno parecido" keeps category, type, brand, condition, location, description and attributes, and "Duplicar" in Mis publicaciones starts a new listing from an existing one.
+
 ## Listing Lifecycle
 
 The normal lifecycle is:
@@ -187,6 +191,8 @@ Restoring a hidden listing must fail gracefully if it would exceed the cap. No p
 ## Store Dashboard
 
 The store-owner dashboard supports editing the store profile and allowed business/contact data; managing logo, banner, optional store photos, and social links; creating and editing inventory; viewing status and moderation reasons; marking sold; hiding/unpublishing; relisting; and aggregate analytics.
+
+Stores set a default condition and a standard text for the end of every description once, at Mi tienda → Valores por defecto (`store_listing_defaults`); the sell form starts with both and the seller can change them per listing. The store's own text does not count towards the 40-character description minimum. Each inventory SKU remembers the brand, model, type, condition, description and attributes of its last publication or import (`store_inventory_items.listing_details`), editable in the SKU's "Datos para publicar" panel, and "Publicar este SKU" starts with them (Effortless Laria SHOP 06, STOCK 09).
 
 Store listings resolve their WhatsApp contact from the store's current number, the way account-owned Particular listings resolve it from the profile: when a store changes its number, every unsold listing of that store follows (sold listings keep their historical record). WhatsApp links add Peru's country code (51) to a 9-digit mobile number stored without it. *(Effortless Laria, batch "listing", fix-03; proposed UXD-listing-1.)*
 
@@ -329,6 +335,8 @@ Rejection and administrative hiding require a reason visible to the owner. Appro
 ## Email Notifications
 
 Centralized application email infrastructure sends listing approval/rejection, store approval/rejection, useful verification-status changes, buyer transaction-confirmation requests, review workflow notifications, search alerts, and price-drop alerts. Product logic must not depend on a particular email provider.
+
+The listing approval e-mail reads "Tu publicación está en línea" and opens the live listing (Effortless Laria POST 15).
 
 Supabase Auth may continue sending authentication-related messages.
 

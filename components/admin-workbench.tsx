@@ -605,6 +605,9 @@ function QueueItem({
         </ul>
       ) : null}
 
+      {/* POST 16: the listing's sound clip is reviewed with it; played only on tap. */}
+      {adminString(item, "sound_clip_url") ? <audio controls preload="none" src={adminString(item, "sound_clip_url")} className="w-full max-w-md" aria-label="Escuchar el sonido de la publicación" /> : null}
+
       <div className="grid gap-2 text-sm leading-6 text-ink-2 sm:grid-cols-2">
         {adminString(item, "owner_name") ? (
           <p><strong>Responsable:</strong> {adminString(item, "owner_name")}</p>

@@ -71,7 +71,10 @@ function templateContent(payload: MarketplaceEmailPayload): TemplateContent {
   const transaction = payload.transaction;
   const reason = payload.context.reason;
   switch (payload.event_type) {
-    case "listing_approved": return listingTemplate("Tu publicación fue aprobada", `“${listing?.title ?? "Tu publicación"}” ya puede mostrarse en Laria.`, "Ver mis publicaciones", "/mi-cuenta/publicaciones");
+    // POST 15 (selling batch): the approval is the moment it goes live, so the button opens the listing itself.
+    case "listing_approved": return listing?.slug
+      ? { ...listingTemplate("Tu publicación está en línea", `“${listing.title}” ya aparece en Laria y los compradores pueden escribirte por WhatsApp.`, "Ver tu publicación", `/instrumentos/${listing.slug}`), details: ["Para que la vean más personas, comparte el enlace en tus grupos o redes."] }
+      : listingTemplate("Tu publicación está en línea", "Tu publicación ya aparece en Laria.", "Ver mis publicaciones", "/mi-cuenta/publicaciones");
     case "listing_rejected": return listingTemplate("Tu publicación necesita correcciones", `“${listing?.title ?? "Tu publicación"}” fue rechazada.${reason ? ` Motivo: ${reason}` : ""}`, "Revisar publicación", "/mi-cuenta/publicaciones");
     case "listing_hidden": return listingTemplate("Moderación ocultó tu publicación", `“${listing?.title ?? "Tu publicación"}” dejó de estar visible.${reason ? ` Motivo: ${reason}` : ""}`, "Revisar publicación", "/mi-cuenta/publicaciones");
     case "listing_revision_approved": return listingTemplate("Tus cambios fueron aprobados", `La actualización de “${listing?.title ?? "tu publicación"}” fue aprobada.`, "Ver mis publicaciones", "/mi-cuenta/publicaciones");

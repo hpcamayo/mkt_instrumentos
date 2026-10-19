@@ -113,36 +113,43 @@ const formMocks = {
   "@/lib/supabase/browser-client": { getSupabaseBrowserClient: () => ({ storage: { from: () => ({}) } }) },
 };
 
-test("the sell form: seven sections with photos first, guidance, no native validation, the rules links in order", () => {
-  const { SellListingForm } = load("components/sell-listing-form.tsx", formMocks);
-  const markup = renderToStaticMarkup(React.createElement(SellListingForm, { profile: { fullName: "Ana Ríos", phone: "51999", city: "Lima", region: "Lima" } }));
+// Effortless Laria (selling batch, big-06): four steps, photos first on every screen size.
+test("the sell form: four steps with photos first, a shot list, drafts, no native validation", () => {
+  const { SellListingForm, SELL_STEPS } = load("components/sell-listing-form.tsx", formMocks);
+  assert.deepEqual(SELL_STEPS.map((step) => step.title), ["Fotos", "Qué es", "Estado y precio", "Revisar y publicar"]);
+  assert.deepEqual(SELL_STEPS[0].fields, ["photos"]);
+  const markup = renderToStaticMarkup(React.createElement(SellListingForm, { ownerId: "u1", profile: { fullName: "Ana Ríos", phone: "51999", city: "Lima", region: "Lima" } }));
   assert.match(markup, /<form[^>]*novalidate/i);
+  assert.match(markup, /aria-label="Pasos para publicar"/);
+  assert.match(markup, /aria-current="step"/);
   const headings = [...markup.matchAll(/<h2 id="[^"]+" class="[^"]*">(?:<span[^>]*>\d<\/span>)?([^<]+)<\/h2>/g)].map((match) => match[1]);
-  assert.deepEqual(headings, ["Fotos", "El instrumento", "Condición y precio", "Ubicación", "Descripción", "Publicar"], "attributes appear only once a type is chosen");
-  for (const tip of sellForm.PHOTO_GUIDANCE) assert.ok(markup.includes(tip), tip);
+  assert.deepEqual(headings, ["Fotos"], "one step at a time, photos first");
   assert.match(markup, /id="venta-fotos"/);
-  assert.match(markup, /href="\/terminos"[\s\S]*href="\/articulos-prohibidos"/);
-  assert.match(markup, /inputMode="numeric"|inputmode="numeric"/);
-  // Condition as three radio cards; the first radio carries the group's id for the summary link.
-  assert.equal((markup.match(/type="radio"[^>]*name="condition"/g) ?? []).length, 3);
-  assert.match(markup, /id="venta-condition"/);
-  assert.match(markup, /Un administrador la revisará antes de mostrarla\. Te avisaremos por correo\./);
-  assert.match(markup, />Publicar<\/button>|>Publicar<\/span>/);
-  // Location fields share the form's id prefix so the summary can link to them.
-  assert.match(markup, /id="venta-city"/);
-  assert.match(markup, /id="venta-region"/);
+  assert.match(markup, /Lista de fotos sugeridas/);
+  assert.match(markup, /Guardar borrador/);
+  assert.match(markup, />Continuar</);
+  assert.match(markup, /Se guarda en este dispositivo mientras escribes\./);
+  // The later steps, from the source: rules links in order, numeric price, condition cards, location ids.
+  const sell = source("components/sell-listing-form.tsx");
+  assert.match(sell, /href="\/terminos"[\s\S]*href="\/articulos-prohibidos"/);
+  assert.match(sell, /inputMode="numeric"/);
+  assert.match(sell, /<ConditionCards id=\{FIELD_IDS\.condition\}/);
+  assert.match(sell, /Un administrador la revisará antes de mostrarla\. Te avisaremos por correo\./);
+  assert.match(sell, /city: `\$\{ID\}-city`/);
+  assert.match(sell, /region: `\$\{ID\}-region`/);
 });
 
 test("per-photo controls on create carry the same names as on edit", () => {
   const sell = source("components/sell-listing-form.tsx");
+  const photos = source("components/selling/photo-step.tsx");
   const edit = source("components/listing-edit-form.tsx");
   for (const name of ["aria-label={`Mover foto ${index + 1} antes`}", "aria-label={`Mover foto ${index + 1} después`}", "aria-label={`Reemplazar foto ${index + 1}`}", "aria-label={`Quitar foto ${index + 1}`}", "alt={`Foto ${index + 1}`}"]) {
-    assert.ok(sell.includes(name), `create: ${name}`);
+    assert.ok(photos.includes(name), `create: ${name}`);
     assert.ok(edit.includes(name), `edit: ${name}`);
   }
   assert.doesNotMatch(sell, /form\.reset\(\)/, "S6: a confirmation replaces the form instead of resetting it");
   assert.match(sell, /Publicar otro instrumento/);
-  assert.match(sell, /reportProgress/);
+  assert.match(sell, /Terminando de subir las fotos/);
 });
 
 test("type chips and condition cards are native radio groups with the error wired to them", () => {

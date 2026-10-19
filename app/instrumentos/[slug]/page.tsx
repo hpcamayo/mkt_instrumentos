@@ -55,6 +55,7 @@ import {
   type ListingCardData,
   type ListingDetailData,
 } from "@/lib/listings";
+import { ListingSoundClip } from "@/components/selling/listing-sound-clip";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
@@ -540,6 +541,8 @@ function ListingDetail({
 
           <div className="contents lg:col-span-7 lg:col-start-1 lg:row-start-2 lg:flex lg:min-w-0 lg:flex-col lg:gap-10">
             <SpecTable specs={getSpecTable(listing)} className="order-7 min-w-0" />
+
+            <ListingSoundClip listingId={listing.id} />
 
             <section aria-labelledby="descripcion" className="order-8 min-w-0">
               <h2 id="descripcion" className="t-section text-ink">Descripción</h2>

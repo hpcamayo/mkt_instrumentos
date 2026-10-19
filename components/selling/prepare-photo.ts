@@ -17,15 +17,37 @@ export class PhotoPrepareError extends Error {}
 
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 
-export function isAcceptedPhotoType(type: string) {
-  return ACCEPTED.includes(type);
+// iPhone photos (POST 04). Some browsers report no type for them, so the extension counts too.
+export function isHeicPhoto(file: Pick<File, "type" | "name">) {
+  return /^image\/hei[cf](-sequence)?$/.test(file.type) || (!file.type && /\.hei[cf]$/i.test(file.name));
+}
+
+export function isAcceptedPhotoType(type: string, name = "") {
+  return ACCEPTED.includes(type) || isHeicPhoto({ type, name });
+}
+
+// What the file pickers accept: the three stored types plus HEIC, which is converted here.
+export const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
+
+// Safari decodes HEIC itself; elsewhere libheif (heic2any) converts it to JPEG, loaded only when a HEIC photo arrives.
+async function decodableSource(source: File): Promise<Blob> {
+  if (!isHeicPhoto(source)) return source;
+  try {
+    const bitmap = await createImageBitmap(source);
+    bitmap.close();
+    return source;
+  } catch {
+    const { default: heic2any } = await import("heic2any");
+    const converted = await heic2any({ blob: source, toType: "image/jpeg", quality: 0.92 });
+    return Array.isArray(converted) ? converted[0] : converted;
+  }
 }
 
 export async function prepareListingPhoto(source: File): Promise<PreparedPhoto> {
   if (source.size > MAX_SOURCE_PHOTO_BYTES) throw new PhotoPrepareError("Esta foto es demasiado pesada. Prueba con otra.");
   const name = source.name.replace(/\.[^.]+$/, "") || "foto";
   try {
-    const bitmap = await createImageBitmap(source, { imageOrientation: "from-image" });
+    const bitmap = await createImageBitmap(await decodableSource(source), { imageOrientation: "from-image" });
     const scale = Math.min(1, MAX_PHOTO_SIDE / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));

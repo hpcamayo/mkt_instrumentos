@@ -4,7 +4,9 @@ import {
   ListingManagementTable,
   type ManagedListing,
 } from "@/components/listing-management-table";
+import { DraftList } from "@/components/selling/draft-list";
 import { getAccountContext } from "@/lib/account-context";
+import { listSellDrafts } from "@/lib/sell-page-data";
 import { getAccountAnalytics } from "@/lib/account-analytics";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -18,6 +20,7 @@ export default async function ParticularListingsPage() {
     supabase ? supabase.from("listings").select("id,title,status,slug,price_pen,created_at,published_at,sold_at,rejection_reason,hidden_source,hidden_reason").eq("owner_user_id", user.id).is("store_id", null).order("created_at", { ascending: false }) : { data: [] },
     getAccountAnalytics(0),
   ]);
+  const drafts = supabase ? await listSellDrafts(supabase, "listing") : [];
   const analyticsByListing = new Map(analytics?.listings.map((listing) => [listing.id, listing]) ?? []);
   const listingIds = listings?.map((listing) => listing.id) ?? [];
   const { data: revisions } = supabase && listingIds.length
@@ -43,7 +46,8 @@ export default async function ParticularListingsPage() {
         title="Mis publicaciones"
         actions={<Link href="/mi-cuenta/publicar" className={buttonClasses()}>Publicar instrumento</Link>}
       />
-      <ListingManagementTable listings={managedListings} emptyMessage="Aún no tienes publicaciones" />
+      {drafts.length ? <div className="border-b border-subtle p-5"><DraftList drafts={drafts} href="/mi-cuenta/publicar" /></div> : null}
+      <ListingManagementTable listings={managedListings} emptyMessage="Aún no tienes publicaciones" publishPath="/mi-cuenta/publicar" />
       <p className="border-t border-subtle p-5 text-meta leading-6 text-ink-2">{analytics ? "Vistas acumuladas de todo el historial, incluidas las históricas. Contactos por WhatsApp registrados desde el inicio del seguimiento; no equivalen a mensajes ni ventas." : "Las métricas no están disponibles en este momento; no se muestran ceros estimados."} La fecha de publicación corresponde a la primera publicación.</p>
     </section>
   );
