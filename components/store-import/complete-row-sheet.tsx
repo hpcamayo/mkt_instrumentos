@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FileInput, Input, Select } from "@/components/ui/field";
+import { PriceInput } from "@/components/ui/price-input";
 import { Notice } from "@/components/ui/notice";
 import { Sheet } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
@@ -223,12 +224,12 @@ export function CompleteRowSheet({ sessionId, row, itemId, onClose, onSaved }: {
             <div className="grid gap-4 sm:grid-cols-2">
               {missing.has("brand") ? (
                 <Field id={`${formId}-brand`} label="Marca" hint="Ej.: Fender, Yamaha." error={errors.brand}>
-                  <Input name="brand" defaultValue={data.values.brand} maxLength={MAX_TEXT} autoComplete="off" required />
+                  <Input name="brand" defaultValue={data.values.brand} maxLength={MAX_TEXT} autoComplete="off" autoCorrect="off" spellCheck={false} required />
                 </Field>
               ) : null}
               {missing.has("model") ? (
                 <Field id={`${formId}-model`} label="Modelo" hint="Ej.: Stratocaster, P-45." error={errors.model}>
-                  <Input name="model" defaultValue={data.values.model} maxLength={MAX_TEXT} autoComplete="off" required />
+                  <Input name="model" defaultValue={data.values.model} maxLength={MAX_TEXT} autoComplete="off" autoCorrect="off" spellCheck={false} required />
                 </Field>
               ) : null}
             </div>
@@ -275,7 +276,7 @@ export function CompleteRowSheet({ sessionId, row, itemId, onClose, onSaved }: {
 
           {missing.has("price") ? (
             <Field id={`${formId}-price`} label="Precio en soles" hint="Se guarda en el SKU, como en Inventario." error={errors.price} className="sm:max-w-xs">
-              <Input name="price" inputMode="numeric" pattern="[0-9]*" autoComplete="off" required />
+              <PriceInput name="price" required />
             </Field>
           ) : null}
 

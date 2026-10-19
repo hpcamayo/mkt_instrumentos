@@ -126,6 +126,34 @@ Merge order (by migration slot): find (#27), listing (#24), accounts (#28), sell
   `components/saving/device-favorites.tsx`, `components/listing-card.tsx`, `components/home/home-for-you.tsx`,
   `components/marketplace-account-provider.tsx`, `lib/catalog-device.ts`, `app/mi-cuenta/{alertas,favoritos}/page.tsx`.
 
+## UXD-integration-10: what the accounts batch left for the others
+
+The accounts batch (#28) shipped shared pieces and listed where the other batches should use them. At integration:
+
+- **Followed arrivals on the home (save-12).** For a signed-in person who follows stores or brands, the home shows
+  "Nuevo de lo que sigues" above "Para ti": up to eight listings from the past two weeks, each saying which follow
+  brought it. It is read after the page loads (`/api/follows`, action `arrivals`), because the home is rendered
+  without the person's session; visitors ask for nothing. The brand "Seguir" under the catalog title and the store
+  header's were already in.
+- **Inputs that fit the keyboard (auth-03).** Every price a seller or store types is the shared `PriceInput` ("S/" in
+  front, "1,250" while typing, numeric keypad): the sell form, the edit form, the inline price on Mis publicaciones,
+  "Bajar precio" in Pendientes, a missing price in an import row, and the SKU's price in Inventario. `PriceInput` can
+  now be kept in a form's own state (`value` and `onValueChange`), which the sell form and the inline price need. The
+  SKU forms read the grouped text with `parseWholeSolPrice`, like the server. Brand and model are never autocorrected
+  (sell form, edit form, import row). The store's "WhatsApp para compradores" and the store sign-up's WhatsApp use
+  `PhoneInput`, so both show "+51" and the number buyers will see with "Probar en WhatsApp". Stock fields already used
+  the numeric keypad.
+- **The password eye on the store sign-up (auth-01).** It was the one password field left without it.
+- **The profile notice on the account home (auth-02).** It showed to every new account, buyers included. It now shows
+  only to someone with publications, whose buyers see those details; Publicar asks for WhatsApp and city the first
+  time.
+- **Files.** `app/page.tsx`, `components/home/home-followed.tsx` (new), `app/api/follows/route.ts`,
+  `components/following/followed-arrivals.tsx`, `components/ui/price-input.tsx`, `components/sell-listing-form.tsx`,
+  `components/listing-edit-form.tsx`, `components/listing-management-table.tsx`, `components/pendientes-list.tsx`,
+  `components/store-import/complete-row-sheet.tsx`, `components/inventory/sku-forms.tsx`,
+  `components/inventory/item-detail.tsx`, `components/store-registration-form.tsx`,
+  `components/store-owner-signup-form.tsx`, `app/mi-cuenta/page.tsx`.
+
 ## Fixed at integration
 
 - **Store columns the public cannot read.** The store-details fix (#30) closes the stores table to the public except

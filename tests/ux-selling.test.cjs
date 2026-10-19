@@ -132,7 +132,9 @@ test("the sell form: four steps with photos first, a shot list, drafts, no nativ
   // The later steps, from the source: rules links in order, numeric price, condition cards, location ids.
   const sell = source("components/sell-listing-form.tsx");
   assert.match(sell, /href="\/terminos"[\s\S]*href="\/articulos-prohibidos"/);
-  assert.match(sell, /inputMode="numeric"/);
+  // The price is the shared PriceInput (auth-03): numeric keypad, "S/" in front, "1,250" while typing.
+  assert.match(sell, /<PriceInput name="price_pen"/);
+  assert.match(source("components/ui/price-input.tsx"), /inputMode="numeric"/);
   assert.match(sell, /<ConditionCards id=\{FIELD_IDS\.condition\}/);
   assert.match(sell, /Un administrador la revisará antes de mostrarla\. Te avisaremos por correo\./);
   assert.match(sell, /city: `\$\{ID\}-city`/);

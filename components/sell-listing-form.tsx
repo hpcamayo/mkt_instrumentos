@@ -28,6 +28,7 @@ import { Button, buttonClasses } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { ErrorSummary } from "@/components/ui/error-summary";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
+import { PriceInput } from "@/components/ui/price-input";
 import { Notice } from "@/components/ui/notice";
 import { Textarea } from "@/components/ui/textarea";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
@@ -743,7 +744,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="grid content-start gap-2">
                   <Field id={FIELD_IDS.brand} label="Marca" error={errorFor("brand")}>
-                    <Input type="text" name="brand" autoComplete="off" list={brands.length ? `${ID}-marcas` : undefined} value={values.brand} onChange={(event) => set("brand", event.target.value)} />
+                    <Input type="text" name="brand" autoComplete="off" autoCorrect="off" spellCheck={false} list={brands.length ? `${ID}-marcas` : undefined} value={values.brand} onChange={(event) => set("brand", event.target.value)} />
                   </Field>
                   {brands.length ? <datalist id={`${ID}-marcas`}>{brands.map((brand) => <option key={brand} value={brand} />)}</datalist> : null}
                   {brands.length && !values.brand ? (
@@ -753,7 +754,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
                   ) : null}
                 </div>
                 <Field id={FIELD_IDS.model} label="Modelo" error={errorFor("model")}>
-                  <Input type="text" name="model" autoComplete="off" value={values.model} onChange={(event) => set("model", event.target.value)} />
+                  <Input type="text" name="model" autoComplete="off" autoCorrect="off" spellCheck={false} value={values.model} onChange={(event) => set("model", event.target.value)} />
                 </Field>
               </div>
               <Field id={FIELD_IDS.title} label="Título" error={errorFor("title")} hint={values.titleEdited ? "Marca, modelo y lo que lo distingue. Ej.: Fender Player Stratocaster 2021, color Tidepool." : "Lo escribimos con la marca y el modelo. Agrega lo que lo distingue: año, color, versión."}>
@@ -775,7 +776,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
             <FormSection id={`${ID}-paso`} step={3} title="Estado y precio">
               <ConditionCards id={FIELD_IDS.condition} name="condition" legend="Condición" options={conditionChoices(conditionOptions)} value={values.condition} onChange={(value) => set("condition", value)} error={errorFor("condition")} />
               <Field id={FIELD_IDS.price_pen} label="Precio en soles" hint="Solo números, sin decimales." error={errorFor("price_pen")} className="sm:max-w-xs">
-                <Input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" value={values.price} onChange={(event) => set("price", event.target.value)} />
+                <PriceInput name="price_pen" value={values.price} onValueChange={(text) => set("price", text)} />
               </Field>
               {hintFor("price_pen").map((hint) => <HintLine key={hint.message} text={hint.message} />)}
               {store ? (

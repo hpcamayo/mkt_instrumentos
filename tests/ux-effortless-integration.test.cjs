@@ -69,3 +69,86 @@ test("save-04 with the home's new listings: one previous visit, counted from eve
   // The marker moves on every page change, in the same effect that records a viewed listing.
   assert.match(source("components/marketplace-account-provider.tsx"), /useEffect\(\(\) => \{\n    touchVisit\(\);\n    const match = /);
 });
+
+test("save-12 with the home: what a signed-in person follows shows above Para ti", () => {
+  const route = source("app/api/follows/route.ts");
+  assert.match(route, /body\?\.action === "arrivals"[\s\S]*?client\.rpc\("get_followed_arrivals", \{ p_limit: 8, p_days: 14 \}\)/);
+  const home = source("app/page.tsx");
+  assert.match(home, /<HomeFollowedArrivals \/>\s*\{pool\?\.length \? <HomeForYou /);
+  const section = source("components/home/home-followed.tsx");
+  assert.match(section, /if \(!settled \|\| !authenticated\)/, "nothing is asked for visitors");
+  assert.match(source("components/following/followed-arrivals.tsx"), /aria-labelledby="lo-que-sigues"/);
+});
+
+test("auth-03 in the other batches' forms: every price reads 'S/ 1,250', names are not corrected, WhatsApp gets +51", () => {
+  const priceFields = {
+    "components/sell-listing-form.tsx": /<PriceInput name="price_pen" value=\{values\.price\} onValueChange=\{\(text\) => set\("price", text\)\} \/>/,
+    "components/listing-edit-form.tsx": /<PriceInput name="price_pen" required defaultValue=\{listing\.price_pen\} \/>/,
+    "components/listing-management-table.tsx": /<PriceInput\s+autoFocus\s+value=\{value\}\s+onValueChange=/,
+    "components/pendientes-list.tsx": /<PriceInput name="price" defaultValue=\{action\.price\} required \/>/,
+    "components/store-import/complete-row-sheet.tsx": /<PriceInput name="price" required \/>/,
+    "components/inventory/sku-forms.tsx": /<PriceInput name="unit_price_pen" defaultValue=\{initial\?\.unit_price_pen\} \/>/,
+    "components/inventory/item-detail.tsx": /<PriceInput name="unit_price_pen" defaultValue=\{item\.unit_price_pen\} \/>/,
+  };
+  for (const [file, pattern] of Object.entries(priceFields)) {
+    const text = source(file);
+    assert.match(text, pattern, file);
+    assert.doesNotMatch(text, /name="(price|price_pen|unit_price_pen)" [^>]*pattern=/, `${file}: the grouped "1,250" must not fail a digits-only pattern`);
+  }
+  // The SKU forms read the grouped text with the same parser as the server.
+  for (const file of ["components/inventory/sku-forms.tsx", "components/inventory/item-detail.tsx"]) assert.match(source(file), /priceText \? parseWholeSolPrice\(priceText\) : null/, file);
+  for (const file of ["components/sell-listing-form.tsx", "components/store-import/complete-row-sheet.tsx"]) {
+    assert.match(source(file), /name="brand" [^>]*autoCorrect="off" spellCheck=\{false\}/, file);
+    assert.match(source(file), /name="model" [^>]*autoCorrect="off" spellCheck=\{false\}/, file);
+  }
+  assert.match(source("components/listing-edit-form.tsx"), /name="brand" [^>]*plain \/>[\s\S]*name="model" [^>]*plain \/>/);
+  assert.match(source("components/store-registration-form.tsx"), /<PhoneInput name="whatsapp_phone" required defaultValue=\{defaults\.whatsapp_phone\} \/>/);
+  const storeSignup = source("components/store-owner-signup-form.tsx");
+  assert.match(storeSignup, /<PhoneInput name="phone" required \/>/);
+  assert.match(storeSignup, /<PasswordInput name="password" required minLength=\{PASSWORD_MIN_LENGTH\}/, "auth-01: the eye on every password field");
+});
+
+test("PriceInput kept in a form's own state shows the grouping, and the grouped text reads as the same price", () => {
+  const React = require("react");
+  const { renderToStaticMarkup } = require("react-dom/server");
+  const { PriceInput } = require("@/components/ui/price-input");
+  const controlled = renderToStaticMarkup(React.createElement(PriceInput, { name: "price_pen", value: "1250", onValueChange: () => {} }));
+  assert.match(controlled, /value="1,250"/);
+  assert.match(controlled, /inputMode="numeric"/);
+  const own = renderToStaticMarkup(React.createElement(PriceInput, { name: "price", defaultValue: 4500 }));
+  assert.match(own, /value="4,500"/);
+  const { parseWholeSolPrice } = require("@/lib/price");
+  assert.equal(parseWholeSolPrice("1,250"), 1250);
+});
+
+test("auth-02 on the account home: the profile notice waits until the person has publications", async () => {
+  const React = require("react");
+  const { renderToStaticMarkup } = require("react-dom/server");
+  const Module = require("node:module");
+  const ts = require("typescript");
+  const filename = path.join(root, "app/mi-cuenta/page.tsx");
+  const Link = ({ href, children, ...props }) => React.createElement("a", { href, ...props }, children);
+  const render = async (recent) => {
+    const query = new Proxy({}, { get: (_, name) => () => (name === "limit" ? Promise.resolve({ data: recent }) : query) });
+    const mocks = {
+      "next/link": { default: Link },
+      "lucide-react": { CheckCircle2: () => null, Circle: () => null, ExternalLink: () => null },
+      "@/lib/account-context": { getAccountContext: async () => ({ user: { id: "nuevo", email: "nuevo@example.test" }, profile: { account_type: "seller", full_name: "Ana", phone: null, city: null, region: null }, store: null, supabase: { from: () => query, rpc: async () => ({ data: null, error: null }) } }) },
+      "@/components/pendientes-list": { PendientesList: () => null },
+      "@/components/vacation-mode": { VacationMode: () => null },
+    };
+    const mod = new Module(filename, module);
+    mod.filename = filename;
+    mod.paths = module.paths;
+    const original = mod.require.bind(mod);
+    mod.require = (name) => (Object.hasOwn(mocks, name) ? mocks[name] : original(name));
+    mod._compile(ts.transpileModule(fs.readFileSync(filename, "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX } }).outputText, filename);
+    return renderToStaticMarkup(await mod.exports.default({ searchParams: Promise.resolve({}) }));
+  };
+  const buyer = await render([]);
+  assert.doesNotMatch(buyer, /Completa tu perfil Particular/, "a new account that only buys is not asked for WhatsApp");
+  assert.match(buyer, /href="\/mi-cuenta\/publicar"/, "Publicar asks the first time");
+  const seller = await render([{ id: "l1", title: "Guitarra", status: "approved", slug: "guitarra", price_pen: 900, created_at: "2026-10-01T12:00:00Z" }]);
+  assert.match(seller, /Completa tu perfil Particular/);
+  assert.match(seller, /href="\/mi-cuenta\/perfil"/);
+});

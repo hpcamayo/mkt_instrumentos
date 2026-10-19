@@ -11,7 +11,8 @@ import { UndoToast, type UndoToastMessage } from "@/components/undo-toast";
 import { Button } from "@/components/ui/button";
 import { useConfirm, type ConfirmOptions } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Field, Input } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { PriceInput } from "@/components/ui/price-input";
 import { Price } from "@/components/ui/price";
 import { StatusTag, Tag } from "@/components/ui/tag";
 import {
@@ -405,14 +406,12 @@ function PriceEditor({
 
   return (
     <form onSubmit={submit} noValidate className="grid w-full max-w-56 gap-2 whitespace-normal">
-      <Field id={id} label="Nuevo precio (S/)" error={fieldError || undefined}>
-        <Input
-          inputMode="numeric"
-          autoComplete="off"
+      <Field id={id} label="Nuevo precio" error={fieldError || undefined}>
+        <PriceInput
           autoFocus
           value={value}
-          onChange={(event) => {
-            setValue(event.target.value);
+          onValueChange={(text) => {
+            setValue(text);
             setFieldError("");
           }}
           onKeyDown={(event) => {

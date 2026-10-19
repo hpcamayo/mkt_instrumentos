@@ -35,8 +35,11 @@ test("whole-sol prices round-trip exactly and display without arithmetic", () =>
     const source = fs.readFileSync(file, "utf8");
     assert.match(source, /parseWholeSolPrice/);
     assert.doesNotMatch(source, /type="number"/);
-    assert.match(source, /inputMode="numeric"/);
+    // Both forms use the shared PriceInput (Effortless Laria auth-03), which brings the numeric keypad.
+    assert.match(source, /<PriceInput name="price_pen"/);
   }
+  assert.match(fs.readFileSync("components/ui/price-input.tsx", "utf8"), /inputMode="numeric"/);
+  assert.equal(parseWholeSolPrice("1,250"), 1250);
   assert.match(fs.readFileSync("app/api/submissions/route.ts", "utf8"), /parseWholeSolPrice/);
   assert.match(fs.readFileSync("app/api/listings/[id]/manage/route.ts", "utf8"), /parseWholeSolPrice/);
 });

@@ -9,10 +9,12 @@ import { UndoNotice, type InventoryNotice } from "@/components/inventory/undo-no
 import { PageNotice } from "@/components/page-notice";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Input, Radio, Select } from "@/components/ui/field";
+import { PriceInput } from "@/components/ui/price-input";
 import { Notice } from "@/components/ui/notice";
 import { Price } from "@/components/ui/price";
 import { Sheet } from "@/components/ui/sheet";
 import { inventoryAction, newRequestKey, parseWholeNumber } from "@/lib/inventory-client";
+import { parseWholeSolPrice } from "@/lib/price";
 import { categoryOptions } from "@/lib/listings";
 import type { InventoryItem } from "@/lib/store-inventory";
 
@@ -92,8 +94,8 @@ export function ItemDetailsForm({ item, canWrite }: { item: InventoryItem; canWr
     const name = String(form.get("product_name") ?? "").trim();
     if (name.length < 2) found.product_name = "Ingresa un nombre de al menos 2 caracteres.";
     const priceText = String(form.get("unit_price_pen") ?? "").trim();
-    const price = priceText ? parseWholeNumber(priceText) : null;
-    if (priceText && (price === null || price < 1)) found.unit_price_pen = "Ingresa soles enteros, sin decimales.";
+    const price = priceText ? parseWholeSolPrice(priceText) : null;
+    if (priceText && price === null) found.unit_price_pen = "Ingresa soles enteros, sin decimales.";
     if (!priceText && item.listing) found.unit_price_pen = "Una publicación vinculada necesita precio.";
     const thresholdText = String(form.get("low_stock_threshold") ?? "").trim();
     const threshold = thresholdText ? parseWholeNumber(thresholdText) : null;
@@ -130,7 +132,7 @@ export function ItemDetailsForm({ item, canWrite }: { item: InventoryItem; canWr
           <Input name="variant_label" defaultValue={item.variant_label ?? ""} maxLength={80} autoComplete="off" />
         </Field>
         <Field id={`${formId}-precio`} label="Precio en soles" optional={!item.listing} hint={item.listing ? "Cambia también el precio de la publicación vinculada." : undefined} error={errors.unit_price_pen}>
-          <Input name="unit_price_pen" defaultValue={item.unit_price_pen ?? ""} inputMode="numeric" pattern="[0-9]*" autoComplete="off" />
+          <PriceInput name="unit_price_pen" defaultValue={item.unit_price_pen} />
         </Field>
         <Field id={`${formId}-umbral`} label="Avisar con stock bajo desde" optional error={errors.low_stock_threshold}>
           <Input name="low_stock_threshold" defaultValue={item.low_stock_threshold ?? ""} inputMode="numeric" pattern="[0-9]*" autoComplete="off" />

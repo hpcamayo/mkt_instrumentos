@@ -562,6 +562,7 @@ Detail: [docs/ux-effortless/integration.md](ux-effortless/integration.md).
 - UXD-integration-7: The owner's store preview leaves out "Seguir", the account home says "Cupo de publicaciones" and points to Mi tienda at the limit, and "Publicar seleccionados" joins the new bulk bar, for ticked rows only.
 - UXD-integration-8: One module, `lib/notifications.ts`, names each notice and picks its page for both the notifications list and push, so a push reads and opens like its row and a new type is added in one place (big-12).
 - UXD-integration-9: "Vistos recientemente" is one list on the device (every listing page opened, drawn from today's public cards on the home, the catalog, the not-found page and Favoritos), and "your last visit" is one cookie with one rule for the home, Favoritos and Alertas (FIND 11, big-04, save-04).
+- UXD-integration-10: What the accounts batch left for the others is in place: the home shows what a signed-in person follows above "Para ti" (save-12); every price field is the shared "S/ 1,250" input and brand and model are never autocorrected (auth-03); both store forms use the +51 WhatsApp field and the store sign-up has the password eye (auth-01, auth-03); and the account home asks to complete the profile only once the person has publications, since Publicar asks the first time (auth-02).
 
 ### Speed, install and push (speed)
 

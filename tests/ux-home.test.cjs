@@ -202,6 +202,8 @@ async function renderHome(data, random = 0) {
     "@/components/marketplace-image": { MarketplaceImage: (props) => React.createElement("img", { src: props.src, alt: props.alt }) },
     "@/lib/supabase/public-client": { getPublicSupabaseClient: () => ({}), warnMissingSupabaseEnv() {} },
     "@/lib/home": { ...home, fetchHomeData: async () => data },
+    // Signed-in only, read after load (save-12, UXD-integration-10): nothing in the server render.
+    "@/components/home/home-followed": { HomeFollowedArrivals: () => null },
   });
   const realRandom = Math.random;
   Math.random = () => random;

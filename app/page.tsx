@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { HomeBanner } from "@/components/home/home-banner";
 import { RecentlyViewed } from "@/components/catalog-recently-viewed";
+import { HomeFollowedArrivals } from "@/components/home/home-followed";
 import { HomeForYou } from "@/components/home/home-for-you";
 import { CategoryTiles, HowItWorks, PriceDropsSection, SellBlock, VerifiedStoresSection } from "@/components/home/home-sections";
 import { RecentListings } from "@/components/home/home-empty";
@@ -36,6 +37,7 @@ export default async function HomePage() {
       <HomeBanner banner={banner} />
       <PageContainer className="flex flex-col gap-8 pb-8 pt-4 md:gap-12 md:pb-12 md:pt-6">
         <CategoryTiles counts={categoryCounts} />
+        <HomeFollowedArrivals />
         {pool?.length ? <HomeForYou pool={pool} total={total} /> : pool ? <RecentListings /> : null}
         {priceDrops?.length ? <PriceDropsSection listings={priceDrops} /> : null}
         <RecentlyViewed />

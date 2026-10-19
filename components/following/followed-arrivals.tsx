@@ -3,14 +3,15 @@ import { MarketplaceImage } from "@/components/marketplace-image";
 import { Price } from "@/components/ui/price";
 import { arrivalReason, type FollowedArrival } from "@/lib/follows";
 
-// save-12: "Para ti" from what the account follows. Each card says why it is there, and the list is finite: the
-// newest arrivals of the last 30 days, never an endless feed. The find batch places it on the home page.
-export function FollowedArrivals({ arrivals, title = "Para ti" }: { arrivals: FollowedArrival[]; title?: string }) {
+// save-12: what is new from the stores and brands the account follows, on the home above "Para ti"
+// (components/home/home-followed.tsx) and in Favoritos. Each card says why it is there, and the list is finite: the
+// newest arrivals of the last weeks, never an endless feed.
+export function FollowedArrivals({ arrivals, title = "Nuevo de lo que sigues" }: { arrivals: FollowedArrival[]; title?: string }) {
   if (!arrivals.length) return null;
   return (
-    <section aria-labelledby="para-ti" className="grid gap-3">
+    <section aria-labelledby="lo-que-sigues" className="grid gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="para-ti" className="t-section text-ink">{title}</h2>
+        <h2 id="lo-que-sigues" className="t-section text-ink">{title}</h2>
         <Link href="/mi-cuenta/correos#sigues" className="link t-ui font-semibold">Lo que sigues</Link>
       </div>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

@@ -4,11 +4,13 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
+import { PriceInput } from "@/components/ui/price-input";
 import { Textarea } from "@/components/ui/textarea";
 import { categoryOptions } from "@/lib/listings";
 import { Notice } from "@/components/ui/notice";
 import { Sheet } from "@/components/ui/sheet";
 import { inventoryAction, newRequestKey, parseWholeNumber } from "@/lib/inventory-client";
+import { parseWholeSolPrice } from "@/lib/price";
 import type { InventoryItem } from "@/lib/store-inventory";
 
 // "Nuevo SKU" (design §13.1) and "Controlar stock" on an existing store publication (§6.1). Both call
@@ -29,8 +31,8 @@ function readSkuForm(form: FormData, { requireName }: { requireName: boolean }) 
   const name = String(form.get("product_name") ?? "").trim();
   if (requireName && name.length < 2) errors.product_name = "Ingresa un nombre de al menos 2 caracteres.";
   const priceText = String(form.get("unit_price_pen") ?? "").trim();
-  const price = priceText ? parseWholeNumber(priceText) : null;
-  if (priceText && (price === null || price < 1)) errors.unit_price_pen = "Ingresa soles enteros, sin decimales.";
+  const price = priceText ? parseWholeSolPrice(priceText) : null;
+  if (priceText && price === null) errors.unit_price_pen = "Ingresa soles enteros, sin decimales.";
   const opening = parseWholeNumber(form.get("opening"));
   if (opening === null || opening > 100000) errors.opening = "Ingresa las unidades que tienes hoy, de 0 a 100000.";
   const thresholdText = String(form.get("low_stock_threshold") ?? "").trim();
@@ -212,7 +214,7 @@ export function NewSkuSheet({ onClose, initial = null }: { onClose: () => void; 
             <Input name="opening" inputMode="numeric" pattern="[0-9]*" defaultValue="0" autoComplete="off" />
           </Field>
           <Field id={`${formId}-precio`} label="Precio en soles" optional error={errors.unit_price_pen}>
-            <Input name="unit_price_pen" inputMode="numeric" pattern="[0-9]*" autoComplete="off" defaultValue={initial?.unit_price_pen ?? undefined} />
+            <PriceInput name="unit_price_pen" defaultValue={initial?.unit_price_pen} />
           </Field>
           <Field id={`${formId}-umbral`} label="Avisar con stock bajo desde" optional hint="Vacío: el aviso de tu tienda, si lo configuraste." error={errors.low_stock_threshold}>
             <Input name="low_stock_threshold" inputMode="numeric" pattern="[0-9]*" autoComplete="off" defaultValue={initial?.low_stock_threshold ?? undefined} />

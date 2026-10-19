@@ -79,11 +79,13 @@ export default async function AccountPage({
   return (
     <div className="space-y-5">
       <AccountNotices confirmed={status.confirmed === "1"} welcomed={status.welcome === "1"} passwordUpdated={status.password === "updated"} storeOwner={false} />
-      {!isSellerProfileComplete(profile) ? (
+      {/* auth-02: an account starts with a name and an e-mail, and Publicar asks for WhatsApp and city the first time.
+          The home asks only someone who already has publications, whose buyers need those details to reach them. */}
+      {listings?.length && !isSellerProfileComplete(profile) ? (
         <section className={noticeClassName("warning")}>
           <NoticeIcon tone="warning" />
           <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><h2 className="font-semibold">Completa tu perfil Particular</h2><p className="mt-1 leading-6">Revisa tu nombre, WhatsApp y ubicación antes de publicar.</p></div>
+            <div><h2 className="font-semibold">Completa tu perfil Particular</h2><p className="mt-1 leading-6">Tus publicaciones muestran tu nombre, WhatsApp y ubicación. Revísalos para que los compradores puedan contactarte.</p></div>
             <Link href="/mi-cuenta/perfil" className={buttonClasses({ variant: "secondary" })}>Completar perfil</Link>
           </div>
         </section>

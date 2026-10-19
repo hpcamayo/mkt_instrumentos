@@ -25,6 +25,7 @@ import { fieldsForRejection, rejectionNote, rejectionReasonLabel, type ListingFi
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
+import { PriceInput } from "@/components/ui/price-input";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
@@ -462,8 +463,8 @@ export function ListingEditForm({
         <div className="grid gap-5 sm:grid-cols-2">
           <SelectField label={labelWith("Categoría", "category")} name="category" error={validation.errorFor("category")} value={category} onChange={(value) => { setCategory(value); validation.clear("instrument_type"); const options = getInstrumentTypeOptions(value); if (!options.some((option) => option.value === instrumentType)) setInstrumentType(options[0]?.value ?? ""); }} options={categoryOptions} />
           <SelectField label={labelWith("Tipo de instrumento", "instrument_type")} name="instrument_type" error={validation.errorFor("instrument_type")} value={instrumentType} onChange={setInstrumentType} options={getInstrumentTypeOptions(category)} />
-          <TextField label={labelWith("Marca", "brand")} name="brand" defaultValue={listing.brand ?? ""} error={validation.errorFor("brand")} />
-          <TextField label={labelWith("Modelo", "model")} name="model" defaultValue={listing.model ?? ""} error={validation.errorFor("model")} />
+          <TextField label={labelWith("Marca", "brand")} name="brand" defaultValue={listing.brand ?? ""} error={validation.errorFor("brand")} plain />
+          <TextField label={labelWith("Modelo", "model")} name="model" defaultValue={listing.model ?? ""} error={validation.errorFor("model")} plain />
         </div>
         <TextField label={labelWith("Título", "title")} name="title" defaultValue={listing.title} error={validation.errorFor("title")} />
       </FormSection>
@@ -471,7 +472,7 @@ export function ListingEditForm({
       <FormSection id="editar-condicion" title="Condición y precio">
         {flagged.has("condition") || showsReviewSplit ? <div className="-mb-2">{fieldTag("condition")}</div> : null}
         <ConditionCards id="editar-condition" name="condition" legend="Condición" options={conditionChoices(conditionOptions)} defaultValue={listing.condition ?? ""} error={validation.errorFor("condition")} />
-        <Field id="editar-price_pen" label={labelWith("Precio en soles", "price_pen")} error={validation.errorFor("price_pen")} className="sm:max-w-xs"><Input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" required defaultValue={listing.price_pen ?? ""} /></Field>
+        <Field id="editar-price_pen" label={labelWith("Precio en soles", "price_pen")} error={validation.errorFor("price_pen")} className="sm:max-w-xs"><PriceInput name="price_pen" required defaultValue={listing.price_pen} /></Field>
       </FormSection>
 
       <FormSection id="editar-ubicacion" title="Ubicación" hint={showsReviewSplit ? "Se publica al instante." : undefined}>
@@ -525,8 +526,9 @@ function AttributeField({ filter, value }: { filter: AttributeFilter; value: unk
   return <SelectField label={filter.label} name={`attribute:${filter.key}`} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} options={filter.options ?? []} required={false} />;
 }
 
-function TextField({ label, name, defaultValue, error }: { label: ReactNode; name: string; defaultValue: string; error?: string }) {
-  return <Field id={`editar-${name}`} label={label} error={error}><Input type="text" name={name} required defaultValue={defaultValue} /></Field>;
+// plain: names such as brand and model, which the phone keyboard must not "correct" (auth-03).
+function TextField({ label, name, defaultValue, error, plain = false }: { label: ReactNode; name: string; defaultValue: string; error?: string; plain?: boolean }) {
+  return <Field id={`editar-${name}`} label={label} error={error}><Input type="text" name={name} required defaultValue={defaultValue} {...(plain ? { autoComplete: "off", autoCorrect: "off", spellCheck: false } : {})} /></Field>;
 }
 
 function SelectField({ label, name, options, value, defaultValue, onChange, required = true, error }: { label: ReactNode; name: string; options: readonly { value: string; label: string }[]; value?: string; defaultValue?: string; onChange?: (value: string) => void; required?: boolean; error?: string }) {

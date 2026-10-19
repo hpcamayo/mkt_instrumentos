@@ -15,6 +15,7 @@ import { FormSection } from "@/components/selling/choice-fields";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Checkbox, Field, FileInput, Input } from "@/components/ui/field";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Notice } from "@/components/ui/notice";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -246,7 +247,7 @@ export function StoreRegistrationForm({
       <FormSection id="tienda-perfil-publico" title="Perfil público" hint="Lo que los compradores ven en tu página y en tus publicaciones.">
         <div className="grid gap-5 sm:grid-cols-2">
           <StoreField label="Nombre público de la tienda" name="name" error={validation.errorFor("name")} defaultValue={defaults.name} />
-          <StoreField label="WhatsApp para compradores" name="whatsapp_phone" error={validation.errorFor("whatsapp_phone")} inputMode="tel" defaultValue={defaults.whatsapp_phone} />
+          <Field id="tienda-reg-whatsapp_phone" label="WhatsApp para compradores" error={validation.errorFor("whatsapp_phone")}><PhoneInput name="whatsapp_phone" required defaultValue={defaults.whatsapp_phone} /></Field>
           <LocationFields idPrefix="tienda-reg" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} defaultCity={defaults.city ?? undefined} defaultRegion={defaults.region ?? undefined} />
           <StoreField label="Distrito (opcional)" name="district" required={false} defaultValue={store?.district} />
         </div>

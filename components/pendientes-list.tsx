@@ -7,7 +7,8 @@ import { CheckCircle2, CircleDot, Info } from "lucide-react";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Field, Input } from "@/components/ui/field";
+import { Field } from "@/components/ui/field";
+import { PriceInput } from "@/components/ui/price-input";
 import type { Pendiente } from "@/lib/pendientes";
 import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -176,7 +177,7 @@ function PendienteActions({ item, onDone }: { item: Pendiente; onDone: (message:
       {priceOpen ? (
         <form onSubmit={lowerPrice} className="flex flex-wrap items-end gap-2 sm:justify-end">
           <Field id={`precio-${action.listingId}`} label="Nuevo precio en soles" className="w-40">
-            <Input name="price" inputMode="numeric" pattern="[0-9]+" defaultValue={action.price ?? undefined} required />
+            <PriceInput name="price" defaultValue={action.price} required />
           </Field>
           <Button type="submit" variant="secondary" loading={busy} loadingLabel="Guardando…">Guardar</Button>
         </form>
