@@ -63,8 +63,9 @@ type Progress = { sent: number; total: number | null; phase: string };
 
 // ------------------------------------------------------------------ the step
 
-export function ImportPhotos({ sessionId, onBack, onContinue, continueLabel = "Continuar" }: {
+export function ImportPhotos({ sessionId, onBack, onContinue, continueLabel = "Continuar", intro }: {
   sessionId: string;
+  intro?: string;
   onBack?: () => void;
   onContinue?: () => void;
   continueLabel?: string;
@@ -214,7 +215,7 @@ export function ImportPhotos({ sessionId, onBack, onContinue, continueLabel = "C
       <div className="grid gap-2">
         <h2 className="t-section">Fotos</h2>
         <p className="t-body text-ink-2">
-          Opcional. Cada SKU necesita de 2 a 10 fotos para publicarse; el inventario se importa igual sin ellas.
+          {intro ?? "Opcional. Cada SKU necesita de 2 a 10 fotos para publicarse; el inventario se importa igual sin ellas."}
         </p>
       </div>
       {onContinue && view.rows.length > 10 ? (

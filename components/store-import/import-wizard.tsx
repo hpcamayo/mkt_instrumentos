@@ -658,6 +658,11 @@ function IssueLine({ issue }: { issue: ImportIssue }) {
 // Filters whose rows can all be left out at once (stock-12); "Con errores" rows are never applied anyway.
 const EXCLUDABLE_FILTERS: RowFilter[] = ["create", "update", "adopt_listing", "warning", "since_export"];
 
+// "Precio (PEN)" → "precio (PEN)"; an all-caps label ("SKU") stays as it is.
+function lowerFirst(label: string) {
+  return label === label.toUpperCase() ? label : label.charAt(0).toLowerCase() + label.slice(1);
+}
+
 // stock-12: a row's failing cells, editable in place. Only cells of mapped columns that an error points at; saving
 // replaces the file's value in this import (the file itself is untouched) and the rows are checked again.
 function CellFixer({ row, mapping, onEditCell }: {
@@ -677,7 +682,7 @@ function CellFixer({ row, mapping, onEditCell }: {
       <div className="flex flex-wrap gap-2">
         {fields.map((key) => (
           <Button key={key} size="sm" variant="secondary" onClick={() => { setField(key); setValue(row.raw?.[mapping[key]]?.v ?? ""); }}>
-            Corregir {fieldLabel(key).toLowerCase()}
+            Corregir {lowerFirst(fieldLabel(key))}
           </Button>
         ))}
       </div>

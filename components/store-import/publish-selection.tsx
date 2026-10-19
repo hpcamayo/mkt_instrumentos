@@ -48,7 +48,8 @@ export function PublishSelection({ sessionId }: { sessionId: string }) {
   const [step, setStep] = useState<"photos" | "publish">("photos");
   return step === "photos" ? (
     <div className="grid gap-4">
-      <ImportPhotos sessionId={sessionId} onContinue={() => { setStep("publish"); window.scrollTo({ top: 0 }); }} continueLabel="Continuar a publicar" />
+      <ImportPhotos sessionId={sessionId} onContinue={() => { setStep("publish"); window.scrollTo({ top: 0 }); }} continueLabel="Continuar a publicar"
+        intro="Cada SKU necesita de 2 a 10 fotos para publicarse. Los que no las tengan quedan en tu inventario sin publicar." />
     </div>
   ) : (
     <div className="grid gap-4">

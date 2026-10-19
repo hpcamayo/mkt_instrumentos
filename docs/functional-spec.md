@@ -177,6 +177,29 @@ The store-owner dashboard supports editing the store profile and allowed busines
 
 Commercial analytics include listing impressions, listing views, favorites, WhatsApp contacts, sold listings, and meaningful conversion-oriented ratios. They must not show revenue without actual transaction data. These metrics should remain suitable for evaluating later paid store packages without activating such packages in V1.
 
+<!-- Effortless Laria, batch "stores" (docs/ux-effortless/stores.md): proposed until Henri's review. -->
+### Effortless Laria changes to stores (proposed)
+
+- **Application and profile (shop-01, shop-03).** A new application is prefilled from the invitation or signup. Mi
+  tienda separates "Perfil público" from "Datos de la empresa"; changing the RUC or razón social warns that declared
+  payment methods go back to Admin review. The physical address stays required but is shown publicly only when the
+  store ticks "Mostrar la dirección" (off by default); opening hours are optional free text (list-12).
+- **Owner preview (shop-04).** The owner can open their store page before it is public, marked as a preview and
+  `noindex`; buyers still get a 404 until approval.
+- **Stores directory (find-13).** `/tiendas` lists active stores (verified first) with a tab of listings from verified
+  stores. "Tiendas verificadas" in the header and footer opens it.
+- **Store page filters (find-14).** A store page has category chips, a brand box and a sort, scoped to that store.
+- **Listing allowance (shop-05).** The cap is called "Cupo de publicaciones" everywhere. Mi tienda shows a meter of what
+  uses it; a store can hide its published out-of-stock listings in one step to free slots, and ask Admin for more
+  ("Pedir más cupo"). A request changes nothing until Admin sets a new allowance.
+- **Inventory access (stock-21).** A store without Inventario can request it; Admin turns it on from the request.
+- **Import (stock-12, stock-13, stock-22).** The review corrects a failing cell in place and excludes a whole filter;
+  the Fotos step has a phone photo session; an open import shows when it expires and can be discarded from the notice.
+- **Bulk publication (stock-10).** "Publicar seleccionados" in Inventario opens the import's publication step for the
+  chosen SKU without changing stock.
+- **Libro de Reclamaciones (trust-05).** `/libro-de-reclamaciones` follows Indecopi's virtual complaints book format
+  with correlative numbers; its provider data and terms are pending legal review before production.
+
 ## Favorites and Alerts
 
 ### Favorites
