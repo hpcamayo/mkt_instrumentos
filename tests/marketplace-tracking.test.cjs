@@ -367,27 +367,18 @@ test("sold detail metadata does not register an active-listing view", () => {
   assert.deepEqual(calls, []);
 });
 
-function contactHarness({ api, request, popup = true } = {}) {
-  const timers = timersHarness();
-  const calls = { opens: [], requests: [], assigned: [], prevented: 0 };
-  const tabs = [];
+// talk-03 (docs/ux-effortless/listing.md): the contact is a plain link that opens WhatsApp at once; the event is
+// recorded in the background with keepalive and never holds or redirects the buyer.
+function contactModule({ api, request } = {}) {
+  const calls = { requests: [] };
   let sequence = 0;
-  const { WhatsAppContactLink } = loadTypeScript("components/whatsapp-contact-link.tsx", {
+  const loaded = loadTypeScript("components/whatsapp-contact-link.tsx", {
     "@/lib/marketplace-events-client": api ?? { ensureMarketplaceSession: async () => {} },
+    "@/components/listing/contact-state": { getQuestions: () => [], markSafetySheetSeen() {}, safetySheetSeen: () => false },
+    "@/components/listing/safety-sheet": { SafetySheet: () => null },
+    "@/lib/contact-message": require("@/lib/contact-message.ts"),
   }, {
-    setTimeout: timers.setTimeout, clearTimeout: timers.clearTimeout,
-    AbortController,
     crypto: { randomUUID: () => `contact-${++sequence}` },
-    window: {
-      open(...args) {
-        calls.opens.push(args);
-        if (!popup) return null;
-        const tab = { closed: false, opener: "parent-window", location: { href: "about:blank" } };
-        tabs.push(tab);
-        return tab;
-      },
-      location: { assign: (destination) => calls.assigned.push(destination) },
-    },
     async fetch(url, options) {
       const entry = { url, ...options, body: JSON.parse(options.body) };
       calls.requests.push(entry);
@@ -395,101 +386,62 @@ function contactHarness({ api, request, popup = true } = {}) {
       return response({ url: "https://wa.me/51999111222" });
     },
   });
-  const href = "https://wa.me/51999888777?text=Mensaje%20privado%20del%20usuario";
-  return {
-    calls, tabs, timers, href,
-    render(props = {}) { return WhatsAppContactLink({ href, listingId, children: "Contactar", ...props }); },
-    click(props = {}, modifiers = {}) {
-      return this.render(props).props.onClick({ preventDefault: () => { calls.prevented++; }, ...modifiers });
-    },
-  };
+  return { calls, ...loaded };
 }
 
 test("WhatsApp contact records canonical identity without serializing user message drafts or browser role claims", async () => {
-  const contact = contactHarness();
-  const anchor = contact.render();
-  assert.equal(anchor.type, "a");
-  assert.equal(anchor.props.href, contact.href);
-  assert.equal(anchor.props.target, "_blank");
-  assert.equal(anchor.props.rel, "noopener noreferrer");
-  await contact.click();
+  const contact = contactModule();
+  await contact.recordContact({ listingId, source: "detail" });
   assert.deepEqual(contact.calls.requests[0].body, { eventId: "contact-1", listingId, source: "detail" });
   assert.equal(contact.calls.requests[0].url, "/api/contact");
   assert.equal(contact.calls.requests[0].method, "POST");
+  assert.equal(contact.calls.requests[0].keepalive, true);
   assert.equal(JSON.stringify(contact.calls.requests[0].body).includes("privado"), false);
-  assert.equal(contact.tabs[0].opener, null);
-  assert.equal(contact.tabs[0].location.href, "https://wa.me/51999111222");
-  assert.equal(contact.calls.prevented, 1);
-  assert.equal(contact.timers.pending.size, 0);
 });
 
 test("true repeated WhatsApp clicks each record their own event while sharing the cookie bootstrap", async () => {
   const transport = clientHarness();
-  const contact = contactHarness({ api: transport.client });
-  await Promise.all([contact.click(), contact.click()]);
+  const contact = contactModule({ api: transport.client });
+  await Promise.all([contact.recordContact({ listingId, source: "detail" }), contact.recordContact({ listingId, source: "detail" })]);
   assert.equal(transport.calls.filter((entry) => entry.url === "/api/events/session").length, 1);
   assert.equal(contact.calls.requests.length, 2);
   assert.notEqual(contact.calls.requests[0].body.eventId, contact.calls.requests[1].body.eventId);
-  assert.equal(contact.tabs.length, 2);
-  assert.ok(contact.tabs.every((tab) => tab.location.href === "https://wa.me/51999111222"));
 });
 
 test("store-only WhatsApp contact records its store entity and supported source", async () => {
-  const contact = contactHarness();
-  await contact.click({ listingId: undefined, storeId, source: "store" });
+  const contact = contactModule();
+  await contact.recordContact({ storeId, source: "store" });
   assert.deepEqual(contact.calls.requests[0].body, { eventId: "contact-1", storeId, source: "store" });
+  assert.deepEqual(contact.contactRequestBody({ listingId, intent: "purchase", source: "detail" }, "e"), { eventId: "e", listingId, intent: "purchase", source: "detail" });
+  assert.deepEqual(contact.contactRequestBody({ storeId, intent: "purchase", source: "store" }, "e"), { eventId: "e", storeId, source: "store" });
 });
 
-test("WhatsApp failures and unsafe redirect responses fall back to the existing safe contact URL", async () => {
-  for (const request of [
-    async () => { throw new Error("Telemetry unavailable"); },
-    async () => response({}, false),
-    async () => response({ url: "https://phishing.example/wa.me/51999111222" }),
-    async () => response({ url: "javascript:alert(1)" }),
-    async () => response({ url: 7 }),
-  ]) {
-    const contact = contactHarness({ request });
-    await contact.click();
-    assert.equal(contact.tabs[0].location.href, contact.href);
-    assert.equal(contact.timers.pending.size, 0);
+test("a failed or stalled record never throws or holds the contact", async () => {
+  for (const request of [async () => { throw new Error("Telemetry unavailable"); }, async () => response({}, false)]) {
+    const contact = contactModule({ request });
+    await contact.recordContact({ listingId, source: "detail" });
   }
-});
-
-test("a blocked popup safely uses the same-window contact fallback after recording", async () => {
-  const contact = contactHarness({ popup: false });
-  await contact.click();
-  assert.deepEqual(contact.calls.assigned, ["https://wa.me/51999111222"]);
-});
-
-test("modified WhatsApp clicks retain native navigation without opening an extra tab or preventing default", async () => {
-  const contact = contactHarness();
-  await contact.click({}, { ctrlKey: true });
-  assert.equal(contact.calls.prevented, 0);
-  assert.deepEqual(contact.calls.opens, []);
-  assert.deepEqual(contact.calls.assigned, []);
-  assert.equal(contact.calls.requests.length, 1);
-});
-
-test("the nine-hundred-millisecond contact deadline bounds delayed session bootstrap", async () => {
-  const contact = contactHarness({ api: { ensureMarketplaceSession: () => new Promise(() => {}) } });
-  const clicking = contact.click();
-  assert.equal(contact.timers.pending.values().next().value.delay, 900);
-  await contact.timers.runNext();
-  await clicking;
-  assert.equal(contact.tabs[0].location.href, contact.href);
-  assert.equal(contact.calls.requests.length, 0);
-  assert.equal(contact.timers.pending.size, 0);
-});
-
-test("the contact deadline aborts a stalled recorder but still navigates to the safe fallback", async () => {
-  const contact = contactHarness({ request: () => new Promise(() => {}) });
-  const clicking = contact.click();
+  const stalled = contactModule({ api: { ensureMarketplaceSession: () => new Promise(() => {}) } });
+  void stalled.recordContact({ listingId, source: "detail" });
   await settle();
-  assert.equal(contact.calls.requests.length, 1);
-  const signal = contact.calls.requests[0].signal;
-  assert.equal(signal.aborted, false);
-  await contact.timers.runNext();
-  await clicking;
-  assert.equal(signal.aborted, true);
-  assert.equal(contact.tabs[0].location.href, contact.href);
+  assert.equal(stalled.calls.requests.length, 0);
+});
+
+test("the link opens WhatsApp itself: no blank tab, no redirect, the server-built URL", () => {
+  const contact = contactModule();
+  const href = "https://wa.me/51999888777?text=Hola";
+  assert.deepEqual(contact.planContact({ href, questions: [], safety: false, modified: false, seen: false }), { destination: href, sheet: false });
+  const source = fs.readFileSync("components/whatsapp-contact-link.tsx", "utf8");
+  assert.doesNotMatch(source, /window\.open|location\.assign|setTimeout/);
+  assert.match(source, /target="_blank" rel="noopener noreferrer"/);
+});
+
+test("quick questions join the message, and the safety sheet comes first only when it should", () => {
+  const contact = contactModule();
+  const href = "https://wa.me/51999888777?text=Hola";
+  const plan = contact.planContact({ href, questions: ["¿Puedo probarlo?"], safety: true, modified: false, seen: false });
+  assert.equal(plan.sheet, true);
+  assert.equal(new URL(plan.destination).searchParams.get("text"), "Hola ¿Puedo probarlo?");
+  assert.equal(contact.planContact({ href, questions: [], safety: true, modified: false, seen: true }).sheet, false);
+  assert.equal(contact.planContact({ href, questions: [], safety: true, modified: true, seen: false }).sheet, false);
 });

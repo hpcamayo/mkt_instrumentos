@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { ListingCard } from "@/components/listing-card";
+import { ScrollRow } from "@/components/listing/scroll-row";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ListingCardData } from "@/lib/listings";
 
 // The related grids (UX-4 L12 A): the catalog card in two columns on phones, three from 768 px and four from 1024 px,
 // gaps 12 / 20 px. Four cards at most.
 export const RELATED_GRID = "grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4";
+export const RELATED_ROW_MAX = 8;
 export const RELATED_SIZES = "(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 320px";
 
 // "Publicaciones similares" and "Más de esta tienda / este vendedor": the title, a link at the right, four cards. A
@@ -17,12 +19,15 @@ export function RelatedListings({
   link,
   listings,
   emptyText,
+  layout = "grid",
 }: {
   id: string;
   title: string;
   link: { href: string; label: string } | null;
   listings: ListingCardData[];
   emptyText?: string;
+  // "row" (list-07, "Publicaciones similares"): up to eight cards in a sideways row.
+  layout?: "grid" | "row";
 }) {
   if (listings.length === 0) {
     if (!emptyText || !link) return null;
@@ -46,11 +51,23 @@ export function RelatedListings({
           </Link>
         ) : null}
       </div>
-      <div className={`mt-4 ${RELATED_GRID}`}>
-        {listings.slice(0, 4).map((item) => (
-          <ListingCard key={item.id} listing={item} source="recommendations" headingLevel={3} sizes={RELATED_SIZES} />
-        ))}
-      </div>
+      {layout === "row" ? (
+        <div className="mt-4">
+          <ScrollRow label={title}>
+            {listings.slice(0, RELATED_ROW_MAX).map((item) => (
+              <div key={item.id} role="listitem" className="w-[44%] shrink-0 snap-start md:w-[calc((100%-40px)/3)] lg:w-[calc((100%-60px)/4)]">
+                <ListingCard listing={item} source="recommendations" headingLevel={3} sizes={RELATED_SIZES} />
+              </div>
+            ))}
+          </ScrollRow>
+        </div>
+      ) : (
+        <div className={`mt-4 ${RELATED_GRID}`}>
+          {listings.slice(0, 4).map((item) => (
+            <ListingCard key={item.id} listing={item} source="recommendations" headingLevel={3} sizes={RELATED_SIZES} />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

@@ -188,6 +188,29 @@ figcaption {
 .lightbox::backdrop {
   background: rgb(5 6 8 / 0.95);
 }
+/* Zoom (Effortless list-01): the stage takes every touch gesture itself; the photo scales around its centre. Buttons,
+   keys and double taps glide 160 ms, in place under reduced motion; pinch and drag follow the fingers. */
+.lightbox-stage {
+  cursor: zoom-in;
+}
+.lightbox-stage[data-zoomed] {
+  cursor: grab;
+}
+.lightbox-stage[data-zoomed]:active {
+  cursor: grabbing;
+}
+.lightbox-photo {
+  transform-origin: center;
+  will-change: transform;
+}
+.lightbox-photo[data-animate] {
+  transition: transform 160ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lightbox-photo[data-animate] {
+    transition: none;
+  }
+}
 
 /* In-page confirmations (components/ui/confirm-dialog.tsx, UX-6 A3): a white modal <dialog>, centred, 8 px corners,
    up to 440 px wide with a 16 px gutter on phones, over frame black at 55%. */

@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   // contact, so a stale page never strands the buyer.
   let purchase = false;
   if (body.listingId) {
-    const { data, error } = await client.from("listings").select("id,title,slug,seller_type,owner_user_id,contact_name,whatsapp_phone,city,region,created_at,profiles!listings_owner_user_id_fkey(full_name,phone,city,region,created_at),stores(whatsapp_phone)").eq("id", body.listingId).eq("status", "approved").maybeSingle();
+    const { data, error } = await client.from("listings").select("id,title,slug,price_pen,stock_state,seller_type,owner_user_id,contact_name,whatsapp_phone,city,region,created_at,profiles!listings_owner_user_id_fkey(full_name,phone,city,region,created_at),stores(whatsapp_phone)").eq("id", body.listingId).eq("status", "approved").maybeSingle();
     if (error || !data) return failure(404, requestId);
     url = buildWhatsAppUrl(data as unknown as ListingDetailData);
     if (body.intent === "purchase" && assistedCommerceEnabled() && data.seller_type === "store") {

@@ -796,4 +796,60 @@ alert changes; no new private data.
   (`app.allow_listing_admin_fields`) for that one statement and restores it. A one-time update brings listings that
   had already drifted to their store's number. Not callable by `anon` or `authenticated`. The app also reads a store
   listing's contact from the store (`lib/seller-contact.ts` `resolveContactPhone`). Suite: `tests/ux-listing-contact.sql`.
+- `20261102120500_ux_listing_registry.sql`: `laria_private.ux_extend_text_check(table, constraint, column, values[])`
+  adds allowed values to an `= any (array[...])` check in place, idempotently and in any order with other batches (any
+  batch may reuse it). Adds notification types `listing_back_in_stock`, `listing_question_asked`,
+  `listing_question_answered` and e-mail types `listing_back_in_stock`, `listing_question_asked`.
+- `20261102140000_ux_listing_page.sql`:
+  - `listings.content_changed_at`, `price_changed_at`, `previous_price_pen`, `price_dropped_at` (check
+    `listings_previous_price_check`), owned by the BEFORE trigger `listings_track_content_change`
+    (`laria_private.track_listing_content_change()`): content changes move `content_changed_at`; a drop is recorded only
+    on an approved listing, ≥5% below a price in effect ≥7 days (a further drop within 30 days keeps the first
+    "previous" price); any increase clears it. View counts and moderation fields never move these columns.
+  - `public.get_public_seller_facts(p_listing_id)`: member since, last-active bucket (`today|week|month`, from
+    `auth.users.last_sign_in_at`), confirmed sales, e-mail confirmed, and for verified stores RUC, razón social,
+    address, phone on file and `verified_since` (from the `store_verified` audit action). Public and sold listings only.
+  - `public.get_public_review_page(p_subject_user_id, p_subject_store_id, p_offset, p_limit ≤ 50)`: count, per-star
+    breakdown and one page of published reviews.
+  - `public.listing_stock_watches (user_id, listing_id)` with RLS select-own; `set_listing_stock_watch(uuid, boolean)`
+    and `get_listing_stock_watch(uuid)` (authenticated only; errors `STOCK_WATCH_AUTH_REQUIRED`,
+    `STOCK_WATCH_UNAVAILABLE`, `STOCK_WATCH_OWN_LISTING`). Trigger `listings_notify_stock_watchers` (after update of
+    `stock_state`, `out_of_stock` → `in_stock`) notifies each watcher once (`listing_back_in_stock`, e-mail dedupe key
+    `back_in_stock:<notification id>`) and deletes the watches.
+  - Suite: `tests/ux-listing-page.sql`.
 <!-- /ux-effortless:listing -->
+
+<!-- ux-effortless:listing questions -->
+## Effortless Laria: public questions on a listing (big-11)
+
+- `20261102130000_ux_listing_questions.sql`: table `public.listing_questions` (`listing_id` → listings, cascade;
+  `asker_user_id` → profiles, cascade; `body` 5–300 characters; `answer` 2–600 with `answered_at`/`answered_by`, set
+  once; `status` `visible`|`hidden` with `hidden_reason` (3–500), `hidden_at`, `hidden_by`; `created_at`
+  `clock_timestamp()`). RLS on, no policies and no grants to `anon`/`authenticated`: every read and write goes through
+  security-definer functions.
+- Public functions (errors read `QUESTION_CODE: mensaje en español`):
+  - `get_listing_questions(p_listing_id uuid) → jsonb` (anon + authenticated): `{signed_in, can_ask, can_answer,
+    is_admin, accepting, questions: [{id, body, asker_name, created_at, answer, answered_at, status, hidden_reason,
+    is_mine}]}`, newest first, up to 100. Visible questions of a published listing, or of a sold listing still shown;
+    an admin also gets hidden ones with the reason. `asker_name` is "Nombre I." (never the full name).
+  - `ask_listing_question(p_listing_id uuid, p_body text) → jsonb {id, created_at}` (authenticated): listing
+    `listing_is_public`, caller not its seller, text through the PAY-1 contact-detail filter, at most 3 unanswered
+    visible questions per asker and listing and 20 per asker in 24 hours (advisory lock per asker). Inserts a
+    `listing_question_asked` notification for the seller and queues the e-mail with
+    `laria_private.enqueue_marketplace_email('listing_question_asked', seller, 'listing_question:<id>', notification, listing)`.
+  - `answer_listing_question(p_question_id uuid, p_answer text) → jsonb {id, answered_at}` (authenticated): only the
+    seller (the listing owner, or the store owner for a store listing), once, on a visible question of a published
+    listing. Inserts a `listing_question_answered` notification for the asker; no e-mail.
+  - `hide_listing_question(p_question_id uuid, p_reason text)` / `restore_listing_question(p_question_id uuid, p_reason
+    text) → jsonb {id, status}` (authenticated, `is_admin()` only): recorded in `admin_audit_actions` as
+    `question_hidden` / `question_restored`, target type `question` (added to `admin_audit_actions_target_type_check`).
+- Internal helpers (`laria_private`, not callable by browser roles): `raise_question_error`, `text_has_contact_details`
+  (the PAY-1 regexes), `question_text`, `listing_question_seller`, `listing_questions_readable`,
+  `question_display_name`, `question_snippet`.
+- Reports: nullable `reports.question_id` → `listing_questions` (restrict); `reports_target_type_check` gains
+  `question` (via `laria_private.ux_extend_text_check`); `reports_target_check` is recreated with the three existing
+  branches unchanged plus the question branch; `reports_question_target_check` keeps `question_id` to question reports;
+  unique open report per reporter and question; `submit_content_report` accepts `p_target_type = 'question'` (a
+  visible question on a readable listing, not one's own). The Admin report pages do not render question targets yet.
+- Suite: `tests/ux-listing-questions.sql`.
+<!-- /ux-effortless:listing questions -->

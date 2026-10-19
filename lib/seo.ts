@@ -133,7 +133,6 @@ export function buildListingMetadata(listing: ListingDetailData): Metadata {
   const canonical = `/instrumentos/${listing.slug}`;
   const title = listing.status === "sold" ? `${listing.title} (vendido)` : listing.title;
   const description = listingSummary(listing);
-  const images = listingImages(listing).slice(0, 1);
   return {
     title,
     description,
@@ -146,9 +145,11 @@ export function buildListingMetadata(listing: ListingDetailData): Metadata {
       title: `${title} | ${SITE_NAME}`,
       description,
       url: canonical,
-      ...(images.length ? { images: images.map((url) => ({ url, alt: listing.title })) } : {}),
+      // Effortless list-09: the generated card (photo, title, price, condition, verified store) from
+      // app/instrumentos/[slug]/opengraph-image.tsx; it falls back to the generic Laria card on any failure.
+      images: [{ url: `${canonical}/opengraph-image`, width: 1200, height: 630, type: "image/png", alt: listing.title }],
     },
-    twitter: { card: images.length ? "summary_large_image" : "summary", title, description },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

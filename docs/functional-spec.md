@@ -196,6 +196,12 @@ Authenticated users can favorite and unfavorite approved listings. Favorites are
 
 Price-drop alerts apply to favorited approved listings. When the public price decreases, eligible users may receive an email. The same unchanged price must not trigger repeated alerts. Pending, rejected, or hidden inventory must not generate price-drop alerts.
 
+The listing page and catalog cards show a real recent drop as "Antes S/ X" for 30 days: the listing is approved, the new price is at least 5% below a price that had been in effect for 7 days, and any increase clears it. Sold listings never show it. *(Effortless Laria, list-05; proposed UXD-listing-4.)*
+
+### Back-in-stock alerts
+
+On an out-of-stock ("Agotado") store listing, a signed-in buyer can ask to be told when it is available again. When its stock returns they receive one in-app notification and one e-mail, and the request ends. Owners cannot watch their own listings. A sold listing instead offers a ready immediate search alert for its category, type and brand. *(Effortless Laria, list-11; proposed UXD-listing-9.)*
+
 ### Search alerts
 
 Authenticated users can save the exact state of a marketplace search, including the free-text query (`query`, find batch), category, supported filters and instrument attributes, location, price filters, and other supported search state.
@@ -249,6 +255,8 @@ Laria records buyer intent when a user initiates WhatsApp contact. It never reco
 
 The event associates the listing, authenticated buyer when present, seller or store, timestamp, and useful source/context. It supports conversion analytics and determines which authenticated buyers are eligible for transaction confirmation when a seller marks that listing sold. Anonymous contact remains possible, but an anonymous buyer cannot later participate in the verified Laria transaction or review workflow for that contact.
 
+The WhatsApp message opens pre-filled with the listing's title, price (when set) and link, asking whether it is still available. Optional quick questions (try it, shipping, case, negotiable price), never preselected, are appended when chosen. The button opens WhatsApp at once; the contact is recorded in the background and never delays or blocks it. Before a buyer's first contact about a listing from S/ 1,000, or any purchase request, a short safety sheet appears once per browser. Signed-out visitors see a quiet hint to sign in first so they can later confirm the purchase and review; contact never requires an account. *(Effortless Laria, talk-01 to talk-05; proposed UXD-listing-6 and UXD-listing-7.)*
+
 ## Marketplace Analytics
 
 The primary funnel is:
@@ -288,7 +296,11 @@ Published reviews cannot be freely edited or deleted. Users can report them. Adm
 
 ## Reports
 
-Users can report a listing, store, or review. A report has a fixed reason category, optional written detail, timestamp, reporter identity where applicable, and moderation status. Reports enter the admin moderation hub, where admin can resolve or dismiss them. V1 does not need a complex ticketing or support system.
+Users can report a listing, store, or review. A report has a fixed reason category, optional written detail, timestamp, reporter identity where applicable, and moderation status. Reports enter the admin moderation hub, where admin can resolve or dismiss them. V1 does not need a complex ticketing or support system. Public questions on listings can be reported too.
+
+## Public Questions on Listings
+
+A signed-in buyer can ask a short public question on a published listing that is not their own; it appears at once for everyone. The seller (the listing owner, or the store owner) answers once, publicly; the seller is notified in the app and by e-mail, the asker in the app. Questions and answers refuse phone numbers, links and e-mails with the same filter as purchase requests; neither side can edit, and the seller cannot delete. Limits: 3 unanswered questions per buyer per listing and 20 per day. Admin can hide and restore a question with a reason. A sold listing keeps its questions read-only. This is public Q&A, not private messaging: transactions and private conversation stay on WhatsApp. *(Effortless Laria, big-11; proposed UXD-listing-8.)*
 
 ## Admin Moderation Hub
 
@@ -312,7 +324,7 @@ The authenticated account shell includes an in-app notification center for Parti
 
 V1 has dedicated content or pages for Terms/marketplace rules, Privacy Policy, prohibited-item rules, and marketplace safety guidance.
 
-The interface clearly says Laria currently does not process payments, provide escrow, manage shipping/delivery, or guarantee transactions. Trust copy must not imply otherwise.
+The interface clearly says Laria currently does not process payments, provide escrow, manage shipping/delivery, or guarantee transactions. Trust copy must not imply otherwise. On the listing page this is said once, as the line under the contact button with a link to the safety tips. *(Effortless Laria, list-02; proposed UXD-listing-3.)*
 
 ## Functionally Out of V1
 
@@ -321,7 +333,7 @@ The following remain post-V1 unless an explicit new product decision changes the
 - Laria-managed checkout, payments, escrow, or shipping/delivery integration.
 - Transaction commission enforcement.
 - Paid subscriptions, packages, or listing boosts.
-- Internal messaging or chat.
+- Internal messaging or chat (public questions on listings are not messaging; see Public Questions on Listings).
 - Multiple store employee accounts.
 - Automatic SUNAT verification.
 - Account deletion or account email-change workflows.
@@ -533,3 +545,5 @@ Sprint 7 implementation clarification: both role-specific account menus call the
 Sprint 8 implementation clarification: Admin authorization is checked server-side for every `/admin` route and again inside privileged database functions. The moderation workbench is operational—not analytics—and always shows every queue, including truthful zero states. General reports preserve individual reporter records and history; closing a report never silently moderates its target. Manual legacy ownership is explicit and one-time, never inferred from contact similarity.
 
 Sprint 9 implementation clarification: public discovery uses one canonical origin (`NEXT_PUBLIC_SITE_URL`, default `https://laria.audio`), per-page canonical/Open Graph metadata, `robots.txt`, a bounded dynamic sitemap of public pages, non-empty categories, approved listings and active stores, and Product/Store/Breadcrumb JSON-LD. Sold listings stay reachable at their direct URL but are `noindex` and excluded from the sitemap. Account, Admin, API, signup/onboarding (`/registro/vendedor`, `/registro/tienda`) and authentication utility routes are `noindex` through metadata and `X-Robots-Tag`, and Vercel preview deployments are never indexable. The account shell follows the frozen V1 order and groups profile and password under `Perfil y seguridad`. Sprint 9 adds no migration, scheduler, payment, escrow, shipping, chat or paid feature.
+
+Effortless Laria listing page clarification (batch "listing", proposed UXD-listing-3 to UXD-listing-10): the listing page shows up to five key specs in one line under the title; dates read as people say them ("Publicado hace 2 semanas", "Actualizado hace 3 días" only after a later content change), and a listing untouched for months invites checking availability. The seller card shows only facts Laria records (activity bucket, confirmed sales, account age, confirmed e-mail) and "Tienda verificada" opens to list what Laria checked by hand (RUC, razón social, address, a phone on file) and since when. The reviews section shows the count per star and loads every review on request. Similar listings are ranked by brand, a price within 30% and the city, in a scrollable row of up to eight. Photos can be zoomed in the lightbox by gesture, button or key. "Compartir" shares the link (or a story image) and links show a generated preview card for public listings. The owner of a listing sees shortcuts to edit, lower the price or mark it sold. `/instrumentos/<listing id>` redirects to the listing's slug.
