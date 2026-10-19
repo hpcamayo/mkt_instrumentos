@@ -449,7 +449,7 @@ do $$ declare denied boolean:=false; begin
  exception when others then
    denied:=sqlerrm like '%STORE_APPLICATION_INCOMPLETE%';
  end;
- if not denied or (select ruc from public.stores where id='82000000-0000-4000-8000-000000000001')<>'20888888881' then
+ if not denied or (select ruc from public.admin_get_store('82000000-0000-4000-8000-000000000001'))<>'20888888881' then
    raise exception 'Invalid active-store Admin edit was accepted';
  end if;
  update public.stores set description='Perfil comercial revisado por administración.' where id='82000000-0000-4000-8000-000000000001';

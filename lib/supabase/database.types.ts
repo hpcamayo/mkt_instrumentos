@@ -1360,6 +1360,16 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_store: {
+        Args: { p_store_id: string }
+        Returns: Database["public"]["Tables"]["stores"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "stores"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       apply_owned_listing_edit: {
         Args: {
           p_immediate?: Json
@@ -1541,6 +1551,16 @@ export type Database = {
       get_marketplace_admin_analytics_before_transactions: {
         Args: { p_days?: number }
         Returns: Json
+      }
+      get_own_store: {
+        Args: never
+        Returns: Database["public"]["Tables"]["stores"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "stores"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_pending_buyer_confirmation_count: { Args: never; Returns: number }
       get_public_reputation: {

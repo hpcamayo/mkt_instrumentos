@@ -137,7 +137,7 @@ begin
   if (select status from public.stores where id='32000000-0000-4000-8000-000000000001') <> 'active' then raise exception 'Basic approval did not activate Tienda'; end if;
   if (select is_verified from public.stores where id='32000000-0000-4000-8000-000000000001') then raise exception 'Basic approval granted verification'; end if;
   perform public.review_store_application('32000000-0000-4000-8000-000000000002','reject','RUC no legible');
-  if (select status from public.stores where id='32000000-0000-4000-8000-000000000002') <> 'rejected' or (select rejection_reason from public.stores where id='32000000-0000-4000-8000-000000000002') <> 'RUC no legible' then raise exception 'Rejection state/reason failed'; end if;
+  if (select status from public.stores where id='32000000-0000-4000-8000-000000000002') <> 'rejected' or (select rejection_reason from public.admin_get_store('32000000-0000-4000-8000-000000000002')) <> 'RUC no legible' then raise exception 'Rejection state/reason failed'; end if;
 end;
 $$;
 
