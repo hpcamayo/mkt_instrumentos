@@ -83,7 +83,9 @@ test("both account roles expose Compras y ventas and Alertas with canonical tran
   assert.match(menu, /Menú de cuenta móvil/);
   assert.match(center, /Requiere tu confirmación/);
   assert.match(center, /¿Compraste este equipo\?/);
-  assert.match(center, /Tienes una reseña pendiente/);
+  // The pending review reads as a day-level reminder with its own "Reseñar" link (no countdown).
+  assert.match(center, /reviewDueLabel\(item\.review_deadline\)/);
+  assert.match(center, /Reseñar/);
 });
 
 test("marketplace templates are branded, safe and preserve transaction/review limitations", () => {

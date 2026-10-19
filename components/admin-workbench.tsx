@@ -25,6 +25,7 @@ import {
   type AdminQueuePayload,
 } from "@/lib/admin";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { REJECTION_REASONS } from "@/lib/rejection-reasons";
 import type { Json } from "@/lib/supabase/database.types";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { Button, buttonClasses } from "@/components/ui/button";
@@ -199,12 +200,15 @@ export function AdminMutationControl({
   mutation,
   label,
   reasonLabel,
+  reasonCodes = false,
   confirmationText,
   onComplete,
 }: {
   mutation: AdminMutation;
   label: string;
   reasonLabel?: string;
+  // mine-03: listing and revision rejections offer the fixed reasons; the note becomes optional with at least one.
+  reasonCodes?: boolean;
   confirmationText?: string;
   onComplete: (message: string) => void;
 }) {
@@ -230,7 +234,7 @@ export function AdminMutationControl({
     }
   }, [expanded]);
 
-  async function execute(reason?: string) {
+  async function execute(reason?: string, codes?: string[]) {
     if (!supabase || busy) return;
     setBusy(true);
     setErrorMessage("");
@@ -241,6 +245,7 @@ export function AdminMutationControl({
         p_listing_id: mutation.id,
         p_decision: mutation.decision,
         p_reason: reason,
+        p_reason_codes: codes?.length ? codes : undefined,
       }));
     } else if (mutation.kind === "revision") {
       ({ error } = await supabase.rpc("review_listing_revision", {
@@ -248,6 +253,7 @@ export function AdminMutationControl({
         p_decision: mutation.decision,
         p_expected_version: mutation.version,
         p_reason: reason,
+        p_reason_codes: codes?.length ? codes : undefined,
       }));
     } else if (mutation.kind === "store") {
       ({ error } = await supabase.rpc("review_store_application", {
@@ -290,14 +296,18 @@ export function AdminMutationControl({
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const reason = String(
-      new FormData(event.currentTarget).get("reason") ?? "",
-    ).trim();
-    if (reason.length < 3) {
-      setErrorMessage("Escribe un motivo de al menos 3 caracteres.");
+    const formData = new FormData(event.currentTarget);
+    const reason = String(formData.get("reason") ?? "").trim();
+    const codes = reasonCodes ? formData.getAll("reason_code").filter((code): code is string => typeof code === "string") : [];
+    if (codes.length && reason.length > 0 && reason.length < 3) {
+      setErrorMessage("La nota debe tener al menos 3 caracteres o quedar vacía.");
       return;
     }
-    void execute(reason);
+    if (!codes.length && reason.length < 3) {
+      setErrorMessage(reasonCodes ? "Elige al menos un motivo o escribe uno de al menos 3 caracteres." : "Escribe un motivo de al menos 3 caracteres.");
+      return;
+    }
+    void execute(reason || undefined, codes);
   }
 
   if (reasonLabel && expanded) {
@@ -306,8 +316,15 @@ export function AdminMutationControl({
         onSubmit={submit}
         className="grid gap-2 rounded-panel bg-canvas p-3"
       >
-        <Field id={reasonId} label={reasonLabel}>
-          <Textarea name="reason" required minLength={3} maxLength={500} rows={3} autoFocus />
+        {reasonCodes ? (
+          <fieldset className="grid gap-0.5">
+            <legend className="t-ui font-semibold text-ink">Motivos del rechazo</legend>
+            <p className="t-meta">Quien publica ve cada motivo como una lista para corregir, con los campos señalados.</p>
+            {REJECTION_REASONS.map((reason) => <Checkbox key={reason.code} name="reason_code" value={reason.code} label={reason.label} className="min-h-0 py-1" />)}
+          </fieldset>
+        ) : null}
+        <Field id={reasonId} label={reasonCodes ? "Nota para quien publica" : reasonLabel} optional={reasonCodes}>
+          <Textarea name="reason" required={!reasonCodes} minLength={3} maxLength={500} rows={3} autoFocus={!reasonCodes} />
         </Field>
         {errorMessage ? (
           <p ref={feedbackRef} tabIndex={-1} role="alert" className="text-meta font-semibold text-danger">
@@ -410,6 +427,7 @@ function QueueActions({
           mutation={{ kind: "listing", id, decision: "reject" }}
           label="Rechazar"
           reasonLabel="Motivo obligatorio del rechazo"
+          reasonCodes
           onComplete={onComplete}
         />
       </div>
@@ -428,6 +446,7 @@ function QueueActions({
           mutation={{ kind: "revision", id, version, decision: "reject" }}
           label="Rechazar cambios"
           reasonLabel="Motivo obligatorio del rechazo"
+          reasonCodes
           onComplete={onComplete}
         />
       </div>

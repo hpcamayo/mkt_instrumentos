@@ -21,7 +21,7 @@ const { getAccountNavigationItems, accountItemIsActive, getSellEntry } = load("l
 
 test("Particular account navigation exposes only implemented Particular destinations", () => {
   const items = getAccountNavigationItems("seller", false);
-  assert.deepEqual(items.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(items.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.equal(items.some((item) => /tienda|inventario/i.test(item.label)), false);
   assert.equal(items.filter((item) => item.label === "Alertas").length, 1);
 });

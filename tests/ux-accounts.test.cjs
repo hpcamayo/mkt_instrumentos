@@ -29,9 +29,10 @@ test("no window.confirm is left in the product; each former call asks the same q
       /body: "La reseña será final: no podrás editarla ni eliminarla libremente\."/,
     ],
     "components/listing-management-table.tsx": [
-      /title: "¿Ocultar esta publicación del marketplace\?"/,
+      // mine-13: hiding and restoring now happen at once with "Deshacer" (tests/ux-my-listings-management.test.cjs), and
+      // "Republicar" opens a draft that changes nothing public; the sale keeps its question, and withdrawing does too.
       /title: "¿Marcar esta publicación como vendida\?"/,
-      /title: "¿Crear una nueva publicación copiando esta publicación vendida\?"/,
+      /title: "¿Retirar esta publicación como vendida\?"/,
     ],
     "components/saved-search-alerts.tsx": [/title: "¿Eliminar esta alerta\?", body: "No recibirás nuevas coincidencias\."/],
   };

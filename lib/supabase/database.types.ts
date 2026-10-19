@@ -351,6 +351,7 @@ export type Database = {
           listing_id: string
           model: string | null
           owner_user_id: string
+          rejection_codes: string[] | null
           rejection_reason: string | null
           resolution_reason: string | null
           reviewed_at: string | null
@@ -374,6 +375,7 @@ export type Database = {
           listing_id: string
           model?: string | null
           owner_user_id: string
+          rejection_codes?: string[] | null
           rejection_reason?: string | null
           resolution_reason?: string | null
           reviewed_at?: string | null
@@ -397,6 +399,7 @@ export type Database = {
           listing_id?: string
           model?: string | null
           owner_user_id?: string
+          rejection_codes?: string[] | null
           rejection_reason?: string | null
           resolution_reason?: string | null
           reviewed_at?: string | null
@@ -436,6 +439,8 @@ export type Database = {
         Row: {
           archived_at: string | null
           attributes: Json | null
+          availability_checkin_at: string | null
+          availability_confirmed_at: string | null
           brand: string | null
           category: string
           city: string
@@ -449,29 +454,33 @@ export type Database = {
           hidden_source: string | null
           id: string
           instrument_type: string | null
+          listing_photo_count: number | null
           marketplace_rules_accepted_at: string | null
           model: string | null
           owner_user_id: string | null
+          paused_until: string | null
           price_pen: number | null
           published_at: string | null
           region: string
+          rejection_codes: string[] | null
           rejection_reason: string | null
           relisted_from_listing_id: string | null
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at: string | null
-          stock_state: string | null
           status: Database["public"]["Enums"]["listing_status"]
+          stock_state: string | null
           store_id: string | null
           title: string
           updated_at: string
           view_count: number | null
           whatsapp_phone: string
-          listing_photo_count: number | null
         }
         Insert: {
           archived_at?: string | null
           attributes?: Json | null
+          availability_checkin_at?: string | null
+          availability_confirmed_at?: string | null
           brand?: string | null
           category: string
           city: string
@@ -488,16 +497,18 @@ export type Database = {
           marketplace_rules_accepted_at?: string | null
           model?: string | null
           owner_user_id?: string | null
+          paused_until?: string | null
           price_pen?: number | null
           published_at?: string | null
           region?: string
+          rejection_codes?: string[] | null
           rejection_reason?: string | null
           relisted_from_listing_id?: string | null
           seller_type: Database["public"]["Enums"]["seller_type"]
           slug: string
           sold_at?: string | null
-          stock_state?: string | null
           status?: Database["public"]["Enums"]["listing_status"]
+          stock_state?: string | null
           store_id?: string | null
           title: string
           updated_at?: string
@@ -507,6 +518,8 @@ export type Database = {
         Update: {
           archived_at?: string | null
           attributes?: Json | null
+          availability_checkin_at?: string | null
+          availability_confirmed_at?: string | null
           brand?: string | null
           category?: string
           city?: string
@@ -523,16 +536,18 @@ export type Database = {
           marketplace_rules_accepted_at?: string | null
           model?: string | null
           owner_user_id?: string | null
+          paused_until?: string | null
           price_pen?: number | null
           published_at?: string | null
           region?: string
+          rejection_codes?: string[] | null
           rejection_reason?: string | null
           relisted_from_listing_id?: string | null
           seller_type?: Database["public"]["Enums"]["seller_type"]
           slug?: string
           sold_at?: string | null
-          stock_state?: string | null
           status?: Database["public"]["Enums"]["listing_status"]
+          stock_state?: string | null
           store_id?: string | null
           title?: string
           updated_at?: string
@@ -793,6 +808,54 @@ export type Database = {
           phone?: string | null
           region?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      purchase_checkins: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          asked_at: string | null
+          buyer_user_id: string
+          claim_id: string | null
+          contacted_at: string
+          created_at: string
+          id: string
+          listing_id: string
+          seller_decided_at: string | null
+          seller_decision: string | null
+          seller_user_id: string
+          store_id: string | null
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          asked_at?: string | null
+          buyer_user_id: string
+          claim_id?: string | null
+          contacted_at: string
+          created_at?: string
+          id?: string
+          listing_id: string
+          seller_decided_at?: string | null
+          seller_decision?: string | null
+          seller_user_id: string
+          store_id?: string | null
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          asked_at?: string | null
+          buyer_user_id?: string
+          claim_id?: string | null
+          contacted_at?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+          seller_decided_at?: string | null
+          seller_decision?: string | null
+          seller_user_id?: string
+          store_id?: string | null
         }
         Relationships: []
       }
@@ -1522,6 +1585,10 @@ export type Database = {
         }
         Returns: Json
       }
+      answer_purchase_checkin: {
+        Args: { p_bought: boolean; p_listing_id: string }
+        Returns: Json
+      }
       apply_email_link_action: {
         Args: { p_action: string; p_alert_id?: string; p_user_id: string }
         Returns: boolean
@@ -1574,6 +1641,14 @@ export type Database = {
         Args: { p_fields: Json; p_id: string; p_kind: string; p_photos: Json }
         Returns: string
       }
+      confirm_listing_available: {
+        Args: { p_listing_id: string }
+        Returns: Database["public"]["Tables"]["listings"]["Row"]
+      }
+      copy_owned_listing: {
+        Args: { p_listing_id: string; p_mode: string }
+        Returns: Database["public"]["Tables"]["listings"]["Row"]
+      }
       create_account_notification: {
         Args: {
           p_event_type: string
@@ -1610,6 +1685,10 @@ export type Database = {
         Args: { p_buyer_user_id: string; p_listing_id: string }
         Returns: string
       }
+      decide_purchase_checkin: {
+        Args: { p_checkin_id: string; p_confirmed: boolean }
+        Returns: Json
+      }
       delete_saved_search_alert: {
         Args: { p_alert_id: string }
         Returns: boolean
@@ -1638,6 +1717,10 @@ export type Database = {
       }
       get_account_favorites: { Args: { p_page?: number }; Returns: Json }
       get_account_follows: {
+        Args: never
+        Returns: Json
+      }
+      get_account_pendientes: {
         Args: never
         Returns: Json
       }
@@ -1712,6 +1795,10 @@ export type Database = {
         Args: { p_days?: number; p_limit?: number }
         Returns: Json
       }
+      get_listing_statistics: {
+        Args: { p_days?: number }
+        Returns: Json
+      }
       get_marketplace_admin_analytics: {
         Args: { p_days?: number }
         Returns: Json
@@ -1768,6 +1855,10 @@ export type Database = {
           p_subject_store_id?: string
           p_subject_user_id?: string
         }
+        Returns: Json
+      }
+      get_purchase_checkin: {
+        Args: { p_listing_id: string }
         Returns: Json
       }
       get_shared_favorite_list: {
@@ -1851,6 +1942,10 @@ export type Database = {
           expected_status: Database["public"]["Enums"]["listing_status"]
           listing_id: string
         }
+        Returns: boolean
+      }
+      listing_is_paused: {
+        Args: { p_paused_until: string }
         Returns: boolean
       }
       listing_is_public: { Args: { p_listing_id: string }; Returns: boolean }
@@ -2055,7 +2150,12 @@ export type Database = {
         }
       }
       review_listing: {
-        Args: { p_decision: string; p_listing_id: string; p_reason?: string }
+        Args: {
+          p_decision: string
+          p_listing_id: string
+          p_reason?: string
+          p_reason_codes?: string[]
+        }
         Returns: {
           archived_at: string | null
           attributes: Json | null
@@ -2103,6 +2203,7 @@ export type Database = {
           p_decision: string
           p_expected_version: number
           p_reason?: string
+          p_reason_codes?: string[]
           p_revision_id: string
         }
         Returns: {
@@ -2241,6 +2342,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_owned_listing_price: {
+        Args: { p_listing_id: string; p_price_pen: number }
+        Returns: Database["public"]["Tables"]["listings"]["Row"]
+      }
+      set_owned_listings_lifecycle_bulk: {
+        Args: { p_action: string; p_listing_ids: string[] }
+        Returns: Json
+      }
+      set_owned_listings_pause: {
+        Args: { p_until: string | null }
+        Returns: Json
       }
       set_saved_search_alert_status: {
         Args: { p_active: boolean; p_alert_id: string }

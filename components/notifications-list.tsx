@@ -83,6 +83,11 @@ export function NotificationsList({
           ? `/mi-cuenta/transacciones/${transactionReference}`
           : notification.event_type === "listing_alert_match"
           ? listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/alertas"
+          // ux my-listings: these are answered from Pendientes on the account home; rejections open the edit form.
+          : MY_LISTINGS_HOME_EVENTS.has(notification.event_type)
+          ? "/mi-cuenta"
+          : (notification.event_type === "listing_rejected" || notification.event_type === "listing_revision_rejected") && notification.listing_id
+          ? `/mi-cuenta/publicaciones/${notification.listing_id}/editar`
           : notification.event_type === "listing_price_drop" && notification.listing_id
           ? `/mi-cuenta/favoritos/${notification.listing_id}`
           : isQuestionNotification(notification.event_type) && notification.listing_id
@@ -120,6 +125,8 @@ export function NotificationsList({
   );
 }
 
+const MY_LISTINGS_HOME_EVENTS = new Set(["listing_purchase_check", "listing_buyer_reported_purchase", "listing_availability_checkin"]);
+
 function notificationLabel(eventType: string) {
   return ({
     listing_price_drop: "Bajó de precio un favorito",
@@ -141,6 +148,12 @@ function notificationLabel(eventType: string) {
     listing_question_asked: "Te hicieron una pregunta",
     listing_question_answered: "Respondieron tu pregunta",
     listing_back_in_stock: "Volvió a estar disponible",
+    // ux my-listings
+    listing_purchase_check: "¿Lo compraste?",
+    listing_buyer_reported_purchase: "Te reportaron una compra",
+    listing_availability_checkin: "¿Sigue disponible?",
+    listing_purchase_confirmation_reminder: "Confirma una compra",
+    listing_review_reminder: "Tu reseña vence pronto",
   } as Record<string, string>)[eventType] ?? "Actualización de tu cuenta";
 }
 

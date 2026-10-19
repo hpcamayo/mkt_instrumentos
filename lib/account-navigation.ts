@@ -40,6 +40,7 @@ export function getAccountNavigationItems(
     { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
     { href: "/mi-cuenta/publicaciones", label: "Mis publicaciones", icon: "listings" },
     { href: "/mi-cuenta/publicar", label: "Publicar", icon: "publish" },
+    { href: "/mi-cuenta/estadisticas", label: "Estadísticas", icon: "analytics" },
     ...sharedAccountItems,
   ];
 }

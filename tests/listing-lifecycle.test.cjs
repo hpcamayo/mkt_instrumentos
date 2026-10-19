@@ -62,7 +62,8 @@ test("account management exposes lifecycle and pending-revision states", () => {
   assert.match(table, /Cambios en revisión/);
   assert.match(table, /Ocultada por moderación/);
   assert.match(table, /Marcar vendida/);
-  assert.match(table, /Republicar copia/);
+  // mine-10: relisting a sold listing ("Republicar") now opens a prefilled draft; the sold record never changes.
+  assert.match(table, />Republicar</);
   assert.match(table, /Enviar nuevamente/);
   assert.match(edit, /la versión pública anterior sigue visible/);
   assert.match(edit, /\["title", "category", "instrument_type", "brand", "model", "condition"\]/);

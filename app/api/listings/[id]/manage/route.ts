@@ -54,7 +54,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ ...capability, folder: `${userData.user.id}/listing-edits/${id}/${capability.attemptId}`, bucket: "listing-edit-photos" });
   }
 
-  if (["hide", "restore", "sold"].includes(body.action)) {
+  if (["hide", "restore", "sold", "withdraw_sold"].includes(body.action)) {
     const { data, error } = await supabase.rpc("set_owned_listing_lifecycle", {
       p_listing_id: id,
       p_action: body.action,
@@ -63,9 +63,24 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ ok: true, listing: data });
   }
 
-  if (body.action === "relist") {
-    const { data, error } = await supabase.rpc("relist_sold_listing", {
+  // mine-10 / shop-08: "Republicar" (a sold listing) and "Duplicar" copy the listing into a new draft with its photos;
+  // the owner reviews it on the edit page before sending it.
+  if (body.action === "relist" || body.action === "duplicate") {
+    const { data, error } = await supabase.rpc("copy_owned_listing", {
       p_listing_id: id,
+      p_mode: body.action,
+    });
+    if (error || !data) return rpcFailure(error?.message ?? "");
+    return NextResponse.json({ ok: true, id: data.id, listing: data });
+  }
+
+  // mine-04: one price from the list, with the immediate-edit rules (whole soles).
+  if (body.action === "price") {
+    const price = parseWholeSolPrice(body.price_pen);
+    if (price === null) return failure("Ingresa un precio válido en soles enteros.");
+    const { data, error } = await supabase.rpc("set_owned_listing_price", {
+      p_listing_id: id,
+      p_price_pen: price,
     });
     if (error) return rpcFailure(error.message);
     return NextResponse.json({ ok: true, listing: data });
@@ -298,6 +313,12 @@ function rpcFailure(message: string) {
   if (message.includes("INVENTORY_MANAGED_LISTING")) {
     return failure("Esta publicación está vinculada a Inventario. Registra la venta desde Inventario.", 409);
   }
+  if (message.includes("LISTING_PRICE_INVALID")) return failure("Ingresa un precio válido en soles enteros.", 409);
+  if (message.includes("LISTING_SOLD_INVALID")) return failure("Solo una publicación publicada u ocultada por ti puede marcarse como vendida.", 409);
+  if (message.includes("LISTING_WITHDRAW_INVALID")) return failure("Solo una publicación que aún no se publica puede retirarse como vendida.", 409);
+  if (message.includes("LISTING_RELIST_INVALID")) return failure("Solo se puede republicar una publicación vendida.", 409);
+  if (message.includes("LISTING_COPY_INVALID")) return failure("Esta publicación no se puede duplicar.", 409);
+  if (message.includes("STORE_NOT_ELIGIBLE")) return failure("Tu tienda no puede recibir publicaciones nuevas en este momento.", 409);
   if (message.includes("SOLD_LISTING_IMMUTABLE")) {
     return failure("La publicación vendida es un registro histórico y no puede modificarse.", 409);
   }

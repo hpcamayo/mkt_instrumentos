@@ -1,5 +1,6 @@
 import Link from "next/link";
-import type { TransactionCenterItem } from "@/lib/transactions";
+import { PenLine } from "lucide-react";
+import { reviewDueLabel, type TransactionCenterItem } from "@/lib/transactions";
 import { buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusTag, Tag } from "@/components/ui/tag";
@@ -29,7 +30,10 @@ function TransactionSection({ title, description, items, action = false }: { tit
   return <section className="grid gap-3" aria-labelledby={`transaction-${title.toLowerCase().replaceAll(" ", "-")}`}>
     <div><h2 id={`transaction-${title.toLowerCase().replaceAll(" ", "-")}`} className="t-section text-ink">{title}</h2><p className="mt-1 t-ui text-ink-2">{description}</p></div>
     <ol className="grid gap-3">
-      {items.map((item) => (
+      {items.map((item) => {
+        // A calm, day-level reminder ("vence mañana"), no countdown: only while the own review is still open.
+        const due = item.status === "verified" && item.review_deadline && !item.own_review_submitted ? reviewDueLabel(item.review_deadline) : null;
+        return (
         <li key={`${item.claim_id}-${item.reference_id}`} className={action ? "rounded-panel border border-subtle bg-warning-tint p-5" : "rounded-panel border border-subtle bg-white p-5"}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
@@ -48,14 +52,20 @@ function TransactionSection({ title, description, items, action = false }: { tit
                   {item.own_review_submitted ? " · Tu reseña fue enviada" : ""}
                 </p>
               ) : null}
-              {item.status === "verified" && item.review_deadline && !item.own_review_submitted && new Date(item.review_deadline).getTime() > Date.now() ? <p className="mt-2 t-meta font-semibold text-ink">Tienes una reseña pendiente</p> : null}
+              {due ? (
+                <p className="mt-2 flex items-center gap-1.5 t-ui text-ink">
+                  <PenLine aria-hidden className="h-4 w-4 shrink-0" />
+                  <span className="font-semibold">{due}</span>
+                </p>
+              ) : null}
             </div>
             <Link href={`/mi-cuenta/transacciones/${item.reference_id}`} className={buttonClasses({ variant: "secondary", className: "shrink-0" })}>
-              {action ? "Responder" : "Ver detalle"}
+              {due ? <>Reseñar<span className="sr-only"> {item.title}</span></> : action ? "Responder" : "Ver detalle"}
             </Link>
           </div>
         </li>
-      ))}
+        );
+      })}
     </ol>
   </section>;
 }

@@ -40,6 +40,7 @@ function helper(context = {}, response = { data: aggregate(), error: null }) {
 
 const { parseAccountAnalytics, parseAnalyticsWindow } = helper();
 const { AccountAnalyticsMetrics } = load("components/account-analytics.tsx");
+const source = (file) => fs.readFileSync(file, "utf8");
 const Link = ({ href, children, ...props }) => React.createElement("a", { href, ...props }, children);
 
 test("analytics periods allow only lifetime, seven and thirty days", () => {
@@ -160,8 +161,10 @@ function statisticsPage(context, metrics = aggregate(30)) {
       "next/link": { default: Link },
       "next/navigation": { redirect: (destination) => { throw new Error(`redirect:${destination}`); } },
       "@/lib/account-context": { getAccountContext: async () => context },
-      "@/lib/account-analytics": { parseAnalyticsWindow, getAccountAnalytics: async (days) => { calls.push(days); return metrics; } },
+      "@/lib/account-analytics": { parseAnalyticsWindow, topListings: () => [], getAccountAnalytics: async (days) => { calls.push(days); return metrics; }, getListingStatistics: async () => null },
       "@/components/account-analytics": { AccountAnalyticsMetrics },
+      "@/components/statistics/listing-ranking": { ListingRanking: () => null, ContactsWithoutSale: () => null },
+      "@/components/statistics/weekly-trend": { WeeklyTrend: () => null },
     }).default,
   };
 }
@@ -185,31 +188,45 @@ test("Store stats render one aggregate and genuine period links with active stat
   assert.match(html, /<a(?=[^>]*href="\/mi-cuenta\/tienda\/estadisticas\?periodo=7")(?=[^>]*aria-current="page")[^>]*>/);
   assert.match(html, /periodo=0/);
   assert.match(html, /periodo=30/);
-  assert.match(html, /href="\/mi-cuenta\/tienda\/inventario"/);
+  // shop-07: per-listing numbers live in this page's ranking, not in the inventory (which has none).
+  assert.doesNotMatch(html, /href="\/mi-cuenta\/tienda\/inventario"/);
+  assert.match(html, /qué publicaciones reciben más vistas y contactos/);
 });
 
-test("Particular dashboard queries recent five but displays complete owner RPC summary", async () => {
+test("Particular home opens on Pendientes, keeps the recent five and leaves metrics to Estadísticas", async () => {
   const queries = [];
   const query = new Proxy({}, { get: (_, name) => (...args) => {
     queries.push([name, ...args]);
     return name === "limit" ? Promise.resolve({ data: Array.from({ length: 5 }, (_, i) => ({ id: `recent-${i}`, title: `Reciente ${i}`, status: "pending" })) }) : query;
   } });
-  let aggregates = 0;
+  const rpcs = [];
+  const pendientes = {
+    buyer: { pending_claims: [], reviews_due: [], purchase_checks: [], price_drops: 2, alert_matches: 0 },
+    seller: { rejected: [{ listing_id: "l1", title: "Bajo", reason: "Pocas fotos", kind: "listing" }], admin_hidden: [], drafts: [], buyer_reports: [], availability: [], unattributed: [], paused_until: null },
+    store: null,
+  };
+  const PendientesList = ({ items, title }) => React.createElement("section", null, React.createElement("h2", null, title), items.map((item) => React.createElement("p", { key: item.key }, item.title)));
   const page = load("app/mi-cuenta/page.tsx", {
     "next/link": { default: Link },
-    "lucide-react": { AlertTriangle: () => null, CheckCircle2: () => null, ExternalLink: () => null },
-    "@/lib/account-context": { getAccountContext: async () => ({ user: { id: "owner", email: "owner@example.test" }, profile: { account_type: "seller", full_name: "Dueño" }, store: null, supabase: { from: () => query } }) },
+    "lucide-react": { CheckCircle2: () => null, Circle: () => null, ExternalLink: () => null },
+    "@/lib/account-context": { getAccountContext: async () => ({ user: { id: "owner", email: "owner@example.test" }, profile: { account_type: "seller", full_name: "Dueño" }, store: null, supabase: { from: () => query, rpc: async (name) => { rpcs.push(name); return { data: pendientes, error: null }; } } }) },
     "@/lib/account-ui": { listingStatusLabel: (value) => value },
     "@/lib/auth/profile": { isSellerProfileComplete: () => true },
-    "@/lib/account-analytics": { getAccountAnalytics: async (days) => { assert.equal(days, 0); aggregates++; return aggregate(); } },
-    "@/components/account-analytics": { AccountAnalyticsMetrics },
+    "@/lib/pendientes": load("lib/pendientes.ts"),
+    "@/lib/payment-methods": { assistedCommerceEnabled: () => false },
+    "@/components/pendientes-list": { PendientesList },
+    "@/components/vacation-mode": { VacationMode: () => React.createElement("p", null, "Modo vacaciones") },
   }).default;
   const html = renderToStaticMarkup(await page({ searchParams: Promise.resolve({}) }));
-  assert.equal(aggregates, 1);
+  assert.deepEqual(rpcs, ["get_account_pendientes"]);
   assert.ok(queries.some(([method, value]) => method === "limit" && value === 5));
-  assert.match(html, />12</);
   assert.equal((html.match(/Reciente \d/g) ?? []).length, 5);
-  assert.doesNotMatch(html, />En revisión</);
+  assert.match(html, /<h2>Pendientes<\/h2>/);
+  assert.match(html, /Corrige tu publicación rechazada/);
+  assert.match(html, /2 favoritos bajaron de precio/);
+  assert.match(html, /href="\/mi-cuenta\/estadisticas"/);
+  assert.match(html, /Modo vacaciones/);
+  assert.doesNotMatch(source("app/mi-cuenta/page.tsx"), /AccountAnalyticsMetrics|getAccountAnalytics/);
 });
 
 test("management table renders actual per-listing counts, first publication and sold history", () => {
@@ -226,7 +243,8 @@ test("management table renders actual per-listing counts, first publication and 
   assert.match(html, /Marcada vendida:/);
   assert.match(html, />123</);
   assert.match(html, />7</);
-  assert.match(html, /Republicar copia/);
+  // mine-10: "Republicar" opens a prefilled draft (copy_owned_listing) instead of publishing a copy.
+  assert.match(html, />Republicar</);
   const missing = renderToStaticMarkup(React.createElement(ListingManagementTable, { listings: [{ ...listing, published_at: null, analytics: undefined }], emptyMessage: "Vacío" }));
   assert.match(missing, /Aún no publicada/);
   assert.equal((missing.match(/>No disponible</g) ?? []).length, 3);
@@ -243,9 +261,9 @@ test("both inventory pages use one grouped owner aggregate rather than per-listi
   }
 });
 
-test("analytics section is only exposed for Store Owners with a store", () => {
+test("analytics section: Particulares get their own statistics (mine-11); Store Owners only with a store", () => {
   const { getAccountNavigationItems } = load("lib/account-navigation.ts");
-  assert.equal(getAccountNavigationItems("seller", false).some((item) => item.icon === "analytics"), false);
+  assert.deepEqual(getAccountNavigationItems("seller", false).filter((item) => item.icon === "analytics").map((item) => item.href), ["/mi-cuenta/estadisticas"]);
   assert.equal(getAccountNavigationItems("store_owner", false).some((item) => item.icon === "analytics"), false);
-  assert.equal(getAccountNavigationItems("store_owner", true).filter((item) => item.icon === "analytics").length, 1);
+  assert.deepEqual(getAccountNavigationItems("store_owner", true).filter((item) => item.icon === "analytics").map((item) => item.href), ["/mi-cuenta/tienda/estadisticas"]);
 });
