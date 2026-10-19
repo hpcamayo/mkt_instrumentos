@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { InventoryCategoryChips } from "@/components/inventory/inventory-category-chips";
+import { InventoryDemand } from "@/components/inventory/inventory-demand";
+import { InventorySettingsButton } from "@/components/inventory/inventory-settings";
+import { InventoryShortcuts } from "@/components/inventory/inventory-shortcuts";
+import { InventoryViews } from "@/components/inventory/inventory-views";
 import { InventorySummaryTiles } from "@/components/inventory/inventory-summary";
 import { InventoryTable } from "@/components/inventory/inventory-table";
 import { InventoryToolbar } from "@/components/inventory/inventory-toolbar";
@@ -18,11 +22,15 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   activeFilterCount,
+  exportViewHref,
   getInventoryCategoryCounts,
   getInventoryPage,
   getInventorySummary,
+  getInventoryViews,
   getLinkedItemsByListing,
+  getOutOfStockDemand,
   inventoryHref,
+  pageRange,
   parseInventoryFilters,
   type InventorySummary,
   getLastImportErrors,
@@ -35,6 +43,10 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 // Import wizard (STORE-2).
 const IMPORT_HREF = "/mi-cuenta/tienda/inventario/importar";
+// Effortless Laria, inventory batch: the counter (big-10), reorder (stock-07) and prices (stock-15).
+const COUNTER_HREF = "/mi-cuenta/tienda/inventario/mostrador";
+const REORDER_HREF = "/mi-cuenta/tienda/inventario/reponer";
+const PRICES_HREF = "/mi-cuenta/tienda/inventario/precios";
 
 export default async function StoreInventoryPage({ searchParams }: { searchParams?: SearchParams }) {
   const { profile, store, supabase } = await getAccountContext();
@@ -52,10 +64,15 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
 async function InventoryView({ summary, storeName, params }: { summary: InventorySummary; storeName: string; params: Record<string, string | string[] | undefined> }) {
   const { supabase } = await getAccountContext();
   const { filters, cursor } = parseInventoryFilters(params);
-  const [page, lastImport, categoryCounts] = supabase
-    ? await Promise.all([getInventoryPage(supabase, filters, cursor), getLastImportErrors(supabase), getInventoryCategoryCounts(supabase)])
-    : [null, null, null];
+  const [page, lastImport, categoryCounts, views, demand] = supabase
+    ? await Promise.all([
+      getInventoryPage(supabase, filters, cursor), getLastImportErrors(supabase), getInventoryCategoryCounts(supabase),
+      getInventoryViews(supabase), cursor || activeFilterCount(filters) || filters.q ? Promise.resolve([]) : getOutOfStockDemand(supabase),
+    ])
+    : [null, null, null, [], []];
   const filtered = activeFilterCount(filters) > 0 || Boolean(filters.q);
+  // stock-19: SKU pages keep the list they were opened from, for Anterior/Siguiente and the way back.
+  const listQuery = inventoryHref(filters, cursor).split("?")[1] ?? "";
   return (
     <section className="rounded-panel border border-subtle bg-white">
       <PageHeader
@@ -65,6 +82,7 @@ async function InventoryView({ summary, storeName, params }: { summary: Inventor
         meta={`${storeName} · Stock informado por tu tienda`}
         actions={summary.can_write ? (
           <>
+            <Link href={COUNTER_HREF} className={buttonClasses({ variant: "secondary" })}>Mostrador</Link>
             {IMPORT_HREF ? <Link href={IMPORT_HREF} className={buttonClasses({ variant: "secondary" })}>Importar desde Excel</Link> : null}
             <NewSkuButton />
           </>
@@ -77,12 +95,14 @@ async function InventoryView({ summary, storeName, params }: { summary: Inventor
         </div>
       ) : null}
       <InventorySummaryTiles summary={summary} importErrors={lastImport?.errors ?? null} importHref={lastImport?.href} />
+      <InventoryDemand rows={demand} />
       <InventoryToolbar filters={filters} />
+      <InventoryViews filters={filters} views={views} canWrite={summary.can_write} />
       <InventoryCategoryChips filters={filters} counts={categoryCounts} />
       {!page ? (
         <div className="p-5"><Notice tone="danger" role="alert">No se pudo cargar el inventario. Vuelve a intentarlo en unos minutos.</Notice></div>
       ) : page.items.length ? (
-        <InventoryTable key={inventoryHref(filters, cursor)} items={page.items} canWrite={summary.can_write} />
+        <InventoryTable key={inventoryHref(filters, cursor)} items={page.items} canWrite={summary.can_write} total={page.total} filters={filters} listQuery={listQuery} />
       ) : filtered || cursor ? (
         <EmptyState className="rounded-none border-0" title="Ningún SKU coincide con la búsqueda" description="Prueba con otro SKU o nombre, o quita los filtros." actions={<Link href="/mi-cuenta/tienda/inventario" className={buttonClasses({ variant: "secondary" })}>Ver todo el inventario</Link>} />
       ) : (
@@ -92,17 +112,47 @@ async function InventoryView({ summary, storeName, params }: { summary: Inventor
           description="Crea un SKU por cada instrumento o equipo que vendes y registra cuántas unidades tienes. También puedes controlar el stock de una publicación existente desde Publicaciones."
         />
       )}
-      <footer className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-subtle p-5 t-meta">
-        <p>
-          Exportar {filtered ? "todo el inventario" : "inventario"}:{" "}
-          <a href="/api/store/inventory/export?format=xlsx" className="link font-semibold">Excel</a>
-          {" · "}
-          <a href="/api/store/inventory/export?format=csv" className="link font-semibold">CSV</a>
-        </p>
-        <nav aria-label="Páginas del inventario" className="flex gap-4">
-          {cursor ? <Link href={inventoryHref(filters)} className="link font-semibold">Volver al inicio</Link> : null}
-          {page?.nextCursor ? <Link href={inventoryHref(filters, page.nextCursor)} className="link font-semibold">Siguiente página</Link> : null}
-        </nav>
+      <footer className="grid gap-3 border-t border-subtle p-5 t-meta">
+        {page && page.total > 0 ? (
+          <nav aria-label="Páginas del inventario" className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+            <p className="t-ui font-semibold text-ink tabular-nums">{pageRange(page)} SKU</p>
+            <div className="flex gap-4">
+              {page.hasPrev ? <Link href={inventoryHref(filters, page.prevCursor)} rel="prev" className="link font-semibold">Anterior</Link> : null}
+              {page.nextCursor ? <Link href={inventoryHref(filters, page.nextCursor)} rel="next" className="link font-semibold">Siguiente</Link> : null}
+            </div>
+          </nav>
+        ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+          <p>
+            {filtered ? (
+              <>
+                Exportar esta vista:{" "}
+                <a href={exportViewHref(filters, "xlsx")} className="link font-semibold">Excel</a>
+                {" · "}
+                <a href={exportViewHref(filters, "csv")} className="link font-semibold">CSV</a>
+                {" · "}
+                <a href={exportViewHref(filters, "xlsx", true)} className="link font-semibold">Excel con datos de la publicación</a>
+                <br />
+                Todo el inventario:{" "}
+              </>
+            ) : "Exportar inventario: "}
+            <a href="/api/store/inventory/export?format=xlsx" className="link font-semibold">Excel</a>
+            {" · "}
+            <a href="/api/store/inventory/export?format=csv" className="link font-semibold">CSV</a>
+            {filtered ? null : (
+              <>
+                {" · "}
+                <a href="/api/store/inventory/export?format=xlsx&publicacion=1" className="link font-semibold">Excel con datos de la publicación</a>
+              </>
+            )}
+          </p>
+          <p className="flex flex-wrap gap-x-4 gap-y-2">
+            <Link href={REORDER_HREF} className="link font-semibold">Reposición</Link>
+            <Link href={PRICES_HREF} className="link font-semibold">Precios</Link>
+            {summary.can_write ? <InventorySettingsButton preferences={summary.preferences ?? null} /> : null}
+            <InventoryShortcuts />
+          </p>
+        </div>
       </footer>
     </section>
   );

@@ -62,14 +62,23 @@ export function paymentMethodText(item: PublicPaymentMethod) {
   return item.provider_label ? `${label} (${item.provider_label})` : label;
 }
 
-export type PurchaseRequest = { methods: PublicPaymentMethod[]; sku: string | null };
+// maxQuantity (stock-23): the most units the buyer can ask for, what is available up to 10. Never shown as a number.
+export type PurchaseRequest = { methods: PublicPaymentMethod[]; sku: string | null; maxQuantity: number };
+
+export const PURCHASE_MAX_QUANTITY = 10;
+
+export function clampPurchaseQuantity(value: unknown, max: number) {
+  const top = Math.max(1, Math.min(Math.trunc(max) || 1, PURCHASE_MAX_QUANTITY));
+  return typeof value === "number" && Number.isInteger(value) ? Math.max(1, Math.min(value, top)) : 1;
+}
 
 export function readPurchaseRequest(value: unknown): PurchaseRequest | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
   const methods = readPublicPaymentMethods(record.methods);
   if (!methods.length) return null;
-  return { methods, sku: typeof record.sku === "string" && record.sku ? record.sku : null };
+  const max = typeof record.max_quantity === "number" ? record.max_quantity : 1;
+  return { methods, sku: typeof record.sku === "string" && record.sku ? record.sku : null, maxQuantity: clampPurchaseQuantity(max, PURCHASE_MAX_QUANTITY) };
 }
 
 // Pilot switch. Off unless the deployment sets LARIA_ASSISTED_COMMERCE=1, so merging this code changes nothing for
@@ -81,19 +90,63 @@ export function assistedCommerceEnabled() {
 }
 
 // The prefilled "Solicitar compra" message (design §11.1): title, SKU when the listing is linked to inventory,
-// quantity and link. Quantity starts at 1; the buyer can change it in WhatsApp before sending.
-export function buildPurchaseMessage(listing: { title: string; slug: string }, sku: string | null) {
+// quantity and link. The buyer picks the quantity next to the button (stock-23) and can still change it in WhatsApp.
+export function buildPurchaseMessage(listing: { title: string; slug: string }, sku: string | null, quantity = 1) {
   return [
     `Hola, quiero comprar "${listing.title}" que vi en Laria.`,
     ...(sku ? [`SKU: ${sku}`] : []),
-    "Cantidad: 1",
+    `Cantidad: ${clampPurchaseQuantity(quantity, PURCHASE_MAX_QUANTITY)}`,
     absoluteUrl(`/instrumentos/${listing.slug}`),
     "¿Me confirmas la disponibilidad y cómo coordinamos el pago y la entrega?",
   ].join("\n");
 }
 
-export function buildPurchaseWhatsAppUrl(phone: string, listing: { title: string; slug: string }, sku: string | null) {
-  return whatsAppUrl(phone, buildPurchaseMessage(listing, sku));
+export function buildPurchaseWhatsAppUrl(phone: string, listing: { title: string; slug: string }, sku: string | null, quantity = 1) {
+  return whatsAppUrl(phone, buildPurchaseMessage(listing, sku, quantity));
+}
+
+// The same link with another quantity, for the stepper (stock-23): the link opens WhatsApp at once (talk-03).
+export function withPurchaseQuantity(href: string, quantity: number) {
+  return href.replace(/Cantidad%3A%20\d+/, `Cantidad%3A%20${clampPurchaseQuantity(quantity, PURCHASE_MAX_QUANTITY)}`);
+}
+
+// ------------------------------------------------------------------ stock-05 ready-made replies
+
+export type ReplyStore = { name: string; address: string | null; district: string | null; city: string | null; pickup_hours: string | null };
+export type ReplyMethod = { method: PaymentMethod; provider_label: string | null; holder_name: string | null };
+export type ReadyReply = { shortcut: string; title: string; text: string };
+
+// Copyable WhatsApp replies for purchase requests, filled with what the store already told Laria: its approved
+// methods, the account holder, the pickup address and hours. Like Laria itself they carry no numbers, accounts or
+// links (D-7): the store adds those in the chat. "[equipo]" is left for the owner to fill, as WhatsApp Business
+// quick replies are fixed text.
+export function readyReplies(store: ReplyStore, methods: ReplyMethod[]): ReadyReply[] {
+  const place = [store.address, store.district, store.city].filter(Boolean).join(", ");
+  const hours = store.pickup_hours ? ` Nuestro horario: ${store.pickup_hours}.` : "";
+  const accepted = methods.map((entry) => paymentMethodText(entry).toLowerCase());
+  const list = accepted.length > 1 ? `${accepted.slice(0, -1).join(", ")} o ${accepted[accepted.length - 1]}` : accepted[0] ?? "";
+  const replies: ReadyReply[] = [
+    {
+      shortcut: "/disponible",
+      title: "Sí, está disponible",
+      text: `Hola, gracias por escribir a ${store.name}. Sí, tenemos [equipo] disponible.${list ? ` Puedes pagar con ${list}.` : ""} ¿Cómo prefieres coordinar el pago y la entrega?`,
+    },
+  ];
+  for (const entry of methods) {
+    const holder = entry.holder_name ? ` a nombre de ${entry.holder_name}` : "";
+    if (entry.method === "yape_plin") {
+      replies.push({ shortcut: "/yape", title: `Para pagar por ${entry.provider_label ?? "Yape o Plin"}`, text: `Para pagar por ${entry.provider_label ?? "Yape o Plin"}, te paso el número${holder} en este chat. Cuando pagues, envíanos la captura y te confirmamos tu pedido.` });
+    } else if (entry.method === "link_de_pago") {
+      replies.push({ shortcut: "/enlace", title: "Para pagar con enlace", text: `Te enviamos por este chat un enlace de pago${entry.provider_label ? ` de ${entry.provider_label}` : ""}${holder}. Al completarlo, te confirmamos tu pedido.` });
+    } else if (entry.method === "pos_tarjeta_al_recoger") {
+      replies.push({ shortcut: "/tarjeta", title: "Pago con tarjeta al recoger", text: `Puedes pagar con tarjeta al recoger${place ? ` en ${place}` : " en nuestra tienda"}.${hours}` });
+    } else if (entry.method === "efectivo_al_recoger") {
+      replies.push({ shortcut: "/efectivo", title: "Pago en efectivo al recoger", text: `Puedes pagar en efectivo al recoger${place ? ` en ${place}` : " en nuestra tienda"}.${hours}` });
+    }
+  }
+  if (place) replies.push({ shortcut: "/recojo", title: "Dónde recoger", text: `Puedes recogerlo en ${place}.${hours} Te esperamos.` });
+  replies.push({ shortcut: "/agotado", title: "Ya no está disponible", text: "Gracias por escribirnos. Por ahora no tenemos [equipo]; te avisamos por aquí apenas vuelva a llegar." });
+  return replies;
 }
 
 // Database errors read "PAYMENT_CODE: mensaje en español". Only those known messages reach the person; anything else

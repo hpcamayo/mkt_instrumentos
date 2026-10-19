@@ -48,12 +48,13 @@ Merge order (by migration slot): find (#27), listing (#24), accounts (#28), sell
   allowed only my listings' five types and one nonsense value: every other notification and e-mail would have failed.
 - **Decision.** One helper for every batch: the listing batch's `laria_private.ux_extend_text_check(table,
   constraint, column, values)`, which now evaluates the list instead of reading its text, so both forms read the same.
-  My listings' `ux_add_check_values` is gone and accounts' two event-type lists use the shared helper (its own reader
-  stays for the e-mail context keys). `tests/ux-effortless-integration.sql` copies each check onto a scratch table and
+  My listings' `ux_add_check_values` is gone, accounts' two event-type lists use the shared helper (its own reader
+  stays for the e-mail context keys), and so does inventory's `store_stock_summary`, whose rebuild expected the
+  `ARRAY[` form and stopped the migration on the other one. `tests/ux-effortless-integration.sql` copies each check onto a scratch table and
   inserts every known type, so a batch that drops one fails the suite whatever form the list is printed in.
 - **Files.** `supabase/migrations/20261102120500_ux_listing_registry.sql`, `20261103130000_ux_accounts_saving.sql`,
   `20261105120000_ux_my_listings_lifecycle.sql`, `20261105120100_ux_my_listings_reminders.sql`,
-  `tests/ux-effortless-integration.sql`, `docs/database.md`.
+  `20261107130100_ux_inventory_undo_and_bulk.sql`, `tests/ux-effortless-integration.sql`, `docs/database.md`.
 
 ## Fixed at integration
 

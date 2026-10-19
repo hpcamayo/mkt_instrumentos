@@ -94,6 +94,8 @@ export function NotificationsList({
           ? `/instrumentos/${notification.listing_id}#preguntas`
           : notification.event_type === "listing_back_in_stock" && notification.listing_id
           ? `/instrumentos/${notification.listing_id}`
+          : notification.event_type === "store_stock_summary"
+          ? "/mi-cuenta/tienda/inventario?stock=low"
           : notification.store_id && notification.event_type.startsWith("store_")
           ? "/mi-cuenta/tienda"
           : notification.store_id
@@ -140,6 +142,8 @@ function notificationLabel(eventType: string) {
     store_rejected: "Solicitud rechazada",
     store_verified: "Tienda verificada",
     store_verification_revoked: "Verificación revocada",
+    // Effortless Laria, inventory batch, stock-06.
+    store_stock_summary: "Resumen de stock",
     transaction_confirmation_requested: "Confirma una compra",
     transaction_confirmed: "Transacción confirmada",
     transaction_declined: "Confirmación rechazada",

@@ -1,6 +1,7 @@
 import { FavoriteButton } from "@/components/favorite-button";
 import { SafetyLine } from "@/components/listing/contact-extras";
 import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
+import { PurchaseRequestLink } from "@/components/payment/purchase-request-link";
 import { buttonClasses } from "@/components/ui/button";
 import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
 import { cn } from "@/lib/utils";
@@ -14,14 +15,19 @@ import { cn } from "@/lib/utils";
 // the purchase message; it is still the one WhatsApp contact, recorded with the purchase intent.
 // Effortless Laria: the line under it is the page's one limitation statement with "Cómo comprar seguro" (list-02), and
 // `safety` shows the safety sheet once before the first contact about something expensive or a purchase (talk-04).
-export function ContactModule({ listingId, href, purchase = false, safety = false, className }: { listingId: string; href: string; purchase?: boolean; safety?: boolean; className?: string }) {
+// stock-23 (inventory batch): a purchase request for a listing with more than one unit available asks how many first.
+export function ContactModule({ listingId, href, purchase = false, maxQuantity = 1, safety = false, className }: { listingId: string; href: string; purchase?: boolean; maxQuantity?: number; safety?: boolean; className?: string }) {
   return (
     <div className={cn("contact-bar grid gap-2 lg:gap-3", className)}>
       <div className="flex items-center gap-2 lg:flex-col lg:items-stretch lg:gap-3">
-        <WhatsAppContactLink href={href} listingId={listingId} intent={purchase ? "purchase" : undefined} safety={safety} className={buttonClasses({ size: "lg", className: "min-w-0 flex-1 px-3 text-[16px] min-[400px]:px-5 min-[400px]:text-[18px] lg:w-full lg:flex-none" })}>
-          <WhatsAppGlyph />
-          {purchase ? "Solicitar compra" : "Contactar por WhatsApp"}
-        </WhatsAppContactLink>
+        {purchase && maxQuantity > 1 ? (
+          <PurchaseRequestLink href={href} listingId={listingId} maxQuantity={maxQuantity} safety={safety} className={buttonClasses({ size: "lg", className: "min-w-0 flex-1 px-3 text-[16px] min-[400px]:px-5 min-[400px]:text-[18px] lg:w-full lg:flex-none" })} />
+        ) : (
+          <WhatsAppContactLink href={href} listingId={listingId} intent={purchase ? "purchase" : undefined} safety={safety} className={buttonClasses({ size: "lg", className: "min-w-0 flex-1 px-3 text-[16px] min-[400px]:px-5 min-[400px]:text-[18px] lg:w-full lg:flex-none" })}>
+            <WhatsAppGlyph />
+            {purchase ? "Solicitar compra" : "Contactar por WhatsApp"}
+          </WhatsAppContactLink>
+        )}
         <FavoriteButton listingId={listingId} variant="module" />
       </div>
       <SafetyLine className="text-center lg:text-left" />

@@ -13,11 +13,18 @@ import type { EventSource } from "@/lib/marketplace-event-payload";
 // visitor picked (talk-02) are added to the message at the moment of the press. `safety` shows the one-time safety
 // sheet before the first such contact (talk-04); "Continuar a WhatsApp" there is itself a plain link.
 // `intent="purchase"` (PAY-1) tells the contact route to record the purchase intent; the route checks eligibility.
-type ContactTarget = { listingId?: string; storeId?: string; intent?: "purchase"; source: EventSource };
+// `quantity` (stock-23) is already in a purchase request's message (withPurchaseQuantity); the route clamps it too.
+type ContactTarget = { listingId?: string; storeId?: string; intent?: "purchase"; quantity?: number; source: EventSource };
 
 // The event the contact route records: identity and source only, never the message.
 export function contactRequestBody(target: ContactTarget, eventId: string) {
-  return { eventId, ...(target.listingId ? { listingId: target.listingId } : { storeId: target.storeId }), ...(target.listingId && target.intent ? { intent: target.intent } : {}), source: target.source };
+  return {
+    eventId,
+    ...(target.listingId ? { listingId: target.listingId } : { storeId: target.storeId }),
+    ...(target.listingId && target.intent ? { intent: target.intent } : {}),
+    ...(target.listingId && target.intent && target.quantity && target.quantity > 1 ? { quantity: target.quantity } : {}),
+    source: target.source,
+  };
 }
 
 // Fire and forget: the page stays open (the link opens a new tab), and `keepalive` lets the request finish anyway.
@@ -33,10 +40,10 @@ export function planContact({ href, questions, safety, modified, seen }: { href:
   return { destination: withQuestions(href, questions), sheet: safety && !modified && !seen };
 }
 
-export function WhatsAppContactLink({ href, listingId, storeId, intent, source = "detail", safety = false, className, children }: { href: string; listingId?: string; storeId?: string; intent?: "purchase"; source?: EventSource; safety?: boolean; className?: string; children: ReactNode }) {
+export function WhatsAppContactLink({ href, listingId, storeId, intent, quantity, source = "detail", safety = false, className, children }: { href: string; listingId?: string; storeId?: string; intent?: "purchase"; quantity?: number; source?: EventSource; safety?: boolean; className?: string; children: ReactNode }) {
   const [pending, setPending] = useState<string | null>(null);
 
-  const record = () => void recordContact({ listingId, storeId, intent, source });
+  const record = () => void recordContact({ listingId, storeId, intent, quantity, source });
 
   function contact(event: MouseEvent<HTMLAnchorElement>) {
     const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;

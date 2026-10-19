@@ -523,6 +523,7 @@ function ListingDetail({
                   listingId={listing.id}
                   href={contactHref}
                   purchase={Boolean(purchase)}
+                  maxQuantity={purchase?.maxQuantity}
                   safety={needsSafetySheet(listing.price_pen, Boolean(purchase))}
                   className="order-3 lg:order-3"
                 />

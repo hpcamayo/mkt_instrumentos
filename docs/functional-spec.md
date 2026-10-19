@@ -503,6 +503,16 @@ Inventory (Tiendas, enabled per store by an Admin during the pilot):
   table follows the box as the owner types. The "En revisión" tile counts new publications and changes in review and
   opens exactly those; rejected publications have their own tile. The catalog filter stays hidden until catalog
   matching exists (fix-09).
+- Every stock change can be undone for 10 seconds (15 minutes on the SKU page) as a linked correction; corrected sales
+  don't count in sales totals. Rows have −1 / +1. Bulk actions reach every SKU that matches a view (up to 2,000) and
+  include archive, reactivate, publish again and category; price changes are named campaigns, optionally rounded to
+  prices ending in 9, that can be reverted. Saved views, "Exportar esta vista", keyboard shortcuts and "1–50 de N"
+  paging. A default low-stock threshold and an opt-in daily in-app summary. Reposición (a reorder file with 30-day
+  sales and a suggestion, re-imported to add what arrived), "Agotados con interés", "Duplicar SKU" and variants.
+  Mostrador sells from the browser by camera, typing or USB scanner, with an offline queue.
+- During the payments pilot, Solicitudes lists purchase requests with one-step "Vendido", "Atendida" and "No se
+  vendió", plus ready WhatsApp replies without numbers or links; "Solicitar compra" asks for a quantity up to what is
+  available (at most 10) without showing stock.
 <!-- /Effortless Laria, inventory batch -->
 
 Spreadsheet import:

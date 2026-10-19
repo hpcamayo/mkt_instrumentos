@@ -414,6 +414,10 @@ test("store-only WhatsApp contact records its store entity and supported source"
   assert.deepEqual(contact.calls.requests[0].body, { eventId: "contact-1", storeId, source: "store" });
   assert.deepEqual(contact.contactRequestBody({ listingId, intent: "purchase", source: "detail" }, "e"), { eventId: "e", listingId, intent: "purchase", source: "detail" });
   assert.deepEqual(contact.contactRequestBody({ storeId, intent: "purchase", source: "store" }, "e"), { eventId: "e", storeId, source: "store" });
+  // stock-23 with talk-03: the quantity rides along with a purchase request only, and only when it is more than one.
+  assert.deepEqual(contact.contactRequestBody({ listingId, intent: "purchase", quantity: 3, source: "detail" }, "e"), { eventId: "e", listingId, intent: "purchase", quantity: 3, source: "detail" });
+  assert.deepEqual(contact.contactRequestBody({ listingId, intent: "purchase", quantity: 1, source: "detail" }, "e"), { eventId: "e", listingId, intent: "purchase", source: "detail" });
+  assert.deepEqual(contact.contactRequestBody({ listingId, quantity: 3, source: "detail" }, "e"), { eventId: "e", listingId, source: "detail" });
 });
 
 test("a failed or stalled record never throws or holds the contact", async () => {

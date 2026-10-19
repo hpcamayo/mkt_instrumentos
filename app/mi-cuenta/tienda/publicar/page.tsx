@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 import { listSellDrafts, loadSellBrands, loadSellPageData } from "@/lib/sell-page-data";
 import { getStoreListingQuota } from "@/lib/store-allowance";
-import { getInventoryItem, inventoryDb } from "@/lib/store-inventory";
+import { getInventoryItem, getSkuListingDetails, inventoryDb } from "@/lib/store-inventory";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const metadata = { title: "Publicar" };
@@ -34,7 +34,7 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
   const skuId = requested === "siguiente" && eligible && supabase ? await nextUnpublishedSku(supabase, store.id) : requested;
   const item = eligible && supabase && typeof skuId === "string" ? await getInventoryItem(supabase, skuId) : null;
   const inventorySku = item && store && item.store_id === store.id && item.inventory_status === "active" && !item.listing_id
-    ? { id: item.id, sku: item.merchant_sku, name: item.product_name, price: item.unit_price_pen, available: item.quantity_available, category: item.category, details: await skuListingDetails(supabase!, item.id) }
+    ? { id: item.id, sku: item.merchant_sku, name: item.product_name, price: item.unit_price_pen, available: item.quantity_available, category: item.category, details: await getSkuListingDetails<NonNullable<InventorySku["details"]>>(supabase!, item.id) }
     : undefined;
   const quota = await getStoreListingQuota(eligible ? supabase : null, count ?? 0);
 
@@ -87,10 +87,3 @@ async function loadStoreDefaults(supabase: SupabaseClient<any, any, any>, storeI
   return row ? { condition: row.condition, descriptionFooter: row.description_footer ?? "" } : undefined;
 }
 
-// STOCK 09: what the SKU remembers from its last publication or import.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function skuListingDetails(supabase: SupabaseClient<any, any, any>, itemId: string) {
-  const { data } = await inventoryDb(supabase).from("store_inventory_items").select("listing_details").eq("id", itemId).maybeSingle();
-  const details = (data as { listing_details?: unknown } | null)?.listing_details;
-  return details && typeof details === "object" && !Array.isArray(details) ? details as NonNullable<InventorySku["details"]> : undefined;
-}

@@ -33,8 +33,8 @@ begin
   return ok;
 end $$;
 
--- Every in-app notification type: the marketplace's own, then listing (big-11, list-11), accounts (search alerts) and
--- my listings (check-ins and reminders).
+-- Every in-app notification type: the marketplace's own, then listing (big-11, list-11), accounts (search alerts), my
+-- listings (check-ins and reminders) and inventory (stock-06 daily summary).
 create temporary table qa_notification_types on commit drop as select unnest(array[
   'listing_approved', 'listing_hidden', 'listing_price_drop', 'listing_rejected', 'listing_revision_approved',
   'listing_revision_rejected', 'review_revealed', 'store_approved', 'store_rejected', 'store_verification_revoked',
@@ -43,7 +43,8 @@ create temporary table qa_notification_types on commit drop as select unnest(arr
   'listing_back_in_stock', 'listing_question_asked', 'listing_question_answered',
   'listing_alert_match',
   'listing_purchase_check', 'listing_buyer_reported_purchase', 'listing_availability_checkin',
-  'listing_purchase_confirmation_reminder', 'listing_review_reminder'
+  'listing_purchase_confirmation_reminder', 'listing_review_reminder',
+  'store_stock_summary'
 ]) as event_type;
 
 -- Every e-mail type: the marketplace's own and the search alerts, then listing, accounts (weekly follow) and my
