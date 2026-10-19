@@ -58,6 +58,37 @@ export function validateSellerProfileInput(
   };
 }
 
+// auth-02: a new Particular gives only a name. WhatsApp and city are asked when they are first needed (publishing),
+// so a buyer who only wants to save a guitar never types them. The profile row is created with the name alone.
+export async function upsertBasicSellerProfile(supabase: SupabaseClient<Database>, userId: string, fullName: string): Promise<ProfileResult> {
+  const name = fullName.trim();
+  if (!name) return { ok: false, message: "Ingresa tu nombre completo." };
+  const { data: current, error: readError } = await supabase.from("profiles").select("account_type").eq("id", userId).maybeSingle();
+  if (readError) return { ok: false, message: "No se pudo revisar tu perfil. Intenta nuevamente." };
+  if (current) return { ok: true };
+  const { error } = await supabase.from("profiles").insert({ id: userId, account_type: INDIVIDUAL_SELLER_ACCOUNT_TYPE, full_name: name });
+  return error ? { ok: false, message: "No se pudo guardar tu perfil. Intenta nuevamente." } : { ok: true };
+}
+
+// auth-02: the profile page lets a Particular leave WhatsApp and city empty until they publish.
+export async function saveOptionalSellerProfile(supabase: SupabaseClient<Database>, userId: string, input: SellerProfileInput): Promise<ProfileResult> {
+  const fullName = input.fullName.trim();
+  if (!fullName) return { ok: false, message: "Ingresa tu nombre completo." };
+  const phone = input.phone.trim() ? normalizeProfilePhone(input.phone) : null;
+  if (input.phone.trim() && !phone) return { ok: false, message: "Ingresa un WhatsApp válido." };
+  const city = input.city.trim() || null;
+  const region = normalizePeruRegion(input.region);
+  if (city && !region) return { ok: false, message: "Selecciona una región válida de Perú." };
+  const { data: current, error: readError } = await supabase.from("profiles").select("account_type").eq("id", userId).maybeSingle();
+  if (readError) return { ok: false, message: "No se pudo revisar tu perfil. Intenta nuevamente." };
+  if (current?.account_type && current.account_type !== INDIVIDUAL_SELLER_ACCOUNT_TYPE) return { ok: false, message: "Esta cuenta ya está registrada con otro tipo de perfil." };
+  const { error } = await supabase.from("profiles").upsert(
+    { id: userId, account_type: INDIVIDUAL_SELLER_ACCOUNT_TYPE, full_name: fullName, phone, city, ...(region ? { region } : {}) },
+    { onConflict: "id" },
+  );
+  return error ? { ok: false, message: "No se pudo guardar tu perfil. Intenta nuevamente." } : { ok: true };
+}
+
 export function isSellerProfileComplete(
   profile:
     | Pick<Database["public"]["Tables"]["profiles"]["Row"], "full_name" | "phone" | "city" | "region">

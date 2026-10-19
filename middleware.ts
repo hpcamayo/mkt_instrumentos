@@ -43,7 +43,8 @@ export async function middleware(request: NextRequest) {
 
   if (isProtectedPath && !claimsData?.claims) {
     const url = request.nextUrl.clone();
-    const loginPath = new URL(getLoginPath(request.nextUrl.pathname), url);
+    // Accounts batch, save-02: the query comes along, so a filtered page opens as it was after signing in.
+    const loginPath = new URL(getLoginPath(request.nextUrl.pathname + request.nextUrl.search), url);
     url.pathname = loginPath.pathname;
     url.search = loginPath.search;
     return NextResponse.redirect(url);

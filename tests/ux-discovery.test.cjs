@@ -100,7 +100,8 @@ test("the card photo is square with the favourite and the photo count over it; t
   assert.match(renderCard({ listing: listing({ listing_photos: [], photo_count: 0 }) }), /Sin foto/);
   // The favourite: a 36 px white circle inside a 44 px hit area.
   assert.match(html, /<button type="button" aria-pressed="false" aria-label="Guardar en favoritos"[^>]*class="[^"]*h-11 w-11[^"]*rounded-full[^"]*"><span class="flex h-9 w-9 items-center justify-center rounded-full border border-subtle bg-surface">/);
-  assert.match(renderCard({}, { authenticated: false }), /<a href="\/login\?next=%2Flistados" aria-label="Ingresa para guardar en favoritos" class="[^"]*h-11 w-11/);
+  // Accounts batch, big-04: signed out, the same button saves on this device.
+  assert.match(renderCard({}, { authenticated: false }), /<button type="button" aria-pressed="false" aria-label="Guardar en favoritos"[^>]*class="[^"]*h-11 w-11/);
 });
 
 test("the card caption: title, price, the real condition with the type's key attributes, then city and seller words (Q3)", () => {
@@ -274,11 +275,13 @@ test("titles, counts and the alert rule: a filter or a category narrows; several
   assert.equal(catalog.narrowsSearch(parse("sort=price_asc")), false);
   assert.equal(catalog.narrowsSearch(parse("category=guitars")), true);
   const { listingFiltersToSearchAlert } = load("lib/search-alerts.ts");
-  assert.equal(listingFiltersToSearchAlert(parse("location=Lima&location=Arequipa")), null);
+  // Accounts batch, save-05: several values in one filter are saved as a list.
+  assert.deepEqual(listingFiltersToSearchAlert(parse("location=Lima&location=Arequipa")), { location: ["Lima", "Arequipa"] });
   assert.deepEqual(listingFiltersToSearchAlert(parse("location=Lima&condition=Nuevo")), { location: "Lima", condition: "Nuevo" });
   const { CreateSearchAlert } = load("components/create-search-alert.tsx", { "next/link": linkMock, "next/navigation": navigationMock(), "@/components/marketplace-account-provider": account({ authenticated: false }) });
-  assert.equal(renderToStaticMarkup(React.createElement(CreateSearchAlert, { filters: null, variant: "button" })), '<p class="t-meta">Para crear una alerta, elige un solo valor en cada filtro.</p>');
-  assert.match(renderToStaticMarkup(React.createElement(CreateSearchAlert, { filters: { location: "Lima" }, variant: "chip" })), /^<a href="\/login\?next=%2Flistados%3Flocation%3DLima" class="[^"]*">.*Crear alerta<\/a>$/);
+  assert.equal(renderToStaticMarkup(React.createElement(CreateSearchAlert, { filters: null, variant: "button" })), "");
+  // Accounts batch, save-01: the sign-in link says why (motivo=alerta) and the alert is created on return.
+  assert.match(renderToStaticMarkup(React.createElement(CreateSearchAlert, { filters: { location: "Lima" }, variant: "chip" })), /^<a href="\/login\?next=%2Flistados%3Flocation%3DLima&amp;motivo=alerta" class="[^"]*">.*Crear alerta<\/a>$/);
   // Every alert entry of the view gets the same single-value filters, or null.
   const view = source("components/catalog-view.tsx");
   assert.match(view, /const alertFilters = listingFiltersToSearchAlert\(filters\);/);

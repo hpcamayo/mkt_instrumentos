@@ -1,21 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
-import { LocationFields } from "@/components/location-fields";
-import { profileFieldErrors } from "@/lib/form-validation";
 import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
-  upsertSellerProfile,
-  validateSellerProfileInput,
+  upsertBasicSellerProfile,
 } from "@/lib/auth/profile";
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
+import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
-import { PhoneInput } from "@/components/ui/phone-input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { ResendConfirmation } from "@/components/auth/resend-confirmation";
 
 type FormState =
@@ -26,8 +25,13 @@ type FormState =
   | "duplicate"
   | "error";
 
+// auth-02: name, e-mail, password and the rules, nothing else. WhatsApp and city are asked at the first publication.
+// save-02: `next` survives sign-up and the confirmation e-mail, so a new buyer lands back where they were.
 export function SellerSignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextParam = searchParams.get("next");
+  const destination = nextParam ? getSafeAuthRedirect(nextParam) : null;
   const [validation, errorSummary] = useFormErrors("signup", "crear tu cuenta");
   const [state, setState] = useState<FormState>("loading");
   const [message, setMessage] = useState<string | null>(null);
@@ -50,7 +54,7 @@ export function SellerSignupForm() {
 
       if (!isMounted) return;
       if (data.user) {
-        router.replace("/mi-cuenta");
+        router.replace(destination ?? "/mi-cuenta");
         router.refresh();
         return;
       }
@@ -62,7 +66,9 @@ export function SellerSignupForm() {
     return () => {
       isMounted = false;
     };
-  }, [router]);
+  }, [router, destination]);
+
+  const confirmedPath = destination ?? "/mi-cuenta?confirmed=1";
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,13 +78,11 @@ export function SellerSignupForm() {
     const formData = new FormData(event.currentTarget);
     const fullName = String(formData.get("fullName") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
-    const phone = String(formData.get("phone") ?? "").trim();
-    const city = String(formData.get("city") ?? "").trim();
-    const region = String(formData.get("region") ?? "");
     const password = String(formData.get("password") ?? "");
     const acceptedRules = formData.get("acceptedRules") === "on";
     if (!validation.validate(event.currentTarget, {
-      ...profileFieldErrors({ fullName, phone, city, region }),
+      ...(!fullName ? { fullName: "Ingresa tu nombre completo." } : {}),
+      ...(password.length < PASSWORD_MIN_LENGTH ? { password: `Usa al menos ${PASSWORD_MIN_LENGTH} caracteres.` } : {}),
       ...(!acceptedRules ? { acceptedRules: "Debes aceptar las reglas del marketplace para continuar." } : {}),
     })) {
       setState("idle");
@@ -92,29 +96,15 @@ export function SellerSignupForm() {
       return;
     }
 
-    const validatedProfile = validateSellerProfileInput({
-      fullName,
-      phone,
-      city,
-      region,
-    });
-
-    if (!validatedProfile.ok) {
-      setState("error");
-      setMessage(validatedProfile.message);
-      return;
-    }
-    const normalizedProfile = validatedProfile.profile;
-
     if (!acceptedRules) {
       setState("error");
       setMessage("Debes aceptar las reglas del marketplace para continuar.");
       return;
     }
 
-    if (!email || password.length < 6) {
+    if (!email || password.length < PASSWORD_MIN_LENGTH) {
       setState("error");
-      setMessage("Ingresa un correo y una contraseña de al menos 6 caracteres.");
+      setMessage(`Ingresa un correo y una contraseña de al menos ${PASSWORD_MIN_LENGTH} caracteres.`);
       return;
     }
 
@@ -135,7 +125,7 @@ export function SellerSignupForm() {
       return;
     }
 
-    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent("/mi-cuenta?confirmed=1")}`;
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(confirmedPath)}`;
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -143,10 +133,7 @@ export function SellerSignupForm() {
         emailRedirectTo,
         data: {
           account_type: INDIVIDUAL_SELLER_ACCOUNT_TYPE,
-          full_name: normalizedProfile.fullName,
-          phone: normalizedProfile.phone,
-          city: normalizedProfile.city,
-          region: normalizedProfile.region,
+          full_name: fullName,
           marketplace_rules_accepted: true,
         },
       },
@@ -168,9 +155,7 @@ export function SellerSignupForm() {
     }
 
     if (data.session && data.user) {
-      const result = await upsertSellerProfile(supabase, data.user.id, {
-        ...normalizedProfile,
-      });
+      const result = await upsertBasicSellerProfile(supabase, data.user.id, fullName);
 
       if (!result.ok) {
         setState("error");
@@ -178,7 +163,7 @@ export function SellerSignupForm() {
         return;
       }
 
-      router.push("/mi-cuenta?welcome=1");
+      router.push(destination ?? "/mi-cuenta?welcome=1");
       router.refresh();
       return;
     }
@@ -186,7 +171,9 @@ export function SellerSignupForm() {
     setSentTo(email);
     setState("sent");
     setMessage(
-      "Revisa tu correo para confirmar tu cuenta Particular. El enlace te llevará directamente a Mi cuenta.",
+      destination
+        ? "Revisa tu correo para confirmar tu cuenta. El enlace te traerá de vuelta a donde estabas."
+        : "Revisa tu correo para confirmar tu cuenta. El enlace te llevará directamente a Mi cuenta.",
     );
   }
 
@@ -202,15 +189,9 @@ export function SellerSignupForm() {
           <Input type="email" name="email" required autoComplete="email" placeholder="tu@email.com" />
         </Field>
 
-        <Field id="signup-password" error={validation.errorFor("password")} label="Contraseña">
-          <Input type="password" name="password" required minLength={6} autoComplete="new-password" placeholder="Mínimo 6 caracteres" />
+        <Field id="signup-password" error={validation.errorFor("password")} label="Contraseña" hint={`Mínimo ${PASSWORD_MIN_LENGTH} caracteres.`}>
+          <PasswordInput name="password" required minLength={PASSWORD_MIN_LENGTH} autoComplete="new-password" />
         </Field>
-
-        <Field id="signup-phone" error={validation.errorFor("phone")} label="WhatsApp">
-          <PhoneInput name="phone" required />
-        </Field>
-
-        <LocationFields idPrefix="signup" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} />
       </div>
 
       <label className="flex gap-3 rounded-panel bg-canvas p-3 t-ui text-ink-2">
@@ -236,11 +217,11 @@ export function SellerSignupForm() {
           {state === "sent" && sentTo ? (
             <>
               <p className="mt-1 t-meta">¿No te llegó? Revisa la carpeta de spam o pide otro enlace.</p>
-              <ResendConfirmation email={sentTo} next="/mi-cuenta?confirmed=1" />
+              <ResendConfirmation email={sentTo} next={confirmedPath} />
             </>
           ) : null}
           {state === "duplicate" ? (
-            <Link className="mt-2 inline-flex" href="/login">
+            <Link className="mt-2 inline-flex" href={destination ? `/login?next=${encodeURIComponent(destination)}` : "/login"}>
               Ir a ingresar
             </Link>
           ) : null}
@@ -253,12 +234,12 @@ export function SellerSignupForm() {
         loading={state === "loading" || state === "submitting"}
         loadingLabel={state === "submitting" ? "Creando cuenta…" : "Revisando sesión…"}
       >
-        Crear cuenta Particular
+        Crear cuenta
       </Button>
 
       <p className="text-center t-ui text-ink-2">
         ¿Ya tienes cuenta?{" "}
-        <Link className="link font-semibold" href="/login">
+        <Link className="link font-semibold" href={destination ? `/login?next=${encodeURIComponent(destination)}` : "/login"}>
           Ingresa aquí
         </Link>
       </p>

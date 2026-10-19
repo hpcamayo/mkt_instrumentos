@@ -13,7 +13,7 @@ const sharedAccountItems: AccountNavigationItem[] = [
   { href: "/mi-cuenta/alertas", label: "Alertas", icon: "alerts" },
   { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
   { href: "/mi-cuenta/transacciones", label: "Compras y ventas", icon: "transactions" },
-  { href: "/mi-cuenta/perfil", label: "Perfil y seguridad", icon: "profile", activePaths: ["/mi-cuenta/seguridad"] },
+  { href: "/mi-cuenta/perfil", label: "Perfil y seguridad", icon: "profile", activePaths: ["/mi-cuenta/seguridad", "/mi-cuenta/correos"] },
 ];
 
 // `payments`: the assisted-commerce pilot is on (assistedCommerceEnabled(), read on the server), so a store sees "Pagos"
@@ -55,6 +55,8 @@ export function accountItemIsActive(pathname: string, item: Pick<AccountNavigati
 export const accountSettingsTabs = [
   { href: "/mi-cuenta/perfil", label: "Perfil" },
   { href: "/mi-cuenta/seguridad", label: "Seguridad" },
+  // Accounts batch, save-07.
+  { href: "/mi-cuenta/correos", label: "Correos" },
 ] as const;
 
 // Glossary names of the two account types (docs/design-system.md).

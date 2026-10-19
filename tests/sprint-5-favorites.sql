@@ -48,12 +48,16 @@ end $$;
 select public.set_listing_favorite('82000000-0000-4000-8000-000000000001',false);
 select public.set_listing_favorite('82000000-0000-4000-8000-000000000001',false);
 reset role;
+-- save-08 (docs/ux-effortless/accounts.md): a listing alerts at most once a day, so the earlier drop is moved back a day.
+update public.listing_price_drops set created_at = created_at - interval '25 hours' where listing_id = '82000000-0000-4000-8000-000000000001';
 update public.listings set price_pen=1000 where slug='s5-live';
 do $$ begin if (select count(*) from public.notifications where listing_id='82000000-0000-4000-8000-000000000001' and event_type='listing_price_drop')<>3 then raise exception 'Unfavorite ignored'; end if; end $$;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"81000000-0000-4000-8000-000000000002","role":"authenticated"}',true);
 select public.set_listing_favorite('82000000-0000-4000-8000-000000000001',true);
 reset role;
+-- save-08 (docs/ux-effortless/accounts.md): a listing alerts at most once a day, so the earlier drop is moved back a day.
+update public.listing_price_drops set created_at = created_at - interval '25 hours' where listing_id = '82000000-0000-4000-8000-000000000001';
 update public.listings set price_pen=900 where slug='s5-live';
 do $$ begin if (select count(*) from public.notifications where listing_id='82000000-0000-4000-8000-000000000001' and event_type='listing_price_drop')<>5 then raise exception 'Future drop/refavorite missing'; end if; end $$;
 -- Proposed text/photo changes do not touch the live price. Private-state drops

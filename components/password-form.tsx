@@ -6,8 +6,9 @@ import { type FormEvent, useState } from "react";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { PageNotice } from "@/components/page-notice";
 import { useFormErrors } from "@/components/use-form-errors";
-import { getPasswordUpdateErrorMessage, getPasswordValidationMessage } from "@/lib/auth/password";
+import { getPasswordUpdateErrorMessage, getPasswordValidationMessage, PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 
@@ -95,7 +96,7 @@ export function PasswordUpdateForm({ mode }: { mode: "reset" | "change" }) {
 }
 
 function AuthInput({ label, name, type, autoComplete, error }: { label: string; name: string; type: string; autoComplete: string; error?: string }) {
-  return <Field id={"clave-" + name} label={label} error={error}><Input name={name} type={type} required minLength={type === "password" ? 8 : undefined} autoComplete={autoComplete} /></Field>;
+  return <Field id={"clave-" + name} label={label} error={error} hint={name === "password" ? `Mínimo ${PASSWORD_MIN_LENGTH} caracteres.` : undefined}>{type === "password" ? <PasswordInput name={name} required minLength={PASSWORD_MIN_LENGTH} autoComplete={autoComplete} /> : <Input name={name} type={type} required autoComplete={autoComplete} />}</Field>;
 }
 
 function Status({ message }: { message: string }) {

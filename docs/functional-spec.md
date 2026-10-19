@@ -60,6 +60,12 @@ gets 51 in front, on every write to profiles, listings and stores (fix-01); the 
 will see ("+51 987 654 321") with a link to try it. Signing in before confirming the e-mail says "Confirma tu correo"
 and offers "Reenviar enlace", as does the screen right after signing up, with a 60-second wait between sends (fix-08).
 <!-- end accounts batch: fixes -->
+<!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): sign-in -->
+A Particular account starts with name, e-mail and password; WhatsApp and city are asked at the first publication. Every
+password field has a show/hide control and one minimum of 8 characters. After a failed password the sign-in page
+offers the e-mail link for the same address. Sign-in, sign-up and the confirmation e-mail return to the page the person
+came from, and the sign-in page says why it is asking.
+<!-- end accounts batch: sign-in -->
 
 Supabase Auth remains appropriate for confirmation, password recovery, invitations, and other authentication messages. Marketplace-generated emails use a centralized application email abstraction. The provider behind that abstraction is an implementation choice, not a product decision.
 
@@ -208,6 +214,16 @@ Authenticated users can save the exact state of a marketplace search, including 
 
 Frequency options are `immediate` and `daily digest`. Immediate alerts notify shortly after a new matching listing becomes public. Daily alerts bundle matching new listings. Only newly public matches qualify; the same user/alert/listing combination must not be notified repeatedly; empty emails are forbidden. Users can pause or delete alerts, and emails link directly to listings or matching search results.
 
+<!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): saving -->
+Visitors can save favorites without an account; they live on the device and merge into the account at sign-in, then
+work on every device. Favorites show the price when saved ("Antes"), a private note, WhatsApp for available listings
+and similar listings or a similar alert for sold ones, and can be shared through a revocable link. Price drops alert
+favorites at 5% or more, at most once a day per listing. Alerts can be renamed, switch between daily (default) and
+instant, hold several cities or conditions, and show their last match and total. A repeated search offers an alert
+once. Buyers can follow stores and brands; new arrivals appear with the reason they are shown, and a weekly e-mail is
+optional. An action interrupted by sign-in (an alert, a report) is finished on return.
+<!-- end accounts batch: saving -->
+
 ## Category SEO Pages
 
 V1 includes useful, indexable category browsing pages such as `/instrumentos/guitarras`, `/instrumentos/baterias`, and `/instrumentos/microfonos`. They use the real listing and filter system and must not be fake-content SEO doorway pages. Exact routing may follow the existing Next.js conventions; implementation must also avoid ambiguity with current listing-detail slugs.
@@ -315,6 +331,13 @@ Rejection and administrative hiding require a reason visible to the owner. Appro
 Centralized application email infrastructure sends listing approval/rejection, store approval/rejection, useful verification-status changes, buyer transaction-confirmation requests, review workflow notifications, search alerts, and price-drop alerts. Product logic must not depend on a particular email provider.
 
 Supabase Auth may continue sending authentication-related messages.
+
+<!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): e-mail choices -->
+Alert, price-drop and weekly-digest e-mails are optional: each says why it arrived, carries a signed one-click link to
+stop that kind of e-mail and the List-Unsubscribe headers, and links to Mi cuenta › Correos. Alert and price-drop
+e-mails include the photo and price. Transactional e-mails stay as they are. In-app notifications can all be marked
+read at once, are paged, name the listing on price drops and include alert matches.
+<!-- end accounts batch: e-mail choices -->
 
 ## In-App Notifications
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useRef, type Ref } from "react";
-import { Bell, ChevronDown, Search, UserRound } from "lucide-react";
+import { Bell, ChevronDown, Heart, Search, UserRound } from "lucide-react";
 import { AccountLogout, AccountSectionLinks } from "@/components/account-navigation";
 import { BrandLogo } from "@/components/brand-logo";
 import { GlobalSearch } from "@/components/global-search";
@@ -177,12 +177,24 @@ function HomeCategoryPanel({ panelRef, onChoose }: { panelRef: Ref<HTMLDivElemen
 // without showing a state that may be wrong.
 function AccountEntry({ publishing }: { publishing: boolean }) {
   const account = useMarketplaceAccount();
+  const pathname = usePathname();
   if (!account.authenticated) {
+    // Accounts batch, save-02 and big-04: "Ingresar" comes back to this page, and favorites saved on this device
+    // have a way in.
+    const back = pathname && !/^\/(login|registro|recuperar-contrasena|restablecer-contrasena|auth)(\/|$)/.test(pathname) && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
+    const saved = account.deviceFavoriteIds?.length ?? 0;
     const signIn = (
-      <Link href="/login" className={cn(ICON_ENTRY, "-mr-3 min-[900px]:-mr-2.5 min-[900px]:px-2.5 min-[900px]:text-[14px] min-[900px]:font-semibold")}>
+      <>
+      {saved ? (
+        <Link href="/favoritos" aria-label={`Favoritos en este dispositivo: ${saved}`} className={ICON_ENTRY}>
+          <Heart aria-hidden="true" />
+        </Link>
+      ) : null}
+      <Link href={`/login${back}`} className={cn(ICON_ENTRY, "-mr-3 min-[900px]:-mr-2.5 min-[900px]:px-2.5 min-[900px]:text-[14px] min-[900px]:font-semibold")}>
         <UserRound aria-hidden="true" />
         <span className="sr-only min-[900px]:not-sr-only">Ingresar</span>
       </Link>
+      </>
     );
     if (account.settled) return signIn;
     return <>

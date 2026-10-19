@@ -6,6 +6,7 @@ import { CatalogLink, CatalogNavigation, CatalogResults } from "@/components/cat
 import { RecentlyViewed } from "@/components/catalog-recently-viewed";
 import { CatalogTrail } from "@/components/catalog-trail";
 import { CreateSearchAlert } from "@/components/create-search-alert";
+import { FollowButton } from "@/components/following/follow-button";
 import { FilterSheetButton } from "@/components/filter-sheet";
 import { ListingCard } from "@/components/listing-card";
 import { ListingFilters } from "@/components/listing-filters";
@@ -110,6 +111,8 @@ export async function CatalogView({
             </div>
           </div>
           {lead ? <p className="text-lead mt-3 max-w-[68ch] t-body text-ink-2">{lead}</p> : null}
+          {/* Accounts batch, save-12: follow the brand being browsed. */}
+          {filters.brand?.trim() ? <div className="mt-3"><FollowButton brand={filters.brand.trim()} label={filters.brand.trim()} showLabel /></div> : null}
           {types}
 
           <div className="mt-4 grid grid-cols-2 gap-3 lg:hidden">

@@ -4,6 +4,7 @@ import { PageContainer } from "@/components/page-container";
 import { RatingFigure, SellerAvatar, SellerKindMark } from "@/components/listing/seller-card";
 import { TrustNote } from "@/components/listing/trust-note";
 import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
+import { FollowButton } from "@/components/following/follow-button";
 import { buttonClasses } from "@/components/ui/button";
 import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
 import { formatMonthYear, listingCountLabel } from "@/lib/listing-page";
@@ -73,6 +74,8 @@ export function StoreHeader({
                 {place ? <span className="t-ui text-ink-2">{place}</span> : null}
               </div>
               {store.description ? <p className="mt-3 max-w-[68ch] t-body text-ink-2">{store.description}</p> : null}
+              {/* Accounts batch, save-12. */}
+              <div className="mt-3"><FollowButton storeId={store.id} label={store.name} /></div>
               <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 t-ui text-ink [&>li+li]:before:mr-3 [&>li+li]:before:text-ink-3 [&>li+li]:before:content-['·']">
                 {rating ? <li><RatingFigure rating={rating} /></li> : null}
                 {total !== null ? <li>{listingCountLabel(total)}</li> : null}
