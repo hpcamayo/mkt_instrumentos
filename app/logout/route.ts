@@ -1,4 +1,6 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { PUSH_DEVICE_COOKIE, isPushDeviceId } from "@/lib/push/device";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export function GET() {
@@ -17,9 +19,14 @@ export async function POST(request: Request) {
 
   const supabase = await getSupabaseServerClient();
 
+  const pushDevice = (await cookies()).get(PUSH_DEVICE_COOKIE)?.value;
   if (supabase) {
+    // big-12: this device stops showing the account's notices once it signs out (a shared phone).
+    if (isPushDeviceId(pushDevice)) await supabase.rpc("delete_push_subscription", { p_subscription_id: pushDevice });
     await supabase.auth.signOut();
   }
 
-  return NextResponse.redirect(`${origin}/login`, 303);
+  const response = NextResponse.redirect(`${origin}/login`, 303);
+  if (pushDevice) response.cookies.delete(PUSH_DEVICE_COOKIE);
+  return response;
 }

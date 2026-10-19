@@ -1,4 +1,5 @@
 import { NotificationsList } from "@/components/notifications-list";
+import { PushSettings } from "@/components/push-settings";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 
@@ -22,6 +23,7 @@ export default async function NotificationsPage() {
         title="Notificaciones"
         meta={<p className="max-w-[68ch]">Revisa decisiones de moderación y cambios importantes de tu tienda o publicaciones.</p>}
       />
+      <PushSettings />
       <NotificationsList notifications={data ?? []} />
     </section>
   );

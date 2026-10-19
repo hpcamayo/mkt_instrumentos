@@ -1462,6 +1462,10 @@ export type Database = {
         Args: { p_limit?: number; p_worker_id: string }
         Returns: Json
       }
+      claim_push_deliveries: {
+        Args: { p_limit?: number; p_worker_id: string }
+        Returns: Json
+      }
       complete_marketplace_email_delivery: {
         Args: {
           p_delivery_id: string
@@ -1510,6 +1514,10 @@ export type Database = {
         Args: { p_buyer_user_id: string; p_listing_id: string }
         Returns: string
       }
+      delete_push_subscription: {
+        Args: { p_endpoint?: string; p_subscription_id?: string }
+        Returns: boolean
+      }
       delete_saved_search_alert: {
         Args: { p_alert_id: string }
         Returns: boolean
@@ -1523,6 +1531,18 @@ export type Database = {
           p_worker_id: string
         }
         Returns: string
+      }
+      finish_push_deliveries: {
+        Args: {
+          p_delivery_ids: string[]
+          p_failed_device_ids?: string[]
+          p_failure_code?: string
+          p_gone_device_ids?: string[]
+          p_outcome: string
+          p_sent_device_ids?: string[]
+          p_worker_id: string
+        }
+        Returns: number
       }
       get_account_analytics: {
         Args: { p_days?: number; p_owner_id?: string }
@@ -1626,6 +1646,10 @@ export type Database = {
         Returns: Json
       }
       get_transaction_center: { Args: never; Returns: Json }
+      get_push_subscription: {
+        Args: { p_endpoint: string }
+        Returns: string | null
+      }
       get_store_payment_methods: {
         Args: { p_store_id: string }
         Returns: Json
@@ -2011,6 +2035,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      save_push_subscription: {
+        Args: { p_auth: string; p_endpoint: string; p_p256dh: string }
+        Returns: string
       }
       set_listing_favorite: {
         Args: { p_listing_id: string; p_saved: boolean }
