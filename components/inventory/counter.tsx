@@ -238,11 +238,11 @@ export function Counter({ storeId }: { storeId: string }) {
                   <Price value={line.item.unit_price_pen === null ? null : line.item.unit_price_pen * line.quantity} size="inline" />
                 </div>
                 <div className="flex items-center gap-2" role="group" aria-label={`Cantidad de ${line.item.merchant_sku}`}>
-                  <Button variant="secondary" size="sm" icon={<Minus aria-hidden />} aria-label={`Quitar una unidad de ${line.item.merchant_sku}`} onClick={() => add(line.item, -1)}>
+                  <Button variant="secondary" size="md" icon={<Minus aria-hidden />} aria-label={`Quitar una unidad de ${line.item.merchant_sku}`} onClick={() => add(line.item, -1)}>
                     <span className="sr-only">Menos</span>
                   </Button>
                   <span className="min-w-8 text-center t-ui font-semibold tabular-nums" aria-live="polite">{numbers.format(line.quantity)}</span>
-                  <Button variant="secondary" size="sm" icon={<Plus aria-hidden />} aria-label={`Agregar una unidad de ${line.item.merchant_sku}`} disabled={line.quantity >= effective(line.item).quantity_available} onClick={() => add(line.item, 1)}>
+                  <Button variant="secondary" size="md" icon={<Plus aria-hidden />} aria-label={`Agregar una unidad de ${line.item.merchant_sku}`} disabled={line.quantity >= effective(line.item).quantity_available} onClick={() => add(line.item, 1)}>
                     <span className="sr-only">Más</span>
                   </Button>
                   <Button variant="quiet" size="sm" icon={<Trash2 aria-hidden />} className="ml-auto" onClick={() => setCart(cart.filter((entry) => entry.item.id !== line.item.id))}>Quitar</Button>
