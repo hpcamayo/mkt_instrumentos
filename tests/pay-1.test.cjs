@@ -41,6 +41,8 @@ test("public method rows are read strictly and in the canonical order", () => {
   assert.deepEqual(payments.readPurchaseRequest({ methods: [{ method: "link_de_pago", provider_label: null }], sku: null }), {
     methods: [{ method: "link_de_pago", provider_label: null }],
     sku: null,
+    // Effortless Laria, inventory batch, stock-23: how many units "Solicitar compra" may ask for (1 without a SKU).
+    maxQuantity: 1,
   });
 });
 

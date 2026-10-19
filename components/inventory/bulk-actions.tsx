@@ -83,9 +83,13 @@ function countLabel(count: number) {
   return `${numbers.format(count)} SKU`;
 }
 
+// An undo is one more database call with its own idempotency key, created once with the result it undoes.
+function keyedUndo(done: string, body: Record<string, unknown>, key = newRequestKey("deshacer")): UndoAction {
+  return { done, run: () => inventoryAction({ ...body, key }) };
+}
+
 function undoBatch(batchKey: string, done: string): UndoAction {
-  const key = newRequestKey("deshacer");
-  return { done, run: () => inventoryAction({ action: "undo_batch", batch_key: batchKey, key }) };
+  return keyedUndo(done, { action: "undo_batch", batch_key: batchKey });
 }
 
 // ------------------------------------------------------------------ price (stock-15)
@@ -336,8 +340,7 @@ export function BulkLifecycleSheet({ target, action, onClose, onDone }: SheetPro
     const skipped = result.data.skipped.length ? ` No cambiaron ${skippedSummary(result.data.skipped)}.` : "";
     let undo: UndoAction | undefined;
     if (changed.length && action === "restore") {
-      const key = newRequestKey("ocultar");
-      undo = { done: copy.undone, run: () => inventoryAction({ action: "hide_bulk", key, item_ids: changed }) };
+      undo = keyedUndo(copy.undone, { action: "hide_bulk", item_ids: changed });
     } else if (changed.length) {
       undo = undoBatch(batchKey, copy.undone);
     }
@@ -472,9 +475,8 @@ export function BulkHideSheet({ target, onClose, onDone }: SheetProps) {
     if (!result.ok) return setError(result.message);
     const hidden = result.data.hidden.map((entry) => entry.id);
     const skipped = result.data.skipped.length;
-    const key = newRequestKey("publicar");
     onDone(`${numbers.format(hidden.length)} publicaciones ocultas.${skipped ? ` ${numbers.format(skipped)} SKU no tenían una publicación publicada y no cambiaron.` : ""}`,
-      hidden.length ? { done: "Las publicaciones volvieron a verse.", run: () => inventoryAction({ action: "bulk_action", bulk: "restore", key, item_ids: hidden }) } : undefined);
+      hidden.length ? keyedUndo("Las publicaciones volvieron a verse.", { action: "bulk_action", bulk: "restore", item_ids: hidden }) : undefined);
     router.refresh();
   }
 

@@ -15,14 +15,14 @@ import { Sheet } from "@/components/ui/sheet";
 
 const PLACES = [
   { label: "Inventario", href: "/mi-cuenta/tienda/inventario", words: "inventario sku stock" },
-  { label: "Mostrador", href: "/mi-cuenta/tienda/inventario/mostrador", words: "mostrador venta caja escanear codigo" },
-  { label: "Reposición", href: "/mi-cuenta/tienda/inventario/reponer", words: "reponer reposicion pedido proveedor" },
-  { label: "Precios", href: "/mi-cuenta/tienda/inventario/precios", words: "precios campana descuento oferta" },
+  { label: "Mostrador", href: "/mi-cuenta/tienda/inventario/mostrador", words: "mostrador venta caja escanear código" },
+  { label: "Reposición", href: "/mi-cuenta/tienda/inventario/reponer", words: "reponer reposición pedido proveedor" },
+  { label: "Precios", href: "/mi-cuenta/tienda/inventario/precios", words: "precios campaña descuento oferta" },
   { label: "Importar desde Excel", href: "/mi-cuenta/tienda/inventario/importar", words: "importar excel csv archivo carga" },
   { label: "Solicitudes de compra", href: "/mi-cuenta/tienda/solicitudes", words: "solicitudes compra whatsapp pedidos" },
-  { label: "Publicaciones", href: "/mi-cuenta/tienda/inventario?vista=publicaciones", words: "publicaciones anuncios" },
-  { label: "Publicar", href: "/mi-cuenta/tienda/publicar", words: "publicar nueva publicacion" },
-  { label: "Estadísticas", href: "/mi-cuenta/tienda/estadisticas", words: "estadisticas vistas contactos" },
+  { label: "Publicaciones", href: "/mi-cuenta/tienda/inventario?vista=publicaciones", words: "publicaciones avisos" },
+  { label: "Publicar", href: "/mi-cuenta/tienda/publicar", words: "publicar nueva publicación" },
+  { label: "Estadísticas", href: "/mi-cuenta/tienda/estadisticas", words: "estadísticas vistas contactos" },
   { label: "Medios de pago", href: "/mi-cuenta/tienda/medios-de-pago", words: "pagos yape plin transferencia" },
   { label: "Mi tienda", href: "/mi-cuenta/tienda", words: "tienda perfil datos" },
 ] as const;

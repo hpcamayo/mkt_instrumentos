@@ -69,7 +69,7 @@ export default async function PurchaseRequestsPage({ searchParams }: { searchPar
       <section aria-labelledby="respuestas-listas" className="grid gap-3">
         <h2 id="respuestas-listas" className="t-section text-ink">Respuestas listas para WhatsApp</h2>
         <p className="max-w-[68ch] t-body text-ink-2">
-          Cópialas y guárdalas en WhatsApp Business como respuestas rápidas (Herramientas para la empresa → Respuestas rápidas) para contestar con un toque. Cambia [producto] por el equipo; el número de Yape o la cuenta los agregas tú en el chat.
+          Cópialas y guárdalas en WhatsApp Business como respuestas rápidas (Herramientas para la empresa → Respuestas rápidas) para contestar con un toque. Cambia [equipo] por el nombre del instrumento; el número de Yape o la cuenta los agregas tú en el chat.
         </p>
         {summary?.inventory_enabled && canWrite ? <PickupHoursForm hours={hours} /> : null}
         {methods.length ? null : (

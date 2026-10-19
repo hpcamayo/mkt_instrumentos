@@ -192,7 +192,8 @@ test("B6: Pagos is a store menu entry only while the pilot is on", () => {
     ["Resumen", "Mi tienda", "Inventario", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   const withPayments = getAccountNavigationItems("store_owner", true, { payments: true });
   assert.deepEqual(labels(withPayments),
-    ["Resumen", "Mi tienda", "Inventario", "Publicar", "Pagos", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+    // Effortless Laria, inventory batch (stock-04): "Solicitudes" comes and goes with the pilot too.
+    ["Resumen", "Mi tienda", "Inventario", "Publicar", "Solicitudes", "Pagos", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.equal(labels(getAccountNavigationItems("store_owner", false, { payments: true })).includes("Pagos"), false, "no store, no Pagos");
   assert.equal(labels(getAccountNavigationItems("seller", false, { payments: true })).includes("Pagos"), false);
   const pagos = withPayments.find((item) => item.label === "Pagos");
@@ -202,7 +203,8 @@ test("B6: Pagos is a store menu entry only while the pilot is on", () => {
 });
 
 test("B6: the menus read the pilot switch on the server", () => {
-  assert.match(read("app/mi-cuenta/layout.tsx"), /payments=\{accountType === "store_owner" && Boolean\(store\) && assistedCommerceEnabled\(\)\}/);
+  assert.match(read("app/mi-cuenta/layout.tsx"), /const payments = accountType === "store_owner" && Boolean\(store\) && assistedCommerceEnabled\(\);/);
+  assert.match(read("app/mi-cuenta/layout.tsx"), /payments=\{payments\}/);
   assert.match(read("app/api/account-navigation/route.ts"), /payments: hasStore && assistedCommerceEnabled\(\)/);
   assert.match(read("components/site-header.tsx"), /getAccountNavigationItems\(accountType, account\.hasStore, \{ payments: account\.payments \}\)/);
 });

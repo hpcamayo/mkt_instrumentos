@@ -94,7 +94,8 @@ test("the export route is owner-scoped, bounded and downloads without caching", 
   const route = fs.readFileSync(path.join(root, "app/api/store/inventory/export/route.ts"), "utf8");
   assert.match(route, /\.eq\("owner_user_id", userData\.user\.id\)/);
   assert.match(route, /\.eq\("store_id", store\.id\)/);
-  assert.match(route, /ids\.length > 200/);
+  // Effortless Laria, inventory batch, stock-14: a selection can be the whole view, up to the bulk limit (2000).
+  assert.match(route, /ids\.length > INVENTORY_BULK_LIMIT/);
   assert.match(route, /MAX_ROWS = 10000/);
   assert.match(route, /"Cache-Control": "private, no-store"/);
   assert.match(route, /Content-Disposition/);
@@ -161,7 +162,8 @@ test("only the allowlisted inventory functions can be called, with shaped argume
   assert.equal(inventoryCall({ action: "drop_table" }), null);
   assert.equal(inventoryCall({ action: "movement", item_id: "not-a-uuid", type: "sale", key: "mov-12345678" }), null);
   assert.equal(inventoryCall({ action: "movement", item_id: item, type: "sale", key: "short" }), null, "keys are at least 8 characters");
-  assert.equal(inventoryCall({ action: "price_bulk", item_ids: Array(201).fill(item), mode: "set", value: 10, key: "precio-12345678" }), null);
+  // Effortless Laria, inventory batch, stock-14: the bulk limit is 2000 (a whole view).
+  assert.equal(inventoryCall({ action: "price_bulk", item_ids: Array(2001).fill(item), mode: "set", value: 10, key: "precio-12345678" }), null);
   const movement = inventoryCall({ action: "movement", item_id: item, type: "sale", quantity: 2, channel: "tienda_fisica", key: "mov-12345678", extra: "ignored", expected_version: 4 });
   assert.equal(movement.fn, "record_stock_movement");
   assert.deepEqual(Object.keys(movement.args).sort(), ["p_channel", "p_expected_version", "p_idempotency_key", "p_item_id", "p_quantity", "p_reason", "p_reference", "p_type"]);
@@ -205,7 +207,7 @@ test("database error codes keep their Spanish message; anything else is generic"
 test("filters live in the URL, unknown values fall back, and tampered cursors restart the list", () => {
   const { parseInventoryFilters, inventoryHref, decodeCursor, encodeCursor, decodeMovementCursor, encodeMovementCursor, stockLevel } = load("lib/store-inventory.ts");
   const { filters, cursor } = parseInventoryFilters({ q: " ds-1 ", stock: "low", publicacion: "published", catalogo: "nope", orden: "price_desc" });
-  assert.deepEqual(filters, { q: "ds-1", stock: "low", publication: "published", catalog: "", category: "", sort: "price_desc" });
+  assert.deepEqual(filters, { q: "ds-1", stock: "low", publication: "published", catalog: "", category: "", price: "", sort: "price_desc" });
   assert.equal(cursor, null);
   const next = { value: "1500", id: "33333333-3333-4333-8333-333333333333" };
   const href = inventoryHref(filters, next);

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { NewSkuSheet } from "@/components/inventory/sku-forms";
-import { StockActionSheet, undoMovements, type StockActionType } from "@/components/inventory/stock-action-sheet";
+import { StockActionSheet, type StockActionType } from "@/components/inventory/stock-action-sheet";
 import { UndoNotice, type InventoryNotice } from "@/components/inventory/undo-notice";
 import { PageNotice } from "@/components/page-notice";
 import { Button, buttonClasses } from "@/components/ui/button";

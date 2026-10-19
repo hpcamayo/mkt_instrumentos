@@ -117,7 +117,7 @@ export type ReadyReply = { shortcut: string; title: string; text: string };
 
 // Copyable WhatsApp replies for purchase requests, filled with what the store already told Laria: its approved
 // methods, the account holder, the pickup address and hours. Like Laria itself they carry no numbers, accounts or
-// links (D-7): the store adds those in the chat. "[producto]" is left for the owner to fill, as WhatsApp Business
+// links (D-7): the store adds those in the chat. "[equipo]" is left for the owner to fill, as WhatsApp Business
 // quick replies are fixed text.
 export function readyReplies(store: ReplyStore, methods: ReplyMethod[]): ReadyReply[] {
   const place = [store.address, store.district, store.city].filter(Boolean).join(", ");
@@ -128,7 +128,7 @@ export function readyReplies(store: ReplyStore, methods: ReplyMethod[]): ReadyRe
     {
       shortcut: "/disponible",
       title: "Sí, está disponible",
-      text: `¡Hola! Gracias por escribir a ${store.name}. Sí, tenemos [producto] disponible.${list ? ` Puedes pagar con ${list}.` : ""} ¿Cómo prefieres coordinar el pago y la entrega?`,
+      text: `Hola, gracias por escribir a ${store.name}. Sí, tenemos [equipo] disponible.${list ? ` Puedes pagar con ${list}.` : ""} ¿Cómo prefieres coordinar el pago y la entrega?`,
     },
   ];
   for (const entry of methods) {
@@ -144,7 +144,7 @@ export function readyReplies(store: ReplyStore, methods: ReplyMethod[]): ReadyRe
     }
   }
   if (place) replies.push({ shortcut: "/recojo", title: "Dónde recoger", text: `Puedes recogerlo en ${place}.${hours} Te esperamos.` });
-  replies.push({ shortcut: "/agotado", title: "Ya no está disponible", text: "Gracias por escribirnos. Por ahora no tenemos [producto]; te avisamos por aquí apenas vuelva a llegar." });
+  replies.push({ shortcut: "/agotado", title: "Ya no está disponible", text: "Gracias por escribirnos. Por ahora no tenemos [equipo]; te avisamos por aquí apenas vuelva a llegar." });
   return replies;
 }
 
