@@ -96,6 +96,10 @@ A sold listing disappears from normal catalog and search but remains available a
 
 `Relistar` creates a new listing copied from the sold listing. The old record stays intact. Copies belonging to a Particular or normal Tienda return require moderation. Copies belonging to a Tienda Verificada may publish directly when they meet publication requirements.
 
+<!-- ux my-listings: start -->
+`Republicar` (sold) and `Duplicar` (any listing that is not archived) create a new **draft** with the text, specs and photos copied, open it in the edit form so the seller can adjust price or photos, and send it with the usual submission (replaces the direct relist copy; UXD-my-listings-6). An owner can mark an owner-hidden listing sold (`Ya lo vendí`), and can withdraw a pending, draft or rejected listing as sold (`Lo vendí, retirar`): it goes to the sold history as archived and never becomes public. An owner can pause all their listings until a return date between tomorrow and 90 days (`Modo vacaciones`): the listings stay public with `Vuelve el …`, WhatsApp contact is replaced by that note, availability questions stop, and everything returns by itself on that date.
+<!-- ux my-listings: end -->
+
 ## Particular Dashboard and Dynamic Profile Data
 
 `Mi cuenta` for a Particular seller supports:
@@ -111,6 +115,10 @@ A sold listing disappears from normal catalog and search but remains available a
 - Viewing listing analytics.
 
 Per-listing analytics include views, favorites, WhatsApp contacts, status, publication date, and sold state. The account summary includes active listings, total views, favorites, WhatsApp contacts, and sold listings. Revenue must not be invented or displayed because transactions occur off-platform.
+
+<!-- ux my-listings: start -->
+The account home (`Resumen`) opens on **Pendientes**: one list, most urgent first, of what needs the person (confirm a purchase, a buyer who says they bought, a review that closes soon, a rejected listing or revision with its reason, a listing Moderación hid, `¿Compraste…?`, `¿Sigue disponible?`, a sale with no buyer chosen, drafts, favorites that dropped in price, new alert matches). Each item answers in one tap on the spot or links to the screen where it is done. Metrics move to `Estadísticas` (`/mi-cuenta/estadisticas`): 7, 30 or 90-day views, WhatsApp contacts and saves per listing with up to two plain tips each (UXD-my-listings-1, UXD-my-listings-9). `Mis publicaciones` has status tabs with counts, search, sorting by views or contacts, inline price changes, bulk hide or restore, pages of 50, and a private preview for listings that are not public. Hide, restore and price changes happen at once with `Deshacer` for 10 seconds; only marking sold keeps a confirmation.
+<!-- ux my-listings: end -->
 
 Account-owned Particular listings resolve seller identity and contact information from the current profile where appropriate. Updating name, WhatsApp, city, or region should update the display of current account-owned listings without unnecessary duplication. Legacy listings may continue to use historical listing-level contact fields until an admin manually assigns ownership.
 
@@ -136,6 +144,10 @@ Moderated edits require admin review for a Particular and normal Tienda:
 - Photos.
 
 The old approved version must remain public while a moderated revision waits for approval. This is a revision or pending-edit workflow; it must not mutate or remove the approved public version prematurely. There is at most one active pending revision per listing, but its owner may amend that same proposal before the admin decision. Later moderated field/photo changes merge into the pending proposal, reverting a field to its approved value removes that difference, and a proposal with no remaining differences is cancelled. Admin decisions must reject a stale proposal version and require review of the latest state. A Tienda Verificada can apply edits to an approved listing directly without moderation.
+
+<!-- ux my-listings: start -->
+The edit form follows the sell form's order (photos, the instrument, condition and price, location, description, characteristics). On approved listings each field carries `Se publica al instante` or `Pasa por revisión`, and a live note says what saving will do. A rejected listing or revision opens with the moderator's reasons as a checklist and the affected fields marked `Revisar`; rejected listings and drafts have one button, `Guardar y enviar a revisión` (`Guardar y publicar` for a Tienda verificada).
+<!-- ux my-listings: end -->
 
 ## Store Account and Application
 
@@ -176,6 +188,10 @@ Restoring a hidden listing must fail gracefully if it would exceed the cap. No p
 The store-owner dashboard supports editing the store profile and allowed business/contact data; managing logo, banner, optional store photos, and social links; creating and editing inventory; viewing status and moderation reasons; marking sold; hiding/unpublishing; relisting; and aggregate analytics.
 
 Commercial analytics include listing impressions, listing views, favorites, WhatsApp contacts, sold listings, and meaningful conversion-oriented ratios. They must not show revenue without actual transaction data. These metrics should remain suitable for evaluating later paid store packages without activating such packages in V1.
+
+<!-- ux my-listings: start -->
+The store home opens on **Hoy en tu tienda**: the same Pendientes plus today's purchase requests, out-of-stock SKUs people saved, low stock, an unfinished import with its expiry, and SKUs without a listing. A new store sees a checklist that ticks itself (Solicitud, Logo y portada, Descripción y redes, Primera publicación o Importar desde Excel, Medios de pago when the payments pilot is on, Ver tu página) until every step is done. `Estadísticas` adds a 12-week trend of views and contacts, the top listings by views, contacts and purchase requests, and the listings with contacts but no sale in 30 days.
+<!-- ux my-listings: end -->
 
 ## Favorites and Alerts
 
@@ -230,9 +246,17 @@ When a seller marks a listing sold:
 
 This confirmation verifies only that both parties identify the sale as a Laria-originated transaction. It does not verify payment amount, delivery, or item condition.
 
+<!-- ux my-listings: start -->
+The loop can also start from the buyer: 3 to 30 days after a signed-in buyer opened WhatsApp on a listing, Laria asks them once `¿Compraste …?` (in Pendientes, on the listing as `¿Cómo te fue?`, and by e-mail). `Sí` notifies the seller, who confirms with one tap (`Sí, me lo compró`): the listing becomes sold and the transaction is verified without a second buyer confirmation, because the buyer already said yes. `No` only stops the question. If the seller already asked that buyer, the buyer's `Sí` answers that request. Stock-managed store listings are excluded; their sales are recorded in Inventario. The buyer list a seller chooses from shows each person's name, contact date and the last three digits of their WhatsApp, with no one pre-selected.
+<!-- ux my-listings: end -->
+
 ## Reviews
 
 Reviews are available only for verified Laria transactions and are two-way: seller/store reviews buyer, and buyer reviews seller/store. Each review requires 1–5 stars, permits an optional text comment, and is limited to one review per side per transaction.
+
+<!-- ux my-listings: start -->
+Stars are tapped directly (five radio buttons, nothing pre-selected), with the comment right below. After the buyer confirms, a closing panel (`Que lo disfrutes`) leads into the review, and a seller's first verified sale is marked once as a milestone. Reminders go to the buyer on day 2 and day 7 of an unanswered confirmation request, and to whoever has not reviewed 3 days and 1 day before the window closes.
+<!-- ux my-listings: end -->
 
 For a Particular sale, the seller-side identity is the Particular account. For a store sale, the buyer's seller-side review belongs to the store, not the individual owner account.
 
@@ -250,11 +274,19 @@ Users can report a listing, store, or review. A report has a fixed reason catego
 
 Listing actions include approve, reject, hide, mark sold where appropriate, inspect revision history, and restore/manage lifecycle where appropriate. Store actions include basic approval, rejection, hiding, verification, and verification revocation.
 
-Rejection and administrative hiding require a reason visible to the owner. Approval, rejection, relevant store-status changes, and other important lifecycle changes generate marketplace emails. Admin assigns legacy listing ownership manually; ownership must never be auto-claimed only from a matching WhatsApp number or email.
+Rejection and administrative hiding require a reason visible to the owner.
+
+<!-- ux my-listings: start -->
+A listing or revision rejection takes one or more fixed reasons (`pocas fotos`, `falta el reverso`, `precio incoherente`, `datos de contacto en la descripción` and six more) plus an optional note; with no reason picked the note is required. The owner sees the reasons as a checklist tied to the fields.
+<!-- ux my-listings: end --> Approval, rejection, relevant store-status changes, and other important lifecycle changes generate marketplace emails. Admin assigns legacy listing ownership manually; ownership must never be auto-claimed only from a matching WhatsApp number or email.
 
 ## Email Notifications
 
 Centralized application email infrastructure sends listing approval/rejection, store approval/rejection, useful verification-status changes, buyer transaction-confirmation requests, review workflow notifications, search alerts, and price-drop alerts. Product logic must not depend on a particular email provider.
+
+<!-- ux my-listings: start -->
+Rejection e-mails open the edit form and include the reason, also for rejected revisions. A daily job (14:00 UTC) sends, at most once each: purchase checks to buyers, `¿Sigue disponible?` to sellers (after 30 days without a confirmation or 5 contacts, not more than every 14 days, never while paused or for stock-managed listings), purchase-confirmation reminders and review reminders.
+<!-- ux my-listings: end -->
 
 Supabase Auth may continue sending authentication-related messages.
 

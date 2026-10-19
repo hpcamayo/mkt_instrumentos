@@ -120,7 +120,7 @@ as $$
     when 'categoria_incorrecta' then 'Categoría o tipo incorrectos'
     when 'marca_modelo' then 'Marca o modelo incorrectos'
     when 'condicion_incoherente' then 'La condición no coincide con las fotos'
-    when 'articulo_prohibido' then 'Artículo no permitido en Laria'
+    when 'articulo_prohibido' then 'El equipo está entre los Artículos prohibidos'
   end;
 $$;
 

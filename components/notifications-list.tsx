@@ -56,6 +56,11 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
         const transactionReference = notification.transaction_id ?? notification.claim_id;
         const href = transactionReference
           ? `/mi-cuenta/transacciones/${transactionReference}`
+          // ux my-listings: these are answered from Pendientes on the account home; rejections open the edit form.
+          : MY_LISTINGS_HOME_EVENTS.has(notification.event_type)
+          ? "/mi-cuenta"
+          : (notification.event_type === "listing_rejected" || notification.event_type === "listing_revision_rejected") && notification.listing_id
+          ? `/mi-cuenta/publicaciones/${notification.listing_id}/editar`
           : notification.event_type === "listing_price_drop" && notification.listing_id
           ? `/mi-cuenta/favoritos/${notification.listing_id}`
           : notification.store_id && notification.event_type.startsWith("store_")
@@ -88,6 +93,8 @@ export function NotificationsList({ notifications }: { notifications: AccountNot
   );
 }
 
+const MY_LISTINGS_HOME_EVENTS = new Set(["listing_purchase_check", "listing_buyer_reported_purchase", "listing_availability_checkin"]);
+
 function notificationLabel(eventType: string) {
   return ({
     listing_price_drop: "Bajó de precio un favorito",
@@ -105,5 +112,11 @@ function notificationLabel(eventType: string) {
     transaction_declined: "Confirmación rechazada",
     transaction_cancelled: "Solicitud cancelada",
     review_revealed: "Reseñas disponibles",
+    // ux my-listings
+    listing_purchase_check: "¿Lo compraste?",
+    listing_buyer_reported_purchase: "Te reportaron una compra",
+    listing_availability_checkin: "¿Sigue disponible?",
+    listing_purchase_confirmation_reminder: "Confirma una compra",
+    listing_review_reminder: "Tu reseña vence pronto",
   } as Record<string, string>)[eventType] ?? "Actualización de tu cuenta";
 }

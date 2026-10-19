@@ -16,6 +16,7 @@ import { TrustNote } from "@/components/listing/trust-note";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
 import { AcceptedPaymentMethods } from "@/components/payment/accepted-payment-methods";
 import { PageContainer } from "@/components/page-container";
+import { PurchaseCheckin } from "@/components/purchase-checkin";
 import { StripCurrent } from "@/components/strip-current";
 import { NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { Price } from "@/components/ui/price";
@@ -128,6 +129,8 @@ const loadPublicListing = cache(async (slug: string) => {
         id,
         status,
         stock_state,
+        paused_until,
+        availability_confirmed_at,
         sold_at,
         store_id,
         owner_user_id,
@@ -345,6 +348,12 @@ function ListingDetail({
   const secondaryTitle = getListingSecondaryTitle(listing);
   const isSold = listing.status === "sold";
   const outOfStock = !isSold && isOutOfStock(listing);
+  // mine-08: a recent "Sí, sigue disponible" is shown; the first publication date never changes.
+  const confirmedAt = listing.availability_confirmed_at ? Date.parse(listing.availability_confirmed_at) : NaN;
+  const availabilityConfirmed = !isSold && Number.isFinite(confirmedAt) && Date.now() - confirmedAt < 30 * 24 * 60 * 60 * 1000
+    ? new Date(confirmedAt).toLocaleDateString("es-PE", { day: "numeric", month: "long", timeZone: "America/Lima" })
+    : null;
+  const paused = !isSold && listing.paused_until && listing.paused_until > new Date().toLocaleDateString("en-CA", { timeZone: "America/Lima" }) ? listing.paused_until : null;
   const place = `${listing.city}, ${listing.region}`;
   const seller: SellerSummary = {
     name: (isStore ? store?.name : particular.name) || (isStore ? "Tienda" : "Particular"),
@@ -399,6 +408,7 @@ function ListingDetail({
                   {place} · {formatPublishedAgo(listing.published_at ?? listing.created_at, Date.now())}
                 </ListingDetailMetadata>
               </p>
+              {availabilityConfirmed ? <p className="mt-1 t-meta">Quien vende confirmó que sigue disponible el {availabilityConfirmed}.</p> : null}
             </div>
 
             {isSold ? (
@@ -408,9 +418,16 @@ function ListingDetail({
                 </p>
                 <Link href="#similares" className="link w-fit t-ui font-semibold">Ver publicaciones similares</Link>
               </div>
+            ) : paused ? (
+              // mine-12 (ux my-listings): the seller is away; contact returns on the date they set.
+              <div className="order-3 grid gap-1 rounded-panel bg-canvas p-4 lg:order-3">
+                <p className="t-ui font-semibold text-ink">Vuelve el {formatPausedUntil(paused)}</p>
+                <p className="t-ui text-ink-2">Quien vende pausó sus publicaciones y no está respondiendo mensajes hasta esa fecha.</p>
+              </div>
             ) : (
               <ContactModule listingId={listing.id} href={contactHref} purchase={Boolean(purchase)} className="order-3 lg:order-3" />
             )}
+            <div className="order-3 empty:hidden lg:order-3"><PurchaseCheckin listingId={listing.id} /></div>
 
             <a href="#vendedor" className="order-4 -my-1 flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 rounded-control py-1 lg:hidden">
               <span className="t-ui font-semibold text-ink underline decoration-line-deco underline-offset-[3px]">{seller.name}</span>
@@ -686,4 +703,8 @@ async function SellerInventory({
 }) {
   const { publishedCount } = await getMoreFromSellerListings(supabase, listing);
   return publishedCount === null ? null : <li>{listingCountLabel(publishedCount)}</li>;
+}
+
+function formatPausedUntil(isoDate: string) {
+  return new Date(`${isoDate}T12:00:00Z`).toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 }

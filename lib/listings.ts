@@ -134,6 +134,10 @@ export type ListingDetailData = ListingCardData & {
   contact_name: string | null;
   whatsapp_phone: string;
   owner_user_id: string | null;
+  // ux my-listings (mine-12): the seller's vacation return date, or null.
+  paused_until?: string | null;
+  // mine-08: when the seller last answered "Sí, sigue disponible".
+  availability_confirmed_at?: string | null;
   profiles: ParticularProfileSummary | ParticularProfileSummary[] | null;
 };
 

@@ -44,10 +44,17 @@ function templateContent(payload: MarketplaceEmailPayload): TemplateContent {
   const reason = payload.context.reason;
   switch (payload.event_type) {
     case "listing_approved": return listingTemplate("Tu publicación fue aprobada", `“${listing?.title ?? "Tu publicación"}” ya puede mostrarse en Laria.`, "Ver mis publicaciones", "/mi-cuenta/publicaciones");
-    case "listing_rejected": return listingTemplate("Tu publicación necesita correcciones", `“${listing?.title ?? "Tu publicación"}” fue rechazada.${reason ? ` Motivo: ${reason}` : ""}`, "Revisar publicación", "/mi-cuenta/publicaciones");
+    case "listing_rejected": return listingTemplate("Tu publicación necesita correcciones", `“${listing?.title ?? "Tu publicación"}” fue rechazada.${reason ? ` Motivo: ${reason}` : ""}`, "Corregir publicación", editPath(listing));
     case "listing_hidden": return listingTemplate("Moderación ocultó tu publicación", `“${listing?.title ?? "Tu publicación"}” dejó de estar visible.${reason ? ` Motivo: ${reason}` : ""}`, "Revisar publicación", "/mi-cuenta/publicaciones");
     case "listing_revision_approved": return listingTemplate("Tus cambios fueron aprobados", `La actualización de “${listing?.title ?? "tu publicación"}” fue aprobada.`, "Ver mis publicaciones", "/mi-cuenta/publicaciones");
-    case "listing_revision_rejected": return listingTemplate("Tu actualización necesita correcciones", `Los cambios de “${listing?.title ?? "tu publicación"}” fueron rechazados. Revisa el motivo en tu cuenta.`, "Revisar publicación", "/mi-cuenta/publicaciones");
+    case "listing_revision_rejected": return listingTemplate("Tu actualización necesita correcciones", `Los cambios de “${listing?.title ?? "tu publicación"}” fueron rechazados; la versión publicada sigue visible.${reason ? ` Motivo: ${reason}` : " Revisa el motivo en tu cuenta."}`, "Corregir cambios", editPath(listing));
+    // ux my-listings (big-08, mine-08, trust-01): reminders from laria_private.run_my_listings_reminders().
+    case "listing_purchase_check": return listingTemplate(`¿Compraste “${listing?.title ?? "el equipo"}”?`, "Le escribiste a quien vende hace unos días. Si lo compraste, respóndelo en un toque y se habilitan las reseñas para ambos. Si no, también puedes decirlo.", "Responder", "/mi-cuenta");
+    case "listing_buyer_reported_purchase": return listingTemplate("Una persona dice que te compró", `Quien te escribió por “${listing?.title ?? "tu publicación"}” indica que lo compró. Confírmalo para marcarla vendida y abrir las reseñas.`, "Revisar", "/mi-cuenta");
+    case "listing_availability_checkin": return listingTemplate(`¿“${listing?.title ?? "Tu publicación"}” sigue disponible?`, "Respóndelo en un toque: confirmar, marcar vendida o ajustar el precio.", "Responder", "/mi-cuenta");
+    case "listing_purchase_confirmation_reminder": return transactionTemplate("Confirma tu compra", `Quien vende indicó que compraste “${transaction?.listing_title ?? listing?.title ?? "el equipo"}”. Responde desde tu cuenta de Laria para habilitar las reseñas.`, "Responder", transaction);
+    case "listing_review_reminder": return transactionTemplate("Tu reseña vence pronto", `El plazo para reseñar la compra de “${transaction?.listing_title ?? listing?.title ?? "el equipo"}” termina pronto. Es breve y ayuda a la próxima persona.`, "Reseñar", transaction);
+    // end ux my-listings
     case "store_approved": return storeTemplate("Tu solicitud fue aprobada", `${store?.name ?? "Tu negocio"} ya figura como Tienda en Laria.`, "Administrar mi tienda");
     case "store_rejected": return storeTemplate("Tu solicitud de tienda necesita correcciones", `${store?.name ?? "Tu solicitud"} fue rechazada.${reason ? ` Motivo: ${reason}` : ""}`, "Revisar solicitud");
     case "store_verified": return storeTemplate("Tu tienda fue verificada", `${store?.name ?? "Tu tienda"} ahora figura como Tienda verificada: sus publicaciones nuevas aparecen directamente si cumplen las reglas.`, "Ver mi tienda");
@@ -76,6 +83,10 @@ function templateContent(payload: MarketplaceEmailPayload): TemplateContent {
   }
 }
 
+// Rejection e-mails open the edit form itself (by slug: the payload has no listing id).
+function editPath(listing: MarketplaceEmailPayload["listing"]) {
+  return listing ? `/mi-cuenta/publicaciones/editar/${encodeURIComponent(listing.slug)}` : "/mi-cuenta/publicaciones";
+}
 function listingTemplate(heading: string, body: string, ctaLabel: string, path: string): TemplateContent {
   return { subject: heading, heading, body, ctaLabel, path };
 }

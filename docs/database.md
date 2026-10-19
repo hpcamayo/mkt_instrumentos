@@ -763,3 +763,35 @@ why is in `docs/store-operations/review-fixes.md`. Long functions are patched fr
   description) written by the owner through `set_store_import_row_publish_fields(session, row, fields)`, refused once the
   row is published (`IMPORT_ROW_PUBLISHED`) or publication is closed (`IMPORT_PUBLISH_CLOSED`). No function that locks
   or writes stock is replaced.
+
+<!-- ux my-listings: start -->
+## UX: my listings, sales and reviews (migrations `20261105120000`–`20261105120200`)
+
+Local only; never applied to a hosted database. SQL suite: `tests/ux-my-listings.sql`.
+
+- `listings` gains `rejection_codes text[]`, `availability_confirmed_at`, `availability_checkin_at`, `paused_until date`;
+  `listing_revisions` gains `rejection_codes`. Owners cannot write them directly (trigger
+  `ux_protect_listing_owner_state`); codes clear when `rejection_reason` is cleared.
+- `laria_private.ux_add_check_values(table, constraint, values[])` extends a `col = any(array[...])` check additively, so
+  batches adding notification or e-mail types don't overwrite each other's constraint rebuilds.
+- `review_listing` and `review_listing_revision` take `p_reason_codes text[] default null` (ten codes, labels in
+  `laria_private.ux_rejection_reason_label`; mirrored in `lib/rejection-reasons.ts`). The stored reason reads
+  "Label; Label. Nota: note"; a rejection needs at least one code or a note.
+- `set_owned_listing_lifecycle`: `sold` also from owner-hidden; `withdraw_sold` moves pending, draft or rejected to
+  archived with `sold_at`.
+- New owner RPCs: `copy_owned_listing(id, 'relist'|'duplicate')` (new draft with copied photos; relist sets
+  `relisted_from_listing_id`), `set_owned_listing_price`, `set_owned_listings_lifecycle_bulk(ids, 'hide'|'restore')`
+  → `{changed, failed}`, `set_owned_listings_pause(until|null)` (tomorrow to 90 days), `listing_is_paused(date)`,
+  `confirm_listing_available`.
+- `public.purchase_checkins` (one row per listing and buyer: answer, seller decision, claim). RLS: the buyer reads their
+  rows; the seller reads rows answered yes. Written only through `answer_purchase_checkin(listing, bought)` and
+  `decide_purchase_checkin(checkin, confirmed)`; `get_purchase_checkin(listing)` returns the caller's state or null.
+- Notification and e-mail types `listing_purchase_check`, `listing_buyer_reported_purchase`,
+  `listing_availability_checkin`, `listing_purchase_confirmation_reminder`, `listing_review_reminder`; sent once each
+  through `laria_private.ux_notify_once` (dedupe table `laria_private.ux_reminders_sent`). A trigger on e-mail deliveries
+  fills `context.reason` for `listing_revision_rejected`.
+- `laria_private.run_my_listings_reminders()` runs from pg_cron job `ux-my-listings-reminders` (`0 14 * * *`).
+- Reads: `get_account_pendientes()` (buyer, seller and store blocks for the account home), `get_listing_statistics(7|30|90)`
+  (per listing, 12 weekly buckets, contacts without sale in 30 days). `get_eligible_transaction_buyers` adds
+  `phone_last3` and `reported_purchase`; `get_transaction_detail` adds `seller_verified_sales` for the seller.
+<!-- ux my-listings: end -->

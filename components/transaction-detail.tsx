@@ -1,8 +1,9 @@
 "use client";
 
+import { Music } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PageNotice } from "@/components/page-notice";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -14,6 +15,8 @@ import {
 } from "@/lib/transactions";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
+import { BuyerChoice } from "@/components/transactions/buyer-choice";
+import { StarRating } from "@/components/transactions/star-rating";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusTag } from "@/components/ui/tag";
@@ -28,7 +31,12 @@ export function TransactionDetailView({
 }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
-  const [selectedBuyer, setSelectedBuyer] = useState(candidates[0]?.buyer_user_id ?? "");
+  // No buyer is chosen in advance: the seller picks the person they sold to (mine-09).
+  const [selectedBuyer, setSelectedBuyer] = useState("");
+  // Set when this buyer just answered "Sí, lo compré" in this visit. After router.refresh() the state reads "verified",
+  // and the flag keeps the closing panel above the review form until the page is left (trust-04). A later visit
+  // shows the plain review section.
+  const [justConfirmed, setJustConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [messageKind, setMessageKind] = useState<"success" | "error">("success");
@@ -37,10 +45,11 @@ export function TransactionDetailView({
     (candidate) => candidate.buyer_user_id === selectedBuyer,
   )
     ? selectedBuyer
-    : candidates[0]?.buyer_user_id ?? "";
+    : "";
 
+  // Returns whether the action succeeded. An empty success text shows no notice (the caller shows its own panel).
   async function run(action: () => PromiseLike<{ error: { message: string } | null }>, success: string) {
-    if (!supabase || busy) return;
+    if (!supabase || busy) return false;
     setBusy(true);
     setMessage("");
     const { error } = await action();
@@ -48,11 +57,12 @@ export function TransactionDetailView({
     if (error) {
       setMessageKind("error");
       setMessage(transactionErrorMessage(error.message));
-      return;
+      return false;
     }
     setMessageKind("success");
     setMessage(success);
     router.refresh();
+    return true;
   }
 
   async function createClaim() {
@@ -81,13 +91,15 @@ export function TransactionDetailView({
 
   async function respond(confirmed: boolean) {
     if (!supabase || !detail.claim_id) return;
-    await run(
+    const done = await run(
       () => supabase.rpc("respond_transaction_claim", {
         p_claim_id: detail.claim_id!,
         p_confirmed: confirmed,
       }),
-      confirmed ? "Confirmaste la compra. Se abrió el plazo de 10 días para ambas reseñas." : "Indicamos al vendedor que no realizaste esta compra.",
+      // A confirmation is answered by the closing panel instead of a notice.
+      confirmed ? "" : "Indicamos al vendedor que no realizaste esta compra.",
     );
+    if (done && confirmed) setJustConfirmed(true);
   }
 
   async function cancelClaim() {
@@ -139,8 +151,19 @@ export function TransactionDetailView({
         </section>
       ) : null}
 
+      {detail.role === "seller" && detail.state === "verified" && detail.seller_verified_sales === 1 ? (
+        <Notice tone="success" role="note" title="Tu primera venta verificada en Laria">
+          <p className="mt-1">El comprador y tú reconocen esta venta. No confirma pago, entrega ni la condición del equipo.</p>
+        </Notice>
+      ) : null}
+
       {detail.state === "verified" && detail.transaction_id && detail.review_deadline ? (
-        <ReviewSection detail={detail} busy={busy} run={run} />
+        <ReviewSection
+          detail={detail}
+          busy={busy}
+          run={run}
+          closing={justConfirmed && detail.role === "buyer" && !detail.own_review}
+        />
       ) : null}
     </div>
   );
@@ -183,15 +206,8 @@ function SellerAttribution({
             <p className="mt-2 t-meta">Solo se muestran cuentas autenticadas que abrieron WhatsApp desde esta publicación antes de marcarla vendida.</p>
             {candidates.length ? (
               <>
-                <Field id="atribucion-comprador" label="Contacto elegible" className="mt-4">
-                  <Select value={selectedBuyer} onChange={(event) => onSelect(event.target.value)}>
-                    {candidates.map((candidate) => (
-                      <option key={candidate.buyer_user_id} value={candidate.buyer_user_id}>
-                        {candidate.display_name || "Cuenta de Laria"} · contacto {formatDateTime(candidate.last_contact_at)}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
+                <BuyerChoice candidates={candidates} selected={selectedBuyer} onSelect={onSelect} disabled={busy} />
+                {!selectedBuyer ? <p className="mt-3 t-meta">Elige a la persona que te compró el equipo.</p> : null}
                 <button type="button" disabled={busy || !selectedBuyer} onClick={onCreate} className={buttonClasses({ className: "mt-4" })}>Solicitar confirmación</button>
               </>
             ) : <p className="mt-4 text-sm font-semibold text-ink-2">No hay otros contactos autenticados elegibles para esta publicación.</p>}
@@ -207,14 +223,19 @@ function SellerAttribution({
   );
 }
 
+type RunAction = (action: () => PromiseLike<{ error: { message: string } | null }>, success: string) => Promise<boolean>;
+
 function ReviewSection({
   detail,
   busy,
   run,
+  closing = false,
 }: {
   detail: TransactionDetail;
   busy: boolean;
-  run: (action: () => PromiseLike<{ error: { message: string } | null }>, success: string) => Promise<void>;
+  run: RunAction;
+  // The buyer just confirmed the purchase: open with the closing panel (trust-04).
+  closing?: boolean;
 }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [confirm, confirmDialog] = useConfirm();
@@ -241,6 +262,7 @@ function ReviewSection({
   return (
     <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
       {confirmDialog}
+      {closing ? <ClosingPanel sellerName={detail.seller_name} /> : null}
       <h2 className="t-section text-ink">Reseñas de la transacción</h2>
       <p className="mt-2 t-ui text-ink-2">
         Plazo: hasta {formatDateTime(detail.review_deadline!)}. Las reseñas son doble ciego: se revelan cuando ambas partes envían o al terminar los 10 días.
@@ -252,12 +274,7 @@ function ReviewSection({
         </Notice>
       ) : detail.review_window_open ? (
         <form onSubmit={submitReview} className="mt-5 grid gap-4">
-          <Field id="resena-rating" label="Calificación" className="max-w-xs">
-            <Select name="rating" required defaultValue="">
-              <option value="" disabled>Selecciona 1 a 5</option>
-              {[1, 2, 3, 4, 5].map((rating) => <option key={rating} value={rating}>{rating} {rating === 1 ? "estrella" : "estrellas"}</option>)}
-            </Select>
-          </Field>
+          <StarRating name="rating" legend="Calificación" disabled={busy} />
           <Field id="resena-comment" label="Comentario opcional">
             <Textarea name="comment" maxLength={2000} rows={4} />
           </Field>
@@ -275,6 +292,27 @@ function ReviewSection({
   );
 }
 
+// The buyer's "Sí, lo compré" ends here: a warm word, the 10 days, and the stars right below. It takes focus because the
+// button the buyer pressed is gone after the refresh.
+function ClosingPanel({ sellerName }: { sellerName: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.focus();
+    ref.current?.scrollIntoView({ block: "nearest" });
+  }, []);
+  return (
+    <div ref={ref} tabIndex={-1} role="status" className="mb-6 rounded-panel bg-accent-tint px-4 py-4 sm:px-5">
+      <p className="flex items-center gap-2 t-section text-ink">
+        <Music aria-hidden className="h-5 w-5 shrink-0" />
+        Que lo disfrutes
+      </p>
+      <p className="mt-1 t-ui text-ink-2">
+        Confirmaste la compra. Tienes 10 días para reseñar a {sellerName}; tu reseña se muestra cuando ambos reseñen o al terminar el plazo.
+      </p>
+    </div>
+  );
+}
+
 function VisibleReview({
   review,
   busy,
@@ -282,7 +320,7 @@ function VisibleReview({
 }: {
   review: TransactionReview;
   busy: boolean;
-  run: (action: () => PromiseLike<{ error: { message: string } | null }>, success: string) => Promise<void>;
+  run: RunAction;
 }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [reportOpen, setReportOpen] = useState(false);

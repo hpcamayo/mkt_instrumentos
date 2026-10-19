@@ -112,7 +112,7 @@ const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     const relisted = await lifecycle(initial.id, ownerSession.cookie, "relist");
     listings.push(relisted.id);
     assert.equal(relisted.title, approved.data.title);
-    assert.equal(relisted.status, "pending");
+    assert.equal(relisted.status, "draft"); // ux my-listings (mine-10): a draft to adjust, then sent to review
     const soldPage = await fetch(`${base}/instrumentos/${approved.data.slug}`);
     assert.equal(soldPage.status, 200);
     assert.match(await soldPage.text(), /Vendido/);
