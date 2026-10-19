@@ -59,6 +59,7 @@ import {
   type SellField,
 } from "@/lib/sell-form";
 import { addStarter, descriptionStarters, sellHints, shotList, titleFromBrandModel } from "@/lib/sell-guidance";
+import { SHARED_PHOTOS_PARAM, takeSharedPhotos } from "@/lib/share-target";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { cn } from "@/lib/utils";
 
@@ -189,6 +190,18 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
         }
         setReady(true);
         return;
+      }
+      // big-12 (speed batch): photos shared from the phone's gallery arrive as ?compartido=1 and are added as if picked.
+      // A share starts a new listing, so an older unfinished one on this device is not offered over it.
+      if (new URLSearchParams(window.location.search).get(SHARED_PHOTOS_PARAM) === "1") {
+        const shared = await takeSharedPhotos();
+        if (cancelled) return;
+        dropSharedParam();
+        if (shared.length) {
+          setReady(true);
+          addPhotos(shared);
+          return;
+        }
       }
       const stored = parseLocalDraft(readStorage(storageKey));
       if (stored && hasContent(stored, baseValues)) setRestore(stored);
@@ -1119,6 +1132,13 @@ function shortError(text: string) {
 function draftsTable() {
   const supabase = getSupabaseBrowserClient();
   return supabase ? (supabase as unknown as SupabaseClient).from("listing_drafts") : null;
+}
+
+// The share marker is not carried on to any other address (reloads, links, Publicar otro).
+function dropSharedParam() {
+  const url = new URL(window.location.href);
+  url.searchParams.delete(SHARED_PHOTOS_PARAM);
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 function readStorage(key: string) {

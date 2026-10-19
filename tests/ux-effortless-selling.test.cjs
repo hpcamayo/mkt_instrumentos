@@ -148,3 +148,12 @@ test("fast-04: upload progress is announced politely, not every percent", () => 
   assert.doesNotMatch(clip, /aria-live="polite"/);
   assert.match(clip, /<span aria-hidden> \{Math\.round\(clip\.progress \* 100\)\}%<\/span>/);
 });
+
+test("big-12: photos shared from the gallery are added like picked ones, and the marker is dropped", () => {
+  const sell = source("components/sell-listing-form.tsx");
+  assert.match(sell, /import \{ SHARED_PHOTOS_PARAM, takeSharedPhotos \} from "@\/lib\/share-target";/);
+  assert.match(sell, /get\(SHARED_PHOTOS_PARAM\) === "1"/);
+  assert.match(sell, /const shared = await takeSharedPhotos\(\);\n\s+if \(cancelled\) return;\n\s+dropSharedParam\(\);/);
+  assert.match(sell, /addPhotos\(shared\)/);
+  assert.match(sell, /url\.searchParams\.delete\(SHARED_PHOTOS_PARAM\)/);
+});

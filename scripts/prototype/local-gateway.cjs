@@ -101,6 +101,8 @@ async function handleAuth(req, res, url) {
     if (grant === "password") {
       const u = await findUser("lower(email) = lower($1) and encrypted_password = extensions.crypt($2, encrypted_password)", [body.email || "", body.password || ""]);
       if (!u) return authErr(res);
+      // Like Supabase Auth: the right password on an unconfirmed address (accounts batch, fix-08).
+      if (!u.email_confirmed_at) return authErr(res, "Email not confirmed", "email_not_confirmed");
       await db.query("update auth.users set last_sign_in_at = now() where id = $1", [u.id]);
       return send(res, 200, await session(u));
     }
@@ -132,6 +134,8 @@ async function handleAuth(req, res, url) {
   if (route === "/logout") return send(res, 204);
   if (route === "/settings") return send(res, 200, { external: { email: true }, disable_signup: true, mailer_autoconfirm: true });
   // OTP, sign-up, recovery and invite need email; the prototype seeds its users instead.
+  // Resending the confirmation e-mail: nothing is sent locally (accounts batch, fix-08).
+  if (route === "/resend") return send(res, 200, {});
   return send(res, 400, { code: 400, error_code: "not_supported_locally", msg: "Not available in the local prototype gateway" });
 }
 

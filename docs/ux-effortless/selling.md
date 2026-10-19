@@ -62,6 +62,11 @@ errors.
   the moment it is added while the seller moves on. On phones "Tomar foto" opens the camera; on computers there is
   "Elegir fotos" and a drop zone. A sticky card preview sits beside the form on wide screens.
 - **Files.** `components/sell-listing-form.tsx`, `components/selling/photo-step.tsx`, `components/selling/listing-uploads.ts`.
+- **Shared from the gallery (big-12, speed batch).** When the form opens with `?compartido=1`, it takes the photos the
+  service worker kept (`takeSharedPhotos`, `lib/share-target.ts`) and adds them exactly as if they were picked, then
+  drops the marker from the address. A share starts a new listing, so an older unfinished one on the device is not
+  offered over it. Checked on the prototype: two shared photos arrived in order and uploaded, and the device copy was
+  removed.
 - **Defaults.** UXD-selling-3: the seller's contact and store notice stay at the top of step 1, so who publishes is
   clear before the first photo.
 
@@ -171,5 +176,5 @@ errors.
 
 ## Checks
 
-`pnpm typecheck`, `pnpm lint`, `pnpm test` (483 passing), `pnpm build`, every SQL suite including the new
-`tests/ux-effortless-selling.sql` and the concurrency suite, on 59 migrations replayed from scratch.
+`pnpm typecheck`, `pnpm lint`, `pnpm test` (508 passing after merging `ux/effortless`), `pnpm build`, every SQL suite including the new
+`tests/ux-effortless-selling.sql` and the concurrency suite, on 63 migrations replayed from scratch.
