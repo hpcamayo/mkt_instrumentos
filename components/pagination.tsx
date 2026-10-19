@@ -49,7 +49,7 @@ export function Pagination({
           <ul className="flex flex-wrap items-center justify-center gap-1">
             {page > 1 ? (
               <li>
-                <CatalogLink href={href(Math.min(page - 1, pages))} className={cn(BOX, "gap-1 border border-line-strong px-2 text-ink hover:bg-canvas md:px-3")}>
+                <CatalogLink resultsScroll="start" href={href(Math.min(page - 1, pages))} className={cn(BOX, "gap-1 border border-line-strong px-2 text-ink hover:bg-canvas md:px-3")}>
                   <ChevronLeft className="h-4 w-4" aria-hidden />
                   <span className="sr-only md:hidden">Página anterior</span>
                   <span className="hidden md:inline">Anterior</span>
@@ -70,7 +70,7 @@ export function Pagination({
                 </li>
               ) : (
                 <li key={item}>
-                  <CatalogLink href={href(item)} className={cn(BOX, "border border-line-strong text-ink hover:bg-canvas")}>
+                  <CatalogLink resultsScroll="start" href={href(item)} className={cn(BOX, "border border-line-strong text-ink hover:bg-canvas")}>
                     <span className="sr-only">Página </span>
                     {item}
                   </CatalogLink>
@@ -79,7 +79,7 @@ export function Pagination({
             )}
             {page < pages ? (
               <li>
-                <CatalogLink href={href(page + 1)} className={cn(BOX, "gap-1 border border-line-strong px-2 text-ink hover:bg-canvas md:px-3")}>
+                <CatalogLink resultsScroll="start" href={href(page + 1)} className={cn(BOX, "gap-1 border border-line-strong px-2 text-ink hover:bg-canvas md:px-3")}>
                   <span className="sr-only md:hidden">Página siguiente</span>
                   <span className="hidden md:inline">Siguiente</span>
                   <ChevronRight className="h-4 w-4" aria-hidden />

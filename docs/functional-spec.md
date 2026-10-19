@@ -89,7 +89,7 @@ Creation supports:
 
 Instrument attributes are generally optional. Only selected important attributes become required when an explicit product rule says so.
 
-Each listing requires 2–10 photos, with front and back views as the expected minimum coverage. The owner can reorder, replace, and remove photos, provided the listing continues to satisfy the two-photo minimum.
+Each listing requires 2–10 photos, with front and back views as the expected minimum coverage. The owner can reorder, replace, and remove photos, provided the listing continues to satisfy the two-photo minimum. Before upload the browser redraws every listing photo as a JPEG of at most 2,400 px on its longest side, which removes its metadata (including the camera's location) and keeps it under the 5 MB storage limit, so sellers can pick photos of any common size (Effortless Laria FIX 02).
 
 ## Listing Lifecycle
 
@@ -187,6 +187,8 @@ Restoring a hidden listing must fail gracefully if it would exceed the cap. No p
 ## Store Dashboard
 
 The store-owner dashboard supports editing the store profile and allowed business/contact data; managing logo, banner, optional store photos, and social links; creating and editing inventory; viewing status and moderation reasons; marking sold; hiding/unpublishing; relisting; and aggregate analytics.
+
+Store listings resolve their WhatsApp contact from the store's current number, the way account-owned Particular listings resolve it from the profile: when a store changes its number, every unsold listing of that store follows (sold listings keep their historical record). WhatsApp links add Peru's country code (51) to a 9-digit mobile number stored without it. *(Effortless Laria, batch "listing", fix-03; proposed UXD-listing-1.)*
 
 Commercial analytics include listing impressions, listing views, favorites, WhatsApp contacts, sold listings, and meaningful conversion-oriented ratios. They must not show revenue without actual transaction data. These metrics should remain suitable for evaluating later paid store packages without activating such packages in V1.
 
@@ -382,6 +384,14 @@ Inventory (Tiendas, enabled per store by an Admin during the pilot):
 - Screens: Inventario (summary tiles, recent movements, search, filters, sort, bulk stock, price, threshold and hide,
   CSV and Excel export with formula-safe text), the SKU page (stock actions, history, publication link, data, SKU
   change, archive), and publishing a SKU as a listing through the existing form and moderation.
+
+<!-- Effortless Laria, inventory batch (proposed; docs/ux-effortless/inventory.md) -->
+- Inventario search (fix-06) matches the SKU, name, variant, external reference (barcodes) and the linked
+  publication's title, brand and model; every word must appear, in any order, ignoring accents and case, and the
+  table follows the box as the owner types. The "En revisión" tile counts new publications and changes in review and
+  opens exactly those; rejected publications have their own tile. The catalog filter stays hidden until catalog
+  matching exists (fix-09).
+<!-- /Effortless Laria, inventory batch -->
 
 Spreadsheet import:
 
