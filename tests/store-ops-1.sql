@@ -389,7 +389,8 @@ do $$ begin
   perform pg_temp.check((select count(*) from public.store_inventory_changes where item_id = pg_temp.id('item1') and change_type = 'price'
     and reason = 'Precio editado en la publicación' and actor_kind = 'owner' and after->>'unit_price_pen' = '880') = 1,
     'listing-side price edit not audited');
-  perform pg_temp.check(pg_temp.price_drops(pg_temp.id('l1')) = 2, 'listing-side price drop not notified');
+  -- save-08: 900 -> 880 is under 5%, so it does not alert (docs/ux-effortless/accounts.md).
+  perform pg_temp.check(pg_temp.price_drops(pg_temp.id('l1')) = 1, 'a price drop under 5% alerted');
 
   -- A linked listing cannot be marked sold (D-15) ...
   perform pg_temp.expect_error($q$select public.set_owned_listing_lifecycle(pg_temp.id('l1'), 'sold')$q$, 'INVENTORY_MANAGED_LISTING');

@@ -264,7 +264,8 @@ do $$ declare claimed jsonb; digest jsonb; begin
   select e into digest from jsonb_array_elements(claimed) e
   where e->>'event_type' = 'search_alert_daily' and e->>'recipient_email' = 'rf-05@example.invalid';
   perform pg_temp.check(digest is not null and digest #> '{search_alert,matches}' = jsonb_build_array(
-    jsonb_build_object('title', 'Pedal RF MXR', 'slug', 'rf-lp2', 'price_pen', 800)), 'the digest lists only the pedal in stock: ' || coalesce(digest::text, 'none'));
+    jsonb_build_object('title', 'Pedal RF MXR', 'slug', 'rf-lp2', 'price_pen', 800,
+      'image_url', (select image_url from public.listing_photos p join public.listings l on l.id = p.listing_id where l.slug = 'rf-lp2' order by p.sort_order limit 1))), 'the digest lists only the pedal in stock: ' || coalesce(digest::text, 'none'));
   perform pg_temp.check(not exists (select 1 from jsonb_array_elements(claimed) e where e->>'recipient_email' = 'rf-06@example.invalid'),
     'a digest with nothing in stock was sent');
 end $$;

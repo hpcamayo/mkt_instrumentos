@@ -240,6 +240,8 @@ do $$ begin
   if (select count(*) from laria_private.marketplace_email_deliveries where event_type='listing_price_drop') <> 1 then raise exception 'Price-drop delivery repeated or missing'; end if;
   if not exists(select 1 from laria_private.marketplace_email_deliveries where event_type='listing_price_drop' and context->>'old_price_pen'='2000' and context->>'new_price_pen'='1500') then raise exception 'Price-drop authoritative context missing'; end if;
 end $$;
+-- save-08 (docs/ux-effortless/accounts.md): a listing alerts at most once a day, so the earlier drop is moved back a day.
+update public.listing_price_drops set created_at = created_at - interval '25 hours' where listing_id = '72000000-0000-4000-8000-000000000001';
 update public.listings set price_pen=1400 where id='72000000-0000-4000-8000-000000000001';
 do $$ begin if (select count(*) from laria_private.marketplace_email_deliveries where event_type='listing_price_drop') <> 2 then raise exception 'Later price transition did not qualify'; end if; end $$;
 
