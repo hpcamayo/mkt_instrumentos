@@ -217,7 +217,7 @@ export function buildStoreMetadata(store: StoreSeoData, page: number): Metadata 
       title: `${title} | ${SITE_NAME}`,
       description,
       url: canonical,
-      ...(store.logo_url ? { images: [{ url: absoluteUrl(store.logo_url), alt: store.name }] } : {}),
+      images: store.logo_url ? [{ url: absoluteUrl(store.logo_url), alt: store.name }] : DEFAULT_OG_IMAGES,
     },
   };
 }

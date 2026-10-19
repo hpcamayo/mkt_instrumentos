@@ -160,6 +160,8 @@ test("list-09 on other batches' pages: pages with their own openGraph name the L
     assert.match(source(file), /openGraph: \{[^}]*images: DEFAULT_OG_IMAGES \}/, file);
   }
   assert.match(source("app/favoritos/compartida/[token]/page.tsx"), /images: image \? \[image\] : DEFAULT_OG_IMAGES/);
+  assert.match(source("lib/seo.ts"), /images: store\.logo_url \? \[\{ url: absoluteUrl\(store\.logo_url\), alt: store\.name \}\] : DEFAULT_OG_IMAGES/);
+  assert.match(source("lib/store-storefront.ts"), /url: plain \? STORES_PATH : url, images: DEFAULT_OG_IMAGES \}/);
   // The home and the category landings keep their own file-based cards, so their metadata names none.
   assert.doesNotMatch(source("lib/seo.ts").match(/export function buildCategoryMetadata[\s\S]*?\n}\n/)[0], /images/);
   assert.doesNotMatch(source("lib/seo.ts").match(/export function buildHomeMetadata[\s\S]*?\n}\n/)[0], /images/);

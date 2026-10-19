@@ -93,6 +93,8 @@ Each listing requires 2–10 photos, with front and back views as the expected m
 
 The sell form (Effortless Laria, selling batch; docs/ux-effortless/selling.md) is four short steps on every screen size: Fotos, Qué es, Estado y precio, Revisar y publicar. Photos come first and upload in the background, three at a time, while the seller fills in the rest; on phones the photo step opens the camera and a per-category shot list names the photos buyers expect. iPhone HEIC photos are converted in the browser. The title follows brand and model until the seller edits it; brand suggestions come from the instrument catalog; description starters and a 40-character counter help write the description; advisory hints point out what usually gets a listing rejected (phone numbers, links, all-caps titles, symbolic prices) without blocking. Step 4 shows the catalog card and the listing page as buyers will see them, and Publicar only confirms. An optional sound clip of at most 20 seconds can be recorded or picked; it is compressed in the browser, played only when a buyer taps it, and reviewed with the listing.
 
+On an Android phone with Laria added to the home screen, photos shared from the gallery to Laria (up to 10) open the sell form with them already picked, the Particular form or the store's. They wait on the device for at most a day and reach Laria only when the form uploads them; signed out, Laria asks to sign in first. iPhone has no share target for web apps. *(Effortless Laria, big-12; proposed UXD-speed-11.)*
+
 The form is saved on the device as the seller types and offered back on return. "Guardar borrador" also saves it to the account (`listing_drafts`, at most 20 per seller) so it can be finished on another device from Mis publicaciones or the publish page; publishing deletes the draft. After sending, a listing in review shows its steps (Enviada, En revisión, Publicada) and, once at least 20 Particular listings were reviewed in the last 60 days, the usual wait; a live listing offers Ver publicación and Compartir. "Publicar uno parecido" keeps category, type, brand, condition, location, description and attributes, and "Duplicar" in Mis publicaciones starts a new listing from an existing one.
 
 ## Listing Lifecycle
@@ -405,6 +407,22 @@ read at once, are paged, name the listing on price drops and include alert match
 ## In-App Notifications
 
 The authenticated account shell includes an in-app notification center for Particular and Store Owner accounts. It records important listing moderation, listing-revision, store approval/rejection, and store verification changes with a typed event, short Spanish message, timestamp, read state, and relevant account destination. A user can read and mark only their own notifications. This does not replace or prematurely implement the centralized application-email infrastructure.
+
+<!-- Effortless Laria, speed batch (docs/ux-effortless/speed.md): push notices -->
+A person can also receive their notices on a phone or browser ("Avisos en este teléfono" in Mi cuenta › Notificaciones), a lighter companion to e-mail, never a replacement. Laria asks the browser for permission only when the person presses "Activar avisos", never on a first visit. A push reads and opens like its row in the list; several pending notices go out as one message, and the phone shows one Laria notice at a time. Nothing is pushed from 22:00 to 08:00 Lima (those notices go out together in the morning), and notices already read in Laria or older than three days are skipped. A device belongs to whoever turned notices on last, a person keeps ten devices at most, and signing out turns that device off. On an iPhone, push works only with Laria added to the home screen. *(Effortless Laria, big-12; proposed UXD-speed-5 to UXD-speed-10.)*
+<!-- end speed batch: push notices -->
+
+<!-- Effortless Laria, speed batch (docs/ux-effortless/speed.md): speed and accessibility -->
+## Speed, Install and Accessibility (Effortless Laria, speed batch)
+
+Proposed with the speed batch (UXD-speed-1 to UXD-speed-4 and UXD-speed-13); not part of V1 until merged.
+
+- A tap that changes the page shows a thin bar after 100 ms and, after a second, a skeleton of the next page over the old one; faster changes show nothing. No route has a `loading.tsx` (owner decision Q1 A).
+- When the phone asks to save data or the connection is 3G or slower, images that appear after the page loads are requested smaller, and listing pages are not loaded ahead of time.
+- Laria can be added to the home screen and then opens without the browser's bar. Laria shows no install banner of its own; the service worker only receives shared photos, and there is no offline mode.
+- The error page offers "Reintentar", which asks the server again and redraws the failed part in place.
+- Pages meet WCAG 2.2 AA: every gesture has a button, bars fixed to the bottom of the screen never cover a focused field, touch targets are at least 24 px, and status changes are announced to screen readers.
+<!-- end speed batch: speed and accessibility -->
 
 ## Legal and Safety
 

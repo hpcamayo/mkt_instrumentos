@@ -17,7 +17,10 @@ pnpm install
 supabase start                       # local stack on 127.0.0.1:54321 (API) and :54322 (Postgres)
 supabase db reset                    # every migration, then supabase/seed.sql
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f scripts/prototype/demo-seed.sql
+psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -f scripts/prototype/ux-my-listings-seed.sql
 ```
+
+The second file adds the Effortless Laria account home's data (Pendientes, check-ins, drafts).
 
 `.env.local` (values from `supabase status`):
 
@@ -53,7 +56,7 @@ Password for all: `laria-demo-2026`.
 | `demo-tienda@laria.test` | Owner of "Laria Demo Música" (verified, inventory enabled). Mi tienda → Inventario, a SKU page, Importar desde Excel, Medios de pago. |
 | `admin@laria.test` | Admin → Medios de pago (one method waiting for review), Tiendas. |
 | `comprador@laria.test` | Buyer with two favorites. |
-| `particular@laria.test` | Particular seller, for comparison (nothing changes for them). |
+| `particular@laria.test` | Particular seller with listings, drafts and Pendientes on the account home (Effortless Laria); Store Operations changes nothing for them. |
 
 Public pages: `/tiendas/laria-demo-musica`, `/instrumentos/demo-boss-ds-1` ("Solicitar compra" with the pilot on),
 `/instrumentos/demo-boss-tu-3` (Agotado).
@@ -61,6 +64,38 @@ Public pages: `/tiendas/laria-demo-musica`, `/instrumentos/demo-boss-ds-1` ("Sol
 The demo store has 12 SKUs (8 linked to approved listings, one at zero stock, one low), a few days of movements and
 four payment methods (three approved). `scripts/prototype/demo-import.csv` is a semicolon-separated file with
 merchant-style headings, two updates, three new SKUs and four rows that fail validation on purpose.
+
+## Effortless Laria
+
+The `ux/effortless` build (`docs/ux-effortless/integration.md`) runs on the same stack and demo data. A few parts need
+more than the stack:
+
+- **Push notices** (`docs/ux-effortless/speed.md` § big-12) show their switch in Mi cuenta > Notificaciones only with
+  a key pair: `node scripts/generate-vapid-keys.mjs` prints `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` for
+  `.env.local`. The service worker registers in production builds only (`pnpm build && pnpm start`). Nothing runs
+  the worker on a schedule; send pending notices with
+  `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/internal/push/process`. Without keys the
+  worker only logs.
+- **Installing and sharing photos into Laria** need HTTPS and a phone, so they are checked on a preview deployment,
+  not here.
+- **E-mails** (alerts, price drops, reminders) are logged, as before (`MARKETPLACE_EMAIL_PROVIDER=log`); the e-mail
+  worker is started the same way, at `/api/internal/email/process`.
+
+## Accessibility checks
+
+Two Playwright scripts run axe-core (WCAG 2.0 to 2.2, A and AA) against the running prototype at 390 px and 1366 px,
+with the demo accounts (`docs/ux-effortless/speed.md` § fast-04): every page each role reaches, and the states a tap
+opens, with a pass that tabs through each page and reports any focused element a bottom bar covers. They need
+playwright-core, which is not a project dependency, and a Chromium.
+
+```sh
+npm install --prefix /tmp/laria-pw playwright-core@1.48.2
+NODE_PATH=/tmp/laria-pw/node_modules node scripts/prototype/a11y-audit.cjs /tmp/laria-prototype/a11y.json
+NODE_PATH=/tmp/laria-pw/node_modules node scripts/prototype/a11y-states.cjs /tmp/laria-prototype/a11y-states.json
+```
+
+`CHROMIUM` (default `/opt/pw-browsers/chromium`), `BASE` (default `http://localhost:3000`) and `AXE` (default: the
+axe-core in `node_modules/.pnpm`) can be set. Each prints one line per page or state and writes the details as JSON.
 
 ## Benchmarks (indicative)
 

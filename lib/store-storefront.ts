@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ListingFilters, ListingSort } from "@/lib/listings";
 import { categoryOptions, sortOptions } from "@/lib/listings";
-import { NOINDEX_FOLLOW_ROBOTS, OPEN_GRAPH_BASE, SITE_NAME } from "@/lib/site";
+import { DEFAULT_OG_IMAGES, NOINDEX_FOLLOW_ROBOTS, OPEN_GRAPH_BASE, SITE_NAME } from "@/lib/site";
 
 // Pure helpers for the storefront ideas of the "stores" batch (docs/ux-effortless/stores.md): the stores directory
 // (find-13), search and sort inside a store (find-14), where the store is and when it opens (list-12) and the owner's
@@ -174,7 +174,7 @@ export function buildStoreDirectoryMetadata({ view, city, page }: { view: StoreD
     title: titled,
     description,
     ...(plain ? { alternates: { canonical: STORES_PATH } } : { robots: NOINDEX_FOLLOW_ROBOTS }),
-    openGraph: { ...OPEN_GRAPH_BASE, title: `${titled} | ${SITE_NAME}`, description, url: plain ? STORES_PATH : url },
+    openGraph: { ...OPEN_GRAPH_BASE, title: `${titled} | ${SITE_NAME}`, description, url: plain ? STORES_PATH : url, images: DEFAULT_OG_IMAGES },
   };
 }
 

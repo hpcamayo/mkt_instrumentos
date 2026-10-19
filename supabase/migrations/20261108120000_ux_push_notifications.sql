@@ -149,9 +149,9 @@ end;
 $$;
 
 revoke all on function public.save_push_subscription(text, text, text), public.delete_push_subscription(uuid, text),
-  public.get_push_subscription(text) from public;
+  public.get_push_subscription(text) from public, anon;
 grant execute on function public.save_push_subscription(text, text, text), public.delete_push_subscription(uuid, text),
-  public.get_push_subscription(text) to anon, authenticated;
+  public.get_push_subscription(text) to authenticated;
 
 create or replace function laria_private.enqueue_notification_push()
 returns trigger
@@ -332,7 +332,8 @@ begin
 end;
 $$;
 
+-- Only the worker's service-role client calls these; the role check inside stays as a second guard.
 revoke all on function public.claim_push_deliveries(uuid, integer),
-  public.finish_push_deliveries(uuid, uuid[], text, text, uuid[], uuid[], uuid[]) from public;
+  public.finish_push_deliveries(uuid, uuid[], text, text, uuid[], uuid[], uuid[]) from public, anon, authenticated;
 grant execute on function public.claim_push_deliveries(uuid, integer),
-  public.finish_push_deliveries(uuid, uuid[], text, text, uuid[], uuid[], uuid[]) to anon, authenticated, service_role;
+  public.finish_push_deliveries(uuid, uuid[], text, text, uuid[], uuid[], uuid[]) to service_role;

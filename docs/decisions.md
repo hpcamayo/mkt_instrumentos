@@ -567,3 +567,17 @@ Detail: [docs/ux-effortless/integration.md](ux-effortless/integration.md).
 ### Speed, install and push (speed)
 
 Detail: [docs/ux-effortless/speed.md](ux-effortless/speed.md).
+
+- UXD-speed-1: No `loading.tsx` anywhere (owner decision Q1 A stands): a bar after 100 ms and a skeleton after 1 s cover the old page while the next one loads (fast-01).
+- UXD-speed-2: Data saving changes only images that appear after the page loads, asking for about 1.5 device pixels per CSS pixel from the same `srcset`, and turns off loading pages ahead of time (fast-03).
+- UXD-speed-3: The service worker is scoped to `/compartir/` and caches nothing but shared photos: no offline mode (big-12).
+- UXD-speed-4: No install banner of Laria's own; the browser offers the install (big-12).
+- UXD-speed-5: Push is a per-device companion to e-mail, asked for only from the switch in Notificaciones, never on a first visit (big-12).
+- UXD-speed-6: No push from 22:00 to 08:00 Lima; those notices go out together in the morning (big-12).
+- UXD-speed-7: Several pending notices go out as one message, and the phone shows one Laria notice at a time (big-12).
+- UXD-speed-8: Notices read in Laria or older than three days are not pushed (big-12).
+- UXD-speed-9: Pushes go only to browsers' push services, and only with real keys (big-12).
+- UXD-speed-10: Ten devices per person at most; a shared phone belongs to whoever turned notices on last, and signing out turns the device off (big-12).
+- UXD-speed-11: Shared photos wait on the device, up to 10 and for one day, and reach Laria only when the form uploads them (big-12).
+- UXD-speed-12: The push worker is started by hand until a scheduler exists, and without VAPID keys it only logs (big-12).
+- UXD-speed-13: Every bar fixed to the bottom of the screen carries `data-bottom-bar` and measures itself, so focus scrolls clear of it, and the phone contact bar pads the listing page by its height (fast-04).
