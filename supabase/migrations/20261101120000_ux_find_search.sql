@@ -8,8 +8,9 @@
 -- FIND 05 / 06 / 07 / 08: catalog_facets() counts every filter option (each facet ignores its own filter), the cities
 --   that really have listings and the price spread; catalog_brand_counts() and catalog_type_counts() feed the menus and
 --   landings with brands and types that have listings.
--- FIND 10: computed fields price_dropped_at, price_drop_from and seller_verified_rank give the "Bajaron de precio" and
---   "Tiendas verificadas primero" orders and the "Antes S/" line.
+-- FIND 10: the computed field seller_verified_rank gives the "Tiendas verificadas primero" order. "Bajaron de precio" and
+--   the "Antes S/" line use the listing batch's real drops (20261102140000) through recent_price_drop_at
+--   (20261109120000), so the card, the listing page and the order always agree.
 -- FIND 16: listing_gone_hint() says only the category and type of a listing that was public and no longer is.
 -- FIND 04: saved search alerts accept the free-text query ("query"), matched with the same rule as the catalog.
 
@@ -134,38 +135,6 @@ grant execute on function public.search_query_words(text) to anon, authenticated
 
 -- ---------------------------------------------------------------------------------------------- computed fields
 
--- When the price last went down in the past 30 days (still lower than the old price), or null.
-create or replace function public.price_dropped_at(p_listing public.listings)
-returns timestamptz
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select max(d.created_at)
-  from public.listing_price_drops d
-  where d.listing_id = p_listing.id
-    and d.created_at > now() - interval '30 days'
-    and d.old_price_pen > p_listing.price_pen
-    and p_listing.status = 'approved'
-$$;
-
--- The highest price of the past 30 days when the listing costs less now: the card's "Antes S/" line.
-create or replace function public.price_drop_from(p_listing public.listings)
-returns numeric
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select max(d.old_price_pen)
-  from public.listing_price_drops d
-  where d.listing_id = p_listing.id
-    and d.created_at > now() - interval '30 days'
-    and d.old_price_pen > p_listing.price_pen
-    and p_listing.status = 'approved'
-$$;
-
 -- 1 for a listing of an active verified store, else 0: "Tiendas verificadas primero".
 create or replace function public.seller_verified_rank(p_listing public.listings)
 returns integer
@@ -179,11 +148,7 @@ as $$
   ) then 1 else 0 end
 $$;
 
-revoke all on function public.price_dropped_at(public.listings) from public;
-revoke all on function public.price_drop_from(public.listings) from public;
 revoke all on function public.seller_verified_rank(public.listings) from public;
-grant execute on function public.price_dropped_at(public.listings) to anon, authenticated;
-grant execute on function public.price_drop_from(public.listings) to anon, authenticated;
 grant execute on function public.seller_verified_rank(public.listings) to anon, authenticated;
 
 -- ------------------------------------------------------------------------------------------------------- facets

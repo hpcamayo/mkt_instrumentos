@@ -123,6 +123,9 @@ UXD-find-n; the integrator moves them into `docs/decisions.md`. Proposed accepta
 - **What changed.** "Bajaron de precio" (a lower price in the past 30 days first) and "Tiendas verificadas primero";
   cards with a recent drop show the previous price struck through.
 - **Files.** `lib/listings.ts` (`sortOptions`), `lib/catalog.ts`, `components/listing-card.tsx`, the migration.
+- **At integration** (UXD-integration-1 in `integration.md`): a drop is the listing batch's real drop (list-05), so the
+  order, the home's row, the card and the listing page agree. This batch's `price_dropped_at` and `price_drop_from`
+  computed fields gave way to `recent_price_drop_at` (20261109120000).
 - **Defaults picked.** "Más cerca" waits until places are reliable, as the idea says.
 
 ## FIND 11: recently viewed
@@ -202,7 +205,7 @@ UXD-find-n; the integrator moves them into `docs/decisions.md`. Proposed accepta
 - `lib/search-alerts.ts` (accounts batch): the additive `query` key, marked.
 - `app/mi-cuenta/favoritos/page.tsx` (accounts batch): one `CompareFromFavorites` line.
 - `lib/supabase/database.types.ts` (shared): one marked block of the new functions.
-- `lib/listings.ts` (shared with the listing batch): `q`, the new sorts, `price_drop_from` on the card type.
+- `lib/listings.ts` (shared with the listing batch): `q` and the new sorts.
 - `lib/marketplace-event-payload.ts`: the search event's query is `q`.
 - The alert SQL functions (`normalize_saved_search`, `saved_search_hash`, `listing_matches_saved_search`) are patched by
   text replacement in this batch's migration; a later migration that redefines them must keep `query`.

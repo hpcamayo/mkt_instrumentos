@@ -118,8 +118,6 @@ export type ListingCardData = {
   seller_type: "individual" | "store";
   created_at: string;
   photo_count?: number;
-  // FIND 10: the highest price of the past 30 days when the listing costs less now (a computed field), for "Antes S/".
-  price_drop_from?: number | null;
   // Null unless a store links the listing to an inventory item (STORE-1a).
   stock_state?: StockState | null;
   // list-05: a real price drop, kept by the database (listings_track_content_change); shown for 30 days.

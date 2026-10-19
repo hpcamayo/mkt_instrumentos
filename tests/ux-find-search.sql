@@ -15,7 +15,7 @@ insert into auth.users(id,aud,role,email,email_confirmed_at,raw_app_meta_data,ra
 insert into public.listings(id,slug,title,seller_type,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,region,whatsapp_phone,description,owner_user_id,marketplace_rules_accepted_at) values
  ('7f100000-0000-4000-8000-000000000001','find-strat','Fender Stratocaster Player Zzqx','individual','pending','guitars','electric_guitar','{}','Fender','Stratocaster','Usado - buen estado',3200,'Lima','Lima','51999998001','Descripción válida y suficientemente extensa para la prueba del buscador.','7f000000-0000-4000-8000-000000000001',now()),
  ('7f100000-0000-4000-8000-000000000002','find-cajon','Cajón peruano Zzqx','individual','pending','percussion','hand_percussion','{}','Zzqxmarca','Festejo','Nuevo',450,'Arequipa','Arequipa','51999998001','Descripción válida y suficientemente extensa para la prueba del buscador.','7f000000-0000-4000-8000-000000000001',now()),
- ('7f100000-0000-4000-8000-000000000003','find-bajo','Bajo Ibanez cinco cuerdas Zzqx','individual','pending','basses','bass','{"strings":"5"}','Ibanez','SR305','Nuevo',1900,'Lima','Lima','51999998001','Descripción válida y suficientemente extensa para la prueba del buscador.','7f000000-0000-4000-8000-000000000001',now()),
+ ('7f100000-0000-4000-8000-000000000003','find-bajo','Bajo Ibanez cinco cuerdas Zzqx','individual','pending','basses','bass','{"strings":"5"}','Ibanez','SR305','Nuevo',2300,'Lima','Lima','51999998001','Descripción válida y suficientemente extensa para la prueba del buscador.','7f000000-0000-4000-8000-000000000001',now()),
  ('7f100000-0000-4000-8000-000000000004','find-hidden','Fender Stratocaster oculta Zzqx','individual','pending','guitars','electric_guitar','{}','Fender','Stratocaster','Nuevo',2500,'Lima','Lima','51999998001','Descripción válida y suficientemente extensa para la prueba del buscador.','7f000000-0000-4000-8000-000000000001',now());
 insert into public.listing_photos(listing_id,image_url,sort_order)
 select listing_id, 'https://example.invalid/'||listing_id||'-'||photo||'.jpg', photo
@@ -24,8 +24,9 @@ cross join generate_series(0,1) photo;
 select set_config('app.allow_listing_admin_fields', 'true', true);
 update public.listings set status='approved', published_at=now() where id::text like '7f100000-%';
 update public.listings set status='hidden' where id='7f100000-0000-4000-8000-000000000004';
+-- A real drop (list-05, at least 5% below a price the approved listing kept): what "Bajaron de precio" orders by.
+update public.listings set price_pen = 1900 where id = '7f100000-0000-4000-8000-000000000003';
 select set_config('app.allow_listing_admin_fields', '', true);
-insert into public.listing_price_drops(listing_id, old_price_pen, new_price_pen, created_at) values ('7f100000-0000-4000-8000-000000000003', 2300, 1900, now() - interval '1 day');
 
 -- As a visitor.
 set local role anon;
@@ -59,8 +60,8 @@ select pg_temp.check(exists(select 1 from public.catalog_brand_counts() where br
 select pg_temp.check(exists(select 1 from public.catalog_type_counts() where category = 'basses' and instrument_type = 'bass' and listings >= 1), 'type counts');
 
 -- FIND 10: the price-drop and verified-first orders and the "Antes" price.
-select pg_temp.check((select public.price_drop_from(l) from public.listings l where id = '7f100000-0000-4000-8000-000000000003') = 2300, 'price before the drop');
-select pg_temp.check((select public.price_dropped_at(l) from public.listings l where id = '7f100000-0000-4000-8000-000000000001') is null, 'no drop, no date');
+select pg_temp.check((select l.previous_price_pen = 2300 and public.recent_price_drop_at(l) = l.price_dropped_at from public.listings l where id = '7f100000-0000-4000-8000-000000000003'), 'price before the drop, and its date for the order');
+select pg_temp.check((select public.recent_price_drop_at(l) from public.listings l where id = '7f100000-0000-4000-8000-000000000001') is null, 'no drop, no date');
 select pg_temp.check((select public.seller_verified_rank(l) from public.listings l where id = '7f100000-0000-4000-8000-000000000001') = 0, 'individual sellers rank after verified stores');
 
 -- FIND 16: a listing that was public and no longer is gives only its category and type; others give nothing.

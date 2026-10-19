@@ -85,10 +85,10 @@ export async function fetchHomeData(supabase: PublicSupabaseClient): Promise<Hom
       .limit(1, { foreignTable: "listing_photos" })
       .limit(FOR_YOU_POOL)
       .returns<PoolRow[]>(),
-    // FIND 10: "Bajaron de precio", a lower price in the past 30 days, the latest first.
-    approvedListings(supabase, `${CARD_SELECT}, price_dropped_at`)
-      .not("price_dropped_at", "is", null)
-      .order("price_dropped_at", { ascending: false })
+    // FIND 10: "Bajaron de precio", the real drops of the past 30 days (list-05), the latest first.
+    approvedListings(supabase, `${CARD_SELECT}, recent_price_drop_at`)
+      .not("recent_price_drop_at", "is", null)
+      .order("recent_price_drop_at", { ascending: false })
       .order("id")
       .order("sort_order", { foreignTable: "listing_photos", ascending: true })
       .limit(1, { foreignTable: "listing_photos" })

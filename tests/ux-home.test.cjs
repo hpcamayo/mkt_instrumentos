@@ -149,7 +149,7 @@ function respondLocal({ failing } = {}) {
   return (query) => {
     if (query.table === "stores") return { data: [{ id: "s1", name: "Casa Musical Grau", slug: "casa-musical-grau", city: "Lima", district: null, logo_url: null }], error: null };
     if (called(query, "select", "id")) return { data: null, count: valueOf(query, "eq", "category") ? 2 : 12, error: null };
-    if (called(query, "not", "price_dropped_at", "is", null)) return failing === "drops" ? { data: null, error: { message: "boom" } } : { data: [listing("d1", "basses", "2026-04-20T00:00:00Z")], error: null };
+    if (called(query, "not", "recent_price_drop_at", "is", null)) return failing === "drops" ? { data: null, error: { message: "boom" } } : { data: [listing("d1", "basses", "2026-04-20T00:00:00Z")], error: null };
     if (failing === "pool") return { data: null, error: { message: "boom" } };
     return { data: [listing("a", "guitars", "2026-04-19T17:00:00Z", { owner_user_id: "u1" }), listing("b", "basses", "2026-04-24T14:05:00Z", { store_id: "s1", owner_user_id: "u2" })], error: null };
   };
@@ -165,8 +165,8 @@ test("home data: the newest 48 for Para ti with hashed sellers, the price drops,
   const pool = listingQueries.find((query) => called(query, "limit", 48));
   assert.ok(pool && called(pool, "eq", "status", "approved") && called(pool, "order", "published_at", { ascending: false, nullsFirst: false }));
   assert.match(pool.calls.find(([name]) => name === "select")[1], /owner_user_id/);
-  const drops = listingQueries.find((query) => called(query, "not", "price_dropped_at", "is", null));
-  assert.ok(called(drops, "limit", 6) && called(drops, "order", "price_dropped_at", { ascending: false }));
+  const drops = listingQueries.find((query) => called(query, "not", "recent_price_drop_at", "is", null));
+  assert.ok(called(drops, "limit", 6) && called(drops, "order", "recent_price_drop_at", { ascending: false }));
   const stores = client.queries.find((query) => query.table === "stores");
   assert.ok(called(stores, "eq", "status", "active") && called(stores, "eq", "is_verified", true) && called(stores, "limit", 3));
 

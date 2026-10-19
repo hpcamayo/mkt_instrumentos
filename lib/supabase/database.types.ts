@@ -1430,10 +1430,10 @@ export type Database = {
       }
       catalog_type_counts: { Args: never; Returns: { category: string; instrument_type: string | null; listings: number }[] }
       listing_gone_hint: { Args: { p_slug: string }; Returns: { category: string; instrument_type: string | null }[] }
-      price_drop_from: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: number | null }
-      price_dropped_at: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: string | null }
       seller_verified_rank: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: number }
       // End of the find batch's functions.
+      // Effortless Laria integration (20261109120000).
+      recent_price_drop_at: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: string | null }
       admin_review_store_payment_method: {
         Args: {
           p_decision: string

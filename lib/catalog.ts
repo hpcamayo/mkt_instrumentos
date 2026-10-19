@@ -5,8 +5,8 @@ import type { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClient>>;
 
 // The card's columns. status and stock_state are listed because PostgREST only filters on the columns a function's
-// result selects (the free-text search runs through public.catalog_search); price_drop_from is a computed field
-// (FIND 10, "Antes S/").
+// result selects (the free-text search runs through public.catalog_search); previous_price_pen and price_dropped_at
+// give the "Antes S/" line (list-05, lib/listing-page.ts visiblePreviousPrice).
 const CARD_COLUMNS = `
         id,
         title,
@@ -29,7 +29,6 @@ const CARD_COLUMNS = `
         status,
         stock_state,
         store_id,
-        price_drop_from,
       `;
 const STORE_AND_PHOTO_COLUMNS = ` (
           name,
@@ -83,7 +82,7 @@ function applyFilters<Q extends { eq: any; in: any; or: any; ilike: any; gte: an
 // both keep the same filters, 24-item pages and deterministic ordering.
 export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: ListingFilters, page: number, pageSize = LISTINGS_PAGE_SIZE) {
   const storeRelation = filters.sellerType === "verified_store" ? "stores!inner" : "stores";
-  const select = filters.sort === "price_drop" ? `${catalogCardSelect(storeRelation)}, price_dropped_at` : filters.sort === "verified_first" ? `${catalogCardSelect(storeRelation)}, seller_verified_rank` : catalogCardSelect(storeRelation);
+  const select = filters.sort === "price_drop" ? `${catalogCardSelect(storeRelation)}, recent_price_drop_at` : filters.sort === "verified_first" ? `${catalogCardSelect(storeRelation)}, seller_verified_rank` : catalogCardSelect(storeRelation);
   let query = applyFilters(source(supabase, filters, select, { count: "exact" }), filters);
 
   if (filters.sort === "price_asc") {
@@ -92,7 +91,7 @@ export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: 
     query = query.order("price_pen", { ascending: false, nullsFirst: false });
   } else {
     // FIND 10: a lower price in the past 30 days first, or verified stores first; then the usual newest first.
-    if (filters.sort === "price_drop") query = query.order("price_dropped_at", { ascending: false, nullsFirst: false });
+    if (filters.sort === "price_drop") query = query.order("recent_price_drop_at", { ascending: false, nullsFirst: false });
     if (filters.sort === "verified_first") query = query.order("seller_verified_rank", { ascending: false });
     query = query
       .order("published_at", { ascending: false, nullsFirst: false })
