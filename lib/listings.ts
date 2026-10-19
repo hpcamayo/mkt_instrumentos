@@ -40,10 +40,14 @@ export const sellerTypeOptions = [
   { value: "verified_store", label: "Tienda verificada" },
 ] as const;
 
+// FIND 10 (Effortless Laria) adds "Bajaron de precio" (a lower price in the past 30 days first) and "Tiendas verificadas
+// primero". "Más cerca" waits until places are reliable.
 export const sortOptions = [
   { value: "newest", label: "Más recientes" },
   { value: "price_asc", label: "Menor precio" },
   { value: "price_desc", label: "Mayor precio" },
+  { value: "price_drop", label: "Bajaron de precio" },
+  { value: "verified_first", label: "Tiendas verificadas primero" },
 ] as const;
 
 export type ListingSort = (typeof sortOptions)[number]["value"];
@@ -57,6 +61,8 @@ export type ListingPhotoData = {
 };
 
 export type ListingFilters = {
+  // BIG 03 (Effortless Laria): the free-text search, over title, brand, model, type and category (lib/catalog.ts).
+  q?: string;
   category?: string;
   // F11 (owner, 8 Oct): condition and location take several values, matched as "any of"; none means all. One value
   // keeps today's URL (?condition=Nuevo); more repeat the parameter (?location=Lima&location=Arequipa).
@@ -111,6 +117,8 @@ export type ListingCardData = {
   seller_type: "individual" | "store";
   created_at: string;
   photo_count?: number;
+  // FIND 10: the highest price of the past 30 days when the listing costs less now (a computed field), for "Antes S/".
+  price_drop_from?: number | null;
   // Null unless a store links the listing to an inventory item (STORE-1a).
   stock_state?: StockState | null;
   stores: StoreSummary | StoreSummary[] | null;
@@ -234,7 +242,10 @@ export function parseListingFilters(
   const instrumentType = readString("instrument_type") || legacy?.instrumentType;
   const advanced = parseAdvancedFilters(searchParams, instrumentType);
 
+  const q = readString("q")?.replace(/\s+/g, " ").trim().slice(0, 200);
+
   return {
+    ...(q ? { q } : {}),
     category: legacy?.category ?? (readString("category") || undefined),
     cities: locations.length ? locations : readList("city"),
     conditions: readList("condition"),
@@ -249,10 +260,7 @@ export function parseListingFilters(
     minPrice: readNumber("min_price"),
     maxPrice: readNumber("max_price"),
     advanced,
-    sort:
-      sort === "price_asc" || sort === "price_desc" || sort === "newest"
-        ? sort
-        : "newest",
+    sort: sortOptions.some((option) => option.value === sort) ? (sort as ListingSort) : "newest",
   };
 }
 

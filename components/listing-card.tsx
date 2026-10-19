@@ -3,9 +3,13 @@
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { ImageOff } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useReducedData } from "@/lib/data-saver";
+import { CompareToggle } from "@/components/catalog-compare";
 import { FavoriteButton } from "@/components/favorite-button";
 import { useListingImpression } from "@/components/marketplace-telemetry";
 import type { EventSource } from "@/lib/marketplace-event-payload";
+import { addRecent, addTaste, EMPTY_TASTE, readStore, rememberable, RECENT_KEY, TASTE_KEY, writeStore, type RememberedListing, type Taste } from "@/lib/catalog-device";
 import { getCardSpecLine } from "@/lib/listing-specs";
 import { formatPrice } from "@/lib/price";
 import { Price } from "@/components/ui/price";
@@ -33,22 +37,50 @@ type ListingCardProps = {
   // The first row of a grid loads its photos eagerly.
   eager?: boolean;
   sizes?: string;
+  // FIND 12: the "Comparar" tick, on desktop catalog cards.
+  compare?: boolean;
 };
+
+// FIND 11 and BIG 01: opening a listing from a card remembers it on this device ("Vistos recientemente") and adds to
+// the taste behind "Para ti". Nothing leaves the device.
+export function rememberOpened(listing: ListingCardData) {
+  const item = rememberable(listing);
+  writeStore(RECENT_KEY, addRecent(readStore<RememberedListing[]>(RECENT_KEY, []), item));
+  writeStore(TASTE_KEY, addTaste(readStore<Taste>(TASTE_KEY, EMPTY_TASTE), item));
+}
+
+// FAST 02: hovering or focusing a card loads its page ahead (a full prefetch: the listing page has no loading
+// boundary, so the default prefetch would bring only the layout).
+// Nothing loads ahead when the phone asks to save data or the connection is slow (fast-03, lib/data-saver.ts).
+function usePrefetchOnIntent(href: string, reducedData: boolean) {
+  const router = useRouter();
+  return () => {
+    if (!reducedData) router.prefetch(href, { kind: "full" } as unknown as Parameters<typeof router.prefetch>[1]);
+  };
+}
 
 // The one listing card (docs/ux-redesign/ux-3-discovery.md § The one listing card). Grid variant: a square photo,
 // then the title, price, a spec line and a seller line. One link, the title, stretched over the whole card, and the
 // favourite above it: two tab stops. Showcase variant (the vitrina): a bordered box with the square photo, the ink price
 // tag on it (H3) and a caption with the category, a one-line title and the seller line; no favourite, one tab stop.
-export function ListingCard({ listing, variant = "grid", source = "catalog", headingLevel = 2, eager = false, sizes = DEFAULT_SIZES }: ListingCardProps) {
+export function ListingCard({ listing, variant = "grid", source = "catalog", headingLevel = 2, eager = false, sizes = DEFAULT_SIZES, compare = false }: ListingCardProps) {
   const impressionRef = useListingImpression(listing.id, source);
   const photo = listing.listing_photos[0];
   const photoCount = listing.photo_count ?? listing.listing_photos.length;
   const displayTitle = getListingDisplayTitle(listing);
   const specLine = getCardSpecLine(listing);
   const Heading = headingLevel === 3 ? "h3" : "h2";
+  const href = `/instrumentos/${listing.slug}`;
+  const reducedData = useReducedData();
+  const prefetch = usePrefetchOnIntent(href, reducedData);
   const titleLink = (
     <Link
-      href={`/instrumentos/${listing.slug}`}
+      href={href}
+      // FAST 02: the first row loads ahead when it shows (phones and desktop); the rest on hover or focus.
+      prefetch={eager && !reducedData ? true : false}
+      onMouseEnter={prefetch}
+      onFocus={prefetch}
+      onClick={() => rememberOpened(listing)}
       className="decoration-accent decoration-2 underline-offset-[3px] after:absolute after:inset-0 group-hover:underline"
     >
       {displayTitle}
@@ -88,11 +120,13 @@ export function ListingCard({ listing, variant = "grid", source = "catalog", hea
       <div className="mt-2 flex min-w-0 flex-col gap-1">
         <Heading className="line-clamp-2 min-h-[38px] t-card-title text-ink">{titleLink}</Heading>
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <Price value={listing.price_pen} />
+          {/* FIND 10: a lower price in the past 30 days shows the old one struck through ("Antes" for screen readers). */}
+          <Price value={listing.price_pen} previous={listing.price_drop_from} />
           {isOutOfStock(listing) ? <StatusTag domain="stock" status="out_of_stock" /> : null}
         </p>
         {specLine ? <p className="truncate t-meta">{specLine}</p> : null}
         <SellerLine listing={listing} />
+        {compare ? <CompareToggle listing={listing} /> : null}
       </div>
 
       <div className="absolute right-1 top-1 z-10">
@@ -129,9 +163,11 @@ function CardPhoto({ photo, title, sizes, eager }: { photo: ListingCardData["lis
 // (stacked) the words alone nearly fill the line below 1280 px, so there the city takes its own line above them.
 function SellerLine({ listing, stacked = false }: { listing: ListingCardData; stacked?: boolean }) {
   const seller = getSellerLabel(listing);
+  // FIND 05: the district too, when the store gives one ("Miraflores, Lima").
+  const district = listing.seller_type === "store" ? normalizeStore(listing)?.district : null;
   return (
     <p className={`flex min-w-0 items-center gap-1 t-meta${stacked ? " max-xl:flex-wrap max-xl:gap-y-0" : ""}`}>
-      <span className={`min-w-0 truncate${stacked ? " max-xl:basis-full" : ""}`}>{listing.city}</span>
+      <span className={`min-w-0 truncate${stacked ? " max-xl:basis-full" : ""}`}>{district ? `${district}, ${listing.city}` : listing.city}</span>
       <span aria-hidden="true" className={stacked ? "max-xl:hidden" : undefined}>·</span>
       <span className="shrink-0">{seller.label}</span>
       {seller.verified ? <VerifiedIcon className="h-3.5 w-3.5" /> : null}

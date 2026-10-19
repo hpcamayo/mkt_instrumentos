@@ -58,10 +58,10 @@ function instrumentSlug(pathname: string) {
 
 export { CATALOG_PATH };
 
-// The catalog searches by brand only, so every search box says so (decision N8): the header, the home banner and the
-// 404 page. Free-text search is left for later (F9). Kept in a plain module so server components can read it.
-export const SEARCH_PLACEHOLDER = "Busca por marca: Yamaha, Fender…";
-export const SEARCH_LABEL = "Buscar por marca en el catálogo";
+// Every search box's words: the header, the home banner and the 404 page. Free-text search (Effortless Laria BIG 03,
+// find batch) replaced the brand-only search of decision N8. Kept in a plain module so server components can read it.
+export const SEARCH_PLACEHOLDER = "Busca guitarras, marcas, modelos…";
+export const SEARCH_LABEL = "Buscar en el catálogo";
 // No stores directory exists: "Tiendas verificadas" opens the catalog filtered to verified stores (decision N7).
 export const VERIFIED_STORES_PATH = "/listados?seller_type=verified_store";
 

@@ -17,8 +17,9 @@ import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/
 import { SearchTelemetry } from "@/components/marketplace-telemetry";
 import { createSearchReceipt } from "@/lib/marketplace-events-server";
 import { searchEventMetadata } from "@/lib/marketplace-event-payload";
-import { fetchCatalogPage } from "@/lib/catalog";
-import { catalogTitle } from "@/lib/catalog-filters";
+import { getCatalogPage } from "@/lib/catalog-data";
+import { applySearchPhrase } from "@/lib/catalog-query";
+import { catalogHref, catalogTabTitle, catalogTitle } from "@/lib/catalog-filters";
 import { buildCatalogMetadata } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -33,7 +34,11 @@ type ListingsPageProps = {
 
 export async function generateMetadata({ searchParams }: ListingsPageProps): Promise<Metadata> {
   const resolved = await searchParams;
-  return buildCatalogMetadata(resolved, parsePage(resolved.page));
+  const filters = parseListingFilters(resolved);
+  const page = parsePage(resolved.page);
+  // FIND 02: a filtered search's tab says what was searched and how many results ("Fender en Guitarras · Lima (34)").
+  const result = applySearchPhrase(filters).changed ? null : await getCatalogPage(filters, page);
+  return buildCatalogMetadata(resolved, page, catalogTabTitle(filters, result && !result.error ? result.count : null));
 }
 
 export default async function ListingsPage({
@@ -48,7 +53,11 @@ export default async function ListingsPage({
     return <SupabaseSetupMessage filters={filters} />;
   }
 
-  const { count, data, error } = await fetchCatalogPage(supabase, filters, page);
+  // BIG 03: a plain phrase becomes filters the visitor can see and edit ("bajo 5 cuerdas menos de 2000 en Lima").
+  const phrase = applySearchPhrase(filters);
+  if (phrase.changed) redirect(catalogHref(phrase.filters));
+
+  const { count, data, error } = (await getCatalogPage(filters, page)) ?? { count: null, data: null, error: null };
   const redirectPage = getPageRedirect(page, count, error);
   if (redirectPage !== null)
     redirect(pageHref("/listados", resolvedSearchParams, redirectPage));

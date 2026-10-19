@@ -45,10 +45,12 @@ test('account state while hydrating equals the server render (React #418)',()=>{
  assert.equal(register,live.register);assert.equal(setFavorite,live.setFavorite);
  assert.match(fs.readFileSync('components/marketplace-account-provider.tsx','utf8'),/useSyncExternalStore\(subscribeToNothing, \(\) => false, \(\) => true\)/);
 });
-test('global search uses exactly the catalog brand parameter and no client event',()=>{
- const {GlobalSearch}=load('components/global-search.tsx',{'next/navigation':{useSearchParams:()=>new URLSearchParams('brand=Yamaha')}});
- const html=renderToStaticMarkup(React.createElement(GlobalSearch));assert.match(html,/action="\/listados"/);assert.match(html,/name="brand"/);assert.match(html,/value="Yamaha"/);assert.match(html,/role="search"/);
- assert.doesNotMatch(fs.readFileSync('components/global-search.tsx','utf8'),/sendMarketplaceEvent|name="q"/);
+test('global search: free-text q (Effortless Laria BIG 03), keeps the current filters and sends no client event',()=>{
+ const nav={useSearchParams:()=>new URLSearchParams('q=Yamaha&category=guitars&page=2'),usePathname:()=>'/listados',useRouter:()=>({push(){}})};
+ const {GlobalSearch}=load('components/global-search.tsx',{'next/navigation':nav});
+ const html=renderToStaticMarkup(React.createElement(GlobalSearch));assert.match(html,/action="\/listados"/);assert.match(html,/name="q"/);assert.match(html,/value="Yamaha"/);assert.match(html,/role="search"/);
+ assert.match(html,/<input type="hidden" name="category" value="guitars"\/>/);assert.doesNotMatch(html,/name="page"/);
+ assert.doesNotMatch(fs.readFileSync('components/global-search.tsx','utf8'),/sendMarketplaceEvent/);
 });
 test('favorite actions authenticate and batches bind to the actual session user',async()=>{
  const queries=[];const client={auth:{getUser:async()=>({data:{user:{id:'trusted'}}})},from:()=>({select:()=>({eq:(...args)=>{queries.push(args);return {in:async()=>({data:[],error:null})};}})}),rpc:async(...args)=>{queries.push(args);return {data:true,error:null};}};

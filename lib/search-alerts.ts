@@ -11,6 +11,8 @@ export type SearchAlertFrequency = "immediate" | "daily";
 export type SearchAlertStatus = "active" | "paused";
 
 export type SearchAlertFilters = {
+  // Effortless Laria find batch (BIG 03): the free-text search an alert can keep.
+  query?: string;
   category?: string;
   location?: string;
   condition?: string;
@@ -43,6 +45,7 @@ export function canSaveSearchAlert(filters: Pick<ListingFilters, "cities" | "con
 export function listingFiltersToSearchAlert(filters: ListingFilters): SearchAlertFilters | null {
   if (!canSaveSearchAlert(filters)) return null;
   const normalized: SearchAlertFilters = {};
+  if (filters.q?.trim()) normalized.query = filters.q.trim(); // find batch (BIG 03)
   if (filters.category) normalized.category = filters.category;
   if (filters.cities[0]) normalized.location = filters.cities[0];
   if (filters.conditions[0]) normalized.condition = filters.conditions[0];
@@ -57,6 +60,7 @@ export function listingFiltersToSearchAlert(filters: ListingFilters): SearchAler
 
 export function searchAlertPath(filters: SearchAlertFilters) {
   const params = new URLSearchParams();
+  append(params, "q", filters.query); // find batch (BIG 03)
   append(params, "category", filters.category);
   append(params, "location", filters.location);
   append(params, "condition", filters.condition);
@@ -73,6 +77,7 @@ export function searchAlertPath(filters: SearchAlertFilters) {
 
 export function searchAlertSummary(filters: SearchAlertFilters) {
   const parts: string[] = [];
+  if (filters.query) parts.push(`“${filters.query}”`); // find batch (BIG 03)
   pushLabel(parts, categoryOptions, filters.category);
   pushLabel(parts, instrumentFilterGroups, filters.instrument_type, "instrumentType");
   if (filters.brand) parts.push(`Marca: ${filters.brand}`);
@@ -119,9 +124,9 @@ export function searchAlertFiltersAsJson(filters: SearchAlertFilters): Json {
 
 function parseSearchAlertFilters(value: unknown): SearchAlertFilters | null {
   if (!isRecord(value)) return null;
-  const allowed = new Set(["category", "location", "condition", "brand", "seller_type", "instrument_type", "min_price", "max_price", "advanced"]);
+  const allowed = new Set(["query", "category", "location", "condition", "brand", "seller_type", "instrument_type", "min_price", "max_price", "advanced"]);
   if (Object.keys(value).some((key) => !allowed.has(key))) return null;
-  for (const key of ["category", "location", "condition", "brand", "instrument_type"] as const) {
+  for (const key of ["query", "category", "location", "condition", "brand", "instrument_type"] as const) {
     if (value[key] !== undefined && typeof value[key] !== "string") return null;
   }
   if (value.seller_type !== undefined && !["individual", "store", "verified_store"].includes(String(value.seller_type))) return null;

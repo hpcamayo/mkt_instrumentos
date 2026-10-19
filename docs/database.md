@@ -764,6 +764,29 @@ why is in `docs/store-operations/review-fixes.md`. Long functions are patched fr
   row is published (`IMPORT_ROW_PUBLISHED`) or publication is closed (`IMPORT_PUBLISH_CLOSED`). No function that locks
   or writes stock is replaced.
 
+## Effortless Laria: search and browse (find batch)
+
+Migration `20261101120000_ux_find_search.sql` (not applied to any hosted database). Read-only for visitors except the
+alert changes; no new private data.
+
+- `public.listing_search_text(title, brand, model, category, instrument_type)`: the folded words a listing is found by.
+- `public.search_synonyms(term, expansions text[])`: the curated slang list (RLS on, read-only to everyone).
+- `public.search_query_words(q)`, `public.listing_matches_query(text, q)`: every word of the query must appear, be a
+  synonym, or be similar (`word_similarity` ≥ 0.55 for words of four letters or more; `pg_trgm`).
+- `public.catalog_search(p_q) returns setof listings` (security invoker, so RLS applies): the catalog's source when a
+  text query is present; PostgREST filters only on the columns the select includes, hence the card select's `status`,
+  `stock_state` and `store_id`.
+- `public.catalog_facets(p_filters jsonb, p_q text, p_attribute_keys text[]) returns jsonb` (security definer, public
+  listings only): total, per-option counts (each facet without its own filter), locations, top brands, price spread.
+- `public.catalog_brand_counts()`, `public.catalog_type_counts()`, `public.catalog_suggest(p_q, p_limit)`: menu counts
+  and suggestions over public listings.
+- Computed fields `price_dropped_at(listings)`, `price_drop_from(listings)` (from `listing_price_drops`, past 30 days)
+  and `seller_verified_rank(listings)` for the new sorts and the "Antes" price.
+- `public.listing_gone_hint(p_slug)`: category and type of a listing that was public and no longer is; nothing else.
+- Saved search alerts accept `query` (up to 200 characters, compared without case in the duplicate hash) and match it
+  with the catalog's rule (`normalize_saved_search`, `saved_search_hash`, `listing_matches_saved_search` patched).
+- Tests: `tests/ux-find-search.sql`.
+
 <!-- ux-effortless:listing (batch "listing", migration slot 20261102) -->
 ## Effortless Laria: listing page and WhatsApp
 

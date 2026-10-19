@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CompareFromFavorites } from "@/components/catalog-compare";
 import { FavoriteButton } from "@/components/favorite-button";
 import { MarketplaceImage } from "@/components/marketplace-image";
 import { buttonClasses } from "@/components/ui/button";
@@ -22,6 +23,8 @@ export default async function FavoritesPage({ searchParams }: { searchParams: Pr
   if (favorites && page > Math.max(1, Math.ceil(favorites.total / 24))) redirect(pageHref("/mi-cuenta/favoritos", {}, Math.max(1, Math.ceil(favorites.total / 24))));
   return <section className="grid min-w-0 gap-5"><PageHeader title="Favoritos" meta="Tus publicaciones guardadas. Las bajadas de precio públicas aparecerán en Notificaciones." />
     {!favorites ? <Notice tone="danger" role="alert">No se pudieron cargar tus favoritos. Intenta nuevamente.</Notice> : !favorites.items.length ? <EmptyState title="No tienes favoritos todavía" actions={<Link href="/listados" className={buttonClasses({ variant: "secondary" })}>Explorar el catálogo</Link>} /> : <>
+      {/* Effortless Laria find batch (FIND 12): compare two or three of the available favorites. */}
+      <CompareFromFavorites listings={favorites.items.flatMap((item) => (item.availability === "approved" && item.slug && item.title ? [{ slug: item.slug, title: item.title }] : []))} />
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{favorites.items.map((item) => <li key={item.listing_id} className="min-w-0 rounded-panel border border-subtle bg-white p-4">
         {item.image_url ? <MarketplaceImage src={item.image_url} alt={item.title ?? "Publicación guardada"} width={480} height={360} sizes="(max-width: 640px) 100vw, 320px" loading="lazy" className="mb-3 aspect-[4/3] w-full rounded-control object-cover" /> : null}
         <h2 className="font-semibold">{item.availability === "unavailable" ? "Publicación no disponible" : <Link href={`/mi-cuenta/favoritos/${item.listing_id}`} className="hover:text-ink hover:underline hover:decoration-accent hover:decoration-2">{item.title}</Link>}</h2>

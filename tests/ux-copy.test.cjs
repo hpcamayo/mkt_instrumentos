@@ -161,9 +161,13 @@ test("buyers see no placeholder copy and the home's cards show the real conditio
   assert.match(card, /const specLine = getCardSpecLine\(listing\);/);
   assert.doesNotMatch(card, /"Nuevo"|"Usado/);
   assert.match(fs.readFileSync("lib/listing-specs.ts", "utf8"), /const parts = listing\.condition \? \[getConditionLabel\(listing\.condition\)\] : \[\];/);
-  const home = fs.readFileSync("components/home/home-sections.tsx", "utf8");
-  assert.equal((home.match(/<ListingCard /g) ?? []).length, 2, "the vitrina tile and the feed card are the one card");
-  assert.doesNotMatch(home, /"Nuevo"|condition/);
+  // Effortless Laria BIG 01: the home's listings ("Bajaron de precio", "Para ti", "Nuevo desde tu última visita") all
+  // use the one card.
+  for (const file of ["components/home/home-sections.tsx", "components/home/home-for-you.tsx"]) {
+    const home = fs.readFileSync(file, "utf8");
+    assert.ok((home.match(/<ListingCard /g) ?? []).length >= 1, file);
+    assert.doesNotMatch(home, /"Nuevo"|condition/);
+  }
   // UX-4: the store header and the seller card draw the monogram through SellerAvatar (initials of the store name).
   assert.match(fs.readFileSync("components/listing/seller-card.tsx", "utf8"), /\{initials\(seller\.name\)\}/);
   assert.match(fs.readFileSync("components/store/store-header.tsx", "utf8"), /<SellerAvatar seller=\{\{ name: store\.name, kind, logoUrl: store\.logo_url \}\} size=\{96\} \/>/);

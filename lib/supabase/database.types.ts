@@ -1416,6 +1416,24 @@ export type Database = {
       }
     }
     Functions: {
+      // Effortless Laria, batch "find" (20261101120000_ux_find_search.sql): search, facets, menus and the gone page.
+      catalog_brand_counts: { Args: never; Returns: { brand: string; category: string; listings: number }[] }
+      catalog_facets: { Args: { p_attribute_keys?: string[]; p_filters: Json; p_q?: string }; Returns: Json }
+      catalog_search: {
+        Args: { p_q: string }
+        Returns: Database["public"]["Tables"]["listings"]["Row"][]
+        SetofOptions: { from: "*"; to: "listings"; isOneToOne: false; isSetofReturn: true }
+      }
+      catalog_suggest: {
+        Args: { p_limit?: number; p_q: string }
+        Returns: { brand: string; kind: string; listings: number; model: string | null }[]
+      }
+      catalog_type_counts: { Args: never; Returns: { category: string; instrument_type: string | null; listings: number }[] }
+      listing_gone_hint: { Args: { p_slug: string }; Returns: { category: string; instrument_type: string | null }[] }
+      price_drop_from: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: number | null }
+      price_dropped_at: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: string | null }
+      seller_verified_rank: { Args: { "": Database["public"]["Tables"]["listings"]["Row"] }; Returns: number }
+      // End of the find batch's functions.
       admin_review_store_payment_method: {
         Args: {
           p_decision: string

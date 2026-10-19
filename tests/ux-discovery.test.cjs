@@ -263,9 +263,12 @@ test("filter URLs: each option sets or clears its value; landings lead to /lista
 
 test("titles, counts and the alert rule: a filter or a category narrows; several values cannot be saved (Q11, Q19)", () => {
   assert.equal(catalog.catalogTitle(parse("")), "Instrumentos");
-  assert.equal(catalog.catalogTitle(parse("category=microphones&location=Lima")), "Micrófonos");
+  // Effortless Laria FIND 02: the heading also names the place and the text searched.
+  assert.equal(catalog.catalogTitle(parse("category=microphones&location=Lima")), "Micrófonos · Lima");
+  assert.equal(catalog.catalogTitle(parse("q=fender&category=guitars&location=Lima")), "“fender” en Guitarras · Lima");
+  assert.equal(catalog.catalogTabTitle(parse("brand=Fender&category=guitars"), 34), "Fender en Guitarras (34)");
   assert.equal(catalog.catalogTitle(parse("seller_type=verified_store&sort=price_desc")), "Tiendas verificadas");
-  assert.equal(catalog.catalogTitle(parse("seller_type=verified_store&location=Lima")), "Instrumentos");
+  assert.equal(catalog.catalogTitle(parse("seller_type=verified_store&location=Lima")), "Instrumentos · Lima");
   assert.equal(catalog.resultsLabel(1), "1 resultado");
   assert.equal(catalog.resultsLabel(1262), "1,262 resultados");
   assert.equal(catalog.narrowsSearch(parse("sort=price_asc")), false);
@@ -346,7 +349,8 @@ test("catalog states: error with Reintentar, empty catalog, no results with the 
   const view = source("components/catalog-view.tsx");
   assert.match(view, /No pudimos cargar las publicaciones\. Vuelve a intentarlo en unos minutos\./);
   assert.match(view, /<a href=\{retryHref\}[^>]*>\s*Reintentar\s*<\/a>/);
-  assert.match(view, /title="No encontramos resultados"\s*description="Prueba quitar un filtro o buscar otra marca\."/);
+  // Effortless Laria FIND 04: the no-results state offers one-tap ways out with their counts when it has them.
+  assert.match(view, /title="No encontramos resultados"[\s\S]*Prueba sin uno de tus filtros:[\s\S]*"Prueba quitar un filtro o buscar con otras palabras\."/);
   assert.match(source("app/listados/page.tsx"), /title="Aún no hay publicaciones"\s*description="Las primeras publicaciones aparecerán aquí\."[\s\S]*Publicar un instrumento/);
   assert.doesNotMatch(source("app/listados/page.tsx"), /con esos filtros/);
   const landing = source("components/category-landing.tsx");

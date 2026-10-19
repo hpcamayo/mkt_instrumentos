@@ -211,13 +211,14 @@ test("header: outline Vender, honest brand search, no Para tiendas, Ingresar whe
   assert.doesNotMatch(html, /Para tiendas|Crear cuenta|Listados/);
   assert.match(html, /href="\/login"[^>]*>.*Ingresar/);
   assert.match(html, /aria-label="Laria inicio"/);
-  // Brand search with the placeholder that says so: inline from 768 px, and a row under the bar on phones that
-  // comes after the bar's actions in the markup, so Tab follows the visual order at both sizes.
+  // The search (free text since Effortless Laria BIG 03, replacing N8's brand search): inline from 768 px, and a row
+  // under the bar on phones that comes after the bar's actions in the markup, so Tab follows the visual order.
   assert.equal((html.match(/role="search"/g) ?? []).length, 2);
   for (const id of ["global-marketplace-search", "busqueda-movil-campo"]) {
     const input = html.match(new RegExp(`<input id="${id}"[^>]*>`))[0];
-    assert.match(input, /name="brand"/);
-    assert.match(input, /placeholder="Busca por marca: Yamaha, Fender…"/);
+    assert.match(input, /name="q"/);
+    assert.match(input, /role="combobox"/);
+    assert.match(input, /placeholder="Busca guitarras, marcas, modelos…"/);
   }
   assert.match(html, /<div class="col-start-2 row-start-1 ml-7 hidden max-w-\[680px\] md:block">/);
   assert.ok(html.indexOf('href="/login"') < html.indexOf('id="busqueda-movil"'));
@@ -324,7 +325,7 @@ test("header state endpoint returns the rail's counts, the admin check and the n
 });
 
 test("breadcrumbs: full trail from 768 px with the current page unlinked; on phones a back link on listings only (N11)", () => {
-  const { Breadcrumbs } = load("components/breadcrumbs.tsx", { "next/link": linkMock });
+  const { Breadcrumbs } = load("components/breadcrumbs.tsx", { "next/link": linkMock, "next/navigation": navigationMock("/instrumentos/fender-stratocaster") });
   const items = shell.listingBreadcrumbs({ category: "guitars", instrument_type: "electric_guitar" }, "Fender Stratocaster");
   assert.deepEqual(items.map((item) => item.label), ["Inicio", "Instrumentos", "Guitarras", "Guitarras eléctricas", "Fender Stratocaster"]);
   const html = renderToStaticMarkup(React.createElement(Breadcrumbs, { items, phoneBackLink: true }));
