@@ -239,7 +239,11 @@ test("shop-04: only the owner sees a store that is not active, as a noindex prev
   assert.match(header, /En la vista previa este botón no abre WhatsApp/);
   assert.match(html(React.createElement(StoreHeader, { store: casaGrau, total: 0, rating: null })), /data-contact=""/);
   const sections = load("components/store/store-sections.tsx", mocks);
-  assert.doesNotMatch(html(React.createElement(sections.StoreAboutSection, { store: casaGrau, preview: true })), /data-report/);
+  const previewAbout = html(React.createElement(sections.StoreAboutSection, { store: casaGrau, preview: true }));
+  assert.doesNotMatch(previewAbout, /data-report/);
+  // A store that is not active was not approved: the preview never says it was.
+  assert.match(previewAbout, /Laria aún no aprueba esta tienda\./);
+  assert.doesNotMatch(previewAbout, /Laria aprobó|Laria revisó a mano/);
 
   const page = source("app/tiendas/[slug]/page.tsx");
   // The owner's store is read with the signed-in user's session, never the service role.
