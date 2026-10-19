@@ -191,6 +191,7 @@ create table public.favorite_shares (
 create unique index favorite_shares_one_active on public.favorite_shares(user_id) where revoked_at is null;
 alter table public.favorite_shares enable row level security;
 create policy "Users read their own favorite shares" on public.favorite_shares for select using (user_id = auth.uid());
+revoke all on public.favorite_shares from anon, authenticated;
 grant select on public.favorite_shares to authenticated;
 
 create or replace function public.get_or_create_favorite_share()
@@ -265,6 +266,7 @@ create index follows_store on public.follows(store_id) where store_id is not nul
 create index follows_brand_key on public.follows(brand_key) where brand is not null;
 alter table public.follows enable row level security;
 create policy "Users read their own follows" on public.follows for select using (user_id = auth.uid());
+revoke all on public.follows from anon, authenticated;
 grant select on public.follows to authenticated;
 
 create or replace function public.set_follow(p_store_id uuid, p_brand text, p_follow boolean)
@@ -368,6 +370,7 @@ create table public.email_preferences (
 );
 alter table public.email_preferences enable row level security;
 create policy "Users read their own e-mail preferences" on public.email_preferences for select using (user_id = auth.uid());
+revoke all on public.email_preferences from anon, authenticated;
 grant select on public.email_preferences to authenticated;
 
 create or replace function public.set_email_preferences(p_price_drop_emails boolean, p_follow_digest_emails boolean)

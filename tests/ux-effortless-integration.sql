@@ -1,6 +1,7 @@
 -- Effortless Laria, integration (docs/ux-effortless/integration.md): what the batches share once they meet.
 -- UXD-integration-3: after every batch's migrations, each notification and e-mail type any batch added is still
 -- allowed, and the shared laria_private.ux_extend_text_check reads either form Postgres prints a list in.
+-- Fixed at integration: every table a batch added in public keeps none of the platform's default privileges.
 -- Local/test database only. Every fixture is rolled back.
 begin;
 set local client_min_messages = warning;
@@ -100,6 +101,35 @@ begin
   raise exception 'FAILED: a constraint that is not a check was accepted';
 exception when others then
   perform pg_temp.check(sqlerrm like '%not found%', 'a missing check is reported: ' || sqlerrm);
+end $$;
+
+-- Every table a batch added in public starts closed to the browser roles (revoke all, then only the grants it needs),
+-- like the repository's other tables, so the platform's default "all on tables" never stays behind: the browser roles
+-- can never truncate, reference or add triggers, visitors can never write, and visitors cannot read per-person tables.
+do $$
+declare
+  name text;
+  leaks text[] := '{}';
+begin
+  foreach name in array array['public.search_synonyms', 'public.listing_questions', 'public.listing_stock_watches',
+      'public.favorite_shares', 'public.follows', 'public.email_preferences', 'public.listing_drafts',
+      'public.listing_sound_clips', 'public.store_listing_defaults', 'public.purchase_checkins',
+      'public.store_admin_requests', 'public.complaints_book_entries', 'public.store_inventory_preferences',
+      'public.store_price_campaigns', 'public.store_inventory_views', 'public.store_purchase_request_marks'] loop
+    if has_table_privilege('anon', name, 'INSERT') or has_table_privilege('anon', name, 'UPDATE')
+        or has_table_privilege('anon', name, 'DELETE') then
+      leaks := leaks || ('anon writes ' || name);
+    end if;
+    if has_table_privilege('anon', name, 'TRUNCATE') or has_table_privilege('authenticated', name, 'TRUNCATE')
+        or has_table_privilege('authenticated', name, 'REFERENCES') or has_table_privilege('authenticated', name, 'TRIGGER') then
+      leaks := leaks || ('default privileges on ' || name);
+    end if;
+  end loop;
+  foreach name in array array['public.favorite_shares', 'public.follows', 'public.email_preferences',
+      'public.listing_drafts', 'public.store_listing_defaults', 'public.purchase_checkins'] loop
+    if has_table_privilege('anon', name, 'SELECT') then leaks := leaks || ('anon reads ' || name); end if;
+  end loop;
+  perform pg_temp.check(cardinality(leaks) = 0, 'privileges left open: ' || leaks::text);
 end $$;
 
 rollback;

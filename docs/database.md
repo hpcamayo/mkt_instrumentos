@@ -891,3 +891,286 @@ Local only; never applied to a hosted database. SQL suite: `tests/ux-my-listings
   visible question on a readable listing, not one's own). The Admin report pages do not render question targets yet.
 - Suite: `tests/ux-listing-questions.sql`.
 <!-- /ux-effortless:listing questions -->
+
+<!-- ux-effortless:store-columns -->
+## Store details: public columns only (integration fix)
+
+Migration `20261022130000_store_public_columns.sql` (not applied to any hosted database). Its timestamp sorts before the
+store-operations migrations (`20261023120000` onwards) because it fixes a gap older than them, so a database that
+already has later migrations applied needs `supabase migration up --include-all` (or a reset) to pick it up. SQL suite:
+`tests/store-public-columns.sql`.
+
+- `revoke select on public.stores from anon, authenticated` removes the table-level read; column grants to both roles
+  put back `id`, `name`, `slug`, `description`, `status`, `city`, `district`, `region`, `whatsapp_phone`, `logo_url`,
+  `banner_url`, `is_verified`, `created_at`, `updated_at`, `instagram_url`, `facebook_url`, `tiktok_url` and
+  `website_url`; `authenticated` also gets `owner_user_id`. `ruc`, `razon_social`, `email`, `contact_person`,
+  `contact_name`, `address`, `rejection_reason` and `listing_plan` have no browser read grant, and `select *` from a
+  browser role fails with a permission error. Row policies and writes are unchanged.
+- `public.get_own_store() returns setof public.stores` (SQL, stable, security definer, `search_path = public`): every
+  column of the store whose `owner_user_id` is `auth.uid()` (one row at most). `authenticated` only.
+- `public.admin_get_store(p_store_id uuid) returns setof public.stores` (plpgsql, stable, security definer): every
+  column of one store when `is_admin()`, else `ADMIN_REQUIRED` (42501). `authenticated` only.
+- A column added to `stores` later is private until a migration grants it. `20261106140000_ux_store_location.sql` grants
+  `show_address`, `opening_hours` and `public_address`, so the result is the same in either apply order.
+<!-- /ux-effortless:store-columns -->
+
+<!-- ux-effortless:accounts -->
+## Effortless Laria: accounts, saving and alerts
+
+Migrations `20261103120000` and `20261103130000` (not applied to any hosted database). Public functions are security
+definer with a fixed `search_path`; errors are bare codes.
+
+- `20261103120000_ux_phone_normalization.sql` (fix-01): `laria_private.normalize_pe_phone(p_value text) → text`
+  (immutable) keeps digits, drops a leading `00` and puts `51` before nine digits starting with 9. BEFORE triggers
+  `profiles_normalize_phone`, `listings_normalize_whatsapp_phone` and `stores_normalize_whatsapp_phone` apply it on
+  insert or update of the number, ahead of the `*_protect_admin_fields` triggers (name order). At apply time stored
+  numbers are rewritten (listing guard opened for the transaction; changed rows get a new `updated_at`; changed stores
+  fire `stores_sync_listing_contact_phone`). Suite: `tests/ux-accounts-phone.sql`.
+- `20261103130000_ux_accounts_saving.sql` (big-04, save-04 to save-12). Suite: `tests/ux-accounts-saving.sql`.
+  - Types `listing_alert_match` (notification) and `follow_weekly` (e-mail) through `ux_extend_text_check`; a `do` block
+    rebuilds `marketplace_email_context_check` with `week_start` and `items` added to the keys it reads with the new
+    `laria_private.check_constraint_values(p_table regclass, p_name text, p_after text)`.
+  - `favorites.saved_price_pen numeric` (backfilled with the old price of the first drop after the save, else the
+    current price; trigger `favorites_capture_saved_price` on insert), `favorites.note` (≤ 280),
+    `saved_search_alerts.name` (1–80).
+  - Tables with RLS on, one select-own policy, only `select` granted to `authenticated` (all else revoked from `anon`
+    and `authenticated`) and no write policy:
+    `favorite_shares` (unique 24-hex `token`, `revoked_at`, one active row per user), `follows` (`store_id` → stores or
+    `brand` 1–80 with generated `brand_key`; one row per user and target), `email_preferences` (`user_id` PK,
+    `price_drop_emails` default true, `follow_digest_emails` default false). `user_id` → profiles, cascade.
+  - `authenticated`: `merge_device_favorites(p_ids uuid[]) → integer` (≤ 100, each through `set_listing_favorite`,
+    failures skipped), `set_favorite_note(p_listing_id uuid, p_note text) → text`, `get_or_create_favorite_share() →
+    text`, `revoke_favorite_share() → boolean`, `set_follow(p_store_id uuid, p_brand text, p_follow boolean)`
+    (`FOLLOW_UNAVAILABLE`, `FOLLOW_SELF_NOT_ALLOWED`), `get_account_follows() → jsonb`, `get_followed_arrivals(p_limit
+    integer default 12, p_days integer default 14) → jsonb`, `set_email_preferences( p_price_drop_emails boolean,
+    p_follow_digest_emails boolean)`, `update_saved_search_alert(p_alert_id uuid, p_name text, p_frequency text)`
+    (`ALERT_NOT_OWNED`), `get_account_search_alerts(p_since timestamptz default null) → jsonb` (total, last and new
+    matches per alert), `mark_all_notifications_read() → integer`.
+  - `anon` and `authenticated`: `get_public_listing_cards(p_ids uuid[], p_slugs text[]) → jsonb` (≤ 120; public listings
+    and sold ones under an active parent), `get_shared_favorite_list(p_token text) → jsonb` (first name and public
+    favorites with notes; null for an unknown or revoked token), `get_new_listing_counts(p_since timestamptz,
+    p_categories text[] default null) → jsonb` (public listings per category, `p_since` within 90 days).
+  - Service role only (`EMAIL_SERVICE_REQUIRED`): `apply_email_link_action(p_user_id uuid, p_action text, p_alert_id
+    uuid default null)` (`pause_alert`, `no_price_drops`, `no_follow_digest`) and `prepare_weekly_follow_emails(
+    p_week_start date, p_limit integer default 100) → integer` (a Monday; up to 8 arrivals of the previous Lima week per
+    delivery). No pg_cron job: the app's e-mail worker calls it.
+  - Replaced, same signatures: `get_account_favorites` (saved price, category, type, brand, note),
+    `notify_favorite_price_drop()` (drops of 5% or more, one per listing in 24 h, the notice names the listing),
+    `enqueue_marketplace_email` (no price-drop e-mail after opting out), `marketplace_email_payload` (recipient id,
+    first photos), `normalize_saved_search` and `listing_matches_saved_search` (location and condition as a list of up
+    to 20; find's `query` clause is put back), `capture_saved_search_matches` (adds an in-app notice per match).
+<!-- /ux-effortless:accounts -->
+
+<!-- ux-effortless:selling -->
+## Effortless Laria: selling
+
+Migrations `20261104120000`–`20261104120200` (not applied to any hosted database). SQL suite:
+`tests/ux-effortless-selling.sql`; no suite asserts the import trigger below.
+
+- `20261104120000_ux_selling_drafts.sql` (POST 02): `public.listing_drafts` (`id` is the signed submission id, no
+  default; `owner_user_id` default `auth.uid()` → `auth.users`, cascade; `kind` `listing` | `store_listing`, with
+  `store_id` → stores (cascade) set exactly for store drafts; `inventory_item_id` without FK; `title` ≤ 200; `form`
+  jsonb object ≤ 64 KB; `photos` jsonb array ≤ 10; `sound_clip` jsonb object). BEFORE trigger `listing_drafts_check`
+  (`laria_private.check_listing_draft()`, security definer): id, owner, kind and store never change; photos must be
+  `<owner>/<id>/<0–99>.(jpg|png|webp)` and the clip `<owner>/<id>/sonido-<n>.(webm|ogg|m4a|wav)` of 0.5–20.5 s, a
+  missing path or duration refused; a store
+  draft needs the owner's own store; an insert raises `LISTING_DRAFT_ALREADY_PUBLISHED` when a listing has that id and
+  `LISTING_DRAFT_LIMIT` at 20 drafts. RLS: select, insert, update and delete own rows (to `authenticated`). Grants:
+  `revoke all … from anon, authenticated`; `select, insert, update, delete` to `authenticated`.
+- `20261104120100_ux_selling_sound_clips.sql` (POST 16): public bucket `listing-sound-clips` (1 MiB; `audio/webm`,
+  `audio/ogg`, `audio/mp4`, `audio/wav`); one storage policy lets `authenticated` insert under
+  `<auth.uid()>/<36-character id>/`; no update or delete policy. `public.listing_sound_clips` (`listing_id` PK →
+  listings, cascade; `clip_url` http(s) ≤ 500; `mime_type`; `duration_seconds numeric(4,1)` 0.5–20.5). RLS: select for
+  `anon` and `authenticated` when the caller can read the listing (subquery under the caller's RLS), delete for
+  `is_admin()`. Grants: select to both, delete to `authenticated`, no insert (the publish route writes the row with the
+  service role). The file itself is public by its address, like listing photos, and deleting the row leaves the file
+  (the orphan-photo sweep due before launch should cover clips too). `get_admin_moderation_queue(text, integer,
+  integer)` is patched to return `sound_clip_url`.
+- `20261104120200_ux_selling_store_defaults_sku_details.sql`:
+  - SHOP 06: `public.store_listing_defaults` (`store_id` PK → stores, cascade; `condition` null or one of the three;
+    `description_footer` ≤ 1000). RLS: select for the owner or Admin, insert and update for the owner
+    (`is_store_owner`), no delete. Grants: `revoke all … from anon, authenticated`; `select, insert, update` to
+    `authenticated`.
+  - STOCK 09: `store_inventory_items.listing_details jsonb` (object ≤ 16 KB, descriptive only).
+    `laria_private.sanitize_listing_details(jsonb)` keeps `brand`, `model`, `instrument_type`, `condition`,
+    `description` and `attributes` with sane values and drops anything else;
+    `laria_private.remember_sku_listing_details(p_item_id uuid, p_details jsonb)` (security definer, no browser execute)
+    merges them, and a valid `category`, into a SKU its caller has locked. It runs from trigger
+    `store_import_rows_remember_listing_details` (after update of `commit_status` to `applied`) and from
+    `laria_private.insert_store_listing`, patched to call it after `link_new_store_listing` (which locks the SKU).
+    `update_inventory_listing_details(p_item_id uuid, p_details jsonb) → jsonb {changed, listing_details, category}`
+    (security definer, `authenticated`; inventory write check, `lock_inventory_item`, logged as a `details` change;
+    `INVENTORY_FIELD_INVALID`, `INVENTORY_ITEM_NOT_OWNED`) replaces the details.
+  - POST 02: `complete_public_submission` is patched to delete the `listing_drafts` row with the submission id before it
+    returns, in the same transaction.
+  - POST 14: `listing_review_wait_minutes() → integer` (security definer, `authenticated` only): median minutes from
+    creation to publication of Particular listings published in the last 60 days; null below 20 of them.
+- The two patches add one call or statement each and leave the functions' locks as they were; no stock-writing function
+  is replaced, and `update_inventory_listing_details` writes no stock.
+<!-- /ux-effortless:selling -->
+
+<!-- ux-effortless:stores -->
+## Effortless Laria: store profile, storefront and import
+
+Migrations `20261106120000`–`20261106170000` (not applied to any hosted database). New public functions are security
+definer (except `get_store_listing_categories`) and return jsonb unless noted. SQL suites: `tests/ux-stores-import.sql`,
+`tests/ux-stores-requests.sql`, `tests/ux-stores-storefront.sql` and `tests/ux-stores-complaints.sql`.
+
+- `20261106120000_ux_import_update_scope.sql` (fix-04): `confirm_store_import_mapping(p_session_id uuid, p_mapping
+  jsonb, p_expected_version integer, p_save_as_default boolean default false, p_update_scope text default null,
+  p_stale_stock text default null)` replaces the four-argument form (`authenticated`). It saves `update_scope` (`prices`
+  | `stock` | `both`, null = `both`) and `stale_stock` (`keep` | `apply`, null = `keep`) in the session's `options` and
+  needs the stock column unless the scope is `prices`, the price column when it is (`IMPORT_SCOPE_INVALID`,
+  `IMPORT_MAPPING_PRICE_REQUIRED`). `laria_private.plan_import_row` gets the options as a fourth argument: on an
+  existing SKU it skips values outside the scope and keeps today's stock if the SKU moved after the row's `exported_at`
+  (new mapping key; `IMPORT_STOCK_KEPT`, `IMPORT_STOCK_STALE`) unless `stale_stock = 'apply'`. Its callers,
+  `plan_store_import_rows` and the stock writer `laria_private.commit_import_row`, only pass the options on;
+  `refresh_import_counts` adds `since_export` counts.
+- `20261106130000_ux_store_requests.sql` (shop-05, stock-21): `public.store_admin_requests` (`store_id` → stores,
+  cascade; `kind` `listing_allowance` | `inventory_access`; `status` `open` | `resolved` | `dismissed`; one open request
+  per store and kind; owner or Admin select only). `authenticated`: `request_store_admin_help(p_kind text, p_message
+  text default null, p_requested_allowance integer default null)`, `get_store_listing_allowance_detail()`,
+  `hide_out_of_stock_store_listings(p_batch_key text)` (≤ 200 approved out-of-stock SKU listings, via
+  `hide_inventory_listings_bulk`); Admin: `get_admin_store_requests(p_status text default 'open', p_store_id uuid
+  default null)`, `admin_close_store_request(p_request_id uuid, p_status text, p_note text default null)`;
+  `STORE_REQUIRED`, `STORE_NOT_WRITABLE`, `REQUEST_INVALID`, `INVENTORY_ALREADY_ENABLED`, `REQUEST_NOT_FOUND`,
+  `ADMIN_REQUIRED`. A request changes no allowance or setting.
+- `20261106140000_ux_store_location.sql` (list-12, find-13, find-14): `stores.show_address boolean` (default false),
+  `opening_hours text` (1–300 characters, not blank) and generated `public_address` (`address` while `show_address`),
+  column-granted to `anon` and `authenticated`, written by owners under the existing update policy. `anon` and
+  `authenticated`: `get_public_store_directory()` returns a table of active stores' public columns with approved listing
+  count and visible review count and average, ≤ 2000 rows; `get_store_listing_categories(p_store_id uuid) returns table
+  (category text, listing_count bigint)` is security invoker (RLS decides what is counted).
+- `20261106150000_ux_complaints_book.sql` (trust-05, pending legal review): `public.complaints_book_entries` (the
+  Indecopi sheet; `user_id` → `auth.users`, set null) with RLS on, no policies and all privileges revoked; numbers
+  `LR-<year>-<000001>` from `laria_private.complaints_book_counters` (a row per Lima year, locked while filing: no
+  gaps). `submit_complaints_book_entry(p_consumer_name … p_declaration_accepted)` (one argument per sheet field) returns
+  table `(sheet_number text, filed_at timestamptz)`; `anon` and `authenticated`, 5 per e-mail and per account in 24 h
+  (`COMPLAINT_DECLARATION_REQUIRED`, `COMPLAINT_INVALID`, `COMPLAINT_RATE_LIMITED`). Admin only:
+  `get_admin_complaints_book_page(p_status text default null, p_page integer default 1, p_page_size integer default
+  20)`, `answer_complaints_book_entry(p_entry_id uuid, p_answer text)` (once; `COMPLAINT_ANSWER_INVALID`,
+  `COMPLAINT_NOT_ANSWERABLE`).
+- `20261106160000_ux_import_cell_edit.sql` (stock-12): `edit_store_import_cell(p_session_id uuid, p_row_number integer,
+  p_field text, p_value text, p_expected_version integer)` (`authenticated`; `ready` session, mapped field;
+  `IMPORT_CELL_INVALID`, `IMPORT_ROW_APPLIED`) writes the cell into the locked row's `raw`, resets it and unapplied
+  duplicate rows to unplanned and sends the session back to `validating`. `20261106170000_ux_publish_selection.sql`
+  (stock-10): `create_inventory_publish_selection(p_item_ids uuid[])` (`authenticated`, inventory write check, 1–200
+  SKU; `INVENTORY_PUBLISH_NONE`) stages active SKU without a listing as a closed, applied import (`options.source =
+  'inventory_selection'`) for `publish_store_import_rows`; no stock change.
+<!-- /ux-effortless:stores -->
+
+<!-- ux-effortless:inventory -->
+## Effortless Laria: store inventory and counter
+
+Migrations `20261107120000`–`20261107130300` (not applied to any hosted database); suites `tests/ux-inventory-fixes.sql`
+(`20261107120000`) and `tests/ux-inventory.sql`. New public functions are security definer, `authenticated` only, scoped
+to the caller's store and return jsonb unless noted. Lock order stays key (advisory) → linked listings → SKU.
+
+- `20261107120000_ux_inventory_search.sql` (fix-06, fix-09): `get_inventory_page` searches SKU, name, variant, external
+  reference and the linked listing's title, brand, model (every word, folded); new publication filter `in_review`.
+  `20261107130000_ux_inventory_enum.sql`: `stock_movement_type` gains `correction` (own file, committed before use).
+- `20261107130100_ux_inventory_undo_and_bulk.sql`:
+  - Bulk limit 200 → 2000 (`laria_private.inventory_bulk_limit()`) in `validate_bulk_price_args`,
+    `set_inventory_threshold_bulk`, `hide_inventory_listings_bulk` and the stock writer `apply_bulk_stock_operations`.
+  - Undo: `store_stock_movements.corrects_movement_id` (self FK, restrict, unique; set exactly on `correction` rows).
+    `undo_stock_movements(p_movement_ids uuid[], p_idempotency_key text)` appends one `correction` per movement through
+    the new stock writer `laria_private.apply_stock_correction`, all or nothing, for owner-recorded sales, returns,
+    restocks, losses, adjustments and counts up to 15 minutes old (`STOCK_UNDO_NOT_FOUND`, `STOCK_UNDO_NOT_ALLOWED`,
+    `STOCK_UNDO_EXPIRED`, `STOCK_UNDO_DONE`, `STOCK_UNDO_INSUFFICIENT`). `get_inventory_summary()` is replaced: sales
+    skip undone ones; adds `undone`, `preferences` and pending revisions in `in_review`.
+  - `public.store_inventory_preferences` (default threshold, `daily_stock_summary`, `pickup_hours`; owner select only),
+    BEFORE INSERT trigger `store_inventory_items_default_threshold`, `set_inventory_preferences(p_fields jsonb,
+    p_apply_to_unset boolean default false)`. Notification type `store_stock_summary` (`ux_extend_text_check`) from
+    `laria_private.send_inventory_daily_summaries(p_day date default null)`, run by pg_cron job
+    `inventory-daily-summary` (`0 1 * * *`, 20:00 Lima), once per opted-in store and day.
+  - `public.store_price_campaigns` (owner select only): `preview_inventory_price_campaign(p_item_ids uuid[], p_mode
+    text, p_value integer, p_rounding text)`, `apply_inventory_price_campaign` (the same plus `p_name text, p_batch_key
+    text`; prices through `apply_inventory_price`), `revert_inventory_price_campaign(p_campaign_id uuid)`.
+  - `set_inventory_item_category(p_item_id uuid, p_category text, p_expected_version integer)`,
+    `apply_inventory_bulk_action(p_item_ids uuid[], p_action text, p_value text, p_reason text, p_batch_key text)`
+    (`category`, `archive`, `unarchive`, `restore`; a listing that cannot be restored is skipped as `requirements`,
+    while a concurrent change fails the whole batch), `undo_inventory_batch(p_batch_key text, p_undo_key text)`.
+- `20261107130200_ux_inventory_views.sql`: `get_inventory_page` is replaced again (filters in
+  `laria_private.inventory_ranked`, new `price: 'none'`) with `total`, `offset`, `has_prev`, `prev_cursor`;
+  `get_inventory_neighbors(p_item_id uuid, p_filters jsonb default '{}')`, `get_inventory_item_ids(p_filters jsonb
+  default '{}')` (≤ 2000); `public.store_inventory_views` (owner select only), `save_inventory_view(p_name text,
+  p_filters jsonb)` (≤ 12), `delete_inventory_view(p_view_id uuid)`; `get_counter_index()`,
+  `get_out_of_stock_demand(p_limit integer default 10)` (counts only), `get_reorder_list()`.
+- `20261107130300_ux_purchase_requests.sql` (stock-04, stock-23): `public.store_purchase_request_marks` (`event_id` PK →
+  `marketplace_events`, cascade; `answered` | `sold` | `not_sold`; `sale_movement_id` → movements, restrict; owner
+  select only) for `whatsapp_contact` events with `{"intent":"purchase"}` from the last 60 days.
+  `get_store_purchase_requests(p_status text default 'waiting', p_limit integer default 50)` (names signed-in buyers),
+  `get_store_purchase_request_count() → integer`, `mark_store_purchase_request(p_event_id uuid, p_status text)`,
+  `record_purchase_request_sale(p_event_id uuid, p_quantity integer, p_expected_version integer, p_idempotency_key
+  text)` (request lock, then `record_stock_movement`, channel `whatsapp_laria`); `PURCHASE_REQUEST_NOT_FOUND`,
+  `PURCHASE_REQUEST_SOLD`, `PURCHASE_REQUEST_NO_SKU`. `get_listing_purchase_request(p_listing_id uuid)` is replaced,
+  PAY-1 grants kept (`anon` included), adding `max_quantity`: the linked SKU's available units clamped to 1–10, 1
+  without a SKU. Below 10 it is the exact count, as the stepper's limit is (stock-23 "up to what is available"); the
+  page never prints it (D-14). No SQL suite asserts it.
+<!-- /ux-effortless:inventory -->
+
+<!-- ux-effortless:speed -->
+## Effortless Laria: push notices (big-12)
+
+Migration `20261108120000_ux_push_notifications.sql` (not applied to any hosted database). Write-up:
+`docs/ux-effortless/speed.md`. Suite: `tests/ux-effortless-push.sql`.
+
+- `laria_private.push_subscriptions` (one row per device): `user_id` → profiles (cascade), `endpoint` unique, checked
+  by `laria_private.is_push_service_endpoint(text)` (HTTPS on `fcm.googleapis.com`, `updates.push.services.mozilla.com`,
+  `web.push.apple.com` or `*.notify.windows.com`, at most 1,024 characters); `p256dh` (65-byte uncompressed P-256 key)
+  and `auth_secret` (16 bytes), base64url, checked by `laria_private.push_key_bytes(text, length)`; `failure_count`
+  (0–10), `created_at`, `last_success_at`.
+- `laria_private.push_deliveries` (one row per notification): `notification_id` unique → notifications (cascade),
+  `user_id`, `status` `pending|processing|sent|skipped|failed`, `attempt_count` (0–5), `next_attempt_at`,
+  `last_attempt_at`, `locked_at`/`locked_by` (set only while `processing`), `failure_code` (≤200), `sent_at` (set only
+  when `sent`).
+- Neither table is granted to `anon` or `authenticated`; both are reached only through the functions below.
+- Trigger `notifications_push_delivery` (after insert on `public.notifications`,
+  `laria_private.enqueue_notification_push()`): queues one delivery when the recipient has a device on.
+- The person's own functions (security definer, `authenticated` only; `PUSH_AUTH_REQUIRED` without a session):
+  - `save_push_subscription(p_endpoint, p_p256dh, p_auth) → uuid`: refuses other hosts (`PUSH_ENDPOINT_UNSUPPORTED`)
+    and keys that are not a real P-256 point and 16-byte secret (`PUSH_KEYS_INVALID`). An endpoint already saved moves
+    to the caller (a shared phone belongs to whoever turned notices on last) with its failures reset; only the
+    newest 10 devices per person are kept.
+  - `get_push_subscription(p_endpoint) → uuid | null`: the caller's device id for this browser.
+  - `delete_push_subscription(p_subscription_id, p_endpoint) → boolean`: deletes only the caller's own device, by id
+    (sign-out passes it from a cookie) or by endpoint (the switch).
+- The worker's functions (security definer, `service_role` only, and `PUSH_SERVICE_REQUIRED` unless the JWT role is
+  `service_role`):
+  - `claim_push_deliveries(p_worker_id, p_limit 1–200) → jsonb`: first returns claims older than 15 minutes to
+    `pending` (or `failed` after five attempts) and marks as `skipped` deliveries whose notice was read (`read`), is
+    older than three days (`stale`) or whose person has no device left (`no_device`). Then it claims up to `p_limit`
+    people with all their due notices (`for update skip locked`) and returns, per person, the notices newest first
+    (type, message, listing id and title, store, claim, transaction, prices) and their devices.
+  - `finish_push_deliveries(p_worker_id, p_delivery_ids, p_outcome, p_failure_code, p_sent_device_ids,
+    p_failed_device_ids, p_gone_device_ids) → integer`: only for deliveries this worker holds
+    (`PUSH_DELIVERY_CLAIM_INVALID` otherwise; `PUSH_OUTCOME_INVALID` for an unknown outcome). `sent`, `failed` and
+    `skipped` are final; `retry` comes back after 5 min, 30 min, 2 h and 8 h, then `failed`. Devices the push service
+    no longer knows are deleted, a device that failed five times in a row too, and a success resets the count; only
+    devices of the people in the claim are touched.
+- Quiet hours (22:00–08:00 Lima), grouping into one message and the RFC 8291/8292 encryption and signing are in the
+  app (`lib/push/push-worker.ts`, `lib/push/web-push.ts`), run by `GET /api/internal/push/process` with `CRON_SECRET`.
+  No scheduler runs it yet.
+<!-- /ux-effortless:speed -->
+
+<!-- ux-effortless:integration -->
+## Effortless Laria: integration
+
+Migration `20261109120000_ux_effortless_integration.sql` (not applied to any hosted database). Write-up:
+`docs/ux-effortless/integration.md`. Suite: `tests/ux-effortless-integration.sql`.
+
+- `public.recent_price_drop_at(listings) → timestamptz` (computed field, security invoker, `anon` and
+  `authenticated`): `price_dropped_at` when the listing is approved, `previous_price_pen` is above its price and the drop
+  is under 30 days old, else null. The catalog's "Bajó de precio" order and the home's drops row read it, so they show
+  exactly the drops the cards and the listing page show as "Antes S/" (UXD-integration-1). The find batch's own drop
+  functions were removed from `20261101120000_ux_find_search.sql`.
+- Every batch adds notification and e-mail types through `laria_private.ux_extend_text_check`
+  (`20261102120500_ux_listing_registry.sql`), so the checks on `public.notifications.event_type` and
+  `laria_private.marketplace_email_deliveries.event_type` keep every type any batch added, in any order
+  (UXD-integration-3). The suite copies each check onto a scratch table and inserts every type.
+- `public.get_public_seller_facts(p_listing_id)` is redefined unchanged except for a verified store's address: it
+  returns `public_address` (the street only while the store shows it, list-12) and `address_checked` (the store has an
+  address on file) instead of the raw `address` (UXD-integration-11).
+- `20261104120100` and `20261104120200` drop their helper `pg_temp.selling_fix`, so every migration also applies in
+  one database session, as the Supabase CLI runs them.
+<!-- /ux-effortless:integration -->

@@ -300,15 +300,23 @@ begin
     and (select filters->>'stock' from public.store_inventory_views) = 'out', 'the same name replaces');
   perform pg_temp.expect_error($q$select public.save_inventory_view('Mala', '{"store_id":"x"}')$q$, 'INVENTORY_FILTER_INVALID');
   perform pg_temp.expect_error($q$select public.save_inventory_view('Mala', '{"stock":"lots"}')$q$, 'INVENTORY_FILTER_INVALID');
+  perform set_config('qa.saved_view', (select id::text from public.store_inventory_views), true);
 end $$;
 
 select pg_temp.owner_b();
 do $$ begin
   perform pg_temp.check((select count(*) from public.store_inventory_views) = 0, 'views are private to the store');
+  perform pg_temp.check((public.delete_inventory_view(current_setting('qa.saved_view')::uuid)->>'deleted')::boolean = false,
+    'another store cannot delete a view');
   perform pg_temp.check((public.get_inventory_neighbors((pg_temp.item('NEW-006')).id, '{}')->>'position') is null, 'no neighbours across stores');
   perform pg_temp.check(jsonb_array_length(public.get_counter_index()->'items') = 1, 'the counter sees only its store');
 end $$;
 select pg_temp.owner_a();
+do $$ begin
+  perform pg_temp.check((select count(*) from public.store_inventory_views) = 1, 'the view outlived the other store''s delete');
+  perform pg_temp.check((public.delete_inventory_view(current_setting('qa.saved_view')::uuid)->>'deleted')::boolean, 'the owner deletes a view');
+  perform pg_temp.check((select count(*) from public.store_inventory_views) = 0, 'the view is gone');
+end $$;
 
 -- ------------------------------------------------------------------ big-10, stock-08, stock-07
 

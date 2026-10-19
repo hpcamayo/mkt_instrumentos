@@ -38,7 +38,7 @@ on public.store_listing_defaults for update to authenticated
 using (public.is_store_owner(store_id))
 with check (public.is_store_owner(store_id));
 
-revoke all on public.store_listing_defaults from anon;
+revoke all on public.store_listing_defaults from anon, authenticated;
 grant select, insert, update on public.store_listing_defaults to authenticated;
 
 -- ------------------------------------------------------------------ STOCK 09

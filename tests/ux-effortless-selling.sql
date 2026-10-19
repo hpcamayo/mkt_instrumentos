@@ -88,6 +88,13 @@ do $$ begin
     pg_temp.id('d2'), jsonb_build_array(jsonb_build_object('path', pg_temp.id('seller') || '/' || pg_temp.id('d2') || '/0.gif'))), 'Invalid draft photo');
   perform pg_temp.expect_error(format($q$insert into public.listing_drafts (id, kind, sound_clip) values (%L, 'listing', %L)$q$,
     pg_temp.id('d2'), jsonb_build_object('path', pg_temp.id('seller') || '/' || pg_temp.id('d2') || '/sonido-1.webm', 'duration', 25)), 'Invalid draft sound clip');
+  -- A missing path or duration is refused too (integration).
+  perform pg_temp.expect_error(format($q$insert into public.listing_drafts (id, kind, sound_clip) values (%L, 'listing', %L)$q$,
+    pg_temp.id('d2'), jsonb_build_object('duration', 12)), 'Invalid draft sound clip');
+  perform pg_temp.expect_error(format($q$insert into public.listing_drafts (id, kind, sound_clip) values (%L, 'listing', %L)$q$,
+    pg_temp.id('d2'), jsonb_build_object('path', pg_temp.id('seller') || '/' || pg_temp.id('d2') || '/sonido-1.webm')), 'Invalid draft sound clip');
+  perform pg_temp.expect_error(format($q$insert into public.listing_drafts (id, kind, photos) values (%L, 'listing', %L)$q$,
+    pg_temp.id('d2'), jsonb_build_array(jsonb_build_object('shot', 'frente'))), 'Invalid draft photo');
   perform pg_temp.expect_error(format($q$insert into public.listing_drafts (id, owner_user_id, kind) values (%L, %L, 'listing')$q$,
     pg_temp.id('d2'), pg_temp.id('other')), 'row-level security');
   -- A Particular cannot save a store draft, and a draft keeps its owner and kind.

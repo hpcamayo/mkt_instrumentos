@@ -49,15 +49,17 @@ begin
     raise exception 'A draft keeps its id, owner, kind and store.';
   end if;
   for photo in select value from jsonb_array_elements(new.photos) loop
-    if jsonb_typeof(photo) <> 'object' or jsonb_typeof(photo->'path') <> 'string'
+    if jsonb_typeof(photo) <> 'object' or jsonb_typeof(photo->'path') is distinct from 'string'
       or (photo->>'path') !~ ('^' || folder || '(?:[0-9]|[1-9][0-9])\.(jpg|png|webp)$')
       or (photo ? 'shot' and (jsonb_typeof(photo->'shot') <> 'string' or char_length(photo->>'shot') > 40)) then
       raise exception 'Invalid draft photo.';
     end if;
   end loop;
   if new.sound_clip is not null and (
-      (new.sound_clip->>'path') !~ ('^' || folder || 'sonido-[0-9]{1,3}\.(webm|ogg|m4a|wav)$')
-      or coalesce((new.sound_clip->>'duration')::numeric, 0) not between 0.5 and 20.5) then
+      jsonb_typeof(new.sound_clip) <> 'object' or jsonb_typeof(new.sound_clip->'path') is distinct from 'string'
+      or (new.sound_clip->>'path') !~ ('^' || folder || 'sonido-[0-9]{1,3}\.(webm|ogg|m4a|wav)$')
+      or jsonb_typeof(new.sound_clip->'duration') is distinct from 'number'
+      or (new.sound_clip->>'duration')::numeric not between 0.5 and 20.5) then
     raise exception 'Invalid draft sound clip.';
   end if;
   if new.kind = 'store_listing' and not exists (
@@ -101,5 +103,5 @@ create policy "Owners delete own listing drafts"
 on public.listing_drafts for delete to authenticated
 using (owner_user_id = auth.uid());
 
-revoke all on public.listing_drafts from anon;
+revoke all on public.listing_drafts from anon, authenticated;
 grant select, insert, update, delete on public.listing_drafts to authenticated;

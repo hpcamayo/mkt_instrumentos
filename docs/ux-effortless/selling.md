@@ -85,7 +85,8 @@ errors.
   reader, allowance or moderation query has to learn to skip them. UXD-selling-5: a draft's id is its submission id;
   resuming re-signs a token for that id, so its photos stay where they are. UXD-selling-6: at most 20 drafts per seller.
 - **Limitations.** A draft kept only on the device leaves its uploaded photos in the public bucket if the seller never
-  comes back; a sweep job for folders with no listing and no draft is needed before launch.
+  comes back; a sweep job for folders with no listing and no draft is needed before launch. It should cover the
+  `listing-sound-clips` bucket too, whose files stay when a clip's row is removed (integration).
 
 ### POST 03 and POST 04: photos upload while you type; iPhone photos and big files just work
 

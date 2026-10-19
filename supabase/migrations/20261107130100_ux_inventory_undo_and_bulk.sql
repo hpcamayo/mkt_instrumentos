@@ -843,7 +843,10 @@ begin
       begin
         perform public.set_owned_listing_lifecycle(listing_record.id, 'restore');
         changed := changed || jsonb_build_array(jsonb_build_object('id', item.id, 'listing_id', listing_record.id));
-      exception when others then
+      exception
+        -- A concurrent change fails the whole batch, so the owner retries it rather than reading "requirements".
+        when serialization_failure or deadlock_detected or lock_not_available then raise;
+        when others then
         -- The listing no longer meets the publication requirements or the store is not public: leave it hidden.
         skipped := skipped || jsonb_build_array(jsonb_build_object('id', item.id, 'merchant_sku', item.merchant_sku, 'reason', 'requirements'));
       end;

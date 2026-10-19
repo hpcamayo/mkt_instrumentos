@@ -186,8 +186,21 @@ The accounts batch (#28) shipped shared pieces and listed where the other batche
 - **Push functions only for their callers.** The speed batch had granted the worker's `claim_push_deliveries` and
   `finish_push_deliveries` to every role, as the older e-mail worker does, relying on the role check inside. They are
   now granted to `service_role` only, and the device functions to `authenticated` only; the checks inside stay.
+- **Tables closed to the browser roles by default.** The accounts batch's `favorite_shares`, `follows` and
+  `email_preferences`, and the selling batch's `listing_drafts` and `store_listing_defaults`, kept some of the
+  platform's default table privileges (Supabase grants every privilege on new tables to `anon` and `authenticated`;
+  row-level security still hid other people's rows). They now revoke everything first and grant only what they use,
+  like every other table, and `tests/ux-effortless-integration.sql` checks all the tables the batches added.
+- **Smaller database fixes from the schema read-through.** A draft photo or sound clip with no path, or a clip with no
+  duration, is refused (a null comparison let it through). A bulk "Restaurar" in Inventario fails the whole batch on a
+  concurrent change instead of reporting the SKU as not meeting the requirements. Two misleading migration comments
+  are corrected (a sound clip's file is public by its address, like photos; the purchase requests helper checks the
+  owner, not the pilot). Deleting a saved inventory view is now covered by `tests/ux-inventory.sql`.
 - **Acceptance files the registry refused.** The find batch's three P3 rows (EASE-012, EASE-020, EASE-023) are P2,
   the registry's lowest level, and the inventory batch's escaped quotes are plain quotes.
+
+Not yet covered by an SQL suite: the import trigger that remembers a SKU's publication details
+(`store_import_rows_remember_listing_details`) and the quantity limit `get_listing_purchase_request` returns.
 
 ## Acceptance cases
 

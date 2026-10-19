@@ -31,7 +31,8 @@ returns interval language sql immutable as $$ select interval '60 days' $$;
 create or replace function laria_private.purchase_request_waiting_window()
 returns interval language sql immutable as $$ select interval '14 days' $$;
 
--- The caller's store when its payments pilot is on (the only way purchase requests exist), else an error.
+-- The caller's own store, else an error; a write also needs the store pending or active. No pilot check here:
+-- requests exist only where the payments pilot showed "Solicitar compra".
 create or replace function laria_private.purchase_request_store(p_for_write boolean)
 returns uuid
 language plpgsql

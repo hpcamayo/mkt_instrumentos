@@ -2,9 +2,11 @@
 --
 -- The seller records or picks up to 20 seconds in the sell form; the browser compresses it and uploads it beside the
 -- photos (listing-sound-clips/<owner>/<submission>/sonido-<n>.<ext>), like a photo. The publish route checks the object
--- and records it here after complete_public_submission, so the clip is moderated with its listing: it is readable
--- exactly when the listing is (the policy reads listings under the caller's own row-level security), the Admin queue
--- shows it next to the photos, and an Admin can remove it. Buyers play it only by tapping; nothing autoplays.
+-- and records it here after complete_public_submission, so the clip is moderated with its listing: its row is
+-- readable exactly when the listing is (the policy reads listings under the caller's own row-level security), the
+-- Admin queue shows it next to the photos, and an Admin can remove it. The file itself is public by its address, like
+-- listing photos (public buckets, docs/decisions.md), and removing the row leaves the file for the photo sweep.
+-- Buyers play it only by tapping; nothing autoplays.
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('listing-sound-clips', 'listing-sound-clips', true, 1048576,
