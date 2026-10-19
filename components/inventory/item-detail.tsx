@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
-import { StockActionSheet, type StockActionType } from "@/components/inventory/stock-action-sheet";
+import { NewSkuSheet } from "@/components/inventory/sku-forms";
+import { StockActionSheet, undoMovements, type StockActionType } from "@/components/inventory/stock-action-sheet";
+import { UndoNotice, type InventoryNotice } from "@/components/inventory/undo-notice";
 import { PageNotice } from "@/components/page-notice";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Input, Radio, Select } from "@/components/ui/field";
@@ -11,6 +13,7 @@ import { Notice } from "@/components/ui/notice";
 import { Price } from "@/components/ui/price";
 import { Sheet } from "@/components/ui/sheet";
 import { inventoryAction, newRequestKey, parseWholeNumber } from "@/lib/inventory-client";
+import { categoryOptions } from "@/lib/listings";
 import type { InventoryItem } from "@/lib/store-inventory";
 
 // Client parts of the SKU page (design §13.2). Every write sends the version the page was rendered with; a stale
@@ -42,10 +45,10 @@ const STOCK_BUTTONS: { type: StockActionType; label: string }[] = [
 
 export function ItemStockActions({ item }: { item: InventoryItem }) {
   const [open, setOpen] = useState<{ type: StockActionType; opener: HTMLElement } | null>(null);
-  const [notice, setNotice] = useFeedback();
+  const [notice, setNotice] = useState<InventoryNotice | null>(null);
   return (
     <div className="grid gap-3">
-      {notice}
+      {notice ? <UndoNotice notice={notice} onChange={setNotice} /> : null}
       <div className="flex flex-wrap gap-2">
         {STOCK_BUTTONS.map((entry) => (
           <Button
@@ -65,7 +68,7 @@ export function ItemStockActions({ item }: { item: InventoryItem }) {
           item={item}
           initialType={open.type}
           onClose={() => { const opener = open.opener; setOpen(null); requestAnimationFrame(() => opener.focus()); }}
-          onDone={(message) => { setOpen(null); setNotice({ kind: "success", message }); }}
+          onDone={(message, undo) => { setOpen(null); setNotice({ kind: "success", message, undo }); }}
         />
       ) : null}
     </div>
@@ -371,4 +374,97 @@ export function ArchiveButton({ item }: { item: InventoryItem }) {
 
 export function PublishFromSkuLink({ itemId }: { itemId: string }) {
   return <Link href={`/mi-cuenta/tienda/publicar?sku=${itemId}`} className={buttonClasses({ variant: "secondary", size: "sm" })}>Publicar este SKU</Link>;
+}
+
+// ------------------------------------------------------------------ Effortless Laria, inventory batch
+
+// stock-03: "Deshacer" in the SKU's history, for a movement the store recorded by hand in the last 15 minutes.
+export function UndoMovementButton({ movementId, sku }: { movementId: string; sku: string }) {
+  const router = useRouter();
+  const [key] = useState(() => newRequestKey("deshacer"));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  return (
+    <span className="t-meta">
+      <button
+        type="button"
+        className="link font-semibold"
+        disabled={busy}
+        aria-label={`Deshacer este movimiento de ${sku}`}
+        onClick={async () => {
+          setBusy(true);
+          setError("");
+          const result = await inventoryAction({ action: "undo_movements", movement_ids: [movementId], key });
+          setBusy(false);
+          if (!result.ok) return setError(result.message);
+          router.refresh();
+        }}
+      >
+        {busy ? "Deshaciendo…" : "Deshacer"}
+      </button>
+      {error ? <span role="alert" className="ml-2 text-danger">{error}</span> : null}
+    </span>
+  );
+}
+
+// stock-20: the SKU's own category. A linked publication keeps its own; the inventory shows the publication's first.
+export function ItemCategoryForm({ item, canWrite }: { item: InventoryItem; canWrite: boolean }) {
+  const router = useRouter();
+  const [value, setValue] = useState(item.category ?? "");
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState<{ code: string; message: string } | null>(null);
+  const [notice, setNotice] = useFeedback();
+  const id = `categoria-${item.id}`;
+  const editable = canWrite && item.inventory_status === "active";
+
+  async function save(next: string) {
+    setValue(next);
+    setBusy(true);
+    setFailure(null);
+    const result = await inventoryAction({ action: "category", item_id: item.id, category: next || null, expected_version: item.version });
+    setBusy(false);
+    if (!result.ok) return setFailure({ code: result.code, message: result.message });
+    setNotice({ kind: "success", message: "Categoría guardada." });
+    router.refresh();
+  }
+
+  return (
+    <div className="grid gap-2">
+      {notice}
+      <Field
+        id={id}
+        label="Categoría del SKU"
+        hint={item.listing?.category && item.listing.category !== value ? "La publicación vinculada tiene su propia categoría, que es la que se muestra en la lista." : "Ordena tu inventario y sus filtros."}
+      >
+        <Select value={value} disabled={!editable || busy} onChange={(event) => save(event.target.value)}>
+          <option value="">Sin categoría</option>
+          {categoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </Select>
+      </Field>
+      {failure ? <Notice tone="danger" role="alert">{failure.message} <StaleHint code={failure.code} /></Notice> : null}
+    </div>
+  );
+}
+
+// stock-11: a new SKU filled from this one (no SKU, stock or codes: those belong to one SKU only).
+export function DuplicateSkuButton({ item }: { item: InventoryItem }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLButtonElement>(null);
+  return (
+    <>
+      <button ref={ref} type="button" aria-haspopup="dialog" className="link font-semibold" onClick={() => setOpen(true)}>Duplicar SKU</button>
+      {open ? (
+        <NewSkuSheet
+          initial={{
+            product_name: item.product_name,
+            variant_label: item.variant_label,
+            unit_price_pen: item.unit_price_pen,
+            low_stock_threshold: item.low_stock_threshold,
+            category: item.category ?? item.listing?.category ?? null,
+          }}
+          onClose={() => { setOpen(false); requestAnimationFrame(() => ref.current?.focus()); }}
+        />
+      ) : null}
+    </>
+  );
 }

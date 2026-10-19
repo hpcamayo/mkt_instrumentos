@@ -39,8 +39,20 @@ export type ExportItem = {
   low_stock_threshold: number | null;
   external_reference: string | null;
   inventory_status: string;
-  listing: { id: string; slug: string; status: string; brand: string | null; model: string | null; category: string | null } | null;
+  listing: {
+    id: string; slug: string; status: string; brand: string | null; model: string | null; category: string | null;
+    // Only read for "con datos de la publicación" (stock-16).
+    title?: string | null; price_pen?: number | null; condition?: string | null; city?: string | null; description?: string | null;
+  } | null;
 };
+
+// stock-16 "Exportar esta vista", optionally with the publication's own fields after the usual columns, so the file
+// still imports back: the import ignores columns it does not map.
+export const LISTING_EXPORT_HEADERS = ["Título de la publicación", "Precio publicado (PEN)", "Condición", "Ciudad", "Descripción"] as const;
+
+export function listingColumns(item: ExportItem): ExportCell[] {
+  return [item.listing?.title ?? null, item.listing?.price_pen ?? null, item.listing?.condition ?? null, item.listing?.city ?? null, item.listing?.description ?? null];
+}
 
 export type ExportCell = string | number | null;
 
@@ -71,14 +83,18 @@ export function toCsv(rows: ExportCell[][], headers: readonly string[] = EXPORT_
   return csvDocument([headers, ...rows]);
 }
 
+export function exportHeaders(withListing: boolean): string[] {
+  return withListing ? [...EXPORT_HEADERS, ...LISTING_EXPORT_HEADERS] : [...EXPORT_HEADERS];
+}
+
 // XLSX cells are inline strings or numbers (lib/spreadsheet/xlsx-write.ts never writes a formula), so text keeps the
 // merchant's exact value there; the apostrophe guard is only needed where a reader could evaluate it, the CSV.
-export function toXlsxSheet(rows: ExportCell[][]): XlsxSheet {
+export function toXlsxSheet(rows: ExportCell[][], headers: readonly string[] = EXPORT_HEADERS): XlsxSheet {
   return {
     name: "Inventario",
-    rows: [[...EXPORT_HEADERS], ...rows] as XlsxCell[][],
+    rows: [[...headers], ...rows] as XlsxCell[][],
     textColumns: EXPORT_TEXT_COLUMNS,
-    widths: [16, 40, 18, 16, 18, 18, 8, 10, 12, 12, 18, 12, 38, 18, 48],
+    widths: [16, 40, 18, 16, 18, 18, 8, 10, 12, 12, 18, 12, 38, 18, 48, 40, 12, 12, 14, 60].slice(0, headers.length),
   };
 }
 

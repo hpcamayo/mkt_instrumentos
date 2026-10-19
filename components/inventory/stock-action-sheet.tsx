@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Radio, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { Sheet } from "@/components/ui/sheet";
+import type { UndoAction } from "@/components/inventory/undo-notice";
 import { inventoryAction, newRequestKey, parseWholeNumber } from "@/lib/inventory-client";
 import { CHANNEL_LABELS, SALE_CHANNELS, numbers } from "@/lib/store-inventory";
 
@@ -31,6 +32,12 @@ const TYPES: { value: StockActionType; label: string; quantityLabel: string }[] 
   { value: "stock_count", label: "Conteo", quantityLabel: "Unidades contadas en tienda" },
 ];
 
+// stock-03: "Deshacer" for movements just recorded; one key per undo, so a double tap undoes once.
+export function undoMovements(movementIds: string[], done: string): UndoAction {
+  const key = newRequestKey("deshacer");
+  return { done, run: () => inventoryAction({ action: "undo_movements", movement_ids: movementIds, key }) };
+}
+
 export function stockActionLabel(type: StockActionType) {
   return TYPES.find((entry) => entry.value === type)?.label ?? "Ajustar stock";
 }
@@ -44,7 +51,7 @@ export function StockActionSheet({
   item: StockActionItem;
   initialType: StockActionType;
   onClose: () => void;
-  onDone: (message: string) => void;
+  onDone: (message: string, undo?: UndoAction) => void;
 }) {
   const router = useRouter();
   const [type, setType] = useState<StockActionType>(initialType);
@@ -71,7 +78,7 @@ export function StockActionSheet({
     }
     setQuantityError("");
     setBusy(true);
-    const result = await inventoryAction<{ item: { quantity_available: number } }>({
+    const result = await inventoryAction<{ item: { quantity_available: number }; movement: { id: string } }>({
       action: "movement",
       key: requestKey,
       item_id: item.id,
@@ -88,7 +95,8 @@ export function StockActionSheet({
       setFailure({ message: result.message, stale: result.code === "INVENTORY_VERSION_CONFLICT" || result.code === "IDEMPOTENCY_KEY_REUSED" });
       return;
     }
-    onDone(`Movimiento guardado. ${item.merchant_sku} tiene ahora ${numbers.format(result.data.item.quantity_available)} disponibles.`);
+    onDone(`Movimiento guardado. ${item.merchant_sku} tiene ahora ${numbers.format(result.data.item.quantity_available)} disponibles.`,
+      undoMovements([result.data.movement.id], `Movimiento deshecho en ${item.merchant_sku}.`));
     router.refresh();
   }
 

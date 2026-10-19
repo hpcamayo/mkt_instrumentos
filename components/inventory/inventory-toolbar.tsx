@@ -12,7 +12,9 @@ import { categoryOptions } from "@/lib/listings";
 import {
   CATALOG_FILTERS,
   CATALOG_MATCHING_AVAILABLE,
+  DEFAULT_FILTERS,
   INVENTORY_NO_CATEGORY,
+  PRICE_FILTERS,
   PUBLICATION_FILTERS,
   SORTS,
   STOCK_FILTERS,
@@ -64,7 +66,7 @@ export function InventoryToolbar({ filters }: { filters: InventoryFilters }) {
           }}
         >
           <Field id={searchId} label="Buscar en tu inventario" labelClassName="sr-only" className="min-w-0 flex-1">
-            <Input name="q" type="search" defaultValue={filters.q} maxLength={100} placeholder="SKU, marca, modelo, nombre o código" onChange={(event) => searchAsYouType(event.target.value)} />
+            <Input name="q" type="search" data-inventory-search="" aria-keyshortcuts="/ Control+K Meta+K" defaultValue={filters.q} maxLength={100} placeholder="SKU, marca, modelo, nombre o código" onChange={(event) => searchAsYouType(event.target.value)} />
           </Field>
           <Button type="submit" variant="secondary" icon={<Search aria-hidden />}>Buscar</Button>
         </form>
@@ -82,7 +84,7 @@ export function InventoryToolbar({ filters }: { filters: InventoryFilters }) {
       </div>
       {applied || filters.q ? (
         <p className="t-meta">
-          {describe(filters)} <Link href={inventoryHref({ q: "", stock: "all", publication: "", catalog: "", category: "", sort: filters.sort })} className="link font-semibold">Quitar búsqueda y filtros</Link>
+          {describe(filters)} <Link href={inventoryHref({ ...DEFAULT_FILTERS, sort: filters.sort })} className="link font-semibold">Quitar búsqueda y filtros</Link>
         </p>
       ) : null}
       {open ? <FilterSheet filters={filters} onDismiss={dismiss} onApply={(href) => { setOpen(false); router.push(href); }} /> : null}
@@ -98,6 +100,7 @@ function describe(filters: InventoryFilters) {
     filters.catalog ? CATALOG_FILTERS.find((entry) => entry.value === filters.catalog)?.label : null,
     filters.category === INVENTORY_NO_CATEGORY ? "Sin categoría"
       : filters.category ? categoryOptions.find((entry) => entry.value === filters.category)?.label ?? filters.category : null,
+    filters.price ? PRICE_FILTERS.find((entry) => entry.value === filters.price)?.label : null,
   ].filter(Boolean);
   return `Mostrando: ${parts.join(" · ")}.`;
 }
@@ -113,7 +116,7 @@ function FilterSheet({ filters, onDismiss, onApply }: { filters: InventoryFilter
       layout="responsive"
       footer={
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="secondary" onClick={() => setDraft({ ...draft, stock: "all", publication: "", catalog: "", category: "" })}>Limpiar</Button>
+          <Button variant="secondary" onClick={() => setDraft({ ...draft, stock: "all", publication: "", catalog: "", category: "", price: "" })}>Limpiar</Button>
           <Button onClick={() => onApply(inventoryHref(draft))}>Ver resultados</Button>
         </div>
       }
@@ -127,13 +130,17 @@ function FilterSheet({ filters, onDismiss, onApply }: { filters: InventoryFilter
           <legend className="t-ui font-semibold text-ink">Publicación</legend>
           {PUBLICATION_FILTERS.map((entry) => <Radio key={entry.value || "any"} name={`${id}-publicacion`} label={entry.label} checked={draft.publication === entry.value} onChange={() => setDraft({ ...draft, publication: entry.value })} />)}
         </fieldset>
-        <Field id={`${id}-categoria`} label="Categoría" hint="La de la publicación; si el SKU no tiene, la de su importación.">
+        <Field id={`${id}-categoria`} label="Categoría" hint="La de la publicación; si el SKU no tiene publicación, la del SKU.">
           <Select value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })}>
             <option value="">Todas las categorías</option>
             {categoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             <option value={INVENTORY_NO_CATEGORY}>Sin categoría</option>
           </Select>
         </Field>
+        <fieldset className="grid gap-0.5">
+          <legend className="t-ui font-semibold text-ink">Precio</legend>
+          {PRICE_FILTERS.map((entry) => <Radio key={entry.value || "any"} name={`${id}-precio`} label={entry.label} checked={draft.price === entry.value} onChange={() => setDraft({ ...draft, price: entry.value })} />)}
+        </fieldset>
         {CATALOG_MATCHING_AVAILABLE ? (
           <fieldset className="grid gap-0.5">
             <legend className="t-ui font-semibold text-ink">Catálogo</legend>

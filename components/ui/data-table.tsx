@@ -32,6 +32,7 @@ export function DataTable<T>({
   rowKey,
   selection,
   rowClassName,
+  onRowShortcut,
 }: {
   caption: string;
   columns: DataTableColumn<T>[];
@@ -39,12 +40,19 @@ export function DataTable<T>({
   rowKey: (row: T) => string;
   selection?: DataTableSelection<T>;
   rowClassName?: (row: T) => string | undefined;
+  // Letter shortcuts for the focused row (stock-18): return true when the key was used.
+  onRowShortcut?: (row: T, key: string, opener: HTMLElement) => boolean;
 }) {
   const allSelected = Boolean(selection) && rows.length > 0 && rows.every((row) => selection!.selected.has(rowKey(row)));
   const someSelected = Boolean(selection) && rows.some((row) => selection!.selected.has(rowKey(row)));
 
-  function onRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>) {
+  function onRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, row: T) {
     if (event.target !== event.currentTarget) return;
+    if (onRowShortcut && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey
+      && onRowShortcut(row, event.key.toLowerCase(), event.currentTarget)) {
+      event.preventDefault();
+      return;
+    }
     const body = event.currentTarget.parentElement;
     if (!body) return;
     const all = [...body.children] as HTMLElement[];
@@ -95,7 +103,7 @@ export function DataTable<T>({
               <tr
                 key={id}
                 tabIndex={0}
-                onKeyDown={onRowKeyDown}
+                onKeyDown={(event) => onRowKeyDown(event, row)}
                 className={cn(
                   "relative grid gap-2 px-4 py-4 align-top outline-offset-[-2px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink md:table-row md:p-0",
                   checked && "bg-accent-tint",

@@ -12,7 +12,7 @@ export function NewSkuButton() {
   const ref = useRef<HTMLButtonElement>(null);
   return (
     <>
-      <button ref={ref} type="button" className={buttonClasses()} aria-haspopup="dialog" onClick={() => setOpen(true)}><Plus aria-hidden />Nuevo SKU</button>
+      <button ref={ref} type="button" className={buttonClasses()} aria-haspopup="dialog" aria-keyshortcuts="n" data-shortcut="nuevo-sku" onClick={() => setOpen(true)}><Plus aria-hidden />Nuevo SKU</button>
       {open ? <NewSkuSheet onClose={() => { setOpen(false); requestAnimationFrame(() => ref.current?.focus()); }} /> : null}
     </>
   );

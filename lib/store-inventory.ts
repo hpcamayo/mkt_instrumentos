@@ -55,6 +55,15 @@ export type RecentMovement = {
   on_hand_after: number;
   actor_kind: string;
   created_at: string;
+  // stock-03: a later correction cancelled this movement.
+  undone?: boolean;
+};
+
+// stock-06: owner-editable Inventario preferences (store_inventory_preferences).
+export type InventoryPreferences = {
+  default_low_stock_threshold: number | null;
+  daily_stock_summary: boolean;
+  pickup_hours: string | null;
 };
 
 export type InventorySummary = {
@@ -72,9 +81,11 @@ export type InventorySummary = {
   hidden: number;
   in_review: number;
   rejected: number;
+  no_price?: number;
   sales_30d_units: number;
   sales_30d_count: number;
   recent_movements: RecentMovement[];
+  preferences?: InventoryPreferences | null;
 };
 
 export type StockMovement = {
@@ -91,6 +102,8 @@ export type StockMovement = {
   import_session_id: string | null;
   import_row_number: number | null;
   created_at: string;
+  // stock-03: set on a correction, the movement it cancels.
+  corrects_movement_id?: string | null;
 };
 
 export type InventoryChange = {
@@ -111,6 +124,8 @@ export type InventoryFilters = {
   publication: "" | "none" | "pending" | "in_review" | "published" | "hidden" | "rejected" | "changes_pending";
   catalog: "" | "matched" | "unmatched";
   category: string;
+  // stock-17: "Sin precio".
+  price: "" | "none";
   sort: "updated" | "name" | "available_asc" | "available_desc" | "price_asc" | "price_desc";
 };
 
@@ -145,6 +160,11 @@ export const CATALOG_FILTERS: readonly { value: InventoryFilters["catalog"]; lab
   { value: "unmatched", label: "Sin vínculo al catálogo" },
 ];
 
+export const PRICE_FILTERS: readonly { value: InventoryFilters["price"]; label: string }[] = [
+  { value: "", label: "Con o sin precio" },
+  { value: "none", label: "Sin precio" },
+];
+
 export const SORTS: readonly { value: InventoryFilters["sort"]; label: string }[] = [
   { value: "updated", label: "Cambios recientes" },
   { value: "name", label: "Nombre (A–Z)" },
@@ -154,7 +174,7 @@ export const SORTS: readonly { value: InventoryFilters["sort"]; label: string }[
   { value: "price_desc", label: "Mayor precio" },
 ];
 
-const DEFAULT_FILTERS: InventoryFilters = { q: "", stock: "all", publication: "", catalog: "", category: "", sort: "updated" };
+export const DEFAULT_FILTERS: InventoryFilters = { q: "", stock: "all", publication: "", catalog: "", category: "", price: "", sort: "updated" };
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -174,6 +194,7 @@ export function parseInventoryFilters(params: SearchParams): { filters: Inventor
     publication: pick(first(params.publicacion), PUBLICATION_FILTERS, ""),
     catalog: CATALOG_MATCHING_AVAILABLE ? pick(first(params.catalogo), CATALOG_FILTERS, "") : "",
     category: first(params.categoria).slice(0, 80),
+    price: pick(first(params.precio), PRICE_FILTERS, ""),
     sort: pick(first(params.orden), SORTS, "updated"),
   };
   return { filters, cursor: decodeCursor(first(params.despues)) };
@@ -187,6 +208,7 @@ export function inventoryHref(filters: InventoryFilters, cursor?: InventoryCurso
   if (filters.publication) query.set("publicacion", filters.publication);
   if (filters.catalog) query.set("catalogo", filters.catalog);
   if (filters.category) query.set("categoria", filters.category);
+  if (filters.price) query.set("precio", filters.price);
   if (filters.sort !== DEFAULT_FILTERS.sort) query.set("orden", filters.sort);
   if (cursor) query.set("despues", encodeCursor(cursor));
   const text = query.toString();
@@ -194,7 +216,60 @@ export function inventoryHref(filters: InventoryFilters, cursor?: InventoryCurso
 }
 
 export function activeFilterCount(filters: InventoryFilters) {
-  return [filters.stock !== "all", Boolean(filters.publication), Boolean(filters.catalog), Boolean(filters.category)].filter(Boolean).length;
+  return [filters.stock !== "all", Boolean(filters.publication), Boolean(filters.catalog), Boolean(filters.category), Boolean(filters.price)]
+    .filter(Boolean).length;
+}
+
+// The filters as get_inventory_page and the other list functions take them (empty values left out).
+export function filtersForRpc(filters: InventoryFilters): Record<string, string> {
+  const rpc: Record<string, string> = { stock: filters.stock, sort: filters.sort };
+  if (filters.q) rpc.q = filters.q;
+  if (filters.publication) rpc.publication = filters.publication;
+  if (filters.catalog) rpc.catalog = filters.catalog;
+  if (filters.category) rpc.category = filters.category;
+  if (filters.price) rpc.price = filters.price;
+  return rpc;
+}
+
+// The inverse, for saved views (stock-17): stored rpc-style filters back to screen filters.
+export function filtersFromRpc(stored: Record<string, unknown>): InventoryFilters {
+  const value = (name: string) => (typeof stored[name] === "string" ? (stored[name] as string) : "");
+  return {
+    q: value("q").slice(0, 100),
+    stock: pick(value("stock"), STOCK_FILTERS, "all"),
+    publication: pick(value("publication"), PUBLICATION_FILTERS, ""),
+    catalog: "",
+    category: value("category").slice(0, 80),
+    price: pick(value("price"), PRICE_FILTERS, ""),
+    sort: pick(value("sort"), SORTS, "updated"),
+  };
+}
+
+// stock-16: "Exportar esta vista" (app/api/store/inventory/export/route.ts reads vista=). Works in the browser too.
+export function exportViewHref(filters: InventoryFilters, format: "csv" | "xlsx", withListing = false) {
+  const json = JSON.stringify(filtersForRpc(filters));
+  const bytes = new TextEncoder().encode(json);
+  let binary = "";
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  const vista = btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return `/api/store/inventory/export?format=${format}&vista=${vista}${withListing ? "&publicacion=1" : ""}`;
+}
+
+// stock-17: views every store has, before its own.
+export const BUILT_IN_VIEWS: readonly { name: string; filters: Partial<InventoryFilters> }[] = [
+  { name: "Agotados publicados", filters: { stock: "out", publication: "published" } },
+  { name: "Stock bajo", filters: { stock: "low" } },
+  { name: "Sin publicación", filters: { publication: "none" } },
+  { name: "Sin precio", filters: { price: "none" } },
+];
+
+export function viewFilters(partial: Partial<InventoryFilters>): InventoryFilters {
+  return { ...DEFAULT_FILTERS, ...partial };
+}
+
+// Same filters, ignoring the order and the search text's surrounding spaces: is this view the one on screen?
+export function sameFilters(a: InventoryFilters, b: InventoryFilters) {
+  return JSON.stringify(filtersForRpc({ ...a, q: a.q.trim() })) === JSON.stringify(filtersForRpc({ ...b, q: b.q.trim() }));
 }
 
 export function encodeCursor(cursor: InventoryCursor) {
@@ -235,6 +310,7 @@ export const MOVEMENT_LABELS: Record<string, string> = {
   reservation: "Reserva",
   reservation_release: "Reserva liberada",
   external_sync: "Sincronización",
+  correction: "Deshecho",
 };
 
 export const CHANNEL_LABELS: Record<string, string> = {
@@ -288,7 +364,7 @@ export function signed(value: number) {
 
 // The functions raise "CODE: mensaje en español". Known inventory codes pass their Spanish message through; anything
 // else (a network or PostgREST failure) is replaced by a generic message and stays in the logs.
-const KNOWN_CODE = /^((INVENTORY|STOCK|IDEMPOTENCY|LISTING|STORE)_[A-Z_]+): ([\s\S]+)$/;
+const KNOWN_CODE = /^((INVENTORY|STOCK|IDEMPOTENCY|LISTING|STORE|PURCHASE)_[A-Z_]+): ([\s\S]+)$/;
 
 export function inventoryError(raw: string | null | undefined): { code: string; message: string } {
   const match = raw ? KNOWN_CODE.exec(raw.trim()) : null;
@@ -351,22 +427,97 @@ export async function getInventoryPage(
   filters: InventoryFilters,
   cursor: InventoryCursor | null,
   limit = 50,
-): Promise<{ items: InventoryItem[]; nextCursor: InventoryCursor | null } | null> {
+): Promise<InventoryPage | null> {
   const { data, error } = await inventoryDb(supabase).rpc("get_inventory_page", {
-    p_filters: {
-      q: filters.q || null,
-      stock: filters.stock,
-      publication: filters.publication || null,
-      catalog: filters.catalog || null,
-      category: filters.category || null,
-      sort: filters.sort,
-    },
+    p_filters: filtersForRpc(filters),
     p_cursor: cursor,
     p_limit: limit,
   });
   if (error || !data) return null;
-  const page = data as { items: InventoryItem[]; next_cursor: InventoryCursor | null };
-  return { items: page.items ?? [], nextCursor: page.next_cursor ?? null };
+  const page = data as {
+    items: InventoryItem[]; next_cursor: InventoryCursor | null; total?: number; offset?: number;
+    has_prev?: boolean; prev_cursor?: InventoryCursor | null;
+  };
+  const items = page.items ?? [];
+  return {
+    items,
+    nextCursor: page.next_cursor ?? null,
+    total: page.total ?? items.length,
+    offset: page.offset ?? 0,
+    hasPrev: page.has_prev ?? false,
+    prevCursor: page.prev_cursor ?? null,
+  };
+}
+
+// stock-19: "1–50 de 312" and the previous page (prevCursor null with hasPrev: the first page).
+export type InventoryPage = {
+  items: InventoryItem[];
+  nextCursor: InventoryCursor | null;
+  total: number;
+  offset: number;
+  hasPrev: boolean;
+  prevCursor: InventoryCursor | null;
+};
+
+export function pageRange(page: Pick<InventoryPage, "items" | "total" | "offset">) {
+  if (!page.items.length) return `0 de ${numbers.format(page.total)}`;
+  return `${numbers.format(page.offset + 1)}–${numbers.format(page.offset + page.items.length)} de ${numbers.format(page.total)}`;
+}
+
+// stock-19: the SKU before and after this one in the list the owner came from.
+export type InventoryNeighbors = { position: number | null; total: number; previous_id: string | null; next_id: string | null };
+
+export async function getInventoryNeighbors(supabase: AnyClient, itemId: string, filters: InventoryFilters): Promise<InventoryNeighbors | null> {
+  const { data, error } = await inventoryDb(supabase).rpc("get_inventory_neighbors", { p_item_id: itemId, p_filters: filtersForRpc(filters) });
+  if (error || !data) return null;
+  return data as InventoryNeighbors;
+}
+
+// stock-17: the store's own saved views.
+export type InventoryView = { id: string; name: string; filters: Record<string, unknown> };
+
+export async function getInventoryViews(supabase: AnyClient): Promise<InventoryView[]> {
+  const { data } = await inventoryDb(supabase).from("store_inventory_views").select("id,name,filters").order("created_at");
+  return (data ?? []) as InventoryView[];
+}
+
+// stock-08: out-of-stock SKUs people still save or ask about.
+export type DemandRow = {
+  id: string; merchant_sku: string; product_name: string; listing_id: string; listing_title: string;
+  version: number; favorites: number; contacts_90d: number;
+};
+
+export async function getOutOfStockDemand(supabase: AnyClient, limit = 5): Promise<DemandRow[]> {
+  const { data, error } = await inventoryDb(supabase).rpc("get_out_of_stock_demand", { p_limit: limit });
+  if (error || !Array.isArray(data)) return [];
+  return data as DemandRow[];
+}
+
+// stock-07: what to reorder.
+export type ReorderRow = {
+  id: string; merchant_sku: string; product_name: string; variant_label: string | null; external_reference: string | null;
+  quantity_available: number; low_stock_threshold: number | null; sales_30d: number; suggested: number; unit_price_pen: number | null;
+};
+
+export async function getReorderList(supabase: AnyClient): Promise<ReorderRow[] | null> {
+  const { data, error } = await inventoryDb(supabase).rpc("get_reorder_list");
+  if (error || !data) return null;
+  return ((data as { items?: ReorderRow[] }).items ?? []) as ReorderRow[];
+}
+
+// stock-15: the store's price campaigns, newest first.
+export type PriceCampaign = {
+  id: string; name: string; mode: string; value: number; rounding: string; item_count: number;
+  created_at: string; reverted_at: string | null; revert_result: { restored?: unknown[]; kept?: unknown[] } | null;
+};
+
+export async function getPriceCampaigns(supabase: AnyClient, limit = 10): Promise<PriceCampaign[]> {
+  const { data } = await inventoryDb(supabase)
+    .from("store_price_campaigns")
+    .select("id,name,mode,value,rounding,item_count,created_at,reverted_at,revert_result")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as PriceCampaign[];
 }
 
 const ITEM_COLUMNS =
@@ -408,7 +559,7 @@ export async function getItemMovements(
 ): Promise<{ movements: StockMovement[]; next: MovementCursor | null }> {
   let query = inventoryDb(supabase)
     .from("store_stock_movements")
-    .select("id,item_id,movement_type,channel,on_hand_delta,on_hand_before,on_hand_after,actor_kind,reference,reason,import_session_id,import_row_number,created_at")
+    .select("id,item_id,movement_type,channel,on_hand_delta,on_hand_before,on_hand_after,actor_kind,reference,reason,import_session_id,import_row_number,created_at,corrects_movement_id")
     .eq("item_id", itemId)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })

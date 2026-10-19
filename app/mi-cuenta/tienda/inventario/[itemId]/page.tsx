@@ -2,11 +2,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
   ArchiveButton,
+  DuplicateSkuButton,
+  ItemCategoryForm,
   ItemDetailsForm,
   ItemStockActions,
   LinkListingForm,
   PublishFromSkuLink,
   SkuChangeButton,
+  UndoMovementButton,
   UnlinkListingButton,
   type LinkCandidate,
 } from "@/components/inventory/item-detail";
@@ -29,12 +32,20 @@ import {
   getInventoryItem,
   getInventorySummary,
   getItemChanges,
+  getInventoryNeighbors,
   getItemMovements,
   getLinkedItemsByListing,
+  inventoryDb,
+  inventoryHref,
   inventoryStatusKey,
   numbers,
+  parseInventoryFilters,
   signed,
 } from "@/lib/store-inventory";
+
+// Matches laria_private.inventory_undo_window (stock-03).
+const UNDO_WINDOW_MS = 15 * 60 * 1000;
+const UNDOABLE_TYPES = new Set(["sale", "return", "restock", "damage_or_loss", "manual_adjustment", "stock_count"]);
 
 export const metadata = { title: "SKU de inventario" };
 
@@ -48,15 +59,28 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
   const { itemId } = await params;
   const query = (await searchParams) ?? {};
   const before = decodeMovementCursor(typeof query.antes === "string" ? query.antes : undefined);
+  // stock-19: the list this SKU was opened from (filters and page), for Anterior/Siguiente and the way back.
+  const listQuery = typeof query.lista === "string" && query.lista.length <= 1200 ? query.lista : "";
+  const list = parseInventoryFilters(Object.fromEntries(new URLSearchParams(listQuery)));
+  const listHref = inventoryHref(list.filters, list.cursor);
+  const withList = (id: string) => `/mi-cuenta/tienda/inventario/${id}${listQuery ? `?lista=${encodeURIComponent(listQuery)}` : ""}`;
   const [item, summary] = await Promise.all([getInventoryItem(supabase, itemId), getInventorySummary(supabase)]);
   if (!item || item.store_id !== store.id) notFound();
   const canWrite = Boolean(summary?.can_write);
 
-  const [history, changes, candidates] = await Promise.all([
+  const [history, changes, candidates, neighbors] = await Promise.all([
     getItemMovements(supabase, item.id, before),
     getItemChanges(supabase, item.id),
     item.listing_id || !canWrite ? Promise.resolve([] as LinkCandidate[]) : linkCandidates(store.id),
+    getInventoryNeighbors(supabase, item.id, list.filters),
   ]);
+  // stock-03: which movements on this page a later correction cancelled.
+  const movementIds = history.movements.map((movement) => movement.id);
+  const { data: corrections } = movementIds.length
+    ? await inventoryDb(supabase).from("store_stock_movements").select("corrects_movement_id").in("corrects_movement_id", movementIds)
+    : { data: [] };
+  const undone = new Set(((corrections ?? []) as { corrects_movement_id: string }[]).map((row) => row.corrects_movement_id));
+  const now = Date.now();
 
   async function linkCandidates(storeId: string): Promise<LinkCandidate[]> {
     const { data } = await supabase!
@@ -74,7 +98,16 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
   const archived = item.inventory_status === "archived";
   return (
     <div className="grid gap-6">
-      <Breadcrumbs items={[{ label: "Inventario", href: "/mi-cuenta/tienda/inventario" }, { label: item.merchant_sku }]} />
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <Breadcrumbs items={[{ label: "Inventario", href: listHref }, { label: item.merchant_sku }]} />
+        {neighbors?.position ? (
+          <nav aria-label="Otros SKU de la lista" className="flex items-center gap-4 t-ui">
+            <span className="t-meta tabular-nums">{numbers.format(neighbors.position)} de {numbers.format(neighbors.total)}</span>
+            {neighbors.previous_id ? <Link href={withList(neighbors.previous_id)} rel="prev" className="link font-semibold">Anterior</Link> : null}
+            {neighbors.next_id ? <Link href={withList(neighbors.next_id)} rel="next" className="link font-semibold">Siguiente</Link> : null}
+          </nav>
+        ) : null}
+      </div>
       <PageHeader
         eyebrow={`SKU ${item.merchant_sku}${item.sku_generated ? " · generado por Laria" : ""}`}
         title={item.product_name}
@@ -131,11 +164,13 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="datos-titulo" className="t-section text-ink">Datos del SKU</h2>
           <div className="flex flex-wrap gap-x-4">
+            {canWrite && !archived ? <DuplicateSkuButton item={item} /> : null}
             {canWrite && !archived ? <SkuChangeButton item={item} /> : null}
             {canWrite ? <ArchiveButton item={item} /> : null}
           </div>
         </div>
         <ItemDetailsForm key={item.version} item={item} canWrite={canWrite} />
+        <ItemCategoryForm key={`categoria-${item.version}`} item={item} canWrite={canWrite} />
         {/* fix-09: no catalog matching exists yet, so only a real link is mentioned. */}
         {item.catalog_product_id ? <p className="t-meta">Catálogo: vinculado a un modelo del catálogo de Laria.</p> : null}
       </section>
@@ -148,6 +183,11 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
               <li key={movement.id} className="grid gap-0.5 py-3 t-ui sm:grid-cols-[1fr_auto] sm:gap-x-6">
                 <p className="font-semibold text-ink">
                   {MOVEMENT_LABELS[movement.movement_type] ?? movement.movement_type} <span className="tabular-nums">{signed(movement.on_hand_delta)}</span>
+                  {undone.has(movement.id) ? <span className="ml-2 t-meta font-normal">Deshecho</span> : null}
+                  {canWrite && !archived && !undone.has(movement.id) && movement.actor_kind === "owner" && UNDOABLE_TYPES.has(movement.movement_type)
+                    && movement.on_hand_delta !== 0 && now - new Date(movement.created_at).getTime() < UNDO_WINDOW_MS ? (
+                      <span className="ml-3"><UndoMovementButton movementId={movement.id} sku={item.merchant_sku} /></span>
+                    ) : null}
                 </p>
                 <p className="t-meta tabular-nums sm:text-right">{numbers.format(movement.on_hand_before)} → {numbers.format(movement.on_hand_after)} en tienda</p>
                 <p className="t-meta sm:col-span-2">
@@ -163,8 +203,8 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
           <EmptyState headingLevel={3} className="border-0 p-0" title="Sin movimientos en este tramo" />
         )}
         <nav aria-label="Páginas del historial" className="flex gap-4 t-ui">
-          {before ? <Link href={`/mi-cuenta/tienda/inventario/${item.id}`} className="link font-semibold">Más recientes</Link> : null}
-          {history.next ? <Link href={`/mi-cuenta/tienda/inventario/${item.id}?antes=${encodeMovementCursor(history.next)}`} className="link font-semibold">Movimientos anteriores</Link> : null}
+          {before ? <Link href={withList(item.id)} className="link font-semibold">Más recientes</Link> : null}
+          {history.next ? <Link href={`${withList(item.id)}${listQuery ? "&" : "?"}antes=${encodeMovementCursor(history.next)}`} className="link font-semibold">Movimientos anteriores</Link> : null}
         </nav>
       </section>
 
