@@ -313,7 +313,8 @@ test("the switch waits for the browser before showing anything, and lives on the
   assert.equal(renderToStaticMarkup(React.createElement(PushSettings, { publicKey: vapidEnv().NEXT_PUBLIC_VAPID_PUBLIC_KEY })), "");
   const settings = source("components/push-settings.tsx");
   assert.match(settings, /userVisibleOnly: true, applicationServerKey: key/);
-  assert.match(settings, /Nunca de 10 p\. m\. a 8 a\. m\./);
+  assert.match(settings, /Nunca de 10\\u00a0p\.\\u00a0m\. a 8\\u00a0a\.\\u00a0m\./, "the hours never split across lines");
+  assert.match(settings, /Ajustes > Notificaciones > Laria/, "an iPhone app that blocked them says where to allow them");
   assert.match(settings, /los correos siguen como siempre/);
   assert.match(settings, /<p role="status" className="sr-only">\{announcement\}<\/p>/);
   const page = source("app/mi-cuenta/notificaciones/page.tsx");

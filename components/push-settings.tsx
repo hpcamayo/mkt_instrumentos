@@ -18,6 +18,7 @@ export function PushSettings({ publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [state, setState] = useState<State>("checking");
   const [phone, setPhone] = useState(true);
+  const [installed, setInstalled] = useState(false);
   const [busy, setBusy] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [problem, setProblem] = useState("");
@@ -25,6 +26,7 @@ export function PushSettings({ publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_
   useEffect(() => {
     let active = true;
     setPhone(window.matchMedia("(pointer: coarse)").matches);
+    setInstalled(window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true);
     void deviceState(publicKey, supabase).then((next) => {
       if (active) setState(next);
     }, () => {
@@ -107,11 +109,18 @@ export function PushSettings({ publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_
     }
   }
 
+  // Where to allow them again depends on how Laria is open: an iPhone app, an Android app, or a browser tab.
+  const denied = installed && iosBrowser()
+    ? "Bloqueaste los avisos de Laria. Para recibirlos, actívalos en Ajustes > Notificaciones > Laria."
+    : installed && phone
+      ? "Bloqueaste los avisos de Laria. Para recibirlos, mantén presionado el ícono de Laria, toca “Información de la app” y permite las notificaciones."
+      : "Bloqueaste los avisos de Laria en este navegador. Para recibirlos, permítelos en la configuración del sitio (el candado junto a la dirección).";
+  // The hours keep their spaces unbroken, so "8 a. m." never splits across lines.
   const copy = {
     install: "En iPhone, los avisos llegan cuando Laria está en tu pantalla de inicio: toca Compartir, luego “Agregar a inicio”, y abre Laria desde ese ícono.",
-    denied: "Bloqueaste los avisos de Laria en este navegador. Para recibirlos, permítelos en la configuración del sitio (el candado junto a la dirección).",
-    off: "Te avisamos aquí de bajas de precio en tus favoritos, compras por confirmar y decisiones sobre tus publicaciones. Nunca de 10 p. m. a 8 a. m.: lo de la noche te llega junto en la mañana.",
-    on: "Activados. Llegan de 8 a. m. a 10 p. m., varios juntos en uno, y los correos siguen como siempre.",
+    denied,
+    off: "Te avisamos aquí de bajas de precio en tus favoritos, compras por confirmar y decisiones sobre tus publicaciones. Nunca de 10\u00a0p.\u00a0m. a 8\u00a0a.\u00a0m.: lo de la noche te llega junto en la mañana.",
+    on: "Activados. Llegan de 8\u00a0a.\u00a0m. a 10\u00a0p.\u00a0m., varios juntos en uno, y los correos siguen como siempre.",
   }[state];
 
   return (
