@@ -62,3 +62,4 @@ select pg_temp.selling_fix('public.get_admin_moderation_queue(text,integer,integ
   'l.category, l.brand, l.model, photos.first_photo_url,',
   'l.category, l.brand, l.model, photos.first_photo_url,
         (select c.clip_url from public.listing_sound_clips c where c.listing_id = l.id) sound_clip_url,');
+drop function pg_temp.selling_fix(regprocedure, text[]);

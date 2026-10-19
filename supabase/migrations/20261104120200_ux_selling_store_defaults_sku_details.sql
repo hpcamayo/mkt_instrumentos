@@ -188,6 +188,7 @@ select pg_temp.selling_fix('public.complete_public_submission(uuid,text,jsonb,js
   E'    raise exception ''Invalid submission kind'';\n  end if;\n\n  return p_id;',
   E'    raise exception ''Invalid submission kind'';\n  end if;\n\n'
   || E'  delete from public.listing_drafts where id = p_id;\n\n  return p_id;');
+drop function pg_temp.selling_fix(regprocedure, text[]);
 
 -- ------------------------------------------------------------------ POST 14
 

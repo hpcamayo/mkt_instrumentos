@@ -22,3 +22,10 @@ Merge order (by migration slot): find (#27), listing (#24), accounts (#28), sell
   `supabase/migrations/20261109120000_ux_effortless_integration.sql`, `lib/catalog.ts`, `lib/home.ts`,
   `lib/listings.ts`, `components/listing-card.tsx`, `lib/supabase/database.types.ts`, `tests/ux-find-search.sql`,
   `tests/ux-home.test.cjs`.
+
+## Fixed at integration
+
+- **Selling's migrations drop their helper.** `20261104120100` and `20261104120200` each created
+  `pg_temp.selling_fix` without dropping it. The local replay runs every migration in its own session, so it passed;
+  the Supabase CLI applies them all over one connection, where the second `create` fails. Both now drop it after use,
+  like the review-fix migrations. A one-session replay of every migration is part of the integration checks.
