@@ -1,3 +1,5 @@
+import { normalizePeruPhone } from "@/lib/phone";
+
 type SellerProfile = {
   full_name: string | null;
   phone: string | null;
@@ -50,14 +52,10 @@ export function resolveContactPhone(listing: SellerContactListing) {
   return resolveParticularSeller(listing).phone ?? listing.whatsapp_phone;
 }
 
-// wa.me needs the country code. Numbers are stored as digits, often a bare 9-digit Peruvian mobile ("987654321"),
-// which wa.me cannot open; those get 51 in front. "0051…" loses its international prefix. Anything else is kept as
-// typed (a number that already starts with 51, or a foreign one).
+// wa.me needs the country code: the one +51 rule (lib/phone.ts, accounts' fix-01) adds 51 to a bare 9-digit Peruvian
+// mobile and drops a leading 00; anything else is kept as typed.
 export function whatsAppNumber(raw: string | null | undefined) {
-  let digits = String(raw ?? "").replace(/\D/g, "");
-  if (digits.startsWith("00")) digits = digits.slice(2);
-  if (/^9\d{8}$/.test(digits)) return `51${digits}`;
-  return digits;
+  return normalizePeruPhone(raw);
 }
 
 export function whatsAppUrl(phone: string | null | undefined, message: string) {
