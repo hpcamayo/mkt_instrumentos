@@ -1188,11 +1188,14 @@ export type Database = {
           listing_plan: Database["public"]["Enums"]["store_listing_plan"]
           logo_url: string | null
           name: string
+          opening_hours: string | null
+          public_address: string | null
           owner_user_id: string | null
           razon_social: string | null
           region: string
           rejection_reason: string | null
           ruc: string | null
+          show_address: boolean
           slug: string
           status: Database["public"]["Enums"]["store_status"]
           tiktok_url: string | null
@@ -1217,11 +1220,13 @@ export type Database = {
           listing_plan?: Database["public"]["Enums"]["store_listing_plan"]
           logo_url?: string | null
           name: string
+          opening_hours?: string | null
           owner_user_id?: string | null
           razon_social?: string | null
           region?: string
           rejection_reason?: string | null
           ruc?: string | null
+          show_address?: boolean
           slug: string
           status?: Database["public"]["Enums"]["store_status"]
           tiktok_url?: string | null
@@ -1246,11 +1251,13 @@ export type Database = {
           listing_plan?: Database["public"]["Enums"]["store_listing_plan"]
           logo_url?: string | null
           name?: string
+          opening_hours?: string | null
           owner_user_id?: string | null
           razon_social?: string | null
           region?: string
           rejection_reason?: string | null
           ruc?: string | null
+          show_address?: boolean
           slug?: string
           status?: Database["public"]["Enums"]["store_status"]
           tiktok_url?: string | null
@@ -1585,6 +1592,10 @@ export type Database = {
         }
         Returns: Json
       }
+      answer_complaints_book_entry: {
+        Args: { p_answer: string; p_entry_id: string }
+        Returns: Json
+      }
       answer_purchase_checkin: {
         Args: { p_bought: boolean; p_listing_id: string }
         Returns: Json
@@ -1728,6 +1739,10 @@ export type Database = {
         Args: { p_since?: string }
         Returns: Json
       }
+      get_admin_complaints_book_page: {
+        Args: { p_page?: number; p_page_size?: number; p_status?: string }
+        Returns: Json
+      }
       get_admin_audit_history: {
         Args: { p_limit?: number; p_target_id: string; p_target_type: string }
         Returns: Json
@@ -1849,6 +1864,22 @@ export type Database = {
         Args: { p_ids?: string[]; p_slugs?: string[] }
         Returns: Json
       }
+      get_public_store_directory: {
+        Args: never
+        Returns: {
+          average_rating: number | null
+          city: string
+          district: string | null
+          id: string
+          is_verified: boolean
+          listing_count: number
+          logo_url: string | null
+          name: string
+          region: string | null
+          review_count: number
+          slug: string
+        }[]
+      }
       get_public_reputation: {
         Args: {
           p_limit?: number
@@ -1866,6 +1897,10 @@ export type Database = {
         Returns: Json
       }
       get_transaction_center: { Args: never; Returns: Json }
+      get_store_listing_categories: {
+        Args: { p_store_id: string }
+        Returns: { category: string; listing_count: number }[]
+      }
       get_store_payment_methods: {
         Args: { p_store_id: string }
         Returns: Json
@@ -2402,6 +2437,27 @@ export type Database = {
       store_application_is_complete: {
         Args: { p_store_id: string }
         Returns: boolean
+      }
+      submit_complaints_book_entry: {
+        Args: {
+          p_address: string
+          p_claimed_amount: number | null
+          p_complaint_type: string
+          p_consumer_name: string
+          p_declaration_accepted: boolean
+          p_detail: string
+          p_document_number: string
+          p_document_type: string
+          p_email: string
+          p_guardian_name: string | null
+          p_is_minor: boolean
+          p_item_description: string
+          p_item_type: string
+          p_listing_slug: string | null
+          p_phone: string
+          p_request: string
+        }
+        Returns: { filed_at: string; sheet_number: string }[]
       }
       submit_content_report: {
         Args: {

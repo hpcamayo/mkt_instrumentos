@@ -18,6 +18,7 @@ export default async function StoreImportSessionPage({ params }: { params: Promi
   if (!isImportSessionId(sessionId) || !supabase) notFound();
   const session = await readImportSession(supabase as unknown as SupabaseClient, sessionId).catch(() => null);
   if (!session || session.store_id !== store.id) notFound();
+  if (session.options?.source === "inventory_selection") redirect(`/mi-cuenta/tienda/publicar-seleccionados/${session.id}`);
 
   return (
     <section className="rounded-panel border border-subtle bg-white">

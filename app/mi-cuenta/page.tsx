@@ -48,7 +48,7 @@ export default async function AccountPage({
         <section className="surface-frame rounded-panel bg-frame p-5 text-white sm:p-6">
           <p className="t-micro text-muted-dark">Resumen de Tienda</p>
           <h1 className="mt-2 t-page">{store?.name ?? "Completa la solicitud de tu tienda"}</h1>
-          <p className="mt-2 t-ui text-muted-dark">{storeTrustLabel(store)} · {concurrent} de {quota.allowance} publicaciones activas o en revisión</p>
+          <p className="mt-2 t-ui text-muted-dark">{storeTrustLabel(store)} · Cupo de publicaciones: {concurrent} de {quota.allowance}</p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href="/mi-cuenta/tienda" className={buttonClasses()}>{store ? "Administrar mi tienda" : "Iniciar solicitud"}</Link>
             {store ? <Link href="/mi-cuenta/tienda/inventario" className={buttonClasses({ variant: "onDark" })}>Ver inventario</Link> : null}
@@ -56,7 +56,8 @@ export default async function AccountPage({
           </div>
         </section>
         {store?.status === "rejected" ? <Notice tone="danger" role="note"><h2 className="font-semibold">Solicitud rechazada</h2><p className="mt-1">{store.rejection_reason || "La solicitud necesita correcciones antes de volver a revisión."}</p><Link href="/mi-cuenta/tienda" className="mt-3 inline-flex">Corregir y reenviar</Link></Notice> : null}
-        {concurrent >= quota.allowance ? <Notice tone="warning" role="note"><h2 className="font-semibold">Límite de publicaciones alcanzado</h2><p className="mt-1">Las {quota.allowance} posiciones están ocupadas. Marca como vendidas o archiva las que ya no tienes.</p></Notice> : null}
+        {/* shop-05 (stores batch): one name for the allowance; at the limit, Mi tienda shows what uses it and how to ask for more. */}
+        {concurrent >= quota.allowance ? <Notice tone="warning" role="note"><h2 className="font-semibold">Usaste todo tu cupo de publicaciones</h2><p className="mt-1">Las {quota.allowance} están en uso. En <Link href="/mi-cuenta/tienda" className="link font-semibold">Mi tienda</Link> puedes liberar lugares o pedir más cupo.</p></Notice> : null}
         {checklist.some((step) => !step.done) ? <StoreChecklist steps={checklist} /> : null}
         <PendientesBlock failed={!pendientes} items={items} title="Hoy en tu tienda" emptyTitle="Todo al día en tu tienda" />
         {store ? <VacationMode pausedUntil={pausedUntil} /> : null}

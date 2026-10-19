@@ -6,6 +6,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AdminInviteUser } from "@/components/admin-invite-user";
 import { AdminListingEditor, AdminStoreEditor } from "@/components/admin-record-editors";
 import { AdminStoreAllowance } from "@/components/admin-store-allowance";
+import { AdminStoreRequests } from "@/components/admin-store-requests";
 import {
   AdminMutationControl,
   AdminRevisionComparison,
@@ -304,6 +305,7 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
           onComplete={onComplete}
         />
       ) : null}
+      {domain === "tiendas" && id ? <AdminStoreRequests storeId={id} onComplete={onComplete} /> : null}
       {domain === "tiendas" && id ? <AdminStoreAllowance storeId={id} onComplete={onComplete} /> : null}
       <DomainActions domain={domain} item={item} onComplete={onComplete} />
     </article>

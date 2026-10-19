@@ -31,7 +31,8 @@ export const CATALOG_PATH = "/listados";
 // A landing (/instrumentos/<slug>) fixes its category (landingScope in lib/category-pages.ts); every other choice
 // leads to /listados?category=…, where filtering happens (categoryFilterRedirect). The landing's own category with
 // nothing else is the landing itself.
-export type CatalogScope = { landing?: { category: string; path: string } };
+// `path` (find-14): a page outside the catalog that reuses its links and forms (a store page) sets its own base path.
+export type CatalogScope = { landing?: { category: string; path: string }; path?: string };
 
 // The results count's id: after the filter sheet applies, a chip goes or the page changes, focus returns there.
 export const RESULTS_STATUS_ID = "resultados-estado";
@@ -66,7 +67,8 @@ export function catalogSearchParams(filters: ListingFilters) {
 export function catalogHref(filters: ListingFilters, scope: CatalogScope = {}) {
   const query = catalogSearchParams(filters).toString();
   if (scope.landing && query === new URLSearchParams({ category: scope.landing.category }).toString()) return scope.landing.path;
-  return query ? `${CATALOG_PATH}?${query}` : CATALOG_PATH;
+  const base = scope.path ?? CATALOG_PATH;
+  return query ? `${base}?${query}` : base;
 }
 
 // No filter at all: the plain catalog, or the landing with its category. The text search is a filter too (its chip).

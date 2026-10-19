@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { PublishSelectedButton } from "@/components/store-import/publish-selection";
 import { BulkHideSheet, BulkPriceSheet, BulkStockSheet, BulkThresholdSheet, type BulkItem } from "@/components/inventory/bulk-actions";
 import { StockActionSheet, type StockActionItem, type StockActionType } from "@/components/inventory/stock-action-sheet";
 import { PageNotice } from "@/components/page-notice";
@@ -188,6 +189,7 @@ export function InventoryTable({ items, canWrite }: { items: InventoryItem[]; ca
               <RowButton onClick={(event) => setBulk({ kind: "threshold", opener: event.currentTarget })}>Umbral de stock bajo</RowButton>
               <RowButton onClick={(event) => setBulk({ kind: "stock", opener: event.currentTarget })}>Ajustar stock</RowButton>
               <RowButton onClick={(event) => setBulk({ kind: "hide", opener: event.currentTarget })}>Ocultar</RowButton>
+              <PublishSelectedButton itemIds={selectedItems.filter((item) => !item.listing && item.inventory_status === "active").map((item) => item.id)} className="link font-semibold disabled:cursor-not-allowed disabled:opacity-50" />
             </>
           ) : null}
           <a href={`/api/store/inventory/export?format=csv&ids=${selectedItems.map((item) => item.id).join(",")}`} className="link font-semibold">Exportar CSV</a>

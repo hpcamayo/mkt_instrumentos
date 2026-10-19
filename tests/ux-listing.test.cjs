@@ -220,9 +220,11 @@ test("store socials are links only for http(s) URLs", () => {
 
 test("4b: the store header, breadcrumb by store type, section links and 'Sobre la tienda'", () => {
   const { storeBreadcrumbs } = load("components/store/store-header.tsx", mocks);
-  assert.deepEqual(storeBreadcrumbs({ name: "Casa Musical Grau", is_verified: true }).map((crumb) => crumb.label), ["Inicio", "Tiendas verificadas", "Casa Musical Grau"]);
-  assert.equal(storeBreadcrumbs({ name: "Casa Musical Grau", is_verified: true })[1].href, "/listados?seller_type=verified_store");
-  assert.deepEqual(storeBreadcrumbs({ name: "Ritmo Sur", is_verified: false }).map((crumb) => crumb.label), ["Inicio", "Ritmo Sur"]);
+  // find-13: with a stores directory every store's trail goes through it (L19 had "Tiendas verificadas", N7's filtered
+  // catalog, for a verified store only).
+  assert.deepEqual(storeBreadcrumbs({ name: "Casa Musical Grau", is_verified: true }).map((crumb) => crumb.label), ["Inicio", "Tiendas", "Casa Musical Grau"]);
+  assert.equal(storeBreadcrumbs({ name: "Casa Musical Grau", is_verified: true })[1].href, "/tiendas");
+  assert.deepEqual(storeBreadcrumbs({ name: "Ritmo Sur", is_verified: false }).map((crumb) => crumb.label), ["Inicio", "Tiendas", "Ritmo Sur"]);
   const sections = load("components/store/store-sections.tsx", { ...mocks, "@/components/store/store-photos": { StorePhotos: ({ photos }) => React.createElement("ul", { "data-photos": photos.length }) } });
   const links = html(React.createElement(sections.StoreSectionLinks, { total: 24, reviews: 9 }));
   assert.match(links, /aria-label="Secciones de la tienda"/);
@@ -243,13 +245,18 @@ test("4b: the store header, breadcrumb by store type, section links and 'Sobre l
   assert.match(plain, /Laria aprobó esta tienda\. Cada publicación suya se revisa antes de mostrarse\./);
   assert.doesNotMatch(plain, /Redes|Fotos del local/);
   const page = source("app/tiendas/[slug]/page.tsx");
-  assert.match(page, /\{store\.is_verified \? <StripCurrent value="verified_stores" \/> : null\}/);
-  assert.match(page, /<StoreVisitTelemetry storeId=\{store\.id\} \/>/);
+  // shop-04: the owner's preview marks nothing in the strip and records no visit.
+  assert.match(page, /\{store\.is_verified && !preview \? <StripCurrent value="verified_stores" \/> : null\}/);
+  assert.match(page, /\{preview \? null : <StoreVisitTelemetry storeId=\{store\.id\} \/>\}/);
   assert.match(page, /lg:grid-cols-4 xl:grid-cols-5/);
   assert.match(page, /source="store"/);
   for (const field of ["created_at", "instagram_url", "facebook_url", "tiktok_url", "website_url", "store_photos"]) assert.match(page, new RegExp(field));
-  // No street address or contact person (L18 A).
-  assert.doesNotMatch(page, /\baddress\b|contact_person/);
+  // Never the contact person (L18 A). list-12 replaces L18's "no street address": the address is read on the server and
+  // reaches the page only through publicStoreLocation, from public_address (set only when the store agreed).
+  assert.doesNotMatch(page, /contact_person/);
+  assert.match(page, /const location = publicStoreLocation\(store\);/);
+  assert.match(page, /withoutPrivateStoreFields\(store\)/);
+  assert.doesNotMatch(page, /store\.address|row\.address/);
   // The banner shows only when the store uploaded one, decorative.
   assert.match(source("components/store/store-header.tsx"), /\{store\.banner_url \? \([\s\S]*alt=""[\s\S]*\) : null\}/);
 });

@@ -97,3 +97,108 @@ test("fix-09: the store invitation no longer says a store can't publish before a
   assert.match(page, /Puedes\s+publicar desde el primer día/);
   assert.match(page, /la página pública de tu tienda no se\s+muestra/);
 });
+
+// ------------------------------------------------------------------ shop-01 and shop-03
+
+const { storeApplicationPrefill, normalizeSocialInput } = require("@/lib/store-profile");
+
+test("shop-01: the application starts from what the invitation and the signup already said", () => {
+  const metadata = { store_name: " Música Sur ", full_name: "Ana", phone: "51999000111", city: "Arequipa", region: "Arequipa" };
+  assert.deepEqual(storeApplicationPrefill(metadata, null), {
+    name: "Música Sur", contact_person: "Ana", whatsapp_phone: "51999000111", city: "Arequipa", region: "Arequipa",
+  });
+  // The profile wins (the person may have corrected it); empty values are left out.
+  assert.deepEqual(storeApplicationPrefill({ phone: "51911" }, { full_name: "Ana Pérez", phone: "51999", city: "", region: null }),
+    { contact_person: "Ana Pérez", whatsapp_phone: "51999" });
+  assert.deepEqual(storeApplicationPrefill(undefined, null), {});
+});
+
+test("shop-03: a social field takes the handle or the link", () => {
+  assert.equal(normalizeSocialInput("instagram_url", "@musicasur"), "https://www.instagram.com/musicasur");
+  assert.equal(normalizeSocialInput("tiktok_url", "musicasur"), "https://www.tiktok.com/@musicasur");
+  assert.equal(normalizeSocialInput("facebook_url", "facebook.com/musicasur"), "https://facebook.com/musicasur");
+  assert.equal(normalizeSocialInput("website_url", "musicasur.pe"), "https://musicasur.pe");
+  assert.equal(normalizeSocialInput("website_url", "https://musicasur.pe/"), "https://musicasur.pe/");
+  assert.equal(normalizeSocialInput("instagram_url", "  "), "");
+});
+
+test("shop-03: Mi tienda splits the public profile from the company data and warns before a RUC change", () => {
+  const form = read("components/store-registration-form.tsx");
+  assert.match(form, /Perfil público/);
+  assert.match(form, /Datos de la empresa/);
+  assert.match(form, /hasPaymentMethods/);
+  const page = read("app/mi-cuenta/tienda/page.tsx");
+  assert.match(page, /storeApplicationPrefill\(user\.user_metadata, profile\)/);
+  assert.match(page, /"approved", "pending_review"/, "only methods a RUC change sends back to review count");
+  assert.match(page, /Ver mi página/);
+  assert.match(page, /\/mi-cuenta\/tienda\/valores-por-defecto/);
+});
+
+// ------------------------------------------------------------------ shop-05 and stock-21
+
+const { listingLimitMessage, allowanceLevel, ALLOWANCE_NAME } = require("@/lib/store-allowance");
+
+test("shop-05: one name for the allowance, and the limit message says what to do", () => {
+  assert.equal(ALLOWANCE_NAME, "Cupo de publicaciones");
+  assert.match(listingLimitMessage("STORE_INVENTORY_LIMIT_REACHED: La tienda ya tiene 80 publicaciones concurrentes."), /cupo de publicaciones \(80\).*pedir más cupo/);
+  assert.equal(allowanceLevel(10, 50), "ok");
+  assert.equal(allowanceLevel(40, 50), "near");
+  assert.equal(allowanceLevel(50, 50), "full");
+  assert.equal(allowanceLevel(3, 0), "full");
+  for (const file of ["app/mi-cuenta/page.tsx", "app/mi-cuenta/tienda/publicar/page.tsx", "app/mi-cuenta/tienda/inventario/page.tsx"]) {
+    assert.doesNotMatch(read(file), /publicaciones concurrentes|Inventario concurrente|posiciones concurrentes/, file);
+  }
+  const meter = read("components/store-allowance-meter.tsx");
+  assert.match(meter, /role="meter"/);
+  assert.match(meter, /hide_out_of_stock_store_listings/);
+  assert.match(meter, /Pedir más cupo/);
+});
+
+test("stock-21: a store without inventory can ask for it, from Mi tienda and from the import page", () => {
+  const access = read("components/store-inventory-access.tsx");
+  assert.match(access, /Lleva tu stock en Laria/);
+  assert.match(access, /Solicitar acceso/);
+  assert.match(access, /request_store_admin_help/);
+  assert.match(read("app/mi-cuenta/tienda/inventario/importar/page.tsx"), /<StoreInventoryAccess/);
+  assert.match(read("components/admin-store-requests.tsx"), /admin_set_store_inventory_enabled/);
+});
+
+// ------------------------------------------------------------------ stock-12, stock-13, stock-22, stock-10
+
+const { importExpiresAt, importExpiryText } = require("@/lib/store-import/labels");
+
+test("stock-22: an open import says when it expires, and can be discarded from the notice", () => {
+  assert.equal(importExpiresAt("2026-10-19T10:00:00Z").toISOString(), "2026-10-26T10:00:00.000Z");
+  assert.equal(importExpiryText("2026-10-19T10:00:00Z"), "Vence el 26 de octubre si no la continúas.");
+  assert.match(read("app/mi-cuenta/tienda/inventario/importar/page.tsx"), /<ImportDiscardButton/);
+  assert.match(read("components/store-import/import-discard.tsx"), /Descartar y empezar otra/);
+});
+
+test("stock-12: a failing cell is corrected in the review, and a whole filter can be excluded", () => {
+  assert.deepEqual(parseImportAction({ action: "edit_cell", row: 4, field: "unit_price_pen", value: "120", version: 3 }),
+    { action: "edit_cell", row: 4, field: "unit_price_pen", value: "120", version: 3 });
+  assert.equal(parseImportAction({ action: "edit_cell", row: 4, field: "unit_price_pen", value: "120" }), null, "needs the version");
+  assert.equal(parseImportAction({ action: "edit_cell", row: 0, field: "sku", value: "x", version: 1 }), null);
+  assert.equal(parseImportAction({ action: "edit_cell", row: 2, field: "SKU; drop", value: "x", version: 1 }), null);
+  assert.equal(parseImportAction({ action: "edit_cell", row: 2, field: "sku", value: "x".repeat(2001), version: 1 }), null);
+  const wizard = read("components/store-import/import-wizard.tsx");
+  assert.match(wizard, /function CellFixer/);
+  assert.match(wizard, /Excluir todas estas filas/);
+  assert.match(read("app/api/store/imports/[id]/rows/route.ts"), /numbers/);
+});
+
+test("stock-13: the photo session opens the phone camera and attaches each shot to the SKU on screen", () => {
+  const photos = read("components/store-import/import-photos.tsx");
+  assert.match(photos, /capture="environment"/);
+  assert.match(photos, /accept="image\/\*"/);
+  assert.match(photos, /action: "place", assetId, row/);
+  assert.match(photos, /Empezar sesión de fotos/);
+});
+
+test("stock-10: Inventario's bulk bar publishes the selected SKU through the import's publication step", () => {
+  assert.match(read("components/inventory/inventory-table.tsx"), /<PublishSelectedButton itemIds=\{selectedItems\.filter\(\(item\) => !item\.listing/);
+  assert.match(read("app/api/store/imports/publish-selection/route.ts"), /create_inventory_publish_selection/);
+  // A selection batch is not an import: it stays out of the history and the import-errors tile.
+  assert.match(read("app/mi-cuenta/tienda/inventario/importar/page.tsx"), /\.is\("options->>source", null\)/);
+  assert.match(read("lib/store-inventory.ts"), /\.is\("options->>source", null\)/);
+});

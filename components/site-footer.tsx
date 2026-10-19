@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { PageContainer } from "@/components/page-container";
 import { categoryLandingPath } from "@/lib/category-pages";
+import { COMPLAINTS_BOOK_LABEL, COMPLAINTS_BOOK_PATH } from "@/lib/complaints-book";
 import { legalPages } from "@/lib/legal-pages";
 import { CATALOG_PATH, VERIFIED_STORES_PATH } from "@/lib/shell";
 import { cn } from "@/lib/utils";
@@ -23,12 +24,15 @@ const sellLinks: FooterLink[] = [
   { href: "/vender", label: "Publicar un instrumento" },
   { href: "/registrar-tienda", label: "Registrar mi tienda" },
 ];
-const helpLinks: FooterLink[] = ["/consejos-de-seguridad", "/articulos-prohibidos", "/terminos", "/privacidad"].map(legal);
+// EASE trust-05: the Libro de Reclamaciones is linked from every footer (a text link; Indecopi practice also shows the
+// book's icon, pending legal review).
+const complaintsBook: FooterLink = { href: COMPLAINTS_BOOK_PATH, label: COMPLAINTS_BOOK_LABEL };
+const helpLinks: FooterLink[] = [...["/consejos-de-seguridad", "/articulos-prohibidos", "/terminos", "/privacidad"].map(legal), complaintsBook];
 const phoneLinks: FooterLink[] = [
   exploreLinks[0], sellLinks[1], legal("/terminos"),
-  legal("/consejos-de-seguridad"), legal("/articulos-prohibidos"), legal("/privacidad"),
+  legal("/consejos-de-seguridad"), legal("/articulos-prohibidos"), legal("/privacidad"), complaintsBook,
 ];
-const slimLinks: FooterLink[] = ["/consejos-de-seguridad", "/terminos", "/privacidad"].map(legal);
+const slimLinks: FooterLink[] = [...["/consejos-de-seguridad", "/terminos", "/privacidad"].map(legal), complaintsBook];
 
 const PROMISE = "No cobramos comisiones ni procesamos pagos.";
 // The footer's small print: 12 px on phones so the promise line fits one line at 390 px, 13 px from 640 px.
@@ -55,7 +59,7 @@ export function SiteFooter({ variant = "slim" }: { variant?: "full" | "slim" }) 
           <FooterColumn title="Vende" links={sellLinks} />
           <FooterColumn title="Ayuda y legal" links={helpLinks} />
           <nav aria-label="Pie de página" className="md:hidden">
-            <ul className="grid grid-flow-col grid-cols-2 grid-rows-3 gap-x-4">
+            <ul className="grid grid-flow-col grid-cols-2 grid-rows-4 gap-x-4">
               {phoneLinks.map((item) => <li key={item.href}><FooterLinkItem {...item} /></li>)}
             </ul>
           </nav>

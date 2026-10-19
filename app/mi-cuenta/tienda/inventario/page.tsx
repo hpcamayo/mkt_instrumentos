@@ -166,8 +166,8 @@ async function PublicationsView({ store, summary }: { store: { id: string; name:
         className="border-b border-subtle p-5"
         eyebrow="Mi tienda"
         title={summary?.inventory_enabled ? "Publicaciones" : "Inventario"}
-        meta={`${store.name} · ${concurrent} de ${quota.allowance} publicaciones concurrentes`}
-        actions={quota.remaining > 0 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar</Link> : null}
+        meta={`${store.name} · Cupo de publicaciones: ${concurrent} de ${quota.allowance} en uso`}
+        actions={quota.remaining > 0 ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses()}>Publicar</Link> : <Link href="/mi-cuenta/tienda" className={buttonClasses({ variant: "secondary" })}>Cupo lleno: ver opciones</Link>}
       />
       {summary?.inventory_enabled ? <ViewTabs current="publicaciones" /> : null}
       <ListingManagementTable listings={managedListings} emptyMessage="Aún no hay publicaciones en el inventario" canControlStock={Boolean(summary?.can_write)} />

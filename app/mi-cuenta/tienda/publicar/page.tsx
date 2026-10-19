@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SellListingForm, type InventorySku } from "@/components/sell-listing-form";
 import { DraftList } from "@/components/selling/draft-list";
 import { Notice } from "@/components/ui/notice";
@@ -43,7 +44,7 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
         {data?.draftMissing ? <Notice tone="warning" role="note">Ese borrador ya no existe: puede que ya lo hayas publicado o descartado.</Notice> : null}
         {requested === "siguiente" && eligible && !inventorySku ? <Notice tone="success" role="note">Todos tus SKU activos ya tienen publicación. Puedes publicar un instrumento sin SKU.</Notice> : null}
         {!eligible ? <Notice tone="warning" role="note">Necesitas una cuenta de Tienda con una solicitud pendiente o aprobada.</Notice>
-        : quota.remaining <= 0 ? <Notice tone="warning" role="note">Tu tienda alcanzó el límite de {quota.allowance} publicaciones concurrentes. Cuando una deje de estar en revisión o publicada, podrás publicar otra.</Notice>
+        : quota.remaining <= 0 ? <Notice tone="warning" role="note">Usaste todo tu cupo de publicaciones ({quota.allowance}). En <Link href="/mi-cuenta/tienda" className="link font-semibold">Mi tienda</Link> ves qué lo ocupa, puedes ocultar las agotadas o pedir más cupo.</Notice>
         : <>
           <SellListingForm
             key={data?.serverDraft?.id ?? inventorySku?.id ?? "nuevo"}
@@ -56,7 +57,7 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
             serverDraft={data?.serverDraft}
           />
           <DraftList drafts={drafts.filter((draft) => draft.id !== data?.serverDraft?.id)} href="/mi-cuenta/tienda/publicar" />
-          <p className="t-meta">La condición y el texto que se agregan a cada publicación se ajustan en <a href="/mi-cuenta/tienda/valores-por-defecto" className="link font-semibold">valores por defecto</a>.</p>
+          <p className="t-meta">La condición y el texto que se agregan a cada publicación se ajustan en <Link href="/mi-cuenta/tienda/valores-por-defecto" className="link font-semibold">valores por defecto</Link>.</p>
         </>}
       </div>
   );

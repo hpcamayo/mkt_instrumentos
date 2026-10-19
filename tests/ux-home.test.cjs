@@ -268,7 +268,8 @@ test("Cómo funciona Laria carries H4 promises 2–5 and the safety line, with n
   // The sell block's yellow action, and the stores without stats (Q18 A) with the "¿Tienes una tienda?" tile.
   assert.match(html, /<a href="\/vender" class="[^"]*h-\[52px\][^"]*bg-action[^"]*">Vender mi equipo<\/a>/);
   const stores = html.slice(html.indexOf('aria-labelledby="tiendas-titulo"'), html.indexOf('aria-labelledby="vender-titulo"'));
-  assert.match(stores, /<a href="\/listados\?seller_type=verified_store" class="link [^"]*">Ver todas<\/a>/);
+  // find-13: "Ver todas" opens the stores directory (was N7's catalog filtered to verified stores).
+  assert.match(stores, /<a href="\/tiendas" class="link [^"]*">Ver todas<\/a>/);
   assert.equal((stores.match(/<a href="\/tiendas\//g) ?? []).length, 2);
   assert.match(stores, /<span aria-hidden="true" class="grid h-10 w-10 shrink-0 place-items-center rounded-tag bg-frame-2 [^"]*text-white">CM<\/span>/);
   assert.match(stores, />Cercado, Lima</);

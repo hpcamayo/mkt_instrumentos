@@ -2,11 +2,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { TRUST_COPY } from "@/components/listing/trust-note";
+import { StoreVisitLines } from "@/components/store/store-visit";
 import { buttonClasses } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { VerifiedMark } from "@/components/ui/verified-mark";
 import { VerifiedExplainer } from "@/components/listing/verified-explainer";
 import { FEW_REVIEWS, formatRating, isNewMember, lastActiveLabel, reviewCountLabel, verifiedSalesLabel, type SellerFacts } from "@/lib/listing-page";
+import type { PublicStoreLocation } from "@/lib/store-storefront";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
@@ -53,11 +55,14 @@ export function RatingFigure({ rating }: { rating: { average: number; count: num
 export function SellerCard({
   seller,
   listingCount,
+  visit,
   sold = false,
   now = Date.now(),
   className,
 }: {
   seller: SellerSummary;
+  // list-12: a store's shown address with "Cómo llegar" and its opening hours (publicStoreLocation).
+  visit?: PublicStoreLocation;
   // The seller's active publications, streamed (null renders nothing).
   listingCount: ReactNode;
   sold?: boolean;
@@ -95,6 +100,7 @@ export function SellerCard({
         {fewReviews ? <>{verified}{rating}</> : <>{rating}{verified}</>}
         {listingCount}
       </ul>
+      {visit ? <StoreVisitLines location={visit} className="mt-3" /> : null}
       {seller.storeHref ? (
         <Link href={seller.storeHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "mt-4" })}>
           Ver la tienda

@@ -34,3 +34,17 @@ export function importCategoryChips(counts: Record<string, number>) {
   ];
   return chips.length > 1 ? chips : [];
 }
+
+// stock-22 (Effortless Laria, stores): an open import closes on its own after 7 days without activity
+// (expire_store_import_sessions, daily). Saying when turns a hidden deadline into a plan.
+export const IMPORT_IDLE_DAYS = 7;
+
+export function importExpiresAt(updatedAt: string) {
+  return new Date(new Date(updatedAt).getTime() + IMPORT_IDLE_DAYS * 24 * 60 * 60 * 1000);
+}
+
+const expiryFormat = new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "long", timeZone: "America/Lima" });
+
+export function importExpiryText(updatedAt: string) {
+  return `Vence el ${expiryFormat.format(importExpiresAt(updatedAt))} si no la continúas.`;
+}

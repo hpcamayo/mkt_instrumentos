@@ -92,8 +92,8 @@ test("publish requests: 1 to 20 distinct row numbers", () => {
 
 test("the allowance message names the store's number", () => {
   assert.equal(listingLimitMessage("STORE_INVENTORY_LIMIT_REACHED: La tienda ya tiene 500 publicaciones concurrentes."),
-    "Tu tienda alcanzó el límite de 500 publicaciones concurrentes.");
-  assert.equal(listingLimitMessage("STORE_INVENTORY_LIMIT_REACHED"), "Tu tienda alcanzó el límite de 50 publicaciones concurrentes.");
+    "Usaste todo tu cupo de publicaciones (500). Desde Mi tienda puedes liberar lugares o pedir más cupo.");
+  assert.equal(listingLimitMessage("STORE_INVENTORY_LIMIT_REACHED"), "Usaste todo tu cupo de publicaciones (50). Desde Mi tienda puedes liberar lugares o pedir más cupo.");
 });
 
 test("boundaries: the publish function is service-role only and takes price, photos and contact data from the database", () => {

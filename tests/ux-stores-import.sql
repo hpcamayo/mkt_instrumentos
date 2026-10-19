@@ -242,6 +242,39 @@ do $$ declare sid uuid; begin
   perform pg_temp.check((pg_temp.item('B-1')).quantity_on_hand = 9 and (pg_temp.item('B-1')).unit_price_pen = 210, 'stock applied, price kept');
 end $$;
 
+-- ------------------------------------------------------------------ stock-12: correct a cell in the review
+
+do $$ declare sid uuid; v integer; r public.store_import_rows; begin
+  sid := pg_temp.staged('["SKU","Stock","Precio"]', 3, '{"sku":0,"quantity":1,"unit_price_pen":2}', 'both');
+  -- Rows 2 and 3 share a SKU (both become duplicates); row 4 is fine.
+  perform pg_temp.plan(sid, jsonb_build_array(
+    jsonb_build_object('row_number', 2, 'parsed', jsonb_build_object('sku', 'E-1', 'quantity', 1, 'product_name', 'Uno')),
+    jsonb_build_object('row_number', 3, 'parsed', jsonb_build_object('sku', 'E-1', 'quantity', 2, 'product_name', 'Dos')),
+    jsonb_build_object('row_number', 4, 'parsed', jsonb_build_object('sku', 'F-1', 'quantity', 3, 'product_name', 'Tres'))));
+  perform pg_temp.check(pg_temp.has_issue(sid, 2, 'IMPORT_DUPLICATE_SKU') and pg_temp.has_issue(sid, 3, 'IMPORT_DUPLICATE_SKU'), 'twins flagged');
+  v := (pg_temp.session(sid)).version;
+  perform pg_temp.expect_error(format($q$select public.edit_store_import_cell(%L, 3, 'sku', 'E-2', %s)$q$, sid, v - 1), 'IMPORT_VERSION_CONFLICT');
+  perform pg_temp.expect_error(format($q$select public.edit_store_import_cell(%L, 3, 'brand', 'X', %s)$q$, sid, v), 'IMPORT_CELL_INVALID');
+  perform pg_temp.expect_error(format($q$select public.edit_store_import_cell(%L, 99, 'sku', 'X', %s)$q$, sid, v), 'IMPORT_ROWS_INVALID');
+  perform public.edit_store_import_cell(sid, 3, 'sku', '  E-2 ', v);
+  perform pg_temp.check((pg_temp.session(sid)).status = 'validating', 'the session is planned again');
+  r := pg_temp.row_of(sid, 3);
+  perform pg_temp.check(r.raw->0 = '{"v":"E-2"}'::jsonb and r.planned_action is null, 'the cell replaced, the row unplanned');
+  perform pg_temp.check((pg_temp.row_of(sid, 2)).planned_action is null, 'its twin is planned again too');
+  perform pg_temp.check((pg_temp.row_of(sid, 4)).planned_action = 'create', 'other rows keep their plan');
+  -- The staged row had no cells: the edit pads it only up to the edited column.
+  perform pg_temp.check(jsonb_array_length(r.raw) = 1, 'only up to the edited column');
+  perform pg_temp.plan(sid, jsonb_build_array(
+    jsonb_build_object('row_number', 2, 'parsed', jsonb_build_object('sku', 'E-1', 'quantity', 1, 'product_name', 'Uno')),
+    jsonb_build_object('row_number', 3, 'parsed', jsonb_build_object('sku', 'E-2', 'quantity', 2, 'product_name', 'Dos'))));
+  perform pg_temp.check((pg_temp.session(sid)).status = 'ready', 'ready again');
+  perform pg_temp.check((pg_temp.row_of(sid, 2)).planned_action = 'create' and (pg_temp.row_of(sid, 3)).planned_action = 'create',
+    'no duplicate left');
+  perform public.cancel_store_import(sid);
+  perform pg_temp.expect_error(format($q$select public.edit_store_import_cell(%L, 3, 'sku', 'E-3', %s)$q$, sid, (pg_temp.session(sid)).version),
+    'IMPORT_');
+end $$;
+
 -- The planning helper is private.
 do $$ begin
   perform pg_temp.expect_error($q$select laria_private.import_exported_at('{}'::jsonb)$q$, 'permission denied');
