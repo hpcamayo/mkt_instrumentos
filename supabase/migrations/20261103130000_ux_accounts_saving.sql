@@ -673,7 +673,7 @@ begin
   end if;
   if exists (
     select 1 from jsonb_object_keys(p_filters) key
-    where key not in ('category','location','condition','brand','seller_type','instrument_type','min_price','max_price','advanced')
+    where key not in ('category','location','condition','brand','seller_type','instrument_type','min_price','max_price','advanced','query')
   ) then
     raise exception 'ALERT_FILTERS_INVALID';
   end if;
@@ -705,6 +705,13 @@ begin
     string_value := nullif(trim(p_filters->>'brand'), '');
     if string_value is not null and length(string_value) > 200 then raise exception 'ALERT_FILTERS_INVALID'; end if;
     if string_value is not null then result := result || jsonb_build_object('brand', string_value); end if;
+  end if;
+  -- Keeps the find batch's free-text query (20261101120000_ux_find_search.sql), which this redefinition replaces.
+  if p_filters ? 'query' then
+    if jsonb_typeof(p_filters->'query') <> 'string' then raise exception 'ALERT_FILTERS_INVALID'; end if;
+    string_value := nullif(trim(p_filters->>'query'), '');
+    if string_value is not null and length(string_value) > 200 then raise exception 'ALERT_FILTERS_INVALID'; end if;
+    if string_value is not null then result := result || jsonb_build_object('query', string_value); end if;
   end if;
   if p_filters ? 'seller_type' then
     if jsonb_typeof(p_filters->'seller_type') <> 'string' then raise exception 'ALERT_FILTERS_INVALID'; end if;
@@ -951,3 +958,25 @@ grant execute on function public.get_shared_favorite_list(text) to anon, authent
 grant execute on function public.get_new_listing_counts(timestamptz, text[]) to anon, authenticated;
 grant execute on function public.apply_email_link_action(uuid, text, uuid) to service_role;
 grant execute on function public.prepare_weekly_follow_emails(date, integer) to service_role;
+
+-- The find batch's migration (20261101120000_ux_find_search.sql) taught listing_matches_saved_search the free-text
+-- "query" filter; the redefinition above would drop it. Put it back whenever find's search helpers exist.
+do $$
+declare
+  definition text;
+  old_text constant text := $old$    and (not (p_filters ? 'brand') or coalesce(p_listing.brand, '') ilike '%' || (p_filters->>'brand') || '%')$old$;
+begin
+  if to_regprocedure('public.listing_matches_query(text,text)') is null
+    or to_regprocedure('public.listing_search_text(text,text,text,text,text)') is null then
+    return;
+  end if;
+  definition := pg_get_functiondef('laria_private.listing_matches_saved_search(public.listings,jsonb)'::regprocedure);
+  if position(old_text in definition) = 0 then
+    raise exception 'listing_matches_saved_search: brand clause not found';
+  end if;
+  execute replace(definition, old_text, old_text || $new$
+    and (not (p_filters ? 'query') or public.listing_matches_query(
+      public.listing_search_text(p_listing.title, p_listing.brand, p_listing.model, p_listing.category, p_listing.instrument_type),
+      p_filters->>'query'))$new$);
+end;
+$$;

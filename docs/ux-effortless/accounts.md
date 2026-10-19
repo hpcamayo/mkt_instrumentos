@@ -169,6 +169,9 @@ tests in `tests/ux-effortless-accounts.test.cjs`, screens in `/mnt/project-files
   appear only when the person starts publishing (auth-02).
 - **sell / inventory**: adopt `PriceInput`, `PhoneInput`, `autoCorrect="off"` on brand and model, and `inputMode="numeric"`
   for stock (auth-03).
+- **find**: this batch's migration redefines `normalize_saved_search` and `listing_matches_saved_search`; it keeps
+  find's `query` filter (validation inline; the match clause is re-added at the end when `listing_matches_query` exists).
+  Checked locally with find's 20261101 migration present and absent.
 
 ## Limitations
 - The prototype cannot send e-mail; the e-mail screens are rendered from the templates with the prototype's data.
