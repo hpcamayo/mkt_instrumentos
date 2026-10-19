@@ -24,6 +24,7 @@ export type ParsedImportRow = {
   external_reference: string | null;
   photos: string[] | null;
   listing_id: string | null;
+  exported_at: string | null;
   attributes: Record<string, string>;
 };
 
@@ -31,6 +32,8 @@ const SKU_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const SCIENTIFIC = /^[+-]?\d+(?:[.,]\d+)?[eE][+-]?\d+$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_STOCK = 100000;
+// What a Laria export writes in "Exportado el" (lib/inventory-export.ts). The database checks it again.
+const EXPORTED_AT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?Z$/;
 
 const CATEGORY_BY_NAME: Map<string, string> = (() => {
   const map = new Map<string, string>();
@@ -272,6 +275,19 @@ export function parseImportRow(cells: ImportCell[], mapping: ImportMapping): { p
     if (value) attributes[field.slice("attribute:".length)] = value;
   }
 
+  // fix-04: the export time is only a hint for the stock check, so a value Excel changed is dropped with a note
+  // instead of failing the row.
+  let exportedAt: string | null = null;
+  const exportedCell = cellFor(cells, mapping, "exported_at", context);
+  if (exportedCell) {
+    const value = exportedCell.v.trim();
+    if (exportedCell.k !== "d" && exportedCell.k !== "n" && EXPORTED_AT.test(value)) exportedAt = value;
+    else {
+      issue(context, "exported_at", "IMPORT_EXPORTED_AT_UNREADABLE", "info",
+        "No pudimos leer la fecha de exportación, así que no se comparó el stock con las ventas registradas después.");
+    }
+  }
+
   const description = text(cells, mapping, "description", context, IMPORT_MAX_CELL_CHARS);
   const parsed: ParsedImportRow = {
     sku,
@@ -289,6 +305,7 @@ export function parseImportRow(cells: ImportCell[], mapping: ImportMapping): { p
     external_reference: identifier(cells, mapping, "external_reference", context),
     photos,
     listing_id: listingId,
+    exported_at: exportedAt,
     attributes,
   };
   if (parsed.external_reference && parsed.external_reference.length > 120) {

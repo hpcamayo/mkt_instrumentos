@@ -11,7 +11,7 @@ import {
   IMPORT_STAGE_CHUNK_ROWS,
 } from "./limits";
 import { IMPORT_NO_CATEGORY } from "./labels";
-import { proposeMapping, type ImportMapping } from "./mapping";
+import { proposeMapping, type ImportMapping, type ImportUpdateScope } from "./mapping";
 import { parseImportRow } from "./rows";
 import { compactCells, readSpreadsheet } from "./sheet";
 import { ImportFileError, type ImportCell, type SpreadsheetFormat } from "./types";
@@ -40,6 +40,7 @@ export type ImportSession = {
   parse_cursor: number;
   file_warnings: string[];
   counts: Record<string, number>;
+  options?: { update_scope?: ImportUpdateScope; stale_stock?: "keep" | "apply" } | null;
   result_summary: Record<string, number> | null;
   photo_counts?: Record<string, number>;
   version: number;
@@ -250,7 +251,7 @@ async function commitStep(db: Db, session: ImportSession, token: string, started
 }
 
 export type ImportAction =
-  | { action: "mapping"; mapping: ImportMapping; version: number; saveDefault?: boolean }
+  | { action: "mapping"; mapping: ImportMapping; version: number; saveDefault?: boolean; updateScope?: ImportUpdateScope; staleStock?: "keep" | "apply" }
   | { action: "decision"; rows: number[] | null; decision: "include" | "exclude"; version: number }
   | { action: "confirm"; version: number }
   | { action: "reopen"; version: number }
@@ -270,7 +271,12 @@ export function parseImportAction(body: unknown): ImportAction | null {
         if (typeof value !== "number" || !Number.isInteger(value)) return null;
         clean[key] = value;
       }
-      return { action: "mapping", mapping: clean, version, saveDefault: input.saveDefault === true };
+      const updateScope = input.updateScope === undefined ? undefined
+        : input.updateScope === "prices" || input.updateScope === "stock" || input.updateScope === "both" ? input.updateScope : null;
+      const staleStock = input.staleStock === undefined ? undefined
+        : input.staleStock === "keep" || input.staleStock === "apply" ? input.staleStock : null;
+      if (updateScope === null || staleStock === null) return null;
+      return { action: "mapping", mapping: clean, version, saveDefault: input.saveDefault === true, updateScope, staleStock };
     }
     case "decision": {
       const rows = input.rows === null ? null : Array.isArray(input.rows) && input.rows.length <= 2000
@@ -294,6 +300,7 @@ export async function applyImportAction(db: Db, sessionId: string, action: Impor
       await call(db, "confirm_store_import_mapping", {
         p_session_id: sessionId, p_mapping: action.mapping, p_expected_version: action.version,
         p_save_as_default: action.saveDefault ?? false,
+        p_update_scope: action.updateScope ?? null, p_stale_stock: action.staleStock ?? null,
       });
       break;
     case "decision":
@@ -315,7 +322,7 @@ export async function applyImportAction(db: Db, sessionId: string, action: Impor
   return { session, next: nextFor(session) };
 }
 
-export const ROW_FILTERS = ["all", "create", "update", "adopt_listing", "unchanged", "error", "warning", "excluded", "conflict", "failed", "applied"] as const;
+export const ROW_FILTERS = ["all", "create", "update", "adopt_listing", "unchanged", "error", "warning", "excluded", "conflict", "failed", "applied", "since_export"] as const;
 export type RowFilter = (typeof ROW_FILTERS)[number];
 
 // One page of staged rows for the review table, keyset-paginated by row number. `category` is a category value from
@@ -340,6 +347,8 @@ export async function readImportRows(db: Db, sessionId: string, filter: RowFilte
     query = query.eq("commit_status", filter);
   } else if (filter === "warning") {
     query = query.neq("planned_action", "error").contains("issues", [{ severity: "warning" }]);
+  } else if (filter === "since_export") {
+    query = query.neq("planned_action", "error").contains("issues", [{ group: "stock_since_export" }]);
   }
   const { data, error } = await query;
   if (error) throw importErrorFrom(error);

@@ -136,7 +136,8 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
           </div>
         </div>
         <ItemDetailsForm key={item.version} item={item} canWrite={canWrite} />
-        <p className="t-meta">Catálogo: {item.catalog_product_id ? "vinculado a un modelo del catálogo de Laria." : "sin vínculo al catálogo. La coincidencia con el catálogo llega con la importación."}</p>
+        {/* fix-09: no catalog matching exists yet, so only a real link is mentioned. */}
+        {item.catalog_product_id ? <p className="t-meta">Catálogo: vinculado a un modelo del catálogo de Laria.</p> : null}
       </section>
 
       <section aria-labelledby="historial-titulo" className="grid gap-3 rounded-panel border border-subtle bg-white p-5">
