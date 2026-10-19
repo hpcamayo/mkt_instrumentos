@@ -1,7 +1,7 @@
 import { instrumentFilterGroups } from "@/lib/instrument-filters";
-import { resolveParticularSeller } from "@/lib/seller-contact";
+import { resolveContactPhone, whatsAppUrl } from "@/lib/seller-contact";
 
-export { resolveParticularSeller } from "@/lib/seller-contact";
+export { resolveContactPhone, resolveParticularSeller, whatsAppNumber } from "@/lib/seller-contact";
 
 // The ten marketplace categories (owner decision, 12 Oct 2026; docs/ux-redesign/category-restructure.md), in menu
 // order. Baterías and Platillos became types of Percusión, and Interfaces de audio a type of Audio.
@@ -180,27 +180,22 @@ export function getListingSecondaryTitle(listing: {
 }
 
 export function buildWhatsAppUrl(listing: ListingDetailData) {
-  const contact = resolveParticularSeller(listing);
-  const phone = String(contact.phone ?? listing.whatsapp_phone).replace(/\D/g, "");
-  const message = encodeURIComponent(
+  return whatsAppUrl(
+    resolveContactPhone(listing),
     isOutOfStock(listing)
       ? `Hola, vi tu publicación "${listing.title}" en Laria y aparece agotada. ¿Volverá a estar disponible?`
       : `Hola, vi tu publicación "${listing.title}" en Laria. ¿Sigue disponible?`,
   );
-
-  return `https://wa.me/${phone}?text=${message}`;
 }
 
 export function buildStoreWhatsAppUrl(store: {
   name: string;
   whatsapp_phone: string;
 }) {
-  const phone = store.whatsapp_phone.replace(/\D/g, "");
-  const message = encodeURIComponent(
+  return whatsAppUrl(
+    store.whatsapp_phone,
     `Hola, vi la tienda "${store.name}" en Laria. Quisiera consultar por sus instrumentos.`,
   );
-
-  return `https://wa.me/${phone}?text=${message}`;
 }
 
 const MAX_FILTER_VALUES = 20;

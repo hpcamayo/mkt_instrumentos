@@ -175,6 +175,8 @@ Restoring a hidden listing must fail gracefully if it would exceed the cap. No p
 
 The store-owner dashboard supports editing the store profile and allowed business/contact data; managing logo, banner, optional store photos, and social links; creating and editing inventory; viewing status and moderation reasons; marking sold; hiding/unpublishing; relisting; and aggregate analytics.
 
+Store listings resolve their WhatsApp contact from the store's current number, the way account-owned Particular listings resolve it from the profile: when a store changes its number, every unsold listing of that store follows (sold listings keep their historical record). WhatsApp links add Peru's country code (51) to a 9-digit mobile number stored without it. *(Effortless Laria, batch "listing", fix-03; proposed UXD-listing-1.)*
+
 Commercial analytics include listing impressions, listing views, favorites, WhatsApp contacts, sold listings, and meaningful conversion-oriented ratios. They must not show revenue without actual transaction data. These metrics should remain suitable for evaluating later paid store packages without activating such packages in V1.
 
 ## Favorites and Alerts
