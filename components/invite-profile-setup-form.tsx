@@ -13,6 +13,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Notice } from "@/components/ui/notice";
 
 type InviteMode = "seller" | "store";
@@ -158,7 +159,7 @@ export function InviteProfileSetupForm({
         </Field>
 
         <Field id="invite-phone" error={validation.errorFor("phone")} label="WhatsApp">
-          <Input type="tel" name="phone" required autoComplete="tel" defaultValue={initialValues.phone} placeholder="+51 999 999 999" />
+          <PhoneInput name="phone" required defaultValue={initialValues.phone} />
         </Field>
 
         <LocationFields
