@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizePeruRegion } from "@/lib/location";
+import { isValidWhatsAppPhone, normalizePeruPhone } from "@/lib/phone";
 import type { Database } from "@/lib/supabase/database.types";
 
 export const INDIVIDUAL_SELLER_ACCOUNT_TYPE = "seller";
@@ -181,9 +182,10 @@ export async function upsertStoreOwnerProfile(
   return { ok: true };
 }
 
+// Digits with the country code ("51987654321"), or null when WhatsApp could not open it (fix-01).
 export function normalizeProfilePhone(value: string) {
-  const phone = value.replace(/\D/g, "");
-  return /^\d{9,15}$/.test(phone) ? phone : null;
+  const phone = normalizePeruPhone(value);
+  return isValidWhatsAppPhone(phone) ? phone : null;
 }
 
 function validateProfileLocation(city: string, region: string) {

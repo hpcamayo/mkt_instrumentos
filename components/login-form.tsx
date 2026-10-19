@@ -9,6 +9,8 @@ import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+import { ResendConfirmation } from "@/components/auth/resend-confirmation";
+import { EMAIL_NOT_CONFIRMED } from "@/lib/auth/confirmation";
 
 type FormState = "idle" | "submitting" | "sent" | "error";
 type LoginMode = "password" | "magic-link";
@@ -21,6 +23,7 @@ export function LoginForm() {
   const [message, setMessage] = useState<string | null>(
     searchParams.get("error"),
   );
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const nextPath = useMemo(
     () => getSafeAuthRedirect(searchParams.get("next")),
     [searchParams],
@@ -30,6 +33,7 @@ export function LoginForm() {
     event.preventDefault();
     setState("submitting");
     setMessage(null);
+    setUnconfirmedEmail(null);
 
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -59,7 +63,13 @@ export function LoginForm() {
       });
 
       if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { code?: string; message?: string } | null;
         setState("error");
+        if (result?.code === EMAIL_NOT_CONFIRMED) {
+          setUnconfirmedEmail(email);
+          setMessage(result.message ?? "Confirma tu correo para ingresar.");
+          return;
+        }
         setMessage("No se pudo iniciar sesión. Revisa tu correo y contraseña.");
         return;
       }
@@ -145,7 +155,10 @@ export function LoginForm() {
         )}
 
         {message ? (
-          <Notice tone={state === "sent" ? "success" : "warning"}>{message}</Notice>
+          <Notice tone={state === "sent" ? "success" : "warning"} title={unconfirmedEmail ? "Confirma tu correo" : undefined}>
+            <p>{message}</p>
+            {unconfirmedEmail ? <ResendConfirmation email={unconfirmedEmail} next={nextPath} /> : null}
+          </Notice>
         ) : null}
 
         <Button

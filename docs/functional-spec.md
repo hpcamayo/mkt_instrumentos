@@ -54,6 +54,13 @@ A Particular profile contains at least:
 
 V1 authentication includes signup, email confirmation, password login, magic-link login, logout, forgot password, password reset, profile editing, and password change. Email change and account deletion are post-V1.
 
+<!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): fixes -->
+WhatsApp numbers are stored as digits with the country code. A Peruvian mobile typed as nine digits starting with 9
+gets 51 in front, on every write to profiles, listings and stores (fix-01); the WhatsApp field shows the number buyers
+will see ("+51 987 654 321") with a link to try it. Signing in before confirming the e-mail says "Confirma tu correo"
+and offers "Reenviar enlace", as does the screen right after signing up, with a 60-second wait between sends (fix-08).
+<!-- end accounts batch: fixes -->
+
 Supabase Auth remains appropriate for confirmation, password recovery, invitations, and other authentication messages. Marketplace-generated emails use a centralized application email abstraction. The provider behind that abstraction is an implementation choice, not a product decision.
 
 ## Particular Listing Creation
