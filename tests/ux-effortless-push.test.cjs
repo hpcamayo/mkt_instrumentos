@@ -290,21 +290,19 @@ test("signing out turns this device's notices off before the session ends (big-1
   const device = crypto.randomUUID();
   const steps = [];
   const supabase = { rpc: async (name, args) => { steps.push([name, args]); return { data: true, error: null }; }, auth: { signOut: async () => { steps.push(["signOut"]); } } };
-  const logout = (cookie) => load("app/logout/route.ts", {
-    "next/headers": { cookies: async () => ({ get: (name) => (name === PUSH_DEVICE_COOKIE && cookie ? { name, value: cookie } : undefined) }) },
-    "@/lib/supabase/server-client": { getSupabaseServerClient: async () => supabase },
-  });
-  const post = (route) => route.POST(new Request("https://laria.audio/logout", { method: "POST", headers: { origin: "https://laria.audio" } }));
-  const response = await post(logout(device));
+  // The route reads the cookie from the request, so it needs nothing from Next's request scope.
+  const route = load("app/logout/route.ts", { "@/lib/supabase/server-client": { getSupabaseServerClient: async () => supabase } });
+  const post = (cookie) => route.POST(new Request("https://laria.audio/logout", { method: "POST", headers: { origin: "https://laria.audio", ...(cookie ? { cookie } : {}) } }));
+  const response = await post(`theme=oscuro; ${PUSH_DEVICE_COOKIE}=${device}`);
   assert.equal(response.status, 303);
   assert.deepEqual(steps, [["delete_push_subscription", { p_subscription_id: device }], ["signOut"]]);
   assert.match(response.headers.get("set-cookie"), new RegExp(`^${PUSH_DEVICE_COOKIE}=;`));
   steps.length = 0;
-  const without = await post(logout(undefined));
+  const without = await post(undefined);
   assert.deepEqual(steps, [["signOut"]]);
   assert.equal(without.headers.get("set-cookie"), null);
   steps.length = 0;
-  await post(logout("no-es-un-id"));
+  await post(`${PUSH_DEVICE_COOKIE}=no-es-un-id`);
   assert.deepEqual(steps, [["signOut"]], "only a device id reaches the database");
 });
 
