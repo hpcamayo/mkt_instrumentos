@@ -2,8 +2,8 @@
 
 Fixes from the owner review of the combined prototype (draft PR #12 at `2524829`): the independent Codex review of the
 six design §17 items and the owner's walkthrough notes. Two branches cut from `store-ops/prototype`, each with a draft
-PR back into it: A (this section) fixes what Codex found, B fixes the store screens. Nothing here is applied to a
-hosted database or deployed.
+PR back into it: A (this section) fixes what Codex found, B fixes the store screens. A third, C, answers Codex's
+re-check of A. Nothing here is applied to a hosted database or deployed.
 
 ## A. Codex findings: security, concurrency, data (`store-ops/review-fixes-core`)
 
@@ -77,8 +77,6 @@ are kept. Functions changed throughout are replaced whole, as before.
   `set_store_verification` locks the store, then that store's pending listings. An owner submitting while an Admin
   changes the store's verification can still get a deadlock error (PostgreSQL aborts one; the other completes). This
   predates Store Operations and is outside the review.
-- **Opposite photo orders.** Two attachments of overlapping import photo sets in opposite orders can end in a deadlock
-  error instead of `LISTING_PHOTO_INVALID`. Nothing is attached twice; publication retries once.
 - **E-mail claim cost.** The claim now runs two extra updates per call; `search_alert_matches_delivery_idx` keeps the
   digest lookups indexed (the e-mail payload already looked matches up by delivery without one).
 
@@ -180,3 +178,62 @@ result notice in view and focused; the stock update file (no hint on the eight l
 the 2,000-row file (eight chips of 250, top buttons); Inventario chips and the filtered view; Pagos (withdraw, add with
 PayPal, edit Yape o Plin) and an Admin approval by revision; with the switch off, no Pagos entry and 404 on both
 addresses.
+
+## C. Codex re-check (`store-ops/review-fixes-recheck`)
+
+Codex re-checked A at `6a321c2`: every A1 to A15 fix held and nothing blocked a merge. It asked for three more fixes
+(R1 to R3), a test joining the Admin payment-method form to its route (R4), and why STORE-2 and STORE-3a stopped early
+on its Supabase stack. The branch is cut from `store-ops/prototype` at `dda83da`, with a draft PR back into it. Each
+fix has a regression test that fails without it.
+
+### Migration
+
+`20261110120000_review_fixes_recheck_lock_order.sql` (R1, R2), after every migration on the branch. It patches the
+latest definitions of `publish_store_import_rows`, `replace_listing_photos`, `apply_owned_listing_edit` and
+`insert_store_listing` with exact old → new replacements, as `20261029120100` does, and adds
+`laria_private.lock_import_photo_assets`.
+
+### What was fixed
+
+| Item | Codex finding | Fix | Commit | Regression |
+| --- | --- | --- | --- | --- |
+| R1 | Import publication locked each SKU on reaching its row, while bulk stock updates lock in id order: rows on [higher id, lower id] against a bulk update of both could deadlock | Publication locks every unlinked candidate SKU in id order before its first row, as the import commit does. A SKU unlinked after that is taken only if free; otherwise `INVENTORY_CONCURRENT_CHANGE`, which the server retries once | `1881edf` | harness: two-row publication versus bulk; `store-ops-review-fixes.sql` |
+| R2 | The import photo guard locked each asset as its photo row went in, so attaching [A, B] and [B, A] at once could deadlock (A's known limit "Opposite photo orders") | Every path that attaches photos first locks the whole set's assets in id order: direct edits, revision proposals and their promotion, the publish form, and import publication for a whole chunk | `1881edf` | harness: photo sets in opposite orders, as a proposal and as a direct edit; `store-ops-review-fixes.sql` |
+| R3 | The photo check accepted incomplete images whose structure was intact: a 57-byte PNG with an empty IDAT and correct CRCs, a JPEG cut to one scan byte with an EOI added | The check reads the encoded image data through, without decoding pixels: a PNG must inflate to exactly the rows IHDR implies, with known filter types and its zlib checksum; every JPEG scan must decode to the end of its last block (baseline, progressive, restart intervals); WebP's VP8, VP8L and ALPH data must decode within their chunks (`photo-png-data.ts`, `photo-jpeg-data.ts`, `photo-webp-data.ts`) | `2b7c041` | `store-ops-review-photos.test.cjs`: both Codex files, cut and emptied files of each format, legal layouts that must pass, the 73 sample photos, the time budget |
+| R4 | The Admin payment-method form and its route were joined only by text matches; the form had sent a field the route no longer took (fixed in `01e9516`) | A test sends the form's own request through the route, its same-origin check included, to the database call, and checks the call against the latest SQL signature | `bc95482` | `pay-1.test.cjs` (fails if the form sends the old field or the revision as text, or the route renames the argument) |
+| SQL | STORE-2 and STORE-3a stopped at their bucket checks | The tests were wrong, not the buckets: they read `storage.buckets` as `authenticated` and `anon`. Supabase Storage keeps row-level security on that table with no policies, so those roles see no rows; the local shim had none there. The suites now read bucket settings as the owner, as the other suites do | `82ccb3f` | The local shim now turns row-level security on for `storage.buckets`; without the fix both suites stop where Codex's did |
+
+### Defaults taken
+
+| Point | Default | Why |
+| --- | --- | --- |
+| R1 SKU unlinked meanwhile | Taken with `nowait`; if busy, `INVENTORY_CONCURRENT_CHANGE` | Waiting there would be the out-of-order wait R1 removes; the retry starts from the new state. |
+| R3 depth | Every bit of the encoded data is read, but no pixels are built and nothing is kept between steps | It finds data cut or emptied anywhere in the file at a bounded cost. A full decode needs a native image library, or about 192 MB for one 8000 px photo. |
+| R3 strictness | Refused although some decoders only warn: an undefined JPEG Huffman code, a VP8L or ALPH stream that runs past its chunk, PNG data beyond the rows or after the checksum | Only damage or a crafted file has them; none of the 2,254 encoder-made test files does. |
+| R3 time | Real photos up to 5 MB and 8000 px take under a second. Files crafted to be slow take up to about 2 s (a 16-bit 8000 px PNG 1.8 s, a 5 MB VP8 1.7 s). A completion request starts no new check after 30 s; photos left unchecked stay waiting, and the page asks for them again | 25 crafted files cannot run the request past its 60 s limit; real batches never reach the budget. |
+| R4 | A unit test with React's hooks stubbed, as in `password-reset.test.cjs` | The repo has no browser test runner; the route, the origin check and the SQL signature are the real ones. |
+| SQL shim | The shared local shim changed too, not only the suites | Local runs now see what Supabase shows the browser roles; all 36 suites pass with it. |
+
+### Known, not changed
+
+- **PNG leniency.** fflate reads neither a stored deflate block's inverted length nor bytes between the end of the
+  deflate data and the zlib checksum, so a file damaged only there passes (libpng refuses the first). The image data
+  must still be whole and match the checksum.
+- **Not yet on a Supabase stack.** Codex's run stopped at the bucket checks, so the rest of STORE-2 and STORE-3a,
+  including their direct writes to `storage.objects`, has only run on the local shim. The next Codex run covers it.
+
+### Production steps
+
+Apply `20261110120000_review_fixes_recheck_lock_order.sql` after the other Store Operations migrations. It changes no
+data and adds no switch.
+
+### Checks run (local database only)
+
+`setup-local-db.sh reset` and `test` (all migrations, every `tests/*.sql`, the concurrency harness with its two new
+cases), the harness with `--mutation`, `node tests/store-ops-3a-race.integration.cjs`, `pnpm test`, `tsc --noEmit`,
+`eslint .`, `next build`.
+
+The photo check also ran, outside the repository, on 2,254 files written by Pillow, ImageMagick, sharp and libwebp (all
+pass), 1,801 cut, shortened and bit-flipped copies compared with Pillow and ImageMagick, 150 photos up to 8000 px and
+5 MB, and files crafted for the most work each format allows. The one copy it passes and both decoders refuse is the
+PNG case under Known; the four it refuses and both decoders show are the strict cases under Defaults.
