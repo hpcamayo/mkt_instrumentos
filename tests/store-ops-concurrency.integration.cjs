@@ -1,7 +1,8 @@
 // Explicit local integration test for STORE-1a stock concurrency (docs/store-operations/design.md §14). Every race
 // runs on separate database connections released together from an advisory-lock barrier, so the database really
-// interleaves them. The lock-order cases (review fixes A3 and A4) instead hold each connection at a chosen lock and
-// check where the others wait. Creates isolated QA rows and removes them at the end, ledger included (see cleanup()).
+// interleaves them. The lock-order cases (review fixes A3 and A4, Codex re-check R1 and R2) instead hold each
+// connection at a chosen lock and check where the others wait. Creates isolated QA rows and removes them at the end,
+// ledger included (see cleanup()).
 // Usage: node tests/store-ops-concurrency.integration.cjs [postgresql://postgres:postgres@127.0.0.1:54322/postgres]
 // The URL may also come from LARIA_TEST_DATABASE_URL. Hosted databases are refused. LARIA_RACE_ROUNDS sets the
 // last-unit repetitions (default 200, as in the design); LARIA_ONLY=<text> runs only the checks whose name contains it.
@@ -143,30 +144,31 @@ async function assertConsistent(id) {
   }
 }
 
-// Plays one import to a publishable row on the control connection (the steps tests/store-ops-3b.sql takes): staged,
-// mapped, planned, photos uploaded and checked, inventory applied.
+// Plays one import to publishable rows (rows 2, 3, … for the SKUs given, in that order) on the control connection, the
+// steps tests/store-ops-3b.sql takes: staged, mapped, planned, photos uploaded and checked, inventory applied. A SKU
+// that already exists is updated by its row.
 const PUBLICATION_HELPERS = `
-create or replace function pg_temp.qa_ready_import(p_sku text, p_price integer) returns uuid language plpgsql as $$
+create or replace function pg_temp.qa_ready_import(p_skus text[], p_price integer) returns uuid language plpgsql as $$
 declare sid uuid; token uuid; result jsonb; upload jsonb;
 begin
   sid := (public.create_store_import_session('publicar.csv', 'csv', 1000) #>> '{session,id}')::uuid;
   token := (public.claim_store_import_step(sid)->>'lock_token')::uuid;
   perform public.begin_store_import_parse(sid, token, repeat('a', 64), 1000);
-  perform public.stage_store_import_rows(sid, token, jsonb_build_array(jsonb_build_object('row_number', 2,
-    'raw', jsonb_build_array(jsonb_build_object('v', p_sku, 'k', 's')))));
+  perform public.stage_store_import_rows(sid, token, (select jsonb_agg(jsonb_build_object('row_number', n + 1,
+    'raw', jsonb_build_array(jsonb_build_object('v', sku, 'k', 's'))) order by n) from unnest(p_skus) with ordinality s(sku, n)));
   perform public.finish_store_import_parse(sid, token, jsonb_build_object('headers', '["SKU","Nombre","Stock","Precio"]'::jsonb,
-    'header_row', 1, 'row_count', 1, 'sheet_name', null));
+    'header_row', 1, 'row_count', cardinality(p_skus), 'sheet_name', null));
   perform public.release_store_import_step(sid, token);
   perform public.confirm_store_import_mapping(sid, '{"sku":0,"product_name":1,"quantity":2,"unit_price_pen":3}',
     (select version from public.store_import_sessions where id = sid));
   token := (public.claim_store_import_step(sid)->>'lock_token')::uuid;
-  perform public.plan_store_import_rows(sid, token, jsonb_build_array(jsonb_build_object('row_number', 2,
-    'parsed', jsonb_build_object('sku', p_sku, 'product_name', 'Pedal ' || p_sku, 'quantity', 3, 'unit_price_pen', p_price))));
+  perform public.plan_store_import_rows(sid, token, (select jsonb_agg(jsonb_build_object('row_number', n + 1,
+    'parsed', jsonb_build_object('sku', sku, 'product_name', 'Pedal ' || sku, 'quantity', 3, 'unit_price_pen', p_price)) order by n)
+    from unnest(p_skus) with ordinality s(sku, n)));
   perform public.finish_store_import_validation(sid, token);
   perform public.release_store_import_step(sid, token);
-  result := public.request_store_import_photo_uploads(sid, jsonb_build_array(
-    jsonb_build_object('name', p_sku || '__01.jpg', 'type', 'image/jpeg', 'bytes', 200000),
-    jsonb_build_object('name', p_sku || '__02.jpg', 'type', 'image/jpeg', 'bytes', 200000)));
+  result := public.request_store_import_photo_uploads(sid, (select jsonb_agg(jsonb_build_object('name', sku || '__0' || k || '.jpg',
+    'type', 'image/jpeg', 'bytes', 200000) order by n, k) from unnest(p_skus) with ordinality s(sku, n), generate_series(1, 2) k));
   for upload in select value from jsonb_array_elements(result->'uploads') loop
     insert into storage.objects(bucket_id, name, owner, owner_id, metadata)
     values ('store-import-photos', upload->>'path', auth.uid(), auth.uid()::text, '{"size":200000,"mimetype":"image/jpeg"}');
@@ -183,14 +185,15 @@ declare token uuid;
 begin
   perform public.start_store_import_commit(p_session, (select version from public.store_import_sessions where id = p_session));
   token := (public.claim_store_import_step(p_session)->>'lock_token')::uuid;
-  perform public.commit_store_import_chunk(p_session, token, array[2]);
+  perform public.commit_store_import_chunk(p_session, token, (select array_agg(row_number order by row_number)
+    from public.store_import_rows where session_id = p_session and commit_status = 'pending'));
   perform public.finish_store_import_commit(p_session, token);
 end $$;
 `;
 
-async function importedSku(sku, price) {
+async function importedSkus(skus, price) {
   await open(control);
-  const sessionId = (await control.query("select pg_temp.qa_ready_import($1, $2) as id", [sku, price])).rows[0].id;
+  const sessionId = (await control.query("select pg_temp.qa_ready_import($1, $2) as id", [skus, price])).rows[0].id;
   const checks = (await control.query("select pg_temp.qa_photo_checks($1) as checks", [sessionId])).rows[0].checks;
   await control.query("commit");
   await open(control, "service");
@@ -200,20 +203,27 @@ async function importedSku(sku, price) {
   await control.query("select pg_temp.qa_commit_import($1)", [sessionId]);
   await control.query("commit");
   const { rows } = await control.query(
-    "select applied_item_id, photo_state from public.store_import_rows where session_id = $1 and row_number = 2",
+    "select applied_item_id, photo_state from public.store_import_rows where session_id = $1 order by row_number",
     [sessionId],
   );
-  assert.equal(rows[0].photo_state, "ready", "fixture row has its photos");
-  return { sessionId, itemId: rows[0].applied_item_id };
+  assert.equal(rows.length, skus.length);
+  assert.ok(rows.every((row) => row.photo_state === "ready" && row.applied_item_id), "fixture rows are applied and have their photos");
+  return { sessionId, itemIds: rows.map((row) => row.applied_item_id) };
 }
 
-const publishRows = (title) => JSON.stringify([{
-  row_number: 2,
+async function importedSku(sku, price) {
+  const { sessionId, itemIds } = await importedSkus([sku], price);
+  return { sessionId, itemId: itemIds[0] };
+}
+
+// The publish request for rows 2, 3, … with one title each.
+const publishRows = (...titles) => JSON.stringify(titles.map((title, index) => ({
+  row_number: index + 2,
   fields: {
     title, brand: "Boss", model: "DS-1", category: "pedals", instrument_type: "pedals", condition: "Nuevo",
     description: "Pedal de distorsión nuevo, en caja, con garantía de la tienda por un año.", attributes: { pedal_type: "distortion" },
   },
-}]);
+})));
 
 async function setup() {
   await control.query("begin");
@@ -230,12 +240,13 @@ async function setup() {
   await control.query("insert into public.store_operation_settings(store_id, inventory_enabled) values ($1, true)", [storeId]);
   // s1 sorts before s2, so a bulk operation over both locks s1 first (the stale-link case needs that order).
   [listings.s1, listings.s2] = [randomUUID(), randomUUID()].sort();
-  for (const name of ["a", "b", "c", "d1", "d2", "d3", "d4", "d5", "h1", "h2", "s1", "s2", "e"]) {
+  // r1 and r2 take edit proposals (approved, and the store is not verified), q1 and q2 direct edits (pending).
+  for (const name of ["a", "b", "c", "d1", "d2", "d3", "d4", "d5", "h1", "h2", "s1", "s2", "e", "r1", "r2", "q1", "q2"]) {
     listings[name] ??= randomUUID();
     await control.query(
       `insert into public.listings (id, slug, title, seller_type, status, category, instrument_type, brand, model, condition, price_pen, city, region, contact_name, whatsapp_phone, description, owner_user_id, store_id, created_by_source, marketplace_rules_accepted_at)
-       values ($1, $2, $3, 'store', 'approved', 'guitars', 'electric_guitar', 'QA', $4, 'Nuevo', 1000, 'Lima', 'Lima', 'Contacto', '51999995001', 'Descripción de inventario válida con más de cuarenta caracteres.', $5, $6, 'self_service', now())`,
-      [listings[name], `qa-conc-${suffix}-${name}`, `Guitarra concurrencia ${name}`, name, ownerId, storeId],
+       values ($1, $2, $3, 'store', $7, 'guitars', 'electric_guitar', 'QA', $4, 'Nuevo', 1000, 'Lima', 'Lima', 'Contacto', '51999995001', 'Descripción de inventario válida con más de cuarenta caracteres.', $5, $6, 'self_service', now())`,
+      [listings[name], `qa-conc-${suffix}-${name}`, `Guitarra concurrencia ${name}`, name, ownerId, storeId, name.startsWith("q") ? "pending" : "approved"],
     );
     await control.query(
       "insert into public.listing_photos (listing_id, image_url, sort_order) values ($1, $2, 0), ($1, $3, 1)",
@@ -619,6 +630,121 @@ async function photoPublicationVersusEdit() {
   return outcomes;
 }
 
+// Codex re-check R1: a publication chunk of two rows, the first on the SKU with the higher id, against a bulk stock
+// update of both SKUs. Publication locked each SKU when it reached its row, and the bulk update locks them in id order:
+// with publication holding the first row's SKU and the bulk update the other one, each waited for the other (40P01).
+// A third connection holds the second staged row, so publication stops between its rows while the bulk update starts;
+// then it lets the row go. Publication now takes both SKUs before its first row, so the bulk update waits for it, then
+// finds the SKUs linked and asks for a retry (INVENTORY_CONCURRENT_CHANGE, which the client retries once).
+async function multiRowPublicationVersusBulk() {
+  const skus = [];
+  for (const name of ["m1", "m2"]) {
+    const created = await owner("select public.create_inventory_item($1, $2, $3)", [
+      { merchant_sku: `QA-${name.toUpperCase()}`, product_name: `Pedal ${name}`, unit_price_pen: 450 },
+      0,
+      `qa-conc-${suffix}-create-${name}`,
+    ]);
+    assert.equal(code(created), "ok", created.error?.message);
+    skus.push({ sku: `QA-${name.toUpperCase()}`, id: created.value.item.id });
+  }
+  const [low, high] = skus.sort((x, y) => (x.id < y.id ? -1 : 1));
+  const target = await importedSkus([high.sku, low.sku], 450);
+  assert.deepEqual(target.itemIds, [high.id, low.id], "row 2 updates the SKU with the higher id, row 3 the other one");
+
+  const [publisher, bulk, gate] = workers;
+  await gate.query("begin");
+  await gate.query("select 1 from public.store_import_rows where session_id = $1 and row_number = 3 for update", [target.sessionId]);
+  let gated = true;
+  try {
+    await open(publisher, "service");
+    const publishing = settle(publisher.query("select public.publish_store_import_rows($1, $2, $3, true)",
+      [ownerId, target.sessionId, publishRows("Pedal fila dos QA", "Pedal fila tres QA")]));
+    await waitFor(() => waitingOnLock(pids[0]), "publication to finish its first row");
+
+    await open(bulk);
+    const operations = JSON.stringify([low.id, high.id].map((id) => ({ item_id: id, type: "restock", quantity: 1 })));
+    const key = `qa-conc-${suffix}-multi-bulk`;
+    const bulkRunning = settle(bulk.query("select public.apply_bulk_stock_operations($1, $2)", [operations, key]));
+    await waitFor(() => waitingOnLock(pids[1]), "the bulk update to wait for a SKU publication holds");
+
+    await gate.query("commit");
+    gated = false;
+    const [published, bulkResult] = await finish([publisher, publishing], [bulk, bulkRunning]);
+    assert.ok(published.ok, published.error?.message);
+    assert.deepEqual(published.value.results.map((row) => row.outcome), ["published", "published"], JSON.stringify(published.value.results));
+    assert.ok(bulkResult.ok || code(bulkResult) === "INVENTORY_CONCURRENT_CHANGE", bulkResult.error?.message);
+    if (!bulkResult.ok) {
+      const retried = await owner("select public.apply_bulk_stock_operations($1, $2)", [operations, key]);
+      assert.ok(retried.ok, retried.error?.message);
+    }
+    for (const sku of [low, high]) {
+      const row = await item(sku.id);
+      assert.ok(row.listing_id, "each SKU is linked to its new listing");
+      assert.equal(row.quantity_on_hand, 4, "the import's 3 units and the bulk restock");
+      await assertConsistent(sku.id);
+    }
+    return [bulkResult.ok ? "bulk update first" : "bulk update retried after publication"];
+  } finally {
+    if (gated) await gate.query("rollback");
+  }
+}
+
+// Codex re-check R2: two edits put the same two import photos on two listings, one as [A, B] and the other as [B, A]
+// (A has the lower asset id). The import photo guard locked each asset as its photo row went in, so the two edits took
+// them in opposite orders. A third connection holds A: the first edit waits for it holding nothing, the second takes B
+// and waits for A as well. When A is let go the first edit gets it (it waited first), then needs B: a deadlock. Every
+// attachment now locks the whole set in asset-id order first, so the second edit waits for A without holding B and is
+// refused once the first one commits: each photo ends up on one listing. Revision proposals (approved listings of a
+// store that is not verified) and direct edits (pending listings) both run.
+async function photoSetsInOppositeOrders() {
+  const outcomes = [];
+  for (const [mode, first, second] of [["proposal", "r1", "r2"], ["direct", "q1", "q2"]]) {
+    const target = await importedSku(`QA-O${mode === "direct" ? "D" : "P"}`, 300);
+    const { rows: photos } = await control.query(
+      "select a.id, laria_private.import_photo_url(a) as url from public.store_import_photo_assets a where a.session_id = $1 order by a.id",
+      [target.sessionId],
+    );
+    assert.equal(photos.length, 2);
+    const [a, b] = photos;
+    const [firstEditor, secondEditor, gate] = workers;
+    const edit = (client, name, set) => settle(client.query("select public.update_owned_listing($1, '{}', '{}', $2, $3)",
+      [listings[name], JSON.stringify(set.map((photo) => ({ image_url: photo.url }))), randomUUID()]));
+
+    await gate.query("begin");
+    await gate.query("select 1 from public.store_import_photo_assets where id = $1 for no key update", [a.id]);
+    let gated = true;
+    try {
+      await open(firstEditor);
+      const firstRunning = edit(firstEditor, first, [a, b]);
+      await waitFor(() => waitingOnLock(pids[0]), "the first edit to wait for photo A");
+      await open(secondEditor);
+      const secondRunning = edit(secondEditor, second, [b, a]);
+      await waitFor(() => waitingOnLock(pids[1]), "the second edit to wait for photo A");
+
+      await gate.query("commit");
+      gated = false;
+      const [firstResult, secondResult] = await finish([firstEditor, firstRunning], [secondEditor, secondRunning]);
+      assert.ok(firstResult.ok, firstResult.error?.message);
+      assert.equal(firstResult.value.mode, mode === "direct" ? "direct" : "revision", JSON.stringify(firstResult.value));
+      assert.match(secondResult.error?.message ?? "", /LISTING_PHOTO_INVALID/, `${mode}: the second edit went ahead with photos the first one uses`);
+      for (const photo of [a, b]) {
+        const { rows } = await control.query(
+          `select array_agg(distinct listing_id) as users from (
+             select listing_id from public.listing_photos where image_url = $1
+             union all
+             select r.listing_id from public.listing_revision_photos rp join public.listing_revisions r on r.id = rp.revision_id where rp.image_url = $1) used`,
+          [photo.url],
+        );
+        assert.deepEqual(rows[0].users, [listings[first]], `${mode}: a photo is used by ${rows[0].users}`);
+      }
+      outcomes.push(`${mode}: second edit refused`);
+    } finally {
+      if (gated) await gate.query("rollback");
+    }
+  }
+  return outcomes;
+}
+
 // --mutation: drop the SKU row lock from the shared helpers (laria_private.lock_inventory_item and lock_inventory_items)
 // and keep the listing locks. The linked last-unit race stays green (the listing lock still serializes it); the unlinked
 // one must catch the oversell. The original functions are restored afterwards, also on failure.
@@ -672,6 +798,8 @@ async function itemLockMutation() {
       ["stock versus publication", () => publicationVersus("stock")],
       ["price versus publication", () => publicationVersus("price")],
       ["photo: publication versus edit", photoPublicationVersusEdit],
+      ["two-row publication versus bulk", multiRowPublicationVersusBulk],
+      ["photo: sets in opposite orders", photoSetsInOppositeOrders],
     ];
     // LARIA_ONLY=<text> runs only the checks whose name contains it.
     for (const [name, check] of checks.filter(([name]) => !process.env.LARIA_ONLY || name.includes(process.env.LARIA_ONLY))) {

@@ -164,6 +164,35 @@ do $$ declare offenders text; begin
     where oid = 'public.link_inventory_listing(uuid,uuid,integer,integer)'::regprocedure), 'linking still locks the SKU''s current listing');
 end $$;
 
+-- Codex re-check R1 and R2 (section C): publication takes its SKUs, then its photos, in id order before its first row,
+-- and every path that attaches photos locks the whole set in asset-id order before inserting it. The races are in the
+-- concurrency harness ("two-row publication versus bulk", "photo: sets in opposite orders").
+do $$ declare source text; offenders text; begin
+  source := (select prosrc from pg_proc where oid = 'public.publish_store_import_rows(uuid,uuid,jsonb,boolean)'::regprocedure);
+  perform pg_temp.check(source ~ 'and i\.listing_id is null\s+order by i\.id\s+for update;'
+    and strpos(source, 'order by i.id') < strpos(source, 'for entry in'), 'publication does not lock its SKUs in id order before its rows');
+  perform pg_temp.check(source ~ 'store_import_photo_assets a\s[^;]*order by a\.id\s+for no key update;'
+    and strpos(source, 'order by a.id') < strpos(source, 'for entry in'), 'publication does not lock its photos in id order before its rows');
+  perform pg_temp.check(source ~ 'staged\.applied_item_id for update nowait;',
+    'publication can still wait out of order for a SKU unlinked after its first locks');
+  select string_agg(p.oid::regprocedure::text, ', ') into offenders
+  from pg_proc p
+  where p.oid in ('public.replace_listing_photos(uuid,jsonb)'::regprocedure,
+                  'public.apply_owned_listing_edit(uuid,jsonb,jsonb,jsonb)'::regprocedure,
+                  'laria_private.insert_store_listing(uuid,public.stores,jsonb,jsonb)'::regprocedure)
+    and not coalesce(strpos(p.prosrc, 'lock_import_photo_assets(p_photos)')
+      between 1 and (select min(at) from unnest(array[strpos(p.prosrc, 'insert into public.listing_photos'),
+                                                      strpos(p.prosrc, 'insert into public.listing_revision_photos')]) at
+                     where at > 0), false);
+  perform pg_temp.check(offenders is null, 'these functions attach photos before locking the whole set: ' || coalesce(offenders, ''));
+  -- The helper ignores what is not an import photo instead of failing on it; the callers' own checks refuse it.
+  perform laria_private.lock_import_photo_assets(null);
+  perform laria_private.lock_import_photo_assets('{"image_url":"x"}');
+  perform laria_private.lock_import_photo_assets(jsonb_build_array(1, 'texto', jsonb_build_object('image_url', 'https://example.invalid/a.jpg'),
+    jsonb_build_object('image_url', '/api/listing-images/' || repeat('-', 36) || '/import-photos/' || repeat('-', 36) || '/'
+      || repeat('-', 36) || '.jpg')));
+end $$;
+
 set local role authenticated;
 select pg_temp.as_user('owner_a');
 do $$ declare result jsonb; begin
