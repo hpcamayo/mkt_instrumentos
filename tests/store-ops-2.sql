@@ -178,10 +178,14 @@ end $$;
 
 -- ------------------------------------------------------------------ storage policies
 
+-- Bucket settings are read as the database owner: Supabase Storage keeps row-level security on storage.buckets with
+-- no policies, so the browser roles see no bucket rows (Codex re-check; the local shim used to let them read it).
+reset role;
 do $$ begin
   perform pg_temp.check((select public from storage.buckets where id = 'store-imports') = false, 'bucket is private');
   perform pg_temp.check((select file_size_limit from storage.buckets where id = 'store-imports') = 5242880, '5 MB bucket limit');
 end $$;
+set local role authenticated;
 
 -- Owner A can upload exactly the session path, once, while the session awaits its file.
 insert into storage.objects(bucket_id, name, owner) values

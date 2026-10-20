@@ -179,6 +179,9 @@ do $$ begin
   perform pg_temp.expect_error($q$select public.place_store_import_photo(gen_random_uuid(), gen_random_uuid(), 1)$q$, 'permission denied');
 end $$;
 
+reset role;
+-- Bucket settings are read as the database owner: Supabase Storage keeps row-level security on storage.buckets with
+-- no policies, so anonymous visitors see no bucket rows (Codex re-check; the local shim used to let them read it).
 do $$ begin
   perform pg_temp.check((select public from storage.buckets where id = 'store-import-photos') = false, 'photo bucket is private');
   perform pg_temp.check((select file_size_limit from storage.buckets where id = 'store-import-photos') = 5242880, '5 MB per photo');
@@ -186,7 +189,6 @@ do $$ begin
     = array['image/jpeg', 'image/png', 'image/webp'], 'JPEG, PNG and WebP only');
 end $$;
 
-reset role;
 select pg_temp.as_admin();
 set local role authenticated;
 select public.admin_set_store_inventory_enabled(pg_temp.id('store_a'), true, 'Piloto STORE-3a');
