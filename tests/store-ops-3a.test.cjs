@@ -4,6 +4,7 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const zlib = require("node:zlib");
 const Module = require("node:module");
 const { zipSync, strToU8 } = require("fflate");
 
@@ -21,12 +22,22 @@ const { parsePhotoAction, parsePhotoFiles } = require("@/lib/store-import/photos
 
 // ------------------------------------------------------------------ fixtures
 
-function jpeg(width, height, { trailer = "", comment = "", pad = 1000 } = {}) {
+// Small but complete images: the check reads the image data through (Codex re-check R3), so each one has all of it.
+
+// Baseline JPEG of a flat picture (Y 2×2, Cb and Cr 1×1): with one-code tables, each block is a zero DC difference and
+// an end-of-block, one bit each, so the scan is all zero bits, padded with ones.
+function jpeg(width, height, { trailer = "", comment = "" } = {}) {
   const app0 = [0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00];
   const com = comment ? [0xff, 0xfe, (comment.length + 2) >> 8, (comment.length + 2) & 0xff, ...Buffer.from(comment, "latin1")] : [];
-  const sof = [0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03, 1, 0x22, 0, 2, 0x11, 1, 3, 0x11, 1];
-  const sos = [0xff, 0xda, 0x00, 0x0c, 0x03, 1, 0, 2, 0x11, 3, 0x11, 0, 0x3f, 0];
-  return Buffer.concat([Buffer.from([0xff, 0xd8, ...app0, ...com, ...sof, ...sos]), Buffer.alloc(pad, 0x55), Buffer.from([0xff, 0xd9]), Buffer.from(trailer, "latin1")]);
+  const dqt = [0xff, 0xdb, 0x00, 0x43, 0x00, ...new Array(64).fill(1)];
+  const sof = [0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff, 0x03, 1, 0x22, 0, 2, 0x11, 0, 3, 0x11, 0];
+  const oneCode = (table, symbol) => [table, 1, ...new Array(15).fill(0), symbol];
+  const dht = [0xff, 0xc4, 0x00, 0x26, ...oneCode(0x00, 0x00), ...oneCode(0x10, 0x00)];
+  const sos = [0xff, 0xda, 0x00, 0x0c, 0x03, 1, 0x00, 2, 0x00, 3, 0x00, 0, 0x3f, 0];
+  const bits = Math.ceil(width / 16) * Math.ceil(height / 16) * 6 * 2;
+  const scan = Buffer.alloc(Math.ceil(bits / 8));
+  if (bits % 8) scan[scan.length - 1] = 0xff >> (bits % 8);
+  return Buffer.concat([Buffer.from([0xff, 0xd8, ...app0, ...com, ...dqt, ...sof, ...dht, ...sos]), scan, Buffer.from([0xff, 0xd9]), Buffer.from(trailer, "latin1")]);
 }
 
 // CRC-32 of a PNG chunk's type and data.
@@ -36,47 +47,73 @@ const CRC_TABLE = Array.from({ length: 256 }, (_, value) => {
 });
 const crc32 = (bytes) => (bytes.reduce((crc, byte) => CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8), 0xffffffff) ^ 0xffffffff) >>> 0;
 
-function png(width, height, { trailer = "" } = {}) {
-  const ihdr = Buffer.alloc(25);
-  ihdr.writeUInt32BE(13, 0);
-  ihdr.write("IHDR", 4, "latin1");
-  ihdr.writeUInt32BE(width, 8);
-  ihdr.writeUInt32BE(height, 12);
-  ihdr[16] = 8;
-  ihdr[17] = 2;
-  ihdr.writeUInt32BE(crc32(ihdr.subarray(4, 21)), 21);
-  const idat = Buffer.concat([Buffer.from([0, 0, 0, 4]), Buffer.from("IDAT", "latin1"), Buffer.alloc(4, 1), Buffer.alloc(4)]);
-  idat.writeUInt32BE(crc32(idat.subarray(4, 12)), 12);
-  const iend = Buffer.from([0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]);
-  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), ihdr, idat, iend, Buffer.from(trailer, "latin1")]);
+function pngChunk(type, data) {
+  const chunk = Buffer.alloc(12 + data.length);
+  chunk.writeUInt32BE(data.length, 0);
+  chunk.write(type, 4, "latin1");
+  data.copy(chunk, 8);
+  chunk.writeUInt32BE(crc32(chunk.subarray(4, 8 + data.length)), 8 + data.length);
+  return chunk;
 }
 
-function webp(kind, width, height, { extra = 0 } = {}) {
-  let chunk;
-  if (kind === "VP8 ") {
-    chunk = Buffer.alloc(30);
-    chunk.write("VP8 ", 0, "latin1");
-    chunk.writeUInt32LE(22, 4);
-    chunk[8] = 0x10; // a key frame that is shown
-    chunk[11] = 0x9d; chunk[12] = 0x01; chunk[13] = 0x2a;
-    chunk.writeUInt16LE(width, 14);
-    chunk.writeUInt16LE(height, 16);
-  } else if (kind === "VP8L") {
-    chunk = Buffer.alloc(18);
-    chunk.write("VP8L", 0, "latin1");
-    chunk.writeUInt32LE(10, 4);
-    chunk[8] = 0x2f;
-    chunk.writeUInt32LE(((width - 1) & 0x3fff) | (((height - 1) & 0x3fff) << 14), 9);
-  } else {
-    // An extended file: the VP8X header, then its image (a VP8L chunk of the same size).
-    const header = Buffer.alloc(18);
-    header.write("VP8X", 0, "latin1");
-    header.writeUInt32LE(10, 4);
-    header.writeUIntLE(width - 1, 12, 3);
-    header.writeUIntLE(height - 1, 15, 3);
-    chunk = Buffer.concat([header, webp("VP8L", width, height).subarray(12)]);
+// 8-bit RGB, black: every row is filter type 0 and zeros, deflated.
+function png(width, height, { trailer = "" } = {}) {
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  const rows = zlib.deflateSync(Buffer.alloc(height * (1 + width * 3)));
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  return Buffer.concat([signature, pngChunk("IHDR", ihdr), pngChunk("IDAT", rows), pngChunk("IEND", Buffer.alloc(0)), Buffer.from(trailer, "latin1")]);
+}
+
+// A lossless WebP stream with no transforms and five one-symbol codes: every pixel takes no bits.
+function vp8l(width, height) {
+  const fields = [[0x2f, 8], [width - 1, 14], [height - 1, 14], [0, 1], [0, 3], [0, 1], [0, 1], [0, 1], ...new Array(5).fill([1, 4])];
+  const data = Buffer.alloc(8);
+  let at = 0;
+  for (const [value, count] of fields) {
+    for (let bit = 0; bit < count; bit += 1, at += 1) if ((value >>> bit) & 1) data[at >> 3] |= 1 << (at & 7);
   }
-  const body = Buffer.concat([Buffer.from("WEBP", "latin1"), chunk]);
+  return data;
+}
+
+// A lossy key frame whose two partitions are zero bytes: a bool decoder reading zeros decodes every bit as 0 (no
+// updates, 4×4 DC prediction, every block ends at once), so it is a grey picture as long as the zeros last.
+function vp8(width, height) {
+  const macroblocks = Math.ceil(width / 16) * Math.ceil(height / 16);
+  const first = 64 + 2 * macroblocks;
+  const frame = Buffer.alloc(10 + first + 64 + 8 * macroblocks);
+  frame.writeUIntLE((first << 5) | 0x10, 0, 3); // a key frame that is shown
+  frame[3] = 0x9d; frame[4] = 0x01; frame[5] = 0x2a;
+  frame.writeUInt16LE(width, 6);
+  frame.writeUInt16LE(height, 8);
+  return frame;
+}
+
+function webpChunk(type, data) {
+  const chunk = Buffer.alloc(8 + data.length + (data.length & 1));
+  chunk.write(type, 0, "latin1");
+  chunk.writeUInt32LE(data.length, 4);
+  data.copy(chunk, 8);
+  return chunk;
+}
+
+// VP8 or VP8L alone, or an extended file: the VP8X header, then its image (a VP8L chunk of the same size).
+function webp(kind, width, height, { extra = 0 } = {}) {
+  let chunks;
+  if (kind === "VP8 ") {
+    chunks = [webpChunk("VP8 ", vp8(width, height))];
+  } else if (kind === "VP8L") {
+    chunks = [webpChunk("VP8L", vp8l(width, height))];
+  } else {
+    const header = Buffer.alloc(10);
+    header.writeUIntLE(width - 1, 4, 3);
+    header.writeUIntLE(height - 1, 7, 3);
+    chunks = [webpChunk("VP8X", header), webpChunk("VP8L", vp8l(width, height))];
+  }
+  const body = Buffer.concat([Buffer.from("WEBP", "latin1"), ...chunks]);
   const header = Buffer.alloc(8);
   header.write("RIFF", 0, "latin1");
   header.writeUInt32LE(body.length + extra, 4);
@@ -269,9 +306,14 @@ test("the image proxy maps import photos only to the photo bucket", () => {
 test("only the completion step uses the service role, and the server never unzips", () => {
   const server = fs.readFileSync("lib/store-import/photos-server.ts", "utf8");
   assert.equal((server.match(/getSupabaseAdminClient\(\)/g) ?? []).length, 1);
-  for (const file of ["lib/store-import/photos-server.ts", "lib/store-import/photo-check.ts"]) {
+  const checks = ["lib/store-import/photos-server.ts", "lib/store-import/photo-check.ts", "lib/store-import/photo-jpeg-data.ts", "lib/store-import/photo-webp-data.ts"];
+  for (const file of checks) {
     assert.doesNotMatch(fs.readFileSync(file, "utf8"), /fflate|unzip/i, `${file} must not open archives`);
   }
+  // The PNG data walk inflates the image's own zlib stream with fflate's Inflate, and takes nothing else from it.
+  const png = fs.readFileSync("lib/store-import/photo-png-data.ts", "utf8");
+  assert.deepEqual(png.match(/^import .*$/gm), ['import { Inflate } from "fflate";']);
+  assert.doesNotMatch(png, /unzip/i);
   const migration = fs.readFileSync("supabase/migrations/20261026120000_store_import_photos.sql", "utf8");
   assert.match(migration, /grant execute on function public\.record_store_import_photo_checks\(uuid, uuid, jsonb\) to service_role;/);
   assert.doesNotMatch(migration, /record_store_import_photo_checks\(uuid, uuid, jsonb\) to authenticated/);

@@ -1,12 +1,19 @@
 // Server-side check of one uploaded import photo (design §8.1 step 3). The browser may have re-encoded the photo, but
-// nothing it did is trusted: the type comes from the bytes, the dimensions from the header (no full decode), and a
-// file that also reads as a web page is refused. The database records the outcome (record_store_import_photo_checks).
+// nothing it did is trusted: the type comes from the bytes, the dimensions from the header, and a file that also reads
+// as a web page is refused. The database records the outcome (record_store_import_photo_checks).
 //
 // "From the bytes" means the whole file: each format is walked from its signature to its real end (JPEG segments and
 // scans up to EOI, every PNG chunk with its CRC, every WebP chunk), so a truncated image, a forged ending or anything
-// appended after the image (another file, an archive, a script) is refused. Only the structure is read; pixels are
-// never decoded.
+// appended after the image (another file, an archive, a script) is refused. Then, once the dimensions are within
+// bounds, the compressed image data is read through as a decoder reads it, so a file whose structure is intact but
+// whose data stops short (an empty IDAT, a scan cut after one byte before a forged EOI) is refused too (Codex re-check
+// R3): every JPEG scan decodes to the end of its blocks, PNG data inflates to exactly the rows IHDR implies, a WebP
+// stream parses to its last macroblock or pixel. Pixels are never reconstructed. Real photos up to 5 MB take well
+// under a second; a file crafted to be slow, up to about 2 s (each walk's file gives its bounds).
 import { createHash } from "node:crypto";
+import { jpegScansComplete, type JpegSegment } from "@/lib/store-import/photo-jpeg-data";
+import { pngImageDataComplete, type PngImage } from "@/lib/store-import/photo-png-data";
+import { webpImageDataComplete, type WebpImage } from "@/lib/store-import/photo-webp-data";
 
 export const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 export const PHOTO_MIN_SIDE = 400;
@@ -41,6 +48,7 @@ export function checkPhoto(input: Uint8Array): PhotoCheck {
   if (width < PHOTO_MIN_SIDE || height < PHOTO_MIN_SIDE || width > PHOTO_MAX_SIDE || height > PHOTO_MAX_SIDE) {
     return { ok: false, code: "PHOTO_DIMENSIONS", bytes };
   }
+  if (!imageDataComplete(header)) return { ok: false, code: "PHOTO_NOT_IMAGE", bytes };
   return {
     ok: true,
     mime_type: header.mime,
@@ -51,9 +59,21 @@ export function checkPhoto(input: Uint8Array): PhotoCheck {
   };
 }
 
-type Header = { mime: PhotoMime; width: number; height: number };
+// `complete` reads the image data through (photo-*-data.ts); it is only run once the dimensions are known to be in
+// bounds, since its work grows with them.
+type Header = { mime: PhotoMime; width: number; height: number; complete: () => boolean };
 
-// The type and dimensions of a complete JPEG, PNG or WebP that ends exactly where the file ends; null otherwise.
+// An exception from a data walk means the data could not be read through, so the photo is not accepted.
+function imageDataComplete(header: Header) {
+  try {
+    return header.complete();
+  } catch {
+    return false;
+  }
+}
+
+// The type and dimensions of a JPEG, PNG or WebP whose structure is whole and ends exactly where the file ends, with
+// the check of its image data; null otherwise.
 export function readHeader(data: Uint8Array): Header | null {
   if (data.length >= 4 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) return readJpeg(data);
   if (data.length >= 8 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((value, index) => data[index] === value)) {
@@ -79,8 +99,9 @@ function isJpegTableOrMisc(marker: number) {
 // bytes of the file. Any other marker (a second SOI or frame, reserved or unsupported codes) is refused.
 function readJpeg(data: Uint8Array): Header | null {
   let offset = 2;
-  let frame: Header | null = null;
+  let frame: Omit<Header, "complete"> | null = null;
   let scans = 0;
+  const decoderSegments: JpegSegment[] = [];
   for (let segments = 0; segments < JPEG_MAX_SEGMENTS; segments += 1) {
     // A marker is 0xFF, optionally more 0xFF fill bytes, then its code.
     if (data[offset] !== 0xff) return null;
@@ -88,7 +109,10 @@ function readJpeg(data: Uint8Array): Header | null {
     if (offset >= data.length) return null;
     const marker = data[offset];
     offset += 1;
-    if (marker === 0xd9) return frame && scans && offset === data.length ? frame : null;
+    if (marker === 0xd9) {
+      if (!frame || !scans || offset !== data.length) return null;
+      return { ...frame, complete: () => jpegScansComplete(data, decoderSegments) };
+    }
     if ((marker >= 0xd0 && marker <= 0xd7) || marker === 0x01) continue; // RSTn and TEM stand alone
     if (offset + 2 > data.length) return null;
     const length = u16be(data, offset);
@@ -98,6 +122,7 @@ function readJpeg(data: Uint8Array): Header | null {
       if (frame) return null;
       frame = readJpegFrame(data, offset, length);
       if (!frame) return null;
+      decoderSegments.push({ marker, start: offset + 2, end, scanEnd: end });
     } else if (marker === 0xda) {
       // Ns components, two bytes each, then Ss, Se and Ah/Al.
       const components = data[offset + 2];
@@ -106,10 +131,13 @@ function readJpeg(data: Uint8Array): Header | null {
       // -1: the file ends inside the scan. A scan without a single byte of image data is not an image either.
       if (scanEnd <= end) return null;
       scans += 1;
+      decoderSegments.push({ marker, start: offset + 2, end, scanEnd });
       offset = scanEnd;
       continue;
     } else if (!isJpegTableOrMisc(marker)) {
       return null;
+    } else if (marker === 0xc4 || marker === 0xdb || marker === 0xdd) {
+      decoderSegments.push({ marker, start: offset + 2, end, scanEnd: end }); // DHT, DQT and DRI matter to the data walk
     }
     offset = end;
   }
@@ -117,7 +145,7 @@ function readJpeg(data: Uint8Array): Header | null {
 }
 
 // SOFn: length, precision, height, width, Nf components of three bytes each.
-function readJpegFrame(data: Uint8Array, offset: number, length: number): Header | null {
+function readJpegFrame(data: Uint8Array, offset: number, length: number): Omit<Header, "complete"> | null {
   const components = data[offset + 7];
   if (length < 8 || components < 1 || components > 4 || length !== 8 + 3 * components) return null;
   const height = u16be(data, offset + 3);
@@ -152,7 +180,9 @@ const PNG_BIT_DEPTHS: Record<number, number[]> = { 0: [1, 2, 4, 8, 16], 2: [8, 1
 // letter) are skipped; an unknown critical chunk is refused, as a decoder would.
 function readPng(data: Uint8Array): Header | null {
   let offset = 8;
-  let header: Header | null = null;
+  let header: Omit<Header, "complete"> | null = null;
+  let image: PngImage | null = null;
+  const idat: [number, number][] = [];
   let colorType = -1;
   let palette = false;
   let imageData: "none" | "reading" | "done" = "none";
@@ -171,14 +201,18 @@ function readPng(data: Uint8Array): Header | null {
       header = readPngHeader(data, start);
       if (!header) return null;
       colorType = data[start + 9];
+      image = { ...header, bitDepth: data[start + 8], colorType, interlaced: data[start + 12] === 1 };
     } else if (type === "PLTE") {
       if (palette || imageData !== "none" || length === 0 || length > 768 || length % 3) return null;
       palette = true;
     } else if (type === "IDAT") {
       if (imageData === "done" || (colorType === 3 && !palette)) return null;
       imageData = "reading";
+      idat.push([start, end]);
     } else if (type === "IEND") {
-      return length === 0 && imageData !== "none" && end + 4 === data.length ? header : null;
+      if (length !== 0 || imageData === "none" || end + 4 !== data.length || !header || !image) return null;
+      const pixels = image;
+      return { ...header, complete: () => pngImageDataComplete(data, pixels, idat) };
     } else if (type.charCodeAt(0) < 0x61) {
       return null;
     }
@@ -188,7 +222,7 @@ function readPng(data: Uint8Array): Header | null {
 }
 
 // IHDR: width, height, bit depth, colour type, compression, filter and interlace methods.
-function readPngHeader(data: Uint8Array, start: number): Header | null {
+function readPngHeader(data: Uint8Array, start: number): Omit<Header, "complete"> | null {
   const width = u32be(data, start);
   const height = u32be(data, start + 4);
   if (!width || !height || width > 0x7fffffff || height > 0x7fffffff) return null;
@@ -220,12 +254,14 @@ function crc32(data: Uint8Array, start: number, end: number) {
 // odd-sized chunk being followed by one pad byte. A simple file is a single VP8 (lossy) or VP8L (lossless) chunk. An
 // extended file starts with VP8X and holds exactly one VP8 or VP8L image (ALPH, ICCP, EXIF, XMP and unknown chunks
 // are skipped) whose size matches the VP8X canvas. Animated WebP (the VP8X flag, ANIM or ANMF) is refused: a listing
-// photo is a still image.
+// photo is a still image. A lossy image is decoded with the last ALPH chunk before it, as libwebp does.
 function readWebp(data: Uint8Array): Header | null {
   if (u32le(data, 4) + 8 !== data.length) return null;
   let offset = 12;
   let canvas: { width: number; height: number } | null = null;
-  let image: Header | null = null;
+  let image: Omit<Header, "complete"> | null = null;
+  let stream: WebpImage | null = null;
+  let alpha: [number, number] | null = null;
   for (let chunks = 0; offset < data.length; chunks += 1) {
     if (chunks >= WEBP_MAX_CHUNKS || offset + 8 > data.length) return null;
     const type = ascii(data, offset, 4);
@@ -241,18 +277,22 @@ function readWebp(data: Uint8Array): Header | null {
       if (image || (chunks > 0 && !canvas)) return null;
       image = type === "VP8 " ? readVp8(data, start, size) : readVp8l(data, start, size);
       if (!image) return null;
+      stream = { lossless: type === "VP8L", start, end: start + size, width: image.width, height: image.height };
     } else if (!canvas || type === "VP8X" || type === "ANIM" || type === "ANMF") {
       return null;
+    } else if (type === "ALPH" && !image) {
+      alpha = [start, start + size];
     }
     offset = next;
   }
-  if (!image || (canvas && (canvas.width !== image.width || canvas.height !== image.height))) return null;
-  return image;
+  if (!image || !stream || (canvas && (canvas.width !== image.width || canvas.height !== image.height))) return null;
+  const pixels = stream;
+  return { ...image, complete: () => webpImageDataComplete(data, pixels, pixels.lossless ? null : alpha) };
 }
 
 // VP8 key frame header, checked as libwebp does: a key frame, a known profile, shown, a first partition that fits
 // the chunk, the start code 9d 01 2a, then 14-bit width and height.
-function readVp8(data: Uint8Array, start: number, size: number): Header | null {
+function readVp8(data: Uint8Array, start: number, size: number): Omit<Header, "complete"> | null {
   if (size < 10) return null;
   const bits = u24le(data, start);
   if (bits & 1 || ((bits >> 1) & 7) > 3 || !((bits >> 4) & 1) || bits >> 5 >= size) return null;
@@ -264,7 +304,7 @@ function readVp8(data: Uint8Array, start: number, size: number): Header | null {
 
 // VP8L header: signature 0x2f, then 14-bit width − 1, 14-bit height − 1, the alpha bit and a 3-bit version that must
 // be 0.
-function readVp8l(data: Uint8Array, start: number, size: number): Header | null {
+function readVp8l(data: Uint8Array, start: number, size: number): Omit<Header, "complete"> | null {
   if (size < 5 || data[start] !== 0x2f) return null;
   const bits = u32le(data, start + 1);
   if (bits >>> 29) return null;

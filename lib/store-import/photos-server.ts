@@ -83,9 +83,15 @@ export async function requestPhotoUploads(db: Db, sessionId: string, files: Phot
   });
 }
 
+const CHECK_BUDGET_MS = 30_000;
+
 // Reads each uploaded object (≤ 25, one at a time so at most one photo is in memory), checks its bytes and records the
 // outcome. Objects that are not there yet are left waiting. Rejected objects are deleted right away; if that fails,
 // the daily cleanup picks them up.
+//
+// The check reads each photo's image data through (Codex re-check R3): under a second for a real photo, up to about
+// 2 s for a file crafted to be slow. No new check starts after CHECK_BUDGET_MS, so 25 such files cannot run the
+// request past its 60 s limit; the photos left unchecked stay waiting, like ones not uploaded yet.
 //
 // Each object is read as a stream and never past the 5 MB photo limit: a larger object is reported as too large as
 // soon as it passes the limit, without being held in memory. The bucket's own 5 MB limit is the first bound; this
@@ -105,8 +111,10 @@ export async function completePhotoUploads(db: Db, ownerUserId: string, sessionI
   if (error) throw importErrorFrom(error);
   const waiting = ((data ?? []) as { id: string; object_path: string; status: string }[]).filter((asset) => asset.status === "awaiting_upload");
 
+  const started = Date.now();
   const results: Record<string, unknown>[] = [];
   for (const asset of waiting) {
+    if (Date.now() - started > CHECK_BUDGET_MS) break;
     const check = await checkStoredPhoto(admin, asset.object_path);
     if (check) results.push({ asset_id: asset.id, ...check });
   }

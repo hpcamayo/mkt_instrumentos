@@ -1,11 +1,15 @@
 // Review fixes for import photos (Codex review of 2026-10-16, item 4). The server-side check walks each format to its
 // real end (JPEG segments and scans up to EOI, every PNG chunk with its CRC, every WebP chunk) and refuses anything
-// incomplete or appended; the browser ZIP reader inflates in small steps, so a size header that lies cannot make it
-// produce more than about 1 MiB before the cap is checked, and entries it skips are not kept in memory; completing an
-// upload never reads more than one photo's limit from storage. Runs with `pnpm test`.
+// incomplete or appended, then reads the image data through as a decoder does (Codex re-check R3), so data that stops
+// short behind an intact structure is refused too; the browser ZIP reader inflates in small steps, so a size header
+// that lies cannot make it produce more than about 1 MiB before the cap is checked, and entries it skips are not kept
+// in memory; completing an upload never reads more than one photo's limit from storage. Runs with `pnpm test`.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const Module = require("node:module");
+const fs = require("node:fs");
+const path = require("node:path");
+const zlib = require("node:zlib");
 const fflate = require("fflate");
 const { zipSync, deflateSync, strToU8 } = fflate;
 
@@ -357,12 +361,13 @@ test("a PNG that ends in IEND but whose chunk walk or CRC is broken is refused",
   // Several IDAT chunks in a row and ancillary chunks are normal.
   assert.equal(check(Buffer.concat([PNG_SIGNATURE, ihdr, pngChunk("tEXt", Buffer.from("Comment\0Laria")), ...split, iend])).ok, true);
 
-  // A palette image needs its PLTE before the image data.
+  // A palette image needs its PLTE before the image data (one index byte per pixel here).
   const paletteHeader = Buffer.from(chunks[0].data);
   paletteHeader[9] = 3;
   const palette = pngChunk("PLTE", Buffer.alloc(6, 0x80));
-  assert.equal(code(Buffer.concat([PNG_SIGNATURE, pngChunk("IHDR", paletteHeader), ...split, iend])), "PHOTO_NOT_IMAGE", "palette missing");
-  assert.equal(check(Buffer.concat([PNG_SIGNATURE, pngChunk("IHDR", paletteHeader), palette, ...split, iend])).ok, true);
+  const indexes = pngChunk("IDAT", zlib.deflateSync(Buffer.alloc(400 * (1 + 400))));
+  assert.equal(code(Buffer.concat([PNG_SIGNATURE, pngChunk("IHDR", paletteHeader), indexes, iend])), "PHOTO_NOT_IMAGE", "palette missing");
+  assert.equal(check(Buffer.concat([PNG_SIGNATURE, pngChunk("IHDR", paletteHeader), palette, indexes, iend])).ok, true);
 });
 
 test("a PNG with anything after its IEND is refused, even data that ends like an IEND", () => {
@@ -434,6 +439,145 @@ test("damaged copies of real files never throw and never pass with impossible va
       assert.ok(["image/jpeg", "image/png", "image/webp"].includes(result.mime_type));
       assert.ok(result.width >= 400 && result.width <= 8000 && result.height >= 400 && result.height <= 8000);
     }
+  }
+});
+
+// ------------------------------------------------------------------ server-side check: the image data is all there
+
+// Codex re-check R3: files whose structure is sound (every CRC right, an IEND or EOI at the end, chunk sizes that add
+// up) but whose image data stops short. Each refused case here is refused or warned about by libpng, libjpeg-turbo or
+// libwebp too; Pillow fills a short JPEG with grey and passes it.
+
+const EOI = Buffer.from([0xff, 0xd9]);
+const pngHeader = () => pngChunks(REAL.png)[0].data;
+const pngRows = () => zlib.inflateSync(pngChunks(REAL.png).find((chunk) => chunk.type === "IDAT").data);
+const pngWith = (stream, header = pngHeader(), ...before) =>
+  Buffer.concat([PNG_SIGNATURE, pngChunk("IHDR", header), ...before, pngChunk("IDAT", stream), pngChunk("IEND")]);
+
+// IHDR data, and zero rows of the size it implies: per Adam7 pass when interlaced, each row a filter byte and its
+// packed samples.
+function pngLayout(width, height, bitDepth, colorType, interlaced) {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = bitDepth;
+  header[9] = colorType;
+  header[12] = interlaced ? 1 : 0;
+  const channels = [1, 0, 3, 1, 2, 0, 4][colorType];
+  const passes = interlaced ? [[0, 0, 8, 8], [4, 0, 8, 8], [0, 4, 4, 8], [2, 0, 4, 4], [0, 2, 2, 4], [1, 0, 2, 2], [0, 1, 1, 2]] : [[0, 0, 1, 1]];
+  let bytes = 0;
+  for (const [x0, y0, dx, dy] of passes) {
+    const columns = Math.ceil(Math.max(0, width - x0) / dx);
+    const rows = Math.ceil(Math.max(0, height - y0) / dy);
+    if (columns && rows) bytes += rows * (1 + Math.ceil((columns * channels * bitDepth) / 8));
+  }
+  return { header, rows: Buffer.alloc(bytes) };
+}
+
+test("a PNG whose image data is empty or stops short is refused, CRCs and all", () => {
+  // Codex's 57-byte file: IHDR, an empty IDAT, IEND.
+  const empty = Buffer.concat([PNG_SIGNATURE, pngChunk("IHDR", pngHeader()), pngChunk("IDAT"), pngChunk("IEND")]);
+  assert.equal(empty.length, 57);
+  assert.equal(code(empty), "PHOTO_NOT_IMAGE", "empty IDAT");
+
+  const rows = pngRows(); // 400 rows of 1 + 400 × 3 bytes
+  const stream = zlib.deflateSync(rows);
+  assert.equal(check(pngWith(stream)).ok, true, "the same rows deflated again");
+  assert.equal(code(pngWith(stream.subarray(0, stream.length >> 1))), "PHOTO_NOT_IMAGE", "deflate data cut in half");
+  assert.equal(code(pngWith(zlib.deflateSync(rows.subarray(0, rows.length - 1201)))), "PHOTO_NOT_IMAGE", "one row short");
+  assert.equal(code(pngWith(zlib.deflateSync(Buffer.concat([rows, rows.subarray(0, 1201)])))), "PHOTO_NOT_IMAGE", "a row too many");
+  const unknownFilter = Buffer.from(rows);
+  unknownFilter[1201 * 7] = 5;
+  assert.equal(code(pngWith(zlib.deflateSync(unknownFilter))), "PHOTO_NOT_IMAGE", "a row with filter type 5");
+  // Every row there, but the zlib stream does not end as libpng needs it to.
+  assert.equal(code(pngWith(stream.subarray(0, stream.length - 4))), "PHOTO_NOT_IMAGE", "no zlib checksum");
+  const wrongChecksum = Buffer.from(stream);
+  wrongChecksum[wrongChecksum.length - 1] ^= 1;
+  assert.equal(code(pngWith(wrongChecksum)), "PHOTO_NOT_IMAGE", "wrong zlib checksum");
+  const interlaced = pngLayout(401, 403, 8, 2, true);
+  const lastPass = 201 * (1 + 401 * 3);
+  assert.equal(code(pngWith(zlib.deflateSync(interlaced.rows.subarray(0, -lastPass)), interlaced.header)), "PHOTO_NOT_IMAGE", "Adam7 pass 7 missing");
+});
+
+test("PNG image data in any legal layout passes", () => {
+  const stream = zlib.deflateSync(pngRows(), { level: 1 });
+  const pieces = [];
+  for (let offset = 0; offset < stream.length; offset += 7) pieces.push(pngChunk("IDAT", stream.subarray(offset, offset + 7)));
+  assert.equal(check(Buffer.concat([PNG_SIGNATURE, pngChunk("IHDR", pngHeader()), ...pieces, pngChunk("IEND")])).ok, true, "7-byte IDATs");
+  const layouts = [
+    [401, 403, 8, 2, true, "interlaced RGB, odd sides"],
+    [403, 401, 1, 0, false, "1-bit grey"],
+    [400, 400, 16, 6, false, "16-bit RGBA"],
+    [405, 407, 2, 3, true, "2-bit palette, interlaced"],
+  ];
+  for (const [width, height, bitDepth, colorType, interlaced, name] of layouts) {
+    const { header, rows } = pngLayout(width, height, bitDepth, colorType, interlaced);
+    const palette = colorType === 3 ? [pngChunk("PLTE", Buffer.alloc(12, 0x80))] : [];
+    const result = check(pngWith(zlib.deflateSync(rows), header, ...palette));
+    assert.equal(result.ok, true, name);
+    assert.deepEqual([result.width, result.height], [width, height], name);
+  }
+});
+
+test("a JPEG whose scan stops short before a forged EOI is refused", () => {
+  for (const name of ["jpegRestart", "jpegProgressive"]) {
+    const bytes = REAL[name];
+    const scan = jpegSegments(bytes).find((segment) => segment.marker === 0xda);
+    // Codex's case: the scan cut to one byte, then EOI.
+    assert.equal(code(Buffer.concat([bytes.subarray(0, scan.end + 1), EOI])), "PHOTO_NOT_IMAGE", `${name}: one scan byte`);
+  }
+  const bytes = REAL.jpegRestart;
+  const scan = jpegSegments(bytes).find((segment) => segment.marker === 0xda);
+  let half = scan.end + ((bytes.length - 2 - scan.end) >> 1);
+  while (bytes[half - 1] === 0xff) half -= 1; // never leave half of a stuffed byte or a marker
+  assert.equal(code(Buffer.concat([bytes.subarray(0, half), EOI])), "PHOTO_NOT_IMAGE", "half the scan");
+  let lastRestart = bytes.length - 3;
+  while (!(bytes[lastRestart] === 0xff && bytes[lastRestart + 1] >= 0xd0 && bytes[lastRestart + 1] <= 0xd7)) lastRestart -= 1;
+  assert.equal(code(Buffer.concat([bytes.subarray(0, lastRestart), EOI])), "PHOTO_NOT_IMAGE", "the last restart interval missing");
+
+  // A progressive file cut inside a later scan is refused; one that ends after a whole scan, once every component has
+  // appeared, is a coarser picture that decoders show without a warning, and passes.
+  const progressive = REAL.jpegProgressive;
+  const scans = [];
+  for (let at = progressive.indexOf(Buffer.from([0xff, 0xda])); at >= 0; at = progressive.indexOf(Buffer.from([0xff, 0xda]), at + 2)) scans.push(at);
+  const seventh = scans[6] + 2 + progressive.readUInt16BE(scans[6] + 2);
+  assert.equal(code(Buffer.concat([progressive.subarray(0, seventh + 100), EOI])), "PHOTO_NOT_IMAGE", "inside the seventh scan");
+  assert.equal(check(Buffer.concat([progressive.subarray(0, scans[6]), EOI])).ok, true, "after the sixth scan");
+});
+
+test("a WebP whose image data stops short is refused, sizes and all", () => {
+  const lossy = webpChunks(REAL.webpLossy)[0].data;
+  for (const cut of [2, 40, 300]) {
+    assert.equal(code(webpFile(webpChunk("VP8 ", lossy.subarray(0, lossy.length - cut)))), "PHOTO_NOT_IMAGE", `lossy, ${cut} bytes short`);
+  }
+  const lossless = webpChunks(REAL.webpLossless)[0].data;
+  for (const cut of [1, 10]) {
+    assert.equal(code(webpFile(webpChunk("VP8L", lossless.subarray(0, lossless.length - cut)))), "PHOTO_NOT_IMAGE", `lossless, ${cut} bytes short`);
+  }
+  const [header, alpha, image] = webpChunks(REAL.webpAlpha);
+  const raw = (chunk) => rawChunk(REAL.webpAlpha, chunk);
+  assert.equal(code(webpFile(raw(header), webpChunk("ALPH", alpha.data.subarray(0, alpha.data.length - 4)), raw(image))), "PHOTO_NOT_IMAGE", "alpha plane short");
+  assert.equal(code(webpFile(raw(header), raw(alpha), webpChunk("VP8 ", image.data.subarray(0, image.data.length - 40)))), "PHOTO_NOT_IMAGE", "colour short");
+  assert.equal(check(webpFile(raw(header), raw(alpha), raw(image))).ok, true, "rebuilt whole");
+});
+
+test("the prototype's sample photos pass, except the two meant to fail", () => {
+  const files = [];
+  const visit = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const file = path.join(dir, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (/\.(jpe?g|png|webp)$/i.test(entry.name)) files.push(file);
+    }
+  };
+  visit("scripts/prototype/samples");
+  assert.ok(files.length >= 70, `${files.length} sample photos`);
+  for (const file of files) {
+    const result = check(fs.readFileSync(file));
+    const name = path.basename(file);
+    if (name === "no-es-imagen.jpg") assert.equal(result.code, "PHOTO_NOT_IMAGE", name);
+    else if (name === "foto-pequena.jpg") assert.equal(result.code, "PHOTO_DIMENSIONS", name);
+    else assert.equal(result.ok, true, file);
   }
 });
 
@@ -646,4 +790,40 @@ test("completing an upload never reads more than the photo limit from storage", 
   assert.equal(fine.ok, true);
   assert.equal(fine.width, 400);
   assert.equal(fine.bytes, REAL.jpegRestart.length);
+});
+
+test("one completion request starts no check after its time budget; the photos left stay waiting", async () => {
+  const assetIds = ["2b6b1f8e-6c43-4a8e-9c2f-0d2f5e0b9a11", "3b6b1f8e-6c43-4a8e-9c2f-0d2f5e0b9a11", "4b6b1f8e-6c43-4a8e-9c2f-0d2f5e0b9a11"];
+  const realNow = Date.now;
+  let now = realNow();
+  Date.now = () => now;
+  const downloaded = [];
+  // Each photo takes 31 s to fetch and check here, past the 30 s budget on its own.
+  const download = (path) => ({
+    asStream: async () => {
+      downloaded.push(path);
+      now += 31_000;
+      return { data: new Response(REAL.jpegRestart).body, error: null };
+    },
+  });
+  const recorded = [];
+  admin = {
+    storage: { from: () => ({ download, remove: async () => ({ error: null }) }) },
+    rpc: async (name, args) => {
+      if (name === "record_store_import_photo_checks") recorded.push(...args.p_results);
+      return { data: { validated: 1, rejected: [], photo_counts: {} }, error: null };
+    },
+  };
+  const rows = assetIds.map((id, index) => ({ id, object_path: `owner/session/${index}.jpg`, status: "awaiting_upload" }));
+  const db = { from: () => ({ select: () => ({ eq: () => ({ in: async () => ({ data: rows, error: null }) }) }) }) };
+  let result;
+  try {
+    result = await completePhotoUploads(db, "owner", "session", assetIds);
+  } finally {
+    admin = null;
+    Date.now = realNow;
+  }
+  assert.deepEqual(downloaded, ["owner/session/0.jpg"]);
+  assert.deepEqual(recorded.map((entry) => [entry.asset_id, entry.ok]), [[assetIds[0], true]]);
+  assert.equal(result.waiting, 2);
 });
