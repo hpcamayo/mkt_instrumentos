@@ -45,12 +45,12 @@ export function InventoryViews({ filters, views, canWrite }: { filters: Inventor
       <ul className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0">
         {builtIn.map((view) => (
           <li key={view.name}>
-            <ChipLink href={inventoryHref(view.screen)} selected={sameFilters(view.screen, filters)} current="page">{view.name}</ChipLink>
+            <ChipLink href={inventoryHref(view.screen)} selected={sameFilters(view.screen, filters)} current="page" scroll={false}>{view.name}</ChipLink>
           </li>
         ))}
         {own.map((view) => (
           <li key={view.id} className="flex items-center">
-            <ChipLink href={inventoryHref(view.screen)} selected={sameFilters(view.screen, filters)} current="page" className="rounded-r-none">{view.name}</ChipLink>
+            <ChipLink href={inventoryHref(view.screen)} selected={sameFilters(view.screen, filters)} current="page" scroll={false} className="rounded-r-none">{view.name}</ChipLink>
             {canWrite ? (
               <button
                 type="button"

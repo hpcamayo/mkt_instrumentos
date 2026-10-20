@@ -13,17 +13,19 @@ export function StoreDirectoryTabs({ view }: { view: StoreDirectoryView }) {
     { key: "tiendas", label: "Tiendas", href: storeDirectoryHref() },
     { key: "publicaciones", label: "Publicaciones de tiendas verificadas", href: storeDirectoryHref({ view: "publicaciones" }) },
   ] as const;
+  // Two big, equal tabs (Henri's review: "they have to be stupidly obvious"): a segmented control, the current view
+  // filled in ink.
   return (
-    <nav aria-label="Vista de tiendas" className="scrollbar-none -mx-4 overflow-x-auto border-b border-line-deco px-4 sm:mx-0 sm:px-0">
-      <ul className="flex gap-1">
+    <nav aria-label="Vista de tiendas">
+      <ul className="grid grid-cols-2 gap-1 rounded-control border border-line-strong bg-surface p-1">
         {tabs.map((tab) => (
-          <li key={tab.key} className="shrink-0">
+          <li key={tab.key} className="min-w-0">
             <Link
               href={tab.href}
               aria-current={view === tab.key ? "page" : undefined}
               className={cn(
-                "-mb-px inline-flex min-h-11 items-center border-b-2 px-3 t-ui font-semibold focus-visible:outline-offset-[-2px]",
-                view === tab.key ? "border-ink text-ink" : "border-transparent text-ink-2 hover:text-ink",
+                "flex min-h-14 h-full items-center justify-center rounded-control px-3 py-2 text-center text-[16px] font-bold leading-5 transition-colors duration-120 sm:text-[17px]",
+                view === tab.key ? "bg-ink text-surface" : "text-ink hover:bg-canvas",
               )}
             >
               {tab.label}

@@ -185,9 +185,9 @@ test("find-13: the directory's tabs, city chips, URLs and metadata", () => {
   const directory = load("components/store/store-directory.tsx", mocks);
   const tabs = html(React.createElement(directory.StoreDirectoryTabs, { view: "publicaciones" }));
   assert.match(tabs, /<nav aria-label="Vista de tiendas"/);
-  assert.match(tabs, /<a href="\/tiendas" class="[^"]*border-transparent[^"]*">Tiendas<\/a>/);
-  assert.match(tabs, /<a href="\/tiendas\?vista=publicaciones" aria-current="page" class="[^"]*border-ink[^"]*">Publicaciones de tiendas verificadas<\/a>/);
-  assert.match(tabs, /min-h-11/);
+  assert.match(tabs, /<a href="\/tiendas" class="[^"]*text-ink hover:bg-canvas[^"]*">Tiendas<\/a>/);
+  assert.match(tabs, /<a href="\/tiendas\?vista=publicaciones" aria-current="page" class="[^"]*bg-ink text-surface[^"]*">Publicaciones de tiendas verificadas<\/a>/);
+  assert.match(tabs, /min-h-14/);
   const chips = html(React.createElement(directory.StoreCityChips, { cities: storefront.storeDirectoryCities(stores), current: "Lima", total: 4 }));
   assert.match(chips, /<a href="\/tiendas" aria-current="page"|href="\/tiendas"[^>]*>Todas/);
   assert.match(chips, /<a href="\/tiendas" aria-current="page" class="[^"]*bg-accent[^"]*"><svg[^>]*>.*?<span class="truncate">Lima <span/);

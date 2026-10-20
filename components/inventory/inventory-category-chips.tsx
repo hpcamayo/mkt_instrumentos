@@ -18,13 +18,13 @@ export function InventoryCategoryChips({ filters, counts }: { filters: Inventory
     <nav aria-label="Categorías del inventario" className="border-b border-subtle px-4 py-3 md:px-5">
       <ul className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0">
         <li>
-          <ChipLink href={inventoryHref({ ...filters, category: "" })} selected={!filters.category} current="page">
+          <ChipLink href={inventoryHref({ ...filters, category: "" })} selected={!filters.category} current="page" scroll={false}>
             Todas ({total})
           </ChipLink>
         </li>
         {chips.map((chip) => (
           <li key={chip.value}>
-            <ChipLink href={inventoryHref({ ...filters, category: chip.value })} selected={filters.category === chip.value} current="page">
+            <ChipLink href={inventoryHref({ ...filters, category: chip.value })} selected={filters.category === chip.value} current="page" scroll={false}>
               {chip.label} ({chip.count})
             </ChipLink>
           </li>
