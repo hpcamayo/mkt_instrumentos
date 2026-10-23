@@ -379,7 +379,7 @@ test("authenticated report controls cover public listings, active stores, and re
   assert.match(trigger, /dynamic\(\(\) => import\("@\/components\/content-report-form"\)/);
   assert.doesNotMatch(trigger, /browser-client|getSupabaseBrowserClient/);
 
-  assert.match(control, /type ReportTarget = "listing" \| "store" \| "review"/);
+  assert.match(control, /type ReportTarget = "listing" \| "store" \| "review"( \| "question")?;/);
   assert.match(control, /useMarketplaceAccount\(\)/);
   assert.match(control, /href=\{`\/login\?next=/);
   assert.match(control, /\.rpc\("submit_content_report"/);
@@ -400,7 +400,9 @@ test("authenticated report controls cover public listings, active stores, and re
 
   assert.match(listing, /targetType="listing"[\s\S]{0,100}label="Reportar publicación"/);
   assert.match(store, /targetType="store"[\s\S]{0,100}label="Reportar tienda"/);
-  assert.match(reputation, /reputation\.items\.map[\s\S]*targetType="review"[\s\S]{0,100}label="Reportar reseña"/);
+  // Effortless list-06: each review is a ReviewCard (components/listing/review-list.tsx), which carries the report control.
+  assert.match(reputation, /reputation\.items\.map\(\(review\) => <ReviewCard /);
+  assert.match(source("components/listing/review-list.tsx"), /targetType="review"[\s\S]{0,100}label="Reportar reseña"/);
   assert.doesNotMatch(control, /reporter_user_id|owner_user_id/);
 });
 

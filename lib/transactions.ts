@@ -15,6 +15,10 @@ export type EligibleBuyer = {
   buyer_user_id: string;
   display_name: string | null;
   last_contact_at: string;
+  // The last three digits of the WhatsApp number the buyer wrote from, so the seller recognises the chat; null when unknown.
+  phone_last3: string | null;
+  // The buyer told Laria "Sí, lo compré" for this listing.
+  reported_purchase: boolean;
 };
 
 export type TransactionCenterItem = {
@@ -64,6 +68,8 @@ export type TransactionDetail = {
   review_window_open: boolean;
   own_review: TransactionReview | null;
   visible_reviews: TransactionReview[];
+  // The seller's count of verified sales (this one included); only for role "seller", null for buyers.
+  seller_verified_sales?: number | null;
 };
 
 export type PublicReputation = {
@@ -103,19 +109,50 @@ export function parseTransactionDetail(value: unknown): TransactionDetail | null
     || typeof value.review_window_open !== "boolean"
     || !(value.own_review === null || isReview(value.own_review))
     || !Array.isArray(value.visible_reviews)
-    || !value.visible_reviews.every(isReview)) return null;
+    || !value.visible_reviews.every(isReview)
+    || !(value.seller_verified_sales === undefined || value.seller_verified_sales === null || isCount(value.seller_verified_sales))) return null;
   return value as unknown as TransactionDetail;
 }
 
+// phone_last3 is null or exactly three digits (absent reads as null); reported_purchase is a boolean (absent reads as
+// false). A buyer with any other shape is left out rather than shown with made-up details.
 export function parseEligibleBuyers(value: unknown): EligibleBuyer[] {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is EligibleBuyer => (
-    isRecord(item)
-    && isString(item.buyer_user_id)
-    && nullableString(item.display_name)
-    && isDate(item.last_contact_at)
-  ));
+  return value.flatMap((item): EligibleBuyer[] => {
+    if (!isRecord(item)
+      || !isString(item.buyer_user_id)
+      || !nullableString(item.display_name)
+      || !isDate(item.last_contact_at)
+      || !(item.phone_last3 === undefined || item.phone_last3 === null || (typeof item.phone_last3 === "string" && /^\d{3}$/.test(item.phone_last3)))
+      || !(item.reported_purchase === undefined || typeof item.reported_purchase === "boolean")) return [];
+    return [{
+      buyer_user_id: item.buyer_user_id,
+      display_name: item.display_name,
+      last_contact_at: item.last_contact_at,
+      phone_last3: typeof item.phone_last3 === "string" ? item.phone_last3 : null,
+      reported_purchase: item.reported_purchase === true,
+    }];
+  });
 }
+
+// Whole calendar days in Lima from `now` to the review deadline: 0 is today, 1 tomorrow. Null once it has passed.
+export function reviewDaysLeft(deadline: string, now: number = Date.now()): number | null {
+  const end = Date.parse(deadline);
+  if (!Number.isFinite(end) || end <= now) return null;
+  const day = (time: number) => Date.parse(`${limaDay.format(new Date(time))}T00:00:00Z`);
+  return Math.round((day(end) - day(now)) / 86_400_000);
+}
+
+// "Tu reseña vence hoy" / "mañana" / "en 3 días"; null once the window closed.
+export function reviewDueLabel(deadline: string, now: number = Date.now()): string | null {
+  const days = reviewDaysLeft(deadline, now);
+  if (days === null) return null;
+  if (days === 0) return "Tu reseña vence hoy";
+  if (days === 1) return "Tu reseña vence mañana";
+  return `Tu reseña vence en ${days} días`;
+}
+
+const limaDay = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" });
 
 // The public reputation, or null when the payload is not what get_public_reputation returns (a failed call reads as
 // null too): pages then leave the reviews out instead of claiming there are none (UX-4).

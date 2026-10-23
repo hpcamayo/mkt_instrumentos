@@ -2,15 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { LocationFields } from "@/components/location-fields";
 import { PageNotice } from "@/components/page-notice";
-import { ConditionCards } from "@/components/selling/choice-fields";
+import { ConditionCards, FormSection } from "@/components/selling/choice-fields";
+import { MAX_SOURCE_PHOTO_BYTES, prepareListingPhoto } from "@/components/selling/prepare-photo";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import {
   MAX_LISTING_PHOTOS,
-  MAX_LISTING_PHOTO_BYTES,
   MIN_LISTING_PHOTOS,
   getInstrumentTypeOptions,
   type ListingSubmissionAttributes,
@@ -20,9 +20,12 @@ import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
 import { conditionChoices, validateSellDraft } from "@/lib/sell-form";
 import { useFormErrors } from "@/components/use-form-errors";
+import { returnLabel } from "@/lib/listing-return";
+import { fieldsForRejection, rejectionNote, rejectionReasonLabel, type ListingField } from "@/lib/rejection-reasons";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
+import { PriceInput } from "@/components/ui/price-input";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,6 +54,9 @@ type EditableListing = {
   listing_photos: ExistingPhoto[];
 };
 
+// mine-01: what the moderator rejected, so the form opens on what to fix.
+export type EditRejection = { kind: "listing" | "revision"; reason: string | null; codes: string[] };
+
 type PhotoItem =
   | { key: string; kind: "existing"; imageUrl: string; altText: string }
   | { key: string; kind: "new"; file: File; previewUrl: string };
@@ -74,6 +80,7 @@ export function ListingEditForm({
   returnHref,
   livePhotos,
   initialNotice = "",
+  rejection = null,
 }: {
   listing: EditableListing;
   hasPendingRevision: boolean;
@@ -81,6 +88,7 @@ export function ListingEditForm({
   returnHref: string;
   livePhotos: ExistingPhoto[];
   initialNotice?: string;
+  rejection?: EditRejection | null;
 }) {
   const router = useRouter();
   const [validation, errorSummary] = useFormErrors("editar", "guardar los cambios");
@@ -111,6 +119,35 @@ export function ListingEditForm({
   );
 
   const attributeGroup = getInstrumentFilterGroup(instrumentType);
+  const flagged = useMemo(() => fieldsForRejection(rejection?.codes ?? []), [rejection]);
+  // mine-02: rejected listings and drafts are fixed and sent in one step; published ones keep "Guardar cambios".
+  const sendsForReview = listing.status === "rejected" || listing.status === "draft";
+  const submitLabel = sendsForReview ? (isVerifiedStore ? "Guardar y publicar" : "Guardar y enviar a revisión") : "Guardar cambios";
+  // Which fields go live at once and which wait for review (approved listings of Particulares and unverified stores).
+  const showsReviewSplit = (listing.status === "approved" || listing.status === "hidden") && !isVerifiedStore;
+  const [pendingKinds, setPendingKinds] = useState<{ immediate: boolean; moderated: boolean }>({ immediate: false, moderated: false });
+  const fieldTag = (field: ListingField | "price_pen" | "location" | "attributes") => {
+    const reviewed = ["photos", "title", "category", "instrument_type", "brand", "model", "condition"].includes(field);
+    return (
+      <span className="inline-flex flex-wrap items-center gap-2">
+        {flagged.has(field as ListingField) ? <Tag tone="danger">Revisar</Tag> : null}
+        {showsReviewSplit ? <Tag tone={reviewed ? "line" : "neutral"}>{reviewed ? "Pasa por revisión" : "Se publica al instante"}</Tag> : null}
+      </span>
+    );
+  };
+  const labelWith = (label: string, field: Parameters<typeof fieldTag>[0]) => <span className="inline-flex flex-wrap items-center gap-2">{label}{fieldTag(field)}</span>;
+
+  function trackChanges(form: HTMLFormElement) {
+    if (!showsReviewSplit) return;
+    const formData = new FormData(form);
+    const current: Record<string, unknown> = {
+      title: read(formData, "title"), category, instrument_type: instrumentType, brand: read(formData, "brand"), model: read(formData, "model"), condition: read(formData, "condition"),
+      price_pen: parseWholeSolPrice(read(formData, "price_pen")), description: read(formData, "description"), city: read(formData, "city"), region: normalizePeruRegion(read(formData, "region")),
+    };
+    const moderatedNow = Object.keys(changedValues(current, listing, ["title", "category", "instrument_type", "brand", "model", "condition"])).length > 0 || photosChanged;
+    const immediateNow = Object.keys(changedValues(current, listing, ["price_pen", "description", "city", "region"])).length > 0;
+    setPendingKinds((previous) => (previous.immediate === immediateNow && previous.moderated === moderatedNow ? previous : { immediate: immediateNow, moderated: moderatedNow }));
+  }
   const moderatedNote =
     listing.status === "approved" || listing.status === "hidden"
       ? isVerifiedStore
@@ -133,8 +170,8 @@ export function ListingEditForm({
       showMessage("error", "Usa fotos JPEG, PNG o WebP.");
       return;
     }
-    if (files.some((file) => file.size > MAX_LISTING_PHOTO_BYTES)) {
-      showMessage("error", "Cada foto debe pesar 5 MB o menos.");
+    if (files.some((file) => file.size > MAX_SOURCE_PHOTO_BYTES)) {
+      showMessage("error", "Una de las fotos es demasiado pesada. Prueba con otra.");
       return;
     }
     if (photos.length + files.length > MAX_LISTING_PHOTOS) {
@@ -162,7 +199,7 @@ export function ListingEditForm({
     event.target.value = "";
     if (!file) return;
     if (!isImageFile(file)) return showMessage("error", "Usa fotos JPEG, PNG o WebP.");
-    if (file.size > MAX_LISTING_PHOTO_BYTES) return showMessage("error", "Cada foto debe pesar 5 MB o menos.");
+    if (file.size > MAX_SOURCE_PHOTO_BYTES) return showMessage("error", "Esta foto es demasiado pesada. Prueba con otra.");
     setPhotos((current) => current.map((photo, photoIndex) => {
       if (photoIndex !== index) return photo;
       if (photo.kind === "new") URL.revokeObjectURL(photo.previewUrl);
@@ -255,8 +292,24 @@ export function ListingEditForm({
 
     const immediate = changedValues(values, listing, ["price_pen", "description", "city", "region", "attributes"]);
     const moderated = changedValues(values, listing, ["title", "category", "instrument_type", "brand", "model", "condition"]);
-    if (!Object.keys(immediate).length && !Object.keys(moderated).length && !photosChanged) {
+    const unchanged = !Object.keys(immediate).length && !Object.keys(moderated).length && !photosChanged;
+    if (unchanged && !sendsForReview) {
       return showMessage("error", "No hay cambios para guardar.");
+    }
+    if (unchanged) {
+      busyRef.current = true;
+      setBusy(true);
+      setProgress(isVerifiedStore ? "Publicando…" : "Enviando a revisión…");
+      try {
+        await submitForReview();
+      } catch (error) {
+        showMessage("error", error instanceof Error ? error.message : "No se pudo enviar la publicación.");
+      } finally {
+        busyRef.current = false;
+        setBusy(false);
+        setProgress("");
+      }
+      return;
     }
     busyRef.current = true;
     setBusy(true);
@@ -298,12 +351,14 @@ export function ListingEditForm({
             attempt.photoPayload.push({ image_url: photo.imageUrl, alt_text: photo.altText });
             continue;
           }
-          const extension = extensionFor(photo.file.type);
+          // FIX 02 (selling batch): shrink and re-encode before upload, which drops the photo's location data.
+          const upload = (await prepareListingPhoto(photo.file)).file;
+          const extension = extensionFor(upload.type);
           const path = `${attempt.folder}/${index}.${extension}`;
           // Include uncertain upload responses in server-side, reference-checked cleanup.
           attempt.uploadedPaths.push(path);
           setProgress(`Subiendo foto ${index + 1} de ${photos.length}…`);
-          const { error } = await supabase.storage.from(attempt.bucket).upload(path, photo.file, { contentType: photo.file.type, upsert: false });
+          const { error } = await supabase.storage.from(attempt.bucket).upload(path, upload, { contentType: upload.type, upsert: false });
           if (error) throw new Error("No se pudo subir una de las fotos.");
           attempt.photoPayload.push({ path, alt_text: `Foto de ${values.title}` });
         }
@@ -319,6 +374,12 @@ export function ListingEditForm({
       const result = await response.json().catch(() => null);
       if (!response.ok || !result) throw new Error(result?.message ?? "No se pudo confirmar el guardado. Reintenta sin cambiar los datos; no volveremos a subir las fotos.");
       const mode = result?.result?.mode;
+      if (sendsForReview) {
+        attemptRef.current = null;
+        setProgress(isVerifiedStore ? "Publicando…" : "Enviando a revisión…");
+        await submitForReview();
+        return;
+      }
       showMessage(
         "success",
         mode === "revision" || mode === "revision_amended"
@@ -351,37 +412,34 @@ export function ListingEditForm({
     }
   }
 
+  async function submitForReview() {
+    const sent = await fetch(`/api/listings/${listing.id}/manage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "resubmit" }),
+    });
+    const sentResult = await sent.json().catch(() => null);
+    if (!sent.ok) throw new Error(sentResult?.message ?? "Guardamos los cambios, pero no se pudo enviar la publicación. Inténtalo de nuevo.");
+    const published = sentResult?.listing?.status === "approved";
+    showMessage("success", published ? "Tu publicación ya está en el catálogo." : "Enviada a revisión. Te avisaremos apenas la revisemos.");
+    router.refresh();
+  }
+
   return (
-    <form ref={validation.formRef} noValidate onSubmit={handleSubmit} onChange={validation.onChange} aria-busy={busy} className="grid gap-6 rounded-panel border border-subtle bg-white p-5 sm:p-6">
+    <form ref={validation.formRef} noValidate onSubmit={handleSubmit} onChange={(event) => { validation.onChange(event); trackChanges(event.currentTarget); }} aria-busy={busy} className="grid gap-6 rounded-panel border border-subtle bg-white p-5 sm:p-6">
       {message ? (
         <PageNotice kind={state === "error" ? "error" : "success"} message={message}>
-          {state === "success" ? <Link href={returnHref} className="link mt-3 inline-block font-semibold">Volver al inventario</Link> : null}
+          {state === "success" ? <Link href={returnHref} className="link mt-3 inline-block font-semibold">{returnLabel(returnHref)}</Link> : null}
         </PageNotice>
       ) : null}
 
       {errorSummary}
       <fieldset disabled={busy} className="grid min-w-0 gap-6">
+      {rejection ? <RejectionChecklist rejection={rejection} /> : null}
       <Notice tone="info" role="note">{moderatedNote}</Notice>
-      <TextField label="Título" name="title" defaultValue={listing.title} error={validation.errorFor("title")} />
-      <div className="grid gap-5 sm:grid-cols-2">
-        <SelectField label="Categoría" name="category" error={validation.errorFor("category")} value={category} onChange={(value) => { setCategory(value); validation.clear("instrument_type"); const options = getInstrumentTypeOptions(value); if (!options.some((option) => option.value === instrumentType)) setInstrumentType(options[0]?.value ?? ""); }} options={categoryOptions} />
-        <SelectField label="Tipo de instrumento" name="instrument_type" error={validation.errorFor("instrument_type")} value={instrumentType} onChange={setInstrumentType} options={getInstrumentTypeOptions(category)} />
-        <TextField label="Marca" name="brand" defaultValue={listing.brand ?? ""} error={validation.errorFor("brand")} />
-        <TextField label="Modelo" name="model" defaultValue={listing.model ?? ""} error={validation.errorFor("model")} />
-        <Field id="editar-price_pen" label="Precio en soles" error={validation.errorFor("price_pen")}><Input type="text" inputMode="numeric" pattern="[0-9]+" name="price_pen" required defaultValue={listing.price_pen ?? ""} /></Field>
-        <LocationFields idPrefix="editar" defaultCity={listing.city} defaultRegion={listing.region} cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} />
-      </div>
-      <ConditionCards id="editar-condition" name="condition" legend="Condición" options={conditionChoices(conditionOptions)} defaultValue={listing.condition ?? ""} error={validation.errorFor("condition")} />
-      {attributeGroup ? (
-        <fieldset className="grid gap-4 rounded-panel border border-subtle bg-canvas p-4 sm:grid-cols-2">
-          <legend className="px-2 t-ui font-semibold text-ink">Características del instrumento</legend>
-          {attributeGroup.filters.map((filter) => <AttributeField key={filter.key} filter={filter} value={listing.attributes?.[filter.key]} />)}
-        </fieldset>
-      ) : null}
-      <Field id="editar-description" label="Descripción" error={validation.errorFor("description")} hint="Mínimo 40 caracteres. Describe el estado real, detalles y accesorios incluidos."><Textarea name="description" required minLength={40} rows={6} defaultValue={listing.description ?? ""} /></Field>
 
       <section className="grid gap-4" aria-labelledby="edit-photo-heading">
-        <div><h2 id="edit-photo-heading" className="t-section text-ink">Fotos</h2><p className="mt-1 t-meta">Entre 2 y 10. La primera es la principal. Las fotos propuestas no reemplazan la versión pública antes de aprobarse.</p></div>
+        <div><h2 id="edit-photo-heading" className="flex flex-wrap items-center gap-2 t-section text-ink">Fotos{fieldTag("photos")}</h2><p className="mt-1 t-meta">Entre 2 y 10. La primera es la principal. Las fotos propuestas no reemplazan la versión pública antes de aprobarse.</p></div>
         <div className="flex flex-wrap gap-3"><label className={buttonClasses({ variant: "secondary", className: "w-fit cursor-pointer focus-within:outline focus-within:outline-2 focus-within:outline-ink focus-within:outline-offset-2" })}>Agregar fotos<input id="editar-photos" name="photos" data-error-label="Fotos" type="file" accept="image/jpeg,image/png,image/webp" multiple aria-invalid={validation.errorFor("photos") ? true : undefined} aria-describedby={validation.errorFor("photos") ? "editar-photos-error" : undefined} disabled={busy} className="sr-only" onChange={addPhotos} /></label>{hasPendingRevision && (listing.status === "approved" || listing.status === "hidden") ? <button type="button" disabled={busy} onClick={restoreLivePhotos} className={buttonClasses({ variant: "secondary" })}>Restaurar fotos aprobadas</button> : null}</div>
         {validation.errorFor("photos") ? <p id="editar-photos-error" className="t-ui font-semibold text-danger">{validation.errorFor("photos")}</p> : null}
         <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -399,9 +457,52 @@ export function ListingEditForm({
           ))}
         </ol>
       </section>
+
+      {/* Same order as the sell form (components/sell-listing-form.tsx): photos, the instrument, condition and price, location, description. */}
+      <FormSection id="editar-instrumento" title="El instrumento">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <SelectField label={labelWith("Categoría", "category")} name="category" error={validation.errorFor("category")} value={category} onChange={(value) => { setCategory(value); validation.clear("instrument_type"); const options = getInstrumentTypeOptions(value); if (!options.some((option) => option.value === instrumentType)) setInstrumentType(options[0]?.value ?? ""); }} options={categoryOptions} />
+          <SelectField label={labelWith("Tipo de instrumento", "instrument_type")} name="instrument_type" error={validation.errorFor("instrument_type")} value={instrumentType} onChange={setInstrumentType} options={getInstrumentTypeOptions(category)} />
+          <TextField label={labelWith("Marca", "brand")} name="brand" defaultValue={listing.brand ?? ""} error={validation.errorFor("brand")} plain />
+          <TextField label={labelWith("Modelo", "model")} name="model" defaultValue={listing.model ?? ""} error={validation.errorFor("model")} plain />
+        </div>
+        <TextField label={labelWith("Título", "title")} name="title" defaultValue={listing.title} error={validation.errorFor("title")} />
+      </FormSection>
+
+      <FormSection id="editar-condicion" title="Condición y precio">
+        {flagged.has("condition") || showsReviewSplit ? <div className="-mb-2">{fieldTag("condition")}</div> : null}
+        <ConditionCards id="editar-condition" name="condition" legend="Condición" options={conditionChoices(conditionOptions)} defaultValue={listing.condition ?? ""} error={validation.errorFor("condition")} />
+        <Field id="editar-price_pen" label={labelWith("Precio en soles", "price_pen")} error={validation.errorFor("price_pen")} className="sm:max-w-xs"><PriceInput name="price_pen" required defaultValue={listing.price_pen} /></Field>
+      </FormSection>
+
+      <FormSection id="editar-ubicacion" title="Ubicación" hint={showsReviewSplit ? "Se publica al instante." : undefined}>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <LocationFields idPrefix="editar" defaultCity={listing.city} defaultRegion={listing.region} cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} />
+        </div>
+      </FormSection>
+
+      <FormSection id="editar-descripcion" title="Descripción">
+        <Field id="editar-description" label={labelWith("Descripción", "description")} error={validation.errorFor("description")} hint="Mínimo 40 caracteres. Describe el estado real, detalles y accesorios incluidos."><Textarea name="description" required minLength={40} rows={6} defaultValue={listing.description ?? ""} /></Field>
+      </FormSection>
+
+      {attributeGroup ? (
+        <fieldset className="grid gap-4 rounded-panel border border-subtle bg-canvas p-4 sm:grid-cols-2">
+          <legend className="px-2 t-ui font-semibold text-ink">Características del instrumento{showsReviewSplit ? " · Se publican al instante" : ""}</legend>
+          {attributeGroup.filters.map((filter) => <AttributeField key={filter.key} filter={filter} value={listing.attributes?.[filter.key]} />)}
+        </fieldset>
+      ) : null}
       </fieldset>
       {busy ? <p role="status" aria-live="polite" className="t-ui font-semibold text-ink-2">{progress}</p> : null}
-      <div className="flex flex-wrap gap-3"><Button type="submit" loading={busy} loadingLabel="Guardando…">Guardar cambios</Button><Link href={returnHref} className={buttonClasses({ variant: "secondary" })}>Cancelar</Link></div>
+      {showsReviewSplit && (pendingKinds.immediate || pendingKinds.moderated) ? (
+        <p role="status" aria-live="polite" className="t-ui text-ink-2">
+          {pendingKinds.moderated
+            ? pendingKinds.immediate
+              ? "Al guardar, precio, ubicación o descripción se publican al instante; lo demás pasa por revisión y la versión pública sigue visible."
+              : "Al guardar, estos cambios pasan por revisión; la versión pública sigue visible mientras tanto."
+            : "Al guardar, estos cambios se publican al instante."}
+        </p>
+      ) : null}
+      <div className="flex flex-wrap gap-3"><Button type="submit" loading={busy} loadingLabel="Guardando…">{submitLabel}</Button><Link href={returnHref} className={buttonClasses({ variant: "secondary" })}>Cancelar</Link></div>
     </form>
   );
 }
@@ -425,11 +526,12 @@ function AttributeField({ filter, value }: { filter: AttributeFilter; value: unk
   return <SelectField label={filter.label} name={`attribute:${filter.key}`} defaultValue={typeof value === "string" || typeof value === "number" ? String(value) : ""} options={filter.options ?? []} required={false} />;
 }
 
-function TextField({ label, name, defaultValue, error }: { label: string; name: string; defaultValue: string; error?: string }) {
-  return <Field id={`editar-${name}`} label={label} error={error}><Input type="text" name={name} required defaultValue={defaultValue} /></Field>;
+// plain: names such as brand and model, which the phone keyboard must not "correct" (auth-03).
+function TextField({ label, name, defaultValue, error, plain = false }: { label: ReactNode; name: string; defaultValue: string; error?: string; plain?: boolean }) {
+  return <Field id={`editar-${name}`} label={label} error={error}><Input type="text" name={name} required defaultValue={defaultValue} {...(plain ? { autoComplete: "off", autoCorrect: "off", spellCheck: false } : {})} /></Field>;
 }
 
-function SelectField({ label, name, options, value, defaultValue, onChange, required = true, error }: { label: string; name: string; options: readonly { value: string; label: string }[]; value?: string; defaultValue?: string; onChange?: (value: string) => void; required?: boolean; error?: string }) {
+function SelectField({ label, name, options, value, defaultValue, onChange, required = true, error }: { label: ReactNode; name: string; options: readonly { value: string; label: string }[]; value?: string; defaultValue?: string; onChange?: (value: string) => void; required?: boolean; error?: string }) {
   return <Field id={`editar-${name.replace(/[^a-z0-9_-]/gi, "-")}`} label={label} error={error}><Select name={name} required={required} value={value} defaultValue={value === undefined ? defaultValue : undefined} onChange={onChange ? (event) => onChange(event.target.value) : undefined}><option value="">Selecciona una opción</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select></Field>;
 }
 
@@ -467,4 +569,23 @@ function isImageFile(file: File) {
 
 function extensionFor(type: string) {
   return type === "image/png" ? "png" : type === "image/webp" ? "webp" : "jpg";
+}
+
+function RejectionChecklist({ rejection }: { rejection: EditRejection }) {
+  const labels = rejection.codes.flatMap((code) => { const label: string | null = rejectionReasonLabel(code); return label ? [label] : []; });
+  const note = labels.length ? rejectionNote(rejection.reason) : rejection.reason;
+  return (
+    <section aria-labelledby="motivo-rechazo" className="rounded-panel border border-subtle bg-danger-tint p-4">
+      <h2 id="motivo-rechazo" className="t-section text-ink">{rejection.kind === "revision" ? "Por qué no se aprobaron tus cambios" : "Por qué no se aprobó tu publicación"}</h2>
+      {labels.length ? (
+        <>
+          <p className="mt-1 t-meta text-ink">Marca cada punto a medida que lo corriges. Los campos a revisar están señalados abajo.</p>
+          <ul className="mt-3 grid gap-1">
+            {labels.map((label) => <li key={label}><Checkbox name="checklist" value={label} label={label} className="min-h-0 py-1" form="" /></li>)}
+          </ul>
+        </>
+      ) : null}
+      {note ? <p className="mt-2 t-body text-ink"><span className="font-semibold">{labels.length ? "Nota de moderación: " : "Motivo: "}</span>{note}</p> : null}
+    </section>
+  );
 }

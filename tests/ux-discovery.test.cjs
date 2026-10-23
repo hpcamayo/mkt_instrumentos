@@ -100,7 +100,8 @@ test("the card photo is square with the favourite and the photo count over it; t
   assert.match(renderCard({ listing: listing({ listing_photos: [], photo_count: 0 }) }), /Sin foto/);
   // The favourite: a 36 px white circle inside a 44 px hit area.
   assert.match(html, /<button type="button" aria-pressed="false" aria-label="Guardar en favoritos"[^>]*class="[^"]*h-11 w-11[^"]*rounded-full[^"]*"><span class="flex h-9 w-9 items-center justify-center rounded-full border border-subtle bg-surface">/);
-  assert.match(renderCard({}, { authenticated: false }), /<a href="\/login\?next=%2Flistados" aria-label="Ingresa para guardar en favoritos" class="[^"]*h-11 w-11/);
+  // Accounts batch, big-04: signed out, the same button saves on this device.
+  assert.match(renderCard({}, { authenticated: false }), /<button type="button" aria-pressed="false" aria-label="Guardar en favoritos"[^>]*class="[^"]*h-11 w-11/);
 });
 
 test("the card caption: title, price, the real condition with the type's key attributes, then city and seller words (Q3)", () => {
@@ -263,19 +264,24 @@ test("filter URLs: each option sets or clears its value; landings lead to /lista
 
 test("titles, counts and the alert rule: a filter or a category narrows; several values cannot be saved (Q11, Q19)", () => {
   assert.equal(catalog.catalogTitle(parse("")), "Instrumentos");
-  assert.equal(catalog.catalogTitle(parse("category=microphones&location=Lima")), "Micrófonos");
+  // Effortless Laria FIND 02: the heading also names the place and the text searched.
+  assert.equal(catalog.catalogTitle(parse("category=microphones&location=Lima")), "Micrófonos · Lima");
+  assert.equal(catalog.catalogTitle(parse("q=fender&category=guitars&location=Lima")), "“fender” en Guitarras · Lima");
+  assert.equal(catalog.catalogTabTitle(parse("brand=Fender&category=guitars"), 34), "Fender en Guitarras (34)");
   assert.equal(catalog.catalogTitle(parse("seller_type=verified_store&sort=price_desc")), "Tiendas verificadas");
-  assert.equal(catalog.catalogTitle(parse("seller_type=verified_store&location=Lima")), "Instrumentos");
+  assert.equal(catalog.catalogTitle(parse("seller_type=verified_store&location=Lima")), "Instrumentos · Lima");
   assert.equal(catalog.resultsLabel(1), "1 resultado");
   assert.equal(catalog.resultsLabel(1262), "1,262 resultados");
   assert.equal(catalog.narrowsSearch(parse("sort=price_asc")), false);
   assert.equal(catalog.narrowsSearch(parse("category=guitars")), true);
   const { listingFiltersToSearchAlert } = load("lib/search-alerts.ts");
-  assert.equal(listingFiltersToSearchAlert(parse("location=Lima&location=Arequipa")), null);
+  // Accounts batch, save-05: several values in one filter are saved as a list.
+  assert.deepEqual(listingFiltersToSearchAlert(parse("location=Lima&location=Arequipa")), { location: ["Lima", "Arequipa"] });
   assert.deepEqual(listingFiltersToSearchAlert(parse("location=Lima&condition=Nuevo")), { location: "Lima", condition: "Nuevo" });
   const { CreateSearchAlert } = load("components/create-search-alert.tsx", { "next/link": linkMock, "next/navigation": navigationMock(), "@/components/marketplace-account-provider": account({ authenticated: false }) });
-  assert.equal(renderToStaticMarkup(React.createElement(CreateSearchAlert, { filters: null, variant: "button" })), '<p class="t-meta">Para crear una alerta, elige un solo valor en cada filtro.</p>');
-  assert.match(renderToStaticMarkup(React.createElement(CreateSearchAlert, { filters: { location: "Lima" }, variant: "chip" })), /^<a href="\/login\?next=%2Flistados%3Flocation%3DLima" class="[^"]*">.*Crear alerta<\/a>$/);
+  assert.equal(renderToStaticMarkup(React.createElement(CreateSearchAlert, { filters: null, variant: "button" })), "");
+  // Accounts batch, save-01: the sign-in link says why (motivo=alerta) and the alert is created on return.
+  assert.match(renderToStaticMarkup(React.createElement(CreateSearchAlert, { filters: { location: "Lima" }, variant: "chip" })), /^<a href="\/login\?next=%2Flistados%3Flocation%3DLima&amp;motivo=alerta" class="[^"]*">.*Crear alerta<\/a>$/);
   // Every alert entry of the view gets the same single-value filters, or null.
   const view = source("components/catalog-view.tsx");
   assert.match(view, /const alertFilters = listingFiltersToSearchAlert\(filters\);/);
@@ -346,7 +352,8 @@ test("catalog states: error with Reintentar, empty catalog, no results with the 
   const view = source("components/catalog-view.tsx");
   assert.match(view, /No pudimos cargar las publicaciones\. Vuelve a intentarlo en unos minutos\./);
   assert.match(view, /<a href=\{retryHref\}[^>]*>\s*Reintentar\s*<\/a>/);
-  assert.match(view, /title="No encontramos resultados"\s*description="Prueba quitar un filtro o buscar otra marca\."/);
+  // Effortless Laria FIND 04: the no-results state offers one-tap ways out with their counts when it has them.
+  assert.match(view, /title="No encontramos resultados"[\s\S]*Prueba sin uno de tus filtros:[\s\S]*"Prueba quitar un filtro o buscar con otras palabras\."/);
   assert.match(source("app/listados/page.tsx"), /title="Aún no hay publicaciones"\s*description="Las primeras publicaciones aparecerán aquí\."[\s\S]*Publicar un instrumento/);
   assert.doesNotMatch(source("app/listados/page.tsx"), /con esos filtros/);
   const landing = source("components/category-landing.tsx");

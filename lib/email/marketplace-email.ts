@@ -2,7 +2,8 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { createMarketplaceEmailProvider, MarketplaceEmailProviderError, type MarketplaceEmailProvider } from "@/lib/email/provider";
-import { parseMarketplaceEmailPayload, renderMarketplaceEmail } from "@/lib/email/templates";
+import { createEmailLinkToken, EMAIL_LINK_LABELS, type EmailLinkAction } from "@/lib/email/links";
+import { parseMarketplaceEmailPayload, renderMarketplaceEmail, type MarketplaceEmailPayload } from "@/lib/email/templates";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
 type RpcError = { message: string; code?: string };
@@ -27,6 +28,40 @@ export async function prepareDueLimaDayDigests(client: MarketplaceEmailQueueClie
     prepared += typeof data === "number" ? data : 0;
   }
   return prepared;
+}
+
+// save-07: the weekly digest of followed stores and brands, for the Monday that most recently reached 8:00 in Lima.
+// Running every day of the week replays that Monday, so a missed run is recovered; database dedupe keeps it single.
+export async function prepareDueWeeklyFollowEmails(client: MarketplaceEmailQueueClient, now = new Date()) {
+  const { localDate, hour } = limaClock(now);
+  let monday = localDate;
+  while (new Date(`${monday}T12:00:00Z`).getUTCDay() !== 1) monday = previousCalendarDate(monday);
+  if (monday === localDate && hour < 8) {
+    for (let index = 0; index < 7; index += 1) monday = previousCalendarDate(monday);
+  }
+  const { data, error } = await client.rpc("prepare_weekly_follow_emails", { p_week_start: monday, p_limit: 100 });
+  if (error) throw new Error(`EMAIL_WEEKLY_PREPARE_FAILED:${error.code ?? "unknown"}`);
+  return typeof data === "number" ? data : 0;
+}
+
+// save-07: the one-click link for this e-mail, if it is one a person can turn off.
+export function emailLinkAction(payload: MarketplaceEmailPayload): { action: EmailLinkAction; alert?: string } | null {
+  if (payload.event_type === "listing_price_drop") return { action: "no_price_drops" };
+  if (payload.event_type === "follow_weekly") return { action: "no_follow_digest" };
+  if ((payload.event_type === "search_alert_immediate" || payload.event_type === "search_alert_daily") && payload.search_alert) return { action: "pause_alert", alert: payload.search_alert.id };
+  return null;
+}
+
+export function emailLinks(payload: MarketplaceEmailPayload, baseUrl: string) {
+  const choice = emailLinkAction(payload);
+  const token = choice && payload.recipient_user_id ? createEmailLinkToken({ user: payload.recipient_user_id, ...choice }) : null;
+  if (!choice || !token) return { links: [], headers: undefined };
+  const page = new URL(`/correos/baja?token=${encodeURIComponent(token)}`, baseUrl).toString();
+  const oneClick = new URL(`/api/email/unsubscribe?token=${encodeURIComponent(token)}`, baseUrl).toString();
+  return {
+    links: [{ label: EMAIL_LINK_LABELS[choice.action].link, url: page }],
+    headers: { "List-Unsubscribe": `<${oneClick}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
+  };
 }
 
 export async function processMarketplaceEmailBatch({
@@ -57,13 +92,15 @@ export async function processMarketplaceEmailBatch({
         return;
       }
       try {
-        const rendered = renderMarketplaceEmail(payload, baseUrl);
+        const extras = emailLinks(payload, baseUrl);
+        const rendered = renderMarketplaceEmail(payload, baseUrl, extras.links);
         const providerResult = await provider.send({
           to: payload.recipient_email,
           subject: rendered.subject,
           html: rendered.html,
           text: rendered.text,
           idempotencyKey: payload.delivery_id,
+          ...(extras.headers ? { headers: extras.headers } : {}),
         });
         const completed = await client.rpc("complete_marketplace_email_delivery", {
           p_delivery_id: payload.delivery_id,

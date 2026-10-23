@@ -38,7 +38,8 @@ export function getShellLayout(pathname: string): ShellLayout {
   return { header: "standard", strip: "all", phoneSearch: "none", footer: "slim" };
 }
 
-// Browse pages: the catalog (including search results), the category landings and the store pages.
+// Browse pages: the catalog (including search results), the category landings, the stores directory (/tiendas,
+// find-13) and the store pages.
 export function isBrowsePath(pathname: string) {
   if (pathname === "/listados" || under(pathname, "/tiendas")) return true;
   const slug = instrumentSlug(pathname);
@@ -58,12 +59,14 @@ function instrumentSlug(pathname: string) {
 
 export { CATALOG_PATH };
 
-// The catalog searches by brand only, so every search box says so (decision N8): the header, the home banner and the
-// 404 page. Free-text search is left for later (F9). Kept in a plain module so server components can read it.
-export const SEARCH_PLACEHOLDER = "Busca por marca: Yamaha, Fender…";
-export const SEARCH_LABEL = "Buscar por marca en el catálogo";
-// No stores directory exists: "Tiendas verificadas" opens the catalog filtered to verified stores (decision N7).
-export const VERIFIED_STORES_PATH = "/listados?seller_type=verified_store";
+// Every search box's words: the header, the home banner and the 404 page. Free-text search (Effortless Laria BIG 03,
+// find batch) replaced the brand-only search of decision N8. Kept in a plain module so server components can read it.
+export const SEARCH_PLACEHOLDER = "Busca guitarras, marcas, modelos…";
+export const SEARCH_LABEL = "Buscar en el catálogo";
+// "Tiendas verificadas" opens the stores directory (find-13, replacing decision N7's catalog filtered to verified
+// stores): its "Tiendas" tab lists the active stores, verified first; its second tab lists verified stores' listings.
+export const STORES_PATH = "/tiendas";
+export const VERIFIED_STORES_PATH = STORES_PATH;
 
 // "link" items go straight to their page; "category" items open that category's menu.
 export type StripItem = { key: string; label: string; href: string; kind: "link" | "category" };
@@ -101,8 +104,10 @@ export const categoryMenus: readonly CategoryMenu[] = categoryOptions.map((categ
   })),
 }));
 
-// The strip item for the current page, or null when none applies (listing and store pages, legal pages).
+// The strip item for the current page, or null when none applies (listing and store pages, legal pages). The stores
+// directory marks "Tiendas verificadas" (find-13); a verified store's page marks it through <StripCurrent>.
 export function currentStripKey(pathname: string, params: { get(name: string): string | null }): string | null {
+  if (pathname === STORES_PATH) return "verified_stores";
   const slug = instrumentSlug(pathname);
   if (slug !== null) return categoryOptions.find((category) => getCategoryLandingByValue(category.value)?.slug === slug)?.value ?? null;
   if (pathname !== CATALOG_PATH) return null;

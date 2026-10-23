@@ -1,0 +1,16 @@
+﻿Exportación de artículos - Sistema de caja - 16/10/2026;;;;;;;;;
+Cód.;Artículo;Marca;Familia;P. Venta;Existencias;Estado;Detalle;Cód. barras;Imágenes
+CAB-XLR-6M;Cable XLR 6 m;Proel;Audio;45;50;Nuevo;Cable balanceado XLR macho a hembra, 6 metros, conectores metálicos.;8033786123456;"IMG_2041.jpg;IMG_2042.jpg"
+CEJ-KYSER;Cejilla Kyser KG6;Kyser;Accesorios;79;12;Nuevo;Cejilla de resorte para guitarra acústica de seis cuerdas, color negro.;;
+AFI-TU3W;Afinador Boss TU-3W Waza;Boss;Pedales;549;2;Nuevo;Afinador cromático de pedal, edición Waza Craft, con salida de corriente.;;"IMG_2050.jpg;IMG_2051.jpg"
+PED-SD1;Boss SD-1 Super OverDrive;Boss;Pedales;1.500;4;Nuevo;Precio escrito con punto de miles: el importador no adivina y marca error.;;
+PED-SD1;Boss SD-1 (fila repetida);Boss;Pedales;319;4;Nuevo;Mismo SKU que la fila anterior: las dos quedan con error.;;
+MIC-PG48;Shure PGA48;Shure;Micrófonos;259;-1;Nuevo;Stock negativo: error de validación a propósito.;;
+;Correa de cuero marrón;Levy's;Accesorios;149;6;Nuevo;Sin código: Laria genera uno y avisa que reimportar duplicaría.;;
+"=HYPERLINK(""x"")";Fila con fórmula;N/A;Pedales;10;1;Nuevo;Una celda que parece fórmula se trata como texto y se rechaza como SKU.;;
+BAQ-VF5B;Baquetas Vic Firth 5B;Vic Firth;Percusión;65;24;Nuevo;Par de baquetas de nogal americano, punta de madera, modelo 5B.;7.50E+11;
+GTR-CORT-AD810;Guitarra Cort AD810;Cort;Guitarras;599;3;Usado - buen estado;Acústica dreadnought de exhibición, pequeña marca en el aro, cuerdas nuevas.;;"IMG_2060.jpg;IMG_2061.jpg"
+KEY-MAUDIO-K2;M-Audio Keystation 49 MK3;M-Audio;Teclados;449;2;Nuevo;Controlador MIDI de 49 teclas por USB, alimentado por el puerto. Nuevo en caja.;;
+AMP-VOX-PF10;Vox Pathfinder 10;Vox;Amplificadores;349;5;nuevo ;Condición con mayúsculas y espacio de más: se normaliza.;;
+ACC-PUAS;Uñetas surtidas x 6;Dunlop;Accesorios;15.50;100;Nuevo;Precio con céntimos: Laria usa soles enteros y marca error.;;
+STR-DAD-EJ16;Cuerdas D'Addario EJ16;D'Addario;Cuerdas;45;30;Nuevo;Juego de cuerdas de bronce fosforado para acústica, calibre 12-53.;;

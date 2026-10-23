@@ -117,7 +117,9 @@ const storeIds = [];
     const relistResponse = await manage(liveId, cookie, "relist");
     listingIds.push(relistResponse.listing.id);
     assert.notEqual(relistResponse.listing.id, liveId);
-    assert.equal(relistResponse.listing.status, "pending");
+    // ux my-listings (mine-10): Republicar makes a draft the seller adjusts before sending it to review.
+    assert.equal(relistResponse.listing.status, "draft");
+    assert.equal((await manage(relistResponse.listing.id, cookie, "resubmit")).listing.status, "pending");
     assert.equal(relistResponse.listing.relisted_from_listing_id, liveId);
 
     const capStoreId = crypto.randomUUID();

@@ -35,7 +35,7 @@ export function PriceFilterForm({ filters, scope, id }: { filters: ListingFilter
   const apply = useApply(scope);
   return (
     <form
-      action={CATALOG_PATH}
+      action={scope.path ?? CATALOG_PATH}
       method="get"
       className="mt-2"
       onSubmit={(event) => {
@@ -86,7 +86,7 @@ export function BrandFilterForm({ filters, scope, id, labelledBy }: { filters: L
   const apply = useApply(scope);
   return (
     <form
-      action={CATALOG_PATH}
+      action={scope.path ?? CATALOG_PATH}
       method="get"
       className="mt-2"
       onSubmit={(event) => {

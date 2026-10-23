@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { assistedCommerceEnabled } from "@/lib/payment-methods";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 const PRIVATE = { "Cache-Control": "private, no-store" };
-const SIGNED_OUT = { authenticated: false, storeOwner: false, hasStore: false, admin: false, name: null, unreadNotifications: 0, pendingBuyerConfirmations: 0 };
+const SIGNED_OUT = { authenticated: false, storeOwner: false, hasStore: false, payments: false, admin: false, name: null, unreadNotifications: 0, pendingBuyerConfirmations: 0 };
 
 // Hydrated header state; public server rendering never needs an Auth query. The header's bell, account menu and
 // avatar read the same values the account rail shows (decision N6); a failed count or admin check degrades to none.
@@ -22,10 +23,13 @@ export async function GET() {
   const storeOwner = profileResult.data?.account_type === "store_owner";
   if (storeOwner && storeResult.error) return NextResponse.json({ message: "No se pudo cargar la tienda." }, { status: 503 });
   const pending = Number(confirmationsResult.data);
+  const hasStore = storeOwner && Boolean(storeResult.data);
   return NextResponse.json({
     authenticated: true,
     storeOwner,
-    hasStore: storeOwner && Boolean(storeResult.data),
+    hasStore,
+    // "Pagos" in the account menu (PAY-1, review fix B6): only while the pilot is on.
+    payments: hasStore && assistedCommerceEnabled(),
     admin: !adminResult.error && adminResult.data === true,
     name: profileResult.data?.full_name?.trim() || null,
     unreadNotifications: notificationsResult.error ? 0 : notificationsResult.count ?? 0,

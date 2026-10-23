@@ -1,9 +1,9 @@
 // The one status dictionary (docs/ux-redesign/ux-1-foundations.md, decision D8). Only the visible label
 // and its tone live here; meanings and transitions stay as in docs/functional-spec.md.
 export type StatusTone = "neutral" | "accent" | "warning" | "danger" | "solid" | "line";
-export type StatusIcon = "draft" | "review" | "check" | "reject" | "hidden" | "sold" | "archive" | "pause";
+export type StatusIcon = "draft" | "review" | "check" | "reject" | "hidden" | "sold" | "archive" | "pause" | "stockout" | "low";
 export type StatusEntry = { label: string; tone: StatusTone; icon?: StatusIcon };
-export type StatusDomain = "listing" | "revision" | "store" | "claim" | "transaction" | "report" | "review" | "alert";
+export type StatusDomain = "listing" | "revision" | "store" | "claim" | "transaction" | "report" | "review" | "alert" | "stock" | "inventory" | "payment";
 
 const LISTING: Record<string, StatusEntry> = {
   draft: { label: "Borrador", tone: "line", icon: "draft" },
@@ -69,6 +69,28 @@ const ALERT: Record<string, StatusEntry> = {
   deleted: { label: "Eliminada", tone: "neutral" },
 };
 
+// Stock of an inventory-linked listing (listings.stock_state). It never changes the listing's own status.
+const STOCK: Record<string, StatusEntry> = {
+  out_of_stock: { label: "Agotado", tone: "neutral", icon: "stockout" },
+};
+
+// A store's accepted payment method (PAY-1, store_payment_methods.status). Only "Aprobado" is shown to buyers.
+const PAYMENT: Record<string, StatusEntry> = {
+  pending_review: { label: "En revisión", tone: "warning", icon: "review" },
+  approved: { label: "Aprobado", tone: "accent", icon: "check" },
+  rejected: { label: "Rechazado", tone: "danger", icon: "reject" },
+  disabled: { label: "Desactivado por Laria", tone: "neutral", icon: "hidden" },
+  withdrawn: { label: "Retirado por la tienda", tone: "line" },
+};
+
+// An inventory SKU's stock level (get_inventory_page's stock_level, or "archived" for an archived SKU), D-13.
+const INVENTORY: Record<string, StatusEntry> = {
+  in_stock: { label: "Disponible", tone: "accent", icon: "check" },
+  low: { label: "Stock bajo", tone: "warning", icon: "low" },
+  out: { label: "Agotado", tone: "neutral", icon: "stockout" },
+  archived: { label: "Archivado", tone: "line", icon: "archive" },
+};
+
 const DICTIONARY: Record<StatusDomain, Record<string, StatusEntry>> = {
   listing: LISTING,
   revision: REVISION,
@@ -78,6 +100,9 @@ const DICTIONARY: Record<StatusDomain, Record<string, StatusEntry>> = {
   report: REPORT,
   review: REVIEW,
   alert: ALERT,
+  stock: STOCK,
+  inventory: INVENTORY,
+  payment: PAYMENT,
 };
 
 // Admin reports and the audit history name their target by type; its status reads from that type's domain.

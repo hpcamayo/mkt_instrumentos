@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { prepareDueLimaDayDigests, processMarketplaceEmailBatch } from "@/lib/email/marketplace-email";
+import { prepareDueLimaDayDigests, prepareDueWeeklyFollowEmails, processMarketplaceEmailBatch } from "@/lib/email/marketplace-email";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   if (!client) return NextResponse.json({ message: "Configuración incompleta." }, { status: 503 });
   const requestId = crypto.randomUUID();
   try {
-    const prepared = await prepareDueLimaDayDigests(client as never);
+    const prepared = await prepareDueLimaDayDigests(client as never) + await prepareDueWeeklyFollowEmails(client as never);
     const batches = [];
     for (let index = 0; index < 4; index += 1) {
       const result = await processMarketplaceEmailBatch({ client: client as never, limit: 25 });

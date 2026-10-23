@@ -41,10 +41,9 @@ test("saved searches serialize canonical supported state and render readable Spa
     advanced: { body_type: "solid_body", pickups: ["single_coil"] }, sort: "price_asc",
   };
   const filters = searchAlerts.listingFiltersToSearchAlert(search);
-  // Saved alerts keep one value per filter (Q19): a search with several locations or conditions (F11) has no alert.
-  assert.equal(searchAlerts.listingFiltersToSearchAlert({ ...search, cities: ["Lima", "Arequipa"] }), null);
-  assert.equal(searchAlerts.listingFiltersToSearchAlert({ ...search, conditions: ["Nuevo", "Usado - buen estado"] }), null);
-  assert.equal(searchAlerts.canSaveSearchAlert({ cities: ["Lima"], conditions: [] }), true);
+  // Accounts batch, save-05: a search with several locations or conditions (F11) is saved as a list.
+  assert.deepEqual(searchAlerts.listingFiltersToSearchAlert({ ...search, cities: ["Lima", "Arequipa"] }).location, ["Lima", "Arequipa"]);
+  assert.deepEqual(searchAlerts.listingFiltersToSearchAlert({ ...search, conditions: ["Nuevo", "Usado - buen estado"] }).condition, ["Nuevo", "Usado - buen estado"]);
   assert.deepEqual(filters, {
     category: "guitars", location: "Lima", condition: "Usado - buen estado", brand: "Fender", seller_type: "individual",
     instrument_type: "electric_guitar", min_price: 1000, max_price: 3000,
@@ -84,7 +83,9 @@ test("both account roles expose Compras y ventas and Alertas with canonical tran
   assert.match(menu, /Menú de cuenta móvil/);
   assert.match(center, /Requiere tu confirmación/);
   assert.match(center, /¿Compraste este equipo\?/);
-  assert.match(center, /Tienes una reseña pendiente/);
+  // The pending review reads as a day-level reminder with its own "Reseñar" link (no countdown).
+  assert.match(center, /reviewDueLabel\(item\.review_deadline\)/);
+  assert.match(center, /Reseñar/);
 });
 
 test("marketplace templates are branded, safe and preserve transaction/review limitations", () => {
@@ -99,7 +100,8 @@ test("marketplace templates are branded, safe and preserve transaction/review li
   const approved = templates.renderMarketplaceEmail({ ...base, event_type: "listing_approved" }, "https://laria.audio");
   assert.match(approved.html, /Laria/);
   assert.match(approved.html, /Guitarra &lt;QA&gt;/);
-  assert.match(approved.destination, /^https:\/\/laria\.audio\/mi-cuenta\/publicaciones$/);
+  // POST 15: the approval e-mail opens the live listing.
+  assert.match(approved.destination, /^https:\/\/laria\.audio\/instrumentos\/guitarra-qa$/);
   assert.doesNotMatch(approved.html, /<img|tracking|buyer@example\.invalid/i);
   const review = templates.renderMarketplaceEmail({ ...base, event_type: "review_revealed", listing: null, transaction: { reference_id: "transaction", listing_title: "Pedal", review_deadline: null } }, "https://laria.audio");
   assert.match(review.text, /no procesa pagos|no verifica pago/i);
@@ -140,6 +142,7 @@ test("email worker retries provider failure, completes success, and replays a bo
   } };
   const marketplace = load("lib/email/marketplace-email.ts", {
     "server-only": {},
+    "@/lib/email/links": { createEmailLinkToken: () => null, EMAIL_LINK_LABELS: {} },
     "@/lib/email/provider": { createMarketplaceEmailProvider: () => null, MarketplaceEmailProviderError: providerError },
     "@/lib/email/templates": { parseMarketplaceEmailPayload: (value) => value, renderMarketplaceEmail: () => ({ subject: "QA", html: "<p>QA</p>", text: "QA" }) },
     "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => null },
@@ -186,6 +189,7 @@ test("protected manual worker rejects untrusted callers and accepts only CRON_SE
     "next/server": { NextResponse: { json: (body, init = {}) => new Response(JSON.stringify(body), { ...init, headers: { "Content-Type": "application/json", ...(init.headers ?? {}) } }) } },
     "@/lib/email/marketplace-email": {
       prepareDueLimaDayDigests: async () => { prepared += 1; return 2; },
+      prepareDueWeeklyFollowEmails: async () => 0,
       processMarketplaceEmailBatch: async () => { processed += 1; return { claimed: 0, sent: 0, retried: 0, failed: 0, invalid: 0 }; },
     },
     "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => ({ rpc: async () => ({ data: null, error: null }) }) },

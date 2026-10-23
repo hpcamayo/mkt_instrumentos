@@ -6,13 +6,15 @@ export type Submission = {
   ownerUserId?: string;
 };
 
+// `id` resumes an existing submission (a saved draft, POST 02); the route checks the draft belongs to the caller.
 export function createSubmissionToken(
   kind: Submission["kind"],
   secret: string,
   ownerUserId?: string,
+  id: string = randomUUID(),
 ) {
   const submission: Submission = {
-    id: randomUUID(),
+    id,
     kind,
     ...(ownerUserId ? { ownerUserId } : {}),
   };

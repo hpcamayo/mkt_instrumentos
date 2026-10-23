@@ -2,10 +2,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { TRUST_COPY } from "@/components/listing/trust-note";
+import { StoreVisitLines } from "@/components/store/store-visit";
 import { buttonClasses } from "@/components/ui/button";
 import { Tag } from "@/components/ui/tag";
 import { VerifiedMark } from "@/components/ui/verified-mark";
-import { formatRating, reviewCountLabel } from "@/lib/listing-page";
+import { VerifiedExplainer } from "@/components/listing/verified-explainer";
+import { FEW_REVIEWS, formatRating, isNewMember, lastActiveLabel, reviewCountLabel, verifiedSalesLabel, type SellerFacts } from "@/lib/listing-page";
+import type { PublicStoreLocation } from "@/lib/store-storefront";
 import { initials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +24,8 @@ export type SellerSummary = {
   rating: { average: number; count: number } | null;
   // "En Laria desde jul. 2026", or null when the date is unknown.
   since: string | null;
+  // list-10: the other verified facts (get_public_seller_facts); null when the call failed.
+  facts?: SellerFacts | null;
 };
 
 export function sellerKindLabel(kind: SellerKind) {
@@ -43,18 +48,38 @@ export function RatingFigure({ rating }: { rating: { average: number; count: num
 
 // The seller card (UX-4 L10 A, L20 A): who sells, with real figures only. No contact button (the page has one). A
 // figure without a value, or whose query failed, is left out. A store links to its page; a Particular has none.
+// Effortless Laria (list-10, trust-03): facts that predict a good deal, all recorded by Laria: when the seller was last
+// active (coarse), sales both sides confirmed in Laria, "Nuevo en Laria" said plainly, and a confirmed e-mail. Until a
+// seller has about ten reviews those facts lead and the rating follows. A verified store's badge opens what Laria
+// checked. Phone checks and reply times are not recorded, so they are not claimed.
 export function SellerCard({
   seller,
   listingCount,
+  visit,
   sold = false,
+  now = Date.now(),
   className,
 }: {
   seller: SellerSummary;
+  // list-12: a store's shown address with "Cómo llegar" and its opening hours (publicStoreLocation).
+  visit?: PublicStoreLocation;
   // The seller's active publications, streamed (null renders nothing).
   listingCount: ReactNode;
   sold?: boolean;
+  now?: number;
   className?: string;
 }) {
+  const facts = seller.facts ?? null;
+  const fewReviews = !seller.rating || seller.rating.count < FEW_REVIEWS;
+  const active = lastActiveLabel(facts?.lastActive);
+  const newMember = isNewMember(facts?.memberSince, now);
+  const verified: ReactNode[] = [
+    active ? <li key="active">{active}</li> : null,
+    facts && facts.verifiedSales > 0 ? <li key="sales">{verifiedSalesLabel(facts.verifiedSales)}</li> : null,
+    newMember ? <li key="new">Nuevo en Laria</li> : seller.since ? <li key="since">En Laria desde {seller.since}</li> : null,
+    facts?.emailConfirmed && seller.kind === "particular" ? <li key="email">Correo confirmado</li> : null,
+  ].filter(Boolean);
+  const rating = seller.rating ? <li key="rating"><RatingFigure rating={seller.rating} /></li> : null;
   return (
     <section id="vendedor" aria-labelledby="vendedor-titulo" className={cn("scroll-mt-4 rounded-panel border border-subtle bg-surface p-4 sm:p-5", className)}>
       <div className="flex items-start gap-3">
@@ -65,16 +90,17 @@ export function SellerCard({
             {seller.name}
           </h2>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <SellerKindMark kind={seller.kind} />
+            {seller.kind === "verified" ? null : <SellerKindMark kind={seller.kind} />}
             {seller.place ? <span className="t-meta">{seller.place}</span> : null}
           </div>
         </div>
       </div>
+      {seller.kind === "verified" ? <VerifiedExplainer checks={facts?.store ?? null} className="mt-3" /> : null}
       <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 t-meta text-ink [&>li+li]:before:mr-3 [&>li+li]:before:text-ink-3 [&>li+li]:before:content-['·']">
-        {seller.rating ? <li><RatingFigure rating={seller.rating} /></li> : null}
+        {fewReviews ? <>{verified}{rating}</> : <>{rating}{verified}</>}
         {listingCount}
-        {seller.since ? <li>En Laria desde {seller.since}</li> : null}
       </ul>
+      {visit ? <StoreVisitLines location={visit} className="mt-3" /> : null}
       {seller.storeHref ? (
         <Link href={seller.storeHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "mt-4" })}>
           Ver la tienda

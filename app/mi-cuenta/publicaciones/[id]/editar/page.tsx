@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ListingEditForm } from "@/components/listing-edit-form";
+import { ListingEditForm, type EditRejection } from "@/components/listing-edit-form";
+import { parseRejectionCodes } from "@/lib/rejection-reasons";
+import { returnLabel } from "@/lib/listing-return";
 import { getAccountContext } from "@/lib/account-context";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -21,7 +23,7 @@ export default async function ListingEditPage({
   const { data: listing } = await supabase
     .from("listings")
     .select(
-      "id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,region,description,owner_user_id,store_id,hidden_source,updated_at,listing_photos(id,image_url,alt_text,sort_order)",
+      "id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,region,description,owner_user_id,store_id,hidden_source,updated_at,rejection_reason,rejection_codes,listing_photos(id,image_url,alt_text,sort_order)",
     )
     .eq("id", id)
     .eq("owner_user_id", user.id)
@@ -44,7 +46,7 @@ export default async function ListingEditPage({
           title="Esta publicación no se puede editar"
           meta="Las publicaciones vendidas son historial inmutable. Las ocultadas por moderación solo pueden restaurarse desde administración."
         />
-        <Link href={returnHref} className={buttonClasses({ variant: "secondary", className: "mt-5" })}>Volver al inventario</Link>
+        <Link href={returnHref} className={buttonClasses({ variant: "secondary", className: "mt-5" })}>{returnLabel(returnHref)}</Link>
       </section>
     );
   }
@@ -55,6 +57,17 @@ export default async function ListingEditPage({
     .eq("listing_id", listing.id)
     .eq("status", "pending")
     .maybeSingle();
+
+  // mine-01: open on what the moderator asked to fix. A rejected listing has its reason on the row; for a published
+  // listing, the latest revision counts only while no newer one is pending.
+  const { data: lastRevision } = !pendingRevision && (listing.status === "approved" || listing.status === "hidden")
+    ? await supabase.from("listing_revisions").select("status,rejection_reason,rejection_codes").eq("listing_id", listing.id).order("submitted_at", { ascending: false }).limit(1).maybeSingle()
+    : { data: null };
+  const rejection: EditRejection | null = listing.status === "rejected"
+    ? { kind: "listing", reason: listing.rejection_reason, codes: parseRejectionCodes(listing.rejection_codes) }
+    : lastRevision?.status === "rejected"
+      ? { kind: "revision", reason: lastRevision.rejection_reason, codes: parseRejectionCodes(lastRevision.rejection_codes) }
+      : null;
 
   const proposedFields = new Set(pendingRevision?.changed_fields ?? []);
   const { guardado } = await searchParams;
@@ -91,6 +104,7 @@ export default async function ListingEditPage({
         hasPendingRevision={Boolean(pendingRevision)}
         isVerifiedStore={Boolean(listing.store_id && store?.status === "active" && store.is_verified)}
         returnHref={returnHref}
+        rejection={rejection && (rejection.reason || rejection.codes.length) ? rejection : null}
       />
     </section>
   );

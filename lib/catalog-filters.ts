@@ -16,6 +16,8 @@ import {
   type ListingFilters,
   type ListingSort,
 } from "@/lib/listings";
+import type { CatalogFacetData } from "@/lib/catalog-facets";
+import { locationZones, zoneOfLocation } from "@/lib/location";
 import { formatPrice } from "@/lib/price";
 
 // The catalog's filters as facets, applied chips and URLs (docs/ux-redesign/ux-3-discovery.md § Filters). Pure, so
@@ -29,7 +31,8 @@ export const CATALOG_PATH = "/listados";
 // A landing (/instrumentos/<slug>) fixes its category (landingScope in lib/category-pages.ts); every other choice
 // leads to /listados?category=…, where filtering happens (categoryFilterRedirect). The landing's own category with
 // nothing else is the landing itself.
-export type CatalogScope = { landing?: { category: string; path: string } };
+// `path` (find-14): a page outside the catalog that reuses its links and forms (a store page) sets its own base path.
+export type CatalogScope = { landing?: { category: string; path: string }; path?: string };
 
 // The results count's id: after the filter sheet applies, a chip goes or the page changes, focus returns there.
 export const RESULTS_STATUS_ID = "resultados-estado";
@@ -45,6 +48,7 @@ export function catalogSearchParams(filters: ListingFilters) {
   const add = (key: string, value: string | number | undefined) => {
     if (value !== undefined && value !== "") params.append(key, String(value));
   };
+  add("q", filters.q);
   add("category", filters.category);
   for (const city of filters.cities) add("location", city);
   for (const condition of filters.conditions) add("condition", condition);
@@ -63,13 +67,18 @@ export function catalogSearchParams(filters: ListingFilters) {
 export function catalogHref(filters: ListingFilters, scope: CatalogScope = {}) {
   const query = catalogSearchParams(filters).toString();
   if (scope.landing && query === new URLSearchParams({ category: scope.landing.category }).toString()) return scope.landing.path;
-  return query ? `${CATALOG_PATH}?${query}` : CATALOG_PATH;
+  const base = scope.path ?? CATALOG_PATH;
+  return query ? `${base}?${query}` : base;
 }
 
-// No filter at all: the plain catalog, or the landing with its category.
+// No filter at all: the plain catalog, or the landing with its category. The text search is a filter too (its chip).
 export function clearedFilters(scope: CatalogScope = {}): ListingFilters {
   return { category: scope.landing?.category, cities: [], conditions: [], advanced: {}, sort: "newest" };
 }
+
+// Places sort alphabetically, so a choice of several always gives the same URL (FIND 05 lists the cities that have
+// listings, which change over time).
+const placeOrder = (cities: readonly string[]) => [...new Set(cities)].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
 
 const SELLER_TYPES = sellerTypeOptions.map((option) => option.value);
 type SellerType = (typeof SELLER_TYPES)[number];
@@ -100,7 +109,7 @@ export function withFacetValue(filters: ListingFilters, key: string, value: stri
     case "condition":
       return { ...next, conditions: toggle(filters.conditions, value, conditionOptions) };
     case "location":
-      return { ...next, cities: toggle(filters.cities, value, cityOptions) };
+      return { ...next, cities: toggle(filters.cities, value, placeOrder([...cityOptions, ...filters.cities, ...(value ? [value] : [])])) };
     case "seller_type":
       return { ...next, sellerType: isSellerType(value) ? value : undefined };
     default: {
@@ -121,6 +130,21 @@ export function withBrand(filters: ListingFilters, brand: string | undefined): L
   return { ...filters, brand: brand?.trim() || undefined };
 }
 
+export function withQuery(filters: ListingFilters, q: string | undefined): ListingFilters {
+  const text = q?.replace(/\s+/g, " ").trim().slice(0, 200);
+  const next = { ...filters };
+  if (text) next.q = text;
+  else delete next.q;
+  return next;
+}
+
+// A zone's "Todo …" option (FIND 05): every listed city of the zone, or none when they are all chosen already.
+export function withZone(filters: ListingFilters, cities: readonly string[]): ListingFilters {
+  const all = cities.length > 0 && cities.every((city) => filters.cities.includes(city));
+  const rest = filters.cities.filter((city) => !cities.includes(city));
+  return { ...filters, cities: all ? rest : placeOrder([...rest, ...cities]) };
+}
+
 export function withSort(filters: ListingFilters, sort: ListingSort): ListingFilters {
   return { ...filters, sort };
 }
@@ -133,7 +157,9 @@ export function parsePriceInput(value: string) {
   return Number.isSafeInteger(number) ? number : undefined;
 }
 
-export type FacetOption = { value: string; label: string };
+// count: how many results choosing the option gives (FIND 07), when the counts loaded. zone: the location's zone.
+export type FacetOption = { value: string; label: string; count?: number; zone?: string };
+export type FacetZone = { key: string; label: string; cities: string[]; count: number };
 export type ChoiceFacet = {
   kind: "choice";
   // The URL parameter.
@@ -147,8 +173,13 @@ export type ChoiceFacet = {
   allLabel?: string;
   options: FacetOption[];
   selected: string[];
+  // Location only: the zones of the listed cities, each with its "Todo …" option.
+  zones?: FacetZone[];
 };
-export type Facet = ChoiceFacet | { kind: "price"; title: string } | { kind: "brand"; title: string };
+export type Facet =
+  | ChoiceFacet
+  | { kind: "price"; title: string; spread?: CatalogFacetData["price"] }
+  | { kind: "brand"; title: string; brands?: { brand: string; count: number }[] };
 
 const specificTypes = (category?: string) => (category ? (instrumentTypesByCategory[category] ?? []).filter((type) => type !== "other") : []);
 
@@ -172,28 +203,47 @@ function attributeConfig(filters: Pick<ListingFilters, "category" | "instrumentT
 // The facets in the decided order: Categoría (catalog without a category), Tipo (a category with several types),
 // Condición, Precio, Ubicación, Vendedor, Marca, then the type's attributes. The phone sheet keeps Categoría while its
 // draft changes the category (`categoryFacet`); the sidebar drops it once a category is chosen (its chip removes it).
-export function catalogFacets(filters: ListingFilters, scope: CatalogScope = {}, options: { categoryFacet?: boolean } = {}): Facet[] {
+// With the counts (FIND 07) each option carries its number; the locations are the cities that have listings, grouped by
+// zone (FIND 05); the brand facet lists the leading brands; the price facet carries the spread for its shortcuts (FIND 08).
+export function catalogFacets(filters: ListingFilters, scope: CatalogScope = {}, options: { categoryFacet?: boolean } = {}, data: CatalogFacetData | null = null): Facet[] {
   const facets: Facet[] = [];
+  const counted = (counts: Record<string, number> | undefined, list: FacetOption[]) => (data ? list.map((option) => ({ ...option, count: counts?.[option.value] ?? 0 })) : list);
   const choice = (facet: Omit<ChoiceFacet, "kind" | "chips"> & { chips?: boolean }) => facets.push({ kind: "choice", chips: false, ...facet });
   if (options.categoryFacet ?? (!scope.landing && !filters.category)) {
-    choice({ key: "category", title: "Categoría", multiple: false, allLabel: "Todas", options: categoryOptions.map(({ value, label }) => ({ value, label })), selected: filters.category ? [filters.category] : [] });
+    choice({ key: "category", title: "Categoría", multiple: false, allLabel: "Todas", options: counted(data?.category, categoryOptions.map(({ value, label }) => ({ value, label }))), selected: filters.category ? [filters.category] : [] });
   }
   if (filters.category && specificTypes(filters.category).length > 1) {
-    choice({ key: "instrument_type", title: "Tipo", multiple: false, allLabel: "Todos", options: getInstrumentTypeOptions(filters.category), selected: filters.instrumentType ? [filters.instrumentType] : [] });
+    choice({ key: "instrument_type", title: "Tipo", multiple: false, allLabel: "Todos", options: counted(data?.instrument_type, getInstrumentTypeOptions(filters.category)), selected: filters.instrumentType ? [filters.instrumentType] : [] });
   }
-  choice({ key: "condition", title: "Condición", multiple: true, options: conditionOptions.map((value) => ({ value, label: getConditionLabel(value) })), selected: filters.conditions });
-  facets.push({ kind: "price", title: "Precio" });
-  choice({ key: "location", title: "Ubicación", multiple: true, options: cityOptions.map((value) => ({ value, label: value })), selected: filters.cities });
-  choice({ key: "seller_type", title: "Vendedor", multiple: false, allLabel: "Todos", options: sellerTypeOptions.map(({ value, label }) => ({ value, label })), selected: filters.sellerType ? [filters.sellerType] : [] });
-  facets.push({ kind: "brand", title: "Marca" });
+  choice({ key: "condition", title: "Condición", multiple: true, options: counted(data?.condition, conditionOptions.map((value) => ({ value, label: getConditionLabel(value) }))), selected: filters.conditions });
+  facets.push({ kind: "price", title: "Precio", ...(data ? { spread: data.price } : {}) });
+  choice({ key: "location", title: "Ubicación", multiple: true, ...locationOptions(filters, data), selected: filters.cities });
+  choice({ key: "seller_type", title: "Vendedor", multiple: false, allLabel: "Todos", options: counted(data?.seller_type, sellerTypeOptions.map(({ value, label }) => ({ value, label }))), selected: filters.sellerType ? [filters.sellerType] : [] });
+  facets.push({ kind: "brand", title: "Marca", ...(data ? { brands: data.brands } : {}) });
   for (const filter of attributeGroup(filters)?.filters ?? []) {
-    const options = (filter.options ?? []).map((option) => ({ value: option.value, label: attributeValueLabel(filter, filter.key, option.value) }));
+    const options = counted(data?.advanced[filter.key], (filter.options ?? []).map((option) => ({ value: option.value, label: attributeValueLabel(filter, filter.key, option.value) })));
     if (options.length === 0) continue;
     const multiple = filter.type === "multiselect";
     const chips = shortAttributeKeys.has(filter.key);
     choice({ key: filter.key, title: filter.label, multiple, chips, allLabel: multiple || chips ? undefined : "Todos", options, selected: asList(filters.advanced[filter.key]) });
   }
   return facets;
+}
+
+// FIND 05: without counts, the four cities of V1; with them, every city that has listings (and any chosen one), by zone
+// in the zones' order, the largest first inside a zone, each zone with its "Todo …" option.
+function locationOptions(filters: ListingFilters, data: CatalogFacetData | null): { options: FacetOption[]; zones?: FacetZone[] } {
+  if (!data) return { options: cityOptions.map((value) => ({ value, label: value })) };
+  const known = new Map(data.locations.map((location) => [location.city, location]));
+  for (const city of filters.cities) if (!known.has(city)) known.set(city, { city, region: null, count: 0 });
+  const rows = [...known.values()].map((location) => ({ ...location, zone: zoneOfLocation(location.city, location.region) }));
+  const order = (key: string | undefined) => (key === undefined ? locationZones.length : locationZones.findIndex((zone) => zone.key === key));
+  rows.sort((a, b) => order(a.zone?.key) - order(b.zone?.key) || b.count - a.count || a.city.localeCompare(b.city, "es"));
+  const zones = locationZones.flatMap((zone) => {
+    const cities = rows.filter((row) => row.zone?.key === zone.key);
+    return cities.length ? [{ key: zone.key, label: zone.label, cities: cities.map((row) => row.city), count: cities.reduce((sum, row) => sum + row.count, 0) }] : [];
+  });
+  return { options: rows.map((row) => ({ value: row.city, label: row.city, count: row.count, zone: row.zone?.key ?? "otras" })), zones };
 }
 
 // What a one-value facet reads in the sheet's disclosure rows: "Todas", "Lima", "2 ubicaciones".
@@ -219,6 +269,7 @@ export function appliedFilters(filters: ListingFilters, scope: CatalogScope = {}
   const chips: AppliedFilter[] = [];
   const add = (key: string, facet: string, value: string, next: ListingFilters, text = value) =>
     chips.push({ key, facet, value, text, href: catalogHref({ ...next, sort: filters.sort }, scope) });
+  if (filters.q) add("q", "Búsqueda", filters.q, withQuery(filters, undefined), `“${filters.q}”`);
   if (filters.category && !scope.landing) add("category", "Categoría", getCategoryLabel(filters.category), { ...filters, category: undefined });
   if (filters.instrumentType) {
     const label = getInstrumentFilterGroup(filters.instrumentType)?.label ?? filters.instrumentType;
@@ -260,18 +311,31 @@ export function narrowsSearch(filters: ListingFilters) {
   return Boolean(filters.category) || appliedFilters(filters).length > 0;
 }
 
-// The catalog's h1: "Instrumentos", the category's name, or "Tiendas verificadas" for N7's entry alone.
+// The catalog's h1 says what was searched (FIND 02): "Fender en Guitarras · Lima", "“strato” en Guitarras eléctricas",
+// "Bajos · 2 ubicaciones"; "Instrumentos" with nothing chosen, and "Tiendas verificadas" for N7's entry alone.
 export function catalogTitle(filters: ListingFilters) {
-  if (filters.category) return getCategoryLabel(filters.category);
   const applied = appliedFilters(filters);
-  if (applied.length === 1 && applied[0].key === "seller_type" && filters.sellerType === "verified_store") return "Tiendas verificadas";
-  return "Instrumentos";
+  if (!filters.category && applied.length === 1 && applied[0].key === "seller_type" && filters.sellerType === "verified_store") return "Tiendas verificadas";
+  const subject = filters.q ? `“${filters.q}”` : filters.brand ? filters.brand : null;
+  const typeLabel = filters.instrumentType ? getInstrumentFilterGroup(filters.instrumentType)?.label : undefined;
+  const scope = typeLabel && filters.instrumentType !== "other" ? typeLabel : filters.category ? getCategoryLabel(filters.category) : null;
+  const place = filters.cities.length === 1 ? filters.cities[0] : filters.cities.length > 1 ? `${filters.cities.length} ubicaciones` : null;
+  const head = subject && scope ? `${subject} en ${scope}` : subject ?? scope ?? "Instrumentos";
+  return place ? `${head} · ${place}` : head;
+}
+
+// The browser tab: the heading and the count, "Fender en Guitarras · Lima (34)".
+export function catalogTabTitle(filters: ListingFilters, count: number | null) {
+  const heading = catalogTitle(filters);
+  return count === null ? heading : `${heading} (${formatNumber(count)})`;
 }
 
 export const sortShortLabels: Record<ListingSort, string> = {
   newest: "Recientes",
   price_asc: "Menor precio",
   price_desc: "Mayor precio",
+  price_drop: "Bajaron de precio",
+  verified_first: "Verificadas primero",
 };
 
 export function formatNumber(value: number) {

@@ -1,50 +1,20 @@
-import { categoryOptions, type ListingCardData } from "@/lib/listings";
+import { createHash } from "node:crypto";
+import { catalogCardSelect } from "@/lib/catalog";
+import { DISCOVERABLE_STOCK_FILTER, categoryOptions, type ListingCardData } from "@/lib/listings";
 import type { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClient>>;
 
-// The home's read-only data (docs/ux-redesign/ux-3-discovery.md § Home data). Every query uses the public client, so
-// RLS decides what is public exactly as on the catalog. The only queries the catalog does not already make are the
-// owner-approved ones: the vitrina's per-category queries on listing_photo_count (Q12) and the counts (Q10 B).
-export const VITRINA_SIZE = 5;
-export const VITRINA_MIN_PHOTOS = 3;
-// Desktop: two rows of six, eleven cards and the end tile (Q15 B). Phones show the first six.
-export const FEED_SIZE = 11;
+// The home's read-only data (docs/ux-redesign/ux-3-discovery.md § Home data; Effortless Laria BIG 01). Every query uses
+// the public client, so RLS decides what is public exactly as on the catalog: the newest listings "Para ti" ranks on
+// the device, the recent price drops, the counts (Q10 B) and the verified stores. The vitrina's per-category queries
+// went with the vitrina (UXD-find).
+// "Para ti" shows twelve on desktop and six on phones (BIG 01).
 export const PHONE_FEED_SIZE = 6;
 export const HOME_STORE_COUNT = 3;
 
-const CARD_SELECT = `
-  id,
-  title,
-  slug,
-  category,
-  brand,
-  model,
-  condition,
-  price_pen,
-  instrument_type,
-  attributes,
-  published_at,
-  view_count,
-  city,
-  region,
-  seller_type,
-  created_at,
-  stores (
-    name,
-    slug,
-    status,
-    is_verified
-  ),
-  photo_count:listing_photo_count,
-  listing_photos (
-    id,
-    listing_id,
-    image_url,
-    alt_text,
-    sort_order
-  )
-`;
+// The catalog card's columns (lib/catalog.ts), so the home cards show the same "Antes S/" and district.
+const CARD_SELECT = catalogCardSelect();
 
 type Ordered = Pick<ListingCardData, "id" | "published_at" | "created_at">;
 
@@ -60,23 +30,23 @@ export function compareCatalogOrder(a: Ordered, b: Ordered) {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
-// H2, Q12: each category's newest approved listing with 3 photos or more competes; the five most recent show.
-export function selectVitrina<T extends Ordered>(winners: readonly (T | null | undefined)[]) {
-  return winners.filter((listing): listing is T => Boolean(listing)).sort(compareCatalogOrder).slice(0, VITRINA_SIZE);
-}
-
-// "Recién publicados": the newest approved listings, leaving out the vitrina's.
-export function selectFeed<T extends Ordered>(newest: readonly T[], vitrina: readonly Ordered[]) {
-  const shown = new Set(vitrina.map((listing) => listing.id));
-  return [...newest].sort(compareCatalogOrder).filter((listing) => !shown.has(listing.id)).slice(0, FEED_SIZE);
-}
-
 export type HomeStore = { id: string; name: string; slug: string; city: string; district: string | null; logo_url: string | null };
+
+// BIG 01 (Effortless Laria): the listings "Para ti" ranks on the device, newest first. Each carries seller_key, a short
+// hash of its store or owner, so the ranking can keep two listings of one seller apart without learning who sells.
+export const FOR_YOU_POOL = 48;
+export const FOR_YOU_SIZE = 12;
+export const PRICE_DROP_SIZE = 6;
+export type HomeListing = ListingCardData & { seller_key: string };
+
+export function sellerKey(listing: { id: string; store_id?: string | null; owner_user_id?: string | null }) {
+  return createHash("sha256").update(`laria-seller:${listing.store_id ?? listing.owner_user_id ?? listing.id}`).digest("hex").slice(0, 12);
+}
 
 // null means the query failed: the page leaves that section out (§ States) and the error goes to the server log.
 export type HomeData = {
-  vitrina: ListingCardData[] | null;
-  feed: ListingCardData[] | null;
+  pool: HomeListing[] | null;
+  priceDrops: ListingCardData[] | null;
   total: number | null;
   categoryCounts: Record<string, number | null>;
   stores: HomeStore[] | null;
@@ -86,33 +56,44 @@ function logFailure(part: string, error: { message: string } | null) {
   if (error) console.error(`Home: the ${part} query failed: ${error.message}`);
 }
 
-function newestApproved(supabase: PublicSupabaseClient) {
+function approvedListings(supabase: PublicSupabaseClient, select: string) {
   return supabase
     .from("listings")
-    .select(CARD_SELECT)
+    .select(select)
     .eq("status", "approved")
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .order("created_at", { ascending: false })
-    .order("id")
-    .order("sort_order", { foreignTable: "listing_photos", ascending: true })
-    .limit(1, { foreignTable: "listing_photos" });
+    .or(DISCOVERABLE_STOCK_FILTER);
 }
 
 function approvedCount(supabase: PublicSupabaseClient, category?: string) {
-  const query = supabase.from("listings").select("id", { count: "exact", head: true }).eq("status", "approved");
+  const query = supabase
+    .from("listings")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "approved")
+    .or(DISCOVERABLE_STOCK_FILTER);
   return category ? query.eq("category", category) : query;
 }
 
+type PoolRow = ListingCardData & { owner_user_id?: string | null };
+
 export async function fetchHomeData(supabase: PublicSupabaseClient): Promise<HomeData> {
-  // One round trip: the feed takes the newest FEED_SIZE + VITRINA_SIZE listings, enough to fill it after leaving out
-  // the vitrina's, so it does not wait for the vitrina queries.
-  const [winners, newest, total, categoryCounts, stores] = await Promise.all([
-    Promise.all(
-      categoryOptions.map((category) =>
-        newestApproved(supabase).eq("category", category.value).gte("listing_photo_count", VITRINA_MIN_PHOTOS).limit(1).returns<ListingCardData[]>(),
-      ),
-    ),
-    newestApproved(supabase).limit(FEED_SIZE + VITRINA_SIZE).returns<ListingCardData[]>(),
+  const [newest, drops, total, categoryCounts, stores] = await Promise.all([
+    approvedListings(supabase, `${CARD_SELECT}, owner_user_id`)
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .order("id")
+      .order("sort_order", { foreignTable: "listing_photos", ascending: true })
+      .limit(1, { foreignTable: "listing_photos" })
+      .limit(FOR_YOU_POOL)
+      .returns<PoolRow[]>(),
+    // FIND 10: "Bajaron de precio", the real drops of the past 30 days (list-05), the latest first.
+    approvedListings(supabase, `${CARD_SELECT}, recent_price_drop_at`)
+      .not("recent_price_drop_at", "is", null)
+      .order("recent_price_drop_at", { ascending: false })
+      .order("id")
+      .order("sort_order", { foreignTable: "listing_photos", ascending: true })
+      .limit(1, { foreignTable: "listing_photos" })
+      .limit(PRICE_DROP_SIZE)
+      .returns<ListingCardData[]>(),
     approvedCount(supabase),
     Promise.all(categoryOptions.map((category) => approvedCount(supabase, category.value))),
     supabase
@@ -126,16 +107,15 @@ export async function fetchHomeData(supabase: PublicSupabaseClient): Promise<Hom
       .returns<HomeStore[]>(),
   ]);
 
-  const winnerError = winners.find((result) => result.error)?.error ?? null;
-  logFailure("vitrina", winnerError);
-  logFailure("feed", newest.error);
+  logFailure("for-you", newest.error);
+  logFailure("price drop", drops.error);
   logFailure("count", total.error ?? categoryCounts.find((result) => result.error)?.error ?? null);
   logFailure("verified stores", stores.error);
 
-  const vitrina = winnerError ? null : selectVitrina(winners.map((result) => result.data?.[0]));
   return {
-    vitrina,
-    feed: newest.error ? null : selectFeed(newest.data ?? [], vitrina ?? []),
+    // The owner's id never leaves the server: only its hash does.
+    pool: newest.error ? null : [...(newest.data ?? [])].sort(compareCatalogOrder).map(({ owner_user_id, ...listing }) => ({ ...listing, seller_key: sellerKey({ ...listing, owner_user_id }) })),
+    priceDrops: drops.error ? null : (drops.data ?? []),
     total: total.error ? null : total.count,
     categoryCounts: Object.fromEntries(categoryOptions.map((category, index) => {
       const result = categoryCounts[index];

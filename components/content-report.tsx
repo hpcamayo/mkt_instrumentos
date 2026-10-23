@@ -6,8 +6,9 @@ import { Flag } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useMarketplaceAccount } from "@/components/marketplace-account-provider";
+import { savePendingIntent, takePendingIntent } from "@/lib/device-saves";
 
-export type ReportTarget = "listing" | "store" | "review";
+export type ReportTarget = "listing" | "store" | "review" | "question";
 
 // The form and its Supabase client load on the first press (UX-4 L15), never with the page.
 const ContentReportForm = dynamic(() => import("@/components/content-report-form"), {
@@ -15,7 +16,7 @@ const ContentReportForm = dynamic(() => import("@/components/content-report-form
   loading: () => <p role="status" className="t-meta">Cargando…</p>,
 });
 
-// "Reportar publicación / tienda / reseña" (REP-001–005, REVW-015). Signed out it is a sign-in link that comes back
+// "Reportar publicación / tienda / reseña / pregunta" (REP-001–005, REVW-015, big-11). Signed out it is a sign-in link that comes back
 // here; signed in, a quiet link that opens the report form in place.
 export function ContentReport({
   targetType,
@@ -53,6 +54,11 @@ export function ContentReport({
     }
   }, [message, open]);
 
+  // Accounts batch, save-01: back from sign-in, the report form opens by itself.
+  useEffect(() => {
+    if (account.authenticated && takePendingIntent("report", pathname, (intent) => intent.targetType === targetType && intent.targetId === targetId)) setOpen(true);
+  }, [account.authenticated, pathname, targetType, targetId]);
+
   if (!account.ready) {
     return <span className="t-meta">Comprobando acceso…</span>;
   }
@@ -60,7 +66,8 @@ export function ContentReport({
   if (!account.authenticated) {
     return (
       <Link
-        href={`/login?next=${encodeURIComponent(pathname)}`}
+        href={`/login?next=${encodeURIComponent(pathname)}&motivo=reporte`}
+        onClick={() => savePendingIntent({ kind: "report", path: pathname, targetType, targetId })}
         className="link inline-flex items-center gap-1.5 t-meta font-semibold"
       >
         {flag}

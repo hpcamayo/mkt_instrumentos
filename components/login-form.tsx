@@ -6,9 +6,12 @@ import { useMemo, useState, type FormEvent } from "react";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { useFormErrors } from "@/components/use-form-errors";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Notice } from "@/components/ui/notice";
+import { ResendConfirmation } from "@/components/auth/resend-confirmation";
+import { EMAIL_NOT_CONFIRMED } from "@/lib/auth/confirmation";
 
 type FormState = "idle" | "submitting" | "sent" | "error";
 type LoginMode = "password" | "magic-link";
@@ -21,15 +24,22 @@ export function LoginForm() {
   const [message, setMessage] = useState<string | null>(
     searchParams.get("error"),
   );
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  // auth-01: after a failed password, offer the e-mail link for the address already typed.
+  const [failedEmail, setFailedEmail] = useState<string | null>(null);
   const nextPath = useMemo(
     () => getSafeAuthRedirect(searchParams.get("next")),
     [searchParams],
   );
 
+  const signupHref = nextPath && nextPath !== "/mi-cuenta" ? `/registro/vendedor?next=${encodeURIComponent(nextPath)}` : "/registro/vendedor";
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setState("submitting");
     setMessage(null);
+    setUnconfirmedEmail(null);
+    setFailedEmail(null);
 
     const formData = new FormData(event.currentTarget);
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -59,7 +69,14 @@ export function LoginForm() {
       });
 
       if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { code?: string; message?: string } | null;
         setState("error");
+        if (result?.code === EMAIL_NOT_CONFIRMED) {
+          setUnconfirmedEmail(email);
+          setMessage(result.message ?? "Confirma tu correo para ingresar.");
+          return;
+        }
+        setFailedEmail(email);
         setMessage("No se pudo iniciar sesión. Revisa tu correo y contraseña.");
         return;
       }
@@ -68,6 +85,10 @@ export function LoginForm() {
       return;
     }
 
+    await sendMagicLink(email);
+  }
+
+  async function sendMagicLink(email: string) {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
       setState("error");
@@ -96,7 +117,16 @@ export function LoginForm() {
     }
 
     setState("sent");
-    setMessage("Te enviamos un enlace de ingreso. Revisa tu correo.");
+    setMessage(`Te enviamos un enlace de ingreso a ${email}. Ábrelo en este dispositivo para volver aquí.`);
+  }
+
+  async function switchToLink(email: string) {
+    setMode("magic-link");
+    validation.clear();
+    setFailedEmail(null);
+    setState("submitting");
+    setMessage(null);
+    await sendMagicLink(email);
   }
 
   function switchMode(nextMode: LoginMode) {
@@ -136,7 +166,7 @@ export function LoginForm() {
 
         {mode === "password" ? (
           <Field id="login-password" error={validation.errorFor("password")} label="Contraseña">
-            <Input type="password" name="password" required autoComplete="current-password" placeholder="Tu contraseña" />
+            <PasswordInput name="password" required autoComplete="current-password" placeholder="Tu contraseña" />
           </Field>
         ) : (
           <p className="t-ui text-ink-2">
@@ -145,7 +175,15 @@ export function LoginForm() {
         )}
 
         {message ? (
-          <Notice tone={state === "sent" ? "success" : "warning"}>{message}</Notice>
+          <Notice tone={state === "sent" ? "success" : "warning"} title={unconfirmedEmail ? "Confirma tu correo" : undefined}>
+            <p>{message}</p>
+            {unconfirmedEmail ? <ResendConfirmation email={unconfirmedEmail} next={nextPath} /> : null}
+            {failedEmail && mode === "password" ? (
+              <button type="button" onClick={() => void switchToLink(failedEmail)} className="link mt-2 inline-flex min-h-6 items-center t-ui font-semibold">
+                ¿Prefieres un enlace? Te lo enviamos a {failedEmail}
+              </button>
+            ) : null}
+          </Notice>
         ) : null}
 
         <Button
@@ -163,13 +201,12 @@ export function LoginForm() {
         ) : null}
       </form>
 
-      <div className="space-y-2 border-t border-subtle pt-4 t-ui text-ink-2">
-        <p>
-          ¿Quieres comprar o vender como Particular?{" "}
-          <Link className="link font-semibold" href="/registro/vendedor">
-            Crea tu cuenta
-          </Link>
-        </p>
+      {/* save-02, save-03: creating an account is an equal choice, and it keeps the way back. */}
+      <div className="space-y-3 border-t border-subtle pt-4 t-ui text-ink-2">
+        <p>¿Es tu primera vez en Laria?</p>
+        <Link href={signupHref} className={buttonClasses({ variant: "secondary", block: true })}>
+          Crear cuenta
+        </Link>
         <p>
           ¿Tienes una tienda?{" "}
           <Link className="link font-semibold" href="/registrar-tienda">

@@ -1,7 +1,8 @@
 import { formatPrice } from "@/lib/price";
 import { cn } from "@/lib/utils";
 
-// Prices in soles, semi-condensed with tabular figures. A previous price (price drop) is shown struck through.
+// Prices in soles, semi-condensed with tabular figures. A previous price (price drop) reads "Antes S/ 2,500" with the
+// amount struck through (list-05): the word says it, not the line alone.
 export function Price({
   value,
   previous,
@@ -21,9 +22,8 @@ export function Price({
     <span className={cn("inline-flex flex-wrap items-baseline gap-x-2 text-ink", className)}>
       <span className={sizeClass}>{formatPrice(value)}</span>
       {previous && previous > value ? (
-        <span className="t-meta line-through">
-          <span className="sr-only">Antes </span>
-          {formatPrice(previous)}
+        <span className="t-meta">
+          Antes <span className="line-through">{formatPrice(previous)}</span>
         </span>
       ) : null}
     </span>

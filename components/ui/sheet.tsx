@@ -10,18 +10,21 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([t
 // up to 88% of the viewport, over a frame-black backdrop at 55% (`.sheet` in app/globals.css). It slides up in 200 ms,
 // in place under reduced motion. Render it only while open: it opens as a native modal <dialog>, which makes the page
 // behind inert; Tab stays inside, the page does not scroll, and Esc, the close button or a press on the backdrop call
-// onDismiss. The caller closes it and returns focus to the button that opened it.
+// onDismiss. The caller closes it and returns focus to the button that opened it. layout="responsive" keeps the
+// bottom sheet on phones and shows a centered dialog from 768 px (inventory stock actions, design §13.3).
 export function Sheet({
   title,
   closeLabel,
   onDismiss,
   footer,
+  layout = "sheet",
   children,
 }: {
   title: string;
   closeLabel: string;
   onDismiss: () => void;
   footer?: ReactNode;
+  layout?: "sheet" | "responsive";
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -62,6 +65,7 @@ export function Sheet({
       aria-labelledby={titleId}
       aria-modal="true"
       className="sheet"
+      data-layout={layout === "responsive" ? "responsive" : undefined}
       onCancel={(event) => {
         event.preventDefault();
         onDismiss();

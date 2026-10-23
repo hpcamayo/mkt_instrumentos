@@ -28,7 +28,9 @@ export function Pagination({
   total,
   path,
   params = {},
+  phoneLoadMore = false,
 }: {
+  phoneLoadMore?: boolean;
   page: number;
   total: number;
   path: string;
@@ -40,7 +42,9 @@ export function Pagination({
   const last = Math.min(page * LISTINGS_PAGE_SIZE, total);
   const href = (target: number) => pageHref(path, params, target);
   return (
-    <div className="mt-8 flex flex-col items-center gap-3">
+    // FIND 15: on phones the catalog shows "Ver 24 más" (components/catalog-load-more.tsx) instead; the links stay in
+    // the page for search engines. Pages without it (a store) keep the numbers on phones.
+    <div className={cn("mt-8 flex flex-col items-center gap-3", phoneLoadMore && pages > 1 && "max-md:hidden")}>
       <p className="text-center t-meta">
         Mostrando {first === last ? formatNumber(first) : `${formatNumber(first)}–${formatNumber(last)}`} de {formatNumber(total)}
       </p>
@@ -49,7 +53,7 @@ export function Pagination({
           <ul className="flex flex-wrap items-center justify-center gap-1">
             {page > 1 ? (
               <li>
-                <CatalogLink href={href(Math.min(page - 1, pages))} className={cn(BOX, "gap-1 border border-line-strong px-2 text-ink hover:bg-canvas md:px-3")}>
+                <CatalogLink resultsScroll="start" href={href(Math.min(page - 1, pages))} className={cn(BOX, "gap-1 border border-line-strong px-2 text-ink hover:bg-canvas md:px-3")}>
                   <ChevronLeft className="h-4 w-4" aria-hidden />
                   <span className="sr-only md:hidden">Página anterior</span>
                   <span className="hidden md:inline">Anterior</span>
@@ -70,7 +74,7 @@ export function Pagination({
                 </li>
               ) : (
                 <li key={item}>
-                  <CatalogLink href={href(item)} className={cn(BOX, "border border-line-strong text-ink hover:bg-canvas")}>
+                  <CatalogLink resultsScroll="start" href={href(item)} className={cn(BOX, "border border-line-strong text-ink hover:bg-canvas")}>
                     <span className="sr-only">Página </span>
                     {item}
                   </CatalogLink>
@@ -79,7 +83,7 @@ export function Pagination({
             )}
             {page < pages ? (
               <li>
-                <CatalogLink href={href(page + 1)} className={cn(BOX, "gap-1 border border-line-strong px-2 text-ink hover:bg-canvas md:px-3")}>
+                <CatalogLink resultsScroll="start" href={href(page + 1)} className={cn(BOX, "gap-1 border border-line-strong px-2 text-ink hover:bg-canvas md:px-3")}>
                   <span className="sr-only md:hidden">Página siguiente</span>
                   <span className="hidden md:inline">Siguiente</span>
                   <ChevronRight className="h-4 w-4" aria-hidden />

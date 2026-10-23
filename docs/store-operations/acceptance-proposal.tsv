@@ -1,0 +1,137 @@
+proposed_id	family	sub_sprint	requirement	expected	evidence
+INV-001	INV	STORE-1a	Inventory is off until an Admin enables it per store	Owner writes fail with `INVENTORY_NOT_ENABLED`; enabling needs a reason and is audited	`store-ops-1.sql` pilot gate
+INV-002	INV	STORE-1a	Only the store owner reads and writes its inventory	Other owners, Particulares and anonymous visitors see nothing; Admin reads; writes only through functions	`store-ops-1.sql` RLS block
+INV-003	INV	STORE-1a	A SKU is unique per store, case-insensitively, and changes only with a reason	`INVENTORY_SKU_TAKEN`, `INVENTORY_REASON_REQUIRED`; change audited	`store-ops-1.sql` items, SKU block
+INV-004	INV	STORE-1a	A blank SKU gets a generated `LAR-000001`-style code that is never reused	Counter advances per store	`store-ops-1.sql`
+INV-005	INV	STORE-1a	Every stock change is a ledger movement with before/after and author	Ledger sums to on-hand; ledger rows cannot be edited or deleted	`store-ops-1.sql` ledger integrity
+INV-006	INV	STORE-1a	Stock can never go below zero	Oversell and negative adjustments fail with `STOCK_INSUFFICIENT`	`store-ops-1.sql`, concurrency "last unit"
+INV-007	INV	STORE-1a	Two buyers cannot get the last unit	Exactly one of N concurrent sales succeeds	concurrency "last unit"
+INV-008	INV	STORE-1a	A retried request never applies twice	Same key returns the first result; same key with other data is refused	`store-ops-1.sql`, concurrency "same-key" cases
+INV-009	INV	STORE-1a	A count needs the version the merchant saw	Stale count refused; a count never erases a sale it did not see	concurrency "stale count"
+INV-010	INV	STORE-1a	Bulk stock and price changes are all-or-nothing	One failing row cancels the batch; retry returns the receipt	`store-ops-1.sql` bulk blocks
+INV-011	INV	STORE-1a	Linking keeps listing and item prices equal from either side	Price edits write through and are audited; favorites get one price-drop notice per decrease while in stock	`store-ops-1.sql`, concurrency "stock vs listing edits"
+INV-012	INV	STORE-1a	Stock never changes a listing's status, and moderation never changes stock	Sell-out keeps `approved`; hide/restore keeps the link	`store-ops-1.sql` stock-out block
+INV-013	INV	STORE-1a	An out-of-stock listing keeps its URL with "Agotado", leaves discovery and the index	Catalog, home, sitemap and related strips skip it; store page lists it last; detail `noindex, follow`	`tests/sprint-9.test.cjs` (sitemap filter); manual page check pending
+INV-014	INV	STORE-1a	Restock does not re-send alerts; a listing approved at zero stock alerts once when first stocked	Saved-search matches and first-public markers counted	`store-ops-1.sql` alerts blocks
+INV-015	INV	STORE-1a	A linked listing cannot be marked sold; unlinking returns it to the V1 sold flow	`INVENTORY_MANAGED_LISTING`; after unlink the sold flow works	`store-ops-1.sql`, concurrency "link vs sold"
+INV-016	INV	STORE-1a	Particular and unlinked store listings behave exactly as before	Lifecycle, sold, price drop and alerts unchanged; `stock_state` null	`store-ops-1.sql`, existing suites unchanged
+INV-017	INV	STORE-1a	A hidden or rejected store keeps read-only access	Writes fail with `INVENTORY_STORE_READ_ONLY`; reads work	`store-ops-1.sql`
+INV-018	INV	STORE-1a	Publishing from an item links it in the same transaction	Verified store at zero stock: approved, out of stock, no alert until stocked; another store's item aborts the submission	`store-ops-1.sql` publication block
+INV-019	INV	STORE-1b	Store without inventory enabled opens Inventario	V1 publications page, unchanged	`store-ops-1b.test.cjs` page checks; browser
+INV-020	INV	STORE-1b	Enabled store opens Inventario	Tabs Inventario / Publicaciones, tiles, table	browser
+INV-021	INV	STORE-1b	Summary tiles	SKU activos, Publicadas, Unidades, Stock bajo, Agotados, En revisión, Ventas registradas por la tienda; values link to filtered views	`store-ops-1b.sql` summary
+INV-022	INV	STORE-1b	Recorded sales tile	Units net of returns, last 30 days, labeled as recorded by the store and not verified by Laria	`store-ops-1b.sql`, ux-copy test
+INV-023	INV	STORE-1b	Search, filters and sort	Results and "Mostrando:" match the URL; clearing returns to all	browser; filters unit test
+INV-024	INV	STORE-1b	Paging	Keyset pages of 50, no duplicates or gaps across pages	cursor unit test; STORE-1a `get_inventory_page` tests
+INV-025	INV	STORE-1b	Table on phones	Stacked cards with labels, no horizontal scroll at 390 px	browser
+INV-026	INV	STORE-1b	Keyboard	Row focus with arrows/Home/End; checkboxes and select-all labeled	DataTable unit test
+INV-027	INV	STORE-1b	Registrar venta	Dialog/sheet with quantity, channel, reference and the "anotación de tu tienda" note; stock drops; disabled at 0	browser; ux-copy test
+INV-028	INV	STORE-1b	Double submit or retry	One movement per opened sheet	idempotency unit test; STORE-1a suites
+INV-029	INV	STORE-1b	Conteo on a changed SKU	Clear stale-count message and "Volver a cargar el stock"	stock sheet; STORE-1a stale-count case
+INV-030	INV	STORE-1b	Bulk price	Preview with before → after and problems, then apply	browser; STORE-1a price suite
+INV-031	INV	STORE-1b	Bulk threshold	Applies to all or none; unchanged SKU not audited; replay safe	`store-ops-1b.sql` threshold
+INV-032	INV	STORE-1b	Bulk hide	Hides approved linked publications, lists the rest as skipped; stock and links unchanged	`store-ops-1b.sql` hide
+INV-033	INV	STORE-1b	Bulk stock	Per-SKU quantities, one batch, counts check versions	browser; STORE-1a bulk suite
+INV-034	INV	STORE-1b	Export CSV and Excel	All active SKU or the selection; headers as documented; formula-like text prefixed in CSV; ids as text in Excel	`store-ops-1b.test.cjs` export
+INV-035	INV	STORE-1b	Export isolation	Only the owner's store, even for an Admin account	export route test
+INV-036	INV	STORE-1b	SKU page	Stock, publication, data, SKU change with reason, archive, history newest first with paging	browser
+INV-037	INV	STORE-1b	Publish from a SKU	Prefilled form, publication linked on submit	browser; submissions route
+INV-038	INV	STORE-1b	Linked listing in Publicaciones	No "Marcar vendida"; "Stock controlado en Inventario. Ver SKU"	D-15 unit test; browser
+INV-039	INV	STORE-1b	Controlar stock	Unlinked editable listing adopts a SKU and quantity in one step	browser; STORE-1a link suite
+INV-040	INV	STORE-3b	Allowance defaults to 50	A store with no setting can hold 50 pending + approved publications	`store-ops-3b.sql` default
+INV-041	INV	STORE-3b	The limit uses the store's own allowance	At allowance N, publication N+1 is refused with "N publicaciones"	`store-ops-3b.sql` trigger
+INV-042	INV	STORE-3b	What counts is unchanged	Inventory items, stock, staged rows, rejected or hidden listings never count	`store-ops-3b.sql` trigger
+INV-043	INV	STORE-3b	Only Admin changes the allowance	Owners and anonymous visitors refused	`store-ops-3b.sql` boundaries
+INV-044	INV	STORE-3b	A reason is required, 1–2000	Missing reason or out of range refused	`store-ops-3b.sql` Admin validation
+INV-045	INV	STORE-3b	Every change is audited	Audit entry with before, after, reason and count in use	`store-ops-3b.sql` audit; browser run
+INV-046	INV	STORE-3b	Lowering hides nothing	Current publications stay; only new ones are refused	`store-ops-3b.sql` lowering
+INV-047	INV	STORE-3b	Restore respects the allowance	Restoring a hidden listing at the limit is refused	`store-ops-3b.sql` restore
+INV-048	INV	STORE-3b	Screens show the store's allowance	Publicar gate, inventory line and limit messages use the number	browser run; `store-ops-3b.test.cjs` message
+INV-049	INV	STORE-3b	Owners see their own allowance only	Quota of another store refused; Admin sees any	`store-ops-3b.sql` boundaries
+IMP-001	IMP	STORE-2	Only an enabled store's owner can import	Disabled store, other owners, Particulares and anonymous visitors are refused	`store-ops-2.sql` gate, anon
+IMP-002	IMP	STORE-2	The file stays private	Upload only to the session's own path while it waits for the file; no update, delete or cross-owner read	`store-ops-2.sql` storage block
+IMP-003	IMP	STORE-2	XLSX and CSV up to 5 MB, 2,000 rows, 80 columns	Over the limits: clear Spanish message, nothing staged	`store-ops-2.test.cjs` limits
+IMP-004	IMP	STORE-2	`.xls`, macro workbooks and non-spreadsheets are refused	`IMPORT_XLS_UNSUPPORTED`, `IMPORT_XLSX_MACROS`, `IMPORT_FILE_INVALID`	`store-ops-2.test.cjs` hostile files
+IMP-005	IMP	STORE-2	Compressed bombs are stopped before inflating	40 MB total and 100:1 per part budgets	`store-ops-2.test.cjs` ZIP bombs
+IMP-006	IMP	STORE-2	Formulas are never evaluated	Cached value used, row warned	`store-ops-2.test.cjs`
+IMP-007	IMP	STORE-2	CSV in UTF-8, UTF-16 or Windows-1252, with `,`, `;` or tab	Accents and delimiter right	`store-ops-2.test.cjs` CSV
+IMP-008	IMP	STORE-2	Headings are recognized in Spanish or English and confirmed once	Proposal per column; saved mapping reused next time	`store-ops-2.test.cjs` mapping; browser run
+IMP-009	IMP	STORE-2	Stock and SKU (or name) columns are required	Column step lists what is missing	`store-ops-2.test.cjs` mapping; `store-ops-2.sql` confirm
+IMP-010	IMP	STORE-2	Excel-mangled identifiers are caught	Scientific notation, dates and >15-digit numbers are errors; numeric SKUs warn	`store-ops-2.test.cjs`
+IMP-011	IMP	STORE-2	Prices are whole soles and never guessed	`1.500`, `1,500`, cents, other currencies refused	`store-ops-2.test.cjs` prices
+IMP-012	IMP	STORE-2	Stock is a whole number 0–100,000	Decimals, negatives, text, booleans and dates refused	`store-ops-2.test.cjs`
+IMP-013	IMP	STORE-2	A SKU appears once per file	All involved rows are errors, case-insensitively	`store-ops-2.sql` first import
+IMP-014	IMP	STORE-2	Nothing changes until the owner confirms	Preview shows counts and current → new per field	`store-ops-2.sql`; browser run
+IMP-015	IMP	STORE-2	The owner can exclude and include rows	Excluded rows are not applied; counts follow	`store-ops-2.sql` decisions
+IMP-016	IMP	STORE-2	Stock in the file is the counted total	7 → 5 records −2 `import_reconciliation` with session and row	`store-ops-2.sql` reimport
+IMP-017	IMP	STORE-2	New SKUs start with an opening balance	`opening_balance` movement, channel `importacion`	`store-ops-2.sql` commit
+IMP-018	IMP	STORE-2	SKUs missing from a later file are untouched	Not zeroed, not archived	`store-ops-2.sql` reimport
+IMP-019	IMP	STORE-2	Blank cells keep current values	No change recorded	`store-ops-2.sql` unchanged
+IMP-020	IMP	STORE-2	A listing id adopts the store's own listing	Linked with the chosen price; other store's or sold listing refused	`store-ops-2.sql` adoption
+IMP-021	IMP	STORE-2	Price changes reach linked listings and favorites	Write-through and one price-drop notice	`store-ops-2.sql` reimport
+IMP-022	IMP	STORE-2	Zero stock marks the listing "Agotado" without changing its status	`stock_state` `out_of_stock`, still approved	`store-ops-2.sql` zero stock
+IMP-023	IMP	STORE-2	A sale during an import is never overwritten	Changed SKU becomes a conflict; re-planned on review	`store-ops-2.sql` conflicts
+IMP-024	IMP	STORE-2	A retried step never applies a row twice	Same row key; applied rows skipped	`store-ops-2.sql` retry chunk
+IMP-025	IMP	STORE-2	Two tabs cannot process one import	Second gets busy; an expired lease is taken over	`store-ops-2.sql` lease
+IMP-026	IMP	STORE-2	Closing the page pauses the import	Reopening continues from the checkpoint	Step model and lease tests in `store-ops-2.sql`; not yet run as a browser reload
+IMP-027	IMP	STORE-2	The result is downloadable and spreadsheet-safe	Report CSV with formula prefix	`store-ops-2.test.cjs` report; browser run
+IMP-028	IMP	STORE-2	One open import per store; cancel keeps applied rows	`IMPORT_ALREADY_OPEN`; cancel leaves ledger intact	`store-ops-2.sql`
+IMP-029	IMP	STORE-2	Abandoned imports expire and files are deleted	7 days idle → expired; rows purged and files queued 30 days after close	`store-ops-2.sql` retention
+IMP-030	IMP	STORE-3b	Publishing is a separate explicit step	Nothing is published by confirming an import	`store-ops-3b.sql`; browser run
+IMP-031	IMP	STORE-3b	Only after the import is confirmed, until purged	Before commit or after purge: closed with a reason	`store-ops-3b.sql` closed
+IMP-032	IMP	STORE-3b	Only the import's owner publishes its rows	Other owners and unknown rows refused	`store-ops-3b.sql` boundaries
+IMP-033	IMP	STORE-3b	At most 20 rows per request	0 or 21 rows refused	`store-ops-3b.sql`; `store-ops-3b.test.cjs` parser
+IMP-034	IMP	STORE-3b	Marketplace rules accepted on each publish	Without acceptance: refused	`store-ops-3b.sql`; route
+IMP-035	IMP	STORE-3b	Rows meet the publish form's requirements	Missing fields reported in Spanish, row not published	`store-ops-3b.test.cjs` plan; `store-ops-3b.sql` brand
+IMP-036	IMP	STORE-3b	2–10 validated photos from the import	One photo: not published	`store-ops-3b.sql` row 4
+IMP-037	IMP	STORE-3b	Price comes from the SKU	No price: not published; published price equals the SKU	`store-ops-3b.sql`
+IMP-038	IMP	STORE-3b	Contact data comes from the store	Listing carries the store's WhatsApp and location	`store-ops-3b.sql`
+IMP-039	IMP	STORE-3b	The listing is linked to its SKU	Inventory shows it; stock state set; restock alerts as 1a	`store-ops-3b.sql` link
+IMP-040	IMP	STORE-3b	Verified active store publishes directly	Status approved	`store-ops-3b.sql`; browser run
+IMP-041	IMP	STORE-3b	Other Tiendas go to review	Status pending, in the Admin queue	`store-ops-3b.sql` store B
+IMP-042	IMP	STORE-3b	A store in review publishes privately	Pending and not public until the store is approved	`store-ops-3b.sql` store C
+IMP-043	IMP	STORE-3b	Over the allowance: "Sin cupo"	Those rows stay unpublished; the rest publish	`store-ops-3b.sql` no_quota
+IMP-044	IMP	STORE-3b	A failing row does not stop the others	Its reason is shown; other rows publish	`store-ops-3b.sql`
+IMP-045	IMP	STORE-3b	Retrying is safe	An already published row creates nothing new	`store-ops-3b.sql` retry
+IMP-046	IMP	STORE-3b	A photo is used by one listing only	Reusing a published photo for another row refused	`store-ops-3b.sql` reuse
+IMP-047	IMP	STORE-3b	Linked or archived SKUs are not published	"Ya tiene publicación" / not available	`store-ops-3b.sql`
+IMP-048	IMP	STORE-3b	Published photos survive the purge	Listing photos still served; unused photos removed	`store-ops-3b.sql` purge
+IMP-049	IMP	STORE-3b	The form path is unchanged	Publishing from the sell form behaves as before	`store-ops-3b.sql` regression; Sprint 4 suites
+IPH-001	IPH	STORE-3a	Only the import's owner adds photos, after review	Other owners, anonymous visitors and imports not yet reviewed are refused	`store-ops-3a.sql` boundaries, photos wait
+IPH-002	IPH	STORE-3a	The server never opens a ZIP	The browser reads it entry by entry and uploads each photo alone	`store-ops-3a.test.cjs` "server never unzips"; browser run
+IPH-003	IPH	STORE-3a	Photos go only to the path the server issued	Upload elsewhere, twice, or after the import closes is refused	`store-ops-3a.sql` storage policies
+IPH-004	IPH	STORE-3a	JPG, PNG or WebP up to 5 MB, 400–8000 px	Other types, sizes and dimensions refused with a Spanish reason	`store-ops-3a.test.cjs` checks; browser run
+IPH-005	IPH	STORE-3a	The type comes from the bytes	A renamed or mixed file is refused	`store-ops-3a.test.cjs`
+IPH-006	IPH	STORE-3a	Files hiding something else are refused	Polyglots and data after the image end: "El archivo contiene algo más que una foto"	`store-ops-3a.test.cjs` polyglots; browser run
+IPH-007	IPH	STORE-3a	Refused files are deleted	Object removed after the check	`photos-server.ts`; browser run
+IPH-008	IPH	STORE-3a	Only the server can mark a photo valid	Owner calling the check is refused	`store-ops-3a.sql` service role
+IPH-009	IPH	STORE-3a	Up to 600 photos per import	The 601st slot is refused	`store-ops-3a.sql` cap; `store-ops-3a.test.cjs`
+IPH-010	IPH	STORE-3a	Photos match by `SKU__NN`, list of photos or `Foto(s)` column	Column > list > name; source shown	`store-ops-3a.sql` matching; browser run
+IPH-011	IPH	STORE-3a	Uncertain photos are set aside, never guessed	Unknown SKU, SKU on two rows, name on two rows, duplicate image, 11th photo	`store-ops-3a.sql` matching
+IPH-012	IPH	STORE-3a	Two photos for one place block that row	`Revisa el orden` until moved	`store-ops-3a.sql`; browser run
+IPH-013	IPH	STORE-3a	A row needs 2–10 photos to be ready	1 photo: "Falta 1 foto"	`store-ops-3a.sql`; browser run
+IPH-014	IPH	STORE-3a	The owner can move, reorder, remove and set aside photos	Manual choices kept on re-matching; reset clears them	`store-ops-3a.sql` manual correction; browser run
+IPH-015	IPH	STORE-3a	Photos survive confirming the import	Still arranged on the result page; generated SKUs match	`store-ops-3a.sql` commit
+IPH-016	IPH	STORE-3a	A listing can use only its owner's validated import photos	Other owner's, rejected or discarded photos refused on every write path	`store-ops-3a.sql` validator, guard
+IPH-017	IPH	STORE-3a	Import photos are public only through a public listing	Owner/Admin otherwise; 404 for anything else	browser run (curl); proxy unit test
+IPH-018	IPH	STORE-3a	The proxy never serves the spreadsheet bucket	`store-imports` in the URL returns 404	`store-ops-3a.test.cjs`; browser run
+IPH-019	IPH	STORE-3a	Unused photos are deleted, used ones never	Cancel, expiry or purge removes unused; race test holds	`store-ops-3a.sql` retention, claims; race test
+PAY-001	PAY	PAY-1	Nothing changes for buyers or stores while the pilot switch is off	No methods, no "Solicitar compra", owner page 404, legal drafts hidden	`pay-1.test.cjs`
+PAY-002	PAY	PAY-1	Only an active, verified store can declare methods	Unverified, hidden and Particular callers refused	`pay-1.sql`
+PAY-003	PAY	PAY-1	Every method except cash names the account holder; the holder is visible only to the owner and Admin	Holder required; never in public reads	`pay-1.sql` public reads
+PAY-004	PAY	PAY-1	No phone, account or card numbers, links or e-mails are stored	`PAYMENT_METHOD_SENSITIVE_DATA`	`pay-1.sql`
+PAY-005	PAY	PAY-1	A declared or changed method is hidden until an Admin approves it	`pending_review`; owner edit after approval re-hides it	`pay-1.sql`
+PAY-006	PAY	PAY-1	The Admin approves only the version they saw, with a reason, for a verified store	Stale version, missing reason and unverified store refused; audited	`pay-1.sql` Admin review
+PAY-007	PAY	PAY-1	An Admin can reject a proposal or disable an approved method, with a reason the store sees	Status and reason on the owner page; hidden from buyers	`pay-1.sql`; manual page check
+PAY-008	PAY	PAY-1	The owner can stop offering a method at any time	`withdrawn`, hidden at once	`pay-1.sql`
+PAY-009	PAY	PAY-1	Revoking verification or hiding the store hides its methods immediately	Public reads empty; rows kept	`pay-1.sql`
+PAY-010	PAY	PAY-1	A RUC or razón social change sends approved methods back to review	`business_data_changed` in history	`pay-1.sql`
+PAY-011	PAY	PAY-1	The store page lists approved methods with the "pay the store directly" statement	Block under "Sobre la tienda"	browser check
+PAY-012	PAY	PAY-1	An eligible listing shows "Solicitar compra" and the methods; Particular, unverified-store and out-of-stock listings do not	Button label and block	`pay-1.sql`, browser check
+PAY-013	PAY	PAY-1	"Solicitar compra" opens WhatsApp with title, SKU (when linked), quantity 1 and the listing link	Prefilled message; no amount, no payment link	`pay-1.test.cjs`, browser check
+PAY-014	PAY	PAY-1	A purchase request is recorded as a WhatsApp contact with the purchase intent, only when eligible	Exact metadata; otherwise the ordinary contact	`pay-1.sql` events, `pay-1.test.cjs`
+PAY-015	PAY	PAY-1	A purchase request never changes stock, listing status, reservations, claims or reviews	No side effects; no money columns	`pay-1.sql`
+PAY-016	PAY	PAY-1	The seller's own purchase-request click is not counted	`recorded = false`	`pay-1.sql`
+PAY-017	PAY	PAY-1	Every proposal, withdrawal and decision is in an append-only history	History cannot be edited or deleted	`pay-1.sql`
+PAY-018	PAY	PAY-1	Terms and Privacy describe Pilot A after legal review	Approved text live with the switch	manual (legal)
+PAY-019	PAY	PAY-1	Existing contact, analytics and transaction-claim behavior is unchanged	Existing suites pass unchanged	`sprint-4-analytics.sql`, `sprint-6-transactions-reviews.sql`, `sprint-6.test.cjs`

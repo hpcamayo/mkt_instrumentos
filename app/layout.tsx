@@ -1,9 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { Suspense } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteShell } from "@/components/site-shell";
 import "./globals.css";
 import { MarketplaceAccountProvider } from "@/components/marketplace-account-provider";
+import { NavigationFeedback } from "@/components/navigation-feedback";
+import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
 import { MENU_BRAND_COUNT } from "@/lib/category-nav";
 import {
@@ -44,8 +47,9 @@ export const metadata: Metadata = {
     title: SITE_OG_TITLE,
     description: SITE_OG_DESCRIPTION,
   },
+  // The share cards are 1200 x 630 (list-09), so X shows them large on every page.
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Laria | Instrumentos musicales en Perú",
     description:
       "Marketplace peruano para instrumentos musicales con contacto directo por WhatsApp.",
@@ -54,6 +58,13 @@ export const metadata: Metadata = {
     icon: "/icon.svg",
     apple: "/apple-icon.png",
   },
+  // big-12: added to the home screen on iPhone, Laria opens like the Android app (the manifest is app/manifest.ts).
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: "black" },
+};
+
+// The browser's own bar takes the header's frame black on phones.
+export const viewport: Viewport = {
+  themeColor: "#050608",
 };
 
 export default async function RootLayout({
@@ -72,6 +83,11 @@ export default async function RootLayout({
           {/* One <main id="contenido"> per page: in the shell, or in app/admin/layout.tsx for Admin. */}
           <SiteShell menuBrands={menuBrands} fullFooter={<SiteFooter variant="full" />} slimFooter={<SiteFooter variant="slim" />}>{children}</SiteShell>
         </MarketplaceAccountProvider>
+        {/* fast-01: the navigation bar and slow-page skeletons. It reads the search params, so it renders on the client. */}
+        <Suspense fallback={null}>
+          <NavigationFeedback />
+        </Suspense>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   );

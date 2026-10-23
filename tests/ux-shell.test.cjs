@@ -66,6 +66,8 @@ test("each route gets its frame: header, strip, phone search and footer (N3–N5
     "/instrumentos/percusion": { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" },
     // A retired landing (12 Oct 2026) only redirects; it is still a browse path, never a listing.
     "/instrumentos/baterias": { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" },
+    // find-13: the stores directory is a browse page like the store pages under it.
+    "/tiendas": { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" },
     "/tiendas/casa-musical-grau": { header: "standard", strip: "all", phoneSearch: "row", footer: "slim" },
     "/instrumentos/bateria-pearl-roadshow-0b6f4a1e-6a3d-4c43-9d49-1d3f64f9c2aa": { header: "standard", strip: "all", phoneSearch: "toggle", footer: "slim" },
     "/terminos": { header: "standard", strip: "all", phoneSearch: "none", footer: "slim" },
@@ -95,7 +97,7 @@ test("nothing in the shell is sticky (N3) and there is no bottom bar (N4)", () =
   }
 });
 
-test("the category strip lists Instrumentos, the categories in taxonomy order and Tiendas verificadas (G1, N7)", () => {
+test("the category strip lists Instrumentos, the categories in taxonomy order and Tiendas verificadas (G1, find-13)", () => {
   assert.deepEqual(shell.stripItems.map((item) => item.label), [
     "Instrumentos", "Guitarras", "Bajos", "Teclados", "Percusión", "Vientos", "Cuerdas", "Pedales", "Amplificadores", "Micrófonos", "Audio", "Tiendas verificadas",
   ]);
@@ -103,13 +105,18 @@ test("the category strip lists Instrumentos, the categories in taxonomy order an
   assert.equal(shell.categoryMenus.find((menu) => menu.key === "keyboards").label, "Teclados y pianos");
   assert.deepEqual(shell.stripItems.map((item) => item.kind), ["link", ...Array(10).fill("category"), "link"]);
   assert.equal(shell.stripItems[0].href, "/listados");
-  assert.equal(shell.stripItems.at(-1).href, "/listados?seller_type=verified_store");
+  // find-13 replaces N7: "Tiendas verificadas" opens the stores directory instead of the catalog filtered to verified
+  // stores (that filter still marks the item, since it shows the same listings as the directory's second tab).
+  assert.equal(shell.stripItems.at(-1).href, "/tiendas");
   const current = (pathname, search = "") => shell.currentStripKey(pathname, new URLSearchParams(search));
   assert.equal(current("/listados"), "catalog");
   assert.equal(current("/listados", "brand=Yamaha"), "catalog");
   assert.equal(current("/listados", "category=percussion&instrument_type=drums"), "percussion");
   assert.equal(current("/listados", "category=drums"), "percussion", "a retired category marks the category it became");
   assert.equal(current("/listados", "seller_type=verified_store"), "verified_stores");
+  assert.equal(current("/tiendas"), "verified_stores");
+  assert.equal(current("/tiendas", "vista=publicaciones"), "verified_stores");
+  assert.equal(current("/tiendas/casa-musical-grau"), null, "a verified store's page marks the item through StripCurrent");
   assert.equal(current("/instrumentos/percusion"), "percussion");
   assert.equal(current("/instrumentos/bateria-pearl-0b6f4a1e"), null);
   assert.equal(current("/terminos"), null);
@@ -126,9 +133,9 @@ test("the catalog has no route-level loading boundary; its own links navigate in
   assert.equal(shell.isCatalogHref, undefined);
   const pendingReact = { ...React, useContext: () => ({ pending: true, navigate() {} }) };
   const pending = load("components/catalog-navigation.tsx", { react: pendingReact, "next/link": clientLinkMock, "next/navigation": navigationMock("/listados") });
-  assert.equal(renderToStaticMarkup(React.createElement(pending.CatalogResults, { className: "grid" }, "x")), '<p role="status" class="sr-only">Cargando resultados…</p><div aria-busy="true" class="catalog-results grid">x</div>');
+  assert.equal(renderToStaticMarkup(React.createElement(pending.CatalogResults, { className: "grid" }, "x")), '<p role="status" class="sr-only">Cargando resultados…</p><div id="resultados" aria-busy="true" class="catalog-results grid">x</div>');
   const idle = load("components/catalog-navigation.tsx", { "next/link": clientLinkMock, "next/navigation": navigationMock("/listados") });
-  assert.equal(renderToStaticMarkup(React.createElement(idle.CatalogResults, { className: "grid" }, "x")), '<p role="status" class="sr-only"></p><div class="catalog-results grid">x</div>');
+  assert.equal(renderToStaticMarkup(React.createElement(idle.CatalogResults, { className: "grid" }, "x")), '<p role="status" class="sr-only"></p><div id="resultados" class="catalog-results grid">x</div>');
   assert.match(source("app/globals.css"), /\.catalog-results\[aria-busy="true"\] \{\s*opacity: 0\.5;\s*transition-delay: 200ms;\s*\}/);
   // Applied chips and pagination are client links that report to the pending state.
   const { AppliedChip } = load("components/ui/chip.tsx", { "next/link": clientLinkMock });
@@ -152,7 +159,7 @@ test("strip categories are menu buttons; Instrumentos and Tiendas verificadas st
   assert.match(html, /aria-controls="categoria-percussion" aria-current="true" class="[^"]*shadow-\[inset_0_-3px_0_var\(--accent\)\]/);
   assert.doesNotMatch(html, /categoria-percussion"[^>]*hidden|id="categoria-/, "panels render only when open");
   // Catalog destinations are client links again once the transition stall is fixed (UX-3 Q1 A).
-  for (const href of ["/listados", "/listados?seller_type=verified_store"]) {
+  for (const href of ["/listados", "/tiendas"]) {
     assert.match(html, new RegExp(`<a href="${href.replace(/[?]/g, "\\?")}" class="[^"]*"[^>]*data-client-link="">`), href);
   }
   assert.match(renderToStaticMarkup(React.createElement(GlobalCategories, { visibility: "wide" })), /hidden md:block/);
@@ -194,7 +201,7 @@ test("Admin reaches the same destinations from its own navigation, without the p
   assert.match(html, /<button id="[^"]+-categorias-boton" type="button" aria-expanded="false" aria-controls="[^"]+-categorias"[^>]*>Explorar categorías/);
   assert.match(html, /<ul id="[^"]+-categorias" hidden=""/);
   assert.equal((html.match(/aria-expanded="false"/g) ?? []).length, 11, "the entry and ten categories");
-  for (const href of ["/listados", "/listados?seller_type=verified_store", "/instrumentos/guitarras", "/listados?category=guitars&amp;instrument_type=electric_guitar"]) assert.ok(html.includes(`href="${href}"`), href);
+  for (const href of ["/listados", "/tiendas", "/instrumentos/guitarras", "/listados?category=guitars&amp;instrument_type=electric_guitar"]) assert.ok(html.includes(`href="${href}"`), href);
   // Nested in the phone "Menú": the accordion marks its Esc handled so the outer menu stays open (both listen on document).
   assert.match(source("components/category-accordion.tsx"), /event\.key !== "Escape" \|\| !open\) return;[\s\S]*?event\.preventDefault\(\);\s*event\.stopPropagation\(\);/);
   assert.match(source("components/use-disclosure.ts"), /event\.key === "Escape" && !event\.defaultPrevented\) close\(true\)/);
@@ -209,15 +216,17 @@ test("header: outline Vender, honest brand search, no Para tiendas, Ingresar whe
   assert.match(vender, /border border-white\/40 bg-transparent text-surface/);
   assert.doesNotMatch(html, /bg-action/);
   assert.doesNotMatch(html, /Para tiendas|Crear cuenta|Listados/);
-  assert.match(html, /href="\/login"[^>]*>.*Ingresar/);
+  // Accounts batch, save-02: "Ingresar" comes back to the page it was pressed on.
+  assert.match(html, /href="\/login(\?next=[^"]*)?"[^>]*>.*Ingresar/);
   assert.match(html, /aria-label="Laria inicio"/);
-  // Brand search with the placeholder that says so: inline from 768 px, and a row under the bar on phones that
-  // comes after the bar's actions in the markup, so Tab follows the visual order at both sizes.
+  // The search (free text since Effortless Laria BIG 03, replacing N8's brand search): inline from 768 px, and a row
+  // under the bar on phones that comes after the bar's actions in the markup, so Tab follows the visual order.
   assert.equal((html.match(/role="search"/g) ?? []).length, 2);
   for (const id of ["global-marketplace-search", "busqueda-movil-campo"]) {
     const input = html.match(new RegExp(`<input id="${id}"[^>]*>`))[0];
-    assert.match(input, /name="brand"/);
-    assert.match(input, /placeholder="Busca por marca: Yamaha, Fender…"/);
+    assert.match(input, /name="q"/);
+    assert.match(input, /role="combobox"/);
+    assert.match(input, /placeholder="Busca guitarras, marcas, modelos…"/);
   }
   assert.match(html, /<div class="col-start-2 row-start-1 ml-7 hidden max-w-\[680px\] md:block">/);
   assert.ok(html.indexOf('href="/login"') < html.indexOf('id="busqueda-movil"'));
@@ -237,7 +246,7 @@ test("header: bell, avatar and an account menu with the rail's sections, counts,
   const menu = html.slice(html.indexOf('id="menu-cuenta"'));
   assert.match(menu, /^id="menu-cuenta" hidden=""/);
   const labels = [...menu.matchAll(/<a href="([^"]+)"[^>]*><span[^>]*>([^<]+)<\/span>/g)].map((match) => match[2]);
-  assert.deepEqual(labels, ["Resumen", "Mis publicaciones", "Publicar", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(labels, ["Resumen", "Mis publicaciones", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.match(menu, /3 notificaciones sin leer/);
   assert.match(menu, /1 compras requieren tu confirmación/);
   assert.match(menu, /href="\/admin"[^>]*>Admin</);
@@ -280,7 +289,8 @@ test("home header: Categorías menu, Tiendas verificadas from 768 px, Cómo func
   assert.match(html, /<nav aria-label="Navegación principal"[^>]*><button type="button" aria-expanded="false" aria-controls="menu-categorias" class="[^"]*h-11[^"]*">Categorías<svg/);
   // Closed, the panel is not in the page at all (no hidden attribute a display class could override).
   assert.doesNotMatch(html, /id="menu-categorias"/);
-  assert.match(html, /<a href="\/listados\?seller_type=verified_store" class="[^"]*hidden md:inline-flex"[^>]*>Tiendas verificadas<\/a>/);
+  // find-13: "Tiendas verificadas" opens the stores directory (was N7's filtered catalog).
+  assert.match(html, /<a href="\/tiendas" class="[^"]*hidden md:inline-flex"[^>]*>Tiendas verificadas<\/a>/);
   assert.match(html, /<a href="#como-funciona" class="[^"]*hidden lg:inline-flex"[^>]*>Cómo funciona<\/a>/);
   // No search in the bar and no phone search row: the banner has the search.
   assert.doesNotMatch(html, /role="search"|name="brand"|busqueda-movil/);
@@ -304,7 +314,8 @@ test("the home Categorías panel: Todos los instrumentos, every category with it
   const expected = [
     ["Todos los instrumentos", "/listados"],
     ...shell.categoryMenus.flatMap((menu) => [[menu.label, menu.href], ...menu.types.map((type) => [type.label, type.href])]),
-    ["Tiendas verificadas", "/listados?seller_type=verified_store"],
+    // find-13: the stores directory (was N7's filtered catalog).
+    ["Tiendas verificadas", "/tiendas"],
   ];
   assert.deepEqual(links.map((link) => [link.label, link.href]), expected);
   // Every destination is a client link; 44 px rows on phones, 36 px from 768 px; types indented on phones.
@@ -324,7 +335,7 @@ test("header state endpoint returns the rail's counts, the admin check and the n
 });
 
 test("breadcrumbs: full trail from 768 px with the current page unlinked; on phones a back link on listings only (N11)", () => {
-  const { Breadcrumbs } = load("components/breadcrumbs.tsx", { "next/link": linkMock });
+  const { Breadcrumbs } = load("components/breadcrumbs.tsx", { "next/link": linkMock, "next/navigation": navigationMock("/instrumentos/fender-stratocaster") });
   const items = shell.listingBreadcrumbs({ category: "guitars", instrument_type: "electric_guitar" }, "Fender Stratocaster");
   assert.deepEqual(items.map((item) => item.label), ["Inicio", "Instrumentos", "Guitarras", "Guitarras eléctricas", "Fender Stratocaster"]);
   const html = renderToStaticMarkup(React.createElement(Breadcrumbs, { items, phoneBackLink: true }));
@@ -373,12 +384,13 @@ test("footers: full on the home with four columns, slim everywhere else (N5)", (
   assert.match(full, /© 2026 Laria/);
   assert.match(full, /Hecho en Perú/);
   assert.match(full, /href="\/listados"[^>]*>Instrumentos</);
-  assert.match(full, /href="\/listados\?seller_type=verified_store"[^>]*>Tiendas verificadas</);
+  // find-13: the footer's "Tiendas verificadas" opens the stores directory (was N7's filtered catalog).
+  assert.match(full, /href="\/tiendas"[^>]*>Tiendas verificadas</);
   // Only pages that exist.
   for (const href of full.matchAll(/href="([^"]+)"/g)) assert.doesNotMatch(href[1], /como-funciona|consejos-para-vender/);
   const slim = renderToStaticMarkup(React.createElement(SiteFooter, { variant: "slim" }));
   assert.match(slim, /© 2026 Laria · No cobramos comisiones ni procesamos pagos\./);
-  assert.deepEqual([...slim.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1]), ["/consejos-de-seguridad", "/terminos", "/privacidad"]);
+  assert.deepEqual([...slim.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1]), ["/consejos-de-seguridad", "/terminos", "/privacidad", "/libro-de-reclamaciones"]);
 });
 
 test("404 and 500 share one body: title, one line, the search and two links", () => {

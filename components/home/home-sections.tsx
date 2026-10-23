@@ -1,22 +1,23 @@
 import Link from "next/link";
-import { ChevronRight, CircleAlert, MessageCircle, ShieldCheck, Star } from "lucide-react";
+import { CircleAlert, MessageCircle, ShieldCheck, Star } from "lucide-react";
 import type { ReactNode } from "react";
 import { ListingCard } from "@/components/listing-card";
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { buttonClasses } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
+import { ChipLink } from "@/components/ui/chip";
 import { VerifiedIcon, VerifiedMark } from "@/components/ui/verified-mark";
 import { categoryLandingPath } from "@/lib/category-pages";
-import { PHONE_FEED_SIZE, type HomeStore } from "@/lib/home";
+import type { HomeStore } from "@/lib/home";
 import { categoryOptions, type ListingCardData } from "@/lib/listings";
 import { CATALOG_PATH, VERIFIED_STORES_PATH } from "@/lib/shell";
-import { HOME_FEED_GRID, HOME_FEED_SIZES, SHOWCASE_SIZES } from "@/lib/ui/listing-grid";
+import { HOME_FEED_GRID, HOME_FEED_SIZES } from "@/lib/ui/listing-grid";
 import { storeInitials } from "@/lib/ui/initials";
 import { cn } from "@/lib/utils";
 
-// The home's sections under the banner (docs/ux-redesign/ux-3-discovery.md § Home): "En vitrina", "Explora por
-// categoría", "Recién publicados", "Cómo funciona Laria", "Tiendas verificadas" and the sell block. Server components;
-// only the cards are client code (impressions with source "home", the favourite on feed cards).
+// The home's sections under the banner (docs/ux-redesign/ux-3-discovery.md § Home, reshaped by Effortless Laria BIG 01):
+// the category chips, "Bajaron de precio", "Cómo funciona Laria", "Tiendas verificadas" and the sell block. "Para ti",
+// "Nuevo desde tu última visita" and "¿Qué tocas?" are client code (components/home/home-for-you.tsx). Server
+// components; only the cards are client code (impressions with source "home", the favourite on feed cards).
 
 const countFormat = new Intl.NumberFormat("es-PE");
 export const publicationsLabel = (count: number) => (count === 1 ? "1 publicación" : `${countFormat.format(count)} publicaciones`);
@@ -40,94 +41,58 @@ function SectionHeader({ id, title, subtitle, link }: { id: string; title: strin
   );
 }
 
-// A row that scrolls sideways inside its section on phones and tablets (the vitrina, the stores), where five or four
-// columns would be too narrow for their captions, and is a grid from 1024 px.
+// A row that scrolls sideways inside its section on phones and tablets (the stores), where four columns would be too
+// narrow for their captions, and is a grid from 1024 px.
 const SCROLL_ROW = "scrollbar-none -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 md:gap-5 lg:mx-0 lg:grid lg:overflow-visible lg:px-0 lg:pb-0";
 
-// H2, H3: the five most recent of the per-category winners (lib/home.ts selectVitrina), as showcase tiles.
-export function ShowcaseSection({ listings, total }: { listings: ListingCardData[]; total: number | null }) {
-  return (
-    <section aria-labelledby="vitrina-titulo">
-      <SectionHeader
-        id="vitrina-titulo"
-        title="En vitrina"
-        subtitle="Lo más reciente de cada categoría. Se actualiza sola."
-        link={{ href: CATALOG_PATH, label: catalogLinkLabel(total) }}
-      />
-      <ul className={cn(SCROLL_ROW, "lg:grid-cols-5")}>
-        {listings.map((listing) => (
-          <li key={listing.id} className="w-40 shrink-0 md:w-48 lg:w-auto">
-            <ListingCard variant="showcase" listing={listing} source="home" headingLevel={3} eager sizes={SHOWCASE_SIZES} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-// One tile per category in taxonomy order (ten: two rows of five on wide screens), each a link to its landing
-// (SEO-002), with its count (Q10 B).
+// BIG 01 and FIND 06 (Effortless Laria): the categories as one slim row of chips under the search, each a link to its
+// landing (SEO-002) with its count (Q10 B). A category known to have no listings is left out until it has stock; one
+// whose count failed still shows, without a number.
 export function CategoryTiles({ counts }: { counts: Record<string, number | null> }) {
+  const shown = categoryOptions.filter((category) => counts[category.value] !== 0);
   return (
-    <section aria-labelledby="categorias-titulo">
-      <SectionHeader id="categorias-titulo" title="Explora por categoría" />
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-5">
-        {categoryOptions.map((category) => {
+    <nav aria-labelledby="categorias-titulo">
+      <h2 id="categorias-titulo" className="sr-only">Categorías</h2>
+      <ul className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 md:flex-wrap md:overflow-visible lg:mx-0 lg:px-0">
+        {shown.map((category) => {
           const count = counts[category.value];
           return (
-            <li key={category.value}>
-              <Link
-                href={categoryLandingPath(category.value)}
-                className="group flex h-full min-h-11 flex-col justify-between gap-3 rounded-panel border border-subtle bg-surface p-3 transition-colors duration-120 hover:border-line-strong md:p-4"
-              >
-                <span className="t-card-title text-ink decoration-accent decoration-2 underline-offset-[3px] group-hover:underline">{category.label}</span>
-                <span className="flex items-center justify-between gap-2 t-meta">
-                  <span>{count === null || count === undefined ? null : publicationsLabel(count)}</span>
-                  <ChevronRight aria-hidden="true" className="h-4 w-4 shrink-0 text-ink-2" />
-                </span>
-              </Link>
+            <li key={category.value} className="shrink-0">
+              <ChipLink href={categoryLandingPath(category.value)}>
+                {category.label}
+                {typeof count === "number" ? (
+                  <span className="ml-1.5 font-normal text-ink-2">
+                    {countFormat.format(count)}
+                    <span className="sr-only"> {count === 1 ? "publicación" : "publicaciones"}</span>
+                  </span>
+                ) : null}
+              </ChipLink>
             </li>
           );
         })}
       </ul>
-    </section>
+    </nav>
   );
 }
 
-// The newest approved listings without the vitrina's (lib/home.ts selectFeed): eleven grid cards and the end tile on
-// desktop; six cards and the catalog button on phones. No link in the header (audit item 16).
-export function RecentListings({ listings, total }: { listings: ListingCardData[]; total: number | null }) {
+// FIND 10: "Bajaron de precio", listings whose price went down in the past 30 days, the latest first, each card with
+// its "Antes S/" line. Left out when there are none.
+export function PriceDropsSection({ listings }: { listings: ListingCardData[] }) {
   return (
-    <section aria-labelledby="recientes-titulo">
-      <SectionHeader id="recientes-titulo" title="Recién publicados" />
-      {listings.length === 0 ? (
-        <EmptyState
-          headingLevel={3}
-          title="Aún no hay publicaciones"
-          description="Las primeras publicaciones aparecerán aquí."
-          actions={<Link href="/vender" className={buttonClasses({ variant: "secondary" })}>Publicar un instrumento</Link>}
-        />
-      ) : (
-        <>
-          <ul className={HOME_FEED_GRID}>
-            {listings.map((listing, index) => (
-              <li key={listing.id} className={cn("min-w-0", index >= PHONE_FEED_SIZE && "max-md:hidden")}>
-                <ListingCard listing={listing} source="home" headingLevel={3} sizes={HOME_FEED_SIZES} />
-              </li>
-            ))}
-            <li className="max-md:hidden">
-              <div className="flex aspect-square flex-col justify-center rounded-panel bg-canvas p-5">
-                {total !== null ? <p className="t-section text-ink">{publicationsLabel(total)}</p> : null}
-                <p className="mt-1 t-meta">Guitarras, baterías, pedales, amplificadores y más.</p>
-                <Link href={CATALOG_PATH} className="link mt-3 inline-flex min-h-6 w-fit items-center t-ui font-semibold">Ver todo el catálogo</Link>
-              </div>
-            </li>
-          </ul>
-          <Link href={CATALOG_PATH} className={buttonClasses({ variant: "secondary", block: true, className: "mt-6 md:hidden" })}>
-            {catalogLinkLabel(total)}
-          </Link>
-        </>
-      )}
+    <section aria-labelledby="bajaron-titulo">
+      <SectionHeader
+        id="bajaron-titulo"
+        title="Bajaron de precio"
+        subtitle="Precio más bajo que hace 30 días o menos."
+        link={{ href: `${CATALOG_PATH}?sort=price_drop`, label: "Ver todas" }}
+      />
+      <ul className={HOME_FEED_GRID}>
+        {listings.map((listing, index) => (
+          <li key={listing.id} className={cn("min-w-0", index >= 4 && "max-md:hidden")}>
+            <ListingCard listing={listing} source="home" headingLevel={3} sizes={HOME_FEED_SIZES} />
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -175,7 +140,7 @@ export function HowItWorks() {
 }
 
 // Up to three active verified stores, newest first, without stats (Q18 A), and the "¿Tienes una tienda?" tile. "Ver
-// todas" opens the catalog filtered to verified stores: there is no stores directory (N7).
+// todas" opens the stores directory, /tiendas (find-13, which replaced N7's filtered catalog).
 export function VerifiedStoresSection({ stores }: { stores: HomeStore[] }) {
   return (
     <section aria-labelledby="tiendas-titulo">

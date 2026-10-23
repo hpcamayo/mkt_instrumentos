@@ -7,9 +7,11 @@ const path = require("node:path");
 const ts = require("typescript");
 
 const ROOTS = ["app", "components", "lib"];
-const SKIP_FILES = [/lib\/supabase\/database\.types\.ts$/, /\.d\.ts$/];
+// Spreadsheet writers emit XML markup, never interface copy.
+const SKIP_FILES = [/lib\/supabase\/database\.types\.ts$/, /\.d\.ts$/, /lib\/spreadsheet\//];
 // Legal pages keep their approved wording and name the data processors (decisions.md, G2); only orthography applies there.
-const LEGAL = /^app\/(terminos|privacidad|articulos-prohibidos|consejos-de-seguridad)\//;
+// The Libro de Reclamaciones (Effortless Laria trust-05) quotes the regulation's own definitions ("productos o servicios").
+const LEGAL = /^app\/(terminos|privacidad|articulos-prohibidos|consejos-de-seguridad|libro-de-reclamaciones)\//;
 // Proper names that look like Spanish words without a tilde.
 const PROPER_NAMES = new Set(["Precision"]);
 
@@ -27,7 +29,7 @@ const INTERROGATIVE = /¿\s*(que|como|donde|cuando|cual|cuales|cuanto|cuanta|cua
 const JARGON = /\b(V1|legacy|Store Owner|metadata|Supabase|CTR|base de datos|dashboard)\b/i;
 // The catalog page is "Instrumentos" since UX-2 (decisions.md, G1), so "Listado" is retired in any case; "Para
 // tiendas" is no longer a sell entry (D8).
-const GLOSSARY = /\b([Ll]istados?|[Aa]nuncios?|Para tiendas|[ií]tems?|vendedor particular|cuenta de vendedor|propietario de tienda|Publicar producto|Publicar inventario|Agregar inventario|Agregar producto|Enviar para revisi[oó]n|Preguntar por WhatsApp|Escribir por WhatsApp|Escribir a la tienda|Tienda Verificada|Tiendas Verificadas)\b/;
+const GLOSSARY = /\b([Ll]istados?|[Aa]nuncios?|Para tiendas|[ií]tems?|vendedor particular|cuenta de vendedor|propietario de tienda|Publicar producto|Publicar inventario|Agregar inventario|Agregar producto|Enviar para revisi[oó]n|Preguntar por WhatsApp|Escribir por WhatsApp|Escribir a la tienda|Tienda Verificada|Tiendas Verificadas|Agregar stock|Editar cantidad)\b/;
 
 function files(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -134,11 +136,14 @@ test("every WhatsApp contact button shares one label and the glyph, one per page
     assert.equal(bodies.length, 1, file);
     for (const body of bodies) {
       assert.match(body, /<WhatsAppGlyph \/>/, file);
-      assert.equal(body.replace(/<WhatsAppGlyph \/>/, "").trim(), "Contactar por WhatsApp", file);
+      // PAY-1: the listing's one button reads "Solicitar compra" while its verified store shows accepted payment methods.
+      const label = body.replace(/<WhatsAppGlyph \/>/, "").trim();
+      if (file === "components/listing/contact-module.tsx") assert.equal(label, '{purchase ? "Solicitar compra" : "Contactar por WhatsApp"}', file);
+      else assert.equal(label, "Contactar por WhatsApp", file);
     }
   }
   const listingPage = fs.readFileSync("app/instrumentos/[slug]/page.tsx", "utf8");
-  assert.equal((listingPage.match(/<ContactModule /g) ?? []).length, 1);
+  assert.equal((listingPage.match(/<ContactModule\b/g) ?? []).length, 1);
   assert.doesNotMatch(listingPage, /<WhatsAppContactLink/);
   const storePage = fs.readFileSync("app/tiendas/[slug]/page.tsx", "utf8");
   assert.equal((storePage.match(/<StoreHeader /g) ?? []).length, 1);
@@ -157,9 +162,13 @@ test("buyers see no placeholder copy and the home's cards show the real conditio
   assert.match(card, /const specLine = getCardSpecLine\(listing\);/);
   assert.doesNotMatch(card, /"Nuevo"|"Usado/);
   assert.match(fs.readFileSync("lib/listing-specs.ts", "utf8"), /const parts = listing\.condition \? \[getConditionLabel\(listing\.condition\)\] : \[\];/);
-  const home = fs.readFileSync("components/home/home-sections.tsx", "utf8");
-  assert.equal((home.match(/<ListingCard /g) ?? []).length, 2, "the vitrina tile and the feed card are the one card");
-  assert.doesNotMatch(home, /"Nuevo"|condition/);
+  // Effortless Laria BIG 01: the home's listings ("Bajaron de precio", "Para ti", "Nuevo desde tu última visita") all
+  // use the one card.
+  for (const file of ["components/home/home-sections.tsx", "components/home/home-for-you.tsx"]) {
+    const home = fs.readFileSync(file, "utf8");
+    assert.ok((home.match(/<ListingCard /g) ?? []).length >= 1, file);
+    assert.doesNotMatch(home, /"Nuevo"|condition/);
+  }
   // UX-4: the store header and the seller card draw the monogram through SellerAvatar (initials of the store name).
   assert.match(fs.readFileSync("components/listing/seller-card.tsx", "utf8"), /\{initials\(seller\.name\)\}/);
   assert.match(fs.readFileSync("components/store/store-header.tsx", "utf8"), /<SellerAvatar seller=\{\{ name: store\.name, kind, logoUrl: store\.logo_url \}\} size=\{96\} \/>/);
@@ -210,4 +219,21 @@ test("Admin, Compras y ventas and store standing read their statuses from the sa
   for (const file of ["app/mi-cuenta/page.tsx", "app/mi-cuenta/tienda/page.tsx", "components/admin-domain-view.tsx"]) {
     assert.match(fs.readFileSync(file, "utf8"), /storeStatusEntry\(/, file);
   }
+});
+
+test("inventory copy follows the D-13 glossary and reads its statuses from the dictionary", () => {
+  const { statusLabel } = require(path.resolve("lib/ui/status.ts"));
+  assert.deepEqual(["in_stock", "low", "out", "archived"].map((value) => statusLabel("inventory", value)), ["Disponible", "Stock bajo", "Agotado", "Archivado"]);
+  assert.equal(statusLabel("stock", "out_of_stock"), "Agotado");
+  for (const file of ["components/inventory/inventory-table.tsx", "app/mi-cuenta/tienda/inventario/[itemId]/page.tsx"]) {
+    assert.match(fs.readFileSync(file, "utf8"), /StatusTag domain="inventory"/, file);
+  }
+  // "Registrar venta" is the store's own record: every sheet that records a sale says so next to it (brief §8, §28).
+  for (const file of ["components/inventory/stock-action-sheet.tsx", "components/inventory/bulk-actions.tsx"]) {
+    const text = fs.readFileSync(file, "utf8");
+    assert.match(text, /"Registrar venta"/, file);
+    assert.match(text, /anotación de tu tienda[^"<]*no crea (una venta verificada|ventas verificadas) en Laria/, file);
+  }
+  // The store's sales figure is labelled as its own, never as verified revenue.
+  assert.match(fs.readFileSync("components/inventory/inventory-summary.tsx", "utf8"), /"Ventas registradas por la tienda"[\s\S]*Laria no las verifica/);
 });

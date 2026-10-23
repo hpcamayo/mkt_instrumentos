@@ -1,7 +1,9 @@
 export type AccountNavigationItem = {
   href: string;
   label: string;
-  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites" | "alerts";
+  icon: "summary" | "listings" | "publish" | "store" | "inventory" | "payments" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites" | "alerts"
+    // Effortless Laria, inventory batch (stock-04): purchase requests.
+    | "requests";
   exact?: boolean;
   // Additional sections that belong to the same navigation entry.
   activePaths?: readonly string[];
@@ -13,10 +15,16 @@ const sharedAccountItems: AccountNavigationItem[] = [
   { href: "/mi-cuenta/alertas", label: "Alertas", icon: "alerts" },
   { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
   { href: "/mi-cuenta/transacciones", label: "Compras y ventas", icon: "transactions" },
-  { href: "/mi-cuenta/perfil", label: "Perfil y seguridad", icon: "profile", activePaths: ["/mi-cuenta/seguridad"] },
+  { href: "/mi-cuenta/perfil", label: "Perfil y seguridad", icon: "profile", activePaths: ["/mi-cuenta/seguridad", "/mi-cuenta/correos"] },
 ];
 
-export function getAccountNavigationItems(accountType: "seller" | "store_owner", hasStore: boolean): AccountNavigationItem[] {
+// `payments`: the assisted-commerce pilot is on (assistedCommerceEnabled(), read on the server), so a store sees "Pagos"
+// (PAY-1, review fix B6). Off, the entry does not exist, like the pages behind it.
+export function getAccountNavigationItems(
+  accountType: "seller" | "store_owner",
+  hasStore: boolean,
+  { payments = false }: { payments?: boolean } = {},
+): AccountNavigationItem[] {
   if (accountType === "store_owner") {
     return [
       { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
@@ -24,6 +32,10 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
       ...(hasStore ? [
         { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory" } as const,
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar", icon: "publish" } as const,
+        // Effortless Laria, inventory batch (stock-04): "Solicitudes" exists only while purchase requests do (the pilot).
+        ...(payments ? [{ href: "/mi-cuenta/tienda/solicitudes", label: "Solicitudes", icon: "requests" } as const] : []),
+        // /Effortless Laria, inventory batch
+        ...(payments ? [{ href: "/mi-cuenta/tienda/pagos", label: "Pagos", icon: "payments", activePaths: ["/mi-cuenta/tienda/medios-de-pago"] } as const] : []),
         { href: "/mi-cuenta/tienda/estadisticas", label: "Estadísticas", icon: "analytics" } as const,
       ] : []),
       ...sharedAccountItems,
@@ -33,6 +45,7 @@ export function getAccountNavigationItems(accountType: "seller" | "store_owner",
     { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
     { href: "/mi-cuenta/publicaciones", label: "Mis publicaciones", icon: "listings" },
     { href: "/mi-cuenta/publicar", label: "Publicar", icon: "publish" },
+    { href: "/mi-cuenta/estadisticas", label: "Estadísticas", icon: "analytics" },
     ...sharedAccountItems,
   ];
 }
@@ -48,6 +61,8 @@ export function accountItemIsActive(pathname: string, item: Pick<AccountNavigati
 export const accountSettingsTabs = [
   { href: "/mi-cuenta/perfil", label: "Perfil" },
   { href: "/mi-cuenta/seguridad", label: "Seguridad" },
+  // Accounts batch, save-07.
+  { href: "/mi-cuenta/correos", label: "Correos" },
 ] as const;
 
 // Glossary names of the two account types (docs/design-system.md).

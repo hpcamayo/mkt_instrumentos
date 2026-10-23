@@ -54,6 +54,19 @@ A Particular profile contains at least:
 
 V1 authentication includes signup, email confirmation, password login, magic-link login, logout, forgot password, password reset, profile editing, and password change. Email change and account deletion are post-V1.
 
+<!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): fixes -->
+WhatsApp numbers are stored as digits with the country code. A Peruvian mobile typed as nine digits starting with 9
+gets 51 in front, on every write to profiles, listings and stores (fix-01); the WhatsApp field shows the number buyers
+will see ("+51 987 654 321") with a link to try it. Signing in before confirming the e-mail says "Confirma tu correo"
+and offers "Reenviar enlace", as does the screen right after signing up, with a 60-second wait between sends (fix-08).
+<!-- end accounts batch: fixes -->
+<!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): sign-in -->
+A Particular account starts with name, e-mail and password; WhatsApp and city are asked at the first publication. Every
+password field has a show/hide control and one minimum of 8 characters. After a failed password the sign-in page
+offers the e-mail link for the same address. Sign-in, sign-up and the confirmation e-mail return to the page the person
+came from, and the sign-in page says why it is asking.
+<!-- end accounts batch: sign-in -->
+
 Supabase Auth remains appropriate for confirmation, password recovery, invitations, and other authentication messages. Marketplace-generated emails use a centralized application email abstraction. The provider behind that abstraction is an implementation choice, not a product decision.
 
 ## Particular Listing Creation
@@ -76,7 +89,13 @@ Creation supports:
 
 Instrument attributes are generally optional. Only selected important attributes become required when an explicit product rule says so.
 
-Each listing requires 2–10 photos, with front and back views as the expected minimum coverage. The owner can reorder, replace, and remove photos, provided the listing continues to satisfy the two-photo minimum.
+Each listing requires 2–10 photos, with front and back views as the expected minimum coverage. The owner can reorder, replace, and remove photos, provided the listing continues to satisfy the two-photo minimum. Before upload the browser redraws every listing photo as a JPEG of at most 2,400 px on its longest side, which removes its metadata (including the camera's location) and keeps it under the 5 MB storage limit, so sellers can pick photos of any common size (Effortless Laria FIX 02).
+
+The sell form (Effortless Laria, selling batch; docs/ux-effortless/selling.md) is four short steps on every screen size: Fotos, Qué es, Estado y precio, Revisar y publicar. Photos come first and upload in the background, three at a time, while the seller fills in the rest; on phones the photo step opens the camera and a per-category shot list names the photos buyers expect. iPhone HEIC photos are converted in the browser. The title follows brand and model until the seller edits it; brand suggestions come from the instrument catalog; description starters and a 40-character counter help write the description; advisory hints point out what usually gets a listing rejected (phone numbers, links, all-caps titles, symbolic prices) without blocking. Step 4 shows the catalog card and the listing page as buyers will see them, and Publicar only confirms. An optional sound clip of at most 20 seconds can be recorded or picked; it is compressed in the browser, played only when a buyer taps it, and reviewed with the listing.
+
+On an Android phone with Laria added to the home screen, photos shared from the gallery to Laria (up to 10) open the sell form with them already picked, the Particular form or the store's. They wait on the device for at most a day and reach Laria only when the form uploads them; signed out, Laria asks to sign in first. iPhone has no share target for web apps. *(Effortless Laria, big-12; proposed UXD-speed-11.)*
+
+The form is saved on the device as the seller types and offered back on return. "Guardar borrador" also saves it to the account (`listing_drafts`, at most 20 per seller) so it can be finished on another device from Mis publicaciones or the publish page; publishing deletes the draft. After sending, a listing in review shows its steps (Enviada, En revisión, Publicada) and, once at least 20 Particular listings were reviewed in the last 60 days, the usual wait; a live listing offers Ver publicación and Compartir. "Publicar uno parecido" keeps category, type, brand, condition, location, description and attributes, and "Duplicar" in Mis publicaciones starts a new listing from an existing one.
 
 ## Listing Lifecycle
 
@@ -96,6 +115,10 @@ A sold listing disappears from normal catalog and search but remains available a
 
 `Relistar` creates a new listing copied from the sold listing. The old record stays intact. Copies belonging to a Particular or normal Tienda return require moderation. Copies belonging to a Tienda Verificada may publish directly when they meet publication requirements.
 
+<!-- ux my-listings: start -->
+`Republicar` (sold) and `Duplicar` (any listing that is not archived) create a new **draft** with the text, specs and photos copied, open it in the edit form so the seller can adjust price or photos, and send it with the usual submission (replaces the direct relist copy; UXD-my-listings-6). An owner can mark an owner-hidden listing sold (`Ya lo vendí`), and can withdraw a pending, draft or rejected listing as sold (`Lo vendí, retirar`): it goes to the sold history as archived and never becomes public. An owner can pause all their listings until a return date between tomorrow and 90 days (`Modo vacaciones`): the listings stay public with `Vuelve el …`, WhatsApp contact is replaced by that note, availability questions stop, and everything returns by itself on that date.
+<!-- ux my-listings: end -->
+
 ## Particular Dashboard and Dynamic Profile Data
 
 `Mi cuenta` for a Particular seller supports:
@@ -111,6 +134,10 @@ A sold listing disappears from normal catalog and search but remains available a
 - Viewing listing analytics.
 
 Per-listing analytics include views, favorites, WhatsApp contacts, status, publication date, and sold state. The account summary includes active listings, total views, favorites, WhatsApp contacts, and sold listings. Revenue must not be invented or displayed because transactions occur off-platform.
+
+<!-- ux my-listings: start -->
+The account home (`Resumen`) opens on **Pendientes**: one list, most urgent first, of what needs the person (confirm a purchase, a buyer who says they bought, a review that closes soon, a rejected listing or revision with its reason, a listing Moderación hid, `¿Compraste…?`, `¿Sigue disponible?`, a sale with no buyer chosen, drafts, favorites that dropped in price, new alert matches). Each item answers in one tap on the spot or links to the screen where it is done. Metrics move to `Estadísticas` (`/mi-cuenta/estadisticas`): 7, 30 or 90-day views, WhatsApp contacts and saves per listing with up to two plain tips each (UXD-my-listings-1, UXD-my-listings-9). `Mis publicaciones` has status tabs with counts, search, sorting by views or contacts, inline price changes, bulk hide or restore, pages of 50, and a private preview for listings that are not public. Hide, restore and price changes happen at once with `Deshacer` for 10 seconds; only marking sold keeps a confirmation.
+<!-- ux my-listings: end -->
 
 Account-owned Particular listings resolve seller identity and contact information from the current profile where appropriate. Updating name, WhatsApp, city, or region should update the display of current account-owned listings without unnecessary duplication. Legacy listings may continue to use historical listing-level contact fields until an admin manually assigns ownership.
 
@@ -136,6 +163,10 @@ Moderated edits require admin review for a Particular and normal Tienda:
 - Photos.
 
 The old approved version must remain public while a moderated revision waits for approval. This is a revision or pending-edit workflow; it must not mutate or remove the approved public version prematurely. There is at most one active pending revision per listing, but its owner may amend that same proposal before the admin decision. Later moderated field/photo changes merge into the pending proposal, reverting a field to its approved value removes that difference, and a proposal with no remaining differences is cancelled. Admin decisions must reject a stale proposal version and require review of the latest state. A Tienda Verificada can apply edits to an approved listing directly without moderation.
+
+<!-- ux my-listings: start -->
+The edit form follows the sell form's order (photos, the instrument, condition and price, location, description, characteristics). On approved listings each field carries `Se publica al instante` or `Pasa por revisión`, and a live note says what saving will do. A rejected listing or revision opens with the moderator's reasons as a checklist and the affected fields marked `Revisar`; rejected listings and drafts have one button, `Guardar y enviar a revisión` (`Guardar y publicar` for a Tienda verificada).
+<!-- ux my-listings: end -->
 
 ## Store Account and Application
 
@@ -175,7 +206,38 @@ Restoring a hidden listing must fail gracefully if it would exceed the cap. No p
 
 The store-owner dashboard supports editing the store profile and allowed business/contact data; managing logo, banner, optional store photos, and social links; creating and editing inventory; viewing status and moderation reasons; marking sold; hiding/unpublishing; relisting; and aggregate analytics.
 
+Stores set a default condition and a standard text for the end of every description once, at Mi tienda → Valores por defecto (`store_listing_defaults`); the sell form starts with both and the seller can change them per listing. The store's own text does not count towards the 40-character description minimum. Each inventory SKU remembers the brand, model, type, condition, description and attributes of its last publication or import (`store_inventory_items.listing_details`), editable in the SKU's "Datos para publicar" panel, and "Publicar este SKU" starts with them (Effortless Laria SHOP 06, STOCK 09).
+
+Store listings resolve their WhatsApp contact from the store's current number, the way account-owned Particular listings resolve it from the profile: when a store changes its number, every unsold listing of that store follows (sold listings keep their historical record). WhatsApp links add Peru's country code (51) to a 9-digit mobile number stored without it. *(Effortless Laria, batch "listing", fix-03; proposed UXD-listing-1.)*
+
 Commercial analytics include listing impressions, listing views, favorites, WhatsApp contacts, sold listings, and meaningful conversion-oriented ratios. They must not show revenue without actual transaction data. These metrics should remain suitable for evaluating later paid store packages without activating such packages in V1.
+
+<!-- ux my-listings: start -->
+The store home opens on **Hoy en tu tienda**: the same Pendientes plus today's purchase requests, out-of-stock SKUs people saved, low stock, an unfinished import with its expiry, and SKUs without a listing. A new store sees a checklist that ticks itself (Solicitud, Logo y portada, Descripción y redes, Primera publicación o Importar desde Excel, Medios de pago when the payments pilot is on, Ver tu página) until every step is done. `Estadísticas` adds a 12-week trend of views and contacts, the top listings by views, contacts and purchase requests, and the listings with contacts but no sale in 30 days.
+<!-- ux my-listings: end -->
+
+<!-- Effortless Laria, batch "stores" (docs/ux-effortless/stores.md): proposed until Henri's review. -->
+### Effortless Laria changes to stores (proposed)
+
+- **Application and profile (shop-01, shop-03).** A new application is prefilled from the invitation or signup. Mi
+  tienda separates "Perfil público" from "Datos de la empresa"; changing the RUC or razón social warns that declared
+  payment methods go back to Admin review. The physical address stays required but is shown publicly only when the
+  store ticks "Mostrar la dirección" (off by default); opening hours are optional free text (list-12).
+- **Owner preview (shop-04).** The owner can open their store page before it is public, marked as a preview and
+  `noindex`; buyers still get a 404 until approval.
+- **Stores directory (find-13).** `/tiendas` lists active stores (verified first) with a tab of listings from verified
+  stores. "Tiendas verificadas" in the header and footer opens it.
+- **Store page filters (find-14).** A store page has category chips, a brand box and a sort, scoped to that store.
+- **Listing allowance (shop-05).** The cap is called "Cupo de publicaciones" everywhere. Mi tienda shows a meter of what
+  uses it; a store can hide its published out-of-stock listings in one step to free slots, and ask Admin for more
+  ("Pedir más cupo"). A request changes nothing until Admin sets a new allowance.
+- **Inventory access (stock-21).** A store without Inventario can request it; Admin turns it on from the request.
+- **Import (stock-12, stock-13, stock-22).** The review corrects a failing cell in place and excludes a whole filter;
+  the Fotos step has a phone photo session; an open import shows when it expires and can be discarded from the notice.
+- **Bulk publication (stock-10).** "Publicar seleccionados" in Inventario opens the import's publication step for the
+  chosen SKU without changing stock.
+- **Libro de Reclamaciones (trust-05).** `/libro-de-reclamaciones` follows Indecopi's virtual complaints book format
+  with correlative numbers; its provider data and terms are pending legal review before production.
 
 ## Favorites and Alerts
 
@@ -187,21 +249,76 @@ Authenticated users can favorite and unfavorite approved listings. Favorites are
 
 Price-drop alerts apply to favorited approved listings. When the public price decreases, eligible users may receive an email. The same unchanged price must not trigger repeated alerts. Pending, rejected, or hidden inventory must not generate price-drop alerts.
 
+The listing page and catalog cards show a real recent drop as "Antes S/ X" for 30 days: the listing is approved, the new price is at least 5% below a price that had been in effect for 7 days, and any increase clears it. Sold listings never show it. *(Effortless Laria, list-05; proposed UXD-listing-4.)*
+
+### Back-in-stock alerts
+
+On an out-of-stock ("Agotado") store listing, a signed-in buyer can ask to be told when it is available again. When its stock returns they receive one in-app notification and one e-mail, and the request ends. Owners cannot watch their own listings. A sold listing instead offers a ready immediate search alert for its category, type and brand. *(Effortless Laria, list-11; proposed UXD-listing-9.)*
+
 ### Search alerts
 
-Authenticated users can save the exact state of a marketplace search, including query, category, supported filters and instrument attributes, location, price filters, and other supported search state.
+Authenticated users can save the exact state of a marketplace search, including the free-text query (`query`, find batch), category, supported filters and instrument attributes, location, price filters, and other supported search state.
 
 Frequency options are `immediate` and `daily digest`. Immediate alerts notify shortly after a new matching listing becomes public. Daily alerts bundle matching new listings. Only newly public matches qualify; the same user/alert/listing combination must not be notified repeatedly; empty emails are forbidden. Users can pause or delete alerts, and emails link directly to listings or matching search results.
+
+<!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): saving -->
+Visitors can save favorites without an account; they live on the device and merge into the account at sign-in, then
+work on every device. Favorites show the price when saved ("Antes"), a private note, WhatsApp for available listings
+and similar listings or a similar alert for sold ones, and can be shared through a revocable link. Price drops alert
+favorites at 5% or more, at most once a day per listing. Alerts can be renamed, switch between daily (default) and
+instant, hold several cities or conditions, and show their last match and total. A repeated search offers an alert
+once. Buyers can follow stores and brands; new arrivals appear with the reason they are shown, and a weekly e-mail is
+optional. An action interrupted by sign-in (an alert, a report) is finished on return.
+<!-- end accounts batch: saving -->
 
 ## Category SEO Pages
 
 V1 includes useful, indexable category browsing pages such as `/instrumentos/guitarras`, `/instrumentos/baterias`, and `/instrumentos/microfonos`. They use the real listing and filter system and must not be fake-content SEO doorway pages. Exact routing may follow the existing Next.js conventions; implementation must also avoid ambiguity with current listing-detail slugs.
+
+## Search, Browse and the Home (Effortless Laria, find batch)
+
+Proposed with the find batch (`docs/ux-effortless/find.md`, UXD-find-1 to UXD-find-16); not part of V1 until merged.
+
+- **One search box.** The header, the home banner and the not-found page share one free-text search (`q`) over brand,
+  model, type, category words and title. It ignores accents and case, forgives small typos (trigram similarity) and
+  knows a small curated list of musicians' slang (strato, LP, ampli, bass…), all inside Postgres (`catalog_search`).
+  Every word must match. Results keep the usual newest-first order.
+- **Phrases become filters.** A phrase such as "bajo 5 cuerdas menos de 2000 en Lima" opens the catalog with those
+  filters as editable chips (Bajos · Número de cuerdas: 5 · Hasta S/ 2,000 · Lima); what is left stays as the text.
+- **The search keeps the filters.** Searching from the catalog or a category page keeps the filters already chosen;
+  the suggestion list offers "Buscar en todo el catálogo". Suggestions name categories, types, brands and models that
+  have listings, with their counts.
+- **The catalog counts.** Every filter option shows how many results choosing it gives; the phone sheet's button says
+  "Ver N resultados". Locations list the places that have listings, grouped into zones ("Todo Lima y Callao", Norte,
+  Centro, Sur, Oriente). Price shortcuts follow the prices on sale. Cards show the store's district when known.
+- **Headings say what was searched**, in the page and the tab ("Fender en Guitarras · Lima (34)").
+- **No results rescue the search:** one-tap ways out with their counts ("Sin “Arequipa” hay 12"), the closest
+  listings and the alert in one tap.
+- **Sorts:** "Bajaron de precio" (a lower price in the past 30 days first, with the previous price on the card) and
+  "Tiendas verificadas primero" join the existing three.
+- **No dead links:** menus and category pages offer only brands, types and categories that have listings.
+- **Back to results:** a listing opened from the results offers "Volver a resultados" (the same search and place) and
+  "Anterior" / "Siguiente" through them.
+- **Phones load more:** "Ver N más" adds the next page below; numbered pages remain as links for search engines.
+- **Recently viewed and compare:** "Vistos recientemente" on the home, the catalog and the not-found page; desktop
+  cards carry "Comparar" (up to three, side by side on `/comparar` with the spec table); phones compare from the
+  favorites. Both are kept on the device only.
+- **A gone listing** (once public, now hidden or removed) says "Esta publicación ya no está disponible" and shows live
+  listings of its type, revealing nothing else about it.
+- **The home starts with instruments:** the search, a row of category chips (empty ones hidden), then "Para ti",
+  ranked on the device from what this person opened (types, brands, price band, place) and an optional first-visit
+  "¿Qué tocas?" row; never two listings of one seller in a row. "¿Por qué veo esto?" explains the order, "Empezar de
+  cero" forgets it and "Sin personalizar" shows plain newest first. "Nuevo desde tu última visita", "Bajaron de
+  precio" and "Vistos recientemente" follow. Nothing of this leaves the device. The vitrina and the category tiles
+  are retired.
 
 ## WhatsApp Contact Tracking
 
 Laria records buyer intent when a user initiates WhatsApp contact. It never records WhatsApp message content.
 
 The event associates the listing, authenticated buyer when present, seller or store, timestamp, and useful source/context. It supports conversion analytics and determines which authenticated buyers are eligible for transaction confirmation when a seller marks that listing sold. Anonymous contact remains possible, but an anonymous buyer cannot later participate in the verified Laria transaction or review workflow for that contact.
+
+The WhatsApp message opens pre-filled with the listing's title, price (when set) and link, asking whether it is still available. Optional quick questions (try it, shipping, case, negotiable price), never preselected, are appended when chosen. The button opens WhatsApp at once; the contact is recorded in the background and never delays or blocks it. Before a buyer's first contact about a listing from S/ 1,000, or any purchase request, a short safety sheet appears once per browser. Signed-out visitors see a quiet hint to sign in first so they can later confirm the purchase and review; contact never requires an account. *(Effortless Laria, talk-01 to talk-05; proposed UXD-listing-6 and UXD-listing-7.)*
 
 ## Marketplace Analytics
 
@@ -230,9 +347,17 @@ When a seller marks a listing sold:
 
 This confirmation verifies only that both parties identify the sale as a Laria-originated transaction. It does not verify payment amount, delivery, or item condition.
 
+<!-- ux my-listings: start -->
+The loop can also start from the buyer: 3 to 30 days after a signed-in buyer opened WhatsApp on a listing, Laria asks them once `¿Compraste …?` (in Pendientes, on the listing as `¿Cómo te fue?`, and by e-mail). `Sí` notifies the seller, who confirms with one tap (`Sí, me lo compró`): the listing becomes sold and the transaction is verified without a second buyer confirmation, because the buyer already said yes. `No` only stops the question. If the seller already asked that buyer, the buyer's `Sí` answers that request. Stock-managed store listings are excluded; their sales are recorded in Inventario. The buyer list a seller chooses from shows each person's name, contact date and the last three digits of their WhatsApp, with no one pre-selected.
+<!-- ux my-listings: end -->
+
 ## Reviews
 
 Reviews are available only for verified Laria transactions and are two-way: seller/store reviews buyer, and buyer reviews seller/store. Each review requires 1–5 stars, permits an optional text comment, and is limited to one review per side per transaction.
+
+<!-- ux my-listings: start -->
+Stars are tapped directly (five radio buttons, nothing pre-selected), with the comment right below. After the buyer confirms, a closing panel (`Que lo disfrutes`) leads into the review, and a seller's first verified sale is marked once as a milestone. Reminders go to the buyer on day 2 and day 7 of an unanswered confirmation request, and to whoever has not reviewed 3 days and 1 day before the window closes.
+<!-- ux my-listings: end -->
 
 For a Particular sale, the seller-side identity is the Particular account. For a store sale, the buyer's seller-side review belongs to the store, not the individual owner account.
 
@@ -242,7 +367,11 @@ Published reviews cannot be freely edited or deleted. Users can report them. Adm
 
 ## Reports
 
-Users can report a listing, store, or review. A report has a fixed reason category, optional written detail, timestamp, reporter identity where applicable, and moderation status. Reports enter the admin moderation hub, where admin can resolve or dismiss them. V1 does not need a complex ticketing or support system.
+Users can report a listing, store, or review. A report has a fixed reason category, optional written detail, timestamp, reporter identity where applicable, and moderation status. Reports enter the admin moderation hub, where admin can resolve or dismiss them. V1 does not need a complex ticketing or support system. Public questions on listings can be reported too.
+
+## Public Questions on Listings
+
+A signed-in buyer can ask a short public question on a published listing that is not their own; it appears at once for everyone. The seller (the listing owner, or the store owner) answers once, publicly; the seller is notified in the app and by e-mail, the asker in the app. Questions and answers refuse phone numbers, links and e-mails with the same filter as purchase requests; neither side can edit, and the seller cannot delete. Limits: 3 unanswered questions per buyer per listing and 20 per day. Admin can hide and restore a question with a reason. A sold listing keeps its questions read-only. This is public Q&A, not private messaging: transactions and private conversation stay on WhatsApp. *(Effortless Laria, big-11; proposed UXD-listing-8.)*
 
 ## Admin Moderation Hub
 
@@ -250,23 +379,56 @@ Users can report a listing, store, or review. A report has a fixed reason catego
 
 Listing actions include approve, reject, hide, mark sold where appropriate, inspect revision history, and restore/manage lifecycle where appropriate. Store actions include basic approval, rejection, hiding, verification, and verification revocation.
 
-Rejection and administrative hiding require a reason visible to the owner. Approval, rejection, relevant store-status changes, and other important lifecycle changes generate marketplace emails. Admin assigns legacy listing ownership manually; ownership must never be auto-claimed only from a matching WhatsApp number or email.
+Rejection and administrative hiding require a reason visible to the owner.
+
+<!-- ux my-listings: start -->
+A listing or revision rejection takes one or more fixed reasons (`pocas fotos`, `falta el reverso`, `precio incoherente`, `datos de contacto en la descripción` and six more) plus an optional note; with no reason picked the note is required. The owner sees the reasons as a checklist tied to the fields.
+<!-- ux my-listings: end --> Approval, rejection, relevant store-status changes, and other important lifecycle changes generate marketplace emails. Admin assigns legacy listing ownership manually; ownership must never be auto-claimed only from a matching WhatsApp number or email.
 
 ## Email Notifications
 
 Centralized application email infrastructure sends listing approval/rejection, store approval/rejection, useful verification-status changes, buyer transaction-confirmation requests, review workflow notifications, search alerts, and price-drop alerts. Product logic must not depend on a particular email provider.
 
+The listing approval e-mail reads "Tu publicación está en línea" and opens the live listing (Effortless Laria POST 15).
+
+<!-- ux my-listings: start -->
+Rejection e-mails open the edit form and include the reason, also for rejected revisions. A daily job (14:00 UTC) sends, at most once each: purchase checks to buyers, `¿Sigue disponible?` to sellers (after 30 days without a confirmation or 5 contacts, not more than every 14 days, never while paused or for stock-managed listings), purchase-confirmation reminders and review reminders.
+<!-- ux my-listings: end -->
+
 Supabase Auth may continue sending authentication-related messages.
+
+<!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): e-mail choices -->
+Alert, price-drop and weekly-digest e-mails are optional: each says why it arrived, carries a signed one-click link to
+stop that kind of e-mail and the List-Unsubscribe headers, and links to Mi cuenta › Correos. Alert and price-drop
+e-mails include the photo and price. Transactional e-mails stay as they are. In-app notifications can all be marked
+read at once, are paged, name the listing on price drops and include alert matches.
+<!-- end accounts batch: e-mail choices -->
 
 ## In-App Notifications
 
 The authenticated account shell includes an in-app notification center for Particular and Store Owner accounts. It records important listing moderation, listing-revision, store approval/rejection, and store verification changes with a typed event, short Spanish message, timestamp, read state, and relevant account destination. A user can read and mark only their own notifications. This does not replace or prematurely implement the centralized application-email infrastructure.
 
+<!-- Effortless Laria, speed batch (docs/ux-effortless/speed.md): push notices -->
+A person can also receive their notices on a phone or browser ("Avisos en este teléfono" in Mi cuenta › Notificaciones), a lighter companion to e-mail, never a replacement. Laria asks the browser for permission only when the person presses "Activar avisos", never on a first visit. A push reads and opens like its row in the list; several pending notices go out as one message, and the phone shows one Laria notice at a time. Nothing is pushed from 22:00 to 08:00 Lima (those notices go out together in the morning), and notices already read in Laria or older than three days are skipped. A device belongs to whoever turned notices on last, a person keeps ten devices at most, and signing out turns that device off. On an iPhone, push works only with Laria added to the home screen. *(Effortless Laria, big-12; proposed UXD-speed-5 to UXD-speed-10.)*
+<!-- end speed batch: push notices -->
+
+<!-- Effortless Laria, speed batch (docs/ux-effortless/speed.md): speed and accessibility -->
+## Speed, Install and Accessibility (Effortless Laria, speed batch)
+
+Proposed with the speed batch (UXD-speed-1 to UXD-speed-4 and UXD-speed-13); not part of V1 until merged.
+
+- A tap that changes the page shows a thin bar after 100 ms and, after a second, a skeleton of the next page over the old one; faster changes show nothing. No route has a `loading.tsx` (owner decision Q1 A).
+- When the phone asks to save data or the connection is 3G or slower, images that appear after the page loads are requested smaller, and listing pages are not loaded ahead of time.
+- Laria can be added to the home screen and then opens without the browser's bar. Laria shows no install banner of its own; the service worker only receives shared photos, and there is no offline mode.
+- The error page offers "Reintentar", which asks the server again and redraws the failed part in place.
+- Pages meet WCAG 2.2 AA: every gesture has a button, bars fixed to the bottom of the screen never cover a focused field, touch targets are at least 24 px, and status changes are announced to screen readers.
+<!-- end speed batch: speed and accessibility -->
+
 ## Legal and Safety
 
 V1 has dedicated content or pages for Terms/marketplace rules, Privacy Policy, prohibited-item rules, and marketplace safety guidance.
 
-The interface clearly says Laria currently does not process payments, provide escrow, manage shipping/delivery, or guarantee transactions. Trust copy must not imply otherwise.
+The interface clearly says Laria currently does not process payments, provide escrow, manage shipping/delivery, or guarantee transactions. Trust copy must not imply otherwise. On the listing page this is said once, as the line under the contact button with a link to the safety tips. *(Effortless Laria, list-02; proposed UXD-listing-3.)*
 
 ## Functionally Out of V1
 
@@ -275,7 +437,7 @@ The following remain post-V1 unless an explicit new product decision changes the
 - Laria-managed checkout, payments, escrow, or shipping/delivery integration.
 - Transaction commission enforcement.
 - Paid subscriptions, packages, or listing boosts.
-- Internal messaging or chat.
+- Internal messaging or chat (public questions on listings are not messaging; see Public Questions on Listings).
 - Multiple store employee accounts.
 - Automatic SUNAT verification.
 - Account deletion or account email-change workflows.
@@ -325,6 +487,87 @@ Open product questions for those sprints:
 - Marketplace categories the catalog covers but Laria does not list today (keyboards, pianos, synthesizers), and
   splitting `cutaway` out of the acoustic body-shape field.
 - How deep the navigation tree goes on mobile, and whether models without listings appear.
+
+## Planned After V1: Store Operations and Assisted Commerce
+
+Status: built as a prototype for the owner's review on branch `store-ops/prototype` (design
+`docs/store-operations/design.md`, owner decisions D-1…D-15 at their accepted defaults). It is **not** part of the V1
+contract or V1 acceptance until the owner accepts it, nothing is applied to production, and every part is off for
+existing stores and buyers until an Admin enables a store (inventory) or the deployment switches the pilot on
+(payments). Proposed acceptance families: `INV-`, `IMP-`, `IPH-`, `PAY-`.
+
+Inventory (Tiendas, enabled per store by an Admin during the pilot):
+
+- A store keeps one inventory record per SKU: its own SKU (unique per store, case-insensitive, letters, digits, `.`,
+  `_`, `-`; a `LAR-000001` code is generated when blank and changed only through an audited SKU change with a reason),
+  name, variant, price in whole soles, low-stock threshold, optional catalog product and external reference.
+- Stock is merchant-reported: units on hand, never below zero, changed only by recorded movements (sale, return,
+  restock, damage or loss, count, import reconciliation) with author, channel and reason in an append-only history.
+  Two buyers can never get the last unit through Laria, and a retried request never applies twice.
+- A SKU may control one publication of the same store. A controlled publication shows "Agotado" at zero stock, keeps
+  its URL, leaves the catalog, home, sitemap and related strips (`noindex, follow`), appears last on the store page,
+  and returns when restocked without re-sending alerts. Stock never changes a publication's status, and moderation
+  never changes stock. A controlled publication cannot be marked sold; the store unlinks it first to use the V1 sold
+  and verified-transaction flow. Particular listings and uncontrolled store listings behave exactly as in V1.
+- Buyers see only Disponible / Agotado, never unit counts. Sales recorded in Inventario are the store's own notes:
+  they never create verified transactions or unlock reviews.
+- Screens: Inventario (summary tiles, recent movements, search, filters, sort, bulk stock, price, threshold and hide,
+  CSV and Excel export with formula-safe text), the SKU page (stock actions, history, publication link, data, SKU
+  change, archive), and publishing a SKU as a listing through the existing form and moderation.
+
+<!-- Effortless Laria, inventory batch (proposed; docs/ux-effortless/inventory.md) -->
+- Inventario search (fix-06) matches the SKU, name, variant, external reference (barcodes) and the linked
+  publication's title, brand and model; every word must appear, in any order, ignoring accents and case, and the
+  table follows the box as the owner types. The "En revisión" tile counts new publications and changes in review and
+  opens exactly those; rejected publications have their own tile. The catalog filter stays hidden until catalog
+  matching exists (fix-09).
+- Every stock change can be undone for 10 seconds (15 minutes on the SKU page) as a linked correction; corrected sales
+  don't count in sales totals. Rows have −1 / +1. Bulk actions reach every SKU that matches a view (up to 2,000) and
+  include archive, reactivate, publish again and category; price changes are named campaigns, optionally rounded to
+  prices ending in 9, that can be reverted. Saved views, "Exportar esta vista", keyboard shortcuts and "1–50 de N"
+  paging. A default low-stock threshold and an opt-in daily in-app summary. Reposición (a reorder file with 30-day
+  sales and a suggestion, re-imported to add what arrived), "Agotados con interés", "Duplicar SKU" and variants.
+  Mostrador sells from the browser by camera, typing or USB scanner, with an offline queue.
+- During the payments pilot, Solicitudes lists purchase requests with one-step "Vendido", "Atendida" and "No se
+  vendió", plus ready WhatsApp replies without numbers or links; "Solicitar compra" asks for a quantity up to what is
+  available (at most 10) without showing stock.
+<!-- /Effortless Laria, inventory batch -->
+
+Spreadsheet import:
+
+- An enabled store imports CSV or XLSX (up to 5 MB, 2,000 rows, 80 columns, first visible sheet) in steps: upload,
+  confirm columns (Spanish or English headings recognized, the mapping remembered), review every row as current →
+  new, exclude rows, confirm, result with a downloadable report.
+- Nothing changes until the owner confirms. Stock in the file is the counted total (a difference is recorded as an
+  import reconciliation); blank cells keep current values; SKUs missing from the file are untouched; a sale made
+  after the preview is never overwritten (the row becomes a conflict to review again). Formulas are never evaluated.
+- The file stays private to the owner and is deleted after the retention period. One open import per store.
+- Photos (optional): the store adds photos or a ZIP, named `SKU__01.jpg` … or listed in a `Foto(s)` column or a photo
+  list. Laria checks each file on the server, matches what is certain (2–10 photos per SKU) and sets aside anything
+  uncertain for the owner to place, reorder or drop by hand; nothing is guessed. Photos can be added after confirming
+  and stay until the import is purged; any photo a listing uses stays with the listing.
+- Publishing (optional, after confirming, until the import is purged): the store selects rows that meet the sell
+  form's requirements (category, type, brand, model, condition, a 40-character description, a price on the SKU and
+  2–10 photos) and accepts the marketplace rules. Each publication goes through the existing rules: verified active
+  store publishes directly, other Tiendas go to review, a store in review publishes privately. Each new listing is
+  linked to its SKU. A row that fails does not stop the others.
+
+Listing allowance: a store holds up to 50 pending or published listings (Store Listing Cap) unless an Admin sets
+another allowance for it (1–2000, with a reason, audited). Lowering it hides nothing; only new publications are
+refused, including import rows, which show "Sin cupo". Inventory SKUs, stock and import rows never count.
+
+Accepted payment methods (Pilot A, verified stores only, behind a deployment switch that stays off until legal
+review):
+
+- A verified store declares which methods it accepts (cash on pickup, Yape or Plin, card POS on pickup, a payment link
+  the store sends). Every method except cash names the account holder, which only the owner and Admin see; numbers,
+  links and e-mails are refused. An Admin approves each method against the store's RUC and razón social; any change,
+  or a change of RUC or razón social, sends it back to review. Revoking verification hides the methods at once.
+- Buyers see the approved methods on the store page and that store's in-stock listings, with a statement that they
+  pay the store directly and that Laria processes no payment, holds no money and issues no receipts. The listing's
+  one contact button reads "Solicitar compra" and opens WhatsApp with the title, the store's SKU, quantity 1 and the
+  link; it is recorded as a WhatsApp contact with the purchase intent. Laria stores no amount, paid state, payment
+  link, reservation or order.
 
 ## V1 Freeze Rule
 
@@ -416,3 +659,5 @@ Sprint 7 implementation clarification: both role-specific account menus call the
 Sprint 8 implementation clarification: Admin authorization is checked server-side for every `/admin` route and again inside privileged database functions. The moderation workbench is operational—not analytics—and always shows every queue, including truthful zero states. General reports preserve individual reporter records and history; closing a report never silently moderates its target. Manual legacy ownership is explicit and one-time, never inferred from contact similarity.
 
 Sprint 9 implementation clarification: public discovery uses one canonical origin (`NEXT_PUBLIC_SITE_URL`, default `https://laria.audio`), per-page canonical/Open Graph metadata, `robots.txt`, a bounded dynamic sitemap of public pages, non-empty categories, approved listings and active stores, and Product/Store/Breadcrumb JSON-LD. Sold listings stay reachable at their direct URL but are `noindex` and excluded from the sitemap. Account, Admin, API, signup/onboarding (`/registro/vendedor`, `/registro/tienda`) and authentication utility routes are `noindex` through metadata and `X-Robots-Tag`, and Vercel preview deployments are never indexable. The account shell follows the frozen V1 order and groups profile and password under `Perfil y seguridad`. Sprint 9 adds no migration, scheduler, payment, escrow, shipping, chat or paid feature.
+
+Effortless Laria listing page clarification (batch "listing", proposed UXD-listing-3 to UXD-listing-10): the listing page shows up to five key specs in one line under the title; dates read as people say them ("Publicado hace 2 semanas", "Actualizado hace 3 días" only after a later content change), and a listing untouched for months invites checking availability. The seller card shows only facts Laria records (activity bucket, confirmed sales, account age, confirmed e-mail) and "Tienda verificada" opens to list what Laria checked by hand (RUC, razón social, address, a phone on file) and since when. The reviews section shows the count per star and loads every review on request. Similar listings are ranked by brand, a price within 30% and the city, in a scrollable row of up to eight. Photos can be zoomed in the lightbox by gesture, button or key. "Compartir" shares the link (or a story image) and links show a generated preview card for public listings. The owner of a listing sees shortcuts to edit, lower the price or mark it sold. `/instrumentos/<listing id>` redirects to the listing's slug.

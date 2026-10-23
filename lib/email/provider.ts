@@ -6,6 +6,8 @@ export type MarketplaceEmailMessage = {
   html: string;
   text: string;
   idempotencyKey: string;
+  // save-07: List-Unsubscribe and List-Unsubscribe-Post (RFC 8058) on alerts, price drops and digests.
+  headers?: Record<string, string>;
 };
 
 export type MarketplaceEmailProvider = {
@@ -45,7 +47,7 @@ export class ResendMarketplaceEmailProvider implements MarketplaceEmailProvider 
           "Content-Type": "application/json",
           "Idempotency-Key": message.idempotencyKey,
         },
-        body: JSON.stringify({ from: this.from, to: [message.to], subject: message.subject, html: message.html, text: message.text }),
+        body: JSON.stringify({ from: this.from, to: [message.to], subject: message.subject, html: message.html, text: message.text, ...(message.headers ? { headers: message.headers } : {}) }),
         signal: AbortSignal.timeout(10_000),
       });
     } catch (error) {

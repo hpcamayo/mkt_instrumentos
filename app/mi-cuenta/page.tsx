@@ -1,17 +1,24 @@
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
 import { getAccountContext } from "@/lib/account-context";
 import { listingStatusLabel } from "@/lib/account-ui";
 import { isSellerProfileComplete } from "@/lib/auth/profile";
-import { getAccountAnalytics } from "@/lib/account-analytics";
-import { AccountAnalyticsMetrics } from "@/components/account-analytics";
+import { buildPendientes, parsePendientes, storeChecklist, type ChecklistStep } from "@/lib/pendientes";
+import { assistedCommerceEnabled } from "@/lib/payment-methods";
+import { PendientesList } from "@/components/pendientes-list";
+import { VacationMode } from "@/components/vacation-mode";
 import { buttonClasses } from "@/components/ui/button";
 import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
+import { getStoreListingQuota } from "@/lib/store-allowance";
 import { storeStatusEntry } from "@/lib/ui/status";
 
 export const metadata = { title: "Mi cuenta" };
 
+type Store = Awaited<ReturnType<typeof getAccountContext>>["store"];
+
+// big-09: the account home opens on Pendientes, what needs the person now, instead of metrics. Metrics live in
+// Estadísticas (one link away). A failed read says so rather than showing an empty, falsely calm list.
 export default async function AccountPage({
   searchParams,
 }: {
@@ -19,36 +26,66 @@ export default async function AccountPage({
 }) {
   const status = await searchParams;
   const { user, profile, store, supabase } = await getAccountContext();
+  const pendientesRead = supabase ? await supabase.rpc("get_account_pendientes") : { data: null, error: null };
+  const pendientes = parsePendientes(pendientesRead.data);
+  const items = pendientes ? buildPendientes(pendientes) : [];
+  const pausedUntil = pendientes?.seller.paused_until ?? null;
 
   if (profile?.account_type === "store_owner") {
     const { data: inventory } = store && supabase
-      ? await supabase
-          .from("listings")
-          .select("id,title,status,slug,created_at")
-          .eq("store_id", store.id)
-          .order("created_at", { ascending: false })
+      ? await supabase.from("listings").select("id,status").eq("store_id", store.id)
       : { data: [] };
-    return <StoreOwnerDashboard email={user.email ?? ""} confirmed={status.confirmed === "1"} store={store} inventory={inventory ?? []} />;
+    const concurrent = (inventory ?? []).filter((item) => item.status === "pending" || item.status === "approved").length;
+    const quota = await getStoreListingQuota(store ? supabase : null, concurrent);
+    const checklist = storeChecklist(store, {
+      listings: pendientes?.store?.listings ?? (inventory ?? []).length,
+      paymentMethods: pendientes?.store?.payment_methods ?? 0,
+      payments: assistedCommerceEnabled(),
+    });
+    return (
+      <div className="space-y-5">
+        <AccountNotices confirmed={status.confirmed === "1"} welcomed={false} passwordUpdated={false} storeOwner />
+        <section className="surface-frame rounded-panel bg-frame p-5 text-white sm:p-6">
+          <p className="t-micro text-muted-dark">Resumen de Tienda</p>
+          <h1 className="mt-2 t-page">{store?.name ?? "Completa la solicitud de tu tienda"}</h1>
+          <p className="mt-2 t-ui text-muted-dark">{storeTrustLabel(store)} · Cupo de publicaciones: {concurrent} de {quota.allowance}</p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/mi-cuenta/tienda" className={buttonClasses()}>{store ? "Administrar mi tienda" : "Iniciar solicitud"}</Link>
+            {store ? <Link href="/mi-cuenta/tienda/inventario" className={buttonClasses({ variant: "onDark" })}>Ver inventario</Link> : null}
+            {store ? <Link href="/mi-cuenta/tienda/estadisticas" className={buttonClasses({ variant: "onDark" })}>Estadísticas</Link> : null}
+          </div>
+        </section>
+        {store?.status === "rejected" ? <Notice tone="danger" role="note"><h2 className="font-semibold">Solicitud rechazada</h2><p className="mt-1">{store.rejection_reason || "La solicitud necesita correcciones antes de volver a revisión."}</p><Link href="/mi-cuenta/tienda" className="mt-3 inline-flex">Corregir y reenviar</Link></Notice> : null}
+        {/* shop-05 (stores batch): one name for the allowance; at the limit, Mi tienda shows what uses it and how to ask for more. */}
+        {concurrent >= quota.allowance ? <Notice tone="warning" role="note"><h2 className="font-semibold">Usaste todo tu cupo de publicaciones</h2><p className="mt-1">Las {quota.allowance} están en uso. En <Link href="/mi-cuenta/tienda" className="link font-semibold">Mi tienda</Link> puedes liberar lugares o pedir más cupo.</p></Notice> : null}
+        {checklist.some((step) => !step.done) ? <StoreChecklist steps={checklist} /> : null}
+        <PendientesBlock failed={!pendientes} items={items} title="Hoy en tu tienda" emptyTitle="Todo al día en tu tienda" />
+        {store ? <VacationMode pausedUntil={pausedUntil} /> : null}
+        {store?.status === "active" ? <p className="t-ui"><Link href={`/tiendas/${store.slug}`} className="link inline-flex items-center gap-2 font-semibold">Ver tienda pública <ExternalLink className="h-4 w-4" aria-hidden="true" /></Link></p> : null}
+      </div>
+    );
   }
 
-  const [{ data: listings }, analytics] = await Promise.all([supabase
-    ? supabase
+  const { data: listings } = supabase
+    ? await supabase
         .from("listings")
         .select("id,title,status,slug,price_pen,created_at")
         .eq("owner_user_id", user.id)
         .is("store_id", null)
         .order("created_at", { ascending: false })
         .limit(5)
-    : { data: [] }, getAccountAnalytics(0)]);
+    : { data: [] };
 
   return (
     <div className="space-y-5">
       <AccountNotices confirmed={status.confirmed === "1"} welcomed={status.welcome === "1"} passwordUpdated={status.password === "updated"} storeOwner={false} />
-      {!isSellerProfileComplete(profile) ? (
+      {/* auth-02: an account starts with a name and an e-mail, and Publicar asks for WhatsApp and city the first time.
+          The home asks only someone who already has publications, whose buyers need those details to reach them. */}
+      {listings?.length && !isSellerProfileComplete(profile) ? (
         <section className={noticeClassName("warning")}>
           <NoticeIcon tone="warning" />
           <div className="flex min-w-0 flex-1 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><h2 className="font-semibold">Completa tu perfil Particular</h2><p className="mt-1 leading-6">Revisa tu nombre, WhatsApp y ubicación antes de publicar.</p></div>
+            <div><h2 className="font-semibold">Completa tu perfil Particular</h2><p className="mt-1 leading-6">Tus publicaciones muestran tu nombre, WhatsApp y ubicación. Revísalos para que los compradores puedan contactarte.</p></div>
             <Link href="/mi-cuenta/perfil" className={buttonClasses({ variant: "secondary" })}>Completar perfil</Link>
           </div>
         </section>
@@ -58,51 +95,51 @@ export default async function AccountPage({
         className="rounded-panel border border-subtle bg-white p-5 sm:p-6"
         eyebrow="Resumen Particular"
         title={`Hola, ${profile?.full_name || user.email || "bienvenido"}`}
-        meta={<p className="max-w-[68ch]">Compra y vende desde una sola cuenta. Tus publicaciones siempre quedan vinculadas a este perfil.</p>}
+        meta={<nav aria-label="Accesos rápidos" className="flex flex-wrap gap-x-4 gap-y-2"><Link href="/mi-cuenta/publicaciones" className="link font-semibold">Mis publicaciones</Link><Link href="/mi-cuenta/transacciones" className="link font-semibold">Compras y ventas</Link><Link href="/mi-cuenta/favoritos" className="link font-semibold">Favoritos</Link><Link href="/mi-cuenta/estadisticas" className="link font-semibold">Estadísticas</Link></nav>}
         actions={<Link href="/mi-cuenta/publicar" className={buttonClasses()}>Publicar instrumento</Link>}
       />
 
-      <AccountAnalyticsMetrics analytics={analytics} />
+      <PendientesBlock failed={!pendientes} items={items} title="Pendientes" emptyTitle="Estás al día" />
 
       <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
         <div className="flex items-center justify-between gap-3"><div><p className="t-micro text-ink-2">Publicaciones recientes</p><h2 className="mt-1 t-section text-ink">Mis publicaciones</h2></div><Link href="/mi-cuenta/publicaciones" className="link font-semibold">Ver todas</Link></div>
         {listings?.length ? <ul className="mt-4 divide-y divide-subtle">{listings.map((listing) => <li key={listing.id} className="flex items-center justify-between gap-3 py-3 text-sm"><span className="font-semibold text-ink">{listing.title}</span><span className="text-ink-2">{listingStatusLabel(listing.status)}</span></li>)}</ul> : <p className="mt-4 text-sm text-ink-2">Aún no tienes publicaciones. Crea la primera desde Publicar.</p>}
       </section>
+
+      {listings?.length ? <VacationMode pausedUntil={pausedUntil} /> : null}
     </div>
   );
 }
 
-function StoreOwnerDashboard({ email, confirmed, store, inventory }: {
-  email: string;
-  confirmed: boolean;
-  store: Awaited<ReturnType<typeof getAccountContext>>["store"];
-  inventory: { id: string; title: string; status: string; slug: string; created_at: string }[];
-}) {
-  const pending = inventory.filter((item) => item.status === "pending").length;
-  const approved = inventory.filter((item) => item.status === "approved").length;
-  const concurrent = pending + approved;
+function PendientesBlock({ failed, items, title, emptyTitle }: { failed: boolean; items: ReturnType<typeof buildPendientes>; title: string; emptyTitle: string }) {
+  if (failed) return <Notice tone="warning" role="note" title="No pudimos cargar tus pendientes"><p className="mt-1">Recarga la página en un momento. Mientras tanto, todo sigue disponible desde el menú.</p></Notice>;
+  return <PendientesList items={items} title={title} emptyTitle={emptyTitle} />;
+}
+
+// shop-02: the steps to get the store live, ticked from the store's own data. Gone once every step is done.
+function StoreChecklist({ steps }: { steps: ChecklistStep[] }) {
+  const done = steps.filter((step) => step.done).length;
   return (
-    <div className="space-y-5">
-      <AccountNotices confirmed={confirmed} welcomed={false} passwordUpdated={false} storeOwner />
-      <section className="surface-frame rounded-panel bg-frame p-5 text-white sm:p-6">
-        <p className="t-micro text-muted-dark">Resumen de Tienda</p>
-        <h1 className="mt-2 t-page">{store?.name ?? "Completa la solicitud de tu tienda"}</h1>
-        <p className="mt-2 t-ui text-muted-dark">{store?.razon_social ?? email}</p>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Link href="/mi-cuenta/tienda" className={buttonClasses()}>{store ? "Administrar mi tienda" : "Iniciar solicitud"}</Link>
-          {store ? <Link href="/mi-cuenta/tienda/publicar" className={buttonClasses({ variant: "onDark" })}>Publicar</Link> : null}
-          {store ? <Link href="/mi-cuenta/tienda/inventario" className={buttonClasses({ variant: "onDark" })}>Ver inventario</Link> : null}
-        </div>
-      </section>
-      {store?.status === "rejected" ? <Notice tone="danger" role="note"><h2 className="font-semibold">Solicitud rechazada</h2><p className="mt-1">{store.rejection_reason || "La solicitud necesita correcciones antes de volver a revisión."}</p><Link href="/mi-cuenta/tienda" className="mt-3 inline-flex">Corregir y reenviar</Link></Notice> : null}
-      <section className="grid gap-4 sm:grid-cols-3"><Metric label="Estado" value={storeTrustLabel(store)} /><Metric label="Inventario concurrente" value={`${concurrent} / 50`} /><Metric label="En revisión" value={String(pending)} /></section>
-      {concurrent >= 50 ? <Notice tone="warning" role="note"><h2 className="font-semibold">Límite de inventario alcanzado</h2><p className="mt-1">Las 50 posiciones concurrentes están ocupadas.</p></Notice> : null}
-      <section className="rounded-panel border border-subtle bg-white p-5 text-sm leading-6 text-ink-2 sm:p-6">
-        <h2 className="t-section text-ink">Cómo publica tu tienda</h2>
-        {!store ? <p className="mt-2">Presenta la solicitud para vincular una tienda a esta cuenta. Cada cuenta puede tener una tienda.</p> : store.status === "active" && store.is_verified ? <p className="mt-2"><strong className="text-ink">Tienda verificada:</strong> tus publicaciones nuevas aparecen directamente si cumplen las reglas. La verificación no implica garantías de pago, entrega o condición.</p> : <p className="mt-2">Tus publicaciones nuevas pasan por revisión antes de aparecer. {store.status === "pending" ? "La tienda y sus publicaciones siguen ocultas al público hasta que se apruebe la solicitud." : "Las publicaciones aprobadas aparecen cuando la tienda está activa."}</p>}
-        {store?.status === "active" ? <Link href={`/tiendas/${store.slug}`} className="mt-3 link inline-flex items-center gap-2 font-semibold">Ver tienda pública <ExternalLink className="h-4 w-4" aria-hidden="true" /></Link> : null}
-      </section>
-    </div>
+    <section aria-labelledby="checklist-titulo" className="rounded-panel border border-subtle bg-white p-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="checklist-titulo" className="t-section text-ink">Deja tu tienda lista</h2>
+        <p className="t-meta">{done} de {steps.length} pasos</p>
+      </div>
+      <ol className="mt-3 grid gap-2">
+        {steps.map((step) => {
+          const Icon = step.done ? CheckCircle2 : Circle;
+          return (
+            <li key={step.key} className="flex items-start gap-3">
+              <Icon aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-ink-2" />
+              <div className="min-w-0">
+                {step.done ? <p className="t-ui text-ink-2"><span className="sr-only">Hecho: </span>{step.label}</p> : <Link href={step.href} className="link t-ui font-semibold">{step.label}</Link>}
+                {step.hint ? <p className="t-meta">{step.hint}</p> : null}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 
@@ -111,12 +148,6 @@ function AccountNotices({ confirmed, welcomed, passwordUpdated, storeOwner }: { 
   return <Notice tone="success" title={passwordUpdated ? "Contraseña actualizada" : confirmed ? "Correo confirmado" : "Cuenta creada"}><p className="mt-1 leading-6">{passwordUpdated ? "Tu contraseña se actualizó correctamente." : storeOwner ? "Tu cuenta de Tienda está activa." : "Tu cuenta Particular está activa para comprar y vender."}</p></Notice>;
 }
 
-// Same card as the analytics metrics (components/account-analytics.tsx). Labels are sentence case: uppercase
-// is only for micro labels of three words or fewer (D6), and metric labels run longer.
-function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-panel border border-subtle bg-white p-5"><p className="t-ui font-semibold text-ink-2">{label}</p><p className="mt-3 text-[28px] font-bold leading-[32px] stretch-semicond tabular-nums text-ink">{value}</p></div>;
-}
-
-function storeTrustLabel(store: Awaited<ReturnType<typeof getAccountContext>>["store"]) {
+function storeTrustLabel(store: Store) {
   return store ? storeStatusEntry(store.status, store.is_verified).label : "Sin solicitud";
 }

@@ -35,6 +35,53 @@ test("transaction JSON parsers reject malformed/private shapes and preserve vali
   assert.equal(transactions.transactionStateLabel("external"), "Venta fuera de Laria");
 });
 
+test("eligible buyers carry recognisable details, the detail carries the seller's verified sales, and review reminders count Lima days", () => {
+  const buyer = { buyer_user_id: "u", display_name: "Ana", last_contact_at: "2026-09-18T12:00:00Z" };
+  assert.deepEqual(transactions.parseEligibleBuyers([buyer]), [{ ...buyer, phone_last3: null, reported_purchase: false }]);
+  assert.deepEqual(transactions.parseEligibleBuyers([{ ...buyer, phone_last3: "321", reported_purchase: true }]), [{ ...buyer, phone_last3: "321", reported_purchase: true }]);
+  assert.deepEqual(transactions.parseEligibleBuyers([{ ...buyer, phone_last3: "4321" }]), []);
+  assert.deepEqual(transactions.parseEligibleBuyers([{ ...buyer, phone_last3: "12a" }]), []);
+  assert.deepEqual(transactions.parseEligibleBuyers([{ ...buyer, reported_purchase: "yes" }]), []);
+  const detail = {
+    reference_id: "tx", listing_id: "listing", listing_title: "Guitarra", listing_slug: "guitarra", sold_at: "2026-09-18T12:00:00Z",
+    role: "seller", state: "verified", claim_id: "c", transaction_id: "tx", buyer_user_id: "u", buyer_name: "Ana", seller_name: "Vendedor",
+    store_id: null, verified_at: "2026-09-18T12:00:00Z", review_deadline: "2026-09-28T12:00:00Z", review_window_open: true,
+    own_review: null, visible_reviews: [],
+  };
+  assert.ok(transactions.parseTransactionDetail(detail));
+  assert.ok(transactions.parseTransactionDetail({ ...detail, seller_verified_sales: null }));
+  assert.equal(transactions.parseTransactionDetail({ ...detail, seller_verified_sales: 1 }).seller_verified_sales, 1);
+  assert.equal(transactions.parseTransactionDetail({ ...detail, seller_verified_sales: -1 }), null);
+  assert.equal(transactions.parseTransactionDetail({ ...detail, seller_verified_sales: 1.5 }), null);
+  // 10:00 in Lima (UTC-5) on 18 Sep; the deadline's Lima day decides the wording.
+  const now = Date.parse("2026-09-18T15:00:00Z");
+  assert.equal(transactions.reviewDueLabel("2026-09-18T23:00:00Z", now), "Tu reseña vence hoy");
+  assert.equal(transactions.reviewDueLabel("2026-09-19T04:00:00Z", now), "Tu reseña vence hoy"); // 04:00 UTC on 19 Sep is 23:00 on 18 Sep in Lima
+  assert.equal(transactions.reviewDueLabel("2026-09-19T15:00:00Z", now), "Tu reseña vence mañana");
+  assert.equal(transactions.reviewDueLabel("2026-09-20T15:00:00Z", now), "Tu reseña vence en 2 días");
+  assert.equal(transactions.reviewDueLabel("2026-09-18T14:00:00Z", now), null);
+});
+
+test("the review rating is five native star radios and the buyer list is radio cards with no buyer chosen in advance", () => {
+  const detail = fs.readFileSync("components/transaction-detail.tsx", "utf8");
+  const stars = fs.readFileSync("components/transactions/star-rating.tsx", "utf8");
+  const buyers = fs.readFileSync("components/transactions/buyer-choice.tsx", "utf8");
+  assert.match(detail, /<StarRating name="rating"/);
+  assert.doesNotMatch(detail, /<Select name="rating"/);
+  assert.match(stars, /type="radio"/);
+  assert.match(stars, /\{rating === 1 \? "estrella" : "estrellas"\}/);
+  assert.match(stars, /de 5/);
+  assert.match(stars, /useState\(0\)/);
+  assert.match(detail, /useState\(""\)/);
+  assert.match(buyers, /type="radio"/);
+  assert.match(buyers, /Te escribió el/);
+  assert.match(buyers, /WhatsApp terminado en/);
+  assert.match(buyers, /Dice que te lo compró/);
+  assert.match(detail, /Que lo disfrutes/);
+  assert.match(detail, /Tu primera venta verificada en Laria/);
+  assert.match(detail, /seller_verified_sales === 1/);
+});
+
 test("public reputation parser never fabricates a default rating", () => {
   assert.deepEqual(transactions.parsePublicReputation(null), { review_count: 0, average_rating: null, items: [] });
   const value = { review_count: 1, average_rating: 4.5, items: [{ id: "r", rating: 5, comment: null, submitted_at: "2026-09-18T12:00:00Z", reviewer_name: "Comprador" }] };
@@ -82,7 +129,8 @@ test("verified transaction UI uses account shell routes and preserves off-platfo
   const navigation = fs.readFileSync("lib/account-navigation.ts", "utf8");
   const detail = fs.readFileSync("components/transaction-detail.tsx", "utf8");
   const management = fs.readFileSync("components/listing-management-table.tsx", "utf8");
-  const notifications = fs.readFileSync("components/notifications-list.tsx", "utf8");
+  // The notification's page comes from lib/notifications.ts, shared by the list and the push notices.
+  const notifications = fs.readFileSync("components/notifications-list.tsx", "utf8") + fs.readFileSync("lib/notifications.ts", "utf8");
   // Compras y ventas is declared once in the shared account items used by both roles.
   assert.equal((navigation.match(/label: "Compras y ventas"/g) ?? []).length, 1);
   assert.equal((navigation.match(/\.\.\.sharedAccountItems/g) ?? []).length, 2);

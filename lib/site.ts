@@ -33,6 +33,11 @@ export const SITE_OG_DESCRIPTION =
 
 export const OPEN_GRAPH_BASE = { siteName: SITE_NAME, locale: "es_PE", type: "website" } as const;
 
+// The Laria card (app/opengraph-image.tsx) named outright. A page whose own openGraph has no images loses the card,
+// because a child's openGraph replaces the parent's, so those pages add this (Effortless list-09).
+// Pages with their own card (the home, listings, categories) leave it out.
+export const DEFAULT_OG_IMAGES = [{ url: "/opengraph-image", width: 1200, height: 630, type: "image/png", alt: "Laria, el mercado de instrumentos del Perú" }];
+
 export const NOINDEX_ROBOTS = { index: false, follow: false } as const;
 export const NOINDEX_FOLLOW_ROBOTS = { index: false, follow: true } as const;
 
@@ -72,4 +77,6 @@ export const NON_INDEXABLE_PATH_PREFIXES = [
   // Signup/onboarding flows, including their invitation sub-routes.
   "/registro/vendedor",
   "/registro/tienda",
+  // Photos shared from the phone to the installed app (big-12).
+  "/compartir",
 ] as const;

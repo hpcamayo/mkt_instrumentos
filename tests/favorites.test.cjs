@@ -29,26 +29,30 @@ test('favorite history accepts only redacted unavailable rows and bounded pages'
 test('favorite controls reflect actual saved state and anonymous safe login navigation',()=>{
  const button=state=>load('components/favorite-button.tsx',{'next/link':{default:Link},'next/navigation':{usePathname:()=>'/listados',useRouter:()=>({push(){},refresh(){}})},'@/components/marketplace-account-provider':{useMarketplaceAccount:()=>({ready:true,authenticated:true,favorites:{id:true},register:()=>()=>{},setFavorite:async()=>{},...state})}}).FavoriteButton;
  const html=renderToStaticMarkup(React.createElement(button({}),{listingId:'id'}));assert.match(html,/aria-pressed="true"/);assert.match(html,/Quitar de favoritos/);
- const anon=renderToStaticMarkup(React.createElement(button({authenticated:false}),{listingId:'id'}));assert.match(anon,/login\?next=%2Flistados/);assert.match(anon,/Ingresa para guardar/);
+ // Accounts batch, big-04: signed out, the heart saves on this device instead of sending to sign-in.
+ const anon=renderToStaticMarkup(React.createElement(button({authenticated:false,deviceFavoriteIds:[]}),{listingId:'id'}));assert.match(anon,/aria-pressed="false"/);assert.match(anon,/Guardar en favoritos/);assert.doesNotMatch(anon,/login\?next/);
+ const anonSaved=renderToStaticMarkup(React.createElement(button({authenticated:false,deviceFavoriteIds:['id']}),{listingId:'id'}));assert.match(anonSaved,/aria-pressed="true"/);
 });
 // React #418 on listing pages (docs/ux-redesign/ux-4-listing-store.md § First task): the related listings stream in after
 // the first account check has finished; hydrated with the live state, their favourite rendered a sign-in link where the
 // server had sent the disabled button. While a component hydrates, the account hook must hand it the server's state.
 test('account state while hydrating equals the server render (React #418)',()=>{
- const live={authenticated:true,storeOwner:true,hasStore:true,admin:true,name:'Ana',unreadNotifications:2,pendingBuyerConfirmations:1,ready:true,settled:true,favorites:{id:true},register:()=>()=>{},setFavorite:async()=>{}};
+ const live={authenticated:true,storeOwner:true,hasStore:true,payments:true,admin:true,name:'Ana',unreadNotifications:2,pendingBuyerConfirmations:1,ready:true,settled:true,favorites:{id:true},register:()=>()=>{},setFavorite:async()=>{}};
  const {useMarketplaceAccount}=load('components/marketplace-account-provider.tsx',{react:{...React,useContext:()=>live}});
  let seen;const Probe=()=>{seen=useMarketplaceAccount();return null;};
  // A server render reads useSyncExternalStore's server snapshot, exactly as hydration does.
  renderToStaticMarkup(React.createElement(Probe));
- const {register,setFavorite,...state}=seen;
- assert.deepEqual(state,{authenticated:false,storeOwner:false,hasStore:false,admin:false,name:null,unreadNotifications:0,pendingBuyerConfirmations:0,ready:false,settled:false,favorites:{}});
+ const {register,setFavorite,flash,...state}=seen;assert.equal(typeof flash,'undefined');
+ assert.deepEqual(state,{authenticated:false,storeOwner:false,hasStore:false,payments:false,admin:false,name:null,unreadNotifications:0,pendingBuyerConfirmations:0,ready:false,settled:false,favorites:{},deviceFavoriteIds:[]});
  assert.equal(register,live.register);assert.equal(setFavorite,live.setFavorite);
  assert.match(fs.readFileSync('components/marketplace-account-provider.tsx','utf8'),/useSyncExternalStore\(subscribeToNothing, \(\) => false, \(\) => true\)/);
 });
-test('global search uses exactly the catalog brand parameter and no client event',()=>{
- const {GlobalSearch}=load('components/global-search.tsx',{'next/navigation':{useSearchParams:()=>new URLSearchParams('brand=Yamaha')}});
- const html=renderToStaticMarkup(React.createElement(GlobalSearch));assert.match(html,/action="\/listados"/);assert.match(html,/name="brand"/);assert.match(html,/value="Yamaha"/);assert.match(html,/role="search"/);
- assert.doesNotMatch(fs.readFileSync('components/global-search.tsx','utf8'),/sendMarketplaceEvent|name="q"/);
+test('global search: free-text q (Effortless Laria BIG 03), keeps the current filters and sends no client event',()=>{
+ const nav={useSearchParams:()=>new URLSearchParams('q=Yamaha&category=guitars&page=2'),usePathname:()=>'/listados',useRouter:()=>({push(){}})};
+ const {GlobalSearch}=load('components/global-search.tsx',{'next/navigation':nav});
+ const html=renderToStaticMarkup(React.createElement(GlobalSearch));assert.match(html,/action="\/listados"/);assert.match(html,/name="q"/);assert.match(html,/value="Yamaha"/);assert.match(html,/role="search"/);
+ assert.match(html,/<input type="hidden" name="category" value="guitars"\/>/);assert.doesNotMatch(html,/name="page"/);
+ assert.doesNotMatch(fs.readFileSync('components/global-search.tsx','utf8'),/sendMarketplaceEvent/);
 });
 test('favorite actions authenticate and batches bind to the actual session user',async()=>{
  const queries=[];const client={auth:{getUser:async()=>({data:{user:{id:'trusted'}}})},from:()=>({select:()=>({eq:(...args)=>{queries.push(args);return {in:async()=>({data:[],error:null})};}})}),rpc:async(...args)=>{queries.push(args);return {data:true,error:null};}};
@@ -65,5 +69,5 @@ test('favorite API refuses anonymous sessions and cross-site actions',async()=>{
  }
 });
 test('price-drop notifications target safe recipient-specific listing navigation, not seller inventory',()=>{
- const source=fs.readFileSync('components/notifications-list.tsx','utf8');assert.match(source,/listing_price_drop/);assert.match(source,/\/mi-cuenta\/favoritos\/\$\{notification.listing_id\}/);assert.match(source,/Bajó de precio un favorito/);
+ const source=fs.readFileSync('components/notifications-list.tsx','utf8')+fs.readFileSync('lib/notifications.ts','utf8');assert.match(source,/listing_price_drop/);assert.match(source,/\/mi-cuenta\/favoritos\/\$\{notification.listing_id\}/);assert.match(source,/Bajó de precio un favorito/);
 });

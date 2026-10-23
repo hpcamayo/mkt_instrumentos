@@ -16,6 +16,7 @@ const links = [
   { href: "/admin/publicaciones", label: "Publicaciones" },
   { href: "/admin/revisiones", label: "Cambios" },
   { href: "/admin/tiendas", label: "Tiendas" },
+  { href: "/admin/medios-de-pago", label: "Medios de pago" },
   { href: "/admin/usuarios", label: "Usuarios" },
   { href: "/admin/reportes", label: "Reportes" },
   { href: "/admin/resenas", label: "Reseñas" },

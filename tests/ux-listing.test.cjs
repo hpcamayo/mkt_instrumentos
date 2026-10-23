@@ -105,7 +105,7 @@ test("the reviews: verified-only wording, five latest, left out when the reputat
   assert.match(markup, /set\. 2026/);
   assert.equal((markup.match(/data-report="review"/g) ?? []).length, 5);
   assert.match(markup, /Mostrando las 5 más recientes de 9/);
-  assert.match(markup, /Solo se reseña después de una compra que comprador y vendedor confirmaron en Laria\. Laria no procesó el pago ni la entrega\./);
+  assert.match(markup, /Solo se reseña después de una compra que comprador y vendedor confirmaron en Laria\./);
   const none = html(React.createElement(ReputationSection, { reputation: { review_count: 0, average_rating: null, items: [] }, title: "Reseñas de Ana" }));
   assert.match(none, /Aún no tiene reseñas\./);
   assert.doesNotMatch(none, /Mostrando/);
@@ -148,7 +148,7 @@ test("L12: related sections show four cards in the catalog grid and are left out
   assert.doesNotMatch(source("app/instrumentos/[slug]/page.tsx"), /emptyMessage|Todavía no hay publicaciones similares/);
 });
 
-test("L3: the gallery has a button per photo, six thumbnails (four on phones), +N tiles and an eager first photo", () => {
+test("L3: the gallery has a button per photo, six thumbnails (four on phones), +N tiles and eager first two photos", () => {
   const { ListingGallery } = load("components/listing/listing-gallery.tsx", { ...mocks, "@/components/listing/lightbox": { Lightbox: () => null } });
   const photos = Array.from({ length: 8 }, (_, n) => ({ id: `p${n}`, image_url: `/p${n}.jpg`, alt_text: null, sort_order: n }));
   const markup = html(React.createElement(ListingGallery, { photos, title: "Strat" }));
@@ -161,14 +161,17 @@ test("L3: the gallery has a button per photo, six thumbnails (four on phones), +
   assert.match(markup, /Foto <\/span>1 \/ 8/);
   const images = [...markup.matchAll(/<img [^>]*>/g)].map(([tag]) => tag);
   assert.match(images[0], /data-priority=""/);
-  assert.ok(images.slice(1).every((tag) => /loading="lazy"/.test(tag)));
+  // Effortless list-01: the second photo is eager so the first swipe shows it at once; the rest stay lazy.
+  assert.match(images[1], /loading="eager"/);
+  assert.ok(images.slice(2).every((tag) => /loading="lazy"/.test(tag)));
   assert.ok(images.slice(8).every((tag) => /data-sizes="\(max-width: 1023px\) 56px, 72px"/.test(tag)));
   assert.match(html(React.createElement(ListingGallery, { photos: [], title: "Strat" })), /Sin foto/);
   const one = html(React.createElement(ListingGallery, { photos: photos.slice(0, 1), title: "Strat" }));
   assert.doesNotMatch(one, /Miniaturas|1 \/ 1|Foto siguiente/);
   const lightbox = source("components/listing/lightbox.tsx");
   for (const rule of [/showModal\(\)/, /onCancel=/, /ArrowLeft/, /ArrowRight/, /event\.key === "Tab"/, /aria-live="polite"/, /label="Cerrar"/, /sizes="100vw"/]) assert.match(lightbox, rule);
-  assert.match(source("components/listing/listing-gallery.tsx"), /openerRef\.current\?\.focus\(\)/);
+  // Focus returns to the opener after the lightbox unmounts (Effortless list-01: a focus() while the modal is open is lost).
+  assert.match(source("components/listing/listing-gallery.tsx"), /useEffect\(\(\) => \{\s*if \(lightboxAt !== null \|\| !returnFocus\.current\) return;[\s\S]*?openerRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
 });
 
 test("L4: one contact module, the phone bar is the same element, and sold pages have none", () => {
@@ -180,9 +183,14 @@ test("L4: one contact module, the phone bar is the same element, and sold pages 
   assert.match(css, /html:has\(\.contact-bar\) \{\s*scroll-padding-bottom/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
   const listing = source("app/instrumentos/[slug]/page.tsx");
-  assert.match(listing, /\{isSold \? \([\s\S]*ya no está disponible para consultas de compra[\s\S]*Ver publicaciones similares[\s\S]*\) : \(\s*<ContactModule/);
-  assert.match(listing, /\{isSold \? null : <TrustNote surface="listing"/);
-  assert.match(listing, /\{isSold \? null : <div aria-hidden="true" className="contact-bar-spacer" \/>\}/);
+  assert.match(listing, /\{isSold \? \([\s\S]*ya no está disponible para consultas de compra[\s\S]*Ver publicaciones similares[\s\S]*\) : \(\s*<>[\s\S]*?<ContactModule\b/);
+  // Effortless list-02: the limitation statement is the line under the contact button (SafetyLine), so it goes with it.
+  assert.match(contact, /<SafetyLine /);
+  assert.doesNotMatch(listing, /<TrustNote/);
+  // fast-04 (integration): the page, footer included, ends above the bar at its measured height; no spacer inside it.
+  assert.doesNotMatch(listing, /contact-bar-spacer/);
+  assert.match(contact, /<BarHeight variable="--contact-bar-height" \/>/);
+  assert.match(source("app/globals.css"), /body:has\(\.contact-bar\) \{\s*padding-bottom: var\(--contact-bar-height, calc\(104px \+ env\(safe-area-inset-bottom\)\)\);/);
   // No public view count (L6 A).
   assert.doesNotMatch(listing, /initialViewCount|Visto/);
 });
@@ -215,9 +223,11 @@ test("store socials are links only for http(s) URLs", () => {
 
 test("4b: the store header, breadcrumb by store type, section links and 'Sobre la tienda'", () => {
   const { storeBreadcrumbs } = load("components/store/store-header.tsx", mocks);
-  assert.deepEqual(storeBreadcrumbs({ name: "Casa Musical Grau", is_verified: true }).map((crumb) => crumb.label), ["Inicio", "Tiendas verificadas", "Casa Musical Grau"]);
-  assert.equal(storeBreadcrumbs({ name: "Casa Musical Grau", is_verified: true })[1].href, "/listados?seller_type=verified_store");
-  assert.deepEqual(storeBreadcrumbs({ name: "Ritmo Sur", is_verified: false }).map((crumb) => crumb.label), ["Inicio", "Ritmo Sur"]);
+  // find-13: with a stores directory every store's trail goes through it (L19 had "Tiendas verificadas", N7's filtered
+  // catalog, for a verified store only).
+  assert.deepEqual(storeBreadcrumbs({ name: "Casa Musical Grau", is_verified: true }).map((crumb) => crumb.label), ["Inicio", "Tiendas", "Casa Musical Grau"]);
+  assert.equal(storeBreadcrumbs({ name: "Casa Musical Grau", is_verified: true })[1].href, "/tiendas");
+  assert.deepEqual(storeBreadcrumbs({ name: "Ritmo Sur", is_verified: false }).map((crumb) => crumb.label), ["Inicio", "Tiendas", "Ritmo Sur"]);
   const sections = load("components/store/store-sections.tsx", { ...mocks, "@/components/store/store-photos": { StorePhotos: ({ photos }) => React.createElement("ul", { "data-photos": photos.length }) } });
   const links = html(React.createElement(sections.StoreSectionLinks, { total: 24, reviews: 9 }));
   assert.match(links, /aria-label="Secciones de la tienda"/);
@@ -238,13 +248,18 @@ test("4b: the store header, breadcrumb by store type, section links and 'Sobre l
   assert.match(plain, /Laria aprobó esta tienda\. Cada publicación suya se revisa antes de mostrarse\./);
   assert.doesNotMatch(plain, /Redes|Fotos del local/);
   const page = source("app/tiendas/[slug]/page.tsx");
-  assert.match(page, /\{store\.is_verified \? <StripCurrent value="verified_stores" \/> : null\}/);
-  assert.match(page, /<StoreVisitTelemetry storeId=\{store\.id\} \/>/);
+  // shop-04: the owner's preview marks nothing in the strip and records no visit.
+  assert.match(page, /\{store\.is_verified && !preview \? <StripCurrent value="verified_stores" \/> : null\}/);
+  assert.match(page, /\{preview \? null : <StoreVisitTelemetry storeId=\{store\.id\} \/>\}/);
   assert.match(page, /lg:grid-cols-4 xl:grid-cols-5/);
   assert.match(page, /source="store"/);
   for (const field of ["created_at", "instagram_url", "facebook_url", "tiktok_url", "website_url", "store_photos"]) assert.match(page, new RegExp(field));
-  // No street address or contact person (L18 A).
-  assert.doesNotMatch(page, /\baddress\b|contact_person/);
+  // Never the contact person (L18 A). list-12 replaces L18's "no street address": the address is read on the server and
+  // reaches the page only through publicStoreLocation, from public_address (set only when the store agreed).
+  assert.doesNotMatch(page, /contact_person/);
+  assert.match(page, /const location = publicStoreLocation\(store\);/);
+  assert.match(page, /withoutPrivateStoreFields\(store\)/);
+  assert.doesNotMatch(page, /store\.address|row\.address/);
   // The banner shows only when the store uploaded one, decorative.
   assert.match(source("components/store/store-header.tsx"), /\{store\.banner_url \? \([\s\S]*alt=""[\s\S]*\) : null\}/);
 });

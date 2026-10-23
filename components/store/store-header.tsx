@@ -3,12 +3,15 @@ import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { PageContainer } from "@/components/page-container";
 import { RatingFigure, SellerAvatar, SellerKindMark } from "@/components/listing/seller-card";
 import { TrustNote } from "@/components/listing/trust-note";
+import { StoreVisitLines } from "@/components/store/store-visit";
 import { WhatsAppContactLink } from "@/components/whatsapp-contact-link";
+import { FollowButton } from "@/components/following/follow-button";
 import { buttonClasses } from "@/components/ui/button";
 import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
 import { formatMonthYear, listingCountLabel } from "@/lib/listing-page";
 import { buildStoreWhatsAppUrl } from "@/lib/listings";
-import type { Crumb } from "@/lib/shell";
+import { STORES_PATH, type Crumb } from "@/lib/shell";
+import type { PublicStoreLocation } from "@/lib/store-storefront";
 
 export type StoreHeaderData = {
   id: string;
@@ -25,14 +28,13 @@ export type StoreHeaderData = {
   created_at: string | null;
 };
 
-export const VERIFIED_STORES_HREF = "/listados?seller_type=verified_store";
-
-// The store breadcrumb (UX-4 L19 A): "Inicio / Tiendas verificadas / <tienda>" for a verified store (the middle item is
-// N7's filtered catalog), "Inicio / <tienda>" for the others; none on phones.
+// The store breadcrumb: "Inicio / Tiendas / <tienda>" for every store, the middle item being the stores directory
+// (find-13; UX-4 L19 had "Tiendas verificadas" for a verified store only, when the directory did not exist). None on
+// phones.
 export function storeBreadcrumbs(store: { name: string; is_verified: boolean }): Crumb[] {
   return [
     { label: "Inicio", href: "/" },
-    ...(store.is_verified ? [{ label: "Tiendas verificadas", href: VERIFIED_STORES_HREF }] : []),
+    { label: "Tiendas", href: STORES_PATH },
     { label: store.name },
   ];
 }
@@ -40,16 +42,22 @@ export function storeBreadcrumbs(store: { name: string; is_verified: boolean }):
 // The store header (UX-4 L17 A, L20 A): a compact identity band on canvas. The banner shows as a 120 px strip (96 px on
 // phones) only when the store uploaded one; then the logo or white initials, the name with "Tienda verificada" or
 // "Tienda", the place, the description and real figures. At the right (full width on phones) the one contact button
-// and the trust statement. No contact bar on the store page.
+// and the trust statement. No contact bar on the store page. When the store shows them (list-12), the street address
+// with "Cómo llegar" and the opening hours follow the place. In the owner's preview (shop-04) the contact button is
+// drawn but inert: nobody can be contacted through a page that is not public, and nothing is recorded.
 export function StoreHeader({
   store,
   total,
   rating,
+  location,
+  preview = false,
 }: {
   store: StoreHeaderData;
   // The exact count of published listings; null when the query failed.
   total: number | null;
   rating: { average: number; count: number } | null;
+  location?: PublicStoreLocation;
+  preview?: boolean;
 }) {
   const place = [store.district, store.city, store.region && store.region !== store.city ? store.region : null].filter(Boolean).join(", ");
   const since = formatMonthYear(store.created_at);
@@ -72,7 +80,10 @@ export function StoreHeader({
                 <SellerKindMark kind={kind} />
                 {place ? <span className="t-ui text-ink-2">{place}</span> : null}
               </div>
+              {location ? <StoreVisitLines location={location} className="mt-2" /> : null}
               {store.description ? <p className="mt-3 max-w-[68ch] t-body text-ink-2">{store.description}</p> : null}
+              {/* Accounts batch, save-12. Not in the owner's preview: a store that is not public cannot be followed. */}
+              {preview ? null : <div className="mt-3"><FollowButton storeId={store.id} label={store.name} /></div>}
               <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 t-ui text-ink [&>li+li]:before:mr-3 [&>li+li]:before:text-ink-3 [&>li+li]:before:content-['·']">
                 {rating ? <li><RatingFigure rating={rating} /></li> : null}
                 {total !== null ? <li>{listingCountLabel(total)}</li> : null}
@@ -81,15 +92,25 @@ export function StoreHeader({
             </div>
           </div>
           <div className="grid gap-2 lg:w-[360px] lg:shrink-0">
-            <WhatsAppContactLink
-              href={buildStoreWhatsAppUrl(store)}
-              storeId={store.id}
-              source="store"
-              className={buttonClasses({ size: "lg", block: true })}
-            >
-              <WhatsAppGlyph />
-              Contactar por WhatsApp
-            </WhatsAppContactLink>
+            {preview ? (
+              <>
+                <span aria-disabled="true" className={buttonClasses({ size: "lg", block: true, className: "pointer-events-none" })}>
+                  <WhatsAppGlyph />
+                  Contactar por WhatsApp
+                </span>
+                <p className="t-meta">En la vista previa este botón no abre WhatsApp. Funcionará cuando tu tienda sea pública.</p>
+              </>
+            ) : (
+              <WhatsAppContactLink
+                href={buildStoreWhatsAppUrl(store)}
+                storeId={store.id}
+                source="store"
+                className={buttonClasses({ size: "lg", block: true })}
+              >
+                <WhatsAppGlyph />
+                Contactar por WhatsApp
+              </WhatsAppContactLink>
+            )}
             <TrustNote surface="store" />
           </div>
         </div>

@@ -5,10 +5,12 @@ import { instrumentFilterGroups } from "@/lib/instrument-filters";
 import {
   formatPrice,
   getCategoryLabel,
+  isOutOfStock,
   normalizeStore,
   type ListingDetailData,
 } from "@/lib/listings";
 import {
+  DEFAULT_OG_IMAGES,
   NOINDEX_FOLLOW_ROBOTS,
   OPEN_GRAPH_BASE,
   SITE_OG_DESCRIPTION,
@@ -23,6 +25,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 // Query keys that change catalog results. Anything else (for example utm_*) is
 // ignored for indexing decisions and never forwarded.
 export const catalogFilterKeys: ReadonlySet<string> = new Set([
+  "q",
   "category",
   "location",
   "city",
@@ -73,7 +76,9 @@ export function buildCategoryMetadata(landing: CategoryLandingPage, page: number
   };
 }
 
-export function buildCatalogMetadata(searchParams: SearchParams, page: number): Metadata {
+// filteredTitle: what a filtered search's tab says (FIND 02, "Fender en Guitarras · Lima (34)"); filtered pages are
+// noindex, so it changes only what people see in their tabs and history.
+export function buildCatalogMetadata(searchParams: SearchParams, page: number, filteredTitle?: string): Metadata {
   const description = "Explora guitarras, bajos, baterías, pedales, amplificadores y equipos de audio de particulares y tiendas en Perú. Contacto directo por WhatsApp.";
   const heading = "Instrumentos musicales en venta en Perú";
   const keys = activeFilterKeys(searchParams);
@@ -82,7 +87,7 @@ export function buildCatalogMetadata(searchParams: SearchParams, page: number): 
   const pageMetadata = (url: string, title: string, pageDescription: string, extra: Metadata = {}): Metadata => ({
     title: titled(title),
     description: pageDescription,
-    openGraph: { ...OPEN_GRAPH_BASE, title: `${titled(title)} | ${SITE_NAME}`, description: pageDescription, url },
+    openGraph: { ...OPEN_GRAPH_BASE, title: `${titled(title)} | ${SITE_NAME}`, description: pageDescription, url, images: DEFAULT_OG_IMAGES },
     ...extra,
   });
 
@@ -102,7 +107,7 @@ export function buildCatalogMetadata(searchParams: SearchParams, page: number): 
   const params = new URLSearchParams();
   for (const key of keys) for (const item of values(searchParams[key])) params.append(key, item);
   if (page > 1) params.set("page", String(page));
-  return pageMetadata(`/listados?${params}`, heading, description, { robots: NOINDEX_FOLLOW_ROBOTS });
+  return pageMetadata(`/listados?${params}`, filteredTitle ?? heading, description, { robots: NOINDEX_FOLLOW_ROBOTS });
 }
 
 function listingImages(listing: ListingDetailData) {
@@ -120,7 +125,7 @@ export function listingSummary(listing: ListingDetailData) {
     listing.condition,
     `${getCategoryLabel(listing.category)}${location ? ` en ${location}` : ""}`,
   ].filter(Boolean).join(" · ");
-  const prefix = listing.status === "sold" ? "Vendido. " : "";
+  const prefix = listing.status === "sold" ? "Vendido. " : isOutOfStock(listing) ? "Agotado. " : "";
   const detail = listing.description ? ` ${listing.description}` : " Contacta al vendedor directo por WhatsApp.";
   return truncateDescription(`${prefix}${facts}.${detail}`);
 }
@@ -129,21 +134,23 @@ export function buildListingMetadata(listing: ListingDetailData): Metadata {
   const canonical = `/instrumentos/${listing.slug}`;
   const title = listing.status === "sold" ? `${listing.title} (vendido)` : listing.title;
   const description = listingSummary(listing);
-  const images = listingImages(listing).slice(0, 1);
   return {
     title,
     description,
     alternates: { canonical },
-    // Sold listings remain at their direct URL as history but leave the index.
-    ...(listing.status === "sold" ? { robots: NOINDEX_FOLLOW_ROBOTS } : {}),
+    // Sold listings remain at their direct URL as history but leave the index; out-of-stock ones leave it until
+    // restocked, keeping the same URL.
+    ...(listing.status === "sold" || isOutOfStock(listing) ? { robots: NOINDEX_FOLLOW_ROBOTS } : {}),
     openGraph: {
       ...OPEN_GRAPH_BASE,
       title: `${title} | ${SITE_NAME}`,
       description,
       url: canonical,
-      ...(images.length ? { images: images.map((url) => ({ url, alt: listing.title })) } : {}),
+      // Effortless list-09: the generated card (photo, title, price, condition, verified store) from
+      // app/instrumentos/[slug]/opengraph-image.tsx; it falls back to the generic Laria card on any failure.
+      images: [{ url: `${canonical}/opengraph-image`, width: 1200, height: 630, type: "image/png", alt: listing.title }],
     },
-    twitter: { card: images.length ? "summary_large_image" : "summary", title, description },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -168,7 +175,12 @@ export function buildListingJsonLd(listing: ListingDetailData) {
             url,
             price: listing.price_pen,
             priceCurrency: "PEN",
-            availability: listing.status === "sold" ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
+            availability:
+              listing.status === "sold"
+                ? "https://schema.org/SoldOut"
+                : isOutOfStock(listing)
+                  ? "https://schema.org/OutOfStock"
+                  : "https://schema.org/InStock",
             itemCondition: listing.condition === "Nuevo" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
             // Individual sellers are not named in structured data; stores are public businesses.
             ...(store ? { seller: { "@type": "Organization", name: store.name } } : {}),
@@ -205,7 +217,7 @@ export function buildStoreMetadata(store: StoreSeoData, page: number): Metadata 
       title: `${title} | ${SITE_NAME}`,
       description,
       url: canonical,
-      ...(store.logo_url ? { images: [{ url: absoluteUrl(store.logo_url), alt: store.name }] } : {}),
+      images: store.logo_url ? [{ url: absoluteUrl(store.logo_url), alt: store.name }] : DEFAULT_OG_IMAGES,
     },
   };
 }

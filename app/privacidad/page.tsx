@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PrivacyAssistedCommerceSection } from "@/components/legal/assisted-commerce-legal";
 import { LegalContact, LegalPage, LegalSection } from "@/components/legal-page";
-import { OPEN_GRAPH_BASE } from "@/lib/site";
+import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
 
 const description = "Qué datos personales usa Laria, para qué, qué se muestra públicamente, qué cookies usamos y cómo ejercer tus derechos.";
 
@@ -9,7 +10,7 @@ export const metadata: Metadata = {
   title: "Política de privacidad",
   description,
   alternates: { canonical: "/privacidad" },
-  openGraph: { ...OPEN_GRAPH_BASE, title: "Política de privacidad | Laria", description, url: "/privacidad" },
+  openGraph: { ...OPEN_GRAPH_BASE, title: "Política de privacidad | Laria", description, url: "/privacidad", images: DEFAULT_OG_IMAGES },
 };
 
 export default function PrivacyPage() {
@@ -57,6 +58,8 @@ export default function PrivacyPage() {
           <li>Tu correo, tus favoritos, tus alertas y tu actividad de navegación no se muestran a otros usuarios. Vendedores y tiendas ven estadísticas agregadas, no la identidad de quienes vieron sus publicaciones.</li>
         </ul>
       </LegalSection>
+
+      <PrivacyAssistedCommerceSection />
 
       <LegalSection title="5. Cookies">
         <ul>

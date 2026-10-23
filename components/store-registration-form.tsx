@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { type FormEvent, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
 import { LocationFields } from "@/components/location-fields";
 import { useFormErrors } from "@/components/use-form-errors";
 import { storeFieldErrors } from "@/lib/form-validation";
@@ -11,9 +11,22 @@ import { normalizePeruRegion } from "@/lib/location";
 import { createPublicSubmission, type SubmissionFile } from "@/lib/public-submission";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import type { Database } from "@/lib/supabase/database.types";
+import { FormSection } from "@/components/selling/choice-fields";
 import { Button, buttonClasses } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Checkbox, Field, FileInput, Input } from "@/components/ui/field";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { Notice } from "@/components/ui/notice";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import {
+  OPENING_HOURS_MAX,
+  SOCIAL_HINTS,
+  STORE_IMAGE_GUIDANCE,
+  normalizeSocialInput,
+  type SocialNetwork,
+  type StorePrefill,
+} from "@/lib/store-profile";
 
 export type StoreApplication = {
   id: string;
@@ -34,6 +47,9 @@ export type StoreApplication = {
   website_url: string | null;
   logo_url: string | null;
   banner_url: string | null;
+  // list-12: the address is shown publicly only when the store says so; opening hours are free text.
+  show_address?: boolean | null;
+  opening_hours?: string | null;
   status: "pending" | "active" | "hidden" | "rejected";
   is_verified: boolean;
   rejection_reason: string | null;
@@ -47,11 +63,19 @@ export function StoreRegistrationForm({
   store = null,
   photos = [],
   defaultEmail = "",
+  prefill = {},
+  hasPaymentMethods = false,
 }: {
   store?: StoreApplication | null;
   photos?: StorePhoto[];
   defaultEmail?: string;
+  // shop-01: what the invitation or the signup already told Laria, for a new application.
+  prefill?: StorePrefill;
+  // shop-03: changing the RUC or the razón social sends declared payment methods back to Admin review.
+  hasPaymentMethods?: boolean;
 }) {
+  const [confirm, confirmDialog] = useConfirm();
+  const [businessChanged, setBusinessChanged] = useState(false);
   const [validation, errorSummary] = useFormErrors("tienda-reg", "guardar los datos de la tienda");
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const submit = useMemo(() => (supabase ? createPublicSubmission(supabase) : null), [supabase]);
@@ -87,10 +111,12 @@ export function StoreRegistrationForm({
       district: text(data, "district"),
       address: text(data, "address"),
       description: text(data, "description"),
-      instagram_url: text(data, "instagram_url"),
-      facebook_url: text(data, "facebook_url"),
-      tiktok_url: text(data, "tiktok_url"),
-      website_url: text(data, "website_url"),
+      instagram_url: normalizeSocialInput("instagram_url", text(data, "instagram_url")),
+      facebook_url: normalizeSocialInput("facebook_url", text(data, "facebook_url")),
+      tiktok_url: normalizeSocialInput("tiktok_url", text(data, "tiktok_url")),
+      website_url: normalizeSocialInput("website_url", text(data, "website_url")),
+      show_address: data.get("show_address") === "on",
+      opening_hours: text(data, "opening_hours").slice(0, OPENING_HOURS_MAX) || null,
     };
     const logo = image(data, "logo");
     const banner = image(data, "banner");
@@ -106,6 +132,16 @@ export function StoreRegistrationForm({
       setState("idle");
       setMessage("");
       return;
+    }
+    // shop-03: ask before a business change that sends payment methods back to review.
+    if (store && hasPaymentMethods && (fields.ruc !== (store.ruc ?? "") || fields.razon_social !== (store.razon_social ?? ""))) {
+      const ok = await confirm({
+        title: "¿Cambiar el RUC o la razón social?",
+        body: "Tus medios de pago vuelven a revisión y no se muestran a los compradores hasta que Laria los apruebe otra vez.",
+        confirmLabel: "Guardar cambios",
+        cancelLabel: "Revisar",
+      });
+      if (!ok) return;
     }
 
     setState("submitting");
@@ -181,45 +217,136 @@ export function StoreRegistrationForm({
     show("success", "Foto del local eliminada.");
   }
 
+  const defaults = {
+    name: store?.name ?? prefill.name,
+    contact_person: store?.contact_person ?? prefill.contact_person,
+    whatsapp_phone: store?.whatsapp_phone ?? prefill.whatsapp_phone,
+    city: store?.city ?? prefill.city,
+    region: store?.region ?? prefill.region,
+  };
+  const prefilled = !store && Object.keys(prefill).length > 0;
+  const watchBusiness = (event: ChangeEvent<HTMLInputElement>) => {
+    if (!store) return;
+    const form = event.currentTarget.form;
+    if (!form) return;
+    const data = new FormData(form);
+    setBusinessChanged(digits(text(data, "ruc")) !== (store.ruc ?? "") || text(data, "razon_social") !== (store.razon_social ?? ""));
+  };
+
   return (
     <form ref={validation.formRef} noValidate onSubmit={handleSubmit} onChange={validation.onChange} className="grid gap-6 rounded-panel border border-subtle bg-white p-5 sm:p-6">
+      {confirmDialog}
       {message ? <PageNotice kind={state === "success" ? "success" : "error"} message={message}>{state === "success" ? <div className="mt-3 flex flex-wrap gap-3"><Link href="/mi-cuenta" className="link font-semibold">Volver al resumen</Link><Link href="/mi-cuenta/tienda" className="link font-semibold">Ver estado de mi tienda</Link>{store ? <Link href="/mi-cuenta/tienda/inventario" className="link font-semibold">Ver inventario</Link> : null}</div> : null}</PageNotice> : null}
       {errorSummary}
-      <div className="grid gap-5 sm:grid-cols-2">
-        <StoreField label="Nombre público de la tienda" name="name" error={validation.errorFor("name")} defaultValue={store?.name} />
-        <StoreField label="Razón social" name="razon_social" error={validation.errorFor("razon_social")} defaultValue={store?.razon_social} />
-        <StoreField label="RUC" name="ruc" error={validation.errorFor("ruc")} inputMode="numeric" defaultValue={store?.ruc} />
-        <StoreField label="Correo comercial" name="email" error={validation.errorFor("email")} type="email" defaultValue={store?.email ?? defaultEmail} />
-        <StoreField label="Persona de contacto" name="contact_person" error={validation.errorFor("contact_person")} defaultValue={store?.contact_person} />
-        <StoreField label="Teléfono / WhatsApp" name="whatsapp_phone" error={validation.errorFor("whatsapp_phone")} inputMode="tel" defaultValue={store?.whatsapp_phone} />
-        <LocationFields idPrefix="tienda-reg" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} defaultCity={store?.city} defaultRegion={store?.region} />
-        <StoreField label="Distrito (opcional)" name="district" required={false} defaultValue={store?.district} />
-        <StoreField label="Dirección física" name="address" error={validation.errorFor("address")} defaultValue={store?.address} />
-      </div>
-      <Field id="tienda-reg-description" label="Descripción" optional><Textarea name="description" rows={5} defaultValue={store?.description ?? ""} /></Field>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <StoreField label="Instagram (opcional)" name="instagram_url" required={false} defaultValue={store?.instagram_url} />
-        <StoreField label="Facebook (opcional)" name="facebook_url" required={false} defaultValue={store?.facebook_url} />
-        <StoreField label="TikTok (opcional)" name="tiktok_url" required={false} defaultValue={store?.tiktok_url} />
-        <StoreField label="Sitio web (opcional)" name="website_url" required={false} defaultValue={store?.website_url} />
-      </div>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <ImageField label="Logo (opcional)" name="logo" error={validation.errorFor("logo")} currentUrl={currentLogoUrl} />
-        <ImageField label="Banner (opcional)" name="banner" error={validation.errorFor("banner")} currentUrl={currentBannerUrl} />
-      </div>
-      <Field id="tienda-reg-store-photos" error={validation.errorFor("store_photos")} label="Fotos del local (opcionales, hasta 5)"><FileInput name="store_photos" multiple accept="image/jpeg,image/png,image/webp" /></Field>
-      {currentPhotos.length ? <ul className="grid gap-3 sm:grid-cols-3">{currentPhotos.map((photo) => <li key={photo.id} className="rounded-panel border border-subtle p-2"><Image src={photo.image_url} alt={photo.alt_text ?? "Foto del local"} width={320} height={220} className="aspect-[4/3] w-full rounded-control object-cover" /><button type="button" onClick={() => removeStorePhoto(photo)} className={buttonClasses({ variant: "danger", size: "sm", block: true, className: "mt-2 min-h-11" })}>Quitar foto</button></li>)}</ul> : null}
+      {prefilled ? (
+        <Notice tone="info" title="Completamos lo que ya nos diste">
+          <p>Revisa el nombre, el contacto y la ubicación, y corrige lo que haga falta.</p>
+        </Notice>
+      ) : null}
+
+      <FormSection id="tienda-perfil-publico" title="Perfil público" hint="Lo que los compradores ven en tu página y en tus publicaciones.">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <StoreField label="Nombre público de la tienda" name="name" error={validation.errorFor("name")} defaultValue={defaults.name} />
+          <Field id="tienda-reg-whatsapp_phone" label="WhatsApp para compradores" error={validation.errorFor("whatsapp_phone")}><PhoneInput name="whatsapp_phone" required defaultValue={defaults.whatsapp_phone} /></Field>
+          <LocationFields idPrefix="tienda-reg" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} defaultCity={defaults.city ?? undefined} defaultRegion={defaults.region ?? undefined} />
+          <StoreField label="Distrito (opcional)" name="district" required={false} defaultValue={store?.district} />
+        </div>
+        <Field id="tienda-reg-description" label="Descripción" optional hint="Qué vendes, marcas que trabajas, servicios (por ejemplo, regulación o reparación)."><Textarea name="description" rows={5} defaultValue={store?.description ?? ""} /></Field>
+        <Field id="tienda-reg-opening_hours" label="Horario de atención" optional hint="Por ejemplo: Lun a sáb de 10:00 a 19:00. Domingos cerrado.">
+          <Textarea name="opening_hours" rows={3} maxLength={OPENING_HOURS_MAX} defaultValue={store?.opening_hours ?? ""} />
+        </Field>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <ImageField label="Logo (opcional)" name="logo" error={validation.errorFor("logo")} currentUrl={currentLogoUrl} guidance={STORE_IMAGE_GUIDANCE.logo} shape="logo" />
+          <ImageField label="Banner (opcional)" name="banner" error={validation.errorFor("banner")} currentUrl={currentBannerUrl} guidance={STORE_IMAGE_GUIDANCE.banner} shape="banner" />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          {(["instagram_url", "facebook_url", "tiktok_url", "website_url"] as SocialNetwork[]).map((network) => (
+            <StoreField key={network} label={`${SOCIAL_LABELS[network]} (opcional)`} name={network} required={false} defaultValue={store?.[network]} hint={SOCIAL_HINTS[network]} />
+          ))}
+        </div>
+        <Field id="tienda-reg-store-photos" error={validation.errorFor("store_photos")} label="Fotos del local (opcionales, hasta 5)" hint="Fachada, vitrina o sala de pruebas: ayudan a que te encuentren."><FileInput name="store_photos" multiple accept="image/jpeg,image/png,image/webp" /></Field>
+        {currentPhotos.length ? <ul className="grid gap-3 sm:grid-cols-3">{currentPhotos.map((photo) => <li key={photo.id} className="rounded-panel border border-subtle p-2"><Image src={photo.image_url} alt={photo.alt_text ?? "Foto del local"} width={320} height={220} className="aspect-[4/3] w-full rounded-control object-cover" /><button type="button" onClick={() => removeStorePhoto(photo)} className={buttonClasses({ variant: "danger", size: "sm", block: true, className: "mt-2 min-h-11" })}>Quitar foto</button></li>)}</ul> : null}
+      </FormSection>
+
+      <FormSection id="tienda-datos-empresa" title="Datos de la empresa" hint="Solo los ven tú y el equipo de Laria, salvo la dirección si eliges mostrarla.">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <StoreField label="Razón social" name="razon_social" error={validation.errorFor("razon_social")} defaultValue={store?.razon_social} onInput={watchBusiness} />
+          <StoreField label="RUC" name="ruc" error={validation.errorFor("ruc")} inputMode="numeric" defaultValue={store?.ruc} onInput={watchBusiness} />
+          <StoreField label="Correo comercial" name="email" error={validation.errorFor("email")} type="email" defaultValue={store?.email ?? defaultEmail} />
+          <StoreField label="Persona de contacto" name="contact_person" error={validation.errorFor("contact_person")} defaultValue={defaults.contact_person} />
+          <StoreField label="Dirección física" name="address" error={validation.errorFor("address")} defaultValue={store?.address} />
+        </div>
+        {businessChanged ? (
+          <Notice tone="warning" title="Cambiar el RUC o la razón social tiene efectos">
+            <p>
+              Laria revisa otra vez los datos de tu empresa
+              {hasPaymentMethods ? ", y tus medios de pago vuelven a revisión: no se muestran a los compradores hasta que se aprueben otra vez" : ""}.
+            </p>
+          </Notice>
+        ) : null}
+        <Checkbox
+          name="show_address"
+          defaultChecked={store?.show_address ?? false}
+          label="Mostrar mi dirección en la página de la tienda"
+          description="Con un enlace “Cómo llegar”, para quien quiera probar el instrumento en persona. Puedes quitarla cuando quieras."
+        />
+      </FormSection>
+
       <Button type="submit" block className="sm:w-auto sm:justify-self-start" loading={state === "submitting"} loadingLabel="Guardando…">{store ? "Guardar datos de la tienda" : "Enviar solicitud de tienda"}</Button>
     </form>
   );
 }
 
-function StoreField({ label, name, required = true, defaultValue, type = "text", inputMode, error }: { label: string; error?: string; name: string; required?: boolean; defaultValue?: string | null; type?: string; inputMode?: "text" | "tel" | "numeric" }) {
-  return <Field id={`tienda-reg-${name}`} label={label} error={error}><Input name={name} type={type} required={required} defaultValue={defaultValue ?? ""} inputMode={inputMode} /></Field>;
+const SOCIAL_LABELS: Record<SocialNetwork, string> = {
+  instagram_url: "Instagram",
+  facebook_url: "Facebook",
+  tiktok_url: "TikTok",
+  website_url: "Sitio web",
+};
+
+function StoreField({ label, name, required = true, defaultValue, type = "text", inputMode, error, hint, onInput }: {
+  label: string; error?: string; name: string; required?: boolean; defaultValue?: string | null; type?: string;
+  inputMode?: "text" | "tel" | "numeric"; hint?: string; onInput?: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return <Field id={`tienda-reg-${name}`} label={label} error={error} hint={hint}><Input name={name} type={type} required={required} defaultValue={defaultValue ?? ""} inputMode={inputMode} onChange={onInput} /></Field>;
 }
 
-function ImageField({ label, name, currentUrl, error }: { label: string; name: string; currentUrl?: string | null; error?: string }) {
-  return <div className="flex min-w-0 flex-col gap-1.5"><Field id={name} label={label} error={error}><FileInput name={name} accept="image/jpeg,image/png,image/webp" /></Field>{currentUrl ? <><span className="t-meta">Imagen actual guardada</span><Checkbox name={"remove_" + name} label="Quitar la imagen actual" className="min-h-0 py-1" /></> : null}</div>;
+// shop-03: the current image as the public will see it, and the chosen file previewed before saving.
+function ImageField({ label, name, currentUrl, error, guidance, shape }: {
+  label: string; name: string; currentUrl?: string | null; error?: string; guidance: string; shape: "logo" | "banner";
+}) {
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [remove, setRemove] = useState(false);
+  useEffect(() => () => { if (chosen) URL.revokeObjectURL(chosen); }, [chosen]);
+  const preview = chosen ?? (remove ? null : currentUrl ?? null);
+  const frame = shape === "logo" ? "h-24 w-24" : "h-[120px] w-full";
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <Field id={name} label={label} error={error} hint={guidance}>
+        <FileInput
+          name={name}
+          accept="image/jpeg,image/png,image/webp"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            setChosen((current) => {
+              if (current) URL.revokeObjectURL(current);
+              return file && allowedImage(file) ? URL.createObjectURL(file) : null;
+            });
+          }}
+        />
+      </Field>
+      {preview ? (
+        <figure className="grid gap-1">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL or the saved public image */}
+          <img src={preview} alt="" className={cn("rounded-panel border border-subtle bg-canvas object-cover", frame)} />
+          <figcaption className="t-meta">{chosen ? "Así se verá al guardar." : "Imagen actual."}</figcaption>
+        </figure>
+      ) : null}
+      {currentUrl && !chosen ? (
+        <Checkbox name={"remove_" + name} checked={remove} onChange={(event) => setRemove(event.target.checked)} label="Quitar la imagen actual" className="min-h-0 py-1" />
+      ) : null}
+    </div>
+  );
 }
 
 function text(data: FormData, key: string) { const value = data.get(key); return typeof value === "string" ? value.trim() : ""; }

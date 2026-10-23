@@ -149,6 +149,20 @@ figcaption {
   max-height: 88vh;
   max-height: 88dvh;
 }
+@media (min-width: 768px) {
+  .sheet[data-layout="responsive"] {
+    inset: 0;
+    width: min(36rem, calc(100% - 2rem));
+    height: fit-content;
+    max-height: 85vh;
+    margin: auto;
+    border-radius: 8px;
+    animation: none;
+  }
+  .sheet[data-layout="responsive"] .sheet-body {
+    max-height: 85vh;
+  }
+}
 @keyframes sheet-up {
   from {
     transform: translateY(100%);
@@ -174,6 +188,29 @@ figcaption {
 .lightbox::backdrop {
   background: rgb(5 6 8 / 0.95);
 }
+/* Zoom (Effortless list-01): the stage takes every touch gesture itself; the photo scales around its centre. Buttons,
+   keys and double taps glide 160 ms, in place under reduced motion; pinch and drag follow the fingers. */
+.lightbox-stage {
+  cursor: zoom-in;
+}
+.lightbox-stage[data-zoomed] {
+  cursor: grab;
+}
+.lightbox-stage[data-zoomed]:active {
+  cursor: grabbing;
+}
+.lightbox-photo {
+  transform-origin: center;
+  will-change: transform;
+}
+.lightbox-photo[data-animate] {
+  transition: transform 160ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lightbox-photo[data-animate] {
+    transition: none;
+  }
+}
 
 /* In-page confirmations (components/ui/confirm-dialog.tsx, UX-6 A3): a white modal <dialog>, centred, 8 px corners,
    up to 440 px wide with a 16 px gutter on phones, over frame black at 55%. */
@@ -193,9 +230,10 @@ figcaption {
 }
 
 /* The listing's contact module (components/listing/contact-module.tsx, UX-4 L4 A). Below 1024 px it is a bar at the
-   bottom of the screen: white, a 1 px line-deco top border, the safe area below. The page gets a matching spacer and
-   scroll padding, so the bar never hides a focused element. On short viewports (landscape, 200% zoom) it is not fixed:
-   the module stays in the page after the identity block. */
+   bottom of the screen: white, a 1 px line-deco top border, the safe area below. The page ends above it, footer
+   included, and gets matching scroll padding, so the bar never hides a focused element or the footer's links (fast-04;
+   --contact-bar-height is its measured height, components/ui/bar-height.tsx). On short viewports
+   (landscape, 200% zoom) it is not fixed: the module stays in the page after the identity block. */
 @media (max-width: 1023px) and (min-height: 560px) {
   .contact-bar {
     position: fixed;
@@ -206,10 +244,10 @@ figcaption {
     background: var(--surface);
   }
   html:has(.contact-bar) {
-    scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(var(--contact-bar-height, calc(104px + env(safe-area-inset-bottom))) + 16px);
   }
-  .contact-bar-spacer {
-    height: calc(104px + env(safe-area-inset-bottom));
+  body:has(.contact-bar) {
+    padding-bottom: var(--contact-bar-height, calc(104px + env(safe-area-inset-bottom)));
   }
 }
 
@@ -219,6 +257,60 @@ figcaption {
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
+}
+
+/* fast-01 (docs/ux-effortless/speed.md): the navigation bar and the slow-page skeleton (components/navigation-feedback.tsx).
+   A 3 px accent fill across the top that grows while the next page loads; under reduced motion the rule below makes
+   each step instant. The skeleton covers the page being left from the top of <main> (or of the screen when the
+   header has scrolled away), below the header's menus. */
+.navigation-bar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 100;
+  height: 3px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+.navigation-bar[data-state="start"] {
+  opacity: 1;
+  transform: scaleX(0.3);
+  transition: transform 200ms ease-out;
+}
+.navigation-bar[data-state="wait"] {
+  opacity: 1;
+  transform: scaleX(0.9);
+  transition: transform 12s cubic-bezier(0.1, 0.6, 0.2, 1);
+}
+.navigation-bar[data-state="done"] {
+  opacity: 0;
+  transform: scaleX(1);
+  transition: transform 150ms ease-out, opacity 200ms ease-in 150ms;
+}
+.navigation-skeleton {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  background: var(--surface);
+}
+@media (forced-colors: active) {
+  .navigation-bar {
+    background: Highlight;
+  }
+}
+
+/* fast-04: a bar fixed to the bottom (or top) of the screen never covers the focused element. Mark it with
+   data-bottom-bar (or data-top-bar) and the page scrolls focused fields clear of it, as .contact-bar does above. A bar
+   that puts <BarHeight variable="--bottom-bar-height" /> inside gives its measured height; 32 px covers a floating
+   bar's offset from the edge. */
+html:has([data-bottom-bar]) {
+  scroll-padding-bottom: calc(var(--bottom-bar-height, 88px) + 32px + env(safe-area-inset-bottom));
+}
+html:has([data-top-bar]) {
+  scroll-padding-top: 88px;
 }
 
 @media (prefers-reduced-motion: reduce) {

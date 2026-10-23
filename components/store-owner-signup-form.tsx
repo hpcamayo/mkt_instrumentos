@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { LocationFields } from "@/components/location-fields";
 import { profileFieldErrors } from "@/lib/form-validation";
+import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
 import {
   STORE_OWNER_ACCOUNT_TYPE,
   upsertStoreOwnerProfile,
@@ -14,6 +15,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { useFormErrors } from "@/components/use-form-errors";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { Notice } from "@/components/ui/notice";
 
 type State = "checking" | "idle" | "submitting" | "sent" | "error";
@@ -64,9 +67,9 @@ export function StoreOwnerSignupForm() {
       setMessage(validated.message);
       return;
     }
-    if (!email || password.length < 6) {
+    if (!email || password.length < PASSWORD_MIN_LENGTH) {
       setState("error");
-      setMessage("Ingresa un correo y una contraseña de al menos 6 caracteres.");
+      setMessage(`Ingresa un correo y una contraseña de al menos ${PASSWORD_MIN_LENGTH} caracteres.`);
       return;
     }
     const available = await fetch("/api/auth/check-email", {
@@ -131,8 +134,13 @@ export function StoreOwnerSignupForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <SignupField label="Nombre de la persona responsable" name="fullName" error={validation.errorFor("fullName")} autoComplete="name" />
         <SignupField label="Correo exclusivo de la cuenta" name="email" error={validation.errorFor("email")} type="email" autoComplete="email" />
-        <SignupField label="Contraseña" name="password" error={validation.errorFor("password")} type="password" autoComplete="new-password" minLength={6} />
-        <SignupField label="WhatsApp de contacto" name="phone" error={validation.errorFor("phone")} type="tel" autoComplete="tel" />
+        {/* auth-01 and auth-03: the eye on the password and the +51 WhatsApp field, as in the Particular sign-up. */}
+        <Field id="tienda-password" label="Contraseña" error={validation.errorFor("password")} hint={`Mínimo ${PASSWORD_MIN_LENGTH} caracteres.`}>
+          <PasswordInput name="password" required minLength={PASSWORD_MIN_LENGTH} autoComplete="new-password" />
+        </Field>
+        <Field id="tienda-phone" label="WhatsApp de contacto" error={validation.errorFor("phone")}>
+          <PhoneInput name="phone" required />
+        </Field>
         <LocationFields idPrefix="tienda-cuenta" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} />
       </div>
       {message ? (
@@ -153,7 +161,7 @@ export function StoreOwnerSignupForm() {
   );
 }
 
-function SignupField({ label, error, ...props }: { label: string; error?: string; name: string; type?: string; autoComplete?: string; minLength?: number }) {
+function SignupField({ label, error, ...props }: { label: string; error?: string; name: string; type?: string; autoComplete?: string }) {
   return (
     <Field id={`tienda-${props.name}`} label={label} error={error}>
       <Input required {...props} />

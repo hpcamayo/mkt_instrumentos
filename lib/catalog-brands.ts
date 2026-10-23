@@ -1,7 +1,7 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { unstable_cache } from "next/cache";
-import { aggregateCatalogBrands, type CatalogBrandsByCategory } from "@/lib/catalog-brands-aggregate";
+import { aggregateCatalogBrands, brandsWithListings, type CatalogBrandsByCategory } from "@/lib/catalog-brands-aggregate";
 
 // The brands of each marketplace category, read from the canonical instrument catalog (docs/database.md § Canonical
 // instrument catalog): its current model-level products, each placed in a marketplace category by its catalog category
@@ -67,11 +67,64 @@ async function loadCatalogBrands(): Promise<CatalogBrandsByCategory> {
 // subtypes only.
 const cachedCatalogBrands = unstable_cache(loadCatalogBrands, ["catalog-brands-by-category-v2"], { revalidate: REVALIDATE_SECONDS });
 
+// FIND 06 (Effortless Laria): the brands that have listings in each category right now (public.catalog_brand_counts),
+// cached for five minutes. The menus and landings offer only these, so no brand link leads to an empty page.
+async function loadListingBrands() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  const supabase = createClient(url, key, {
+    auth: { persistSession: false },
+    global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }) },
+  });
+  const { data, error } = await supabase.rpc("catalog_brand_counts");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as { category: string; brand: string; listings: number }[];
+}
+const cachedListingBrands = unstable_cache(loadListingBrands, ["catalog-listing-brands-v1"], { revalidate: 300 });
+
 export async function getCatalogBrandsByCategory(): Promise<CatalogBrandsByCategory> {
+  const [catalog, listings] = await Promise.all([
+    cachedCatalogBrands().catch((error) => {
+      console.warn("Catalog brands are unavailable:", error instanceof Error ? error.message : error);
+      return {} as CatalogBrandsByCategory;
+    }),
+    cachedListingBrands().catch((error) => {
+      console.warn("Listing brands are unavailable:", error instanceof Error ? error.message : error);
+      return null;
+    }),
+  ]);
+  // Without listing counts, the catalog's brands as before.
+  return listings ? brandsWithListings(catalog, listings) : catalog;
+}
+
+// FIND 06: how many listings each category and type has right now (public.catalog_type_counts), cached for five
+// minutes. Null when the count fails, so callers show everything as before.
+async function loadTypeCounts() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  const supabase = createClient(url, key, { auth: { persistSession: false } });
+  const { data, error } = await supabase.rpc("catalog_type_counts");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as { category: string; instrument_type: string | null; listings: number }[];
+}
+const cachedTypeCounts = unstable_cache(loadTypeCounts, ["catalog-type-counts-v1"], { revalidate: 300 });
+
+export type ListingCounts = { categories: Record<string, number>; types: Record<string, number> };
+
+export async function getListingCounts(): Promise<ListingCounts | null> {
   try {
-    return await cachedCatalogBrands();
+    const rows = await cachedTypeCounts();
+    if (!rows) return null;
+    const counts: ListingCounts = { categories: {}, types: {} };
+    for (const row of rows) {
+      counts.categories[row.category] = (counts.categories[row.category] ?? 0) + Number(row.listings);
+      if (row.instrument_type) counts.types[`${row.category}:${row.instrument_type}`] = Number(row.listings);
+    }
+    return counts;
   } catch (error) {
-    console.warn("Catalog brands are unavailable:", error instanceof Error ? error.message : error);
-    return {};
+    console.warn("Listing counts are unavailable:", error instanceof Error ? error.message : error);
+    return null;
   }
 }

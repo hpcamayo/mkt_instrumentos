@@ -1,7 +1,8 @@
 import { instrumentFilterGroups } from "@/lib/instrument-filters";
-import { resolveParticularSeller } from "@/lib/seller-contact";
+import { listingContactMessage } from "@/lib/contact-message";
+import { resolveContactPhone, whatsAppUrl } from "@/lib/seller-contact";
 
-export { resolveParticularSeller } from "@/lib/seller-contact";
+export { resolveContactPhone, resolveParticularSeller, whatsAppNumber } from "@/lib/seller-contact";
 
 // The ten marketplace categories (owner decision, 12 Oct 2026; docs/ux-redesign/category-restructure.md), in menu
 // order. Baterías and Platillos became types of Percusión, and Interfaces de audio a type of Audio.
@@ -40,10 +41,14 @@ export const sellerTypeOptions = [
   { value: "verified_store", label: "Tienda verificada" },
 ] as const;
 
+// FIND 10 (Effortless Laria) adds "Bajaron de precio" (a lower price in the past 30 days first) and "Tiendas verificadas
+// primero". "Más cerca" waits until places are reliable.
 export const sortOptions = [
   { value: "newest", label: "Más recientes" },
   { value: "price_asc", label: "Menor precio" },
   { value: "price_desc", label: "Mayor precio" },
+  { value: "price_drop", label: "Bajaron de precio" },
+  { value: "verified_first", label: "Tiendas verificadas primero" },
 ] as const;
 
 export type ListingSort = (typeof sortOptions)[number]["value"];
@@ -57,6 +62,8 @@ export type ListingPhotoData = {
 };
 
 export type ListingFilters = {
+  // BIG 03 (Effortless Laria): the free-text search, over title, brand, model, type and category (lib/catalog.ts).
+  q?: string;
   category?: string;
   // F11 (owner, 8 Oct): condition and location take several values, matched as "any of"; none means all. One value
   // keeps today's URL (?condition=Nuevo); more repeat the parameter (?location=Lima&location=Arequipa).
@@ -111,17 +118,38 @@ export type ListingCardData = {
   seller_type: "individual" | "store";
   created_at: string;
   photo_count?: number;
+  // Null unless a store links the listing to an inventory item (STORE-1a).
+  stock_state?: StockState | null;
+  // list-05: a real price drop, kept by the database (listings_track_content_change); shown for 30 days.
+  previous_price_pen?: number | null;
+  price_dropped_at?: string | null;
   stores: StoreSummary | StoreSummary[] | null;
   listing_photos: ListingPhotoData[];
 };
 
+export type StockState = "in_stock" | "out_of_stock";
+
+// PostgREST filter for discovery (catalog, home, sitemap, related strips): a listing without inventory, or one with
+// units available. An approved listing at zero stock stays reachable at its URL and on its store page (design §5.2).
+export const DISCOVERABLE_STOCK_FILTER = "stock_state.is.null,stock_state.eq.in_stock";
+
+export function isOutOfStock(listing: { stock_state?: StockState | null }) {
+  return listing.stock_state === "out_of_stock";
+}
+
 export type ListingDetailData = ListingCardData & {
   status: "approved" | "sold";
+  // list-04: when the seller last changed what a buyer reads (never a view count).
+  content_changed_at?: string | null;
   sold_at: string | null;
   description: string | null;
   contact_name: string | null;
   whatsapp_phone: string;
   owner_user_id: string | null;
+  // ux my-listings (mine-12): the seller's vacation return date, or null.
+  paused_until?: string | null;
+  // mine-08: when the seller last answered "Sí, sigue disponible".
+  availability_confirmed_at?: string | null;
   profiles: ParticularProfileSummary | ParticularProfileSummary[] | null;
 };
 
@@ -168,25 +196,17 @@ export function getListingSecondaryTitle(listing: {
 }
 
 export function buildWhatsAppUrl(listing: ListingDetailData) {
-  const contact = resolveParticularSeller(listing);
-  const phone = String(contact.phone ?? listing.whatsapp_phone).replace(/\D/g, "");
-  const message = encodeURIComponent(
-    `Hola, vi tu publicación "${listing.title}" en Laria. ¿Sigue disponible?`,
-  );
-
-  return `https://wa.me/${phone}?text=${message}`;
+  return whatsAppUrl(resolveContactPhone(listing), listingContactMessage(listing, { outOfStock: isOutOfStock(listing) }));
 }
 
 export function buildStoreWhatsAppUrl(store: {
   name: string;
   whatsapp_phone: string;
 }) {
-  const phone = store.whatsapp_phone.replace(/\D/g, "");
-  const message = encodeURIComponent(
+  return whatsAppUrl(
+    store.whatsapp_phone,
     `Hola, vi la tienda "${store.name}" en Laria. Quisiera consultar por sus instrumentos.`,
   );
-
-  return `https://wa.me/${phone}?text=${message}`;
 }
 
 const MAX_FILTER_VALUES = 20;
@@ -225,7 +245,10 @@ export function parseListingFilters(
   const instrumentType = readString("instrument_type") || legacy?.instrumentType;
   const advanced = parseAdvancedFilters(searchParams, instrumentType);
 
+  const q = readString("q")?.replace(/\s+/g, " ").trim().slice(0, 200);
+
   return {
+    ...(q ? { q } : {}),
     category: legacy?.category ?? (readString("category") || undefined),
     cities: locations.length ? locations : readList("city"),
     conditions: readList("condition"),
@@ -240,10 +263,7 @@ export function parseListingFilters(
     minPrice: readNumber("min_price"),
     maxPrice: readNumber("max_price"),
     advanced,
-    sort:
-      sort === "price_asc" || sort === "price_desc" || sort === "newest"
-        ? sort
-        : "newest",
+    sort: sortOptions.some((option) => option.value === sort) ? (sort as ListingSort) : "newest",
   };
 }
 

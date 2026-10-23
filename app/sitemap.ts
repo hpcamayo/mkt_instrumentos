@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { categoryLandingPages } from "@/lib/category-pages";
 import { legalPages } from "@/lib/legal-pages";
+import { DISCOVERABLE_STOCK_FILTER } from "@/lib/listings";
 import { absoluteUrl, isIndexableDeployment } from "@/lib/site";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
@@ -19,6 +20,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: Entry[] = [
     { url: absoluteUrl("/"), changeFrequency: "daily", priority: 1 },
     { url: absoluteUrl("/listados"), changeFrequency: "hourly", priority: 0.9 },
+    // find-13: the stores directory (its city and listings tabs are noindex and left out).
+    { url: absoluteUrl("/tiendas"), changeFrequency: "daily", priority: 0.7 },
     ...legalPages.map((page): Entry => ({ url: absoluteUrl(page.href), changeFrequency: "yearly", priority: 0.2 })),
     // Owner decision (13 Oct 2026): keep all ten landings discoverable before they have inventory.
     // Empty landing metadata still declares noindex until public listings are available.
@@ -44,12 +47,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (data.length < BATCH_SIZE) break;
   }
 
-  // Approved public listings only; sold listings stay reachable but are not submitted.
+  // Approved public listings only; sold and out-of-stock listings stay reachable but are not submitted.
   for (let offset = 0; offset < MAX_LISTINGS; offset += BATCH_SIZE) {
     const { data, error } = await supabase
       .from("listings")
       .select("id,slug,updated_at")
       .eq("status", "approved")
+      .or(DISCOVERABLE_STOCK_FILTER)
       .order("id")
       .range(offset, offset + BATCH_SIZE - 1);
     if (error || !data) break;
