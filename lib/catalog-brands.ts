@@ -84,6 +84,7 @@ async function loadListingBrands() {
 const cachedListingBrands = unstable_cache(loadListingBrands, ["catalog-listing-brands-v1"], { revalidate: 300 });
 
 export async function getCatalogBrandsByCategory(): Promise<CatalogBrandsByCategory> {
+  if (process.env.LARIA_CATALOG_ENRICHMENT_DISABLED === "true") return {};
   const [catalog, listings] = await Promise.all([
     cachedCatalogBrands().catch((error) => {
       console.warn("Catalog brands are unavailable:", error instanceof Error ? error.message : error);
@@ -114,6 +115,7 @@ const cachedTypeCounts = unstable_cache(loadTypeCounts, ["catalog-type-counts-v1
 export type ListingCounts = { categories: Record<string, number>; types: Record<string, number> };
 
 export async function getListingCounts(): Promise<ListingCounts | null> {
+  if (process.env.LARIA_CATALOG_ENRICHMENT_DISABLED === "true") return null;
   try {
     const rows = await cachedTypeCounts();
     if (!rows) return null;
