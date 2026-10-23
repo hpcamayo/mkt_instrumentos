@@ -5,6 +5,9 @@ import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 // FIND 07: the filter counts for a draft in the phone sheet (the same counts the catalog page shows). Public data.
 export async function GET(request: NextRequest) {
+  if (process.env.LARIA_CATALOG_ENRICHMENT_DISABLED === "true") {
+    return NextResponse.json(null, { headers: { "cache-control": "public, max-age=30, s-maxage=60" } });
+  }
   const params = request.nextUrl.searchParams;
   const record = Object.fromEntries([...new Set(params.keys())].map((key) => [key, params.getAll(key)]));
   const supabase = getPublicSupabaseClient();

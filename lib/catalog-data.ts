@@ -40,6 +40,8 @@ export type RescueWay = { chip: AppliedFilter; count: number };
 export type CatalogRescue = { ways: RescueWay[]; closest: ListingCardData[]; closestLabel: string };
 
 export async function getCatalogRescue(filters: ListingFilters, scope: { landing?: { category: string; path: string } } = {}): Promise<CatalogRescue | null> {
+  // An empty crawled search can otherwise fan out into eight count queries and several fallback reads.
+  if (process.env.LARIA_CATALOG_ENRICHMENT_DISABLED === "true") return null;
   const supabase = getPublicSupabaseClient();
   if (!supabase) return null;
   const chips = appliedFilters(filters, scope).slice(0, 8);

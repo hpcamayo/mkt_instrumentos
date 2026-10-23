@@ -79,6 +79,8 @@ export function readCatalogFacets(value: unknown): CatalogFacetData | null {
 type RpcClient = { rpc: (name: "catalog_facets", args: { p_filters: Json; p_q?: string; p_attribute_keys?: string[] }) => PromiseLike<{ data: unknown; error: { message: string } | null }> };
 
 export async function fetchCatalogFacets(supabase: RpcClient, filters: ListingFilters): Promise<CatalogFacetData | null> {
+  // Incident recovery: optional counts must be removable before issuing the expensive RPC.
+  if (process.env.LARIA_CATALOG_ENRICHMENT_DISABLED === "true") return null;
   const { data, error } = await supabase.rpc("catalog_facets", {
     p_filters: facetFiltersJson(filters),
     ...(filters.q ? { p_q: filters.q } : {}),
