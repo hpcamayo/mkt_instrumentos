@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { catalogCardSelect } from "@/lib/catalog";
+import type { ListingCounts } from "@/lib/catalog-brands";
 import { DISCOVERABLE_STOCK_FILTER, categoryOptions, type ListingCardData } from "@/lib/listings";
 import type { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
@@ -7,7 +8,9 @@ type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClien
 
 // The home's read-only data (docs/ux-redesign/ux-3-discovery.md § Home data; Effortless Laria BIG 01). Every query uses
 // the public client, so RLS decides what is public exactly as on the catalog: the newest listings "Para ti" ranks on
-// the device, the recent price drops, the counts (Q10 B) and the verified stores. The vitrina's per-category queries
+// the device, the recent price drops and the verified stores. The counts (Q10 B) come from the shared type counts
+// (lib/catalog-brands.ts getListingCounts, at most a few minutes old) instead of eleven exact counts per visit
+// (docs/operations/catalog-performance.md). The vitrina's per-category queries
 // went with the vitrina (UXD-find).
 // "Para ti" shows twelve on desktop and six on phones (BIG 01).
 export const PHONE_FEED_SIZE = 6;
@@ -64,19 +67,11 @@ function approvedListings(supabase: PublicSupabaseClient, select: string) {
     .or(DISCOVERABLE_STOCK_FILTER);
 }
 
-function approvedCount(supabase: PublicSupabaseClient, category?: string) {
-  const query = supabase
-    .from("listings")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "approved")
-    .or(DISCOVERABLE_STOCK_FILTER);
-  return category ? query.eq("category", category) : query;
-}
-
 type PoolRow = ListingCardData & { owner_user_id?: string | null };
 
-export async function fetchHomeData(supabase: PublicSupabaseClient): Promise<HomeData> {
-  const [newest, drops, total, categoryCounts, stores] = await Promise.all([
+// counts: the shared listing counts, or null when they are unavailable (the tiles and "Ver todo" show no numbers).
+export async function fetchHomeData(supabase: PublicSupabaseClient, sharedCounts: ListingCounts | null | Promise<ListingCounts | null>): Promise<HomeData> {
+  const [newest, drops, stores, counts] = await Promise.all([
     approvedListings(supabase, `${CARD_SELECT}, owner_user_id`)
       .order("published_at", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
@@ -94,8 +89,6 @@ export async function fetchHomeData(supabase: PublicSupabaseClient): Promise<Hom
       .limit(1, { foreignTable: "listing_photos" })
       .limit(PRICE_DROP_SIZE)
       .returns<ListingCardData[]>(),
-    approvedCount(supabase),
-    Promise.all(categoryOptions.map((category) => approvedCount(supabase, category.value))),
     supabase
       .from("stores")
       .select("id, name, slug, city, district, logo_url")
@@ -105,22 +98,19 @@ export async function fetchHomeData(supabase: PublicSupabaseClient): Promise<Hom
       .order("id")
       .limit(HOME_STORE_COUNT)
       .returns<HomeStore[]>(),
+    sharedCounts,
   ]);
 
   logFailure("for-you", newest.error);
   logFailure("price drop", drops.error);
-  logFailure("count", total.error ?? categoryCounts.find((result) => result.error)?.error ?? null);
   logFailure("verified stores", stores.error);
 
   return {
     // The owner's id never leaves the server: only its hash does.
     pool: newest.error ? null : [...(newest.data ?? [])].sort(compareCatalogOrder).map(({ owner_user_id, ...listing }) => ({ ...listing, seller_key: sellerKey({ ...listing, owner_user_id }) })),
     priceDrops: drops.error ? null : (drops.data ?? []),
-    total: total.error ? null : total.count,
-    categoryCounts: Object.fromEntries(categoryOptions.map((category, index) => {
-      const result = categoryCounts[index];
-      return [category.value, result.error ? null : result.count];
-    })),
+    total: counts ? counts.total : null,
+    categoryCounts: counts ? Object.fromEntries(categoryOptions.map((category) => [category.value, counts.categories[category.value] ?? 0])) : {},
     stores: stores.error ? null : (stores.data ?? []),
   };
 }

@@ -3,9 +3,12 @@ import { fetchCatalogPage } from "@/lib/catalog";
 import { categoryLandingPath, categoryTypePath } from "@/lib/category-pages";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { getCategoryLabel } from "@/lib/listings";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { READ_BUDGETS, createDeadline } from "@/lib/request-deadline";
+import { createPublicReadClient } from "@/lib/supabase/public-read-client";
 
 const SIMILAR = 4;
+
+export const maxDuration = 30;
 
 // FIND 16 (Effortless Laria): for a listing address that no longer opens, whether it was once public and, if so, live
 // listings of the same type. public.listing_gone_hint says only the category and type, nothing about the old listing
@@ -13,7 +16,8 @@ const SIMILAR = 4;
 export async function GET(request: NextRequest) {
   const slug = request.nextUrl.searchParams.get("slug") ?? "";
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 200) return NextResponse.json({ gone: false });
-  const supabase = getPublicSupabaseClient();
+  // The hint and both similar-listing reads share one deadline.
+  const supabase = createPublicReadClient(createDeadline(READ_BUDGETS.routeMs, request.signal));
   if (!supabase) return NextResponse.json({ gone: false }, { status: 503 });
   const { data, error } = await supabase.rpc("listing_gone_hint", { p_slug: slug });
   const hint = data?.[0];

@@ -134,9 +134,11 @@ test("the catalog read is server-only, read-only, cached and fails soft", () => 
   assert.doesNotMatch(reader, /\.(insert|update|upsert|delete)\(/);
   // Effortless Laria FIND 06: the only functions called are the read-only listing counts.
   assert.deepEqual([...reader.matchAll(/\.rpc\("([a-z_]+)"/g)].map((match) => match[1]), ["catalog_brand_counts", "catalog_type_counts"]);
-  assert.match(reader, /unstable_cache\(loadCatalogBrands, \["catalog-brands-by-category-v2"\], \{ revalidate: REVALIDATE_SECONDS \}\)/);
-  assert.match(reader, /cachedCatalogBrands\(\)\.catch\(\(error\) => \{[\s\S]*return \{\} as CatalogBrandsByCategory;/);
-  assert.match(source("app/layout.tsx"), /const brands = await getCatalogBrandsByCategory\(\);/);
+  // Shared for a day through lib/shared-aggregate.ts, which answers null (here: no brands) when the read fails.
+  assert.match(reader, /key: "catalog-brands-by-category-v3",\s*revalidateSeconds: REVALIDATE_SECONDS,\s*load: loadCatalogBrands/);
+  assert.match(reader, /return listings \? brandsWithListings\(catalog \?\? \{\}, listings\) : \(catalog \?\? \{\}\);/);
+  // The layout waits for the brands at most the optional budget (docs/operations/catalog-performance.md).
+  assert.match(source("app/layout.tsx"), /const brands = await getCatalogBrandsByCategory\(optionalReadSignal\(getRequestReads\(\)\.deadline\)\);/);
 });
 
 function loadPanel() {

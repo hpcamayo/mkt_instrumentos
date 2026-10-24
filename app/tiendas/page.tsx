@@ -22,9 +22,12 @@ import {
   storeDirectoryView,
   type DirectoryStore,
 } from "@/lib/store-storefront";
-import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
+import { warnMissingSupabaseEnv, type getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { getRequestReads } from "@/lib/supabase/public-read-client";
 
 export const dynamic = "force-dynamic";
+// A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
+export const maxDuration = 30;
 
 type StoresPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -49,7 +52,7 @@ export async function generateMetadata({ searchParams }: StoresPageProps): Promi
 export default async function StoresPage({ searchParams }: StoresPageProps) {
   const resolved = await searchParams;
   const view = storeDirectoryView(resolved);
-  const supabase = getPublicSupabaseClient();
+  const { supabase } = getRequestReads();
   if (!supabase) warnMissingSupabaseEnv();
 
   return (

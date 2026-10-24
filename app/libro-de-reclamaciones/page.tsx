@@ -9,7 +9,7 @@ import {
   listingContextDescription,
 } from "@/lib/complaints-book";
 import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { getRequestReads } from "@/lib/supabase/public-read-client";
 
 // Libro de Reclamaciones virtual (EASE stores trust-05), in the format of Anexo I of the Reglamento del Libro de
 // Reclamaciones (D.S. 011-2011-PCM and amendments) under Ley 29571.
@@ -31,7 +31,7 @@ type PageProps = { searchParams: Promise<Record<string, string | string[] | unde
 async function readListingContext(value: string | string[] | undefined) {
   const slug = typeof value === "string" ? value.trim().toLowerCase() : "";
   if (!LISTING_SLUG_PATTERN.test(slug)) return null;
-  const client = getPublicSupabaseClient();
+  const { supabase: client } = getRequestReads();
   if (!client) return null;
   const { data } = await client.from("listings").select("title,slug").eq("slug", slug).eq("status", "approved").maybeSingle();
   return data ? { title: data.title, slug: data.slug } : null;

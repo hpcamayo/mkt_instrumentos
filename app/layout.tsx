@@ -9,6 +9,7 @@ import { NavigationFeedback } from "@/components/navigation-feedback";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
 import { MENU_BRAND_COUNT } from "@/lib/category-nav";
+import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
 import {
   NOINDEX_ROBOTS,
   OPEN_GRAPH_BASE,
@@ -72,8 +73,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // The strip's "Marcas" column: each category's leading catalog brands (a day-cached catalog read; none if it fails).
-  const brands = await getCatalogBrandsByCategory();
+  // The strip's "Marcas" column: each category's leading brands with listings (shared aggregates, lib/catalog-brands.ts).
+  // Optional: the layout waits at most the optional budget and renders the menus without brands when they are late.
+  const brands = await getCatalogBrandsByCategory(optionalReadSignal(getRequestReads().deadline));
   const menuBrands = Object.fromEntries(Object.entries(brands).map(([category, list]) => [category, list.slice(0, MENU_BRAND_COUNT).map((brand) => brand.name)]));
   return (
     <html lang="es" className={archivo.variable}>

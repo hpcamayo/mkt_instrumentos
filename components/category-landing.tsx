@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getListingCounts } from "@/lib/catalog-brands";
+import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
 import { brandsAlphabetical, type CategoryBrand } from "@/lib/catalog-brands-aggregate";
 import { formatNumber } from "@/lib/catalog-filters";
 import { BRANDS_ANCHOR, categoryBrandHref, subtypeLinks } from "@/lib/category-nav";
@@ -45,7 +46,7 @@ export async function CategoryLanding({
   const path = `/instrumentos/${landing.slug}`;
   // FIND 06 (Effortless Laria): the type chips say how many listings each has, and types without listings are left
   // out (all of them show when the counts are unavailable).
-  const counts = await getListingCounts();
+  const counts = await getListingCounts(optionalReadSignal(getRequestReads().deadline));
   const typeCount = (type: string) => counts?.types[`${landing.category}:${type}`];
   const types = getInstrumentTypeOptions(landing.category).filter((type) => type.value !== "other" && (!counts || (typeCount(type.value) ?? 0) > 0));
   const otherCategories = categoryLandingPages.filter((item) => item.slug !== landing.slug && (!counts || (counts.categories[item.category] ?? 0) > 0));

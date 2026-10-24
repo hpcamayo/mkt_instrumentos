@@ -71,8 +71,9 @@ export function FilterSheetButton({ filters, scope, appliedCount, facets = null 
 // how many results it will show ("Ver 12 resultados"), so an empty combination is visible before it is applied. The
 // counts come from /api/catalog/facets; until they arrive (or if they fail) the button keeps its plain words.
 function useDraftCounts(draft: ListingFilters, initial: CatalogFacetData | null) {
-  const [counts, setCounts] = useState<{ key: string; data: CatalogFacetData | null }>({ key: catalogSearchParams(draft).toString(), data: initial });
+  // Counts do not depend on the sort: the key is the endpoint's canonical address (no redirect, one CDN entry).
   const key = catalogSearchParams({ ...draft, sort: "newest" }).toString();
+  const [counts, setCounts] = useState<{ key: string; data: CatalogFacetData | null }>({ key, data: initial });
   useEffect(() => {
     if (key === counts.key) return;
     const controller = new AbortController();

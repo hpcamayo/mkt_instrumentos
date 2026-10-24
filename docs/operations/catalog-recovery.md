@@ -2,7 +2,11 @@
 
 `LARIA_CATALOG_ENRICHMENT_DISABLED=true` temporarily skips optional catalog database reads. Leave it unset for normal operation.
 
-When enabled, the server skips facet counts, data-derived price shortcuts, empty-search rescue counts and fallback suggestions, and optional brand/menu aggregates and type counts. The existing empty-data fallbacks keep the filters usable without fabricated numbers. The facet endpoint returns HTTP 200 with JSON `null` and a 60-second CDN cache lifetime.
+When enabled, the server skips facet counts, data-derived price shortcuts, empty-search rescue counts and fallback suggestions, optional brand/menu aggregates, the home page's category counts and total, type counts, and the search box's brand and model suggestions. The existing empty-data fallbacks keep the filters usable without fabricated numbers. The facet endpoint returns HTTP 200 with JSON `null` and a 60-second CDN cache lifetime; the suggestion endpoint returns HTTP 200 with an empty list, and submitting a search works as usual.
+
+The sell form's brand suggestions come from the reference instrument catalog, not from listing aggregates, so they stay available with the switch on.
+
+Outside containment, the same optional reads are bounded on their own: time budgets, shared caches, cool-downs after failures and no automatic retries ([catalog-performance.md](catalog-performance.md)). The switch remains the way to remove them entirely.
 
 Core listing queries, chosen filters, pagination and all publication, authorization and mutation rules retain their normal behavior. The switch changes no database schema or data.
 
@@ -10,8 +14,8 @@ Set the variable on the intended deployment environment and deploy again to acti
 
 Verification:
 
-- `pnpm test`: includes checks proving the optional database calls are skipped and core search still runs with its real filters and pagination.
+- `pnpm test`: includes checks proving the optional database calls are skipped (server renders, the facet endpoint and the suggestion endpoint, before any database client is created), that every direct caller of an optional aggregate checks the switch, that the sell form keeps its reference brands, and that core search still runs with its real filters and pagination.
 - `pnpm lint`, `pnpm typecheck`, `pnpm build`.
-- In a contained deployment, `GET /api/catalog/facets?category=guitars` returns HTTP 200 and JSON `null` without a Supabase request.
+- In a contained deployment, `GET /api/catalog/facets?category=guitars` returns HTTP 200 and JSON `null`, and `GET /api/catalog/suggest?q=fe` returns `[]`, without a Supabase request.
 
 Live incident details and provider account identifiers belong in private operational records, not this public runbook. This document changes no V1 acceptance status.

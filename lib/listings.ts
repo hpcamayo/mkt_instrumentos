@@ -210,13 +210,17 @@ export function buildStoreWhatsAppUrl(store: {
 }
 
 const MAX_FILTER_VALUES = 20;
+// Longer than any real value (docs/operations/catalog-performance.md § Input limits): a longer one is dropped, so a
+// crafted address cannot make the filters, their cache keys or the database's work arbitrarily large.
+const MAX_FILTER_VALUE_LENGTH = 80;
 
 export function parseListingFilters(
   searchParams: Record<string, string | string[] | undefined>,
 ): ListingFilters {
   const readString = (key: string) => {
     const value = searchParams[key];
-    return Array.isArray(value) ? value[0] : value;
+    const first = Array.isArray(value) ? value[0] : value;
+    return first !== undefined && first.length > MAX_FILTER_VALUE_LENGTH && key !== "q" ? undefined : first;
   };
 
   const readNumber = (key: string) => {
@@ -234,7 +238,7 @@ export function parseListingFilters(
   // Repeated parameters, in URL order, without blanks or repeats (capped: they become an `in` list).
   const readList = (key: string) => {
     const value = searchParams[key];
-    const items = (Array.isArray(value) ? value : [value]).map((item) => item?.trim()).filter((item): item is string => Boolean(item));
+    const items = (Array.isArray(value) ? value : [value]).map((item) => item?.trim()).filter((item): item is string => Boolean(item) && item!.length <= MAX_FILTER_VALUE_LENGTH);
     return [...new Set(items)].slice(0, MAX_FILTER_VALUES);
   };
 
@@ -301,7 +305,8 @@ function parseAdvancedFilters(
     const values = (Array.isArray(rawValue) ? rawValue : [rawValue])
       .flatMap((value) => value.split(","))
       .map((value) => value.trim())
-      .filter(Boolean);
+      .filter((value) => value && value.length <= MAX_FILTER_VALUE_LENGTH)
+      .slice(0, MAX_FILTER_VALUES);
 
     if (values.length === 0) {
       continue;

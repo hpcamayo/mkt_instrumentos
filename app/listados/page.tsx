@@ -13,7 +13,8 @@ import {
   type ListingCardData,
   type ListingFilters as ListingFiltersType,
 } from "@/lib/listings";
-import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
+import { warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
+import { getRequestReads } from "@/lib/supabase/public-read-client";
 import { SearchTelemetry } from "@/components/marketplace-telemetry";
 import { createSearchReceipt } from "@/lib/marketplace-events-server";
 import { searchEventMetadata } from "@/lib/marketplace-event-payload";
@@ -27,6 +28,8 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
+// A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
+export const maxDuration = 30;
 
 type ListingsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -47,7 +50,7 @@ export default async function ListingsPage({
   const resolvedSearchParams = await searchParams;
   const filters = parseListingFilters(resolvedSearchParams);
   const page = parsePage(resolvedSearchParams.page);
-  const supabase = getPublicSupabaseClient();
+  const { supabase } = getRequestReads();
 
   if (!supabase) {
     return <SupabaseSetupMessage filters={filters} />;

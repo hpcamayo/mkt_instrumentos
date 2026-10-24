@@ -230,10 +230,11 @@ export function catalogFacets(filters: ListingFilters, scope: CatalogScope = {},
   return facets;
 }
 
-// FIND 05: without counts, the four cities of V1; with them, every city that has listings (and any chosen one), by zone
-// in the zones' order, the largest first inside a zone, each zone with its "Todo …" option.
+// FIND 05: without counts, the four cities of V1 and any chosen one (so it can still be unticked); with them, every
+// city that has listings (and any chosen one), by zone in the zones' order, the largest first inside a zone, each zone
+// with its "Todo …" option.
 function locationOptions(filters: ListingFilters, data: CatalogFacetData | null): { options: FacetOption[]; zones?: FacetZone[] } {
-  if (!data) return { options: cityOptions.map((value) => ({ value, label: value })) };
+  if (!data) return { options: [...new Set([...cityOptions, ...filters.cities])].map((value) => ({ value, label: value })) };
   const known = new Map(data.locations.map((location) => [location.city, location]));
   for (const city of filters.cities) if (!known.has(city)) known.set(city, { city, region: null, count: 0 });
   const rows = [...known.values()].map((location) => ({ ...location, zone: zoneOfLocation(location.city, location.region) }));
