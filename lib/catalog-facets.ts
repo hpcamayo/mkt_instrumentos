@@ -1,3 +1,4 @@
+import { catalogEnrichmentDisabled } from "@/lib/catalog-guard";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { instrumentTypesByCategory } from "@/lib/listing-submission";
 import type { ListingFilters } from "@/lib/listings";
@@ -76,21 +77,33 @@ export function readCatalogFacets(value: unknown): CatalogFacetData | null {
   };
 }
 
-type RpcClient = { rpc: (name: "catalog_facets", args: { p_filters: Json; p_q?: string; p_attribute_keys?: string[] }) => PromiseLike<{ data: unknown; error: { message: string } | null }> };
+type RpcCall = PromiseLike<{ data: unknown; error: { message: string } | null }> & { abortSignal?: (signal: AbortSignal) => RpcCall };
+type RpcClient = { rpc: (name: "catalog_facets", args: { p_filters: Json; p_q?: string; p_attribute_keys?: string[] }) => RpcCall };
 
-export async function fetchCatalogFacets(supabase: RpcClient, filters: ListingFilters): Promise<CatalogFacetData | null> {
-  // Incident recovery: optional counts must be removable before issuing the expensive RPC.
-  if (process.env.LARIA_CATALOG_ENRICHMENT_DISABLED === "true") return null;
-  const { data, error } = await supabase.rpc("catalog_facets", {
+// The counts for a set of filters; throws when they are unavailable (lib/catalog-data.ts shares and caches them).
+export async function requestCatalogFacets(supabase: RpcClient, filters: ListingFilters, signal?: AbortSignal): Promise<CatalogFacetData> {
+  const call = supabase.rpc("catalog_facets", {
     p_filters: facetFiltersJson(filters),
     ...(filters.q ? { p_q: filters.q } : {}),
     p_attribute_keys: facetAttributeKeys(filters),
   });
-  if (error) {
-    console.error(`Catalog: the facet counts failed: ${error.message}`);
+  const { data, error } = await (signal && call.abortSignal ? call.abortSignal(signal) : call);
+  if (error) throw new Error(`the facet counts failed: ${error.message}`);
+  const facets = readCatalogFacets(data);
+  if (!facets) throw new Error("the facet counts were malformed");
+  return facets;
+}
+
+// Null when switched off (lib/catalog-guard.ts) or unavailable: the filters show without numbers.
+export async function fetchCatalogFacets(supabase: RpcClient, filters: ListingFilters, signal?: AbortSignal): Promise<CatalogFacetData | null> {
+  // Incident recovery: optional counts must be removable before issuing the expensive RPC.
+  if (catalogEnrichmentDisabled()) return null;
+  try {
+    return await requestCatalogFacets(supabase, filters, signal);
+  } catch (error) {
+    console.error(`Catalog: ${error instanceof Error ? error.message : error}`);
     return null;
   }
-  return readCatalogFacets(data);
 }
 
 // Price shortcuts tuned to what is on sale (FIND 08): the spread's thirds, rounded to round numbers ("Hasta S/ 500",

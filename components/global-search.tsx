@@ -38,7 +38,7 @@ function useSuggestions(query: string) {
       } catch {
         // Aborted or offline: no suggestions; the search itself still works.
       }
-    }, 150);
+    }, 250);
     return () => {
       controller.abort();
       window.clearTimeout(timer);

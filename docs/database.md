@@ -792,6 +792,26 @@ alert changes; no new private data.
   with the catalog's rule (`normalize_saved_search`, `saved_search_hash`, `listing_matches_saved_search` patched).
 - Tests: `tests/ux-find-search.sql`.
 
+## Catalog read performance
+
+Migration `20261111120000_catalog_read_performance.sql` (not applied to any hosted database). Same names, arguments,
+results and grants; no data changes. Details, measurements and rollout: `docs/operations/catalog-performance.md`.
+
+- Policies "Public can read publicly eligible listings" and "Public can read photos for publicly eligible listings"
+  write `listing_is_public`'s condition inline (approved; an individual listing without a store, or a store listing
+  whose store is active). `listing_is_public` itself is unchanged for single-listing checks; keep the three in step.
+- Index `listings_search_text_trgm_idx`: GIN trigram on `listing_search_text(title, brand, model, category,
+  instrument_type)` where `status = 'approved'`. Reindex it when `listing_search_text` or `catalog_fold` changes.
+- `public.catalog_search_condition(p_q) returns text`: `listing_matches_query`'s rule for one query as SQL with the
+  words and synonyms as constants (escaped `like`, `<%` at word similarity 0.55).
+- `public.catalog_search_ids(p_q) returns setof uuid` (security definer, public listings only; over 200 characters
+  raises `CATALOG_FILTERS_INVALID`). `catalog_search(p_q)` now selects approved listings among these ids, so its result
+  is the public set for every caller (before, RLS let a signed-in store member also find an inactive store's listings).
+- `catalog_facets` computes each filter's result once per listing; same JSON; brands tied at the 30th place are now
+  ordered by name. `catalog_brand_counts`, `catalog_type_counts` and `catalog_suggest` use the inline condition.
+- Rollback (by hand, not a migration): `supabase/rollback/20261111120000_catalog_read_performance.rollback.sql`.
+- Tests: `tests/catalog-performance.sql` (compares every rewritten definition with the previous one).
+
 <!-- ux my-listings: start -->
 ## UX: my listings, sales and reviews (migrations `20261105120000`–`20261105120200`)
 

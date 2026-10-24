@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { READ_BUDGETS, createDeadline } from "@/lib/request-deadline";
+import { createPublicReadClient } from "@/lib/supabase/public-read-client";
 
 type ListingPhotosRouteContext = {
   params: Promise<{
@@ -7,12 +8,14 @@ type ListingPhotosRouteContext = {
   }>;
 };
 
+export const maxDuration = 30;
+
 export async function GET(
   request: Request,
   { params }: ListingPhotosRouteContext,
 ) {
   const { id } = await params;
-  const supabase = getPublicSupabaseClient();
+  const supabase = createPublicReadClient(createDeadline(READ_BUDGETS.routeMs, request.signal));
 
   if (!supabase) {
     return NextResponse.json(

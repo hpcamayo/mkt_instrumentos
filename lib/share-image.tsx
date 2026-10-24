@@ -7,7 +7,8 @@ import { getConditionLabel, isOutOfStock, normalizeStore, type ListingCardData }
 import { formatPrice } from "@/lib/price";
 import { DEFAULT_SITE_URL, absoluteUrl } from "@/lib/site";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { READ_BUDGETS, budgetSignal, createDeadline } from "@/lib/request-deadline";
+import { createPublicReadClient } from "@/lib/supabase/public-read-client";
 
 // Share images (Effortless list-09 and list-08): the link preview WhatsApp, Facebook and X show (1200x630) and the
 // WhatsApp Status image (1080x1920), drawn with next/og (satori) in its bundled Noto Sans, which has every Spanish
@@ -45,7 +46,8 @@ type ListingRow = Pick<ListingCardData, "id" | "title" | "slug" | "price_pen" | 
 // store that is still active. Anything else is null, as the page's notFound().
 export async function loadShareListing(slug: string, { withPhoto = true } = {}): Promise<ShareListing | null> {
   const admin = getSupabaseAdminClient();
-  const publicClient = getPublicSupabaseClient();
+  const deadline = createDeadline(READ_BUDGETS.pageMs);
+  const publicClient = createPublicReadClient(deadline);
   if (!admin || !publicClient) return null;
   const { data, error } = await admin
     .from("listings")
@@ -54,6 +56,8 @@ export async function loadShareListing(slug: string, { withPhoto = true } = {}):
     .eq("slug", slug)
     .order("sort_order", { foreignTable: "listing_photos", ascending: true })
     .limit(1, { foreignTable: "listing_photos" })
+    .retry(false)
+    .abortSignal(budgetSignal(deadline, READ_BUDGETS.coreMs))
     .maybeSingle()
     .returns<ListingRow>();
   if (error || !data) return null;

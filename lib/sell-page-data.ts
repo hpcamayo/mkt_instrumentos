@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ServerDraft } from "@/components/sell-listing-form";
-import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
+import { getReferenceBrandsByCategory } from "@/lib/catalog-brands";
 
 // What the publish pages read for the sell form besides the seller (Effortless Laria, selling batch): a draft to finish
 // (?borrador=, POST 02), the usual review wait (POST 14) and the seller's drafts. Everything goes through the signed-in
@@ -51,7 +51,9 @@ export async function listSellDrafts(client: unknown, kind: "listing" | "store_l
 }
 
 // POST 06: brand suggestions per category, the ones with the most catalog models first (the catalog lookup's order).
+// From the reference catalog alone: neither live listing counts nor the recovery switch change them, and when the
+// catalog is unavailable the form gets none and the brand stays free text.
 export async function loadSellBrands(): Promise<Record<string, string[]>> {
-  const brands = await getCatalogBrandsByCategory();
+  const brands = await getReferenceBrandsByCategory();
   return Object.fromEntries(Object.entries(brands).map(([category, list]) => [category, list.slice(0, 200).map((brand) => brand.name)]));
 }

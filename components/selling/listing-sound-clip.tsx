@@ -1,11 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Volume2 } from "lucide-react";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { getRequestReads } from "@/lib/supabase/public-read-client";
 
 // POST 16: the seller's optional sound clip on the listing page. Loaded and played only when the buyer taps it
 // (preload="none"; it never starts on its own). The row is readable exactly when the listing is.
 export async function ListingSoundClip({ listingId }: { listingId: string }) {
-  const supabase = getPublicSupabaseClient();
+  const { supabase } = getRequestReads();
   if (!supabase) return null;
   // listing_sound_clips is newer than the generated database types.
   const { data } = await (supabase as unknown as SupabaseClient).from("listing_sound_clips").select("clip_url,duration_seconds").eq("listing_id", listingId).maybeSingle();

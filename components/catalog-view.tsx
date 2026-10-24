@@ -81,8 +81,10 @@ export async function CatalogView({
   emptyState: ReactNode;
   after?: ReactNode;
 }) {
-  const facets = error ? null : await getCatalogFacets(filters);
-  const rescue = !error && listings.length === 0 && appliedFilters(filters, scope).length > 0 ? await getCatalogRescue(filters, scope) : null;
+  // Optional reads, together (lib/catalog-data.ts): each gives up at the optional budget and the page renders without it.
+  const [facets, rescue] = error
+    ? [null, null]
+    : await Promise.all([getCatalogFacets(filters), listings.length === 0 && appliedFilters(filters, scope).length > 0 ? getCatalogRescue(filters, scope) : null]);
   const applied = appliedFilters(filters, scope);
   // FIND 01: a text search inside other filters says so, with the escape to the whole catalog.
   const scoped = filters.q && applied.some((chip) => chip.key !== "q") ? catalogTitle(withQuery({ ...filters, brand: undefined }, undefined)) : null;

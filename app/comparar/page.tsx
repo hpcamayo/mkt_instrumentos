@@ -10,7 +10,7 @@ import { compareSlugs } from "@/lib/catalog-compare";
 import { getSpecTable } from "@/lib/listing-specs";
 import { formatPrice, getConditionLabel, normalizeStore, type ListingCardData } from "@/lib/listings";
 import { NOINDEX_FOLLOW_ROBOTS } from "@/lib/site";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { getRequestReads } from "@/lib/supabase/public-read-client";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Comparar instrumentos", robots: NOINDEX_FOLLOW_ROBOTS };
@@ -22,7 +22,7 @@ type CompareProps = { searchParams: Promise<Record<string, string | string[] | u
 
 export default async function ComparePage({ searchParams }: CompareProps) {
   const slugs = compareSlugs((await searchParams).p);
-  const supabase = getPublicSupabaseClient();
+  const { supabase } = getRequestReads();
   const { data } = supabase && slugs.length
     ? await supabase.from("listings").select(catalogCardSelect()).in("slug", slugs).eq("status", "approved").order("sort_order", { foreignTable: "listing_photos", ascending: true }).limit(1, { foreignTable: "listing_photos" }).returns<ListingCardData[]>()
     : { data: [] as ListingCardData[] };
