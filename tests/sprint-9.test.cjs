@@ -105,11 +105,11 @@ test("SEO-002..SEO-005: category pages use the shared catalog query, 24-item sta
   const catalog = source("lib/catalog.ts");
   assert.match(catalog, /\.eq\("status", "approved"\)/);
   // Effortless Laria (find batch): the page size is a parameter (the gone page asks for four), 24 by default.
-  assert.match(catalog, /page: number, pageSize = LISTINGS_PAGE_SIZE\)/);
+  assert.match(catalog, /page: number, pageSize = LISTINGS_PAGE_SIZE, signal\?: AbortSignal\)/);
   assert.match(catalog, /\.order\("id"\)\s*\.range\(\(page - 1\) \* pageSize, page \* pageSize - 1\)/);
   // Effortless Laria (find batch): /listados reads its page through the request-cached lib/catalog-data.ts.
   assert.match(source("app/listados/page.tsx"), /getCatalogPage\(filters, page\)/);
-  assert.match(source("lib/catalog-data.ts"), /fetchCatalogPage\(supabase, fromKey\(value\), page\)/);
+  assert.match(source("lib/catalog-data.ts"), /fetchCatalogPage\(supabase, filtersFromKey\(value\), page\)/);
   const detail = source("app/instrumentos/[slug]/page.tsx");
   assert.match(detail, /parseListingFilters\(\{ category \}\)[\s\S]*fetchCatalogPage\(supabase, filters, page\)/);
   assert.match(detail, /getPageRedirect\(page, result\.count, result\.error\)/);
@@ -282,7 +282,7 @@ test("sitemap lists all ten category landings and bounded public inventory, even
     stores: [{ id: "s", slug: "tienda-qa", updated_at: "2026-09-01T00:00:00Z" }],
     listings: [{ id: "l", slug: "pedal-qa-l", updated_at: "2026-09-02T00:00:00Z" }],
   });
-  const sitemap = load("app/sitemap.ts", { "@/lib/supabase/public-client": { getPublicSupabaseClient: () => client } }).default;
+  const sitemap = load("app/sitemap.ts", { "@/lib/supabase/public-read-client": { createPublicReadClient: () => client } }).default;
   const urls = await withEnv({ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: undefined }, async () => (await sitemap()).map((entry) => entry.url));
   for (const expected of ["/", "/listados", "/terminos", "/privacidad", "/articulos-prohibidos", "/consejos-de-seguridad", "/instrumentos/guitarras", "/tiendas/tienda-qa", "/instrumentos/pedal-qa-l"]) {
     assert.ok(urls.includes(`https://laria.audio${expected}`), expected);
@@ -301,7 +301,7 @@ test("sitemap lists all ten category landings and bounded public inventory, even
   }
   const preview = await withEnv({ VERCEL_ENV: "preview" }, () => sitemap());
   assert.deepEqual(preview, []);
-  const withoutDatabase = load("app/sitemap.ts", { "@/lib/supabase/public-client": { getPublicSupabaseClient: () => null } }).default;
+  const withoutDatabase = load("app/sitemap.ts", { "@/lib/supabase/public-read-client": { createPublicReadClient: () => null } }).default;
   const staticUrls = await withEnv({ VERCEL_ENV: "production" }, async () => (await withoutDatabase()).map((entry) => entry.url));
   for (const landing of categories.categoryLandingPages) {
     assert.ok(staticUrls.includes(`https://laria.audio/instrumentos/${landing.slug}`), landing.slug);

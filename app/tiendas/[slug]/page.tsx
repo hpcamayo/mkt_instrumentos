@@ -37,11 +37,14 @@ import {
   type StoreCategoryCount,
   type StoreStatus,
 } from "@/lib/store-storefront";
-import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
+import { warnMissingSupabaseEnv, type getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { getRequestReads } from "@/lib/supabase/public-read-client";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
 
 export const dynamic = "force-dynamic";
+// A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
+export const maxDuration = 30;
 
 type StorePageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -191,7 +194,7 @@ async function loadStoreCategories(supabase: PublicSupabaseClient, storeId: stri
 }
 
 const loadActiveStore = cache(async (slug: string) => {
-  const supabase = getPublicSupabaseClient();
+  const { supabase } = getRequestReads();
   if (!supabase) return { data: null, error: null };
   return supabase
     .from("stores")
@@ -258,13 +261,15 @@ export default async function StorePage({
   const resolved = await searchParams;
   const page = parsePage(resolved.page);
   const filters = storeListingFilters(resolved);
-  const supabase = getPublicSupabaseClient();
+  const { supabase } = getRequestReads();
 
   if (!supabase) {
     return <SupabaseSetupMessage />;
   }
 
   const { data: activeStore, error: storeError } = await loadActiveStore(slug);
+  // A failed read is not a missing store: the visitor gets "Algo salió mal · Reintentar" (app/error.tsx).
+  if (storeError) throw new Error(`The store could not be read: ${storeError.message}`);
   // Everyone but the owner gets the same 404 for a store that is not active.
   const owned = !activeStore && !storeError ? await loadOwnedStore(slug) : null;
   const row = activeStore ?? owned?.store ?? null;

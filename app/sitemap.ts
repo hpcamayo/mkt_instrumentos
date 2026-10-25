@@ -3,7 +3,8 @@ import { categoryLandingPages } from "@/lib/category-pages";
 import { legalPages } from "@/lib/legal-pages";
 import { DISCOVERABLE_STOCK_FILTER } from "@/lib/listings";
 import { absoluteUrl, isIndexableDeployment } from "@/lib/site";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { READ_BUDGETS, createDeadline } from "@/lib/request-deadline";
+import { createPublicReadClient } from "@/lib/supabase/public-read-client";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
-  const supabase = getPublicSupabaseClient();
+  // Each batch gets the core budget, all of them 20 s together; a batch that fails ends the list there, as before.
+  const supabase = createPublicReadClient(createDeadline(20_000), READ_BUDGETS.coreMs);
   if (!supabase) return entries;
 
   for (let offset = 0; offset < MAX_STORES; offset += BATCH_SIZE) {

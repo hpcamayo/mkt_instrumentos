@@ -2,6 +2,7 @@ import { LISTINGS_PAGE_SIZE } from "@/lib/pagination";
 import { DISCOVERABLE_STOCK_FILTER, type ListingCardData, type ListingFilters } from "@/lib/listings";
 import type { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
+// The plain public client and the deadline-bound read client (lib/supabase/public-read-client.ts) are the same type.
 type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClient>>;
 
 // The card's columns. status and stock_state are listed because PostgREST only filters on the columns a function's
@@ -80,7 +81,8 @@ function applyFilters<Q extends { eq: any; in: any; or: any; ilike: any; gte: an
 
 // Shared public catalog query used by /listados and category landing pages so
 // both keep the same filters, 24-item pages and deterministic ordering.
-export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: ListingFilters, page: number, pageSize = LISTINGS_PAGE_SIZE) {
+// `signal` cancels the request (lib/request-deadline.ts); without one the client's own budget applies.
+export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: ListingFilters, page: number, pageSize = LISTINGS_PAGE_SIZE, signal?: AbortSignal) {
   const storeRelation = filters.sellerType === "verified_store" ? "stores!inner" : "stores";
   const select = filters.sort === "price_drop" ? `${catalogCardSelect(storeRelation)}, recent_price_drop_at` : filters.sort === "verified_first" ? `${catalogCardSelect(storeRelation)}, seller_verified_rank` : catalogCardSelect(storeRelation);
   let query = applyFilters(source(supabase, filters, select, { count: "exact" }), filters);
@@ -103,6 +105,7 @@ export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: 
     ascending: true,
   });
   query = query.limit(1, { foreignTable: "listing_photos" });
+  if (signal) query = query.abortSignal(signal);
 
   return query
     .order("id")
@@ -111,9 +114,10 @@ export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: 
 }
 
 // How many results a set of filters gives (FIND 04's one-tap ways out). Null when the count fails.
-export async function countCatalog(supabase: PublicSupabaseClient, filters: ListingFilters) {
+export async function countCatalog(supabase: PublicSupabaseClient, filters: ListingFilters, signal?: AbortSignal) {
   const storeRelation = filters.sellerType === "verified_store" ? "stores!inner" : "stores";
   const select = `id, category, city, brand, condition, seller_type, instrument_type, price_pen, attributes, status, stock_state, ${storeRelation} (is_verified)`;
-  const { count, error } = await applyFilters(source(supabase, filters, select, { count: "exact", head: true }), filters);
+  const query = applyFilters(source(supabase, filters, select, { count: "exact", head: true }), filters);
+  const { count, error } = await (signal ? query.abortSignal(signal) : query);
   return error ? null : count;
 }

@@ -59,7 +59,9 @@ import {
 } from "@/lib/listings";
 import { ListingSoundClip } from "@/components/selling/listing-sound-clip";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
-import { getPublicSupabaseClient, warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
+import { warnMissingSupabaseEnv, type getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
+import { READ_BUDGETS, budgetSignal } from "@/lib/request-deadline";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
 import {
   assistedCommerceEnabled,
@@ -90,6 +92,8 @@ import { formatPrice } from "@/lib/price";
 import { absoluteUrl, NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
+// A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
+export const maxDuration = 30;
 
 type ListingDetailPageProps = {
   params: Promise<{
@@ -138,8 +142,10 @@ const relatedListingSelect = `
 `;
 
 // Shared by generateMetadata and the page so one request performs one detail lookup.
+// A failed read throws, so the visitor gets the "Algo salió mal · Reintentar" page (app/error.tsx), never a 404 that
+// would say the listing does not exist.
 const loadPublicListing = cache(async (slug: string) => {
-  const supabase = getPublicSupabaseClient();
+  const { supabase, deadline } = getRequestReads();
   const detailClient = getSupabaseAdminClient();
 
   if (!supabase || !detailClient) {
@@ -216,20 +222,23 @@ const loadPublicListing = cache(async (slug: string) => {
       foreignTable: "listing_photos",
       ascending: true,
     })
+    // The service-role client keeps postgrest-js's retries for its other callers; this public read opts out.
+    .retry(false)
+    .abortSignal(budgetSignal(deadline, READ_BUDGETS.coreMs))
     .maybeSingle()
     .returns<ListingDetailData>();
 
-  if (error || !data) {
-    return { configured: true as const, listing: null };
-  }
+  if (error) throw new Error(`The listing could not be read: ${error.message}`);
+  if (!data) return { configured: true as const, listing: null };
 
   if (data.status === "sold" && normalizeStore(data)?.status && normalizeStore(data)?.status !== "active") {
     return { configured: true as const, listing: null };
   }
   if (data.status === "approved") {
-    const { data: isPublic } = await supabase.rpc("listing_is_public", {
+    const { data: isPublic, error: publicError } = await supabase.rpc("listing_is_public", {
       p_listing_id: data.id,
     });
+    if (publicError) throw new Error(`The listing could not be checked: ${publicError.message}`);
     if (!isPublic) return { configured: true as const, listing: null };
   }
 
@@ -271,7 +280,7 @@ export default async function ListingDetailPage({
     return renderCategoryLanding(landing, await searchParams);
   }
 
-  const supabase = getPublicSupabaseClient();
+  const { supabase } = getRequestReads();
   const { configured, listing } = await loadPublicListing(slug);
 
   if (!configured || !supabase) {
@@ -327,7 +336,10 @@ export default async function ListingDetailPage({
 async function findListingSlug(id: string) {
   const client = getSupabaseAdminClient();
   if (!client) return null;
-  const { data } = await client.from("listings").select("slug").eq("id", id).in("status", ["approved", "sold"]).maybeSingle();
+  const { data } = await client.from("listings").select("slug").eq("id", id).in("status", ["approved", "sold"])
+    .retry(false)
+    .abortSignal(budgetSignal(getRequestReads().deadline, READ_BUDGETS.coreMs))
+    .maybeSingle();
   return data?.slug && data.slug !== id ? data.slug : null;
 }
 
@@ -342,7 +354,7 @@ async function loadPurchaseRequest(supabase: PublicSupabaseClient, listing: List
 }
 
 const loadCategoryPage = cache(async (category: string, page: number) => {
-  const supabase = getPublicSupabaseClient();
+  const { supabase } = getRequestReads();
   if (!supabase) return { configured: false as const, count: null, data: null, error: null };
   const filters = parseListingFilters({ category });
   const result = await fetchCatalogPage(supabase, filters, page);
@@ -360,7 +372,7 @@ async function renderCategoryLanding(
 
   const page = parsePage(searchParams.page);
   const filters = parseListingFilters({ category: landing.category });
-  const [result, catalogBrands] = await Promise.all([loadCategoryPage(landing.category, page), getCatalogBrandsByCategory()]);
+  const [result, catalogBrands] = await Promise.all([loadCategoryPage(landing.category, page), getCatalogBrandsByCategory(optionalReadSignal(getRequestReads().deadline))]);
   if (!result.configured) return <SupabaseSetupMessage />;
 
   const redirectPage = getPageRedirect(page, result.count, result.error);

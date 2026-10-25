@@ -155,13 +155,14 @@ function respondLocal({ failing } = {}) {
   };
 }
 
-test("home data: the newest 48 for Para ti with hashed sellers, the price drops, eleven head counts, three stores", async () => {
+test("home data: the newest 48 for Para ti with hashed sellers, the price drops, the shared counts, three stores", async () => {
   const client = fakeClient(respondLocal());
-  const data = await home.fetchHomeData(client);
+  // docs/operations/catalog-performance.md: the counts come from the shared type counts, not eleven exact counts.
+  const shared = { categories: { guitars: 10, percussion: 2 }, types: {}, total: 12 };
+  const data = await home.fetchHomeData(client, Promise.resolve(shared));
   const listingQueries = client.queries.filter((query) => query.table === "listings");
-  const counts = listingQueries.filter((query) => called(query, "select", "id", { count: "exact", head: true }));
-  assert.equal(counts.length, 11);
-  assert.ok(counts.every((query) => called(query, "eq", "status", "approved")));
+  assert.equal(listingQueries.filter((query) => called(query, "select", "id", { count: "exact", head: true })).length, 0, "no per-category counts");
+  assert.equal(listingQueries.length, 2);
   const pool = listingQueries.find((query) => called(query, "limit", 48));
   assert.ok(pool && called(pool, "eq", "status", "approved") && called(pool, "order", "published_at", { ascending: false, nullsFirst: false }));
   assert.match(pool.calls.find(([name]) => name === "select")[1], /owner_user_id/);
@@ -176,7 +177,11 @@ test("home data: the newest 48 for Para ti with hashed sellers, the price drops,
   assert.deepEqual(data.priceDrops.map((item) => item.id), ["d1"]);
   assert.equal(data.total, 12);
   assert.equal(data.categoryCounts.percussion, 2);
+  assert.equal(data.categoryCounts.basses, 0, "a category the counts do not name has no listings");
   assert.equal(data.stores.length, 1);
+  const unknown = await home.fetchHomeData(fakeClient(respondLocal()), null);
+  assert.equal(unknown.total, null);
+  assert.deepEqual(unknown.categoryCounts, {}, "unavailable counts show no numbers, never zeros");
 });
 
 test("a failed query leaves its section's data null and is logged", async () => {
@@ -184,7 +189,7 @@ test("a failed query leaves its section's data null and is logged", async () => 
   const original = console.error;
   console.error = (message) => errors.push(message);
   try {
-    const data = await home.fetchHomeData(fakeClient(respondLocal({ failing: "drops" })));
+    const data = await home.fetchHomeData(fakeClient(respondLocal({ failing: "drops" })), null);
     assert.equal(data.priceDrops, null);
     assert.equal(data.pool.length, 2);
     assert.deepEqual(errors, ["Home: the price drop query failed: boom"]);
@@ -200,7 +205,9 @@ async function renderHome(data, random = 0) {
     "react-dom": { preload: (href) => preloads.push(href) },
     "@/components/listing-card": cardMock,
     "@/components/marketplace-image": { MarketplaceImage: (props) => React.createElement("img", { src: props.src, alt: props.alt }) },
-    "@/lib/supabase/public-client": { getPublicSupabaseClient: () => ({}), warnMissingSupabaseEnv() {} },
+    "@/lib/supabase/public-client": { warnMissingSupabaseEnv() {} },
+    "@/lib/supabase/public-read-client": { getRequestReads: () => ({ supabase: {}, deadline: {} }), optionalReadSignal: () => undefined },
+    "@/lib/catalog-brands": { getListingCounts: async () => null },
     "@/lib/home": { ...home, fetchHomeData: async () => data },
     // Signed-in only, read after load (save-12, UXD-integration-10): nothing in the server render.
     "@/components/home/home-followed": { HomeFollowedArrivals: () => null },
@@ -283,6 +290,9 @@ test("Cómo funciona Laria carries H4 promises 2–5 and the safety line, with n
 test("states: failed listing queries leave their sections out; an empty marketplace shows the empty feed; no stores hides them", async () => {
   const failed = (await renderHome({ pool: null, priceDrops: null, total: null, categoryCounts: {}, stores: null })).html;
   assert.deepEqual(headings(failed), ["Categorías", "Cómo funciona Laria", "¿Tienes equipo que ya no usas?"]);
+  // A failed feed says so, with a retry, instead of looking like an empty marketplace (docs/operations/catalog-performance.md).
+  assert.match(failed, /role="alert"[\s\S]*No pudimos cargar las publicaciones\. Vuelve a intentarlo en unos minutos\.[\s\S]*<a href="\/"[^>]*>Reintentar<\/a>/);
+  assert.doesNotMatch(failed, /Aún no hay publicaciones/);
   assert.doesNotMatch(failed, / publicaciones<\/span>/, "no counts without the count query");
   const noCounts = (await renderHome({ ...FULL, total: null })).html;
   assert.match(noCounts, /<a href="\/listados" class="[^"]*">Ver todo el catálogo<\/a>/);
