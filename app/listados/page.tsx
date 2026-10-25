@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect, redirect } from "next/navigation";
 import {
   parsePage,
   pageHref,
@@ -9,6 +9,7 @@ import { CatalogView } from "@/components/catalog-view";
 import { ListingFilters } from "@/components/listing-filters";
 import { PageContainer } from "@/components/page-container";
 import {
+  hasRejectedFilterValues,
   parseListingFilters,
   type ListingCardData,
   type ListingFilters as ListingFiltersType,
@@ -51,6 +52,13 @@ export default async function ListingsPage({
   const filters = parseListingFilters(resolvedSearchParams);
   const page = parsePage(resolvedSearchParams.page);
   const { supabase } = getRequestReads();
+
+  // A value the catalog does not offer is dropped: one permanent redirect to the cleaned address, so malformed links
+  // collapse onto real ones instead of each rendering (and linking to) a new combination.
+  if (hasRejectedFilterValues(resolvedSearchParams)) {
+    const cleaned = catalogHref(filters);
+    permanentRedirect(page > 1 ? `${cleaned}${cleaned.includes("?") ? "&" : "?"}page=${page}` : cleaned);
+  }
 
   if (!supabase) {
     return <SupabaseSetupMessage filters={filters} />;

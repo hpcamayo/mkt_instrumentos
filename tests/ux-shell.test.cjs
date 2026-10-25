@@ -139,7 +139,7 @@ test("the catalog has no route-level loading boundary; its own links navigate in
   assert.match(source("app/globals.css"), /\.catalog-results\[aria-busy="true"\] \{\s*opacity: 0\.5;\s*transition-delay: 200ms;\s*\}/);
   // Applied chips and pagination are client links that report to the pending state.
   const { AppliedChip } = load("components/ui/chip.tsx", { "next/link": clientLinkMock });
-  assert.match(renderToStaticMarkup(React.createElement(AppliedChip, { href: "/listados", label: "Condición: Nuevo" })), /^<a href="\/listados" aria-label="Quitar filtro: Condición: Nuevo" class="[^"]*" data-client-link="" data-on-navigate="">/);
+  assert.match(renderToStaticMarkup(React.createElement(AppliedChip, { href: "/listados", label: "Condición: Nuevo" })), /^<a href="\/listados" rel="nofollow" aria-label="Quitar filtro: Condición: Nuevo" class="[^"]*" data-client-link="" data-on-navigate="">/);
   const { Pagination } = load("components/pagination.tsx", { "next/link": clientLinkMock });
   const pages = renderToStaticMarkup(React.createElement(Pagination, { page: 2, total: 60, path: "/listados", params: { condition: "Nuevo" } }));
   assert.equal((pages.match(/<a [^>]*data-client-link="" data-on-navigate="">/g) ?? []).length, (pages.match(/<a /g) ?? []).length);

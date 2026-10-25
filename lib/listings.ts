@@ -217,6 +217,31 @@ const MAX_FILTER_VALUE_LENGTH = 80;
 export function parseListingFilters(
   searchParams: Record<string, string | string[] | undefined>,
 ): ListingFilters {
+  return readListingFilters(searchParams).filters;
+}
+
+// True when the address carries a filter value the catalog does not offer (a select option that does not exist, an
+// unknown category or type, a free-text value with "="). Those values are dropped; /listados redirects to the cleaned
+// address so a malformed link (some crawlers mangle "&microphone_type" into "µphone_type") cannot seed endless new URLs.
+export function hasRejectedFilterValues(searchParams: Record<string, string | string[] | undefined>) {
+  return readListingFilters(searchParams).rejected;
+}
+
+// A "=" never belongs in a brand or a city: it is a pasted or mangled query string.
+const isFreeTextValue = (value: string) => !value.includes("=");
+const knownCategories = new Set<string>(categoryOptions.map((option) => option.value));
+const knownInstrumentTypes = new Set<string>([...instrumentFilterGroups.map((group) => group.instrumentType), "other"]);
+
+function readListingFilters(
+  searchParams: Record<string, string | string[] | undefined>,
+): { filters: ListingFilters; rejected: boolean } {
+  let rejected = false;
+  const accept = (value: string | undefined, valid: (value: string) => boolean) => {
+    if (!value) return value;
+    if (valid(value)) return value;
+    rejected = true;
+    return undefined;
+  };
   const readString = (key: string) => {
     const value = searchParams[key];
     const first = Array.isArray(value) ? value[0] : value;
@@ -244,19 +269,28 @@ export function parseListingFilters(
 
   const sellerType = readString("seller_type");
   const sort = readString("sort");
-  const locations = readList("location");
+  const freeTextList = (key: string) => {
+    const items = readList(key);
+    const kept = items.filter(isFreeTextValue);
+    if (kept.length !== items.length) rejected = true;
+    return kept;
+  };
+  const locations = freeTextList("location");
   const legacy = legacyCategories[readString("category") ?? ""];
-  const instrumentType = readString("instrument_type") || legacy?.instrumentType;
-  const advanced = parseAdvancedFilters(searchParams, instrumentType);
+  const instrumentType = accept(readString("instrument_type"), (value) => knownInstrumentTypes.has(value)) || legacy?.instrumentType;
+  const { advanced, rejected: advancedRejected } = parseAdvancedFilters(searchParams, instrumentType);
+  if (advancedRejected) rejected = true;
+  const category = legacy?.category ?? accept(readString("category"), (value) => knownCategories.has(value));
+  const brand = accept(readString("brand"), isFreeTextValue);
 
   const q = readString("q")?.replace(/\s+/g, " ").trim().slice(0, 200);
 
-  return {
+  const filters: ListingFilters = {
     ...(q ? { q } : {}),
-    category: legacy?.category ?? (readString("category") || undefined),
-    cities: locations.length ? locations : readList("city"),
+    category: category || undefined,
+    cities: locations.length ? locations : freeTextList("city"),
     conditions: readList("condition"),
-    brand: readString("brand") || undefined,
+    brand: brand || undefined,
     sellerType:
       sellerType === "individual" ||
       sellerType === "store" ||
@@ -269,6 +303,7 @@ export function parseListingFilters(
     advanced,
     sort: sortOptions.some((option) => option.value === sort) ? (sort as ListingSort) : "newest",
   };
+  return { filters, rejected };
 }
 
 function parseAdvancedFilters(
@@ -284,6 +319,8 @@ function parseAdvancedFilters(
     string,
     "select" | "multiselect" | "boolean" | "number"
   >();
+  // The values each select/multiselect key offers (a key shared by several types offers all of theirs).
+  const filterOptions = new Map<string, Set<string>>();
 
   for (const group of groups) {
     for (const filter of group.filters) {
@@ -292,9 +329,15 @@ function parseAdvancedFilters(
         filter.key,
         currentType === "multiselect" ? currentType : filter.type,
       );
+      if (filter.options) {
+        const options = filterOptions.get(filter.key) ?? new Set<string>();
+        for (const option of filter.options) options.add(option.value);
+        filterOptions.set(filter.key, options);
+      }
     }
   }
   const advancedFilters: ListingFilters["advanced"] = {};
+  let rejected = false;
 
   for (const [key, type] of filterTypes) {
     const rawValue = searchParams[key];
@@ -302,11 +345,17 @@ function parseAdvancedFilters(
       continue;
     }
 
-    const values = (Array.isArray(rawValue) ? rawValue : [rawValue])
+    const given = (Array.isArray(rawValue) ? rawValue : [rawValue])
       .flatMap((value) => value.split(","))
       .map((value) => value.trim())
       .filter((value) => value && value.length <= MAX_FILTER_VALUE_LENGTH)
       .slice(0, MAX_FILTER_VALUES);
+    const options = filterOptions.get(key);
+    const values =
+      type === "number"
+        ? given
+        : given.filter((value) => (type === "boolean" && (value === "true" || value === "false")) || !options || options.has(value));
+    if (values.length !== given.length) rejected = true;
 
     if (values.length === 0) {
       continue;
@@ -330,5 +379,5 @@ function parseAdvancedFilters(
     advancedFilters[key] = type === "multiselect" ? values : values[0];
   }
 
-  return advancedFilters;
+  return { advanced: advancedFilters, rejected };
 }
