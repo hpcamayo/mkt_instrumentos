@@ -13,6 +13,8 @@ export type MarketplaceEmailPayload = {
   // Accounts batch (save-07): who the e-mail is for, to sign its one-click links.
   recipient_user_id?: string;
   context: { reason?: string; old_price_pen?: number; new_price_pen?: number; digest_date?: string; week_start?: string; items?: FollowItem[]
+    // feature-ideas services (bet-02): the service's title and the page the button opens.
+    service_title?: string; service_path?: string;
     // Feature ideas, selling-tools batch (docs/feature-ideas/selling-tools.md).
     selling?: SellingEmailContext };
   listing: EmailListing | null;
@@ -153,6 +155,12 @@ function templateContent(payload: MarketplaceEmailPayload): TemplateContent {
       path: listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/notificaciones",
     };
     case "follow_weekly": return followTemplate(payload);
+    // feature-ideas services (bet-02): Admin's decisions on a service and the "Contraté este servicio" steps.
+    case "service_approved": return serviceTemplate(payload, "Tu servicio está en línea", `“${serviceTitle(payload)}” ya aparece en Servicios para músicos y los interesados pueden escribirte por WhatsApp.`, "Ver tu servicio");
+    case "service_rejected": return serviceTemplate(payload, "Tu servicio necesita correcciones", `“${serviceTitle(payload)}” no se publicó.${reason ? ` Motivo: ${reason}` : ""} Corrígelo y vuelve a enviarlo.`, "Corregir servicio");
+    case "service_hidden": return serviceTemplate(payload, "Moderación ocultó tu servicio", `“${serviceTitle(payload)}” dejó de estar visible.${reason ? ` Motivo: ${reason}` : ""}`, "Revisar servicio");
+    case "service_booking_requested": return serviceTemplate(payload, "Confirma una contratación", `Te piden confirmar una contratación de “${serviceTitle(payload)}” hecha por WhatsApp desde Laria. Confirmarla solo habilita la reseña; Laria no verifica el pago ni el trabajo.`, "Responder");
+    case "service_booking_confirmed": return serviceTemplate(payload, "Tu contratación fue confirmada", `Se confirmó tu contratación de “${serviceTitle(payload)}”. Tienes 30 días para dejar tu reseña y ayudar a otros músicos.`, "Dejar mi reseña");
     // Feature ideas, selling-tools batch.
     case "store_trade_request":
     case "store_trade_update":
@@ -246,6 +254,13 @@ function storeTemplate(heading: string, body: string, ctaLabel: string): Templat
 }
 function transactionTemplate(heading: string, body: string, ctaLabel: string, transaction: MarketplaceEmailPayload["transaction"]): TemplateContent {
   return { subject: heading, heading, body, ctaLabel, path: transaction ? `/mi-cuenta/transacciones/${transaction.reference_id}` : "/mi-cuenta/transacciones" };
+}
+function serviceTitle(payload: MarketplaceEmailPayload) {
+  return payload.context.service_title?.trim() || "Tu servicio";
+}
+function serviceTemplate(payload: MarketplaceEmailPayload, heading: string, body: string, ctaLabel: string): TemplateContent {
+  const path = payload.context.service_path;
+  return { subject: heading, heading, body, ctaLabel, path: typeof path === "string" && path.startsWith("/") && !path.startsWith("//") ? path : "/mi-cuenta/servicios" };
 }
 function dailyTemplate(payload: MarketplaceEmailPayload): TemplateContent {
   const alert = payload.search_alert;

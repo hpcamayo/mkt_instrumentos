@@ -1313,6 +1313,31 @@ Migrations `20261207120000`–`20261207120400` (not applied to any hosted databa
   artists: `get_listing_marks(uuid[])`, `get_public_makers(int)`, `get_store_maker_profile(uuid)`,
   `get_public_artists(int)`, `get_gift_exchange_stores(int)`.
 
+## Feature ideas: services for musicians (migration `20261208120000_feat_services.sql`)
+
+Proposed with the services batch (`docs/feature-ideas/services.md`); not applied to any hosted database.
+
+- **Tables** (RLS on, every grant revoked; written and read only through `SECURITY DEFINER` RPCs):
+  `public.services` (one per owner and kind; `status` pending, approved, rejected, paused or hidden;
+  `needs_recheck`; `version` for Admin decisions), `public.service_events` (views and WhatsApp contacts, keyed by a
+  client event id), `public.service_bookings` (requested by provider or client; pending, confirmed, declined,
+  cancelled or expired; one open or confirmed per service and client), `public.service_reviews` (one per confirmed
+  booking and per client and service; visible or hidden with a reason) and `public.service_reports` (service or
+  service review, one open per reporter and target).
+- **Storage.** Public bucket `service-photos` (5 MB, JPEG, PNG, WebP). Owners insert and read only
+  `<uid>/<uuid>.<ext>` in their folder and delete only photos no service uses (`public.service_photo_is_unused`).
+- **RPCs.** Owner: `save_service`, `set_service_paused`, `delete_service`, `get_my_services`, `get_my_service`,
+  `get_service_booking_candidates`, `request_service_booking`, `claim_service_booking`, `respond_service_booking`,
+  `cancel_service_booking`, `get_my_service_bookings`, `submit_service_review`, `submit_service_report`. Public:
+  `get_public_services`, `get_service_directory_counts`, `get_public_service`, `get_service_reviews`,
+  `get_service_viewer_state`, `get_public_service_paths`. Service role: `record_service_event`. Admin:
+  `get_admin_service_counts`, `get_admin_service_queue`, `admin_review_service`, `admin_moderate_service_review`,
+  `admin_close_service_report`. Errors are `SERVICE_CODE: mensaje` (P0001).
+- **Shared registries** (additive): `notifications.service_id` and seven `service_*` event types, with an appended
+  branch in `notifications_target_check`; five e-mail types and the context keys `service_title` and `service_path`;
+  Admin audit target types `service`, `service_review`, `service_report`.
+- **Tests.** `tests/feat-services.sql`.
+
 <!-- feature-ideas:selling-tools -->
 ## Feature ideas: selling tools (Mi equipo, store offers, consignment, price steps, private offers, reminders)
 

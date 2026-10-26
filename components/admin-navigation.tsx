@@ -26,6 +26,8 @@ const links = [
   { href: "/admin/colecciones", label: "Colecciones" },
   { href: "/admin/fabricantes", label: "Fabricantes y talleres" },
   { href: "/admin/artistas", label: "Artistas verificados" },
+  // feature-ideas services (bet-02)
+  { href: "/admin/servicios", label: "Servicios" },
 ] as const;
 
 // "Moderación" carries the total of the moderation queues; the other sections are record views without a

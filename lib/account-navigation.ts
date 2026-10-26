@@ -4,6 +4,8 @@ export type AccountNavigationItem = {
   icon: "summary" | "listings" | "publish" | "store" | "inventory" | "payments" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites" | "alerts"
     // Effortless Laria, inventory batch (stock-04): purchase requests.
     | "requests"
+    // feature-ideas services (bet-02)
+    | "services"
     // Feature ideas, selling-tools batch: Mi equipo (sell-01) and the store's Ofertas inbox (sell-02, run-04).
     | "gear" | "offers";
   exact?: boolean;
@@ -42,6 +44,8 @@ export function getAccountNavigationItems(
         // /Effortless Laria, inventory batch
         ...(payments ? [{ href: "/mi-cuenta/tienda/pagos", label: "Pagos", icon: "payments", activePaths: ["/mi-cuenta/tienda/medios-de-pago"] } as const] : []),
         { href: "/mi-cuenta/tienda/estadisticas", label: "Estadísticas", icon: "analytics" } as const,
+        // feature-ideas services (bet-02): a store offers services as itself.
+        { href: "/mi-cuenta/servicios", label: "Servicios", icon: "services" } as const,
       ] : []),
       ...sharedAccountItems,
     ];
@@ -54,6 +58,8 @@ export function getAccountNavigationItems(
     { href: "/mi-cuenta/equipo", label: "Mi equipo", icon: "gear" },
     // /Feature ideas, selling-tools batch
     { href: "/mi-cuenta/estadisticas", label: "Estadísticas", icon: "analytics" },
+    // feature-ideas services (bet-02)
+    { href: "/mi-cuenta/servicios", label: "Servicios", icon: "services" },
     ...sharedAccountItems,
   ];
 }
