@@ -26,7 +26,7 @@ export default function ProhibitedItemsPage() {
           <li>Falsificaciones, réplicas o copias presentadas como originales, y el uso engañoso de marcas o modelos.</li>
           <li>Artículos que no son instrumentos musicales ni equipo de música o audio de las categorías de Laria.</li>
           <li>Armas, drogas, medicamentos, alcohol, tabaco, animales, contenido para adultos o cualquier artículo cuya venta esté prohibida por la ley peruana.</li>
-          <li>Anuncios que no ofrecen un artículo concreto a la venta: servicios, alquileres, pedidos de compra, rifas, sorteos o publicidad.</li>
+          <li>Anuncios que no ofrecen un artículo concreto a la venta: servicios, alquileres, pedidos de compra, rifas, sorteos o publicidad. Las clases, reparaciones, salas de ensayo, estudios de grabación y el sonido para eventos se ofrecen en <Link href="/servicios">Servicios para músicos</Link>, no como publicaciones.</li>
           <li>Fotos que no corresponden al artículo real, precios ficticios o descripciones engañosas.</li>
           <li>Datos personales de terceros, o enlaces y datos para pagar a través de supuestos servicios de Laria.</li>
         </ul>

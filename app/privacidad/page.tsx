@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { PrivacyAssistedCommerceSection } from "@/components/legal/assisted-commerce-legal";
+import { PrivacyServicesSection } from "@/components/legal/services-legal";
 import { LegalContact, LegalPage, LegalSection } from "@/components/legal-page";
 import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
 
@@ -60,6 +61,8 @@ export default function PrivacyPage() {
       </LegalSection>
 
       <PrivacyAssistedCommerceSection />
+
+      <PrivacyServicesSection />
 
       <LegalSection title="5. Cookies">
         <ul>

@@ -3,7 +3,9 @@
 export type StatusTone = "neutral" | "accent" | "warning" | "danger" | "solid" | "line";
 export type StatusIcon = "draft" | "review" | "check" | "reject" | "hidden" | "sold" | "archive" | "pause" | "stockout" | "low";
 export type StatusEntry = { label: string; tone: StatusTone; icon?: StatusIcon };
-export type StatusDomain = "listing" | "revision" | "store" | "claim" | "transaction" | "report" | "review" | "alert" | "stock" | "inventory" | "payment";
+export type StatusDomain = "listing" | "revision" | "store" | "claim" | "transaction" | "report" | "review" | "alert" | "stock" | "inventory" | "payment"
+  // feature-ideas services (bet-02)
+  | "service" | "service_booking";
 
 const LISTING: Record<string, StatusEntry> = {
   draft: { label: "Borrador", tone: "line", icon: "draft" },
@@ -91,6 +93,24 @@ const INVENTORY: Record<string, StatusEntry> = {
   archived: { label: "Archivado", tone: "line", icon: "archive" },
 };
 
+// feature-ideas services (bet-02): a service for musicians (services.status) and a "Contraté este servicio" booking
+// (service_bookings.status, a pending one past 30 days reads "expired").
+const SERVICE: Record<string, StatusEntry> = {
+  pending: { label: "En revisión", tone: "warning", icon: "review" },
+  approved: { label: "Publicado", tone: "accent", icon: "check" },
+  rejected: { label: "Rechazado", tone: "danger", icon: "reject" },
+  paused: { label: "Pausado", tone: "neutral", icon: "pause" },
+  hidden: { label: "Oculto por moderación", tone: "neutral", icon: "hidden" },
+};
+
+const SERVICE_BOOKING: Record<string, StatusEntry> = {
+  pending: { label: "Por confirmar", tone: "warning", icon: "review" },
+  confirmed: { label: "Contratación confirmada", tone: "accent", icon: "check" },
+  declined: { label: "No hubo contratación", tone: "danger", icon: "reject" },
+  cancelled: { label: "Cancelada", tone: "neutral" },
+  expired: { label: "Venció sin respuesta", tone: "neutral" },
+};
+
 const DICTIONARY: Record<StatusDomain, Record<string, StatusEntry>> = {
   listing: LISTING,
   revision: REVISION,
@@ -103,6 +123,8 @@ const DICTIONARY: Record<StatusDomain, Record<string, StatusEntry>> = {
   stock: STOCK,
   inventory: INVENTORY,
   payment: PAYMENT,
+  service: SERVICE,
+  service_booking: SERVICE_BOOKING,
 };
 
 // Admin reports and the audit history name their target by type; its status reads from that type's domain.
@@ -112,6 +134,8 @@ const TARGET_DOMAINS: Record<string, StatusDomain> = {
   store: "store",
   report: "report",
   review: "review",
+  service: "service",
+  service_review: "review",
 };
 
 export function statusDomainForTarget(targetType: string | null | undefined): StatusDomain | null {
