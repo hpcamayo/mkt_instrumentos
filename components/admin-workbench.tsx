@@ -24,6 +24,7 @@ import {
   type AdminQueue,
   type AdminQueuePayload,
 } from "@/lib/admin";
+import { refreshListingPages } from "@/lib/listing-page-refresh";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { REJECTION_REASONS } from "@/lib/rejection-reasons";
 import type { Json } from "@/lib/supabase/database.types";
@@ -290,6 +291,9 @@ export function AdminMutationControl({
       return;
     }
 
+    // The listing's cached public page shows the decision at once.
+    if (mutation.kind === "listing") void refreshListingPages({ listings: [mutation.id] });
+    if (mutation.kind === "revision") void refreshListingPages({ revisions: [mutation.id] });
     setExpanded(false);
     onComplete("Acción registrada. La bandeja y los conteos fueron actualizados.");
   }

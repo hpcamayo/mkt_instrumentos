@@ -67,9 +67,10 @@ test("the banner is one of the nine decided pieces, picked uniformly per request
   assert.equal(banners.pickHomeBanner(0).id, "diablada");
   assert.equal(banners.pickHomeBanner(0.9999999).id, "guitarra-amplificador");
   assert.deepEqual(new Set(Array.from({ length: 9 }, (_, index) => banners.pickHomeBanner((index + 0.5) / 9).id)), new Set(ids));
-  // Picked on the server for every request: the page is dynamic and picks inside the request.
+  // Picked on the server each time the cached page is rebuilt (launch audit A19: at most once a minute).
   const page = source("app/page.tsx");
-  assert.match(page, /export const dynamic = "force-dynamic";/);
+  assert.match(page, /export const revalidate = 60;/);
+  assert.doesNotMatch(page, /force-dynamic/);
   assert.match(page, /export default async function HomePage\(\) \{\s*const banner = pickHomeBanner\(\);/);
 });
 
@@ -288,9 +289,20 @@ test("Cómo funciona Laria carries H4 promises 2–5 and the safety line, with n
 });
 
 test("states: failed listing queries leave their sections out; an empty marketplace shows the empty feed; no stores hides them", async () => {
-  const failed = (await renderHome({ pool: null, priceDrops: null, total: null, categoryCounts: {}, stores: null })).html;
+  const none = { pool: null, priceDrops: null, total: null, categoryCounts: {}, stores: null };
+  // Launch audit A19: a failed feed fails the rebuild, so visitors keep the last good cached page.
+  await assert.rejects(renderHome(none), /The home feed could not be read/);
+  // Only the copy built during the deploy says so, with a retry, instead of looking like an empty marketplace
+  // (docs/operations/catalog-performance.md).
+  const phase = process.env.NEXT_PHASE;
+  process.env.NEXT_PHASE = "phase-production-build";
+  let failed;
+  try {
+    failed = (await renderHome(none)).html;
+  } finally {
+    if (phase === undefined) delete process.env.NEXT_PHASE; else process.env.NEXT_PHASE = phase;
+  }
   assert.deepEqual(headings(failed), ["Categorías", "Cómo funciona Laria", "¿Tienes equipo que ya no usas?"]);
-  // A failed feed says so, with a retry, instead of looking like an empty marketplace (docs/operations/catalog-performance.md).
   assert.match(failed, /role="alert"[\s\S]*No pudimos cargar las publicaciones\. Vuelve a intentarlo en unos minutos\.[\s\S]*<a href="\/"[^>]*>Reintentar<\/a>/);
   assert.doesNotMatch(failed, /Aún no hay publicaciones/);
   assert.doesNotMatch(failed, / publicaciones<\/span>/, "no counts without the count query");

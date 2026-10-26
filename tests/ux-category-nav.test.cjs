@@ -186,5 +186,5 @@ test("the landing lists every subtype and every catalog brand under Explora", ()
   assert.match(landing, /<h2 id="explora" className="t-section text-ink">Explora \{label\}<\/h2>/);
   assert.match(landing, /<div id=\{BRANDS_ANCHOR\}/);
   assert.match(landing, /brandsAlphabetical\(brands\)\.map/);
-  assert.match(source("app/instrumentos/[slug]/page.tsx"), /brands=\{catalogBrands\[landing\.category\] \?\? \[\]\}/);
+  assert.match(source("app/instrumentos/_category/landing.tsx"), /brands=\{catalogBrands\[landing\.category\] \?\? \[\]\}/);
 });

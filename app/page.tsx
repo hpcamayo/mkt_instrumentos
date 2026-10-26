@@ -17,8 +17,9 @@ import { getListingCounts } from "@/lib/catalog-brands";
 import { warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
 
-// Dynamic: the banner piece is picked per request (H11) and the listings refresh by themselves (H2).
-export const dynamic = "force-dynamic";
+// Launch audit A19: one cached page for everyone, rebuilt in the background at most once a minute. The banner piece
+// (H11) changes with each rebuild and new listings show within a minute (H2); the personal rows load in the browser.
+export const revalidate = 60;
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
 export const maxDuration = 30;
 
@@ -31,8 +32,9 @@ const UNAVAILABLE: HomeData = { pool: null, priceDrops: null, total: null, categ
 // search, the category chips, then instruments right away: "¿Qué tocas?" on a first visit, "Nuevo desde tu última
 // visita", "Para ti" (or the newest first), "Bajaron de precio" and "Vistos recientemente"; then "Cómo funciona Laria",
 // "Tiendas verificadas" and the sell block. A failed listing query leaves its section out (logged on the server); when
-// the newest listings themselves fail, the feed says so with a retry instead of looking like an empty marketplace. An
-// empty marketplace shows the empty feed.
+// the newest listings themselves fail, the rebuild fails, so visitors keep the last good page instead of a failure
+// cached for a minute. Only the copy built during the deploy can say the feed failed, with a retry, until the first
+// rebuild. An empty marketplace shows the empty feed.
 export default async function HomePage() {
   const banner = pickHomeBanner();
   const { supabase, deadline } = getRequestReads();
@@ -40,6 +42,8 @@ export default async function HomePage() {
   const { pool, priceDrops, total, categoryCounts, stores } = supabase
     ? await fetchHomeData(supabase, getListingCounts(optionalReadSignal(deadline)))
     : UNAVAILABLE;
+  // During `next build` a failed read must not fail the deploy: that copy only lives until the first rebuild.
+  if (supabase && !pool && process.env.NEXT_PHASE !== "phase-production-build") throw new Error("The home feed could not be read.");
 
   return (
     <>

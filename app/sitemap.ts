@@ -6,7 +6,8 @@ import { absoluteUrl, isIndexableDeployment } from "@/lib/site";
 import { READ_BUDGETS, createDeadline } from "@/lib/request-deadline";
 import { createPublicReadClient } from "@/lib/supabase/public-read-client";
 
-export const dynamic = "force-dynamic";
+// Launch audit A19: built at most once an hour instead of on every crawler request.
+export const revalidate = 3600;
 
 // Bounded: batches of 1000, well under the 50,000-URL sitemap limit.
 const BATCH_SIZE = 1000;
