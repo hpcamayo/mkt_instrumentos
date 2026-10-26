@@ -40,11 +40,12 @@ function TransactionSection({ title, description, items, action = false }: { tit
               <div className="flex flex-wrap items-center gap-2">
                 <Tag tone="accent">{item.role === "buyer" ? "Compra" : "Venta"}</Tag>
                 <StatusTag domain="claim" status={item.status} />
+                {item.attribution_type === "counter" ? <Tag>En tienda</Tag> : null}
               </div>
               <h2 className="mt-3 t-section text-ink">{item.title}</h2>
               {action ? <p className="mt-2 font-semibold text-ink">¿Compraste este equipo?</p> : null}
               <p className="mt-1 t-ui text-ink-2">
-                {item.role === "buyer" ? `Vendedor: ${item.seller_name}` : item.buyer_name ? `Contacto: ${item.buyer_name}` : "Sin comprador Laria asociado"}
+                {item.role === "buyer" ? `${item.attribution_type === "counter" ? "Tienda" : "Vendedor"}: ${item.seller_name}` : item.buyer_name ? `${item.attribution_type === "counter" ? "Cliente" : "Contacto"}: ${item.buyer_name}` : "Sin comprador Laria asociado"}
               </p>
               {item.review_deadline ? (
                 <p className="mt-2 t-meta font-semibold">

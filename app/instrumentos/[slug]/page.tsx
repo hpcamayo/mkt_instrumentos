@@ -18,6 +18,7 @@ import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@
 import { SpecTable } from "@/components/listing/spec-table";
 import { ListingProvenance, SellerTrust } from "@/components/trust/listing-trust";
 import { SafeMeetup } from "@/components/trust/safe-meetup";
+import { TrackRecordChip } from "@/components/trust/track-record-chip";
 import { getListingTrust } from "@/lib/listing-trust";
 import { publicStoreLocation } from "@/lib/store-storefront";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
@@ -532,6 +533,7 @@ function ListingDetail({
                 {outOfStock ? <RestockAlert listingId={listing.id} className="order-3 lg:order-2" /> : null}
                 <div className="order-3 grid gap-3 lg:order-2">
                   {purchase ? null : <QuickQuestions listingId={listing.id} questions={quickQuestions(listing.seller_type)} />}
+                  <TrackRecordChip listingId={listing.id} />
                   <SignInHint />
                 </div>
                 <ContactModule

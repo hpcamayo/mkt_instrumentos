@@ -291,6 +291,13 @@ export function readSellerPage(value: unknown): SellerPage | null {
   };
 }
 
+// The seller's own settings card: null until they have a page (a Particular with an approved or sold publication).
+export type MySellerPage = { slug: string; hidden: boolean };
+export function readMySellerPage(value: unknown): MySellerPage | null {
+  if (!isRecord(value) || value.exists !== true || !isSlug(value.slug)) return null;
+  return { slug: value.slug, hidden: value.hidden === true };
+}
+
 export function readBuyerCard(value: unknown): BuyerCard | null {
   if (!isRecord(value) || !isText(value.first_name) || !isDate(value.member_since) || !isCount(value.verified_purchases)
     || !isCount(value.rating_count) || !(value.average_rating === null || isNumber(value.average_rating))) return null;
