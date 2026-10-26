@@ -12,7 +12,9 @@ export type MarketplaceEmailPayload = {
   recipient_name: string | null;
   // Accounts batch (save-07): who the e-mail is for, to sign its one-click links.
   recipient_user_id?: string;
-  context: { reason?: string; old_price_pen?: number; new_price_pen?: number; digest_date?: string; week_start?: string; items?: FollowItem[] };
+  context: { reason?: string; old_price_pen?: number; new_price_pen?: number; digest_date?: string; week_start?: string; items?: FollowItem[]
+    // feature-ideas services (bet-02): the service's title and the page the button opens.
+    service_title?: string; service_path?: string };
   listing: EmailListing | null;
   store: { name: string; slug: string } | null;
   transaction: { reference_id: string; listing_title: string; review_deadline: string | null } | null;
@@ -129,7 +131,45 @@ function templateContent(payload: MarketplaceEmailPayload): TemplateContent {
       path: listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/notificaciones",
     };
     case "follow_weekly": return followTemplate(payload);
+    // store-floor (buy-07): try-outs at a store. context.reason is the time ("sábado 14 de diciembre, 11:00 a. m.") and,
+    // when the store gave one, " · Motivo: …".
+    case "store_tryout_requested":
+    case "store_tryout_cancelled":
+    case "listing_tryout_confirmed":
+    case "listing_tryout_declined":
+    case "listing_tryout_cancelled":
+    case "listing_tryout_reminder": return tryoutTemplate(payload);
+    // feature-ideas services (bet-02): Admin's decisions on a service and the "Contraté este servicio" steps.
+    case "service_approved": return serviceTemplate(payload, "Tu servicio está en línea", `“${serviceTitle(payload)}” ya aparece en Servicios para músicos y los interesados pueden escribirte por WhatsApp.`, "Ver tu servicio");
+    case "service_rejected": return serviceTemplate(payload, "Tu servicio necesita correcciones", `“${serviceTitle(payload)}” no se publicó.${reason ? ` Motivo: ${reason}` : ""} Corrígelo y vuelve a enviarlo.`, "Corregir servicio");
+    case "service_hidden": return serviceTemplate(payload, "Moderación ocultó tu servicio", `“${serviceTitle(payload)}” dejó de estar visible.${reason ? ` Motivo: ${reason}` : ""}`, "Revisar servicio");
+    case "service_booking_requested": return serviceTemplate(payload, "Confirma una contratación", `Te piden confirmar una contratación de “${serviceTitle(payload)}” hecha por WhatsApp desde Laria. Confirmarla solo habilita la reseña; Laria no verifica el pago ni el trabajo.`, "Responder");
+    case "service_booking_confirmed": return serviceTemplate(payload, "Tu contratación fue confirmada", `Se confirmó tu contratación de “${serviceTitle(payload)}”. Tienes 30 días para dejar tu reseña y ayudar a otros músicos.`, "Dejar mi reseña");
     default: throw new Error("EMAIL_TEMPLATE_UNSUPPORTED");
+  }
+}
+
+// store-floor (buy-07): one wording per try-out event. The store's own words go in a separate line, as the store's.
+function tryoutTemplate(payload: MarketplaceEmailPayload): TemplateContent {
+  const [when, motive] = (payload.context.reason ?? "").split(" · Motivo: ");
+  const title = payload.listing?.title ?? "el instrumento";
+  const store = payload.store?.name ?? "La tienda";
+  const at = when ? ` el ${when}` : "";
+  const details = motive ? [`Motivo de la tienda: ${motive}`] : undefined;
+  const otherTime = { ctaLabel: "Elegir otro horario", path: payload.listing ? `/instrumentos/${payload.listing.slug}#prueba` : "/mi-cuenta/pruebas" };
+  switch (payload.event_type) {
+    case "store_tryout_requested":
+      return { subject: "Te pidieron una prueba en Laria", heading: "Alguien quiere probar en tu tienda", body: `Pidieron probar “${title}”${at}. Confírmala con un toque o avisa que no puedes; si no respondes antes de esa hora, la solicitud vence.`, ctaLabel: "Responder", path: "/mi-cuenta/tienda/pruebas" };
+    case "store_tryout_cancelled":
+      return { subject: "Cancelaron una prueba", heading: "Cancelaron una prueba", body: `Quien iba a probar “${title}”${at} la canceló. Ese horario vuelve a estar libre.`, ctaLabel: "Ver pruebas", path: "/mi-cuenta/tienda/pruebas" };
+    case "listing_tryout_confirmed":
+      return { subject: "Tu prueba está confirmada", heading: "Tu prueba está confirmada", body: `${store} te espera${at} para probar “${title}”. Si no puedes ir, cancélala desde Laria para liberar el horario.`, ctaLabel: "Ver mi prueba", path: "/mi-cuenta/pruebas" };
+    case "listing_tryout_declined":
+      return { subject: "La tienda no puede en ese horario", heading: "La tienda no puede en ese horario", body: `${store} no puede recibirte${at} para probar “${title}”. Puedes pedir otro horario desde la publicación.`, details, ...otherTime };
+    case "listing_tryout_cancelled":
+      return { subject: "La tienda canceló tu prueba", heading: "La tienda canceló tu prueba", body: `${store} canceló la prueba de “${title}”${at}. Puedes pedir otro horario desde la publicación.`, details, ...otherTime };
+    default:
+      return { subject: "Recordatorio de tu prueba", heading: "Tu prueba es pronto", body: `Te esperan en ${store}${at} para probar “${title}”. Si no puedes ir, cancélala desde Laria.`, ctaLabel: "Ver mi prueba", path: "/mi-cuenta/pruebas" };
   }
 }
 
@@ -145,6 +185,13 @@ function storeTemplate(heading: string, body: string, ctaLabel: string): Templat
 }
 function transactionTemplate(heading: string, body: string, ctaLabel: string, transaction: MarketplaceEmailPayload["transaction"]): TemplateContent {
   return { subject: heading, heading, body, ctaLabel, path: transaction ? `/mi-cuenta/transacciones/${transaction.reference_id}` : "/mi-cuenta/transacciones" };
+}
+function serviceTitle(payload: MarketplaceEmailPayload) {
+  return payload.context.service_title?.trim() || "Tu servicio";
+}
+function serviceTemplate(payload: MarketplaceEmailPayload, heading: string, body: string, ctaLabel: string): TemplateContent {
+  const path = payload.context.service_path;
+  return { subject: heading, heading, body, ctaLabel, path: typeof path === "string" && path.startsWith("/") && !path.startsWith("//") ? path : "/mi-cuenta/servicios" };
 }
 function dailyTemplate(payload: MarketplaceEmailPayload): TemplateContent {
   const alert = payload.search_alert;

@@ -2,6 +2,7 @@
 
 import { type FormEvent, useId, useMemo, useState } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { servicesDb } from "@/lib/services-db";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
@@ -39,12 +40,16 @@ export default function ContentReportForm({
     if (!supabase || busy) return;
     const data = new FormData(event.currentTarget);
     setBusy(true);
-    const { error } = await supabase.rpc("submit_content_report", {
+    const report = {
       p_target_type: targetType,
       p_target_id: targetId,
       p_reason: String(data.get("reason") ?? ""),
       p_detail: String(data.get("detail") ?? ""),
-    });
+    };
+    // feature-ideas services (bet-02): a service or its review goes to the services queue.
+    const { error } = targetType === "service" || targetType === "service_review"
+      ? await servicesDb(supabase).rpc("submit_service_report", report)
+      : await supabase.rpc("submit_content_report", report);
     setBusy(false);
 
     if (error) {

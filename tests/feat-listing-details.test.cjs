@@ -93,7 +93,7 @@ test("listing details: known keys only, the failing key and field named, writer 
 test("yes/no filters: one URL whatever the click order, unknown values flagged", () => {
   assert.deepEqual(flags.parseListingOptions(["se-puede-probar,envia-provincia", "nada"]), ["envia_provincia", "se_puede_probar"]);
   assert.equal(flags.hasUnknownListingOption(["envia-provincia"]), false);
-  assert.equal(flags.hasUnknownListingOption(["envia-provincia,con-garantia"]), true);
+  assert.equal(flags.hasUnknownListingOption(["envia-provincia,con-descuento"]), true);
   assert.deepEqual(flags.toggleListingOption(["acepta_cambios"], "envia_provincia"), ["envia_provincia", "acepta_cambios"]);
   assert.deepEqual(flags.toggleListingOption(["acepta_cambios"], "acepta_cambios"), []);
 });

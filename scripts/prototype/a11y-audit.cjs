@@ -55,6 +55,11 @@ const PAGES = {
     "/mi-cuenta/tienda/pagos", "/mi-cuenta/tienda/estadisticas", "/mi-cuenta/publicaciones", "/tiendas/laria-demo-musica",
   ],
 };
+// store-floor (docs/feature-ideas/store-floor.md): Con garantía, Por llegar, try-outs, warranty, labels and poster.
+PAGES.visitor.push("/listados?opciones=con-garantia", "/instrumentos/demo-fender-player-strat-3ts");
+PAGES.buyer.push("/mi-cuenta/pruebas", "/instrumentos/demo-fender-player-strat-3ts", "/instrumentos/demo-boss-tu-3");
+PAGES.store.push("/mi-cuenta/tienda/garantia", "/mi-cuenta/tienda/pruebas", "/mi-cuenta/tienda/pruebas/horario",
+  "/mi-cuenta/tienda/etiquetas", "/mi-cuenta/tienda/etiquetas/cartel", "/mi-cuenta/tienda/inventario?stock=out");
 const ACCOUNTS = { buyer: "comprador@laria.test", seller: "particular@laria.test", store: "demo-tienda@laria.test" };
 const WIDTHS = [[390, 844, true], [1366, 900, false]];
 

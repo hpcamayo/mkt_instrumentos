@@ -26,6 +26,12 @@ const links = [
   { href: "/admin/colecciones", label: "Colecciones" },
   { href: "/admin/fabricantes", label: "Fabricantes y talleres" },
   { href: "/admin/artistas", label: "Artistas verificados" },
+  // feature-ideas services (bet-02)
+  { href: "/admin/servicios", label: "Servicios" },
+  // Feature ideas, store-reach batch: dealer authorizations (reach-04) and Laria's campaigns (reach-05).
+  { href: "/admin/distribuidores", label: "Distribuidores" },
+  { href: "/admin/campanas", label: "Campañas" },
+  // /Feature ideas, store-reach batch
 ] as const;
 
 // "Moderación" carries the total of the moderation queues; the other sections are record views without a

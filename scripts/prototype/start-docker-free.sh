@@ -34,6 +34,8 @@ if [ "${1:-}" = "seed" ]; then
   psql "$PGURL" -v ON_ERROR_STOP=1 -q -o /dev/null -f scripts/prototype/ux-my-listings-seed.sql
   # Feature ideas, listing-details: delivery terms, combos and the map's pins (docs/feature-ideas/listing-details.md).
   psql "$PGURL" -v ON_ERROR_STOP=1 -q -o /dev/null -f scripts/prototype/listing-details-seed.sql
+  # feature-ideas services (bet-02): Servicios para músicos (docs/feature-ideas/services.md).
+  psql "$PGURL" -v ON_ERROR_STOP=1 -q -o /dev/null -f scripts/prototype/services-seed.sql
 fi
 
 pkill -f "postgrest $LOG_DIR/postgrest.conf" 2>/dev/null || true

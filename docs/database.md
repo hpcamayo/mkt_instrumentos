@@ -1195,6 +1195,46 @@ Migration `20261109120000_ux_effortless_integration.sql` (not applied to any hos
   one database session, as the Supabase CLI runs them.
 <!-- /ux-effortless:integration -->
 
+<!-- feature-ideas:store-floor -->
+## Feature ideas: store floor (arrivals, warranty and returns, try-outs)
+
+Migrations `20261206120000`–`20261206120300` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/store-floor.md`. Suite: `tests/store-floor.sql`. No shared function is redefined.
+
+- `public.store_warranty_policies` (pk store_id, condition_group new|open_box|used; warranty_months 0–60,
+  warranty_provider store|brand (only with months), returns_days 0–30, returns_note 1–100 (only with days)): public for
+  active stores, owner always; written through `set_store_warranty_policy(text, jsonb)`, which re-applies the policy
+  to the store's unsold listings of that group (listings locked in id order).
+- `public.listings` gains `warranty_months`, `warranty_provider`, `returns_days`, `returns_note` and
+  `store_terms_source` (store_policy|listing), store listings only. The BEFORE trigger `listings_a_store_terms`
+  (`laria_private.apply_store_terms`) fills them from the policy on insert, on a condition change and when the source is
+  reset; `set_listing_store_terms(uuid, jsonb)` gives one listing its own terms (null returns it to the policy).
+  `laria_private.listing_condition_group(text)` maps the condition scale to the three groups.
+- Listing flag `con_garantia` (sort 40) in `laria_private.listing_flag_filters`, appended by the trigger
+  `listings_flags_store_floor` when `warranty_months > 0`.
+- `public.store_inventory_items.expected_arrival_on` and `public.listings.restock_expected_on` (date): set through
+  `set_inventory_arrival(uuid[], date)` (up to 200 SKUs, today to a year ahead in Lima, SKUs with units skipped; locks
+  listings then SKUs in id order). Triggers clear both when units arrive or the SKU is archived or unlinked
+  (`clear_arrival_on_stock`, `sync_restock_estimate`, `push_arrival_to_listing`). Change type `arrival` in
+  `store_inventory_changes`; notice type `store_arrival_estimate_passed`.
+- `public.store_tryout_settings` (store_id pk; enabled (default false, needs hours), weekly_hours jsonb ISO weekday →
+  up to two `["HH:MM","HH:MM"]` ranges, slot_minutes 15|30|45|60|90, capacity 1–5, min_notice_hours 1–72,
+  max_days_ahead 1–30, note 1–200): public for active stores, owner always; written through
+  `set_store_tryout_settings(jsonb)`.
+- `public.store_tryouts` (store, listing (set null on delete), listing_title, buyer_user_id, buyer_name, buyer_phone,
+  buyer_note, starts_at, ends_at, status requested|confirmed|declined|cancelled|expired, cancelled_by, store_reason,
+  request_key unique per buyer, decided_at, cancelled_at, reminded_at): readable by the buyer and the store's owner
+  only; no direct writes. Functions: `get_listing_tryout_slots(uuid)` (anon), `request_store_tryout(…)` (bookings of a
+  store serialized on its settings row; limits 1 open per listing, 3 open, 10 a day), `cancel_my_tryout(uuid)`,
+  `respond_store_tryout(uuid, text, text)` (confirm|decline|cancel).
+- Notice and e-mail types `store_tryout_requested`, `store_tryout_cancelled`, `listing_tryout_confirmed`,
+  `listing_tryout_declined`, `listing_tryout_cancelled`, `listing_tryout_reminder` (through
+  `laria_private.ux_extend_text_check`).
+- `public.run_store_floor_daily()` (service_role): `laria_private.expire_arrival_estimates()` then
+  `laria_private.run_tryout_daily()` (expire unanswered requests, one reminder for today and tomorrow, delete try-outs
+  90 days past). Idempotent.
+<!-- /feature-ideas:store-floor -->
+
 <!-- feature-ideas:listing-details -->
 ## Feature ideas: listing details (conditions, sale terms, combos, map)
 
@@ -1312,3 +1352,28 @@ Migrations `20261207120000`–`20261207120400` (not applied to any hosted databa
 - Public reads (definer, `anon` and `authenticated`), each returning only public listings and visible makers or
   artists: `get_listing_marks(uuid[])`, `get_public_makers(int)`, `get_store_maker_profile(uuid)`,
   `get_public_artists(int)`, `get_gift_exchange_stores(int)`.
+
+## Feature ideas: services for musicians (migration `20261208120000_feat_services.sql`)
+
+Proposed with the services batch (`docs/feature-ideas/services.md`); not applied to any hosted database.
+
+- **Tables** (RLS on, every grant revoked; written and read only through `SECURITY DEFINER` RPCs):
+  `public.services` (one per owner and kind; `status` pending, approved, rejected, paused or hidden;
+  `needs_recheck`; `version` for Admin decisions), `public.service_events` (views and WhatsApp contacts, keyed by a
+  client event id), `public.service_bookings` (requested by provider or client; pending, confirmed, declined,
+  cancelled or expired; one open or confirmed per service and client), `public.service_reviews` (one per confirmed
+  booking and per client and service; visible or hidden with a reason) and `public.service_reports` (service or
+  service review, one open per reporter and target).
+- **Storage.** Public bucket `service-photos` (5 MB, JPEG, PNG, WebP). Owners insert and read only
+  `<uid>/<uuid>.<ext>` in their folder and delete only photos no service uses (`public.service_photo_is_unused`).
+- **RPCs.** Owner: `save_service`, `set_service_paused`, `delete_service`, `get_my_services`, `get_my_service`,
+  `get_service_booking_candidates`, `request_service_booking`, `claim_service_booking`, `respond_service_booking`,
+  `cancel_service_booking`, `get_my_service_bookings`, `submit_service_review`, `submit_service_report`. Public:
+  `get_public_services`, `get_service_directory_counts`, `get_public_service`, `get_service_reviews`,
+  `get_service_viewer_state`, `get_public_service_paths`. Service role: `record_service_event`. Admin:
+  `get_admin_service_counts`, `get_admin_service_queue`, `admin_review_service`, `admin_moderate_service_review`,
+  `admin_close_service_report`. Errors are `SERVICE_CODE: mensaje` (P0001).
+- **Shared registries** (additive): `notifications.service_id` and seven `service_*` event types, with an appended
+  branch in `notifications_target_check`; five e-mail types and the context keys `service_title` and `service_path`;
+  Admin audit target types `service`, `service_review`, `service_report`.
+- **Tests.** `tests/feat-services.sql`.

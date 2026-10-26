@@ -4,6 +4,7 @@ import { CONDITION_VALUES, PARTICULAR_CONDITION_VALUES, currentCondition, expand
 import { hasUnknownListingOption, parseListingOptions } from "@/lib/listing-flags";
 import { resolveContactPhone, whatsAppUrl } from "@/lib/seller-contact";
 import type { ListingSaleTerms } from "@/lib/sale-terms";
+import type { ListingStoreTerms } from "@/lib/store-floor/warranty";
 
 export { resolveContactPhone, resolveParticularSeller, whatsAppNumber } from "@/lib/seller-contact";
 
@@ -127,6 +128,8 @@ export type ListingCardData = {
   photo_count?: number;
   // Null unless a store links the listing to an inventory item (STORE-1a).
   stock_state?: StockState | null;
+  // store-floor, reach-08: "Por llegar", the date the store expects units while the listing is out of stock.
+  restock_expected_on?: string | null;
   // list-05: a real price drop, kept by the database (listings_track_content_change); shown for 30 days.
   previous_price_pen?: number | null;
   price_dropped_at?: string | null;
@@ -162,7 +165,7 @@ export type ListingDetailData = ListingCardData & ListingSaleTerms & {
   // mine-08: when the seller last answered "Sí, sigue disponible".
   availability_confirmed_at?: string | null;
   profiles: ParticularProfileSummary | ParticularProfileSummary[] | null;
-};
+} & ListingStoreTerms;
 
 // The condition as people read it. An old value a cached page or an old link still carries reads as its step.
 export function getConditionLabel(condition: string) {
