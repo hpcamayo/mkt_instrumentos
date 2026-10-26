@@ -67,16 +67,16 @@ test("the seller level: name, criteria and the owner's progress", () => {
 test("the track record line joins the message only when on, with a purchase and a card", () => {
   process.env.NEXT_PUBLIC_SITE_URL = "https://laria.audio";
   const base = { enabled: true, token: "0123456789abcdef01234567", memberSince: "2026-03-01T12:00:00Z", verifiedPurchases: 3 };
-  assert.equal(trust.trackRecordLine(base), "Compro en Laria desde 2026 · 3 compras verificadas: https://laria.audio/comprador/0123456789abcdef01234567");
-  assert.equal(trust.trackRecordLine({ ...base, verifiedPurchases: 1 }).includes("1 compra verificada:"), true);
-  assert.equal(trust.trackRecordLine({ ...base, enabled: false }), null);
-  assert.equal(trust.trackRecordLine({ ...base, verifiedPurchases: 0 }), null);
-  assert.equal(trust.trackRecordLine({ ...base, token: null }), null);
+  assert.equal(contactMessage.trackRecordLine(base), "Compro en Laria desde 2026 · 3 compras verificadas: https://laria.audio/comprador/0123456789abcdef01234567");
+  assert.equal(contactMessage.trackRecordLine({ ...base, verifiedPurchases: 1 }).includes("1 compra verificada:"), true);
+  assert.equal(contactMessage.trackRecordLine({ ...base, enabled: false }), null);
+  assert.equal(contactMessage.trackRecordLine({ ...base, verifiedPurchases: 0 }), null);
+  assert.equal(contactMessage.trackRecordLine({ ...base, token: null }), null);
   // The WhatsApp button adds it after the quick questions, in the message text.
   const href = "https://wa.me/51999999999?text=Hola";
-  const destination = contactMessage.withQuestions(href, ["¿Sigue disponible?", trust.trackRecordLine(base)]);
+  const destination = contactMessage.withQuestions(href, ["¿Sigue disponible?", contactMessage.trackRecordLine(base)]);
   const text = new URL(destination).searchParams.get("text");
-  assert.equal(text, `Hola ¿Sigue disponible? ${trust.trackRecordLine(base)}`);
+  assert.equal(text, `Hola ¿Sigue disponible? ${contactMessage.trackRecordLine(base)}`);
   assert.doesNotMatch(destination, /\+/);
 });
 
@@ -94,12 +94,12 @@ test("the contact button reads the track record per listing, off when the buyer 
 test("provenance and meetup words never name the previous seller or promise safety", () => {
   assert.equal(trust.provenanceSummary({ boughtAt: "2026-05-10T15:00:00Z", previousOwners: 1 }), "Comprado en Laria en mayo de 2026 · 1 dueño anterior en Laria");
   assert.equal(trust.provenanceSummary({ boughtAt: "2026-05-10T15:00:00Z", previousOwners: 2 }).endsWith("2 dueños anteriores en Laria"), true);
-  const message = trust.meetupNoticeMessage({ title: "Fender Stratocaster", url: "https://laria.audio/instrumentos/x", sellerFirstName: "María", place: "Larcomar, Miraflores", when: trust.meetupWhen("2026-11-07", "16:30") });
+  const message = contactMessage.meetupNoticeMessage({ title: "Fender Stratocaster", url: "https://laria.audio/instrumentos/x", sellerFirstName: "María", place: "Larcomar, Miraflores", when: contactMessage.meetupWhen("2026-11-07", "16:30") });
   assert.match(message, /^Voy a ver este equipo con María en Larcomar, Miraflores el sábado, 7 de noviembre a las 4:30/);
   assert.match(message, /Te aviso cuando termine\.$/);
-  assert.equal(trust.meetupWhen("", "16:30"), "");
-  assert.equal(trust.meetupWhen("2026-11-07", ""), "el sábado, 7 de noviembre");
-  assert.equal(trust.shareTextUrl("a b"), "https://wa.me/?text=a%20b");
+  assert.equal(contactMessage.meetupWhen("", "16:30"), "");
+  assert.equal(contactMessage.meetupWhen("2026-11-07", ""), "el sábado, 7 de noviembre");
+  assert.equal(contactMessage.shareTextUrl("a b"), "https://wa.me/?text=a%20b");
   for (const file of ["components/trust/safe-meetup.tsx", "components/trust/safe-spot-mark.tsx", "components/trust/safe-spot-settings.tsx", "app/consejos-de-seguridad/page.tsx"]) {
     const source = read(file);
     assert.doesNotMatch(source, /\b(seguro garantizado|garantizamos|100% seguro|sin riesgo)\b/i, file);

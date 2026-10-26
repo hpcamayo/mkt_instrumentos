@@ -7,7 +7,8 @@ import { loadTrackRecord, setTrackRecord, toggleTrackRecordFor, useTrackRecord, 
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Sheet } from "@/components/ui/sheet";
-import { formatAverage, readTrackRecord, trackRecordLine, trustErrorMessage, type TrackRecord } from "@/lib/deal-trust";
+import { trackRecordLine } from "@/lib/contact-message";
+import { formatAverage, readTrackRecord, trustErrorMessage, type TrackRecord } from "@/lib/deal-trust";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { cn } from "@/lib/utils";
 

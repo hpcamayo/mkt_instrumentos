@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, buttonClasses } from "@/components/ui/button";
-import { shareTextUrl } from "@/lib/deal-trust";
+import { shareTextUrl } from "@/lib/contact-message";
 
 // A link someone hands out (a seller page, a buyer card): send it by WhatsApp or copy it. The status line says what
 // happened; when the clipboard is blocked the link stays visible to copy by hand.

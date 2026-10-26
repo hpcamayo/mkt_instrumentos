@@ -8,9 +8,9 @@ import { CopyLink } from "@/components/trust/copy-link";
 import { SellerLevelMark } from "@/components/trust/seller-level-mark";
 import { TrackRecordConsent, TrackRecordFacts } from "@/components/trust/track-record-chip";
 import { Button } from "@/components/ui/button";
+import { buyerCardUrl } from "@/lib/contact-message";
 import {
   LEVEL_CRITERIA,
-  buyerCardUrl,
   levelName,
   levelProgress,
   readMySellerPage,

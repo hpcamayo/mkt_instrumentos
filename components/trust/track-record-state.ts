@@ -2,7 +2,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
-import { readTrackRecord, trackRecordLine, type TrackRecord } from "@/lib/deal-trust";
+import { trackRecordLine } from "@/lib/contact-message";
+import { readTrackRecord, type TrackRecord } from "@/lib/deal-trust";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 // «Comprador con historial» (safe-07): the signed-in buyer's own track record, read once per page load, and the

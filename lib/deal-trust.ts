@@ -152,18 +152,7 @@ export function levelProgress(facts: LevelFacts) {
 
 // ------------------------------------------------------------------ buyer track record (safe-07)
 
-export function buyerCardUrl(token: string) {
-  return absoluteUrl(`/comprador/${token}`);
-}
-
-// "Compro en Laria desde 2026 · 3 compras verificadas: https://laria.audio/comprador/…" — what joins the WhatsApp
-// message when the buyer leaves the chip on. Null without a verified purchase or a card address.
-export function trackRecordLine(record: Pick<TrackRecord, "enabled" | "token" | "memberSince" | "verifiedPurchases">) {
-  if (!record.enabled || !record.token || record.verifiedPurchases < 1) return null;
-  const year = limaYear(record.memberSince);
-  const purchases = record.verifiedPurchases === 1 ? "1 compra verificada" : `${record.verifiedPurchases} compras verificadas`;
-  return `${year ? `Compro en Laria desde ${year} · ` : ""}${purchases}: ${buyerCardUrl(record.token)}`;
-}
+// The card's address and the WhatsApp line live in lib/contact-message.ts (buyerCardUrl, trackRecordLine).
 
 // ------------------------------------------------------------------ provenance (safe-11)
 
@@ -176,31 +165,7 @@ export function provenanceSummary(provenance: Pick<Provenance, "boughtAt" | "pre
 
 // ------------------------------------------------------------------ safe meetups (safe-03)
 
-// "Avisar a alguien": the message the buyer sends a friend before going. The seller's first name only; the place and
-// time are what the buyer typed or picked.
-export function meetupNoticeMessage({ title, url, sellerFirstName, place, when }: { title: string; url: string; sellerFirstName: string | null; place: string; when: string }) {
-  const who = sellerFirstName ? ` con ${sellerFirstName}` : "";
-  const where = place.trim() ? ` en ${place.trim()}` : "";
-  const time = when.trim() ? ` ${when.trim()}` : "";
-  return `Voy a ver este equipo${who}${where}${time}: ${title} ${url} Te aviso cuando termine.`;
-}
-
-export function shareTextUrl(text: string) {
-  return `https://wa.me/?text=${encodeURIComponent(text)}`;
-}
-
-// "el sábado 2 de noviembre a las 4:30 p. m." from the date and time inputs; empty when the date is missing.
-export function meetupWhen(date: string, time: string) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
-  const day = new Date(`${date}T12:00:00Z`);
-  if (Number.isNaN(day.getTime())) return "";
-  const dayText = new Intl.DateTimeFormat("es-PE", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(day);
-  const match = /^(\d{2}):(\d{2})$/.exec(time);
-  if (!match) return `el ${dayText}`;
-  const at = new Date(Date.UTC(2000, 0, 1, Number(match[1]), Number(match[2])));
-  const timeText = new Intl.DateTimeFormat("es-PE", { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(at);
-  return `el ${dayText} a las ${timeText}`;
-}
+// "Avisar a alguien" is built in lib/contact-message.ts (meetupNoticeMessage, meetupWhen, shareTextUrl).
 
 // ------------------------------------------------------------------ counter purchases (reach-11)
 
@@ -479,11 +444,6 @@ function readProvenance(value: unknown): Provenance | null {
 // ------------------------------------------------------------------ formatting
 
 const LIMA = "America/Lima";
-
-function limaYear(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : new Intl.DateTimeFormat("es-PE", { year: "numeric", timeZone: LIMA }).format(date);
-}
 
 // "mayo de 2026".
 export function monthYearLong(value: string | null | undefined) {
