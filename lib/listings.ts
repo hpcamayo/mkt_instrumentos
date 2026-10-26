@@ -4,8 +4,9 @@ import { resolveContactPhone, whatsAppUrl } from "@/lib/seller-contact";
 
 export { resolveContactPhone, resolveParticularSeller, whatsAppNumber } from "@/lib/seller-contact";
 
-// The ten marketplace categories (owner decision, 12 Oct 2026; docs/ux-redesign/category-restructure.md), in menu
-// order. Baterías and Platillos became types of Percusión, and Interfaces de audio a type of Audio.
+// The marketplace categories (owner decision, 12 Oct 2026; docs/ux-redesign/category-restructure.md), in menu
+// order. Baterías and Platillos became types of Percusión, and Interfaces de audio a type of Audio. The eleventh,
+// Andinos y tradicionales, came with disc-04 (Henri, 26 Oct 2026; docs/feature-ideas/discovery.md).
 export const categoryOptions = [
   { value: "guitars", label: "Guitarras" },
   { value: "basses", label: "Bajos" },
@@ -17,6 +18,7 @@ export const categoryOptions = [
   { value: "amplifiers", label: "Amplificadores" },
   { value: "microphones", label: "Micrófonos" },
   { value: "audio", label: "Audio" },
+  { value: "andean", label: "Andinos y tradicionales" },
 ] as const;
 
 // Category values retired on 12 Oct 2026 → the category and type they became. Old links, bookmarks and alert e-mails

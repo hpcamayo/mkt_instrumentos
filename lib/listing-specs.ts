@@ -52,6 +52,7 @@ const cardAttributeKeys: Record<string, readonly string[]> = {
   microphones: ["microphone_type", "polar_pattern"],
   audio_interface: ["inputs", "connection"],
   audio_gear: ["audio_type"],
+  andean_instrument: ["andean_type"],
   pedals: ["pedal_type", "format"],
   amplifiers: ["technology", "power"],
 };

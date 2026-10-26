@@ -660,6 +660,34 @@ export const instrumentFilterGroups = [
     ],
   },
   {
+    // disc-04: the traditional Peruvian and Andean instruments (docs/feature-ideas/discovery.md lists the choice).
+    // The cajón stays a Percusión type; the Andinos landing links to it.
+    instrumentType: "andean_instrument",
+    label: "Instrumentos andinos",
+    filters: [
+      {
+        key: "andean_type",
+        label: "Tipo",
+        type: "select",
+        options: [
+          { value: "charango", label: "Charango" },
+          { value: "ronroco", label: "Ronroco" },
+          { value: "bandurria", label: "Bandurria" },
+          { value: "andean_harp", label: "Arpa andina" },
+          { value: "quena", label: "Quena" },
+          { value: "quenacho", label: "Quenacho" },
+          { value: "zampona", label: "Zampoña o siku" },
+          { value: "antara", label: "Antara" },
+          { value: "pinkillo", label: "Pinkillo" },
+          { value: "tinya", label: "Tinya" },
+          { value: "bombo_andino", label: "Bombo andino" },
+          { value: "wankara", label: "Wankara" },
+          { value: "chajchas", label: "Chajchas" },
+        ],
+      },
+    ],
+  },
+  {
     instrumentType: "audio_gear",
     label: "Equipos de audio",
     filters: [

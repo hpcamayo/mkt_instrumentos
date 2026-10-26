@@ -137,6 +137,17 @@ const subtypeValues: Record<string, readonly NavValue[]> = {
     { key: "technology", value: "tube", label: "De tubos" },
     { key: "technology", value: "modeling", label: "De modelado" },
   ],
+  andean_instrument: [
+    { key: "andean_type", value: "charango", label: "Charangos" },
+    { key: "andean_type", value: "ronroco", label: "Ronrocos" },
+    { key: "andean_type", value: "quena", label: "Quenas" },
+    { key: "andean_type", value: "quenacho", label: "Quenachos" },
+    { key: "andean_type", value: "zampona", label: "Zampoñas y sikus" },
+    { key: "andean_type", value: "antara", label: "Antaras" },
+    { key: "andean_type", value: "tinya", label: "Tinyas" },
+    { key: "andean_type", value: "bombo_andino", label: "Bombos andinos" },
+    { key: "andean_type", value: "andean_harp", label: "Arpas andinas" },
+  ],
   audio_interface: [
     { key: "inputs", value: "1", label: "1 entrada" },
     { key: "inputs", value: "2" },
