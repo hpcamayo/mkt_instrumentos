@@ -292,6 +292,53 @@ test("the empty-search rescue shares one optional deadline: counts together, fal
   assert.ok(rescue === null || rescue.closest.length === 0);
 });
 
+test("related empty searches reuse removal counts, preserve current sort links and skip duplicate fallback queries", async () => {
+  const { parseListingFilters } = require("@/lib/listings");
+  const counts = [];
+  const pages = [];
+  const data = loadServer("lib/catalog-data.ts", {
+    "@/lib/supabase/public-read-client": {
+      createPublicReadClient: () => ({}),
+      getRequestReads: () => ({ deadline: deadlines.createDeadline(8000), supabase: {} }),
+    },
+    "@/lib/catalog": {
+      countCatalog: async (_, filters) => { counts.push(filters); return 12; },
+      fetchCatalogPage: async (_, filters) => { pages.push(filters); return { data: [], error: null }; },
+    },
+  });
+  for (const params of [{ location: "Lima" }, { location: "Arequipa" }, { location: "Lima", sort: "price_asc" }]) {
+    const result = await data.getCatalogRescue(parseListingFilters({ q: "zzz", category: "guitars", ...params }));
+    assert.equal(result.ways.length, 3);
+    assert.ok(result.ways.every((way) => way.count === 12));
+    for (const way of result.ways) assert.equal(new URL(way.chip.href, "https://laria.audio").searchParams.get("sort"), params.sort ?? null);
+  }
+  assert.equal(counts.length, 5, "five calls rather than nine: shared removal questions ignore sort");
+  assert.equal(pages.length, 6, "category and newest once each, rather than repeating category three times");
+  assert.equal(counts.filter((filters) => filters.q === "zzz" && filters.category === "guitars" && filters.cities.length === 0).length, 1);
+  data.resetCatalogDataForTests();
+  await data.getCatalogRescue(parseListingFilters({ q: "zzz", category: "guitars", location: "Lima" }));
+  assert.equal(counts.length, 8, "reset forgets the shared optional counts too");
+});
+
+test("concurrent empty searches share an in-flight removal count without sharing scope or other filters", async () => {
+  const { parseListingFilters } = require("@/lib/listings");
+  const counts = [];
+  const data = loadServer("lib/catalog-data.ts", {
+    "@/lib/supabase/public-read-client": {
+      createPublicReadClient: () => ({}),
+      getRequestReads: () => ({ deadline: deadlines.createDeadline(8000), supabase: {} }),
+    },
+    "@/lib/catalog": {
+      countCatalog: async (_, filters) => { counts.push(filters); await sleep(20); return 0; },
+      fetchCatalogPage: async () => ({ data: [], error: null }),
+    },
+  });
+  await Promise.all(["Lima", "Cusco"].map((location) => data.getCatalogRescue(parseListingFilters({ q: "zzz", category: "guitars", location }))));
+  assert.equal(counts.length, 5, "the shared 'without location' read is issued once");
+  await data.getCatalogRescue(parseListingFilters({ q: "zzz", category: "guitars", location: "Lima" }), { landing: { category: "guitars", path: "/instrumentos/guitarras" } });
+  assert.ok(counts.every((filters) => filters.sort === "newest"));
+});
+
 test("the facet endpoint: one canonical address per filter set, shared by the CDN; unavailable is not a zero", async () => {
   const keys = [];
   const facets = { total: 3, category: { guitars: 3 }, instrument_type: {}, condition: {}, seller_type: {}, locations: [], brands: [], price: null, advanced: {} };

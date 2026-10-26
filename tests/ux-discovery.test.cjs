@@ -329,6 +329,22 @@ test("the desktop sidebar: live option links with aria-current, small GET forms 
   assert.doesNotMatch(html, /<select|Aplicar filtros/);
 });
 
+test("price and attribute-chip refinements are nofollow without changing their destinations", () => {
+  const { ListingFilters } = load("components/listing-filters.tsx", { "next/link": linkMock, "next/navigation": navigationMock() });
+  const filters = parse("category=guitars&instrument_type=electric_guitar");
+  const facets = { total: 10, category: {}, instrument_type: {}, condition: {}, seller_type: {}, locations: [], brands: [], advanced: {}, price: { min: 100, max: 5000, low: 500, high: 1500, count: 10 } };
+  const html = renderToStaticMarkup(React.createElement(ListingFilters, { filters, facets }));
+  const anchors = [...html.matchAll(/<a\b[^>]*>/g)].map(([tag]) => tag);
+  const prices = anchors.filter((tag) => /id="filtro-precio-/.test(tag));
+  assert.equal(prices.length, 3);
+  const attributes = anchors.filter((tag) => /id="filtro-strings-/.test(tag));
+  assert.ok(attributes.length > 0, "short attribute choices are rendered as chips");
+  for (const tag of [...prices, ...attributes]) {
+    assert.match(tag, /rel="nofollow"/);
+    assert.match(tag, /href="\/listados\?category=guitars&amp;instrument_type=electric_guitar/);
+  }
+});
+
 test("phone and tablet controls: Filtrar with the applied count and Ordenar open sheets; sort has no form field", () => {
   const mocks = { "next/link": linkMock, "next/navigation": navigationMock() };
   const { FilterSheetButton } = load("components/filter-sheet.tsx", mocks);

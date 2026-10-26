@@ -10,6 +10,7 @@ import { getListingCounts } from "@/lib/catalog-brands";
 import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
 import { brandsAlphabetical, type CategoryBrand } from "@/lib/catalog-brands-aggregate";
 import { formatNumber } from "@/lib/catalog-filters";
+import { catalogRefinementRel } from "@/lib/catalog-links";
 import { BRANDS_ANCHOR, categoryBrandHref, subtypeLinks } from "@/lib/category-nav";
 import { categoryLandingPages, categoryTypePath, landingScope, type CategoryLandingPage } from "@/lib/category-pages";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
@@ -165,7 +166,7 @@ function CategoryExplore({ landing, brands }: { landing: CategoryLandingPage; br
         {types.map((type) => (
           <div key={type.value}>
             <h3 className="t-card-title text-ink">
-              {types.length > 1 ? <Link href={categoryTypePath(landing.category, type.value)} className="link">{type.label}</Link> : "Por tipo"}
+              {types.length > 1 ? <Link href={categoryTypePath(landing.category, type.value)} rel={catalogRefinementRel(categoryTypePath(landing.category, type.value))} className="link">{type.label}</Link> : "Por tipo"}
             </h3>
             <ul aria-label={type.label} className="mt-2 flex flex-wrap gap-2">
               {type.subtypes.map((subtype) => (
