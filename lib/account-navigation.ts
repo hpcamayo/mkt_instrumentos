@@ -3,7 +3,9 @@ export type AccountNavigationItem = {
   label: string;
   icon: "summary" | "listings" | "publish" | "store" | "inventory" | "payments" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites" | "alerts"
     // Effortless Laria, inventory batch (stock-04): purchase requests.
-    | "requests";
+    | "requests"
+    // Feature ideas, store-reach batch (reach-06): the monthly demand report.
+    | "demand";
   exact?: boolean;
   // Additional sections that belong to the same navigation entry.
   activePaths?: readonly string[];
@@ -37,6 +39,9 @@ export function getAccountNavigationItems(
         // /Effortless Laria, inventory batch
         ...(payments ? [{ href: "/mi-cuenta/tienda/pagos", label: "Pagos", icon: "payments", activePaths: ["/mi-cuenta/tienda/medios-de-pago"] } as const] : []),
         { href: "/mi-cuenta/tienda/estadisticas", label: "Estadísticas", icon: "analytics" } as const,
+        // Feature ideas, store-reach batch (reach-06): "Lo que buscan en Laria". The batch's other pages open from Mi tienda.
+        { href: "/mi-cuenta/tienda/demanda", label: "Lo que buscan", icon: "demand" } as const,
+        // /Feature ideas, store-reach batch
       ] : []),
       ...sharedAccountItems,
     ];
