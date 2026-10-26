@@ -91,7 +91,8 @@ export function createQueue(limit = 3) {
 
 export type CompleteResult = { ok: true; completed: true; slug?: string; status?: string };
 
-export function completeSubmission(token: string, fields: Record<string, unknown>, paths: string[], soundClip: { path: string; duration: number } | null) {
+// details: listing-details' extra fields by key (lib/listing-details.ts), stored with the listing.
+export function completeSubmission(token: string, fields: Record<string, unknown>, paths: string[], soundClip: { path: string; duration: number } | null, details: Record<string, unknown> = {}) {
   return submissionRequest<CompleteResult>({
     action: "complete",
     token,
@@ -99,6 +100,7 @@ export function completeSubmission(token: string, fields: Record<string, unknown
     paths,
     roles: paths.map(() => null),
     ...(soundClip ? { sound_clip: soundClip } : {}),
+    ...(Object.keys(details).length ? { details } : {}),
   });
 }
 

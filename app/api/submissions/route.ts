@@ -297,7 +297,7 @@ export async function POST(request: Request) {
   // A listing goes through complete_listing_submission (20261202120100): the same insert, plus its details in the same
   // transaction, before saved alerts look at it.
   const { error } = isListing
-    ? await (client as unknown as import("@supabase/supabase-js").SupabaseClient).rpc("complete_listing_submission", {
+    ? await client.rpc("complete_listing_submission", {
         p_id: id,
         p_kind: kind,
         p_fields: fields as Json,

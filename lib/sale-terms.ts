@@ -34,16 +34,16 @@ export type SaleTerms = {
   trade_categories: string[];
 };
 
-// The listing columns, as pages read them.
+// The listing columns, as pages read them (text columns the database checks; read back through oneOf).
 export type ListingSaleTerms = {
-  price_mode?: "fixed" | "negotiable" | null;
+  price_mode?: string | null;
   delivery_pickup?: boolean | null;
   pickup_area?: string | null;
   can_try?: boolean | null;
-  lima_delivery?: LimaDelivery | null;
+  lima_delivery?: string | null;
   ships_provinces?: boolean | null;
   shipping_carriers?: string[] | null;
-  shipping_payment?: ShippingPayment | null;
+  shipping_payment?: string | null;
   accepts_trades?: boolean | null;
   trade_wants?: string | null;
   trade_categories?: string[] | null;
@@ -74,18 +74,50 @@ export function emptySaleTerms(): SaleTerms {
 
 export function saleTermsFromListing(listing: ListingSaleTerms): SaleTerms {
   return {
-    price_mode: listing.price_mode ?? null,
+    price_mode: oneOf(["fixed", "negotiable"] as const, listing.price_mode),
     pickup: Boolean(listing.delivery_pickup),
     pickup_area: listing.pickup_area ?? "",
     can_try: Boolean(listing.can_try),
-    lima_delivery: listing.lima_delivery ?? null,
+    lima_delivery: oneOf(LIMA_DELIVERY, listing.lima_delivery),
     ships_provinces: Boolean(listing.ships_provinces),
     carriers: (listing.shipping_carriers ?? []).filter((value): value is Carrier => (CARRIERS as readonly string[]).includes(value)),
-    shipping_payment: listing.shipping_payment ?? null,
+    shipping_payment: oneOf(SHIPPING_PAYMENT, listing.shipping_payment),
     accepts_trades: Boolean(listing.accepts_trades),
     trade_wants: listing.trade_wants ?? "",
     trade_categories: (listing.trade_categories ?? []).filter((value) => (TRADE_CATEGORIES as readonly string[]).includes(value)),
   };
+}
+
+// A form value as saved in a draft (on the device or in listing_drafts), read leniently: known keys only, text kept
+// as typed so the seller can still fix it. cleanSaleTerms decides what may be sent.
+export function readSaleTerms(input: unknown): SaleTerms {
+  const raw = input && typeof input === "object" && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
+  const text = (value: unknown) => (typeof value === "string" ? value : "");
+  const list = (value: unknown) => (Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []);
+  return {
+    price_mode: oneOf(["fixed", "negotiable"] as const, raw.price_mode),
+    pickup: raw.pickup === true,
+    pickup_area: text(raw.pickup_area),
+    can_try: raw.can_try === true,
+    lima_delivery: oneOf(LIMA_DELIVERY, raw.lima_delivery),
+    ships_provinces: raw.ships_provinces === true,
+    carriers: CARRIERS.filter((carrier) => list(raw.carriers).includes(carrier)),
+    shipping_payment: oneOf(SHIPPING_PAYMENT, raw.shipping_payment),
+    accepts_trades: raw.accepts_trades === true,
+    trade_wants: text(raw.trade_wants),
+    trade_categories: TRADE_CATEGORIES.filter((category) => list(raw.trade_categories).includes(category)),
+  };
+}
+
+// The delivery and trade terms without the price mode: what "Usar lo de tu última publicación" copies, since a
+// seller's delivery terms rarely change but each price is its own.
+export function deliveryTermsOnly(value: SaleTerms): SaleTerms {
+  return { ...value, price_mode: null };
+}
+
+// Where the device remembers the last published terms, per account and kind.
+export function lastSaleTermsKey(ownerId: string, kind: "listing" | "store_listing") {
+  return `laria:entrega:${ownerId}:${kind}`;
 }
 
 const oneOf = <T extends string>(list: readonly T[], value: unknown): T | null =>

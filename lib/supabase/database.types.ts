@@ -173,6 +173,42 @@ export type Database = {
         }
         Relationships: []
       }
+      listing_companions: {
+        Row: {
+          companion_id: string
+          created_at: string
+          listing_id: string
+          sort_order: number
+        }
+        Insert: {
+          companion_id: string
+          created_at?: string
+          listing_id: string
+          sort_order?: number
+        }
+        Update: {
+          companion_id?: string
+          created_at?: string
+          listing_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_companions_companion_id_fkey"
+            columns: ["companion_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_companions_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_edit_attempts: {
         Row: {
           attempt_id: string
@@ -437,28 +473,35 @@ export type Database = {
       }
       listings: {
         Row: {
+          accepts_trades: boolean
           archived_at: string | null
           attributes: Json | null
           availability_checkin_at: string | null
           availability_confirmed_at: string | null
           brand: string | null
+          can_try: boolean
           category: string
           city: string
           condition: string | null
           contact_name: string | null
           created_at: string
           created_by_source: string
+          delivery_pickup: boolean
           description: string | null
           hidden_at: string | null
           hidden_reason: string | null
           hidden_source: string | null
           id: string
           instrument_type: string | null
+          lima_delivery: string | null
+          listing_flags: string[]
           listing_photo_count: number | null
           marketplace_rules_accepted_at: string | null
           model: string | null
           owner_user_id: string | null
           paused_until: string | null
+          pickup_area: string | null
+          price_mode: string | null
           price_pen: number | null
           published_at: string | null
           region: string
@@ -466,38 +509,50 @@ export type Database = {
           rejection_reason: string | null
           relisted_from_listing_id: string | null
           seller_type: Database["public"]["Enums"]["seller_type"]
+          shipping_carriers: string[]
+          shipping_payment: string | null
+          ships_provinces: boolean
           slug: string
           sold_at: string | null
           status: Database["public"]["Enums"]["listing_status"]
           stock_state: string | null
           store_id: string | null
           title: string
+          trade_categories: string[]
+          trade_wants: string | null
           updated_at: string
           view_count: number | null
           whatsapp_phone: string
         }
         Insert: {
+          accepts_trades?: boolean
           archived_at?: string | null
           attributes?: Json | null
           availability_checkin_at?: string | null
           availability_confirmed_at?: string | null
           brand?: string | null
+          can_try?: boolean
           category: string
           city: string
           condition?: string | null
           contact_name?: string | null
           created_at?: string
           created_by_source?: string
+          delivery_pickup?: boolean
           description?: string | null
           hidden_at?: string | null
           hidden_reason?: string | null
           hidden_source?: string | null
           id?: string
           instrument_type?: string | null
+          lima_delivery?: string | null
+          listing_flags?: string[]
           marketplace_rules_accepted_at?: string | null
           model?: string | null
           owner_user_id?: string | null
           paused_until?: string | null
+          pickup_area?: string | null
+          price_mode?: string | null
           price_pen?: number | null
           published_at?: string | null
           region?: string
@@ -505,38 +560,50 @@ export type Database = {
           rejection_reason?: string | null
           relisted_from_listing_id?: string | null
           seller_type: Database["public"]["Enums"]["seller_type"]
+          shipping_carriers?: string[]
+          shipping_payment?: string | null
+          ships_provinces?: boolean
           slug: string
           sold_at?: string | null
           status?: Database["public"]["Enums"]["listing_status"]
           stock_state?: string | null
           store_id?: string | null
           title: string
+          trade_categories?: string[]
+          trade_wants?: string | null
           updated_at?: string
           view_count?: number | null
           whatsapp_phone: string
         }
         Update: {
+          accepts_trades?: boolean
           archived_at?: string | null
           attributes?: Json | null
           availability_checkin_at?: string | null
           availability_confirmed_at?: string | null
           brand?: string | null
+          can_try?: boolean
           category?: string
           city?: string
           condition?: string | null
           contact_name?: string | null
           created_at?: string
           created_by_source?: string
+          delivery_pickup?: boolean
           description?: string | null
           hidden_at?: string | null
           hidden_reason?: string | null
           hidden_source?: string | null
           id?: string
           instrument_type?: string | null
+          lima_delivery?: string | null
+          listing_flags?: string[]
           marketplace_rules_accepted_at?: string | null
           model?: string | null
           owner_user_id?: string | null
           paused_until?: string | null
+          pickup_area?: string | null
+          price_mode?: string | null
           price_pen?: number | null
           published_at?: string | null
           region?: string
@@ -544,12 +611,17 @@ export type Database = {
           rejection_reason?: string | null
           relisted_from_listing_id?: string | null
           seller_type?: Database["public"]["Enums"]["seller_type"]
+          shipping_carriers?: string[]
+          shipping_payment?: string | null
+          ships_provinces?: boolean
           slug?: string
           sold_at?: string | null
           status?: Database["public"]["Enums"]["listing_status"]
           stock_state?: string | null
           store_id?: string | null
           title?: string
+          trade_categories?: string[]
+          trade_wants?: string | null
           updated_at?: string
           view_count?: number | null
           whatsapp_phone?: string
@@ -1040,6 +1112,51 @@ export type Database = {
           },
         ]
       }
+      seller_bundle_offers: {
+        Row: {
+          created_at: string
+          discount_percent: number
+          id: string
+          min_items: number
+          owner_user_id: string | null
+          store_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          discount_percent: number
+          id?: string
+          min_items?: number
+          owner_user_id?: string | null
+          store_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          discount_percent?: number
+          id?: string
+          min_items?: number
+          owner_user_id?: string | null
+          store_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_bundle_offers_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seller_bundle_offers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_members: {
         Row: {
           created_at: string
@@ -1187,10 +1304,14 @@ export type Database = {
           is_verified: boolean
           listing_plan: Database["public"]["Enums"]["store_listing_plan"]
           logo_url: string | null
+          map_latitude: number | null
+          map_longitude: number | null
           name: string
           opening_hours: string | null
           public_address: string | null
           owner_user_id: string | null
+          public_map_latitude: number | null
+          public_map_longitude: number | null
           razon_social: string | null
           region: string
           rejection_reason: string | null
@@ -1219,6 +1340,8 @@ export type Database = {
           is_verified?: boolean
           listing_plan?: Database["public"]["Enums"]["store_listing_plan"]
           logo_url?: string | null
+          map_latitude?: number | null
+          map_longitude?: number | null
           name: string
           opening_hours?: string | null
           owner_user_id?: string | null
@@ -1250,6 +1373,8 @@ export type Database = {
           is_verified?: boolean
           listing_plan?: Database["public"]["Enums"]["store_listing_plan"]
           logo_url?: string | null
+          map_latitude?: number | null
+          map_longitude?: number | null
           name?: string
           opening_hours?: string | null
           owner_user_id?: string | null
@@ -1654,6 +1779,10 @@ export type Database = {
         Args: { p_limit?: number; p_worker_id: string }
         Returns: Json
       }
+      complete_listing_submission: {
+        Args: { p_details?: Json; p_fields: Json; p_id: string; p_kind: string; p_photos: Json }
+        Returns: string
+      }
       complete_marketplace_email_delivery: {
         Args: {
           p_delivery_id: string
@@ -1895,6 +2024,18 @@ export type Database = {
       get_public_seller_facts: {
         Args: { p_listing_id: string }
         Returns: Json
+      }
+      listing_condition_is_valid: {
+        Args: { p_condition: string; p_store?: boolean }
+        Returns: boolean
+      }
+      set_bundle_offer: {
+        Args: { p_discount_percent: number | null; p_min_items?: number; p_store_id: string | null }
+        Returns: Database["public"]["Tables"]["seller_bundle_offers"]["Row"]
+      }
+      set_listing_companions: {
+        Args: { p_companion_ids: string[]; p_listing_id: string }
+        Returns: number
       }
       set_listing_stock_watch: {
         Args: { p_listing_id: string; p_watch: boolean }
@@ -2382,6 +2523,10 @@ export type Database = {
         Args: { p_listing_id: string; p_saved: boolean }
         Returns: boolean
       }
+      set_own_store_map_pin: {
+        Args: { p_latitude: number | null; p_longitude: number | null; p_store_id: string }
+        Returns: undefined
+      }
       set_owned_listing_lifecycle: {
         Args: { p_action: string; p_listing_id: string }
         Returns: {
@@ -2473,6 +2618,10 @@ export type Database = {
       set_store_verification: {
         Args: { p_store_id: string; p_verified: boolean }
         Returns: Json
+      }
+      update_owned_listing_details: {
+        Args: { p_details: Json; p_listing_id: string }
+        Returns: undefined
       }
       update_saved_search_alert: {
         Args: { p_alert_id: string; p_frequency: string; p_name: string | null }
