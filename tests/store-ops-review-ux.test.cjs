@@ -189,11 +189,11 @@ test("B5: Completar datos sits next to Faltan datos and sends photos to that row
 test("B6: Pagos is a store menu entry only while the pilot is on", () => {
   const labels = (items) => items.map((item) => item.label);
   assert.deepEqual(labels(getAccountNavigationItems("store_owner", true)),
-    ["Resumen", "Mi tienda", "Inventario", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+    ["Resumen", "Mi tienda", "Inventario", "Publicar", "Pruebas", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   const withPayments = getAccountNavigationItems("store_owner", true, { payments: true });
   assert.deepEqual(labels(withPayments),
     // Effortless Laria, inventory batch (stock-04): "Solicitudes" comes and goes with the pilot too.
-    ["Resumen", "Mi tienda", "Inventario", "Publicar", "Solicitudes", "Pagos", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+    ["Resumen", "Mi tienda", "Inventario", "Publicar", "Pruebas", "Solicitudes", "Pagos", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.equal(labels(getAccountNavigationItems("store_owner", false, { payments: true })).includes("Pagos"), false, "no store, no Pagos");
   assert.equal(labels(getAccountNavigationItems("seller", false, { payments: true })).includes("Pagos"), false);
   const pagos = withPayments.find((item) => item.label === "Pagos");

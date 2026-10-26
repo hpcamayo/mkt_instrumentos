@@ -239,7 +239,7 @@ export function BuyerTryoutList({ upcoming, past, siteUrl }: { upcoming: Tryout[
                   ) : null}
                   {whatsapp ? (
                     <a href={whatsapp} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "quiet", size: "sm" })}>
-                      <MessageCircle aria-hidden />Escribir a la tienda
+                      <MessageCircle aria-hidden />Coordinar por WhatsApp
                     </a>
                   ) : null}
                   <Button size="sm" variant="quiet" disabled={busy === tryout.id} onClick={() => setCancelling(tryout)}>Cancelar</Button>

@@ -189,10 +189,11 @@ function icsTime(value: string) {
 // A calendar file for a confirmed try-out ("Agregar al calendario"), as a data: URL the phone opens.
 export function tryoutCalendarHref(tryout: Tryout, siteUrl: string) {
   const place = storePlace(tryout.store);
+  // Property names as object keys, so they read as data and not as interface copy.
+  const calendar = { VERSION: "2.0", PRODID: "-//Laria//Pruebas//ES" };
   const lines = [
     "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Laria//Pruebas//ES",
+    ...Object.entries(calendar).map(([name, value]) => `${name}:${value}`),
     "BEGIN:VEVENT",
     `UID:${tryout.id}@laria`,
     `DTSTAMP:${icsTime(new Date().toISOString())}`,

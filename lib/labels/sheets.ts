@@ -139,13 +139,13 @@ export function layoutLabel(data: LabelData, format: LabelFormat, options: Label
     if (canEncodeCode128(data.sku)) {
       const widths = code128Widths(data.sku);
       const modules = widths.reduce((sum, value) => sum + value, 0) + 20;
-      const module = Math.min(MAX_MODULE_MM, inner.width / modules);
-      if (module >= MIN_MODULE_MM) {
-        const total = modules * module;
-        const x = PADDING + (inner.width - total) / 2 + 10 * module;
+      const moduleWidth = Math.min(MAX_MODULE_MM, inner.width / modules);
+      if (moduleWidth >= MIN_MODULE_MM) {
+        const total = modules * moduleWidth;
+        const x = PADDING + (inner.width - total) / 2 + 10 * moduleWidth;
         const y = height - PADDING - barcodeText - 0.6 - barcodeHeight;
         barcode = {
-          x, y, height: barcodeHeight, module, widths,
+          x, y, height: barcodeHeight, module: moduleWidth, widths,
           text: { value: data.sku, x: width / 2, y: height - PADDING, size: barcodeText },
         };
       } else {

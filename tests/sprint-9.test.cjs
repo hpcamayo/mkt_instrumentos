@@ -410,7 +410,7 @@ test("account navigation follows the frozen IA on desktop and mobile with precis
   const particular = navigation.getAccountNavigationItems("seller", false);
   assert.deepEqual(particular.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   const store = navigation.getAccountNavigationItems("store_owner", true);
-  assert.deepEqual(store.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(store.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar", "Pruebas", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   for (const items of [particular, store, navigation.getAccountNavigationItems("store_owner", false)]) {
     const hrefs = items.map((item) => item.href);
     assert.equal(new Set(hrefs).size, hrefs.length);

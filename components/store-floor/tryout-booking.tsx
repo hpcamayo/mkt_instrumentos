@@ -213,7 +213,7 @@ function TryoutDone({ tryout, onClose }: { tryout: Tryout; onClose: () => void }
       <div className="flex flex-col gap-2 sm:flex-row">
         {whatsapp ? (
           <a href={whatsapp} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "secondary" })}>
-            <MessageCircle aria-hidden />Escribir a la tienda
+            <MessageCircle aria-hidden />Coordinar por WhatsApp
           </a>
         ) : null}
         <Link href="/mi-cuenta/pruebas" className={buttonClasses({ variant: "secondary" })}>Ver mis pruebas</Link>
