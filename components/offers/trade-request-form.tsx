@@ -11,7 +11,8 @@ import { Field, FileInput, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { PriceInput } from "@/components/ui/price-input";
 import { Textarea } from "@/components/ui/textarea";
-import { categoryOptions, conditionOptions, getConditionLabel } from "@/lib/listings";
+import { conditionScale } from "@/lib/listing-condition";
+import { categoryOptions } from "@/lib/listings";
 import { peruRegions } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
 import {
@@ -180,10 +181,10 @@ export function TradeRequestForm({
         <Field id="pedido-modelo" label="Modelo" optional>
           <Input value={model} maxLength={120} autoComplete="off" onChange={(event) => setModel(event.target.value)} />
         </Field>
-        <Field id="pedido-estado" label="Estado" error={problems.condition}>
+        <Field id="pedido-estado" label="Estado" error={problems.condition} hint={conditionScale.find((step) => step.value === condition)?.definition}>
           <Select value={condition} onChange={(event) => setCondition(event.target.value)}>
             <option value="">Elige el estado</option>
-            {conditionOptions.map((option) => <option key={option} value={option}>{getConditionLabel(option)}</option>)}
+            {conditionScale.filter((step) => !step.storeOnly).map((step) => <option key={step.value} value={step.value}>{step.value}</option>)}
           </Select>
         </Field>
         {kind === "sell" ? (

@@ -88,9 +88,9 @@ insert into public.stores (id,slug,name,razon_social,ruc,email,contact_person,co
  ('f3100000-0000-4000-8000-000000000004','st-tienda-d','ST Tienda D','ST D SAC','20999993004','st-d@example.invalid','Contacto D','Contacto D','51999993014','Lima','Lince','Lima','Av. Arequipa 404','f3000000-0000-4000-8000-000000000014','active','free',false);
 
 insert into public.listings (id,slug,title,seller_type,status,category,instrument_type,brand,model,condition,price_pen,city,region,contact_name,whatsapp_phone,description,owner_user_id,store_id,created_by_source,marketplace_rules_accepted_at,published_at) values
- ('f3200000-0000-4000-8000-000000000001','st-l1','Guitarra ST uno','individual','approved','guitars','electric_guitar','Fender','Stratocaster','Usado - buen estado',2000,'Lima','Lima','Vendedora ST','51999993001','Descripción de la guitarra válida con más de cuarenta caracteres.','f3000000-0000-4000-8000-000000000001',null,'self_service',now(),now()-interval '20 days'),
- ('f3200000-0000-4000-8000-000000000002','st-l2','Guitarra ST tienda','store','approved','guitars','electric_guitar','Gibson','Les Paul','Usado - buen estado',6000,'Lima','Lima','Contacto A','51999993011','Descripción de la guitarra válida con más de cuarenta caracteres.','f3000000-0000-4000-8000-000000000011','f3100000-0000-4000-8000-000000000001','self_service',now(),now()-interval '20 days'),
- ('f3200000-0000-4000-8000-000000000003','st-l3','Bajo ST vendido','individual','approved','basses','bass','Ibanez','SR300','Usado - buen estado',1500,'Lima','Lima','Vendedora ST','51999993001','Descripción del bajo válida con más de cuarenta caracteres siempre.','f3000000-0000-4000-8000-000000000001',null,'self_service',now(),now()-interval '20 days'),
+ ('f3200000-0000-4000-8000-000000000001','st-l1','Guitarra ST uno','individual','approved','guitars','electric_guitar','Fender','Stratocaster','Muy bueno',2000,'Lima','Lima','Vendedora ST','51999993001','Descripción de la guitarra válida con más de cuarenta caracteres.','f3000000-0000-4000-8000-000000000001',null,'self_service',now(),now()-interval '20 days'),
+ ('f3200000-0000-4000-8000-000000000002','st-l2','Guitarra ST tienda','store','approved','guitars','electric_guitar','Gibson','Les Paul','Muy bueno',6000,'Lima','Lima','Contacto A','51999993011','Descripción de la guitarra válida con más de cuarenta caracteres.','f3000000-0000-4000-8000-000000000011','f3100000-0000-4000-8000-000000000001','self_service',now(),now()-interval '20 days'),
+ ('f3200000-0000-4000-8000-000000000003','st-l3','Bajo ST vendido','individual','approved','basses','bass','Ibanez','SR300','Muy bueno',1500,'Lima','Lima','Vendedora ST','51999993001','Descripción del bajo válida con más de cuarenta caracteres siempre.','f3000000-0000-4000-8000-000000000001',null,'self_service',now(),now()-interval '20 days'),
  ('f3200000-0000-4000-8000-000000000004','st-l4','Teclado ST tienda B','store','approved','keyboards','keyboards','Roland','FP-30','Nuevo',3000,'Lima','Lima','Contacto B','51999993012','Descripción del teclado válida con más de cuarenta caracteres siempre.','f3000000-0000-4000-8000-000000000012','f3100000-0000-4000-8000-000000000002','self_service',now(),now()-interval '20 days');
 
 -- ------------------------------------------------------------------ shared registry
@@ -249,7 +249,7 @@ do $$ declare result jsonb; fields jsonb; begin
   perform pg_temp.check((public.count_trade_stores_by_category('Lima')->>'guitars')::int = 2
     and (public.count_trade_stores_by_category('Lima')->>'keyboards')::int = 0, 'sell page counts stores by category');
   fields := jsonb_build_object('kind', 'sell', 'category', 'guitars', 'instrument_type', 'electric_guitar', 'brand', 'Fender',
-    'model', 'Telecaster', 'condition', 'Usado - buen estado', 'description', 'Telecaster mexicana con estuche, trastes en buen estado.',
+    'model', 'Telecaster', 'condition', 'Muy bueno', 'description', 'Telecaster mexicana con estuche, trastes en buen estado.',
     'city', 'Lima', 'region', 'Lima', 'asking_price_pen', 2500, 'gear_item_id', pg_temp.id('gear_tele'),
     'photos', jsonb_build_array(pg_temp.id('seller')::text || '/' || pg_temp.id('trade_1')::text || '/1.jpg',
                                 pg_temp.id('seller')::text || '/' || pg_temp.id('trade_1')::text || '/2.jpg'));
@@ -354,7 +354,7 @@ insert into storage.objects(bucket_id, name, owner, owner_id) values
  ('trade-photos', pg_temp.id('buyer')::text || '/' || pg_temp.id('trade_pp')::text || '/2.jpg', pg_temp.id('buyer'), pg_temp.id('buyer')::text);
 do $$ declare fields jsonb; begin
   fields := jsonb_build_object('kind', 'part_payment', 'listing_id', pg_temp.id('l_store'), 'gear_item_id', pg_temp.id('gear_bass'),
-    'category', 'basses', 'instrument_type', 'bass', 'brand', 'Ibanez', 'model', 'SR300', 'condition', 'Usado - buen estado',
+    'category', 'basses', 'instrument_type', 'bass', 'brand', 'Ibanez', 'model', 'SR300', 'condition', 'Muy bueno',
     'description', 'Bajo en buen estado, cuerdas nuevas.', 'city', 'Lima', 'region', 'Lima',
     'photos', jsonb_build_array(pg_temp.id('buyer')::text || '/' || pg_temp.id('trade_pp')::text || '/1.jpg',
                                 pg_temp.id('buyer')::text || '/' || pg_temp.id('trade_pp')::text || '/2.jpg'));
@@ -500,7 +500,7 @@ do $$ declare result jsonb; begin
   -- Expiry: a sell request nobody chose in time.
   insert into public.trade_requests(id, kind, requester_user_id, category, instrument_type, brand, model, title, condition, description, region, photos,
     offers_until, decide_until, created_at)
-  values ('f3300000-0000-4000-8000-000000000009', 'sell', pg_temp.id('other'), 'guitars', 'other', 'Yamaha', 'Pacifica', 'Yamaha Pacifica', 'Usado - buen estado',
+  values ('f3300000-0000-4000-8000-000000000009', 'sell', pg_temp.id('other'), 'guitars', 'other', 'Yamaha', 'Pacifica', 'Yamaha Pacifica', 'Muy bueno',
     'Guitarra con detalles de uso.', 'Arequipa', array['a/b/1.jpg', 'a/b/2.jpg'], now() - interval '4 days', now() - interval '1 minute', now() - interval '5 days');
   result := laria_private.run_trade_request_expiry(100);
   perform pg_temp.check((result->>'expired')::int = 1, 'expired one request');

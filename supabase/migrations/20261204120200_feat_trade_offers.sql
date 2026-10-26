@@ -339,7 +339,7 @@ declare
   v_type text := coalesce(nullif(trim(coalesce(p_fields->>'instrument_type', '')), ''), 'other');
   v_brand text := nullif(trim(coalesce(p_fields->>'brand', '')), '');
   v_model text := trim(coalesce(p_fields->>'model', ''));
-  v_condition text := nullif(trim(coalesce(p_fields->>'condition', '')), '');
+  v_condition text := laria_private.current_condition(nullif(trim(coalesce(p_fields->>'condition', '')), ''));
   v_description text := trim(coalesce(p_fields->>'description', ''));
   v_city text := nullif(trim(coalesce(p_fields->>'city', '')), '');
   v_region text := nullif(trim(coalesce(p_fields->>'region', '')), '');
@@ -381,8 +381,9 @@ begin
   if v_brand is null or char_length(v_brand) > 80 or char_length(v_model) > 120 then
     raise exception 'TRADE_BRAND_REQUIRED: Escribe la marca y el modelo.';
   end if;
-  if v_condition is null or char_length(v_condition) > 40 then
-    raise exception 'TRADE_CONDITION_REQUIRED: Elige el estado.';
+  -- The listing condition scale (sell-10, 20261202120000); a person is never "Exhibición o caja abierta".
+  if v_condition is null or not public.listing_condition_is_valid(v_condition, false) then
+    raise exception 'TRADE_CONDITION_REQUIRED: Elige el estado de la escala.';
   end if;
   if char_length(v_description) not between 10 and 1000 then
     raise exception 'TRADE_DESCRIPTION_LENGTH: Describe el equipo en 10 a 1000 caracteres.';
