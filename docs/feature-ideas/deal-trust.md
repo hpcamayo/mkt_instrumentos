@@ -48,7 +48,7 @@ count it.
 
 **Files.** `supabase/migrations/20261203100100_feat_counter_purchases.sql`, the patches `…110000`, `…110300` to
 `…110500`, `components/trust/counter-purchase-code.tsx`, `components/trust/claim-counter-purchase.tsx`,
-`app/compra-en-tienda/[token]/page.tsx`, `lib/sale-qr.ts`, `components/inventory/counter.tsx`,
+`app/compra-en-tienda/[token]/page.tsx`, `components/inventory/counter.tsx`,
 `app/mi-cuenta/tienda/inventario/mostrador/page.tsx`, `app/mi-cuenta/transacciones/*`, `components/transaction-center.tsx`,
 `components/transaction-detail.tsx`, `lib/transactions.ts`.
 
@@ -67,10 +67,9 @@ count it.
   publication were checked; four now left-join it and title such a row "Compra en tienda · <Tienda>". Counter purchases
   get their own review reminder (two days before the end, nightly job) because `run_my_listings_reminders` joins
   publications.
-- **FD-deal-trust-5.** The QR is drawn by `lib/sale-qr.ts`, a small byte-mode encoder (versions 1 to 10, level M,
-  adapted from Project Nayuki's MIT-licensed generator, notice included). It is temporary: when store-floor's
-  `lib/labels/qr.ts` lands, `saleQrModules` becomes `return qrModules(text)`. The unit tests decode its output with an
-  independent decoder (format and version words, finder and timing patterns, Reed-Solomon syndromes, data).
+- **FD-deal-trust-5.** The QR is drawn with store-floor's encoder (`lib/labels/qr.ts`, byte mode, level M, versions 1
+  to 10), with no library. This batch's unit tests decode its output with an independent decoder (format and version
+  words, finder and timing patterns, Reed-Solomon syndromes, data), so the claim link is checked end to end.
 
 **How to test.** As `demo-tienda@laria.test`, Mi tienda > Inventario > Mostrador: add `BOSS-DS1`, "Registrar venta",
 "Mostrar código al cliente". Open the link in another browser, sign in as `comprador@laria.test`, confirm. Check the
@@ -223,7 +222,7 @@ All small and marked with a deal-trust comment where they are not obvious:
 
 ## Overlaps for other batches
 
-- **store-floor:** replace `lib/sale-qr.ts` with `lib/labels/qr.ts` (FD-deal-trust-5).
+- **store-floor:** the Mostrador sale QR uses `qrModules` and `qrSvgPath` from `lib/labels/qr.ts` (FD-deal-trust-5).
 - **accounts:** `get_admin_moderation_queue` and `get_account_pendientes` are patched here (left join to listings).
 - **discovery:** the meetup sheet uses `guidesForListing()` for "Qué revisar al probarlo".
 - **selling-tools:** a "Ver mi página" line in Mis publicaciones was left to that batch (see Limitations).

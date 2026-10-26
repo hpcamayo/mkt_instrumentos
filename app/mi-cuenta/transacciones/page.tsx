@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import Link from "next/link";
 import { TransactionCenter } from "@/components/transaction-center";
 import { AccountTrust } from "@/components/trust/account-trust";
 import { Notice } from "@/components/ui/notice";

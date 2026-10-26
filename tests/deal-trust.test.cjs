@@ -8,7 +8,7 @@ const path = require("node:path");
 
 const trust = require(path.resolve("lib/deal-trust.ts"));
 const places = require(path.resolve("lib/safe-meetup-places.ts"));
-const qr = require(path.resolve("lib/sale-qr.ts"));
+const qr = require(path.resolve("lib/labels/qr.ts"));
 const contactMessage = require(path.resolve("lib/contact-message.ts"));
 const read = (file) => fs.readFileSync(file, "utf8");
 
@@ -335,7 +335,7 @@ function decode(modules) {
   return { version, mask, text: Buffer.from(bytes).toString("utf8") };
 }
 
-test("the counter QR (store-floor's encoder) decodes back to its link, versions 1 to 10", () => {
+test("the counter QR (store-floor's lib/labels/qr.ts) decodes back to its link, versions 1 to 10", () => {
   const texts = [
     "Laria",
     "https://laria.audio/compra-en-tienda/0123456789abcdef0123456789abcdef",
@@ -345,19 +345,20 @@ test("the counter QR (store-floor's encoder) decodes back to its link, versions 
   ];
   const versions = new Set();
   for (const text of texts) {
-    const decoded = decode(qr.saleQrModules(text));
+    const decoded = decode(qr.qrModules(text));
     assert.equal(decoded.text, text);
     versions.add(decoded.version);
   }
-  assert.ok(versions.has(1) && versions.has(10) && [...versions].some((v) => v >= 7), `versions covered: ${[...versions]}`);
-  // Every length from 1 to the version 10 limit picks a version that fits and decodes.
-  for (let length = 1; length <= 213; length += 7) assert.equal(decode(qr.saleQrModules("q".repeat(length))).text.length, length);
-  assert.throws(() => qr.saleQrModules("z".repeat(214)), qr.SaleQrTooLong);
+  assert.ok(versions.has(1) && versions.has(5) && versions.has(10) && [...versions].some((v) => v >= 7), `versions covered: ${[...versions]}`);
+  // Every length from 1 to the version 10 limit picks the smallest version that fits and decodes.
+  for (let length = 1; length <= 213; length += 7) assert.equal(decode(qr.qrModules("q".repeat(length))).text.length, length);
+  assert.equal(qr.qrVersionFor("z".repeat(214)), null);
+  assert.throws(() => qr.qrModules("z".repeat(214)), /QR_TOO_LONG/);
   // The decoder is not a mirror of the encoder: one flipped data module, or a damaged format word, fails.
-  const modules = qr.saleQrModules(texts[1]);
+  const modules = qr.qrModules(texts[1]);
   modules[modules.length - 1][modules.length - 1] = !modules[modules.length - 1][modules.length - 1];
   assert.throws(() => decode(modules), /syndrome/);
-  const other = qr.saleQrModules(texts[1]);
+  const other = qr.qrModules(texts[1]);
   for (let x = 0; x < 6; x += 1) other[8][x] = !other[8][x];
   assert.throws(() => decode(other));
 });
