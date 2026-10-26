@@ -193,7 +193,7 @@ export function TradeRequestForm({
           </Field>
         ) : null}
       </div>
-      <Field id="pedido-descripcion" label="Cómo está" error={problems.description} hint="Uso, detalles, accesorios y si tiene caja o estuche. Sin teléfonos ni enlaces: el contacto se comparte cuando eliges una oferta.">
+      <Field id="pedido-descripcion" label="Cómo está" error={problems.description} hint={`Uso, detalles, accesorios y si tiene caja o estuche. Sin teléfonos ni enlaces: el contacto se comparte cuando eliges ${kind === "sell" ? "una oferta" : "el estimado"}.`}>
         <Textarea value={description} maxLength={1000} onChange={(event) => setDescription(event.target.value)} />
       </Field>
       <div className="grid gap-4 md:grid-cols-2">

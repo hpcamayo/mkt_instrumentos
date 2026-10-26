@@ -202,7 +202,8 @@ setting was changed.
    (`tests/feat-selling-tools.sql`), and `pnpm test` (`tests/feat-selling-tools.test.cjs`).
 2. Prototype (`bash scripts/prototype/start-docker-free.sh seed`, then
    `psql "postgresql://postgres@127.0.0.1:54322/postgres" -f scripts/prototype/selling-tools-seed.sql`, which makes the
-   buyer save the Particular's Squier, and `pnpm dev`), as a Particular (`particular@laria.test`):
+   buyer save the Particular's Squier and gives the store a used Ibanez outside Inventario for consignment, and
+   `pnpm dev`), as a Particular (`particular@laria.test`):
    Mi cuenta → Mi equipo → add a guitar with a serial and warranty, turn on the strings reminder, "Vender esto".
 3. As a verified store owner: Ofertas → Qué recibimos → "Compramos usados" (Guitarras), consignment, part payment,
    Cuerdas. Back as the Particular: Mi equipo → "Pedir ofertas a tiendas" with two photos. As the store: Ofertas → the
@@ -210,8 +211,9 @@ setting was changed.
 4. Mis publicaciones → Herramientas de venta on an approved listing: set a floor, send an offer to people who saved it.
    Run the jobs locally: `select public.run_selling_job('price-steps')` as `service_role`, or call the route with
    the local `CRON_SECRET`.
-5. A store listing → Herramientas de venta → consignment link; open it as the Particular and accept; the listing page
-   shows "En consignación en …".
+5. As the store: Inventario → Publicaciones → the used Ibanez → Herramientas de venta → "Invitar a la persona dueña";
+   open the link as the Particular and choose "Vincular a mi cuenta"; the listing page shows "En consignación en …"
+   and "Aceptamos tu equipo como parte de pago". Stock-managed listings can't take a consignment.
 
 Screens: `/mnt/project-files/feature-ideas/screens/selling-tools/` (390 px and 1366 px).
 
@@ -227,8 +229,9 @@ Screens: `/mnt/project-files/feature-ideas/screens/selling-tools/` (390 px and 1
 
 ## Copy that needs legal review
 
-- sell-02 and run-04: "Laria no compra ni paga: la tienda revisa el equipo, confirma el precio final y te paga
-  directamente." "Al elegirla, <Tienda> verá tu nombre y tu WhatsApp, tú verás su dirección…" The privacy policy should mention that the
+- sell-02: "Laria no compra ni paga: la tienda revisa el equipo, confirma el precio final y te paga directamente."
+  run-04: "Laria no compra ni cobra: la tienda revisa el equipo, confirma su valor y lo descuenta de tu compra."
+  "Al elegirla, <Tienda> verá tu nombre y tu WhatsApp, tú verás su dirección…" The privacy policy should mention that the
   person's WhatsApp goes to the store they choose, and that request photos are kept until 90 days after the request
   closes.
 - sell-03: "La comisión y el pago los acuerdan ustedes; Laria no interviene." and the consignment accept screen.
