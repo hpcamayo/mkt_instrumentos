@@ -38,6 +38,14 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   listing_availability_checkin: "¿Sigue disponible?",
   listing_purchase_confirmation_reminder: "Confirma una compra",
   listing_review_reminder: "Tu reseña vence pronto",
+  // feature-ideas services (bet-02)
+  service_approved: "Servicio publicado",
+  service_rejected: "Servicio por corregir",
+  service_hidden: "Servicio ocultado",
+  service_booking_requested: "Confirma una contratación",
+  service_booking_confirmed: "Contratación confirmada",
+  service_booking_declined: "Contratación no confirmada",
+  service_review_received: "Nueva reseña de tu servicio",
 };
 
 export const DEFAULT_NOTIFICATION_LABEL = "Actualización de tu cuenta";
@@ -59,6 +67,10 @@ export function isQuestionNotification(eventType: string) {
 // listing page forwards to its address.
 export function notificationHref(notification: NotificationTarget, listingSlug?: string | null) {
   const transactionReference = notification.transaction_id ?? notification.claim_id;
+  // feature-ideas services (bet-02): every service notice opens Mi cuenta › Servicios (bookings at their section).
+  if (notification.event_type.startsWith("service_")) {
+    return notification.event_type.startsWith("service_booking_") ? "/mi-cuenta/servicios#contrataciones" : "/mi-cuenta/servicios";
+  }
   return transactionReference
     ? `/mi-cuenta/transacciones/${transactionReference}`
     : notification.event_type === "listing_alert_match"
