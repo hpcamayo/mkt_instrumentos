@@ -11,6 +11,7 @@ type FooterLink = { href: string; label: string };
 
 // Footers link only to pages that exist (docs/ux-redesign/ux-2-shell.md).
 const legal = (href: string) => legalPages.find((page) => page.href === href)!;
+const servicesLink: FooterLink = { href: "/servicios", label: "Servicios para músicos" };
 const exploreLinks: FooterLink[] = [
   { href: CATALOG_PATH, label: "Instrumentos" },
   { href: categoryLandingPath("guitars"), label: "Guitarras" },
@@ -21,12 +22,16 @@ const exploreLinks: FooterLink[] = [
   { href: "/hecho-en-peru", label: "Hecho en Perú" },
   { href: "/regalos", label: "Para regalar" },
   { href: "/guias", label: "Guías de compra" },
+  // feature-ideas services (bet-02): its own section, apart from the instruments.
+  servicesLink,
 ];
 // /registrar-tienda sends a signed-out visitor to /registro/tienda and tells a signed-in Particular that a
 // store needs its own account.
 const sellLinks: FooterLink[] = [
   { href: "/vender", label: "Publicar un instrumento" },
   { href: "/registrar-tienda", label: "Registrar mi tienda" },
+  // feature-ideas services (bet-02)
+  { href: "/mi-cuenta/servicios/nuevo", label: "Ofrecer un servicio" },
 ];
 // EASE trust-05: the Libro de Reclamaciones is linked from every footer (a text link; Indecopi practice also shows the
 // book's icon, pending legal review).
@@ -35,6 +40,8 @@ const helpLinks: FooterLink[] = [...["/consejos-de-seguridad", "/articulos-prohi
 const phoneLinks: FooterLink[] = [
   exploreLinks[0], sellLinks[1], legal("/terminos"),
   legal("/consejos-de-seguridad"), legal("/articulos-prohibidos"), legal("/privacidad"), complaintsBook,
+  // feature-ideas services (bet-02): the eighth cell of the 2 × 4 grid.
+  servicesLink,
 ];
 const slimLinks: FooterLink[] = [...["/consejos-de-seguridad", "/terminos", "/privacidad"].map(legal), complaintsBook];
 

@@ -5,7 +5,9 @@ export type AccountNavigationItem = {
     // Effortless Laria, inventory batch (stock-04): purchase requests.
     | "requests"
     // store-floor (buy-07): try-outs at the store.
-    | "tryouts";
+    | "tryouts"
+    // feature-ideas services (bet-02)
+    | "services";
   exact?: boolean;
   // Additional sections that belong to the same navigation entry.
   activePaths?: readonly string[];
@@ -43,6 +45,8 @@ export function getAccountNavigationItems(
         // /Effortless Laria, inventory batch
         ...(payments ? [{ href: "/mi-cuenta/tienda/pagos", label: "Pagos", icon: "payments", activePaths: ["/mi-cuenta/tienda/medios-de-pago"] } as const] : []),
         { href: "/mi-cuenta/tienda/estadisticas", label: "Estadísticas", icon: "analytics" } as const,
+        // feature-ideas services (bet-02): a store offers services as itself.
+        { href: "/mi-cuenta/servicios", label: "Servicios", icon: "services" } as const,
       ] : []),
       ...sharedAccountItems,
     ];
@@ -52,6 +56,8 @@ export function getAccountNavigationItems(
     { href: "/mi-cuenta/publicaciones", label: "Mis publicaciones", icon: "listings" },
     { href: "/mi-cuenta/publicar", label: "Publicar", icon: "publish" },
     { href: "/mi-cuenta/estadisticas", label: "Estadísticas", icon: "analytics" },
+    // feature-ideas services (bet-02)
+    { href: "/mi-cuenta/servicios", label: "Servicios", icon: "services" },
     ...sharedAccountItems,
   ];
 }
