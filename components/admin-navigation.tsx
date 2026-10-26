@@ -22,6 +22,10 @@ const links = [
   { href: "/admin/resenas", label: "Reseñas" },
   { href: "/admin/transacciones", label: "Transacciones" },
   { href: "/admin/legacy", label: "Publicaciones históricas" },
+  // Feature ideas, accounts batch (safe-10, safe-05, safe-02).
+  { href: "/admin/ayuda", label: "Ayuda" },
+  { href: "/admin/fotos-repetidas", label: "Fotos repetidas" },
+  { href: "/admin/equipos-reportados", label: "Equipos reportados" },
 ] as const;
 
 // "Moderación" carries the total of the moderation queues; the other sections are record views without a

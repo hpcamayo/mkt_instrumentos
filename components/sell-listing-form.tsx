@@ -63,6 +63,7 @@ import { addStarter, descriptionStarters, sellHints, shotList, titleFromBrandMod
 import { SHARED_PHOTOS_PARAM, takeSharedPhotos } from "@/lib/share-target";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { cn } from "@/lib/utils";
+import { ListingSerialField } from "@/components/stolen-gear/listing-serial-field";
 
 // The sell form, Effortless Laria (docs/ux-effortless/selling.md; big-06 and POST 01–11, 13–16, SHOP 06, STOCK 09).
 // Four short steps on every screen size: photos first (they shrink and upload in the background while the seller
@@ -1008,6 +1009,8 @@ function SellSuccess({ success, store, direct, reviewWaitMinutes, onSimilar, onA
         <p className="mt-2">{confirmation.next}</p>
       </PageNotice>
       {!live ? <ReviewSteps waitMinutes={reviewWaitMinutes} /> : null}
+      {/* Feature ideas, accounts batch (safe-02): a store's serials live on the SKU. */}
+      {success.slug && !success.sku ? <ListingSerialField listingSlug={success.slug} /> : null}
       {live && href ? (
         <div className="flex flex-wrap items-center gap-3">
           <Link href={href} className={buttonClasses({ variant: "primary" })}>Ver publicación</Link>

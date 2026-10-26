@@ -46,7 +46,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "comprar",
     title: "Cómo contactar a quien vende",
     summary: "El botón de WhatsApp de cada publicación abre la conversación directamente con quien vende.",
-    keywords: ["whatsapp", "contacto", "mensaje", "vendedor", "preguntar", "pregunta publica"],
+    keywords: ["whatsapp", "contacto", "mensaje", "vendedor", "preguntar", "pregunta pública"],
     sections: [
       {
         paragraphs: [
@@ -70,7 +70,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "comprar",
     title: "Cómo pagar y recibir el equipo de forma segura",
     summary: "Laria no cobra ni retiene pagos: acuerdas con quien vende. Prueba el equipo antes de pagar siempre que puedas.",
-    keywords: ["pago", "pagar", "yape", "plin", "transferencia", "adelanto", "envio", "entrega", "recojo", "probar"],
+    keywords: ["pago", "pagar", "yape", "plin", "transferencia", "adelanto", "envío", "entrega", "recojo", "probar"],
     sections: [
       {
         paragraphs: [
@@ -98,7 +98,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "comprar",
     title: "Señales de una posible estafa",
     summary: "Prisa, precios demasiado bajos, adelantos y pedidos de códigos son las señales más comunes.",
-    keywords: ["estafa", "fraude", "sospechoso", "prisa", "codigo", "adelanto", "barato", "falso", "captura"],
+    keywords: ["estafa", "fraude", "sospechoso", "prisa", "código", "adelanto", "barato", "falso", "captura"],
     sections: [
       {
         bullets: [
@@ -124,7 +124,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "comprar",
     title: "Confirmar una compra y dejar una reseña",
     summary: "Si compraste por Laria, confirmarlo habilita las reseñas de ambas partes durante 10 días.",
-    keywords: ["resena", "reseñas", "calificar", "estrellas", "confirmar", "compre", "compraste", "transaccion"],
+    keywords: ["reseña", "reseñas", "calificar", "estrellas", "confirmar", "compré", "compraste", "transacción"],
     sections: [
       {
         paragraphs: [
@@ -141,7 +141,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "comprar",
     title: "Favoritos y alertas",
     summary: "Guarda publicaciones y crea alertas de búsqueda. Te avisamos solo cuando hay algo nuevo, y puedes dejar de recibirlas en un toque.",
-    keywords: ["favorito", "guardar", "alerta", "aviso", "baja de precio", "notificacion", "correo"],
+    keywords: ["favorito", "guardar", "alerta", "aviso", "baja de precio", "notificación", "correo"],
     sections: [
       {
         bullets: [
@@ -158,7 +158,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "comprar",
     title: "Reportar una publicación, una tienda o una reseña",
     summary: "El botón «Reportar» envía tu reporte al equipo de Laria, que lo revisa.",
-    keywords: ["reportar", "denunciar", "falso", "prohibido", "abuso", "moderacion"],
+    keywords: ["reportar", "denunciar", "falso", "prohibido", "abuso", "moderación"],
     sections: [
       {
         paragraphs: [
@@ -174,7 +174,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "comprar",
     title: "Si te robaron un instrumento",
     summary: "Repórtalo en Laria con su número de serie y fotos: si aparece en una publicación, el equipo de Laria lo revisa y te avisa.",
-    keywords: ["robo", "robado", "robaron", "serie", "numero de serie", "denuncia", "policia", "perdido"],
+    keywords: ["robo", "robado", "robaron", "serie", "número de serie", "denuncia", "policía", "perdido"],
     sections: [
       {
         steps: [
@@ -221,7 +221,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "vender",
     title: "Por qué mi publicación está en revisión o fue rechazada",
     summary: "Las publicaciones de Particulares pasan por una revisión antes de verse. Si se rechaza, te decimos el motivo.",
-    keywords: ["revision", "rechazada", "pendiente", "moderacion", "aprobada", "motivo", "corregir"],
+    keywords: ["revisión", "rechazada", "pendiente", "moderación", "aprobada", "motivo", "corregir"],
     sections: [
       {
         paragraphs: [
@@ -267,7 +267,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "vender",
     title: "El número de serie de tu equipo",
     summary: "Es opcional y privado: nadie más lo ve. Laria lo usa solo para compararlo con reportes de equipos robados.",
-    keywords: ["serie", "numero de serie", "serial", "privado", "robado", "sku"],
+    keywords: ["serie", "número de serie", "serial", "privado", "robado", "sku"],
     sections: [
       {
         paragraphs: [
@@ -284,7 +284,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "tiendas",
     title: "Registrar tu tienda",
     summary: "Una tienda usa su propia cuenta. Envías los datos del negocio y el equipo de Laria los revisa.",
-    keywords: ["tienda", "registrar", "ruc", "negocio", "empresa", "razon social", "solicitud"],
+    keywords: ["tienda", "registrar", "ruc", "negocio", "empresa", "razón social", "solicitud"],
     sections: [
       {
         steps: [
@@ -302,7 +302,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "tiendas",
     title: "Tienda y Tienda verificada",
     summary: "«Tienda» pasó la aprobación básica. «Tienda verificada» es un negocio cuya identidad revisó Laria, y publica sin esperar revisión.",
-    keywords: ["verificada", "verificacion", "insignia", "tienda verificada", "aprobacion"],
+    keywords: ["verificada", "verificación", "insignia", "tienda verificada", "aprobación"],
     sections: [
       {
         bullets: [
@@ -320,7 +320,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "tiendas",
     title: "Cupo de publicaciones de una tienda",
     summary: "Cada tienda tiene un cupo de publicaciones activas a la vez; las vendidas, ocultas y rechazadas no cuentan.",
-    keywords: ["cupo", "limite", "50", "publicaciones", "maximo", "mas cupo"],
+    keywords: ["cupo", "límite", "50", "publicaciones", "máximo", "más cupo"],
     sections: [
       {
         paragraphs: [
@@ -354,7 +354,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "cuenta",
     title: "Ingresar y mantener la sesión iniciada",
     summary: "Ingresa con tu contraseña o con un enlace por correo. Con «Mantener sesión iniciada» no te volvemos a pedir nada en ese dispositivo.",
-    keywords: ["ingresar", "iniciar sesion", "login", "contraseña", "olvide", "enlace", "mantener sesion", "google", "apple"],
+    keywords: ["ingresar", "iniciar sesión", "login", "contraseña", "olvidé", "enlace", "mantener sesión", "google", "apple"],
     sections: [
       {
         bullets: [
@@ -372,7 +372,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "cuenta",
     title: "Verificación en dos pasos",
     summary: "Además de tu contraseña, un código de una app de autenticación. Lo pedimos solo en un dispositivo nuevo o después de cerrar sesión.",
-    keywords: ["dos pasos", "2fa", "autenticacion", "codigo", "authenticator", "seguridad", "recuperacion", "telefono perdido"],
+    keywords: ["dos pasos", "2fa", "autenticación", "código", "authenticator", "seguridad", "recuperación", "teléfono perdido"],
     sections: [
       {
         steps: [
@@ -399,7 +399,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
     topic: "cuenta",
     title: "Dispositivos con sesión iniciada",
     summary: "Te escribimos cuando alguien ingresa desde un dispositivo nuevo. En Seguridad puedes cerrar la sesión de cualquiera.",
-    keywords: ["dispositivo", "sesion", "cerrar sesion", "nuevo ingreso", "correo de ingreso", "todos los dispositivos", "hackeo"],
+    keywords: ["dispositivo", "sesión", "cerrar sesión", "nuevo ingreso", "correo de ingreso", "todos los dispositivos", "hackeo"],
     sections: [
       {
         bullets: [
