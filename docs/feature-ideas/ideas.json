@@ -1,0 +1,1972 @@
+[
+ {
+  "id": "safe-01",
+  "area": "safe",
+  "title": "Identity check for sellers",
+  "ui": "«Identidad verificada»",
+  "roles": [
+   "seller",
+   "store",
+   "buyer"
+  ],
+  "what": "A seller checks their DNI against RENIEC through an identity provider, with a selfie check. Their profile and listings then show “Identidad verificada · oct 2026”. Laria keeps the result and the date, never the DNI photo. Optional for everyone; Laria could ask for it before a Particular publishes something over S/ 3,000.",
+  "why": "The fear behind every WhatsApp deal is “who is this person?”. A checked identity is the strongest trust fact a new seller can show long before they have reviews, and it fits the seller panel from list-10.",
+  "cost": "Didit lists US$0.20 per conclusive DNI registry check, with 500 free checks a month; a selfie liveness check costs extra and needs quotes. Biometric data is sensitive data under Peru's data-protection law: explicit consent, a provider contract and a privacy-policy update.",
+  "src": [
+   [
+    "OfferUp TruYou",
+    null
+   ],
+   [
+    "Airbnb ID checks",
+    null
+   ],
+   [
+    "Didit: Peru DNI checks",
+    "https://didit.me/blog/peru-dni-database-validation/"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "ext",
+   "priv",
+   "legal",
+   "db"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "safe-02",
+  "area": "safe",
+  "title": "Stolen-gear registry",
+  "ui": "«¿Te robaron un instrumento?»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "Anyone reports a stolen instrument with its serial number, photos and police report number. Sellers can add a serial privately when they publish (stores take it from the SKU). When a serial or a photo matches a report, the listing goes to the Admin queue with the match explained. Nobody is accused on the page, and the owner who reported it hears only after Admin review.",
+  "why": "Stolen instruments get resold through classifieds. A registry makes Laria the place where thieves can't sell and owners look first, which earns press and goodwill with musicians. Bike Index has run this for bikes for years, including a link to shop tills that records serials at the sale.",
+  "cost": "A report form, a private serial field, matching and an Admin queue. No running cost. Legal reviews the wording (“coincide con un reporte”, never “robado”).",
+  "src": [
+   [
+    "Bike Index",
+    "https://bicycleretailer.com/retail-news/2019/09/11/bike-index-pos-integration-lets-retailers-quickly-add-serial-numbers-national"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "db",
+   "legal",
+   "priv"
+  ],
+  "rec": "next",
+  "top": true,
+  "topwhy": "A trust feature nobody else in Peru offers, with no running cost."
+ },
+ {
+  "id": "safe-03",
+  "area": "safe",
+  "title": "Safe meetups",
+  "ui": "«Encuentro seguro»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "For Particular deals, the listing suggests public places to meet and try the instrument: verified stores that opt in as “Punto seguro Laria”, plus malls and police stations near the seller's district. One tap on “Avisar a alguien” sends a trusted friend the listing, the seller's first name, the place and the time by WhatsApp. A short checklist for trying that type of instrument opens on the phone.",
+  "why": "OfferUp set up hundreds of MeetUp Spots at police stations and supermarkets after robberies at meetups. In Lima, music stores make better spots: they have amps to plug into, and every meetup walks a musician through their door.",
+  "cost": "A store opt-in, a list of places per district and a share link (plain WhatsApp text). No running cost. The copy must never promise safety.",
+  "src": [
+   [
+    "OfferUp MeetUp Spots",
+    "https://www.geekwire.com/2017/offerup-tackles-safety-concerns-designated-pick-zones-exchanging-items/"
+   ],
+   [
+    "Uber trip sharing",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "legal"
+  ],
+  "rec": "soon",
+  "top": true,
+  "topwhy": "Turns stores into safe meeting points and gives every buyer a way to tell someone where they are."
+ },
+ {
+  "id": "safe-04",
+  "area": "safe",
+  "title": "A technician's check before buying",
+  "ui": "«Revisado por técnico»",
+  "roles": [
+   "buyer",
+   "seller",
+   "maker"
+  ],
+  "what": "Before buying an expensive used instrument, the buyer or the seller books a check at a partner luthier, repair shop or store, at that partner's price. The partner fills in a short report (setup, electronics, frets, cracks, what works) that appears on the listing as “Revisado por Taller X el 12/11”. The partner signs the report; Laria only shows it.",
+  "why": "Sweetwater inspects every guitar it ships and eBay sends high-value items to independent authenticators, because checked items sell faster and for more. For vintage guitars, amps and saxophones, a report settles the doubts that end many WhatsApp chats, and luthiers get paid work.",
+  "cost": "Signing up partners is the real work. Then a report form and a mark on the listing. The terms must say the report is the partner's.",
+  "src": [
+   [
+    "Sweetwater inspections",
+    "https://www.sweetwater.com/about/inspections/"
+   ],
+   [
+    "eBay Authenticity Guarantee",
+    "https://reviewed.com/home-outdoors/features/what-ebays-authenticity-guarantee-and-should-you-trust"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "ops",
+   "legal",
+   "spec"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "safe-05",
+  "area": "safe",
+  "title": "Red flags at review time",
+  "ui": "«Alertas para moderación»",
+  "roles": [
+   "buyer",
+   "laria"
+  ],
+  "what": "When a listing is submitted, Laria compares its photos with every other listing's photos and flags copies under a different seller. It also flags a new account whose price is far below the typical range (big-13). Admin sees the reason next to the listing; nothing is rejected automatically.",
+  "why": "The classic classifieds scam is someone else's photos at a low price, then “send a deposit by Yape”. Catching it in moderation keeps scams off Laria as volume grows, without more moderator time.",
+  "cost": "Image fingerprints computed at upload (no outside service) and a price rule once typical prices exist. A simple rule set, not the “sophisticated fraud scoring” the spec leaves out of V1.",
+  "src": [
+   [
+    "Standard practice on large marketplaces",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "db"
+  ],
+  "rec": "soon",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "safe-06",
+  "area": "safe",
+  "title": "Reviews with photos",
+  "ui": "«Reseña con fotos»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "A verified-transaction review can include up to three photos of the instrument as it arrived. They appear with the review on the seller's or store's page.",
+  "why": "A photo shows the instrument matched its listing and makes the review believable. Mercado Libre and Amazon put buyer photos at the top of reviews for that reason.",
+  "cost": "Reuses the photo pipeline and photo moderation.",
+  "src": [
+   [
+    "Mercado Libre",
+    null
+   ],
+   [
+    "Amazon",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "db"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "safe-07",
+  "area": "safe",
+  "title": "A buyer's track record",
+  "ui": "«Comprador con historial»",
+  "roles": [
+   "buyer",
+   "seller"
+  ],
+  "what": "A signed-in buyer can choose to add one line to their WhatsApp message: “Compro en Laria desde 2026 · 3 compras verificadas”, with a link to a small card (first name, member since, verified purchases, the average rating sellers gave them). Off by default, and it can be switched off at any time.",
+  "why": "Sellers fear time-wasters and fake buyers too. A track record that arrives with the first message gets serious buyers answered first. Airbnb hosts and eBay sellers see the other side's record before they agree to a deal.",
+  "cost": "V1 keeps seller-to-buyer reviews private to the buyer, so this opt-in card changes a product rule.",
+  "src": [
+   [
+    "Airbnb",
+    null
+   ],
+   [
+    "eBay",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "spec",
+   "priv"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "safe-08",
+  "area": "safe",
+  "title": "Two-step sign-in for stores",
+  "ui": "«Verificación en dos pasos»",
+  "roles": [
+   "store",
+   "laria"
+  ],
+  "what": "Two-step sign-in with an authenticator app for store owners and Admin, required once a store has approved payment methods. An e-mail on every sign-in from a new device, and “Cerrar sesión en todos los dispositivos”.",
+  "why": "A hijacked store account could change the WhatsApp number or the payment holder and send buyers' money elsewhere. Before the payments pilot opens, this is the cheapest serious protection.",
+  "cost": "Supabase Auth includes authenticator-app sign-in. No running cost.",
+  "src": [
+   [
+    "Supabase multi-factor sign-in",
+    "https://supabase.com/docs/guides/platform/multi-factor-authentication"
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "storeops"
+  ],
+  "rec": "soon",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "safe-09",
+  "area": "safe",
+  "title": "Your data, your call",
+  "ui": "«Tus datos»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "Change your e-mail, download your data (listings, favorites, alerts, reviews) as a file, and delete your account in as few steps as signing up took. Listings are removed; verified transactions stay, anonymized, so the other side's review history still holds.",
+  "why": "Peru's data-protection law gives people the right to see and cancel their data, and the guardrail “leaving is as easy as joining” needs it. Apple requires account deletion inside any app where people can create an account, so the mobile app can't ship without it. E-mail change and deletion sit on today's post-V1 list.",
+  "cost": "Deletion has to walk every table that points at the account. No running cost.",
+  "src": [
+   [
+    "Apple: account deletion in apps",
+    "https://developer.apple.com/support/offering-account-deletion-in-your-app"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "spec",
+   "priv",
+   "legal",
+   "db"
+  ],
+  "rec": "soon",
+  "top": true,
+  "topwhy": "Apple requires it for the app and Peru's data law expects it; small to build now."
+ },
+ {
+  "id": "safe-10",
+  "area": "safe",
+  "title": "Help that answers",
+  "ui": "«Centro de ayuda»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "A searchable help center in Spanish (buying safely, selling, stores, accounts), a “¿No encontraste tu respuesta?” form that opens a ticket in Admin, and Laria's own WhatsApp support line with its hours shown.",
+  "why": "People leave platforms where nobody answers. In Peru, support by WhatsApp is what people expect, and a human line is also the fastest way to report a scam.",
+  "cost": "Content and a form. The ongoing cost is someone answering.",
+  "src": [
+   [
+    "Mercado Libre help",
+    null
+   ],
+   [
+    "Vinted help",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "ops"
+  ],
+  "rec": "soon",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "safe-11",
+  "area": "safe",
+  "title": "The instrument's history",
+  "ui": "«Historial en Laria»",
+  "roles": [
+   "buyer",
+   "seller"
+  ],
+  "what": "When someone relists an instrument they bought through a verified transaction on Laria, the listing can show “Comprado en Laria en mayo 2026 · 1 dueño anterior en Laria”, with the original listing's specs.",
+  "why": "Known provenance raises resale value and trust, like a vehicle history report. It also rewards buying on Laria in the first place.",
+  "cost": "Links the relist to the old transaction with the new owner's consent. Nothing personal about the previous seller is shown.",
+  "src": [
+   [
+    "Vehicle history reports",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "db",
+   "priv"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "buy-01",
+  "area": "buy",
+  "title": "Several items, one message",
+  "ui": "«Combo»",
+  "roles": [
+   "buyer",
+   "store",
+   "seller"
+  ],
+  "what": "Add several listings from the same seller or store to a “Combo” and send one WhatsApp message with every title, price and link. Sellers can offer “10% menos llevando 2 o más”, shown on their listings. Stores can attach “Lo que suele acompañarlo” (cable, strap, tuner, case) to an instrument.",
+  "why": "Beginners need a kit, not just a guitar, and don't know what goes with it. Vinted's bundle discounts and Amazon's “frequently bought together” raise order size, and accessories carry a store's margin. Without checkout it is simply a better message.",
+  "cost": "A small per-seller list kept on the device, a declared discount and the message builder.",
+  "src": [
+   [
+    "Vinted bundle discounts",
+    "https://tools.oneshop.com/blog/bundles-in-vinted"
+   ],
+   [
+    "Amazon",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "db"
+  ],
+  "rec": "soon",
+  "top": true,
+  "topwhy": "Bigger, easier purchases for beginners and accessory sales for stores, with no checkout."
+ },
+ {
+  "id": "buy-02",
+  "area": "buy",
+  "title": "Delivery, said up front",
+  "ui": "«Cómo se entrega»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "Each listing says how it reaches you: pickup or try-out (district), delivery in Lima (and who pays), shipping to provinces (Shalom, Olva or other; paid at origin or at the agency) and “Se puede probar”. Buyers filter by “Envía a provincia” and “Se puede probar”. Laria still handles no shipping.",
+  "why": "Supply sits mostly in Lima, and buyers in Arequipa, Trujillo or Cusco spend their first message asking “¿envías?”. talk-02 lets them ask; this answers before they need to. Agency shipping with Shalom or Olva is how Peru ships between cities.",
+  "cost": "A few listing fields, two filters and alert support.",
+  "src": [
+   [
+    "Wallapop",
+    null
+   ],
+   [
+    "Mercado Libre",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "db"
+  ],
+  "rec": "soon",
+  "top": true,
+  "topwhy": "Answers the first question every buyer outside Lima asks."
+ },
+ {
+  "id": "buy-03",
+  "area": "buy",
+  "title": "Ask Laria",
+  "ui": "«Pregúntale a Laria»",
+  "roles": [
+   "buyer"
+  ],
+  "what": "A box on the home and on results: “busco guitarra para mi hijo de 10 años, hasta S/ 600”. Laria answers with live listings and a short reason for each (3/4 size, nylon strings, what to check), using only Laria's listings and catalog, and shows the filters it used so the buyer can adjust them.",
+  "why": "Amazon's Rufus and eBay's conversational search show people shop in plain words. Beginners and gift buyers don't know scale lengths, watts or 61 versus 88 keys. This goes further than the forgiving search box of big-03.",
+  "cost": "An AI model per question, around a cent or less with a small model, with a cap per visitor. Belongs in the Jev sprint, with Laria's planned AI engine.",
+  "src": [
+   [
+    "Amazon Rufus",
+    "https://aboutamazon.com/news/retail/amazon-rufus"
+   ],
+   [
+    "eBay conversational search",
+    "https://playbook.ebay.com/articles/ebay-design-2025-in-review"
+   ]
+  ],
+  "effort": "L",
+  "flags": [
+   "ext",
+   "jev"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "buy-04",
+  "area": "buy",
+  "title": "Search with a photo",
+  "ui": "«Buscar con una foto»",
+  "roles": [
+   "buyer"
+  ],
+  "what": "Take a photo of a pedal, amp or guitar (at a friend's place, on a stage, in a video) and Laria names the likely brand and model, then shows listings and the typical price.",
+  "why": "Musicians often know the look before the name. eBay's image search and Google Lens made this normal.",
+  "cost": "A vision model per search plus catalog matching. Close to big-07 (a listing assistant that reads photos), which is still a Maybe.",
+  "src": [
+   [
+    "eBay image search",
+    null
+   ],
+   [
+    "Google Lens",
+    null
+   ]
+  ],
+  "effort": "L",
+  "flags": [
+   "ext",
+   "jev"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "buy-05",
+  "area": "buy",
+  "title": "Gift finder",
+  "ui": "«Para regalar»",
+  "roles": [
+   "buyer",
+   "store"
+  ],
+  "what": "Seasonal pages for Navidad, Día del Padre, Día de la Madre and birthdays: pick who it's for (niño, principiante, guitarrista, baterista...) and a budget, and see real listings and accessories, with “qué preguntarle al vendedor” and which stores accept gift exchanges.",
+  "why": "December is Peru's biggest gift season, and people buying for a musician get lost in specs. Etsy's Gift Mode builds guides by recipient and budget. Built in November, it's ready for Navidad 2026.",
+  "cost": "Curated filters and copy; an AI version can come later.",
+  "src": [
+   [
+    "Etsy Gift Mode",
+    "https://techcrunch.com/2024/01/24/etsy-launches-gift-mode-a-new-ai-powered-feature-that-generates-200-gift-guides/"
+   ]
+  ],
+  "effort": "S",
+  "flags": [],
+  "rec": "soon",
+  "top": true,
+  "topwhy": "Ready for Navidad 2026 if it is built in November."
+ },
+ {
+  "id": "buy-06",
+  "area": "buy",
+  "title": "A reminder to change strings",
+  "ui": "«¿Toca cambiar cuerdas?»",
+  "roles": [
+   "buyer",
+   "store"
+  ],
+  "what": "After buying (or from Mi equipo), opt in to one reminder: “Tus cuerdas tienen 3 meses”, or reeds, or drumheads, with stores nearby that stock them. Off by default, one per item, stopped in one tap.",
+  "why": "Amazon's Subscribe & Save and “Buy again” show that consumables are habits. For stores, strings and reeds bring people back to the counter. It's useful news (old strings sound dead) because the person asked for it.",
+  "cost": "Needs the e-mail or push scheduler that is already pending.",
+  "src": [
+   [
+    "Amazon Subscribe & Save",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "buy-07",
+  "area": "buy",
+  "title": "Book a try-out at the store",
+  "ui": "«Reservar una prueba»",
+  "roles": [
+   "buyer",
+   "store"
+  ],
+  "what": "On a store's in-stock listing, “Reservar una prueba”: pick a day and time within the store's hours; the store confirms in one tap and both get the details by WhatsApp. Mi tienda shows the day's appointments.",
+  "why": "Instruments get tried before they're bought, and car marketplaces book test drives online for the same reason. A booked visit is the warmest lead a store can get. It holds a time, not the item (talk-06 “Reservado” is still a Maybe).",
+  "cost": "Time slots from the store's hours, confirmations and one reminder.",
+  "src": [
+   [
+    "Test-drive booking on car marketplaces",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "db",
+   "storeops"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "buy-08",
+  "area": "buy",
+  "title": "Results on a map",
+  "ui": "«Ver en mapa»",
+  "roles": [
+   "buyer"
+  ],
+  "what": "Results on a map: an approximate area for Particulares and an exact pin for stores that show their address.",
+  "why": "In Lima, distance and traffic decide whether a buyer goes. Wallapop, Facebook Marketplace and Airbnb all offer a map; find-10's “Más cerca” is the list version.",
+  "cost": "Map tiles from a provider with a free tier; districts need clean place data (find-05).",
+  "src": [
+   [
+    "Wallapop",
+    null
+   ],
+   [
+    "Airbnb",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "ext",
+   "priv"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "buy-09",
+  "area": "buy",
+  "title": "Installments, said clearly",
+  "ui": "«Cuotas»",
+  "roles": [
+   "buyer",
+   "store"
+  ],
+  "what": "A store lists card installments with its payment methods (“Hasta 12 cuotas sin intereses con...”). When the store offers no-interest installments, its listings show “o 12 cuotas de S/ 250”, and buyers can filter by “Acepta cuotas”. Laria still processes no payment.",
+  "why": "Big purchases in Peru are routinely paid in card installments, and Mercado Libre leads with “cuotas sin interés”. For a S/ 3,000 guitar, buyers compare the monthly number. Reverb offers pay-later at checkout for the same reason.",
+  "cost": "Extends the Pilot A payment methods, with Admin approval. Installments with interest would have to show the TCEA, so only no-interest offers are shown.",
+  "src": [
+   [
+    "Mercado Libre",
+    null
+   ],
+   [
+    "Reverb pay later",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "storeops",
+   "legal"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "buy-10",
+  "area": "buy",
+  "title": "Alerts on WhatsApp",
+  "ui": "«Alertas por WhatsApp»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "Choose WhatsApp instead of e-mail for alert matches, price drops, purchase confirmations and review reminders. A daily digest by default, instant only for the alert you pick, and “Pausar” in every message.",
+  "why": "In Peru WhatsApp gets read and e-mail often doesn't, so this is a reason to sign up. It covers alerts, not signing in, so it isn't big-05.",
+  "cost": "Meta charges per message: about US$0.03 for a utility message to Peru and US$0.07 for marketing (rates from 1 October 2026, Meta's fee only). A daily digest for 500 people costs about US$450 a month. Message templates need Meta's approval.",
+  "src": [
+   [
+    "WhatsApp pricing",
+    "https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing"
+   ],
+   [
+    "Rates by country",
+    "https://agentdeals.dev/whatsapp-business-api-pricing-2026"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "ext",
+   "priv"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "buy-11",
+  "area": "buy",
+  "title": "Sign in with Google or Apple",
+  "ui": "«Continuar con Google»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "Create an account or sign in with Google or Apple in one tap. E-mail and password stay, and these accounts skip the e-mail confirmation step.",
+  "why": "It removes the two steps where most sign-ups are lost: inventing a password and confirming the e-mail. Apple requires Sign in with Apple, or an equally private option, in any iOS app that offers another provider, so the app needs it anyway. It is not big-05 (signing in with a code), which you turned down.",
+  "cost": "Supabase supports both. Apple needs the developer account the app needs anyway (US$99 a year).",
+  "src": [
+   [
+    "Apple login rules (4.8)",
+    "https://developer.apple.com/forums/thread/765145"
+   ]
+  ],
+  "effort": "S",
+  "flags": [],
+  "rec": "talk",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "sell-01",
+  "area": "sell",
+  "title": "My gear",
+  "ui": "«Mi equipo»",
+  "roles": [
+   "seller",
+   "buyer"
+  ],
+  "what": "A private list of what you own, filled automatically from verified purchases or added by brand and model. Each item shows an estimated value from Laria's typical prices, its serial number (which also protects it in the stolen-gear registry), purchase date and warranty end. “Vender esto” opens the sell form already filled in.",
+  "why": "Reverb's My Collection tracks gear value and lists in one click, and eBay's My Closet does the same for clothes. Every buyer becomes a future seller with nothing to type, and the account earns its keep without a single notification.",
+  "cost": "Values depend on catalog matching and typical prices (big-13, find-17).",
+  "src": [
+   [
+    "Reverb My Collection",
+    "https://routenote.com/blog/reverbs-collections-feature/"
+   ],
+   [
+    "eBay My Closet",
+    "https://playbook.ebay.com/articles/ebay-design-2025-in-review"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "db",
+   "jev"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "sell-02",
+  "area": "sell",
+  "title": "Sell it to a store today",
+  "ui": "«Véndelo a una tienda»",
+  "roles": [
+   "seller",
+   "store"
+  ],
+  "what": "When someone sells a guitar, amp, pedal or keyboard, Laria asks “¿Prefieres vender ya?”. Verified stores that buy used gear send an offer within 24 hours. The seller picks one and drops the gear off within five days; the store checks it, confirms the final price and pays the seller directly.",
+  "why": "Reverb launched exactly this in the US: “Sell in-store” and trade-in give an instant offer based on sales data, the seller drops the gear off within five days and the shop confirms its condition. Particulares get speed and certainty; stores get used stock, their best margin.",
+  "cost": "Offer requests, store opt-in by category and notifications. Laria touches no money.",
+  "src": [
+   [
+    "Reverb sell in-store",
+    "https://help.reverb.com/hc/en-us/articles/42562673688091-How-does-selling-in-store-through-Reverb-work"
+   ],
+   [
+    "Reverb trade-in",
+    "https://help.reverb.com/hc/en-us/articles/40917639941915-How-to-trade-in-your-gear-on-Reverb"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "spec",
+   "db",
+   "storeops"
+  ],
+  "rec": "next",
+  "top": true,
+  "topwhy": "A sale in a day for Particulares and used stock for stores; Reverb is doing it now."
+ },
+ {
+  "id": "sell-03",
+  "area": "sell",
+  "title": "A store sells it for you",
+  "ui": "«Consignación»",
+  "roles": [
+   "seller",
+   "store"
+  ],
+  "what": "A Particular leaves an instrument with a participating store, which lists it on Laria as “En consignación en Tienda X”. The owner sees its views and contacts; the store and the owner agree the commission between themselves.",
+  "why": "Consignment is how vintage and high-end used gear sells in music stores: the buyer gets a store's trust and the owner does nothing.",
+  "cost": "A store listing linked to a Particular owner. It counts against the store's listing allowance.",
+  "src": [
+   [
+    "Music store consignment",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "spec",
+   "db",
+   "storeops"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "sell-04",
+  "area": "sell",
+  "title": "Price steps on autopilot",
+  "ui": "«Bajada automática»",
+  "roles": [
+   "seller",
+   "store"
+  ],
+  "what": "Set a floor (“no menos de S/ 1,600”) and a pace (“5% cada semana sin contactos”). Laria lowers the price step by step and stops at the floor, at a sale or when paused. Each real drop reaches people who saved the listing through the existing price-drop alerts.",
+  "why": "Mercari's Smart Pricing moves a price toward the seller's floor based on demand. Most stale listings are overpriced and forgotten; this keeps them moving without the seller having to remember.",
+  "cost": "A scheduled job. Drops follow the 5% alert rule from save-08.",
+  "src": [
+   [
+    "Mercari Smart Pricing",
+    "https://www.nifty.ai/post/mercari-smart-pricing"
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "db"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "sell-05",
+  "area": "sell",
+  "title": "A private offer to people who saved it",
+  "ui": "«Oferta a interesados»",
+  "roles": [
+   "seller",
+   "store",
+   "buyer"
+  ],
+  "what": "The seller sends one private price to everyone who saved the listing (“S/ 1,800 para ti hasta el domingo”). It arrives in the app or by e-mail with a WhatsApp button that quotes the offer. The public price stays the same. Once per listing per week.",
+  "why": "eBay lets sellers send offers to watchers and Poshmark to “likers”, because people who saved an item are the warmest buyers. The end date is the seller's real deadline. This is not talk-07, where the buyer makes the offer.",
+  "cost": "A small offer record and one notification per person who saved it.",
+  "src": [
+   [
+    "eBay offers to buyers",
+    "https://innovation.ebayinc.com/stories/ebay-makes-it-easier-with-three-new-ways-for-sellers-to-send-offers-to-buyers/"
+   ],
+   [
+    "Poshmark offers to likers",
+    "https://blog.vendoo.co/a-guide-to-poshmark-offers-etiquette-offering-canceling"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "db"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "sell-06",
+  "area": "sell",
+  "title": "Trades welcome",
+  "ui": "«Acepto cambios»",
+  "roles": [
+   "seller",
+   "buyer"
+  ],
+  "what": "A listing option “Acepto cambios por...” (free text and categories), a filter “Acepta cambios” and a WhatsApp chip “Te propongo un cambio”.",
+  "why": "Swapping gear is part of musician culture, and Peru's Facebook groups are full of “venta o cambio”. On Laria it's buried in descriptions today. The listing still has a price, so it fits the rules.",
+  "cost": "A field, a filter and a chip.",
+  "src": [
+   [
+    "Facebook buy-and-sell groups",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "db"
+  ],
+  "rec": "soon",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "sell-07",
+  "area": "sell",
+  "title": "Fixed or open price",
+  "ui": "«Precio fijo o conversable»",
+  "roles": [
+   "seller",
+   "buyer"
+  ],
+  "what": "One toggle next to the price, “Precio fijo” or “Conversable”, shown on the card and the listing.",
+  "why": "It sets expectations before the first message and cuts the “¿precio final?” back-and-forth for both sides.",
+  "cost": "One field.",
+  "src": [
+   [
+    "Wallapop",
+    null
+   ],
+   [
+    "Vinted",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "db"
+  ],
+  "rec": "soon",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "sell-08",
+  "area": "sell",
+  "title": "A level you earn",
+  "ui": "«Vendedor destacado»",
+  "roles": [
+   "seller",
+   "store",
+   "buyer"
+  ],
+  "what": "An automatic mark with public criteria, for example 5 or more verified sales, a 4.5 average, no upheld reports in 90 days and answered questions. “¿Por qué?” explains it, and it lapses by itself when the criteria do.",
+  "why": "eBay Top Rated, Etsy Star Seller, Airbnb Superhost and MercadoLíder steer sellers toward good behavior and help buyers choose. It's earned from real outcomes, so it respects the “no engagement badges” guardrail.",
+  "cost": "A nightly calculation and a mark.",
+  "src": [
+   [
+    "MercadoLíder",
+    "https://www.mercadolibre.com.pe/l/ser-mercadolider"
+   ],
+   [
+    "Etsy Star Seller",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "db",
+   "spec"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "sell-09",
+  "area": "sell",
+  "title": "A public seller page",
+  "ui": "«Perfil del vendedor»",
+  "roles": [
+   "seller",
+   "buyer"
+  ],
+  "what": "Particulares get a page with first name, city, member since, verified sales, reviews and every active listing, plus a link to share it (“Mi venta de equipos”).",
+  "why": "Today only stores have pages. Vinted, Wallapop and Depop profiles let buyers judge the person and browse everything they sell, and a seller with five items shares one link instead of five.",
+  "cost": "A new public page showing first name and city only, with no buyer data.",
+  "src": [
+   [
+    "Vinted",
+    null
+   ],
+   [
+    "Wallapop",
+    null
+   ],
+   [
+    "Depop",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "priv",
+   "spec"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "sell-10",
+  "area": "sell",
+  "title": "Condition you can trust",
+  "ui": "«Estado detallado»",
+  "roles": [
+   "seller",
+   "buyer",
+   "store"
+  ],
+  "what": "Replace today's three conditions with a clear scale: Nuevo, Como nuevo, Excelente, Muy bueno, Bueno, Regular and Para reparar, each with a one-line definition and an example photo, shown while selling and on tap on the listing. Stores also get “Exhibición o caja abierta”. Old values map across automatically.",
+  "why": "“Usado - con detalles” covers everything from a pick scratch to a cracked neck, and vague condition is the main cause of disappointed buyers and bad reviews. Reverb's scale (Excellent down to Non-functioning, plus Brand New, B-Stock and Mint for retailers) is the music-gear standard.",
+  "cost": "A data migration for listings, filters and saved alerts that use the old values, plus copy.",
+  "src": [
+   [
+    "Reverb gear conditions",
+    "https://help.reverb.com/hc/en-gb/articles/40934592346395-Gear-conditions-and-what-they-mean"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "spec",
+   "db"
+  ],
+  "rec": "soon",
+  "top": true,
+  "topwhy": "Fixes the vaguest field on every listing, and it's cheaper before launch volume than after."
+ },
+ {
+  "id": "reach-01",
+  "area": "reach",
+  "title": "Bring your Mercado Libre listings",
+  "ui": "«Importar desde Mercado Libre»",
+  "roles": [
+   "store"
+  ],
+  "what": "A store signs in to Mercado Libre from Laria (Mercado Libre's official sign-in for apps), picks listings, and Laria maps title, photos, price, attributes and description into the sell form for review and publishing under the usual moderation and allowance. Shopify and WooCommerce can follow under SYNC-1.",
+  "why": "Most Peruvian music stores that sell online already list on Mercado Libre, and retyping a catalog is the main reason a store stops halfway through onboarding.",
+  "cost": "A Mercado Libre developer app, category and attribute mapping and photo copying. No running cost. Check Mercado Libre's terms on moving a seller's own content.",
+  "src": [
+   [
+    "Mercado Libre items API",
+    "https://developers.mercadolibre.com.ar/items-y-busquedas"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "storeops",
+   "legal"
+  ],
+  "rec": "soon",
+  "top": true,
+  "topwhy": "Removes the main reason stores don't finish onboarding: retyping their catalog."
+ },
+ {
+  "id": "reach-02",
+  "area": "reach",
+  "title": "Your stock on Instagram, WhatsApp and Google",
+  "ui": "«Catálogo para redes»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "Laria publishes a product feed per store that the store connects once to Meta Commerce Manager (Instagram and Facebook shopping, the WhatsApp Business catalog) and to Google Merchant Center (free listings). Each product links back to its Laria listing, and price and stock stay in sync. One feed for all of Laria puts every listing in Google's Shopping tab.",
+  "why": "Peruvian stores sell through Instagram and WhatsApp, and Google shows Merchant Center products without ads. A catalog kept once in Laria then shows up everywhere, which makes Laria the store's source of truth.",
+  "cost": "Feed endpoints and a how-to. Google asks for prices in soles, visible legal pages and shipping settings.",
+  "src": [
+   [
+    "Google free listings",
+    "https://www.searchenginejournal.com/google-makes-shopping-ads-free-worldwide/382665/"
+   ],
+   [
+    "Google Shopping in Peru",
+    "https://kom.pe/google-shopping-woocommerce-lima-peru/"
+   ],
+   [
+    "Meta product catalog",
+    "https://www.channable.com/integrations/meta-product-catalog"
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "storeops"
+  ],
+  "rec": "soon",
+  "top": true,
+  "topwhy": "Makes Laria the place stores keep their catalog for Instagram, WhatsApp and Google."
+ },
+ {
+  "id": "reach-03",
+  "area": "reach",
+  "title": "A website for your store",
+  "ui": "«Tu tienda con tu dominio»",
+  "roles": [
+   "store"
+  ],
+  "what": "A verified store points its own domain (or tienda.laria.audio) at a clean version of its Laria storefront: logo, colors, listings, hours, map and WhatsApp.",
+  "why": "Many small stores have only an Instagram account. A site that updates itself from Laria is a strong reason to stay with Laria.",
+  "cost": "Custom domains and certificates through the hosting provider's API.",
+  "src": [
+   [
+    "Shopify",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "ext"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "reach-04",
+  "area": "reach",
+  "title": "Authorized dealer mark",
+  "ui": "«Distribuidor oficial»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "A store that is an authorized dealer of a brand uploads the authorization; Admin checks it, and that store's listings of the brand show “Distribuidor oficial Yamaha” with the manufacturer's warranty. Brand pages list official dealers first.",
+  "why": "Counterfeits and grey imports worry buyers of new gear, and Mercado Libre's Tiendas Oficiales are how brands sell there. For a store it's prestige that can't be bought on Laria.",
+  "cost": "An Admin check per brand and a mark.",
+  "src": [
+   [
+    "Mercado Libre Tiendas Oficiales",
+    "https://www.xataka.com.mx/seleccion/tiendas-oficiales-mercado-libre-asi-puedes-identificar-cuando-compras-producto-oficial-cualquier-marca-tienda"
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "db",
+   "legal"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "reach-05",
+  "area": "reach",
+  "title": "Sales events that are real",
+  "ui": "«Campañas Laria»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "Laria runs campaign pages for Cyber Wow, Navidad, Día de la Música and back to school. Stores opt in listings with a real discount, and Laria checks that the “Antes” price is what the listing actually held over the previous 30 days. No countdowns.",
+  "why": "Cyber Wow (IAB Perú) runs three editions a year, in April, July and November, and moves the whole country online. Indecopi has set criteria against fake “before” prices, so a campaign where Laria checks the reference price is the honest place to shop deals.",
+  "cost": "A campaign record, an eligibility check from price history and a landing page. The next realistic date is Cyber Wow in April 2027.",
+  "src": [
+   [
+    "Cyber Wow 2026",
+    "https://infomercado.pe/cyber-wow-2026-cuando-empieza-y-cuanto-dura/"
+   ],
+   [
+    "Indecopi on misleading discounts",
+    "https://lpderecho.pe/precedente-vinculante-identificar-engano-precio-ofertas-resolucion-186-2021-ccd-indecopi"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "legal",
+   "db"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "reach-06",
+  "area": "reach",
+  "title": "What buyers are looking for",
+  "ui": "«Lo que buscan en Laria»",
+  "roles": [
+   "store"
+  ],
+  "what": "A monthly report for stores: the brands, models and types people searched for or set alerts on, by city, against how many are listed (“34 alertas buscan un Fender Jazz Bass en Lima; hay 2 publicados”), plus the top searches with no results. Only counts of 5 or more, never people.",
+  "why": "Discogs shows sellers how many people want a record, and Mercado Libre publishes trends. Laria already records searches and alerts, so turning them into a buying list is pure value for stores, and it fills the gaps buyers hit.",
+  "cost": "Totals over events Laria already records, with a minimum count.",
+  "src": [
+   [
+    "Discogs wantlists",
+    null
+   ],
+   [
+    "Mercado Libre Tendencias",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "priv",
+   "storeops"
+  ],
+  "rec": "soon",
+  "top": true,
+  "topwhy": "Turns data Laria already has into a buying list stores will open every month."
+ },
+ {
+  "id": "reach-07",
+  "area": "reach",
+  "title": "Your price against the market",
+  "ui": "«Tu precio»",
+  "roles": [
+   "store",
+   "seller",
+   "buyer"
+  ],
+  "what": "In Inventario and on the edit page: “Por encima del rango típico (S/ 2,100 a 2,500)”. A “Buen precio” mark on the public listing when it sits inside or below the range.",
+  "why": "Mercado Libre and Amazon nudge sellers about price competitiveness, and Reverb's app code includes a “great value” badge. Stores price faster and buyers trust faster.",
+  "cost": "Comes almost free once big-13's typical prices exist.",
+  "src": [
+   [
+    "Mercado Libre",
+    null
+   ],
+   [
+    "Reverb",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "jev"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "reach-08",
+  "area": "reach",
+  "title": "Stock that's on its way",
+  "ui": "«Por llegar»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "A SKU can be “Por llegar, fecha estimada 15/12”. The listing stays visible with the date, buyers tap “Avísame cuando llegue”, and the restock notifies them once.",
+  "why": "Stores import, and customers keep asking “¿cuándo te llega?”. Showing the expected date keeps that demand on Laria instead of the store next door.",
+  "cost": "A new stock state plus the existing back-in-stock alert (list-11).",
+  "src": [
+   [
+    "Sweetwater and Thomann expected dates",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "storeops",
+   "db"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "reach-09",
+  "area": "reach",
+  "title": "Warranty and returns, side by side",
+  "ui": "«Garantía y cambios»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "Stores state their warranty and returns once, per condition (“Garantía de 12 meses”, “Cambios en 7 días con boleta”, “Usado con garantía de tienda: 3 meses”). Every listing shows the line, and buyers can filter by “Con garantía”.",
+  "why": "Warranty is the main reason to buy from a store rather than a stranger. Back Market built a brand on used goods with a warranty. shop-06 adds a free-text footer; this makes warranties comparable and filterable.",
+  "cost": "A few store fields, a listing line and a filter. The promise is the store's.",
+  "src": [
+   [
+    "Back Market",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "db",
+   "legal",
+   "storeops"
+  ],
+  "rec": "soon",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "reach-10",
+  "area": "reach",
+  "title": "Price labels and QR codes",
+  "ui": "«Etiquetas para la tienda»",
+  "roles": [
+   "store"
+  ],
+  "what": "Print price labels from Inventario with a barcode (for Mostrador), the price and a QR to the listing, plus a counter poster “Encuéntranos en Laria” with the store's QR.",
+  "why": "Mostrador scans barcodes that many small stores don't have. A QR on the shelf turns walk-in browsers into followers, reviewers and later online buyers.",
+  "cost": "A label sheet generated in the browser for standard label paper.",
+  "src": [
+   [
+    "Point-of-sale label printing",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "storeops"
+  ],
+  "rec": "soon",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "reach-11",
+  "area": "reach",
+  "title": "Counter sales that earn reviews",
+  "ui": "«Compra en tienda verificada»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "When a store records a Mostrador sale, it can show a one-time QR on its phone. The customer scans it, signs in and confirms “Compré en Tienda X”, which creates a verified transaction and unlocks a review, just like a WhatsApp purchase.",
+  "why": "Most store sales happen at the counter, so stores collect very few reviews today, and reviews are a store's most valuable asset on Laria.",
+  "cost": "Changes the V1 rule that only WhatsApp contacts become verified buyers. Each code is tied to one recorded sale and expires.",
+  "src": [
+   [
+    "Review-after-visit codes",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "spec",
+   "storeops",
+   "db"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "run-01",
+  "area": "run",
+  "title": "Staff accounts",
+  "ui": "«Equipo de la tienda»",
+  "roles": [
+   "store"
+  ],
+  "what": "The owner invites staff with roles: Vendedor (Mostrador and Solicitudes), Encargado (inventory and listings) and Dueño (everything, including payment methods and RUC). Every stock movement records who made it.",
+  "why": "Counters are run by employees, and sharing the owner's password is a security hole. Every serious store platform has staff roles. The database already has store member roles that V1 doesn't use.",
+  "cost": "Permissions across the store screens and database functions.",
+  "src": [
+   [
+    "Shopify staff accounts",
+    null
+   ],
+   [
+    "Mercado Libre",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "spec",
+   "db",
+   "storeops"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "run-02",
+  "area": "run",
+  "title": "Several locations",
+  "ui": "«Sedes»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "Stock per location, “Disponible en Miraflores y en el Centro” on the listing, pickup at the chosen location, and Mostrador per location.",
+  "why": "Larger music chains in Peru have several branches, and without this they can't use inventory honestly.",
+  "cost": "Location becomes part of stock, movements, imports and exports.",
+  "src": [
+   [
+    "Retail inventory systems",
+    null
+   ]
+  ],
+  "effort": "L",
+  "flags": [
+   "spec",
+   "db",
+   "storeops"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "run-03",
+  "area": "run",
+  "title": "Boleta from the counter",
+  "ui": "«Boleta electrónica»",
+  "roles": [
+   "store"
+  ],
+  "what": "Connect an electronic-invoicing provider (for example Nubefact) so a Mostrador sale issues a boleta or factura to SUNAT in one tap, with the customer's DNI or RUC, and sends the copy by e-mail or WhatsApp.",
+  "why": "Every formal store must issue comprobantes. Doing it where the sale is recorded removes double entry and makes Laria the store's daily tool.",
+  "cost": "The store pays its own provider; Laria builds the connection, error handling and certification.",
+  "src": [
+   [
+    "Bsale",
+    null
+   ],
+   [
+    "Nubefact",
+    null
+   ]
+  ],
+  "effort": "L",
+  "flags": [
+   "ext",
+   "legal",
+   "storeops"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "run-04",
+  "area": "run",
+  "title": "Your old gear as part payment",
+  "ui": "«Parte de pago»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "Store listings can say “Aceptamos tu equipo como parte de pago”. The buyer picks an item from Mi equipo (or describes it with photos) and the store replies with an estimate.",
+  "why": "Trade-ins close upgrades, as Guitar Center and Reverb's trade-in show. A buyer with an old amp buys sooner when it counts, and the store gets used stock.",
+  "cost": "A request form and the store's reply.",
+  "src": [
+   [
+    "Reverb trade-in",
+    "https://help.reverb.com/hc/en-us/articles/40917639941915-How-to-trade-in-your-gear-on-Reverb"
+   ],
+   [
+    "Guitar Center",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "storeops"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "money-01",
+  "area": "money",
+  "title": "Protected payment",
+  "ui": "«Pago protegido»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store",
+   "laria"
+  ],
+  "what": "The buyer pays through Laria by card or Yape via a payment processor that holds the money until the buyer confirms receipt (or a set time after tracked delivery), then pays the seller minus a fee. Disputes follow published rules, and a balance can stay on Laria for the next purchase.",
+  "why": "Mercado Libre's Compra Protegida, Vinted's buyer protection and Reverb's protection are why strangers pay strangers online, and they unlock buying from another city. Reverb Wallet and eBay's balance keep earnings inside the marketplace. It is the single biggest lever, and the biggest change.",
+  "cost": "A processor contract (Mercado Pago offers split payments in Peru; Culqi, Niubiz and Izipay are local options), seller identity checks, refunds, disputes and chargebacks, consumer-law duties as an intermediary, SUNAT invoices for Laria's fee and a rewrite of the terms. Processor fees on each payment plus a support desk.",
+  "src": [
+   [
+    "Mercado Pago split payments (Peru)",
+    "https://www.mercadopago.com.pe/developers/en/docs/split-payments/integration-configuration"
+   ],
+   [
+    "Reverb Wallet",
+    "https://guitar.com/news/industry-news/reverb-wallet/"
+   ],
+   [
+    "eBay balance",
+    "https://playbook.ebay.com/articles/ebay-design-2025-in-review"
+   ]
+  ],
+  "effort": "XL",
+  "flags": [
+   "spec",
+   "legal",
+   "ext",
+   "ops"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "money-02",
+  "area": "money",
+  "title": "Shipping booked in Laria",
+  "ui": "«Envío con Laria»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "The seller books a courier from the listing (Olva or Shalom between cities, a same-day courier in Lima), prints the label, and the buyer sees the tracking number. A packing guide per instrument type. Laria's corporate rates are shared by every seller.",
+  "why": "Mercado Libre now runs its own logistics in Peru, Vinted Go made shipping one tap, and Reverb sells labels. Couriers open their APIs only to corporate accounts with negotiated rates, which Laria could hold for everyone.",
+  "cost": "Courier contracts and integration (Olva offers an API; Shalom's is limited), insurance for instruments and damage claims. Works best together with protected payment.",
+  "src": [
+   [
+    "Olva and Shalom for online stores",
+    "https://kom.pe/como-integrar-olva-courier-y-shalom-en-tu-tienda-virtual/"
+   ],
+   [
+    "Vinted Go",
+    "https://vintedgo.com/"
+   ]
+  ],
+  "effort": "L",
+  "flags": [
+   "ext",
+   "ops",
+   "spec"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "disc-01",
+  "area": "disc",
+  "title": "Price guide pages",
+  "ui": "«Guía de precios»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "A public page per model: “Fender Player Stratocaster usada en Perú: S/ 2,100 a 2,600”, from 12 months of Laria listings and verified sales, with the new price at stores, listings for sale now and an alert button. Shown only when there is enough data.",
+  "why": "Reverb's Price Guide is one of its most used features, and “¿cuánto cuesta...?” is what people search before buying or selling. It takes big-13 (typical price on the listing) and find-17 (browse by model) into a page that search engines index.",
+  "cost": "Needs catalog matching and enough data per model.",
+  "src": [
+   [
+    "Reverb Price Guide",
+    "https://reverb.com/news/how-to-use-the-reverb-price-guide"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "jev"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "disc-02",
+  "area": "disc",
+  "title": "Buying guides and try-out checklists",
+  "ui": "«Guías de compra»",
+  "roles": [
+   "buyer",
+   "seller"
+  ],
+  "what": "Short Spanish guides per category (“Cómo elegir tu primer teclado”, “Qué revisar en una guitarra usada”) and an interactive checklist for the meetup (frets, truss rod, jack, pots, buzz, battery compartment). Linked from listings of that type and from talk-04's safety sheet.",
+  "why": "Beginners buy with more confidence, try-outs catch problems before money changes hands, and guides bring in search traffic.",
+  "cost": "Writing, plus a review by a musician. No running cost.",
+  "src": [
+   [
+    "Sweetwater InSync",
+    null
+   ],
+   [
+    "Reverb News",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [],
+  "rec": "soon",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "disc-03",
+  "area": "disc",
+  "title": "Collections with a Peruvian voice",
+  "ui": "«Colecciones»",
+  "roles": [
+   "buyer",
+   "store"
+  ],
+  "what": "Dated collections that Admin builds from filters: “Criollo y afroperuano” (cajón, guitarra criolla), “Andino” (charango, quena, zampoña), “Banda escolar” (lira, tambores, trompetas, before the school year and the July parades), “Alabanza”, “Home studio”, “Empieza con S/ 500”. Shown on the home and easy to share.",
+  "why": "Etsy's and Reverb's editors' picks give a big catalog a voice. Collections for Peru's own music and seasons say “made for Peru” like nothing else, and give the home fresh variety without a feed.",
+  "cost": "An Admin tool that saves a set of filters with a title, a text and dates.",
+  "src": [
+   [
+    "Etsy editors' picks",
+    null
+   ],
+   [
+    "Reverb collections",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [],
+  "rec": "soon",
+  "top": true,
+  "topwhy": "Gives the home a Peruvian voice, starting with Navidad and the school-band season."
+ },
+ {
+  "id": "disc-04",
+  "area": "disc",
+  "title": "Made in Peru",
+  "ui": "«Hecho en Perú»",
+  "roles": [
+   "maker",
+   "buyer",
+   "seller"
+  ],
+  "what": "Luthiers and workshops get a maker profile and a “Hecho a mano en Ayacucho” mark, listings can be made to order (“Se hace a pedido: 3 semanas”), and a landing page tells each maker's story.",
+  "why": "Peru's luthiers make cajones, charangos and guitars that musicians abroad look for, and Etsy built a marketplace on handmade and made-to-order. It sets Laria apart from Mercado Libre.",
+  "cost": "A seller attribute, a mark and a made-to-order option. A made-to-order item is still a concrete item with a price, but the rules page needs a line about it.",
+  "src": [
+   [
+    "Etsy",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "spec",
+   "db"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "disc-05",
+  "area": "disc",
+  "title": "Gear from Peruvian artists",
+  "ui": "«Equipo de artistas»",
+  "roles": [
+   "maker",
+   "buyer"
+  ],
+  "what": "Verified Peruvian musicians sell gear they played (“Usado en la gira 2024”), with a verified-artist mark and a short story, gathered on one landing page.",
+  "why": "Fans and press follow artists' gear, and Reverb regularly hosts artist shops for that reason. One well-known musician selling an amp brings more visitors than any ad.",
+  "cost": "An identity check for the artist and a landing page. Claims about how the gear was used remain the seller's.",
+  "src": [
+   [
+    "Reverb artist shops",
+    null
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "legal"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "disc-06",
+  "area": "disc",
+  "title": "Short videos on listings",
+  "ui": "«Video corto»",
+  "roles": [
+   "seller",
+   "store",
+   "buyer"
+  ],
+  "what": "An optional 15 to 30-second vertical video per listing, compressed on the phone and played only when tapped. Cards show a small “Video” mark. It complements the sound clip from post-16.",
+  "why": "Mercado Libre brought short product videos (Clips) to Peru in 2025. A video proves the instrument works and belongs to the seller. No autoplay and no feed.",
+  "cost": "Video storage and delivery costs per minute, plus moderation of video.",
+  "src": [
+   [
+    "Mercado Libre Clips in Peru",
+    "https://www.mercadonegro.pe/marketing/mercado-libre-lanza-clips-en-peru-una-nueva-forma-de-descubrir-productos-a-traves-de-videos-cortos"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "ext",
+   "db"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "disc-07",
+  "area": "disc",
+  "title": "Pedalboard planner",
+  "ui": "«Arma tu pedalboard»",
+  "roles": [
+   "buyer",
+   "store"
+  ],
+  "what": "Drag pedals from listings and Mi equipo onto a board of real size, see whether they fit, the total price and the power they need, then contact each seller or a store's combo.",
+  "why": "A tool only musicians care about, which keeps them planning on Laria rather than elsewhere. Pedal-planning websites already have loyal users.",
+  "cost": "Needs pedal dimensions and power specs from the catalog.",
+  "src": [
+   [
+    "Pedal planner websites",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "jev"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "disc-08",
+  "area": "disc",
+  "title": "Fits your gear",
+  "ui": "«Compatible con tu equipo»",
+  "roles": [
+   "buyer",
+   "store"
+  ],
+  "what": "With Mi equipo, strings, cases, power supplies, pickups and parts say “Compatible con tu Fender Stratocaster” (scale, size, voltage), and stores' accessories appear on the gear's page.",
+  "why": "Amazon's “fits your vehicle” and eBay's guaranteed fit cut wrong purchases, and accessories are where stores make their margin.",
+  "cost": "Fit attributes in the catalog.",
+  "src": [
+   [
+    "Amazon Garage",
+    null
+   ],
+   [
+    "eBay guaranteed fit",
+    null
+   ]
+  ],
+  "effort": "L",
+  "flags": [
+   "jev"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "bet-01",
+  "area": "bet",
+  "title": "Curated auctions for rare gear",
+  "ui": "«Subastas Laria»",
+  "roles": [
+   "buyer",
+   "seller",
+   "store"
+  ],
+  "what": "A weekly auction for vintage and rare items, curated by Admin with an expert check on each lot: a start price and a reserve, bids from verified buyers, a fixed close with a short extension against last-second sniping, and payment through protected payment.",
+  "why": "Catawiki built a business on weekly auctions curated by experts, and eBay auctions find prices for rare items. For a 1970s amp or a master luthier's charango, an auction finds the price nobody can guess. You raised auctions yourself in your note on price-drop alerts.",
+  "cost": "Needs protected payment (or deposits) so winners pay, auction rules under consumer law and checks against fake bids. Only the real closing time is shown, with no other pressure.",
+  "src": [
+   [
+    "Catawiki",
+    "https://www.catawiki.com/pages/p/buyer-protection"
+   ],
+   [
+    "eBay auctions",
+    null
+   ]
+  ],
+  "effort": "L",
+  "flags": [
+   "spec",
+   "legal",
+   "pay"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "bet-02",
+  "area": "bet",
+  "title": "Lessons, repairs and studios",
+  "ui": "«Servicios para músicos»",
+  "roles": [
+   "maker",
+   "buyer"
+  ],
+  "what": "A separate section for teachers, luthiers and repair shops, rehearsal and recording studios, and sound for events: profiles with starting prices, areas served and WhatsApp contact, reviewed after a confirmed booking. Services never mix into instrument search.",
+  "why": "Every musician needs a setup, a teacher or a room every month, so it gives Laria a second regular reason to be opened and a stream of future buyers (a student's first guitar). Superprof and Thumbtack show the demand. Services are prohibited as listings today, so it changes a rule.",
+  "cost": "A new listing type, categories, moderation and reviews.",
+  "src": [
+   [
+    "Superprof",
+    null
+   ],
+   [
+    "Thumbtack",
+    null
+   ]
+  ],
+  "effort": "L",
+  "flags": [
+   "spec",
+   "legal",
+   "db"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "bet-03",
+  "area": "bet",
+  "title": "Rentals and rent-to-own",
+  "ui": "«Alquiler»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "Stores rent instruments and backline by the day, week or month, and offer rent-to-own for students, where monthly payments count toward buying.",
+  "why": "Rent-to-own band programs put instruments in students' hands in the US. Peru's school bands and youth orchestras need trumpets, drums and violins for a season. Rentals are prohibited today, so it changes a rule.",
+  "cost": "Deposits, damage and contracts; much easier once protected payment exists.",
+  "src": [
+   [
+    "Band and orchestra rental programs",
+    "https://www.alamomusic.com/pages/band-orchestra-rental"
+   ]
+  ],
+  "effort": "L",
+  "flags": [
+   "spec",
+   "legal",
+   "pay"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "bet-04",
+  "area": "bet",
+  "title": "Publish by sending a WhatsApp",
+  "ui": "«Publica por WhatsApp»",
+  "roles": [
+   "seller",
+   "store"
+  ],
+  "what": "Send photos and a voice note to Laria's WhatsApp number. Laria drafts the listing (category, brand, model, description and a suggested price) and replies with a link to check it and publish in one tap. Moderation stays the same.",
+  "why": "In Peru people already send photos over WhatsApp, so this is the shortest possible path to a listing. eBay says its AI listing tool, which drafts a listing from photos, raised listings per seller by about half in the US.",
+  "cost": "WhatsApp replies inside the 24-hour window (1,000 free a month per number, then about US$0.03 each to Peru), speech-to-text and a vision model. Depends on big-07 (still a Maybe) and on Jev.",
+  "src": [
+   [
+    "eBay AI listings",
+    "https://cryptobriefing.com/ebay-ai-listings-50-percent-increase/"
+   ],
+   [
+    "eBay design 2025",
+    "https://playbook.ebay.com/articles/ebay-design-2025-in-review"
+   ]
+  ],
+  "effort": "L",
+  "flags": [
+   "ext",
+   "jev",
+   "spec"
+  ],
+  "rec": "talk",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "bet-05",
+  "area": "bet",
+  "title": "Give an instrument a second life",
+  "ui": "«Dona tu instrumento»",
+  "roles": [
+   "seller",
+   "buyer",
+   "laria"
+  ],
+  "what": "Donate an instrument to a vetted youth music program (for example Sinfonía por el Perú or a school band) through Laria, with drop-off at a partner store. Donors can show a thank-you on their profile, and the program posts where the instrument went.",
+  "why": "Reverb Gives has funded youth music programs for years, and eBay for Charity lets sellers donate part of a sale. Sinfonía por el Perú says it has reached 30,000 children and young people. It makes Laria loved and talked about, and it moves idle instruments.",
+  "cost": "Partnership work and a donation flow. Donating part of a sale would need protected payment.",
+  "src": [
+   [
+    "Reverb Gives",
+    "https://reverb.com/news/reverb-gives-reaches-a-donation-milestone"
+   ],
+   [
+    "Sinfonía por el Perú",
+    "https://rpp.pe/cultura/mas-cultura/juan-diego-florez-sobre-sinfonia-por-el-peru-hemos-impactado-en-la-vida-de-30-mil-ninos-y-jovenes-noticia-1281641"
+   ]
+  ],
+  "effort": "S",
+  "flags": [
+   "ops",
+   "legal"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "bet-06",
+  "area": "bet",
+  "title": "Store clinics and events",
+  "ui": "«Eventos»",
+  "roles": [
+   "store",
+   "buyer",
+   "maker"
+  ],
+  "what": "Stores and brands post clinics, demos, launches and workshops (date, place, free or paid, link) on their page and on a city calendar; people who follow the store see them in their weekly digest.",
+  "why": "Events are how music stores build loyalty, and a calendar gives buyers a reason to walk into a store. New social or community features are outside V1, so this changes a rule; it stays to events, with no comments.",
+  "cost": "An event record, a calendar page and the digest.",
+  "src": [
+   [
+    "Music store events",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "spec",
+   "db"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "bet-07",
+  "area": "bet",
+  "title": "Live demos, linked",
+  "ui": "«Demo en vivo»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "A store schedules a live demo on its Instagram or TikTok; Laria shows “En vivo el jueves 7 pm: pedales de overdrive” with the featured listings, and keeps the recording link afterwards. No bidding and no streaming inside Laria.",
+  "why": "eBay Live and TikTok Shop show that live demos sell gear. Laria keeps the useful part, seeing and hearing the gear, and leaves out the impulse mechanics.",
+  "cost": "A scheduled-live record and a banner.",
+  "src": [
+   [
+    "eBay Live",
+    "https://playbook.ebay.com/articles/ebay-design-2025-in-review"
+   ]
+  ],
+  "effort": "S",
+  "flags": [],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "bet-08",
+  "area": "bet",
+  "title": "Quotes for schools and churches",
+  "ui": "«Cotización para instituciones»",
+  "roles": [
+   "store",
+   "buyer"
+  ],
+  "what": "A school, church, orchestra or band asks several verified stores at once for a quote (“20 flautas dulces, 6 tambores, 2 liras, entrega en Huancayo”). Stores reply with a price and conditions; the institution picks one and continues by WhatsApp.",
+  "why": "Institutions buy in bulk every year, and comparing three stores today means three days of calls. Stores love bulk orders. “Pedidos de compra” are prohibited as listings, so this private request to stores changes a rule.",
+  "cost": "A request form, a store inbox, replies and expiry.",
+  "src": [
+   [
+    "Requests for quotes on B2B marketplaces",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "spec",
+   "db",
+   "storeops"
+  ],
+  "rec": "next",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "earn-01",
+  "area": "earn",
+  "title": "Store plans",
+  "ui": "«Laria Pro»",
+  "roles": [
+   "store",
+   "laria"
+  ],
+  "what": "Free stays free, with 50 listings. A monthly plan in soles adds a higher allowance, demand reports and deeper statistics, the store website, staff seats, priority support and a featured slot. Cancelling takes no more steps than joining.",
+  "why": "Your decisions log puts store plans first among the ways Laria could earn. Wallapop Pro shows professionals pay for tools that save them time.",
+  "cost": "Charging stores (a card subscription or a payment link through a processor), SUNAT invoices for Laria's own sales and new terms.",
+  "src": [
+   [
+    "Wallapop Pro",
+    "https://es.wallapop.com/wallapop-pro"
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "spec",
+   "legal",
+   "ext"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ },
+ {
+  "id": "earn-02",
+  "area": "earn",
+  "title": "Featured, clearly labelled",
+  "ui": "«Destacado»",
+  "roles": [
+   "seller",
+   "store",
+   "laria"
+  ],
+  "what": "A seller or store pays a small fee to feature a listing in its category for 7 days. Always labelled “Destacado”, at most one in six results, and never above a better match for a specific search.",
+  "why": "Reverb Bump, Wallapop's paid positioning and Vinted's bumps are those platforms' simplest income, and labels plus caps keep trust. Featured listings come second in your decisions log.",
+  "cost": "Charging for a Laria service, a ranking slot and labels.",
+  "src": [
+   [
+    "Wallapop paid positioning",
+    "https://www.genbeta.com/actualidad/wallapop-ofrece-un-nuevo-servicio-de-pago-que-mejora-el-posicionamiento-de-tus-anuncios"
+   ],
+   [
+    "Reverb Bump",
+    null
+   ]
+  ],
+  "effort": "M",
+  "flags": [
+   "spec",
+   "legal",
+   "ext"
+  ],
+  "rec": "later",
+  "top": false,
+  "topwhy": ""
+ }
+]
