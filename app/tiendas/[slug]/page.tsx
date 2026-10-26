@@ -11,6 +11,7 @@ import { PageContainer } from "@/components/page-container";
 import { Pagination } from "@/components/pagination";
 import { AcceptedPaymentMethods } from "@/components/payment/accepted-payment-methods";
 import { StoreHeader, type StoreHeaderData } from "@/components/store/store-header";
+import { StoreDiscoverySection } from "@/components/discovery/store-discovery-section";
 import { StoreListingFilters, StoreSortMenu } from "@/components/store/store-listing-filters";
 import { StoreOwnerNotice } from "@/components/store/store-owner-notice";
 import { StoreAboutSection, StoreSectionLinks, type StoreAbout } from "@/components/store/store-sections";
@@ -447,6 +448,8 @@ function StoreView({
           <ReputationSection reputation={reputation} title={`Reseñas de ${store.name}`} className="min-w-0" />
           <div className="grid min-w-0 content-start gap-6">
             <StoreAboutSection store={store} location={location} preview={preview} className="min-w-0" />
+            {/* discovery batch (disc-04, buy-05): the maker's story and the gift exchange policy */}
+            <StoreDiscoverySection storeId={store.id} />
             <AcceptedPaymentMethods methods={paymentMethods} />
           </div>
         </div>

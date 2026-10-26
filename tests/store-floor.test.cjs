@@ -229,3 +229,23 @@ test("try-outs: the booking only shows on a store's available listing, and the j
   const purchases = getAccountNavigationItems("seller", false).find((item) => item.href === "/mi-cuenta/transacciones");
   assert.equal(accountItemIsActive("/mi-cuenta/pruebas", purchases), true);
 });
+
+// ------------------------------------------------------------------ store page and /regalos: one exchange promise
+
+test("a store's returns terms win over its gift exchange policy, on the store page and on /regalos", () => {
+  const { storeExchange } = load("lib/store-floor/exchange.ts");
+  const gift = { exchange_days: 30, note: "Con boleta de regalo" };
+  assert.deepEqual(storeExchange(null, gift), { days: 30, note: "Con boleta de regalo", source: "gift" });
+  assert.deepEqual(storeExchange([{ condition_group: "new", returns_days: 0, returns_note: null }], gift).source, "gift");
+  assert.deepEqual(storeExchange([
+    { condition_group: "used", returns_days: 15, returns_note: null },
+    { condition_group: "new", returns_days: 7, returns_note: "Con boleta" },
+  ], gift), { days: 7, note: "Con boleta", source: "terms" });
+  assert.deepEqual(storeExchange([
+    { condition_group: "used", returns_days: 3, returns_note: null },
+    { condition_group: "open_box", returns_days: 10, returns_note: null },
+  ], null), { days: 10, note: null, source: "terms" });
+  assert.equal(storeExchange([], null), null);
+  assert.match(read("components/discovery/store-discovery-section.tsx"), /exchange\?\.source === "gift"/);
+  assert.match(read("lib/discovery/data.ts"), /withStoreExchangeTerms\(client\(\), stores\)/);
+});

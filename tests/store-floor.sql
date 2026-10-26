@@ -113,6 +113,12 @@ select pg_temp.check((pg_temp.listing('sf-pedal')).warranty_months = 6 and (pg_t
   'back to the policy');
 
 reset role;
+-- Saved searches and alerts take "Con garantía" through the listing-details "options" key, like every registered flag.
+select pg_temp.check(laria_private.normalize_saved_search('{"options":["con_garantia"]}') -> 'options' = '["con_garantia"]',
+  'a saved search keeps the Con garantía option');
+select pg_temp.check(laria_private.listing_matches_saved_search(pg_temp.listing('sf-new'), '{"options":["con_garantia"]}')
+  and not laria_private.listing_matches_saved_search(pg_temp.listing('sf-particular'), '{"options":["con_garantia"]}'),
+  'an alert for Con garantía matches only listings with a warranty');
 -- Condition groups survive the new condition scale (sell-10).
 select pg_temp.check(laria_private.listing_condition_group('Nuevo') = 'new'
   and laria_private.listing_condition_group('Exhibición o caja abierta') = 'open_box'

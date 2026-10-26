@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { StoreDiscoveryLink } from "@/components/discovery/store-discovery-link";
 import { StoreAllowanceMeter } from "@/components/store-allowance-meter";
 import { StoreInventoryAccess } from "@/components/store-inventory-access";
 import { StoreRegistrationForm, type StoreApplication } from "@/components/store-registration-form";
@@ -53,6 +54,8 @@ export default async function StoreAccountPage() {
       ) : null}
       {/* store-floor: today's try-outs, warranty, labels and poster. */}
       {store && db ? <StoreFloorPanel storeId={store.id} supabase={db} /> : null}
+      {/* discovery batch (docs/feature-ideas/discovery.md): Fabricante o Taller, cambios de regalos */}
+      {store && canWrite ? <StoreDiscoveryLink /> : null}
       <StoreRegistrationForm
         store={(store as StoreApplication | null) ?? null}
         photos={photos ?? []}

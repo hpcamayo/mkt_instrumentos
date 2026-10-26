@@ -22,6 +22,7 @@ function SortOptions({ filters, scope, focusId, onChoose, rowClassName }: { filt
           <li key={option.value}>
             <CatalogLink
               href={catalogHref(withSort(filters, option.value), scope)}
+              rel="nofollow"
               aria-current={chosen ? "true" : undefined}
               focusId={focusId}
               onNavigate={onChoose}

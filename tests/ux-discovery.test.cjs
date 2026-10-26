@@ -330,9 +330,9 @@ test("the desktop sidebar: live option links with aria-current, small GET forms 
   assert.match(html, /^<section aria-label="Filtros" class="hidden lg:block">/);
   assert.match(html, /<h2 id="filtro-condition-titulo" class="t-ui font-semibold text-ink">Condición<\/h2>/);
   // A chosen checkbox row removes its value; the others add theirs; the chosen radio row is "Todos" when none is set.
-  assert.match(html, /<a href="\/listados\?category=guitars&amp;sort=price_asc" id="filtro-condition-Nuevo" aria-current="true"[^>]*><span aria-hidden="true" class="[^"]*rounded-\[3px\][^"]*bg-ink"><svg/);
-  assert.match(html, /<a href="\/listados\?category=guitars&amp;condition=Nuevo&amp;condition=Muy\+bueno&amp;sort=price_asc" id="filtro-condition-Muy-bueno" class=/);
-  assert.match(html, /<a href="\/listados\?category=guitars&amp;condition=Nuevo&amp;sort=price_asc" id="filtro-seller_type-todos" aria-current="true"[^>]*><span aria-hidden="true" class="[^"]*rounded-full border-ink"><span class="h-2 w-2 rounded-full bg-ink">/);
+  assert.match(html, /<a href="\/listados\?category=guitars&amp;sort=price_asc" id="filtro-condition-Nuevo" rel="nofollow" aria-current="true"[^>]*><span aria-hidden="true" class="[^"]*rounded-\[3px\][^"]*bg-ink"><svg/);
+  assert.match(html, /<a href="\/listados\?category=guitars&amp;condition=Nuevo&amp;condition=Muy\+bueno&amp;sort=price_asc" id="filtro-condition-Muy-bueno" rel="nofollow" class=/);
+  assert.match(html, /<a href="\/listados\?category=guitars&amp;condition=Nuevo&amp;sort=price_asc" id="filtro-seller_type-todos" rel="nofollow" aria-current="true"[^>]*><span aria-hidden="true" class="[^"]*rounded-full border-ink"><span class="h-2 w-2 rounded-full bg-ink">/);
   // Price and brand are GET forms to /listados with every other filter as hidden fields.
   const price = html.match(/<form class="mt-2" action="\/listados" method="get">([\s\S]*?)<\/form>/)[1];
   assert.deepEqual([...price.matchAll(/<input type="hidden" name="([^"]+)" value="([^"]+)"\/>/g)].map((match) => `${match[1]}=${match[2]}`), ["category=guitars", "condition=Nuevo", "sort=price_asc"]);
