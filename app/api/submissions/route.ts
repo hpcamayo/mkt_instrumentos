@@ -16,13 +16,14 @@ import { getMarketplaceSession, recordMarketplaceEvent } from "@/lib/marketplace
 import {
   createSubmissionToken,
   readSubmissionToken,
+  submissionTokenSecret,
 } from "@/lib/submission-token";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
   const client = getSupabaseAdminClient();
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const secret = submissionTokenSecret();
   if (!client || !secret) return failure("No se pudo iniciar el envío.", 503);
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") return failure("Solicitud inválida.");
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
     typeof body.token === "string"
       ? readSubmissionToken(body.token, secret)
       : null;
-  if (!submission) return failure("El envío no es válido.", 403);
+  if (!submission) return failure("Este envío venció o no es válido. Vuelve a intentarlo desde el formulario.", 403);
   const { id, kind, ownerUserId } = submission;
   if (kind === "listing" || kind === "store" || kind === "store_listing") {
     const account =

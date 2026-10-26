@@ -62,7 +62,28 @@ insert into public.listings (
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
--- A Particular can create only their own pending individual listing.
+-- Listings are created only through the submission functions (launch audit A12): a direct insert is refused,
+-- so the owned listing is seeded as the database owner, the way complete_public_submission writes it.
+do $$ declare denied boolean := false; begin
+  begin
+    insert into public.listings (
+      id, slug, title, seller_type, status, category, instrument_type, attributes,
+      brand, model, condition, price_pen, city, region, contact_name,
+      whatsapp_phone, description, owner_user_id, created_by_source,
+      marketplace_rules_accepted_at
+    ) values (
+      '20000000-0000-4000-8000-000000000001', 'qa-owned-listing', 'QA owned',
+      'individual', 'pending', 'guitars', 'electric_guitar',
+      '{"body_type":"solid_body","pickups":["humbucker"]}'::jsonb,
+      'QA', 'QA', 'Usado - buen estado', 100, 'Lima', 'Lima', 'Snapshot original',
+      '51999999991', 'Descripción QA con más de cuarenta caracteres para publicación.',
+      '10000000-0000-4000-8000-000000000001', 'self_service', now()
+    );
+  exception when insufficient_privilege then denied := true;
+  end;
+  if not denied then raise exception 'A Particular inserted a listing directly'; end if;
+end $$;
+reset role;
 insert into public.listings (
   id, slug, title, seller_type, status, category, instrument_type, attributes,
   brand, model, condition, price_pen, city, region, contact_name,
@@ -76,6 +97,8 @@ insert into public.listings (
   '51999999991', 'Descripción QA con más de cuarenta caracteres para publicación.',
   '10000000-0000-4000-8000-000000000001', 'self_service', now()
 );
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
 do $$
 declare listing_record public.listings; denied boolean := false;

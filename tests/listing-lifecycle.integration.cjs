@@ -172,10 +172,17 @@ const storeIds = [];
     assert.equal((await service.from("listings").insert(soldOriginals)).error, null);
     for (const [index, row] of soldOriginals.entries()) await addPhotos(row.id, `race-${index}`);
 
-    const race = await Promise.all(soldOriginals.map((row) => storeClient.rpc("relist_sold_listing", { p_listing_id: row.id })));
-    assert.equal(race.filter((result) => !result.error).length, 1, "Two concurrent relists from 49 must create only the 50th listing");
+    // The app relists in two steps: copy_owned_listing makes a draft (drafts use no capacity), then the owner sends it.
+    const drafts = [];
+    for (const row of soldOriginals) {
+      const copied = await storeClient.rpc("copy_owned_listing", { p_listing_id: row.id, p_mode: "relist" });
+      assert.equal(copied.error, null);
+      drafts.push(copied.data);
+      listingIds.push(copied.data.id);
+    }
+    const race = await Promise.all(drafts.map((draft) => storeClient.rpc("submit_listing_for_publication", { p_listing_id: draft.id })));
+    assert.equal(race.filter((result) => !result.error).length, 1, "Two concurrent relists from 49 must publish only the 50th listing");
     assert.equal(race.filter((result) => result.error?.message.includes("STORE_INVENTORY_LIMIT_REACHED")).length, 1);
-    for (const result of race) if (result.data?.id) listingIds.push(result.data.id);
     assert.equal((await service.from("listings").select("id", { count: "exact", head: true }).eq("store_id", capStoreId).in("status", ["pending", "approved"])).count, 50);
 
     console.log("Sprint 3 integration: lifecycle, revision, sold detail, RLS, relist, and concurrent cap passed.");

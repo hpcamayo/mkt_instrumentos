@@ -41,3 +41,37 @@ test("private proposed images require references and cleanup is serialized with 
   assert.match(image, /stores\?\.status === "active"/);
   assert.match(image, /no-store/);
 });
+
+test("launch audit A35: draft and edit capabilities expire and use their own key", () => {
+  const owner = crypto.randomUUID(); const listing = crypto.randomUUID();
+  const now = Date.UTC(2026, 9, 26, 12);
+  const edit = tokens.createListingEditToken(listing, owner, "qa-key", now);
+  assert.equal(tokens.readListingEditToken(edit.token, listing, owner, "qa-key", now + 23 * 3600e3), edit.attemptId);
+  assert.equal(tokens.readListingEditToken(edit.token, listing, owner, "qa-key", now + 24 * 3600e3), null);
+  const draft = tokens.createSubmissionToken("listing", "qa-key", owner, undefined, now);
+  assert.equal(tokens.readSubmissionToken(draft.token, "qa-key", now + 6 * 86400e3)?.id, draft.id);
+  assert.equal(tokens.readSubmissionToken(draft.token, "qa-key", now + 7 * 86400e3), null);
+  // A token from before expiry existed (no exp) is refused.
+  const crypto_ = require("node:crypto");
+  const legacy = Buffer.from(JSON.stringify({ id: crypto.randomUUID(), kind: "listing" })).toString("base64url");
+  const signature = crypto_.createHmac("sha256", "qa-key").update(`marketplace-submission:${legacy}`).digest("base64url");
+  assert.equal(tokens.readSubmissionToken(`${legacy}.${signature}`, "qa-key"), null);
+  // The signing key is derived from the service role key unless SUBMISSION_TOKEN_SECRET is set, never the key itself.
+  const saved = { own: process.env.SUBMISSION_TOKEN_SECRET, service: process.env.SUPABASE_SERVICE_ROLE_KEY };
+  try {
+    delete process.env.SUBMISSION_TOKEN_SECRET;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key-for-tests";
+    const derived = tokens.submissionTokenSecret();
+    assert.ok(derived && derived !== "service-role-key-for-tests");
+    process.env.SUBMISSION_TOKEN_SECRET = "short";
+    assert.equal(tokens.submissionTokenSecret(), derived);
+    process.env.SUBMISSION_TOKEN_SECRET = "x".repeat(32);
+    assert.equal(tokens.submissionTokenSecret(), "x".repeat(32));
+    delete process.env.SUBMISSION_TOKEN_SECRET;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    assert.equal(tokens.submissionTokenSecret(), null);
+  } finally {
+    if (saved.own === undefined) delete process.env.SUBMISSION_TOKEN_SECRET; else process.env.SUBMISSION_TOKEN_SECRET = saved.own;
+    if (saved.service === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY; else process.env.SUPABASE_SERVICE_ROLE_KEY = saved.service;
+  }
+});

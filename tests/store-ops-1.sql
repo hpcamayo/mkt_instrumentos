@@ -253,7 +253,8 @@ do $$ begin
   perform pg_temp.expect_error($q$update public.store_operation_settings set inventory_enabled = true$q$, 'permission denied');
   perform pg_temp.expect_error($q$insert into public.listings (id,slug,title,seller_type,status,category,instrument_type,brand,model,condition,price_pen,city,region,contact_name,whatsapp_phone,description,owner_user_id,store_id,created_by_source,marketplace_rules_accepted_at,stock_state)
     values (gen_random_uuid(),'so1-forged','Forjada','store','pending','guitars','electric_guitar','QA','F','Nuevo',100,'Lima','Lima','Contacto A','51999996001','Descripción de inventario válida con más de cuarenta caracteres.',pg_temp.id('owner_a'),pg_temp.id('store_a'),'self_service',now(),'in_stock')$q$,
-    'Only controlled server functions');
+    -- Launch audit A12: no direct listing inserts at all; the stock_state guard still covers the controlled paths.
+    'permission denied');
 end $$;
 
 select pg_temp.as_user('owner_b');

@@ -70,3 +70,16 @@ export const STORE_IMAGE_GUIDANCE = {
 } as const;
 
 export const OPENING_HOURS_MAX = 300;
+
+// Launch audit A09: the badge vouches for the business Laria checked. When the owner of a verified Tienda changes its
+// public name, RUC or razón social, the badge waits for Admin to check again. Same rule as the database
+// (protect_store_admin_fields): other spacing or capitals are not a change.
+type StoreIdentity = { name?: string | null; ruc?: string | null; razon_social?: string | null };
+const identityText = (value?: string | null) => (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+const identityDigits = (value?: string | null) => (value ?? "").replace(/\D/g, "");
+
+export function storeIdentityChanged(before: StoreIdentity, after: StoreIdentity) {
+  return identityText(before.name) !== identityText(after.name)
+    || identityDigits(before.ruc) !== identityDigits(after.ruc)
+    || identityText(before.razon_social) !== identityText(after.razon_social);
+}

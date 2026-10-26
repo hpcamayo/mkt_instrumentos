@@ -2,9 +2,19 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getLoginPath } from "@/lib/auth/redirects";
 import { isProtectedAccountPath } from "@/lib/auth/protected-paths";
+import { isRefusedCrossSiteApiWrite } from "@/lib/same-origin";
 import type { Database } from "@/lib/supabase/database.types";
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (isRefusedCrossSiteApiWrite(request, pathname)) {
+    return NextResponse.json({ error: "Solicitud no permitida." }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
+  // Only Admin's API routes need the session refreshed here; the others read it themselves.
+  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/admin/")) {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({
     request,
   });
@@ -62,6 +72,7 @@ export const config = {
     "/login",
     "/logout",
     "/admin/:path*",
-    "/api/admin/:path*",
+    // Every API route except the GET-only catalog and image routes, which see most of the traffic (A22).
+    "/api/((?!catalog/|listing-images/).*)",
   ],
 };
