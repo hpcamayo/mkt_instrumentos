@@ -675,7 +675,8 @@ reset role;
 
 do $$ begin
   perform pg_temp.check(laria_private.run_deal_trust_nightly() ? 'levels', 'the nightly job runs');
-  perform pg_temp.check(exists (select 1 from cron.job where jobname = 'deal-trust-nightly'), 'and is scheduled');
+  perform pg_temp.check(public.run_deal_trust_nightly() ? 'counter_review_reminders', 'and runs again harmlessly from its route');
+  perform pg_temp.check(not exists (select 1 from cron.job where jobname = 'deal-trust-nightly'), 'with no pg_cron job (the route is the schedule)');
 end $$;
 
 rollback;

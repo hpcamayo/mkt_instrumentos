@@ -359,5 +359,5 @@ $$;
 revoke all on function public.run_deal_trust_nightly() from public, anon, authenticated;
 grant execute on function public.run_deal_trust_nightly() to service_role;
 
--- 02:30 Lima (07:30 UTC). cron.schedule() with a job name replaces the job of that name. Running it twice is harmless.
-select cron.schedule('deal-trust-nightly', '30 7 * * *', $$select laria_private.run_deal_trust_nightly()$$);
+-- No pg_cron job: per the feature build plan every scheduled job runs from its route (once a day, 02:30 Lima suggested),
+-- and the integrator collects the schedules for Henri. Running it more than once a day is harmless.

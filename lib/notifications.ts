@@ -38,6 +38,16 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   listing_availability_checkin: "¿Sigue disponible?",
   listing_purchase_confirmation_reminder: "Confirma una compra",
   listing_review_reminder: "Tu reseña vence pronto",
+  // --- deal-trust batch (docs/feature-ideas/deal-trust.md) ---
+  store_counter_purchase_confirmed: "Compra en tienda confirmada",
+  store_counter_review_revealed: "Reseñas disponibles",
+  store_counter_review_reminder: "Tu reseña vence pronto",
+  store_level_earned: "Tu tienda es Tienda destacada",
+  store_level_lapsed: "Tu tienda dejó de ser destacada",
+  store_safe_spot_disabled: "Punto seguro desactivado",
+  seller_level_earned: "Eres Vendedor destacado",
+  seller_level_lapsed: "Dejaste de ser Vendedor destacado",
+  // --- end deal-trust batch ---
 };
 
 export const DEFAULT_NOTIFICATION_LABEL = "Actualización de tu cuenta";
@@ -57,10 +67,15 @@ export function isQuestionNotification(eventType: string) {
 // listingSlug: the list passes the public listing's address it looked up for an alert match (null when the listing is
 // no longer public, which opens the alerts instead); a push leaves it out and links the listing by id, which the
 // listing page forwards to its address.
+// deal-trust (sell-08): a seller level earned or lost opens its progress card in Compras y ventas.
+export const SELLER_LEVEL_EVENTS = new Set(["seller_level_earned", "seller_level_lapsed", "store_level_earned", "store_level_lapsed"]);
+
 export function notificationHref(notification: NotificationTarget, listingSlug?: string | null) {
   const transactionReference = notification.transaction_id ?? notification.claim_id;
   return transactionReference
     ? `/mi-cuenta/transacciones/${transactionReference}`
+    : SELLER_LEVEL_EVENTS.has(notification.event_type)
+    ? "/mi-cuenta/transacciones#perfil-laria"
     : notification.event_type === "listing_alert_match"
     ? listingSlug ? `/instrumentos/${listingSlug}` : listingSlug === undefined && notification.listing_id ? `/instrumentos/${notification.listing_id}` : "/mi-cuenta/alertas"
     // ux my-listings: these are answered from Pendientes on the account home; rejections open the edit form.
