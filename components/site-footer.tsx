@@ -17,12 +17,16 @@ const exploreLinks: FooterLink[] = [
   { href: categoryLandingPath("percussion"), label: "Percusión" },
   { href: categoryLandingPath("pedals"), label: "Pedales" },
   { href: VERIFIED_STORES_PATH, label: "Tiendas verificadas" },
+  // feature-ideas services (bet-02): its own section, apart from the instruments.
+  { href: "/servicios", label: "Servicios para músicos" },
 ];
 // /registrar-tienda sends a signed-out visitor to /registro/tienda and tells a signed-in Particular that a
 // store needs its own account.
 const sellLinks: FooterLink[] = [
   { href: "/vender", label: "Publicar un instrumento" },
   { href: "/registrar-tienda", label: "Registrar mi tienda" },
+  // feature-ideas services (bet-02)
+  { href: "/mi-cuenta/servicios/nuevo", label: "Ofrecer un servicio" },
 ];
 // EASE trust-05: the Libro de Reclamaciones is linked from every footer (a text link; Indecopi practice also shows the
 // book's icon, pending legal review).
@@ -31,6 +35,8 @@ const helpLinks: FooterLink[] = [...["/consejos-de-seguridad", "/articulos-prohi
 const phoneLinks: FooterLink[] = [
   exploreLinks[0], sellLinks[1], legal("/terminos"),
   legal("/consejos-de-seguridad"), legal("/articulos-prohibidos"), legal("/privacidad"), complaintsBook,
+  // feature-ideas services (bet-02): the eighth cell of the 2 × 4 grid.
+  exploreLinks[exploreLinks.length - 1],
 ];
 const slimLinks: FooterLink[] = [...["/consejos-de-seguridad", "/terminos", "/privacidad"].map(legal), complaintsBook];
 

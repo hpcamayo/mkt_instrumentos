@@ -22,6 +22,8 @@ const links = [
   { href: "/admin/resenas", label: "Reseñas" },
   { href: "/admin/transacciones", label: "Transacciones" },
   { href: "/admin/legacy", label: "Publicaciones históricas" },
+  // feature-ideas services (bet-02)
+  { href: "/admin/servicios", label: "Servicios" },
 ] as const;
 
 // "Moderación" carries the total of the moderation queues; the other sections are record views without a

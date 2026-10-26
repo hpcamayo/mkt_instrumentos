@@ -5,6 +5,8 @@ import { DISCOVERABLE_STOCK_FILTER } from "@/lib/listings";
 import { absoluteUrl, isIndexableDeployment } from "@/lib/site";
 import { READ_BUDGETS, createDeadline } from "@/lib/request-deadline";
 import { createPublicReadClient } from "@/lib/supabase/public-read-client";
+import { SERVICE_CATEGORIES, serviceCategoryPath } from "@/lib/services";
+import { servicesDb } from "@/lib/services-db";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,7 @@ export const dynamic = "force-dynamic";
 const BATCH_SIZE = 1000;
 const MAX_LISTINGS = 20000;
 const MAX_STORES = 2000;
+const MAX_SERVICES = 5000;
 
 type Entry = MetadataRoute.Sitemap[number];
 
@@ -63,6 +66,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       entries.push({ url: absoluteUrl(`/instrumentos/${listing.slug}`), lastModified: listing.updated_at, changeFrequency: "weekly", priority: 0.7 });
     }
     if (data.length < BATCH_SIZE) break;
+  }
+
+  // feature-ideas services (bet-02): the services section, its five category pages and every public service.
+  entries.push(
+    { url: absoluteUrl("/servicios"), changeFrequency: "daily", priority: 0.6 },
+    ...SERVICE_CATEGORIES.map((category): Entry => ({ url: absoluteUrl(serviceCategoryPath(category)), changeFrequency: "daily", priority: 0.5 })),
+  );
+  // A failed services read leaves the instrument entries above intact.
+  try {
+    for (let offset = 0; offset < MAX_SERVICES; offset += BATCH_SIZE) {
+      const { data, error } = await servicesDb(supabase).rpc("get_public_service_paths", { p_offset: offset, p_limit: BATCH_SIZE });
+      if (error || !Array.isArray(data)) break;
+      for (const service of data as { path: string; updated_at: string }[]) {
+        entries.push({ url: absoluteUrl(service.path), lastModified: service.updated_at, changeFrequency: "weekly", priority: 0.5 });
+      }
+      if (data.length < BATCH_SIZE) break;
+    }
+  } catch {
+    // Services are optional in the sitemap.
   }
 
   return entries;

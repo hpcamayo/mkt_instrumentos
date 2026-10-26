@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { TermsAssistedCommerceSection } from "@/components/legal/assisted-commerce-legal";
+import { TermsServicesSection } from "@/components/legal/services-legal";
 import { LegalContact, LegalPage, LegalSection, MarketplaceLimitations } from "@/components/legal-page";
 import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
 
@@ -63,6 +64,8 @@ export default function TermsPage() {
           <li>Laria puede ocultar reseñas abusivas o inapropiadas, pero no reescribe su contenido.</li>
         </ul>
       </LegalSection>
+
+      <TermsServicesSection />
 
       <LegalSection title="6. Conducta no permitida">
         <ul>
