@@ -667,7 +667,7 @@ export const instrumentFilterGroups = [
     filters: [
       {
         key: "andean_type",
-        label: "Tipo",
+        label: "Instrumento",
         type: "select",
         options: [
           { value: "charango", label: "Charango" },

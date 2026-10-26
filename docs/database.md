@@ -1194,3 +1194,29 @@ Migration `20261109120000_ux_effortless_integration.sql` (not applied to any hos
 - `20261104120100` and `20261104120200` drop their helper `pg_temp.selling_fix`, so every migration also applies in
   one database session, as the Supabase CLI runs them.
 <!-- /ux-effortless:integration -->
+
+## Feature ideas: discovery batch
+
+Migrations `20261207120000`–`20261207120400` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/discovery.md`. Suite: `tests/feat-discovery.sql`.
+
+- Category `andean` / type `andean_instrument` / attribute `andean_type`: `listing_taxonomy_is_valid`,
+  `listing_attribute_keys_are_valid` and `listing_search_text` are each redefined alone in their own migration (the
+  trigram index is rebuilt); `laria_private.normalize_saved_search` is patched in place (its live definition gains
+  `'andean'` and `'andean_type'`, and the migration fails if the lists moved).
+- `public.store_maker_profiles` (store_id pk; kind fabricante|taller, craft_city, story, since_year, hidden_*):
+  owner and Admin read; writes through `set_store_maker_profile` and `admin_set_maker_hidden` (audited).
+- `public.listing_maker_details` (listing_id pk; handmade, made_to_order_weeks 1–26, artist_note 3–140): read by those
+  who can manage the listing; written through `set_listing_maker_details` (makers for the first two, verified artists
+  for the note).
+- `public.store_gift_policies` (store_id pk; exchange_days 3–60, note): public for active stores, owner and Admin
+  always; written through `set_store_gift_policy`.
+- `public.artist_profiles` (user_id pk; slug, display_name, story, https link_url, verified_*, revoked_at): self and
+  Admin read; written through `admin_save_artist_profile` / `admin_revoke_artist_profile` (audited, target type
+  `artist`).
+- `public.collections` (slug, title, intro, sets jsonb of 1–4 `{label, query}`, starts_on, ends_on, published,
+  sort_order): public while published and inside its dates (Lima), Admin always; written through
+  `admin_save_collection` / `admin_delete_collection` (audited, target type `collection`). Six starter rows seeded.
+- Public reads (definer, `anon` and `authenticated`), each returning only public listings and visible makers or
+  artists: `get_listing_marks(uuid[])`, `get_public_makers(int)`, `get_store_maker_profile(uuid)`,
+  `get_public_artists(int)`, `get_gift_exchange_stores(int)`.
