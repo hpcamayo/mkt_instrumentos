@@ -67,7 +67,7 @@ export default async function SellingToolsPage({ params }: { params: Promise<{ i
     : listing.status !== "approved"
     ? "Disponible cuando la publicación esté en línea."
     : null;
-  const back = isStore ? "/mi-cuenta/tienda/inventario" : "/mi-cuenta/publicaciones";
+  const back = isStore ? "/mi-cuenta/tienda/inventario?vista=publicaciones" : "/mi-cuenta/publicaciones";
 
   return (
     <section className="grid min-w-0 gap-5">

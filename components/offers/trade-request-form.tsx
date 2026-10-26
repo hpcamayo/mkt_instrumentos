@@ -253,7 +253,9 @@ export function TradeRequestForm({
         <Button href={kind === "sell" ? "/mi-cuenta/equipo" : listing ? `/instrumentos/${listing.id}` : "/mi-cuenta/equipo"} variant="quiet">Cancelar</Button>
       </div>
       <p className="t-meta">
-        Laria no compra ni paga: la tienda revisa el equipo, confirma el precio final y te paga directamente. No hay ningún cobro por usar esto.
+        {kind === "sell"
+          ? "Laria no compra ni paga: la tienda revisa el equipo, confirma el precio final y te paga directamente. No hay ningún cobro por usar esto."
+          : "Laria no compra ni cobra: la tienda revisa el equipo, confirma su valor y lo descuenta de tu compra. No hay ningún cobro por usar esto."}
       </p>
     </form>
   );
