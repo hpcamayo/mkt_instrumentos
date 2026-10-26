@@ -220,8 +220,8 @@ export function parseListingFilters(
   return readListingFilters(searchParams).filters;
 }
 
-// True when the address carries a filter value the catalog does not offer (a select option that does not exist, an
-// unknown category or type, a free-text value with "="). Those values are dropped; /listados redirects to the cleaned
+// True when the address carries a filter value the catalog does not offer (an unknown option, category or type,
+// an overlong value, a free-text value with "="). Those values are dropped; /listados redirects to the cleaned
 // address so a malformed link (some crawlers mangle "&microphone_type" into "µphone_type") cannot seed endless new URLs.
 export function hasRejectedFilterValues(searchParams: Record<string, string | string[] | undefined>) {
   return readListingFilters(searchParams).rejected;
@@ -231,6 +231,7 @@ export function hasRejectedFilterValues(searchParams: Record<string, string | st
 const isFreeTextValue = (value: string) => !value.includes("=");
 const knownCategories = new Set<string>(categoryOptions.map((option) => option.value));
 const knownInstrumentTypes = new Set<string>([...instrumentFilterGroups.map((group) => group.instrumentType), "other"]);
+const knownConditions = new Set<string>(conditionOptions);
 
 function readListingFilters(
   searchParams: Record<string, string | string[] | undefined>,
@@ -245,7 +246,11 @@ function readListingFilters(
   const readString = (key: string) => {
     const value = searchParams[key];
     const first = Array.isArray(value) ? value[0] : value;
-    return first !== undefined && first.length > MAX_FILTER_VALUE_LENGTH && key !== "q" ? undefined : first;
+    if (first !== undefined && first.length > MAX_FILTER_VALUE_LENGTH && key !== "q") {
+      rejected = true;
+      return undefined;
+    }
+    return first;
   };
 
   const readNumber = (key: string) => {
@@ -263,8 +268,10 @@ function readListingFilters(
   // Repeated parameters, in URL order, without blanks or repeats (capped: they become an `in` list).
   const readList = (key: string) => {
     const value = searchParams[key];
-    const items = (Array.isArray(value) ? value : [value]).map((item) => item?.trim()).filter((item): item is string => Boolean(item) && item!.length <= MAX_FILTER_VALUE_LENGTH);
-    return [...new Set(items)].slice(0, MAX_FILTER_VALUES);
+    const items = (Array.isArray(value) ? value : [value]).map((item) => item?.trim()).filter((item): item is string => Boolean(item));
+    const bounded = items.filter((item) => item.length <= MAX_FILTER_VALUE_LENGTH);
+    if (bounded.length !== items.length) rejected = true;
+    return [...new Set(bounded)].slice(0, MAX_FILTER_VALUES);
   };
 
   const sellerType = readString("seller_type");
@@ -276,20 +283,24 @@ function readListingFilters(
     return kept;
   };
   const locations = freeTextList("location");
+  const legacyCities = freeTextList("city");
   const legacy = legacyCategories[readString("category") ?? ""];
   const instrumentType = accept(readString("instrument_type"), (value) => knownInstrumentTypes.has(value)) || legacy?.instrumentType;
   const { advanced, rejected: advancedRejected } = parseAdvancedFilters(searchParams, instrumentType);
   if (advancedRejected) rejected = true;
   const category = legacy?.category ?? accept(readString("category"), (value) => knownCategories.has(value));
   const brand = accept(readString("brand"), isFreeTextValue);
+  const conditions = readList("condition");
+  const acceptedConditions = conditions.filter((value) => knownConditions.has(value));
+  if (acceptedConditions.length !== conditions.length) rejected = true;
 
   const q = readString("q")?.replace(/\s+/g, " ").trim().slice(0, 200);
 
   const filters: ListingFilters = {
     ...(q ? { q } : {}),
     category: category || undefined,
-    cities: locations.length ? locations : freeTextList("city"),
-    conditions: readList("condition"),
+    cities: locations.length ? locations : legacyCities,
+    conditions: acceptedConditions,
     brand: brand || undefined,
     sellerType:
       sellerType === "individual" ||
@@ -345,11 +356,13 @@ function parseAdvancedFilters(
       continue;
     }
 
-    const given = (Array.isArray(rawValue) ? rawValue : [rawValue])
+    const items = (Array.isArray(rawValue) ? rawValue : [rawValue])
       .flatMap((value) => value.split(","))
       .map((value) => value.trim())
-      .filter((value) => value && value.length <= MAX_FILTER_VALUE_LENGTH)
-      .slice(0, MAX_FILTER_VALUES);
+      .filter(Boolean);
+    const bounded = items.filter((value) => value.length <= MAX_FILTER_VALUE_LENGTH);
+    if (bounded.length !== items.length) rejected = true;
+    const given = bounded.slice(0, MAX_FILTER_VALUES);
     const options = filterOptions.get(key);
     const values =
       type === "number"

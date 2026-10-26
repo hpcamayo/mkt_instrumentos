@@ -106,16 +106,63 @@ crawl of filter combinations does not write a data-cache entry per combination. 
 - Every other filter value: 80 characters; longer values are ignored.
 - Advanced attribute values: at most 20 per request.
 - Filter values the catalog does not offer are dropped: an unknown category or instrument type, a select or
-  multiselect value outside the filter's options, and a brand or place containing "=". `/listados` answers such an
-  address with one permanent redirect to the cleaned one. Some crawlers decode `&microphone_type` in our links as
+  multiselect value outside the filter's options, an unknown condition, and a brand or place containing "=".
+  Values over the existing 80-character limit are also reported as rejected, including repeated locations and
+  advanced attributes. `/listados` answers such an address with a permanent redirect to the cleaned one, keeping
+  valid filters, their repeated values, sorting, prices and pagination. Both the page and `generateMetadata` check
+  this before starting their catalog query; a redirect does not need a result count for its title.
+  Some crawlers decode `&microphone_type` in our links as
   `µphone_type`; before this, each mangled value was kept, carried into every filter link and produced endless new
   uncached addresses. Old links keep working where they map to real values (legacy categories); values that never
   existed no longer narrow the results to nothing.
+- Valid free-text searches keep their existing 200-character limit (including literal "="), arbitrary real brands
+  and locations remain supported, and the legacy category aliases still work. Category/listing/store SEO, sitemap,
+  robots.txt and valid filtered pages' `noindex, follow` behavior are unchanged. This is URL cleanup, not a bot rate
+  limit: a crawler may still request and follow redirects. The root layout can still load its shared brand menus.
 - Filter, applied-filter and sort links are `rel="nofollow"` (filtered `/listados` pages are already `noindex, follow`).
   robots.txt still allows them, because the SEO gate requires noindex pages to stay crawlable.
 - Suggestions: 2 characters minimum, 60 used; the browser waits 250 ms after typing and cancels superseded requests.
 - Draft counts in the filter sheet: 250 ms after the last change, the previous request cancelled, the canonical
   address requested directly.
+
+### Crawl cleanup follow-up verification (26 Oct 2026)
+
+`pnpm test` passes 703 tests; lint, TypeScript and the production build pass. The crawl regression tests reproduce
+the malformed-condition, overlong-value and metadata-query gaps before the fix, and exercise the actual page and
+metadata exports after it. They preserve repeated valid filters, arbitrary real brands/places, a literal `=` in
+free-text search, legacy categories, pagination and catalog SEO metadata.
+
+The compiled production build was also checked over HTTP with a local read-only PostgREST-shaped fixture. Every
+malformed condition/brand/location/attribute case returns 308 to the cleaned URL; following it returns 200. Valid
+repeated filters, price bounds, sorting and page 2 survive cleanup. Unfiltered pagination and category-only aliases
+keep their canonical tags; valid filtered searches keep `noindex, follow`. A browser smoke applied two conditions
+through the phone filter sheet and changed the sort to `price_asc`, preserving both conditions. The local fixture
+caused an unrelated `/vender` prefetch warning; authentication was not part of this check.
+
+Comparison against merged PR #35 (`6ed8bf7`), using the same Next.js 15.5.18 production build dependencies, a
+Googlebot user agent, warmed caches and 20 requests per case:
+
+| Malformed value | Catalog reads per initial response, before → after | Local CPU reduction | Uncompressed HTML reduction |
+| --- | --- | --- | --- |
+| Condition | 1 → 0 | 51% | 90% |
+| Short brand containing `µphone_type=` (already redirected by #35) | 2 → 0 | 18% | 18% |
+| Brand over 80 characters | 1 → 0 | 45% | 90% |
+| Location over 80 characters | 1 → 0 | 61% | 90% |
+| Advanced attribute over 80 characters | 1 → 0 | 67% | 90% |
+
+These are measurements of the malformed response only, not of a crawler following its target. An equal mix of the
+five cases used 52% less local CPU per initial response. In a separate conservative run (eight initial URLs per case)
+that followed every redirect and freshly fetched every destination, the same mix used about 16% **more** CPU and
+29% fewer catalog reads than #35. Redirected destinations still render and query the catalog. Savings depend on
+crawlers remembering the permanent redirect and stopping discovery/revisits of malformed combinations; this change
+does not enforce a request cap. Root-layout menu reads may still run on a cold cache.
+
+For planning only, if 25%, 50% or 75% of catalog CPU belongs to affected malformed responses and crawlers converge on
+the clean destinations, a 52% per-response CPU saving corresponds to roughly 13%, 26% or 39% less catalog CPU. This
+is a scenario, not a measured production forecast. The available request metrics/log sample omit query strings, so
+the affected share cannot be established from them. There is no defensible percentage reduction in total bot
+requests yet. Local Node CPU and uncompressed HTML are not Vercel billing measurements; memory, compressed origin
+transfer, instance concurrency and crawler behavior require post-deployment observation.
 
 ## Functionality contract
 
