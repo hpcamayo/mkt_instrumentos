@@ -1214,6 +1214,10 @@ be applied before the deploy.
   keeps `created_at`. An identity change on a verified store lifts the badge as described under `public.stores`;
   `get_admin_moderation_counts` and `get_admin_moderation_queue('verificacion')` count and list active, unverified
   stores with a lapse (`reason = 'store_identity_changed'`, `previous_identity` from `verification_lapsed_from`).
+  The trigger `launch_audit_store_verification_lapsed` (`laria_private.notify_store_verification_lapsed()`, security
+  definer, after update when `verification_lapsed_at` goes from null to a time) gives the owner an in-app notification
+  of the new type `store_verification_lapsed` (added with `ux_extend_text_check`; no e-mail). `set_store_verification
+  (..., false)` sends `store_verification_revoked` when the store was verified or waiting with a lapse.
 - A10: the public SELECT policies on `listing-photos` and `store-assets` give way to owner-folder SELECT policies for
   `authenticated`.
 - A21: `submit_listing_for_publication` requires `auth.uid()` and is executable only by `authenticated`.

@@ -73,7 +73,9 @@ errors.
 ### POST 01 and POST 02: drafts that are never lost and follow the seller
 
 - **What changed.** The form (values, uploaded photo paths, sound clip, submission token) is saved in `localStorage`
-  half a second after each change and offered back on return ("Retomar tu borrador" or "Descartar"). "Guardar borrador"
+  half a second after each change and offered back on return ("Retomar tu borrador" or "Descartar"). A token lasts a
+  week (launch audit A35), so a draft taken back renews it for the same submission (`renew` in
+  `app/api/submissions/route.ts`) and keeps its photos; publishing with an expired token renews it and sends again. "Guardar borrador"
   also saves it to the account in the new `listing_drafts` table; after that every change is saved there too. Drafts
   are listed with "Continuar" on the publish pages and in Mis publicaciones (`components/selling/draft-list.tsx`) and
   open at the first step that still needs something. Publishing deletes the draft in the same transaction

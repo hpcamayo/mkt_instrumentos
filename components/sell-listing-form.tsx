@@ -293,6 +293,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
         originals.current.clear();
         setPhotos([]);
         setClip(null);
+        setStep(0);
       }
       throw error;
     }
