@@ -380,6 +380,39 @@ until merged.
 - **Laria's role.** Laria does not schedule, charge, take payments, verify titles or the quality of the work, or take
   part in the agreement (Terms § 5 bis, draft pending legal review).
 
+<!-- feature-ideas:deal-trust -->
+## Deal trust: seller pages, safer meetups and verified store purchases (feature ideas, deal-trust batch)
+
+Proposed with the deal-trust batch (`docs/feature-ideas/deal-trust.md`, FD-deal-trust-1 to FD-deal-trust-18); not part
+of V1 until merged. Laria still never charges, holds money, checks an instrument or guarantees a deal.
+
+- **Verified store purchases (reach-11).** After a Mostrador sale the store can show a one-time QR (24 hours, one
+  use). The customer signs in and confirms "Sí, compré en <Tienda>", which creates a verified transaction for the
+  store with the usual double-blind reviews. This changes two rules on purpose: a customer who confirms a counter code
+  becomes a verified buyer without a WhatsApp contact, and a counter sale unlocks reviews once the customer confirms
+  (a stock movement alone still does not). Never at one's own store; one per store per customer a day, five a day.
+- **Review photos (safe-06).** A buyer's review of the seller can carry up to three photos of what arrived. Each one
+  waits for Admin and shows only once approved and its review is visible.
+- **Seller page (sell-09).** Every Particular who published has `/vendedores/<slug>`: first name, city, member since,
+  verified sales, the level, reviews and active publications. Not indexed; the seller can hide it.
+- **Vendedor destacado / Tienda destacada (sell-08).** Granted and lifted every night from public criteria: 5 verified
+  sales, 3 visible reviews averaging 4.5, no upheld report in 90 days, no public question unanswered over 7 days.
+  Nobody applies or pays.
+- **Buyer track record (safe-07).** Off by default. Once the buyer turns it on, a line with a link to a small card
+  (first name, buying since, verified purchases, average rating from sellers) joins their WhatsApp messages; it can be
+  removed per listing. Turning it off kills the link.
+- **History on Laria (safe-11).** A buyer who resells an instrument bought through a verified transaction can link the
+  new listing to it: "Comprado en Laria en <mes> · N dueños anteriores en Laria" and the original specs. Nothing about
+  the previous seller is shown.
+- **Safe meetups (safe-03).** On a Particular's listing, "Encuentro seguro" lists «Punto seguro Laria» stores in the
+  city (verified, active stores showing their address that opted in; Admin can turn one off with a reason), public
+  shopping centers and the nearest police station, prepares an "Avisar a alguien" WhatsApp message and links the
+  try-out checklist. The copy never promises safety.
+- **Admin > Confianza** reviews photos, Puntos seguros and confirmed counter purchases (repeat confirmations flagged).
+  A daily job (`/api/internal/jobs/deal-trust`, `CRON_SECRET`) runs the levels, counter-purchase review reminders and
+  photo upload cleanup.
+<!-- /feature-ideas:deal-trust -->
+
 ## WhatsApp Contact Tracking
 
 Laria records buyer intent when a user initiates WhatsApp contact. It never records WhatsApp message content.
@@ -414,6 +447,10 @@ When a seller marks a listing sold:
 8. If the buyer declines or never confirms, the listing remains sold without a verified transaction or review relationship.
 
 This confirmation verifies only that both parties identify the sale as a Laria-originated transaction. It does not verify payment amount, delivery, or item condition.
+
+<!-- feature-ideas:deal-trust -->
+Proposed (deal-trust batch, reach-11): a store's Mostrador sale can also become a verified transaction, with no listing and no WhatsApp contact, when the customer confirms the store's one-time code. See "Deal trust" above.
+<!-- /feature-ideas:deal-trust -->
 
 <!-- ux my-listings: start -->
 The loop can also start from the buyer: 3 to 30 days after a signed-in buyer opened WhatsApp on a listing, Laria asks them once `¿Compraste …?` (in Pendientes, on the listing as `¿Cómo te fue?`, and by e-mail). `Sí` notifies the seller, who confirms with one tap (`Sí, me lo compró`): the listing becomes sold and the transaction is verified without a second buyer confirmation, because the buyer already said yes. `No` only stops the question. If the seller already asked that buyer, the buyer's `Sí` answers that request. Stock-managed store listings are excluded; their sales are recorded in Inventario. The buyer list a seller chooses from shows each person's name, contact date and the last three digits of their WhatsApp, with no one pre-selected.

@@ -21,6 +21,11 @@ import { ListingQuestions } from "@/components/listing/listing-questions";
 import { ReputationSection } from "@/components/listing/reputation-section";
 import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@/components/listing/seller-card";
 import { SpecTable } from "@/components/listing/spec-table";
+import { ListingProvenance, SellerTrust } from "@/components/trust/listing-trust";
+import { SafeMeetup } from "@/components/trust/safe-meetup";
+import { TrackRecordChip } from "@/components/trust/track-record-chip";
+import { getListingTrust } from "@/lib/listing-trust";
+import { guidePath, guidesForListing } from "@/lib/discovery/buying-guides";
 import { publicStoreLocation } from "@/lib/store-storefront";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
 import { AcceptedPaymentMethods } from "@/components/payment/accepted-payment-methods";
@@ -468,6 +473,8 @@ function ListingDetail({
     facts,
   };
   const specLine = keySpecLine(getSpecStrip(listing, 5));
+  // deal-trust (safe-03): the meetup sheet links the type's try-out checklist (discovery's guides) when there is one.
+  const tryOutGuide = isStore ? undefined : guidesForListing(listing.category, listing.instrument_type).find((guide) => guide.kind === "revisar");
   const contactHref = purchase ? buildPurchaseWhatsAppUrl(resolveContactPhone(listing), listing, purchase.sku) : buildWhatsAppUrl(listing);
   const typeHref = listing.instrument_type
     ? categoryTypePath(listing.category, listing.instrument_type)
@@ -547,6 +554,7 @@ function ListingDetail({
                 {outOfStock ? <RestockAlert listingId={listing.id} arriving={Boolean(listing.restock_expected_on)} className="order-3 lg:order-2" /> : null}
                 <div className="order-3 grid gap-3 lg:order-2">
                   {purchase ? null : <QuickQuestions listingId={listing.id} questions={quickQuestions(listing.seller_type)} />}
+                  <TrackRecordChip listingId={listing.id} />
                   <SignInHint />
                 </div>
                 <ContactModule
@@ -571,6 +579,17 @@ function ListingDetail({
                   variant="module"
                   className="order-5 lg:order-3"
                 />
+                {isStore ? null : (
+                  <SafeMeetup
+                    title={displayTitle}
+                    url={absoluteUrl(`/instrumentos/${listing.slug}`)}
+                    sellerFirstName={particular.name?.trim().split(/\s+/)[0] || null}
+                    city={listing.city}
+                    region={listing.region}
+                    tryOutHref={tryOutGuide ? guidePath(tryOutGuide.slug) : undefined}
+                    className="order-5 lg:order-3"
+                  />
+                )}
               </>
             )}
             <div className="order-3 empty:hidden lg:order-3"><PurchaseCheckin listingId={listing.id} /></div>
@@ -589,6 +608,7 @@ function ListingDetail({
               sold={isSold}
               now={now}
               className="order-9 lg:order-5"
+              trust={<Suspense fallback={null}><SellerTrust listingId={listing.id} /></Suspense>}
               listingCount={
                 <Suspense fallback={<li aria-hidden="true"><Skeleton className="inline-block h-[18px] w-28 align-middle" /></li>}>
                   <SellerInventory supabase={supabase} listing={listing} />
@@ -603,6 +623,7 @@ function ListingDetail({
 
           <div className="contents lg:col-span-7 lg:col-start-1 lg:row-start-2 lg:flex lg:min-w-0 lg:flex-col lg:gap-10">
             <SpecTable specs={getSpecTable(listing)} className="order-7 min-w-0" />
+            <Suspense fallback={null}><ListingProvenance listingId={listing.id} className="order-7 min-w-0" /></Suspense>
 
             <ListingSoundClip listingId={listing.id} />
 
@@ -778,11 +799,13 @@ async function SellerListings({
   storeHref: string | null;
 }) {
   const result = await getMoreFromSellerListings(supabase, listing);
+  // deal-trust (sell-09): a Particular's strip links to their seller page when they have one.
+  const sellerPageSlug = storeHref ? null : (await getListingTrust(listing.id))?.sellerPageSlug ?? null;
   return (
     <RelatedListings
       id="mas-del-vendedor"
       title={listing.seller_type === "store" ? "Más de esta tienda" : "Más de este vendedor"}
-      link={storeHref ? { href: storeHref, label: "Ver la tienda" } : null}
+      link={storeHref ? { href: storeHref, label: "Ver la tienda" } : sellerPageSlug ? { href: `/vendedores/${sellerPageSlug}`, label: "Ver perfil" } : null}
       listings={result.listings}
     />
   );
