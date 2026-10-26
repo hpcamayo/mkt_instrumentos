@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { FEED_CACHE_CONTROL, FEED_PAGE_SIZE, feedHead, feedStream, parseFeedItems, validFeedSlug } from "@/lib/store-feed";
 import { absoluteUrl, isIndexableDeployment } from "@/lib/site";
 import { storeReachDb } from "@/lib/store-reach-db";
-import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { createDeadline } from "@/lib/request-deadline";
+import { createPublicReadClient } from "@/lib/supabase/public-read-client";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -13,7 +14,8 @@ export const maxDuration = 60;
 export async function GET(_request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   if (!isIndexableDeployment() || !validFeedSlug(slug)) return notFound();
-  const client = getPublicSupabaseClient();
+  // The deadline-bound public client: the whole feed within 50 s, each page of 500 within 8 s, no automatic retries.
+  const client = createPublicReadClient(createDeadline(50_000), 8_000);
   if (!client) return unavailable();
   const db = storeReachDb(client);
   const { data: header, error } = await db.rpc("get_store_feed_header", { p_store_slug: slug });

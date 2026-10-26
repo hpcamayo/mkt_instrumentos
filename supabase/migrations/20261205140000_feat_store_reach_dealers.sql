@@ -73,6 +73,25 @@ select laria_private.ux_extend_text_check(
   array['dealer_authorization']
 );
 
+-- Whether the caller may upload this object: the path the database issued them, while the request waits for its
+-- document. A function, because the table has no grants and every policy on storage.objects is planned for every
+-- upload, whatever its bucket.
+create or replace function public.dealer_document_upload_allowed(p_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.store_dealer_authorizations d
+    where d.document_path = p_name and d.created_by = auth.uid() and d.status = 'awaiting_document'
+      and public.is_store_owner(d.store_id)
+  )
+$$;
+revoke all on function public.dealer_document_upload_allowed(text) from public, anon, authenticated;
+grant execute on function public.dealer_document_upload_allowed(text) to authenticated;
+
 -- The owner uploads exactly the path the database issued, once, while the request waits for its document. No update
 -- or delete policy: a document cannot be replaced, and only the service role removes objects.
 create policy "Store owners upload their dealer documents" on storage.objects
@@ -80,11 +99,7 @@ for insert to authenticated
 with check (
   bucket_id = 'store-dealer-documents'
   and (storage.foldername(name))[1] = auth.uid()::text
-  and exists (
-    select 1 from public.store_dealer_authorizations d
-    where d.document_path = objects.name and d.created_by = auth.uid() and d.status = 'awaiting_document'
-      and public.is_store_owner(d.store_id)
-  )
+  and public.dealer_document_upload_allowed(name)
 );
 
 -- ------------------------------------------------------------------ helpers
@@ -168,7 +183,8 @@ begin
     raise exception using errcode = 'P0001', message = 'DEALER_NOTE_INVALID: La nota puede tener hasta 500 caracteres.';
   end if;
 
-  perform 1 from public.stores s where s.id = caller_store.id for update;
+  -- One request at a time per store, without blocking the KEY SHARE that inserts referencing the store take.
+  perform 1 from public.stores s where s.id = caller_store.id for no key update;
   if exists (select 1 from public.store_dealer_authorizations d
              where d.store_id = caller_store.id and d.brand_key = v_key and d.status in ('pending', 'approved')) then
     raise exception using errcode = 'P0001', message = 'DEALER_ALREADY_OPEN: Ya tienes una autorización de esta marca en revisión o aprobada.';

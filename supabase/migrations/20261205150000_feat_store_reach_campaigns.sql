@@ -51,14 +51,20 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  -- The moment of the change, not the transaction's start: two edits of one listing wait for each other's row lock,
+  -- and the later one may have started first. Never before the current row began.
+  at timestamptz;
 begin
   if tg_op = 'UPDATE' and new.price_pen is not distinct from old.price_pen then
     return null;
   end if;
-  update public.listing_price_history h set valid_to = now() where h.listing_id = new.id and h.valid_to is null;
+  select greatest(clock_timestamp(), max(h.valid_from)) into at
+  from public.listing_price_history h where h.listing_id = new.id and h.valid_to is null;
+  update public.listing_price_history h set valid_to = at where h.listing_id = new.id and h.valid_to is null;
   if new.price_pen is not null and new.price_pen > 0 then
     insert into public.listing_price_history (listing_id, price_pen, valid_from, source)
-    values (new.id, new.price_pen, now(),
+    values (new.id, new.price_pen, at,
       case when tg_op = 'INSERT' then 'created'
            when current_setting('laria.price_change_source', true) = 'campaign' then 'campaign'
            else 'change' end);

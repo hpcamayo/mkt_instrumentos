@@ -83,6 +83,13 @@ select pg_temp.check(
 select pg_temp.expect_error($$select public.complete_dealer_authorization_upload((select id from dealer_ids where name = 'yamaha'),
   'e7420000-0000-4000-8000-0000000000a1', 'application/pdf', 2048, repeat('a', 64))$$, 'permission denied');
 select pg_temp.expect_error($$select * from public.store_dealer_authorizations$$, 'permission denied');
+select pg_temp.expect_error($$insert into storage.objects(bucket_id, name, owner) values ('store-dealer-documents',
+  'e7420000-0000-4000-8000-0000000000a1/' || gen_random_uuid() || '/autorizacion.pdf', 'e7420000-0000-4000-8000-0000000000a1')$$, 'new row violates row-level security');
+insert into storage.objects(bucket_id, name, owner)
+values ('store-dealer-documents', (select path from dealer_ids where name = 'yamaha'), 'e7420000-0000-4000-8000-0000000000a1');
+select pg_temp.as_user('e7420000-0000-4000-8000-0000000000a2');
+select pg_temp.check(not public.dealer_document_upload_allowed((select path from dealer_ids where name = 'yamaha')), 'another owner cannot upload it');
+select pg_temp.as_user('e7420000-0000-4000-8000-0000000000a1');
 
 -- ------------------------------------------------------------------ the server's check
 

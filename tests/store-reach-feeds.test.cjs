@@ -102,7 +102,7 @@ test("reach-02: feeds are public, cached, crawlable and never served by previews
   for (const file of ["app/api/feeds/tiendas/[slug]/route.ts", "app/api/feeds/laria/route.ts"]) {
     const route = read(file);
     assert.match(route, /isIndexableDeployment\(\)/, file);
-    assert.match(route, /getPublicSupabaseClient\(\)/, file);
+    assert.match(route, /createPublicReadClient\(createDeadline\(50_000\), 8_000\)/, file);
     assert.doesNotMatch(route, /AdminClient|service_role/, file);
     assert.match(route, /"Cache-Control": FEED_CACHE_CONTROL/, file);
   }

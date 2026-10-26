@@ -48,15 +48,23 @@ test("reach-01: tokens are sealed to their store, and the OAuth state is signed 
   assert.equal(decryptToken(key, "store-a", sealed), "APP_USR-123");
   assert.equal(decryptToken(key, "store-b", sealed), null, "not on another store's row");
   assert.equal(decryptToken(tokenKey("1f".repeat(32)), "store-a", sealed), null, "not with another key");
+  // Flip one bit of a decoded byte (changing a base64 character can touch only padding bits).
+  const flip = (text) => {
+    const bytes = Buffer.from(text, "base64url");
+    bytes[0] ^= 1;
+    return bytes.toString("base64url");
+  };
   const parts = sealed.split(".");
-  parts[3] = parts[3].slice(0, -2) + (parts[3].endsWith("A") ? "BB" : "AA");
-  assert.equal(decryptToken(key, "store-a", parts.join(".")), null, "tampered");
+  assert.equal(decryptToken(key, "store-a", [parts[0], parts[1], parts[2], flip(parts[3])].join(".")), null, "tampered body");
+  assert.equal(decryptToken(key, "store-a", [parts[0], parts[1], flip(parts[2]), parts[3]].join(".")), null, "tampered tag");
 
   const state = { state: "abc", verifier: "v".repeat(64), uid: "u1", exp: Date.now() + 60_000 };
   const cookie = signState(key, state);
   assert.deepEqual(readState(key, cookie), state);
   assert.equal(readState(key, cookie, state.exp + 1), null, "expired");
-  assert.equal(readState(key, cookie.replace(/.$/, (c) => (c === "A" ? "B" : "A"))), null, "bad signature");
+  const [payload, signature] = cookie.split(".");
+  assert.equal(readState(key, `${payload}.${flip(signature)}`), null, "bad signature");
+  assert.equal(readState(key, `${flip(payload)}.${signature}`), null, "changed payload");
   assert.equal(readState(key, undefined), null);
   // RFC 7636 appendix B.
   assert.equal(pkceChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"), "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
