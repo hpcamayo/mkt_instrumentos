@@ -4,7 +4,10 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const Module = require("node:module");
 const path = require("node:path");
+const React = require("react");
+const { renderToStaticMarkup } = require("react-dom/server");
 
 const root = path.resolve(__dirname, "..");
 const source = (file) => fs.readFileSync(path.join(root, file), "utf8");
@@ -160,9 +163,15 @@ test("services never mix with instruments", () => {
   // The migration never writes listings, favorites or alerts, and the catalog never reads services.
   const sql = source(MIGRATION);
   assert.doesNotMatch(sql, /(insert into|update|delete from)\s+public\.(listings|favorites|saved_searches|listing_[a-z_]+)\b/i);
+  // The catalog and listing pages read no service data and show no service card; the listing page only links to the
+  // section (the repair line, through components/services/service-entry-points.tsx).
   const catalog = [...walk("app/listados"), ...walk("app/instrumentos"), "lib/catalog-filters.ts"].filter((file) => fs.existsSync(path.join(root, file)));
   assert.ok(catalog.length > 0);
-  for (const file of catalog) assert.doesNotMatch(source(file), /services|servicios/i, `${file} mentions services`);
+  for (const file of catalog) {
+    const text = source(file);
+    assert.doesNotMatch(text, /rpc\(["'][a-z_]*service|from\(["']service|ServiceCard|services-db|services-counts/, `${file} reads services`);
+    for (const match of text.matchAll(/from "@\/components\/services\/([^"]+)"/g)) assert.equal(match[1], "service-entry-points", file);
+  }
   // The directory pages render their own cards, never the listing card.
   for (const file of SERVICE_FILES) assert.doesNotMatch(source(file), /components\/listing-card/, file);
 });
@@ -199,4 +208,43 @@ test("copy keeps Laria's promises: no money handled, nothing verified, no pressu
   assert.match(copy, /nunca recibe dinero|no recibe dinero/);
   // Stars start empty: no rating is chosen for the client.
   assert.doesNotMatch(source("components/services/service-review-form.tsx"), /useState\((?:[1-5])\)/);
+});
+
+function loadEntryPoints() {
+  const original = Module._load;
+  Module._load = function loadWithoutServerOnly(request, ...rest) {
+    if (request === "server-only") return {};
+    return original.call(this, request, ...rest);
+  };
+  try {
+    return require(path.join(root, "components/services/service-entry-points.tsx"));
+  } finally {
+    Module._load = original;
+  }
+}
+
+test("entry points: the home teaser shows the kinds with services, most first, and nothing without them", () => {
+  const { HomeServicesTeaser } = loadEntryPoints();
+  const render = (counts) => renderToStaticMarkup(React.createElement(HomeServicesTeaser, { counts }));
+  assert.equal(render(null), "");
+  assert.equal(render({ total: 0, categories: {} }), "");
+  const html = render({ total: 9, categories: { clases: 2, reparaciones: 4, ensayo: 1, grabacion: 1, sonido: 1 } });
+  const links = [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((match) => match[1]);
+  // "Ver servicios", then four kinds: the most first, ties in the section's order; no service profile.
+  assert.deepEqual(links, ["/servicios", "/servicios/reparaciones", "/servicios/clases", "/servicios/salas-de-ensayo", "/servicios/estudios-de-grabacion"]);
+  assert.match(html, /<h2 id="servicios-inicio"[^>]*>Servicios para músicos<\/h2>/);
+  assert.match(html, /Ver servicios<span class="sr-only">: 9 servicios<\/span>/);
+  assert.match(html, />4<span class="sr-only"> servicios<\/span>/);
+});
+
+test("entry points: the repair line is only for worn or broken gear that is still for sale", () => {
+  const { listingNeedsRepairLine } = loadEntryPoints();
+  for (const condition of ["Bueno", "Regular", "Para reparar", "Usado - con detalles"]) assert.equal(listingNeedsRepairLine(condition, false), true, condition);
+  for (const condition of ["Nuevo", "Exhibición o caja abierta", "Como nuevo", "Excelente", "Muy bueno", "Usado - buen estado", null]) {
+    assert.equal(listingNeedsRepairLine(condition, false), false, String(condition));
+  }
+  assert.equal(listingNeedsRepairLine("Para reparar", true), false, "sold");
+  // The home header's Categorías panel (also the phone menu) links the section after the stores.
+  assert.match(source("components/site-header.tsx"), /<Link href="\/servicios" onClick=\{onChoose\}[^>]*>Servicios para músicos<\/Link>/);
+  assert.match(source("app/page.tsx"), /<CategoryTiles counts=\{categoryCounts\} \/>\s*<HomeServicesTeaser counts=\{serviceCounts\} \/>/);
 });
