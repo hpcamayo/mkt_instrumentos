@@ -3,7 +3,9 @@ export type AccountNavigationItem = {
   label: string;
   icon: "summary" | "listings" | "publish" | "store" | "inventory" | "payments" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites" | "alerts"
     // Effortless Laria, inventory batch (stock-04): purchase requests.
-    | "requests";
+    | "requests"
+    // Feature ideas, selling-tools batch: Mi equipo (sell-01) and the store's Ofertas inbox (sell-02, run-04).
+    | "gear" | "offers";
   exact?: boolean;
   // Additional sections that belong to the same navigation entry.
   activePaths?: readonly string[];
@@ -32,6 +34,9 @@ export function getAccountNavigationItems(
       ...(hasStore ? [
         { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory" } as const,
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar", icon: "publish" } as const,
+        // Feature ideas, selling-tools batch: requests to buy used gear and part-payment requests (sell-02, run-04).
+        { href: "/mi-cuenta/tienda/ofertas", label: "Ofertas", icon: "offers" } as const,
+        // /Feature ideas, selling-tools batch
         // Effortless Laria, inventory batch (stock-04): "Solicitudes" exists only while purchase requests do (the pilot).
         ...(payments ? [{ href: "/mi-cuenta/tienda/solicitudes", label: "Solicitudes", icon: "requests" } as const] : []),
         // /Effortless Laria, inventory batch
@@ -45,6 +50,9 @@ export function getAccountNavigationItems(
     { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
     { href: "/mi-cuenta/publicaciones", label: "Mis publicaciones", icon: "listings" },
     { href: "/mi-cuenta/publicar", label: "Publicar", icon: "publish" },
+    // Feature ideas, selling-tools batch (sell-01).
+    { href: "/mi-cuenta/equipo", label: "Mi equipo", icon: "gear" },
+    // /Feature ideas, selling-tools batch
     { href: "/mi-cuenta/estadisticas", label: "Estadísticas", icon: "analytics" },
     ...sharedAccountItems,
   ];

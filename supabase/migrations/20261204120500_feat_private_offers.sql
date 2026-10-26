@@ -211,3 +211,23 @@ $$;
 
 revoke all on function public.get_listing_selling_tools(uuid[]) from public, anon;
 grant execute on function public.get_listing_selling_tools(uuid[]) to authenticated;
+
+-- What the listing page adds for a visitor, in one read: the consignment label, whether the store takes gear as part
+-- payment and, for a signed-in person, the private offer they received.
+create or replace function public.get_listing_selling_public(p_listing_id uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select jsonb_build_object(
+    'consignment', public.get_listing_consignment(p_listing_id),
+    'part_payment', public.listing_accepts_part_payment(p_listing_id)
+      and not exists (select 1 from public.listings l where l.id = p_listing_id and l.owner_user_id is not distinct from auth.uid()),
+    'private_offer', case when auth.uid() is null then null else public.get_my_private_offer(p_listing_id) end,
+    'is_owner', auth.uid() is not null and exists (select 1 from public.listings l where l.id = p_listing_id and l.owner_user_id = auth.uid())
+  );
+$$;
+
+grant execute on function public.get_listing_selling_public(uuid) to anon, authenticated;

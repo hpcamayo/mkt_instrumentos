@@ -301,8 +301,23 @@ as $$
   where auth.uid() is not null and laria_private.trade_store_qualifies(s.id, p_category, coalesce(p_region, ''));
 $$;
 
-revoke all on function public.count_trade_stores(text, text) from public, anon;
-grant execute on function public.count_trade_stores(text, text) to authenticated;
+-- The same count for every category stores buy, for the "¿Prefieres vender ya?" card on the sell page.
+create or replace function public.count_trade_stores_by_category(p_region text)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public, laria_private
+as $$
+  select jsonb_object_agg(category, (
+    select count(*) from public.stores s where laria_private.trade_store_qualifies(s.id, category, coalesce(p_region, ''))
+  ))
+  from unnest(array['guitars', 'basses', 'amplifiers', 'pedals', 'keyboards']) category
+  where auth.uid() is not null;
+$$;
+
+revoke all on function public.count_trade_stores(text, text), public.count_trade_stores_by_category(text) from public, anon;
+grant execute on function public.count_trade_stores(text, text), public.count_trade_stores_by_category(text) to authenticated;
 
 -- ------------------------------------------------------------------ the person's side
 

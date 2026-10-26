@@ -126,7 +126,8 @@ begin
 end;
 $$;
 
--- Photos uploaded for a request that was never sent, after two days. The route removes them through Storage.
+-- Photos uploaded for a request that was never sent, after two days, and the photos of requests closed more than 90 days
+-- ago (the request keeps its text and amounts). The route removes them through Storage.
 create or replace function laria_private.trade_photo_orphans(p_limit integer default 200)
 returns text[]
 language sql
@@ -138,8 +139,11 @@ as $$
   from (
     select o.name
     from storage.objects o
-    where o.bucket_id = 'trade-photos' and o.created_at < now() - interval '2 days'
-      and not exists (select 1 from public.trade_requests r where r.id::text = (storage.foldername(o.name))[2])
+    where o.bucket_id = 'trade-photos' and (
+      (o.created_at < now() - interval '2 days'
+        and not exists (select 1 from public.trade_requests r where r.id::text = (storage.foldername(o.name))[2]))
+      or exists (select 1 from public.trade_requests r
+        where r.id::text = (storage.foldername(o.name))[2] and r.closed_at < now() - interval '90 days'))
     order by o.created_at
     limit greatest(1, least(coalesce(p_limit, 200), 1000))
   ) rows;

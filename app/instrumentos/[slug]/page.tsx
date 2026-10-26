@@ -58,6 +58,7 @@ import {
   type ListingDetailData,
 } from "@/lib/listings";
 import { ListingSoundClip } from "@/components/selling/listing-sound-clip";
+import { ListingSellingExtras } from "@/components/offers/listing-selling-extras";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { warnMissingSupabaseEnv, type getPublicSupabaseClient } from "@/lib/supabase/public-client";
 import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
@@ -539,6 +540,7 @@ function ListingDetail({
                   safety={needsSafetySheet(listing.price_pen, Boolean(purchase))}
                   className="order-3 lg:order-3"
                 />
+                <ListingSellingExtras listingId={listing.id} title={displayTitle} contactHref={contactHref} className="order-3 lg:order-3" />
                 <ShareListing
                   url={absoluteUrl(`/instrumentos/${listing.slug}`)}
                   title={listing.title}
