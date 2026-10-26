@@ -13,6 +13,7 @@ import { addTaste, EMPTY_TASTE, readStore, rememberable, TASTE_KEY, writeStore, 
 import { getCardSpecLine } from "@/lib/listing-specs";
 import { formatPrice } from "@/lib/price";
 import { Price } from "@/components/ui/price";
+import { PriceModeMark } from "@/components/listing-details/price-mode-mark";
 import { visiblePreviousPrice } from "@/lib/listing-page";
 import { StatusTag } from "@/components/ui/tag";
 import { VerifiedIcon } from "@/components/ui/verified-mark";
@@ -122,6 +123,7 @@ export function ListingCard({ listing, variant = "grid", source = "catalog", hea
           {/* FIND 10 and list-05: a real drop of the past 30 days shows the old price struck through ("Antes" for screen
               readers), the same one the listing page shows. */}
           <Price value={listing.price_pen} previous={visiblePreviousPrice(listing, Date.now())} />
+          {listing.price_pen !== null ? <PriceModeMark mode={listing.price_mode} /> : null}
           {isOutOfStock(listing) ? <StatusTag domain="stock" status="out_of_stock" /> : null}
         </p>
         {specLine ? <p className="truncate t-meta">{specLine}</p> : null}

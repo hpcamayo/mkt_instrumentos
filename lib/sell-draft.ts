@@ -2,6 +2,7 @@
 // and, on "Guardar borrador", in listing_drafts so it follows them to another device (POST 02). Pure, so the form and
 // the tests share it. Nothing here is trusted by the server: publishing validates everything again.
 import { currentCondition } from "@/lib/listing-condition";
+import { readMakerForm } from "@/lib/maker-details";
 import { deliveryTermsOnly, readSaleTerms } from "@/lib/sale-terms";
 
 export type SellValues = {
@@ -70,7 +71,12 @@ export function similarValues(values: SellValues): SellValues {
     attributes: values.attributes,
     // How it is delivered and what trades the seller takes usually hold for the next one too; the price mode, like
     // the price, does not.
-    details: values.details.sale_terms ? { ...values.details, sale_terms: deliveryTermsOnly(readSaleTerms(values.details.sale_terms)) } : values.details,
+    // An artist's note is about one instrument, so it is not carried over either.
+    details: {
+      ...values.details,
+      ...(values.details.sale_terms ? { sale_terms: deliveryTermsOnly(readSaleTerms(values.details.sale_terms)) } : {}),
+      ...(values.details.maker ? { maker: { ...readMakerForm(values.details.maker), artist_note: "" } } : {}),
+    },
   });
 }
 

@@ -6,7 +6,7 @@ import {
   sanitizeListingAttributes,
 } from "@/lib/listing-submission";
 import { isValidCondition } from "@/lib/listing-condition";
-import { checkListingDetails } from "@/lib/listing-details";
+import { checkListingDetails, detailWriterError } from "@/lib/listing-details";
 import { categoryOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
@@ -337,8 +337,8 @@ function rpcFailure(message: string) {
   if (message.includes("LISTING_COPY_INVALID")) return failure("Esta publicación no se puede duplicar.", 409);
   if (message.includes("STORE_NOT_ELIGIBLE")) return failure("Tu tienda no puede recibir publicaciones nuevas en este momento.", 409);
   if (message.includes("LISTING_NOT_EDITABLE")) return failure("Esta publicación ya no se puede editar.", 409);
-  if (message.includes("SALE_TERMS_CONTACT_DETAILS")) return failure("Quita teléfonos, correos o enlaces de la entrega o de los cambios.", 409);
-  if (message.includes("SALE_TERMS_INVALID") || message.includes("LISTING_DETAILS_INVALID")) return failure("Revisa la entrega y los cambios.", 409);
+  const detailProblem = detailWriterError(message);
+  if (detailProblem) return failure(detailProblem, 409);
   if (message.includes("LISTING_CONDITION_INVALID")) return failure("Selecciona una condición válida.", 409);
   if (message.includes("SOLD_LISTING_IMMUTABLE")) {
     return failure("La publicación vendida es un registro histórico y no puede modificarse.", 409);

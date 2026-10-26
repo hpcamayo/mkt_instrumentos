@@ -1,6 +1,9 @@
 "use client";
 
+import { MakerFields } from "@/components/listing-details/maker-fields";
 import { SALE_TERMS_KEY, SaleTermsFields } from "@/components/listing-details/sale-terms-fields";
+import type { ListingDetailAccess } from "@/lib/listing-detail-access";
+import { MAKER_KEY, readMakerForm } from "@/lib/maker-details";
 import { readSaleTerms } from "@/lib/sale-terms";
 
 // listing-details: every batch's extra listing fields in the sell and edit forms, rendered once by each form
@@ -16,6 +19,7 @@ export function ListingDetailFields({
   onChange,
   error,
   previous,
+  access = {},
   heading = "h3",
 }: {
   idPrefix: string;
@@ -26,6 +30,9 @@ export function ListingDetailFields({
   previous?: Record<string, unknown> | null;
   // For fields only a store (or only a Particular) sees; sale terms are for both.
   isStore: boolean;
+  // Fields that depend on the seller (lib/listing-detail-access.ts). Left out, those fields are not shown: the edit
+  // page has discovery's own maker form.
+  access?: ListingDetailAccess;
   heading?: "h2" | "h3";
 }) {
   const errorFor = (key: string) => (error && error.key === key ? error : undefined);
@@ -40,6 +47,9 @@ export function ListingDetailFields({
         error={errorFor(SALE_TERMS_KEY)}
         previous={previous?.[SALE_TERMS_KEY] ? readSaleTerms(previous[SALE_TERMS_KEY]) : null}
       />
+      {access.maker ? (
+        <MakerFields idPrefix={idPrefix} heading={heading} access={access.maker} value={readMakerForm(details[MAKER_KEY])} onChange={(value) => onChange(MAKER_KEY, value)} error={errorFor(MAKER_KEY)} />
+      ) : null}
       {/* END listing detail fields */}
     </>
   );

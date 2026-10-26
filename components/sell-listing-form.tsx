@@ -35,11 +35,12 @@ import { Notice } from "@/components/ui/notice";
 import { Textarea } from "@/components/ui/textarea";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { MAX_LISTING_PHOTOS, getInstrumentTypeOptions } from "@/lib/listing-submission";
+import type { ListingDetailAccess } from "@/lib/listing-detail-access";
 import { checkListingDetails, detailFieldId } from "@/lib/listing-details";
 import { categoryOptions, conditionOptions, particularConditionOptions } from "@/lib/listings";
 import { citySuggestions, normalizePeruRegion, peruRegions } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
-import { lastSaleTermsKey, readSaleTerms } from "@/lib/sale-terms";
+import { lastSaleTermsKey, readSaleTerms, saleTermsColumns } from "@/lib/sale-terms";
 import {
   emptyValues,
   draftFromServer,
@@ -101,6 +102,8 @@ type Props = {
   storeDefaults?: { condition: string | null; descriptionFooter: string };
   serverDraft?: ServerDraft;
   reviewWaitMinutes?: number | null;
+  // listing-details: the optional fields this seller may fill (lib/listing-detail-access.ts).
+  detailAccess?: ListingDetailAccess;
 };
 
 type Clip = NonNullable<ClipState> & { path?: string; slot: number; type: EncodedClip["type"]; blob?: Blob };
@@ -133,7 +136,7 @@ export const SELL_STEPS: { title: string; fields: SellField[] }[] = [
 // Photo paths allow slots 0–99 (app/api/submissions); a replaced photo never reuses its slot.
 const MAX_SLOT = 99;
 
-export function SellListingForm({ ownerId, profile, store, inventorySku: initialSku, brandsByCategory = {}, storeDefaults, serverDraft, reviewWaitMinutes = null }: Props) {
+export function SellListingForm({ ownerId, profile, store, inventorySku: initialSku, brandsByCategory = {}, storeDefaults, serverDraft, reviewWaitMinutes = null, detailAccess }: Props) {
   const kind = store ? "store_listing" : "listing";
   const direct = store?.status === "active" && store.isVerified;
   // FIX 05: the SKU being published. Starting another listing clears it, so the next one is never sent for a linked SKU.
@@ -684,6 +687,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
     photos: photos.map((photo) => photo.url),
     seller: { name: store ? store.name : profile.fullName, label: !store ? "Particular" : direct ? "Tienda verificada" : "Tienda" },
     hasSound: Boolean(clip),
+    saleTerms: saleTermsColumns(readSaleTerms(values.details[SALE_TERMS_KEY])),
   };
 
   if (success) {
@@ -842,7 +846,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
                 onRemove={() => setClip(null)}
                 onRetry={() => { if (clip) void uploadClip(clip); }}
               />
-              <ListingDetailFields idPrefix={ID} details={values.details} onChange={setDetail} error={detailError} previous={previousDetails} isStore={Boolean(store)} />
+              <ListingDetailFields idPrefix={ID} details={values.details} onChange={setDetail} error={detailError} previous={previousDetails} isStore={Boolean(store)} access={detailAccess} />
             </FormSection>
           ) : null}
 

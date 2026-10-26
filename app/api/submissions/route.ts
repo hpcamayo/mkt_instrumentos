@@ -7,7 +7,7 @@ import {
 } from "@/lib/listing-submission";
 import { categoryOptions } from "@/lib/listings";
 import { isValidCondition } from "@/lib/listing-condition";
-import { checkListingDetails, type ListingDetails } from "@/lib/listing-details";
+import { checkListingDetails, detailWriterError, type ListingDetails } from "@/lib/listing-details";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
@@ -316,10 +316,11 @@ export async function POST(request: Request) {
     return failure("Esta cuenta ya tiene una solicitud de tienda.", 409);
   if (error?.message.includes("STORE_INVENTORY_LIMIT_REACHED"))
     return failure(listingLimitMessage(error.message), 409);
-  if (error?.message.includes("SALE_TERMS_CONTACT_DETAILS"))
-    return failure("Quita teléfonos, correos o enlaces de la entrega o de los cambios.");
-  if (error?.message.includes("SALE_TERMS_INVALID") || error?.message.includes("LISTING_DETAILS_INVALID") || error?.message.includes("LISTING_CONDITION_INVALID"))
-    return failure("Revisa la condición, la entrega y los cambios.");
+  // listing-details: a detail writer's refusal (sale terms, discovery's maker marks) in the seller's words.
+  const detailProblem = detailWriterError(error?.message);
+  if (detailProblem) return failure(detailProblem);
+  if (error?.message.includes("LISTING_CONDITION_INVALID"))
+    return failure("Elige una condición de la escala.");
   if (error)
     return failure(
       "No se pudo guardar el envío. Reintenta sin cerrar esta página.",

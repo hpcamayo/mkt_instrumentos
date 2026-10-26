@@ -9,11 +9,13 @@
 // the pages and the tests share it.
 
 import { hasContactDetails } from "@/lib/listing-questions";
+import { categoryOptions } from "@/lib/listings";
 
 export const LIMA_DELIVERY = ["buyer", "seller", "agree"] as const;
 export const CARRIERS = ["shalom", "olva", "other"] as const;
 export const SHIPPING_PAYMENT = ["origin", "destination"] as const;
-export const TRADE_CATEGORIES = ["guitars", "basses", "keyboards", "percussion", "winds", "strings", "pedals", "amplifiers", "microphones", "audio"] as const;
+// The catalog's categories (the database checks the same through listing_taxonomy_is_valid, 20261202120800).
+export const TRADE_CATEGORIES: readonly string[] = categoryOptions.map((option) => option.value);
 
 export type LimaDelivery = (typeof LIMA_DELIVERY)[number];
 export type Carrier = (typeof CARRIERS)[number];
@@ -69,6 +71,23 @@ export function emptySaleTerms(): SaleTerms {
     accepts_trades: false,
     trade_wants: "",
     trade_categories: [],
+  };
+}
+
+// The other way round: a form's terms as the listing's columns (the sell form's preview).
+export function saleTermsColumns(value: SaleTerms): ListingSaleTerms {
+  return {
+    price_mode: value.price_mode,
+    delivery_pickup: value.pickup,
+    pickup_area: value.pickup_area.trim() || null,
+    can_try: value.can_try,
+    lima_delivery: value.lima_delivery,
+    ships_provinces: value.ships_provinces,
+    shipping_carriers: value.ships_provinces ? value.carriers : [],
+    shipping_payment: value.ships_provinces ? value.shipping_payment : null,
+    accepts_trades: value.accepts_trades,
+    trade_wants: value.accepts_trades ? value.trade_wants.trim() || null : null,
+    trade_categories: value.accepts_trades ? value.trade_categories : [],
   };
 }
 

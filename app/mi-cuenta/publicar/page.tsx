@@ -5,6 +5,7 @@ import { DraftList } from "@/components/selling/draft-list";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
+import { loadListingDetailAccess } from "@/lib/listing-detail-access";
 import { normalizePeruRegion } from "@/lib/location";
 import { listSellDrafts, loadSellBrands, loadSellPageData } from "@/lib/sell-page-data";
 
@@ -15,13 +16,14 @@ export default async function PublishParticularPage({ searchParams }: { searchPa
   if (profile?.account_type === "store_owner") redirect("/mi-cuenta/tienda/publicar");
   const complete = Boolean(profile?.full_name?.trim() && profile.phone?.trim() && profile.city?.trim() && normalizePeruRegion(profile.region));
   const params = (await searchParams) ?? {};
-  const [data, drafts, brandsByCategory] = complete && supabase
+  const [data, drafts, brandsByCategory, detailAccess] = complete && supabase
     ? await Promise.all([
       loadSellPageData(supabase, { kind: "listing", params }),
       listSellDrafts(supabase, "listing"),
       loadSellBrands(),
+      loadListingDetailAccess(supabase, { userId: user.id }),
     ])
-    : [null, [], {}];
+    : [null, [], {}, {}];
   const otherDrafts = drafts.filter((draft) => draft.id !== data?.serverDraft?.id);
   return (
     <div className="space-y-6">
@@ -40,6 +42,7 @@ export default async function PublishParticularPage({ searchParams }: { searchPa
           brandsByCategory={brandsByCategory}
           serverDraft={data.serverDraft}
           reviewWaitMinutes={data.reviewWaitMinutes}
+          detailAccess={detailAccess}
         />
         <DraftList drafts={otherDrafts} href="/mi-cuenta/publicar" title={data.serverDraft ? "Otros borradores" : "Borradores"} />
       </> : <Notice tone="warning" role="note"><h2 className="font-semibold">Completa tu perfil Particular</h2><p className="mt-2">Necesitamos tu nombre, WhatsApp y ubicación antes de publicar.</p><Link href="/mi-cuenta/perfil?next=/mi-cuenta/publicar" className="mt-4 inline-flex">Completar perfil</Link></Notice>}

@@ -1,8 +1,9 @@
 import { instrumentFilterGroups } from "@/lib/instrument-filters";
 import { listingContactMessage } from "@/lib/contact-message";
 import { CONDITION_VALUES, PARTICULAR_CONDITION_VALUES, currentCondition, expandConditionSearch } from "@/lib/listing-condition";
-import { parseListingOptions } from "@/lib/listing-flags";
+import { hasUnknownListingOption, parseListingOptions } from "@/lib/listing-flags";
 import { resolveContactPhone, whatsAppUrl } from "@/lib/seller-contact";
+import type { ListingSaleTerms } from "@/lib/sale-terms";
 
 export { resolveContactPhone, resolveParticularSeller, whatsAppNumber } from "@/lib/seller-contact";
 
@@ -147,7 +148,7 @@ export function isOutOfStock(listing: { stock_state?: StockState | null }) {
   return listing.stock_state === "out_of_stock";
 }
 
-export type ListingDetailData = ListingCardData & {
+export type ListingDetailData = ListingCardData & ListingSaleTerms & {
   status: "approved" | "sold";
   // list-04: when the seller last changed what a buyer reads (never a view count).
   content_changed_at?: string | null;
@@ -305,6 +306,9 @@ function readListingFilters(
   const acceptedConditions = conditions.filter((value) => knownConditions.has(value) || expandConditionSearch([value]).length > 0);
   if (acceptedConditions.length !== conditions.length) rejected = true;
 
+  const optionValues = readList("opciones");
+  if (hasUnknownListingOption(optionValues)) rejected = true;
+
   const q = readString("q")?.replace(/\s+/g, " ").trim().slice(0, 200);
 
   const filters: ListingFilters = {
@@ -324,7 +328,7 @@ function readListingFilters(
     minPrice: readNumber("min_price"),
     maxPrice: readNumber("max_price"),
     advanced,
-    options: parseListingOptions(readList("opciones")),
+    options: parseListingOptions(optionValues),
     sort: sortOptions.some((option) => option.value === sort) ? (sort as ListingSort) : "newest",
   };
   return { filters, rejected };
