@@ -522,7 +522,10 @@ test("categories, types and conditions map to Laria values; unknown ones warn", 
   assert.equal(parse("Guitarras", "Guitarras eléctricas", "Usado - buen estado").parsed.instrument_type, "electric_guitar");
   assert.equal(parse("", "Guitarras eléctricas", "").parsed.category, "guitars", "type implies the category");
   assert.equal(parse("drums", "", "").parsed.category, "percussion", "retired categories still map");
-  assert.equal(parse("", "", "usado con detalles").parsed.condition, "Usado - con detalles");
+  // sell-10: the old values and the usual synonyms map to the scale.
+  assert.equal(parse("", "", "usado con detalles").parsed.condition, "Bueno");
+  assert.equal(parse("", "", "Seminuevo").parsed.condition, "Como nuevo");
+  assert.equal(parse("", "", "open box").parsed.condition, "Exhibición o caja abierta");
   assert.ok(codes(parse("Juguetes", "", "").issues).includes("IMPORT_CATEGORY_UNKNOWN"));
   assert.ok(codes(parse("Pedales", "Guitarras eléctricas", "").issues).includes("IMPORT_TYPE_MISMATCH"));
   assert.ok(codes(parse("", "", "usado").issues).includes("IMPORT_CONDITION_UNKNOWN"));

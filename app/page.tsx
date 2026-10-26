@@ -6,8 +6,10 @@ import { HomeFollowedArrivals } from "@/components/home/home-followed";
 import { HomeForYou } from "@/components/home/home-for-you";
 import { CategoryTiles, HowItWorks, PriceDropsSection, SellBlock, VerifiedStoresSection } from "@/components/home/home-sections";
 import { RecentListings } from "@/components/home/home-empty";
+import { CollectionsStrip } from "@/components/discovery/collections-strip";
 import { JsonLd } from "@/components/json-ld";
 import { PageContainer } from "@/components/page-container";
+import { getCurrentCollections } from "@/lib/discovery/data";
 import { fetchHomeData, type HomeData } from "@/lib/home";
 import { pickHomeBanner } from "@/lib/home-banner";
 import { buildHomeMetadata, buildOrganizationJsonLd } from "@/lib/seo";
@@ -37,9 +39,9 @@ export default async function HomePage() {
   const banner = pickHomeBanner();
   const { supabase, deadline } = getRequestReads();
   if (!supabase) warnMissingSupabaseEnv();
-  const { pool, priceDrops, total, categoryCounts, stores } = supabase
-    ? await fetchHomeData(supabase, getListingCounts(optionalReadSignal(deadline)))
-    : UNAVAILABLE;
+  const [{ pool, priceDrops, total, categoryCounts, stores }, collections] = supabase
+    ? await Promise.all([fetchHomeData(supabase, getListingCounts(optionalReadSignal(deadline))), getCurrentCollections()])
+    : [UNAVAILABLE, null];
 
   return (
     <>
@@ -50,6 +52,8 @@ export default async function HomePage() {
         <HomeFollowedArrivals />
         {pool?.length ? <HomeForYou pool={pool} total={total} /> : pool ? <RecentListings /> : supabase ? <FeedUnavailable /> : null}
         {priceDrops?.length ? <PriceDropsSection listings={priceDrops} /> : null}
+        {/* disc-03 and buy-05 (docs/feature-ideas/discovery.md): the current collections and the gift finder. */}
+        <CollectionsStrip collections={collections} />
         <RecentlyViewed />
         <HowItWorks />
         {stores?.length ? <VerifiedStoresSection stores={stores} /> : null}

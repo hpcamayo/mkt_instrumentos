@@ -7,7 +7,8 @@ type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClien
 
 // The card's columns. status and stock_state are listed because PostgREST only filters on the columns a function's
 // result selects (the free-text search runs through public.catalog_search); previous_price_pen and price_dropped_at
-// give the "Antes S/" line (list-05, lib/listing-page.ts visiblePreviousPrice).
+// give the "Antes S/" line (list-05, lib/listing-page.ts visiblePreviousPrice). listing_flags is there for the yes/no
+// filters on the search's results, price_mode for the card's "Precio conversable" (listing-details).
 const CARD_COLUMNS = `
         id,
         title,
@@ -30,6 +31,8 @@ const CARD_COLUMNS = `
         status,
         stock_state,
         store_id,
+        listing_flags,
+        price_mode,
       `;
 const STORE_AND_PHOTO_COLUMNS = ` (
           name,
@@ -76,6 +79,8 @@ function applyFilters<Q extends { eq: any; in: any; or: any; ilike: any; gte: an
   if (filters.minPrice !== undefined) result = result.gte("price_pen", filters.minPrice);
   if (filters.maxPrice !== undefined) result = result.lte("price_pen", filters.maxPrice);
   for (const [key, value] of Object.entries(filters.advanced)) result = result.contains("attributes", { [key]: value });
+  // listing-details: every yes/no filter chosen ("all of"), on the flags the database keeps (GIN-indexed).
+  if (filters.options?.length) result = result.contains("listing_flags", filters.options);
   return result;
 }
 
