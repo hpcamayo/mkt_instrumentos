@@ -21,7 +21,7 @@ export default async function CounterPage() {
       <Breadcrumbs items={[{ label: "Inventario", href: "/mi-cuenta/tienda/inventario" }, { label: "Mostrador" }]} />
       <PageHeader eyebrow={store.name} title="Mostrador" meta="Registra ventas de tu tienda escaneando o escribiendo el código." />
       {summary.can_write ? (
-        <Counter storeId={store.id} />
+        <Counter storeId={store.id} storeName={store.name} />
       ) : (
         <Notice tone="warning" role="note">Tu tienda no puede registrar cambios de inventario en este momento.</Notice>
       )}

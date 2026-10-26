@@ -301,11 +301,11 @@ test("home header: Categorías menu, Tiendas verificadas from 768 px, Cómo func
   assert.match(source("components/site-header.tsx"), /\{menu\.open \? <HomeCategoryPanel panelRef=\{menu\.panelRef\} onChoose=\{\(\) => menu\.close\(\)\} \/> : null\}/);
 });
 
-test("the home Categorías panel: Todos los instrumentos, every category with its types, Tiendas verificadas (PUB-011–015 destinations)", () => {
+test("the home Categorías panel: Todos los instrumentos, every category with its types, Tiendas verificadas (PUB-011–015 destinations) and Servicios para músicos", () => {
   const html = renderHomeHeader({ open: true });
   assert.match(html, /aria-expanded="true" aria-controls="menu-categorias"/);
   // The panel follows its button in the markup, so Tab goes from the button into it.
-  const panel = html.slice(html.indexOf('<div id="menu-categorias"'), html.indexOf("Tiendas verificadas</a></div></div>") + 35);
+  const panel = html.slice(html.indexOf('<div id="menu-categorias"'), html.indexOf("Servicios para músicos</a></div></div>") + 38);
   assert.ok(html.indexOf('aria-controls="menu-categorias"') < html.indexOf('id="menu-categorias"'));
   assert.ok(html.indexOf('id="menu-categorias"') < html.indexOf('href="#como-funciona"'));
   assert.match(panel, /^<div id="menu-categorias" class="surface-light menu-fade absolute inset-x-0 top-full z-40 max-h-\[calc\(100dvh-56px\)\] overflow-y-auto[^"]*shadow-level-1[^"]*md:max-h-none md:overflow-visible">/);
@@ -316,6 +316,8 @@ test("the home Categorías panel: Todos los instrumentos, every category with it
     ...shell.categoryMenus.flatMap((menu) => [[menu.label, menu.href], ...menu.types.map((type) => [type.label, type.href])]),
     // find-13: the stores directory (was N7's filtered catalog).
     ["Tiendas verificadas", "/tiendas"],
+    // feature-ideas services (bet-02): its own section, after the stores.
+    ["Servicios para músicos", "/servicios"],
   ];
   assert.deepEqual(links.map((link) => [link.label, link.href]), expected);
   // Every destination is a client link; 44 px rows on phones, 36 px from 768 px; types indented on phones.

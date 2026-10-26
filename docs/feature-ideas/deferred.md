@@ -53,6 +53,15 @@ The catalog autofill must reach main first. It must never be copied from `proto/
 | buy-09 Installments | Henri's note: "next wave". It ships as store-floor's second PR. |
 | run-02 Several locations, run-03 Boleta from the counter | They change stock, so they start after store-floor's wave-1 PR is merged. |
 
+## Parts of built ideas left for later
+
+| Idea | What is left | Why |
+| --- | --- | --- |
+| reach-11 Compra en tienda verificada | A code for a Mostrador sale queued offline, and showing a code again from the sale history | The code needs the sale recorded on the server; the offer appears only right after the sale (deal-trust). |
+| reach-11 Compra en tienda verificada | Swap the temporary QR encoder for store-floor's `lib/labels/qr.ts` | Waits for store-floor's encoder to merge (FD-deal-trust-5). |
+| sell-09 Seller page | A "Ver mi página" line in Mis publicaciones | That page belongs to selling-tools; the link is in Compras y ventas for now. |
+| safe-03 Encuentro seguro | Confirming the shopping-center names per city | Someone in Lima should check `lib/safe-meetup-places.ts` before launch (FD-deal-trust-17). |
+
 ## Still open from Effortless Laria (not part of this list)
 
 - **Maybes:** big-02, big-07, stock-24, talk-06, talk-07.

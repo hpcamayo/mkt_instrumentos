@@ -58,9 +58,12 @@ export function SellerCard({
   visit,
   sold = false,
   now = Date.now(),
+  trust,
   className,
 }: {
   seller: SellerSummary;
+  // deal-trust: the seller level, «Punto seguro Laria» and a Particular's "Ver perfil" (components/trust/listing-trust).
+  trust?: ReactNode;
   // list-12: a store's shown address with "Cómo llegar" and its opening hours (publicStoreLocation).
   visit?: PublicStoreLocation;
   // The seller's active publications, streamed (null renders nothing).
@@ -100,6 +103,7 @@ export function SellerCard({
         {fewReviews ? <>{verified}{rating}</> : <>{rating}{verified}</>}
         {listingCount}
       </ul>
+      {trust}
       {visit ? <StoreVisitLines location={visit} className="mt-3" /> : null}
       {seller.storeHref ? (
         <Link href={seller.storeHref} className={buttonClasses({ variant: "secondary", size: "sm", className: "mt-4" })}>

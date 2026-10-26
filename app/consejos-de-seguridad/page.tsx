@@ -35,6 +35,18 @@ export default function SafetyPage() {
         </ul>
       </LegalSection>
 
+      {/* deal-trust (safe-03): the meetup section the «Encuentro seguro» sheet links to. */}
+      <LegalSection id="encuentro" title="Si se encuentran en persona">
+        <ul>
+          <li>Elige un lugar público y concurrido, de día: un centro comercial, la puerta de una comisaría o una tienda que se ofrece como «Punto seguro Laria».</li>
+          <li>Antes de salir, avisa a alguien de confianza a dónde vas, con quién y a qué hora. En la publicación de un particular, «Encuentro seguro» te prepara ese mensaje para WhatsApp.</li>
+          <li>Prueba el instrumento con calma: enciéndelo y conéctalo, revisa cuerdas, trastes, teclas o parches, escucha si hay ruidos y compara el número de serie con el de las fotos.</li>
+          <li>Si puedes, ve con alguien que conozca el instrumento.</li>
+          <li>Paga solo después de revisarlo, y quien vende confirma el pago en su propia app antes de entregar.</li>
+        </ul>
+        <p>Un «Punto seguro Laria» es una tienda verificada que acepta que compradores y vendedores se vean en su local durante su horario. La tienda no revisa el instrumento, no recibe pagos y no participa en el trato. Laria no revisa estos lugares ni a las personas y no puede garantizar cómo resulta un encuentro.</p>
+      </LegalSection>
+
       <LegalSection title="Si vendes">
         <ul>
           <li>Antes de entregar, confirma en tu banco o billetera que el dinero llegó. Las capturas de pantalla de transferencias pueden ser falsas.</li>
@@ -59,6 +71,7 @@ export default function SafetyPage() {
 
       <LegalSection title="Etiquetas y reseñas">
         <p>«Tienda Verificada» significa que Laria revisó manualmente los datos comerciales de la tienda. Las reseñas solo provienen de ventas que comprador y vendedor confirmaron como originadas en Laria. Ninguna de las dos es una garantía sobre un artículo o una transacción.</p>
+        <p>«Vendedor destacado» y «Tienda destacada» se asignan solos cada noche a quien cumple criterios públicos (ventas verificadas, reseñas, ningún reporte confirmado en los últimos 90 días y preguntas respondidas) y se quitan solos cuando deja de cumplirlos. Las fotos de las reseñas las revisa Laria antes de mostrarlas. Tampoco son una garantía sobre un artículo o una transacción.</p>
       </LegalSection>
 
       <LegalSection title="Si algo sale mal">
