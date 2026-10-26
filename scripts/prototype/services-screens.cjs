@@ -41,6 +41,10 @@ const SHOTS = {
     ["service-store", REPAIRS],
     ["service-room", ROOM],
     ["terms", "/terminos#servicios"],
+    // The entry points from the instrument side: the home teaser, the home menu and the repair line on worn gear.
+    ["home-teaser", "/"],
+    ["home-menu", "/", async (page) => { await page.getByRole("button", { name: "Categorías" }).click(); }],
+    ["listing-repair-line", "/instrumentos/demo-particular-zoom-g1"],
   ],
   buyer: [
     ["service-review-prompt", LESSONS],

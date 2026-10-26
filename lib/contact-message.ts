@@ -84,3 +84,49 @@ export function comboContactMessage(
     ask,
   ].join("\n");
 }
+
+// ------------------------------------------------------------------ deal-trust (docs/feature-ideas/deal-trust.md)
+
+export function buyerCardUrl(token: string) {
+  return absoluteUrl(`/comprador/${token}`);
+}
+
+type TrackRecordFacts = { enabled: boolean; token: string | null; memberSince: string; verifiedPurchases: number };
+
+// safe-07. "Compro en Laria desde 2026 · 3 compras verificadas: https://laria.audio/comprador/…" — what joins the
+// WhatsApp message when the buyer turned their track record on and left it in for this publication. Null without a
+// verified purchase or a card address.
+export function trackRecordLine(record: TrackRecordFacts) {
+  if (!record.enabled || !record.token || record.verifiedPurchases < 1) return null;
+  const since = new Date(record.memberSince);
+  const year = Number.isNaN(since.getTime()) ? null : new Intl.DateTimeFormat("es-PE", { year: "numeric", timeZone: "America/Lima" }).format(since);
+  const purchases = record.verifiedPurchases === 1 ? "1 compra verificada" : `${record.verifiedPurchases} compras verificadas`;
+  return `${year ? `Compro en Laria desde ${year} · ` : ""}${purchases}: ${buyerCardUrl(record.token)}`;
+}
+
+// safe-03, "Avisar a alguien": the message the buyer sends a friend before going. The seller's first name only; the
+// place and time are what the buyer typed or picked.
+export function meetupNoticeMessage({ title, url, sellerFirstName, place, when }: { title: string; url: string; sellerFirstName: string | null; place: string; when: string }) {
+  const who = sellerFirstName ? ` con ${sellerFirstName}` : "";
+  const where = place.trim() ? ` en ${place.trim()}` : "";
+  const time = when.trim() ? ` ${when.trim()}` : "";
+  return `Voy a ver este equipo${who}${where}${time}: ${title} ${url} Te aviso cuando termine.`;
+}
+
+// A WhatsApp link with no recipient: the person picks who gets the text.
+export function shareTextUrl(text: string) {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+// "el sábado, 2 de noviembre a las 4:30 p. m." from the date and time inputs; empty when the date is missing.
+export function meetupWhen(date: string, time: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return "";
+  const day = new Date(`${date}T12:00:00Z`);
+  if (Number.isNaN(day.getTime())) return "";
+  const dayText = new Intl.DateTimeFormat("es-PE", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(day);
+  const match = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!match) return `el ${dayText}`;
+  const at = new Date(Date.UTC(2000, 0, 1, Number(match[1]), Number(match[2])));
+  const timeText = new Intl.DateTimeFormat("es-PE", { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(at);
+  return `el ${dayText} a las ${timeText}`;
+}
