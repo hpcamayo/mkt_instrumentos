@@ -12,6 +12,8 @@ import { OwnerBar, RestockAlert, SimilarAlert } from "@/components/listing/listi
 import { ListingGallery } from "@/components/listing/listing-gallery";
 import { RELATED_ROW_MAX, RelatedListings, RelatedListingsSkeleton } from "@/components/listing/related-listings";
 import { ShareListing } from "@/components/listing/share-button";
+import { ListingGuideLink } from "@/components/discovery/listing-guide-link";
+import { ListingMarks } from "@/components/discovery/listing-marks";
 import { ListingQuestions } from "@/components/listing/listing-questions";
 import { ReputationSection } from "@/components/listing/reputation-section";
 import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@/components/listing/seller-card";
@@ -488,6 +490,8 @@ function ListingDetail({
               </h1>
               {secondaryTitle ? <p className="mt-1 t-ui text-ink-2">{secondaryTitle}</p> : null}
               {specLine ? <p className="mt-1 t-ui font-semibold text-ink">{specLine}</p> : null}
+              {/* discovery batch (disc-04, disc-05): Hecho a mano, a pedido, equipo de artista */}
+              <Suspense fallback={null}><ListingMarks listingId={listing.id} /></Suspense>
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <Price value={listing.price_pen} previous={visiblePreviousPrice(listing, now)} size="detail" />
                 {outOfStock ? <StatusTag domain="stock" status="out_of_stock" /> : null}
@@ -596,6 +600,9 @@ function ListingDetail({
                 </p>
               )}
             </section>
+
+            {/* discovery batch (disc-02): the buying guide and try-out checklist for this kind of instrument */}
+            {isSold ? null : <ListingGuideLink category={listing.category} instrumentType={listing.instrument_type} className="order-8 min-w-0" />}
 
             <div className="order-11 min-w-0">
               <ListingQuestions

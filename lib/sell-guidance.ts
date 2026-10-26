@@ -22,6 +22,7 @@ const SHOTS: Record<string, Shot[]> = {
   amplifiers: [FRONT, BACK, { id: "panel", label: "Panel de control", hint: "Perillas y entradas, enfocadas." }, { id: "parlante", label: "Parlante", hint: "Si se puede ver, el cono." }, WEAR, EXTRAS],
   microphones: [FRONT, { id: "capsula", label: "Cápsula o rejilla", hint: "De cerca." }, { id: "conector", label: "Conector", hint: "XLR o USB." }, WEAR, EXTRAS],
   audio: [FRONT, BACK, { id: "conexiones", label: "Conexiones", hint: "Entradas y salidas." }, WEAR, EXTRAS],
+  andean: [FRONT, BACK, { id: "detalle", label: "Clavijas, agujeros o parche", hint: "Lo que suena, de cerca: clavijas y cuerdas, agujeros y bisel, o parche y amarres." }, { id: "firma", label: "Firma o sello del luthier", hint: "Si tiene, legible." }, WEAR, EXTRAS],
 };
 
 const GENERAL_SHOTS: Shot[] = [FRONT, BACK, WEAR, EXTRAS];
@@ -51,6 +52,7 @@ const STARTERS_BY_TYPE: Record<string, string[]> = {
   cymbals: ["Medida: ", "Sin rajaduras ni ojos ovalados"],
   microphones: ["Incluye pinza y cable", "Patrón polar: "],
   audio_interface: ["Probada en Windows y Mac", "Incluye cable USB"],
+  andean_instrument: ["Hecho por ", "Afinación: ", "Madera o caña: "],
 };
 
 export function descriptionStarters(instrumentType: string) {

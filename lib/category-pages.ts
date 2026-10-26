@@ -76,6 +76,12 @@ const landingCopy = {
     description: "Interfaces de audio, mezcladoras, parlantes, monitores y audífonos usados y de tiendas en Perú. Contacta al vendedor directo por WhatsApp.",
     intro: "Interfaces, mezcladoras, parlantes, monitores de estudio y audífonos publicados por particulares y tiendas. Revisa entradas, potencia y estado antes de coordinar.",
   },
+  andean: {
+    slug: "andinos",
+    heading: "Instrumentos andinos y tradicionales en venta en Perú",
+    description: "Charangos, quenas, zampoñas, tinyas y bombos andinos usados, de tiendas y de talleres peruanos. Contacta al vendedor o al luthier directo por WhatsApp.",
+    intro: "Charangos, ronrocos, quenas, zampoñas, antaras, tinyas y bombos andinos publicados por particulares, tiendas y talleres que los hacen a mano. El cajón está en Percusión.",
+  },
 } satisfies Record<CategoryValue, Omit<CategoryLandingPage, "category" | "label">>;
 
 export const categoryLandingPages: readonly CategoryLandingPage[] = categoryOptions.map((option) => ({

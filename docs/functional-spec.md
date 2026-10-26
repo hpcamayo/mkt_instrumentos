@@ -312,6 +312,26 @@ Proposed with the find batch (`docs/ux-effortless/find.md`, UXD-find-1 to UXD-fi
   precio" and "Vistos recientemente" follow. Nothing of this leaves the device. The vitrina and the category tiles
   are retired.
 
+## Discovery: gifts, guides, collections, makers and artists (feature ideas, discovery batch)
+
+Proposed with the discovery batch (`docs/feature-ideas/discovery.md`, FD-discovery-1 to FD-discovery-13); not part of
+V1 until merged.
+
+- **Eleventh category.** "Andinos y tradicionales" (`/instrumentos/andinos`) with one type, Instrumento andino, and an
+  Instrumento attribute (charango, ronroco, bandurria, arpa andina, quena, quenacho, zampoña o siku, antara, pinkillo,
+  tinya, bombo andino, wankara, chajchas). The cajón stays in Percusión.
+- **Hecho en Perú.** A store declares itself Fabricante or Taller with its city; its listings can say "Hecho a mano" and
+  "Se hace a pedido: N semanas" (1 to 26). The marks say they are the store's word. Admin can hide a maker with a
+  reason. `/hecho-en-peru` lists the makers.
+- **Verified artists.** Admin verifies an artist's identity on an existing account; their listings may carry a short
+  note on how the gear was used, shown as the seller's word. `/artistas` lists them. Revoking removes every mark.
+- **Buying guides.** `/guias`: nine guides, with try-out checklists ticked on the device only; unsold listings link the
+  guides for their kind under "Antes de ir a verlo".
+- **Gift finder.** `/regalos` (and four occasion pages) by recipient and budget, from real listings; no countdowns.
+  Stores can say they accept gift exchanges for 3 to 60 days.
+- **Collections.** Admin saves dated collections of up to four catalog filter sets; the home shows up to three current
+  ones and the gift finder card; `/colecciones` lists them.
+
 ## WhatsApp Contact Tracking
 
 Laria records buyer intent when a user initiates WhatsApp contact. It never records WhatsApp message content.
