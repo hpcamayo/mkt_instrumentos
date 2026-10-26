@@ -13,7 +13,8 @@ export function foldText(value: string) {
   return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-type Kind = { category: string; instrumentType?: string };
+// `advanced` names one attribute value, for words that name a subtype ("quena" → Andinos, tipo Quena).
+type Kind = { category: string; instrumentType?: string; advanced?: Record<string, string> };
 
 // Words that name a category or a type (folded). Longer phrases are tried first.
 const kindWordsAsWritten: readonly (readonly [string, Kind])[] = [
@@ -56,7 +57,23 @@ const kindWordsAsWritten: readonly (readonly [string, Kind])[] = [
   ["flauta", { category: "winds" }],
   ["violín", { category: "strings" }],
   ["ukulele", { category: "strings" }],
-  ["charango", { category: "strings" }],
+  // disc-04: the Andean instruments have their own category; the cajón stays in Percusión.
+  ["bombo andino", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "bombo_andino" } }],
+  ["instrumentos andinos", { category: "andean" }],
+  ["andinos", { category: "andean" }],
+  ["andino", { category: "andean" }],
+  ["charangos", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "charango" } }],
+  ["charango", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "charango" } }],
+  ["ronroco", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "ronroco" } }],
+  ["quenas", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "quena" } }],
+  ["quena", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "quena" } }],
+  ["quenacho", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "quenacho" } }],
+  ["zampoñas", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "zampona" } }],
+  ["zampoña", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "zampona" } }],
+  ["siku", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "zampona" } }],
+  ["sikus", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "zampona" } }],
+  ["antara", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "antara" } }],
+  ["tinya", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "tinya" } }],
   ["pedales", { category: "pedals" }],
   ["pedal", { category: "pedals" }],
   ["pedalera", { category: "pedals" }],
@@ -167,6 +184,9 @@ export function applySearchPhrase(filters: ListingFilters, knownCities: readonly
     take(pattern, () => {
       next.category = kind.category;
       if (kind.instrumentType && !next.instrumentType) next.instrumentType = kind.instrumentType;
+      if (kind.advanced && next.instrumentType === kind.instrumentType) {
+        for (const [key, value] of Object.entries(kind.advanced)) if (next.advanced[key] === undefined) next.advanced[key] = value;
+      }
       return true;
     });
     break;

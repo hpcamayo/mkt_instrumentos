@@ -99,11 +99,11 @@ test("nothing in the shell is sticky (N3) and there is no bottom bar (N4)", () =
 
 test("the category strip lists Instrumentos, the categories in taxonomy order and Tiendas verificadas (G1, find-13)", () => {
   assert.deepEqual(shell.stripItems.map((item) => item.label), [
-    "Instrumentos", "Guitarras", "Bajos", "Teclados", "Percusión", "Vientos", "Cuerdas", "Pedales", "Amplificadores", "Micrófonos", "Audio", "Tiendas verificadas",
+    "Instrumentos", "Guitarras", "Bajos", "Teclados", "Percusión", "Vientos", "Cuerdas", "Pedales", "Amplificadores", "Micrófonos", "Audio", "Andinos", "Tiendas verificadas",
   ]);
   // The strip shortens "Teclados y pianos" so ten categories fit one row at 1280 px; the menu keeps the full label.
   assert.equal(shell.categoryMenus.find((menu) => menu.key === "keyboards").label, "Teclados y pianos");
-  assert.deepEqual(shell.stripItems.map((item) => item.kind), ["link", ...Array(10).fill("category"), "link"]);
+  assert.deepEqual(shell.stripItems.map((item) => item.kind), ["link", ...Array(11).fill("category"), "link"]);
   assert.equal(shell.stripItems[0].href, "/listados");
   // find-13 replaces N7: "Tiendas verificadas" opens the stores directory instead of the catalog filtered to verified
   // stores (that filter still marks the item, since it shows the same listings as the directory's second tab).
@@ -155,7 +155,7 @@ test("strip categories are menu buttons; Instrumentos and Tiendas verificadas st
   assert.match(html, /<nav aria-label="Categorías"/);
   // Ten disclosure buttons, all closed, each pointing at its panel; the current category keeps the blue underline.
   const buttons = [...html.matchAll(/<button type="button" aria-expanded="false" aria-controls="(categoria-[^"]+)"[^>]*>([^<]+)/g)];
-  assert.deepEqual(buttons.map((match) => match[2]), ["Guitarras", "Bajos", "Teclados", "Percusión", "Vientos", "Cuerdas", "Pedales", "Amplificadores", "Micrófonos", "Audio"]);
+  assert.deepEqual(buttons.map((match) => match[2]), ["Guitarras", "Bajos", "Teclados", "Percusión", "Vientos", "Cuerdas", "Pedales", "Amplificadores", "Micrófonos", "Audio", "Andinos"]);
   assert.match(html, /aria-controls="categoria-percussion" aria-current="true" class="[^"]*shadow-\[inset_0_-3px_0_var\(--accent\)\]/);
   assert.doesNotMatch(html, /categoria-percussion"[^>]*hidden|id="categoria-/, "panels render only when open");
   // Catalog destinations are client links again once the transition stall is fixed (UX-3 Q1 A).
@@ -200,7 +200,7 @@ test("Admin reaches the same destinations from its own navigation, without the p
   const html = renderToStaticMarkup(React.createElement(CategoryAccordion));
   assert.match(html, /<button id="[^"]+-categorias-boton" type="button" aria-expanded="false" aria-controls="[^"]+-categorias"[^>]*>Explorar categorías/);
   assert.match(html, /<ul id="[^"]+-categorias" hidden=""/);
-  assert.equal((html.match(/aria-expanded="false"/g) ?? []).length, 11, "the entry and ten categories");
+  assert.equal((html.match(/aria-expanded="false"/g) ?? []).length, 12, "the entry and eleven categories");
   for (const href of ["/listados", "/tiendas", "/instrumentos/guitarras", "/listados?category=guitars&amp;instrument_type=electric_guitar"]) assert.ok(html.includes(`href="${href}"`), href);
   // Nested in the phone "Menú": the accordion marks its Esc handled so the outer menu stays open (both listen on document).
   assert.match(source("components/category-accordion.tsx"), /event\.key !== "Escape" \|\| !open\) return;[\s\S]*?event\.preventDefault\(\);\s*event\.stopPropagation\(\);/);

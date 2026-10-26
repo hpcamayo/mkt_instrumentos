@@ -43,6 +43,10 @@ const CATEGORY_BY_NAME: Map<string, string> = (() => {
     map.set(normalizeHeader(option.label), option.value);
   }
   for (const [legacy, target] of Object.entries(legacyCategories)) map.set(normalizeHeader(legacy), target.category);
+  // disc-04: the names stores commonly give the Andean category in their own sheets.
+  for (const name of ["Andinos", "Instrumentos andinos", "Andino", "Tradicionales", "Instrumentos tradicionales", "Folklore", "Folclore", "Folklórico", "Folclórico"]) {
+    map.set(normalizeHeader(name), "andean");
+  }
   return map;
 })();
 
