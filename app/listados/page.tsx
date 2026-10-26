@@ -1,6 +1,5 @@
 import { permanentRedirect, redirect } from "next/navigation";
 import {
-  parsePage,
   pageHref,
   getPageRedirect,
 } from "@/lib/pagination";
@@ -9,8 +8,6 @@ import { CatalogView } from "@/components/catalog-view";
 import { ListingFilters } from "@/components/listing-filters";
 import { PageContainer } from "@/components/page-container";
 import {
-  hasRejectedFilterValues,
-  parseListingFilters,
   type ListingCardData,
   type ListingFilters as ListingFiltersType,
 } from "@/lib/listings";
@@ -27,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
+import { catalogFilterParams, parseCatalogRequest } from "@/lib/catalog-request";
 
 export const dynamic = "force-dynamic";
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
@@ -38,12 +36,8 @@ type ListingsPageProps = {
 
 // Metadata and the page can run independently. Both must clean malformed URLs before starting catalog reads.
 function readCatalogRequest(searchParams: Awaited<ListingsPageProps["searchParams"]>) {
-  const filters = parseListingFilters(searchParams);
-  const page = parsePage(searchParams.page);
-  if (hasRejectedFilterValues(searchParams)) {
-    const cleaned = catalogHref(filters);
-    permanentRedirect(page > 1 ? `${cleaned}${cleaned.includes("?") ? "&" : "?"}page=${page}` : cleaned);
-  }
+  const { filters, page, redirectHref } = parseCatalogRequest(searchParams);
+  if (redirectHref) permanentRedirect(redirectHref);
   return { filters, page };
 }
 
@@ -60,6 +54,7 @@ export default async function ListingsPage({
 }: ListingsPageProps) {
   const resolvedSearchParams = await searchParams;
   const { filters, page } = readCatalogRequest(resolvedSearchParams);
+  const navigationParams = catalogFilterParams(filters);
   const { supabase } = getRequestReads();
 
   if (!supabase) {
@@ -73,7 +68,7 @@ export default async function ListingsPage({
   const { count, data, error } = (await getCatalogPage(filters, page)) ?? { count: null, data: null, error: null };
   const redirectPage = getPageRedirect(page, count, error);
   if (redirectPage !== null)
-    redirect(pageHref("/listados", resolvedSearchParams, redirectPage));
+    redirect(pageHref("/listados", navigationParams, redirectPage));
   const listings = (data ?? []) as ListingCardData[];
   const searchReceipt = !error && page === 1 ? createSearchReceipt(filters, count ?? 0) : null;
   const searchState = searchEventMetadata(filters, count ?? 0);
@@ -90,9 +85,9 @@ export default async function ListingsPage({
       totalCount={count ?? 0}
       page={page}
       path="/listados"
-      params={resolvedSearchParams}
+      params={navigationParams}
       error={Boolean(error)}
-      retryHref={pageHref("/listados", resolvedSearchParams, page)}
+      retryHref={pageHref("/listados", navigationParams, page)}
       emptyState={
         <EmptyState
           title="Aún no hay publicaciones"
