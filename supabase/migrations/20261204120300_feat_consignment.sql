@@ -55,7 +55,7 @@ begin
   end if;
   if v_store.status <> 'active' or not v_store.is_verified
     or not exists (select 1 from public.store_trade_settings ts where ts.store_id = v_store.id and ts.consignment) then
-    raise exception 'CONSIGNMENT_NOT_ENABLED: Activa "Recibimos en consignación" en Mi tienda (tiendas verificadas).';
+    raise exception 'CONSIGNMENT_NOT_ENABLED: Activa «Recibimos en consignación» en Ofertas › Qué recibimos (tiendas verificadas).';
   end if;
   select * into v_listing from public.listings where id = p_listing_id and store_id = v_store.id for update;
   if not found then

@@ -332,6 +332,36 @@ V1 until merged.
 - **Collections.** Admin saves dated collections of up to four catalog filter sets; the home shows up to three current
   ones and the gift finder card; `/colecciones` lists them.
 
+<!-- feature-ideas:selling-tools -->
+## Selling Tools: Mi equipo, store offers, consignment, price steps and private offers (feature ideas, selling-tools batch)
+
+Proposed with the selling-tools batch (`docs/feature-ideas/selling-tools.md`, FD-selling-tools-1 to FD-selling-tools-15);
+not part of V1 until merged. Laria never charges, handles money or values gear in any of these.
+
+- **Mi equipo.** A Particular's private list of their gear (Mi cuenta › Mi equipo): brand, model, serial, purchase date,
+  warranty end and a note. Confirmed purchases are added by themselves. "Vender esto" opens the sell form with the
+  item's details. No estimated value.
+- **¿Prefieres vender ya?** Verified stores opt in to buying used guitars, basses, amplifiers, pedals or keyboards. A
+  Particular sends photos and a description to every such store of their region, sees how many will receive it
+  first, gets offers within 24 hours and has 3 days to choose one or none. Choosing shares their WhatsApp with that
+  store only; they bring the gear within 5 days and the store confirms the price and pays directly.
+- **Consignment.** A verified store lists a Particular's instrument as its own listing, marked "En consignación en
+  <Tienda>", and invites the owner by a one-time link; the owner follows its views, contacts and saves and is told when
+  it sells. The commission is agreed between them.
+- **Part payment.** A store listing can say "Aceptamos tu equipo como parte de pago" (store default, per-listing
+  choice). The buyer sends their gear from Mi equipo or with photos to that store, which answers with an estimate.
+- **Bajada automática.** The owner of a listing sets a floor and a pace (5 % or 10 % every 7 or 14 days, optionally
+  only without WhatsApp contacts). A daily job lowers the price until the floor, a sale or a pause; each step is a
+  normal price change, so saved-listing alerts follow. Buyers see no countdown.
+- **Oferta a interesados.** Once per listing per week, the owner sends one private price, for 1 to 7 days, to the
+  people who saved it, by notification and e-mail (respecting the price-drop e-mail choice). The listing shows it to
+  them with a WhatsApp button that quotes it; the public price does not change.
+- **Reminders.** A Mi equipo item with strings, reeds or drumheads can have one reminder (off by default, every 1 to 12
+  months) that names up to three stores of the region that sell them; one tap stops it, also from the e-mail.
+- **Ofertas (stores).** The store inbox for sell and part-payment requests and the "Qué recibimos" settings (used gear,
+  consignment, part payment, consumables). Mis publicaciones links each listing's "Herramientas de venta".
+<!-- /feature-ideas:selling-tools -->
+
 ## WhatsApp Contact Tracking
 
 Laria records buyer intent when a user initiates WhatsApp contact. It never records WhatsApp message content.

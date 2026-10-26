@@ -1312,3 +1312,70 @@ Migrations `20261207120000`–`20261207120400` (not applied to any hosted databa
 - Public reads (definer, `anon` and `authenticated`), each returning only public listings and visible makers or
   artists: `get_listing_marks(uuid[])`, `get_public_makers(int)`, `get_store_maker_profile(uuid)`,
   `get_public_artists(int)`, `get_gift_exchange_stores(int)`.
+
+<!-- feature-ideas:selling-tools -->
+## Feature ideas: selling tools (Mi equipo, store offers, consignment, price steps, private offers, reminders)
+
+Migrations `20261204120000`–`20261204120700` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/selling-tools.md`. Suite: `tests/feat-selling-tools.sql`. No shared function is redefined; direct
+writes to every table below are revoked and go through definer functions. Errors read `CODE: Mensaje en español.`.
+
+- **Registry (`20261204120000`).** Notification types `listing_price_step`, `listing_private_offer`,
+  `listing_consignment_update`, `store_trade_request`, `store_trade_update`, `gear_trade_offer`, `gear_trade_update`,
+  `gear_reminder_due`; e-mail types `listing_private_offer`, `listing_consignment_update`, `store_trade_request`,
+  `store_trade_update`, `gear_trade_offer`, `gear_reminder_due`; the e-mail context key `selling`; a `gear_%` branch on
+  `notifications_target_check` (no listing or store needed), added by `laria_private.feat_add_check_branch` (idempotent:
+  wraps the live check in `(old) or (branch)`). Helpers `laria_private.selling_notify(user, type, message, listing,
+  store) → uuid` and `laria_private.selling_own_store_id()`.
+- **`gear_items` (`20261204120100`).** A Particular's own gear: `user_id`, `source` (manual | purchase),
+  `transaction_id` (unique), `source_listing_id`, taxonomy, `brand`, `model`, `title`, `attributes`, `serial` and the
+  generated `serial_key` (upper-case alphanumerics, for stolen-gear matching), `purchased_on`, `warranty_until`, `note`,
+  `sale_listing_id`. Owner reads only. `save_gear_item(p_id, p_fields)`, `delete_gear_item(p_id)`,
+  `start_gear_sale(p_id) → {draft_id} | {listing_id, status}` (a `listing_drafts` row with the sell form's keys). The
+  trigger `verified_transactions_add_to_gear` adds a confirmed purchase to a Particular buyer's list once. 200 items
+  per person.
+- **`gear_reminders`.** One per gear item (buy-06): `kind` (strings | reeds | drumheads, from
+  `public.gear_reminder_kind(type)`), `every_months` 1–12, `last_changed_on`, `next_due_on`, `last_sent_on`.
+  `set_gear_reminder`, `mark_gear_reminder_done`, `stop_gear_reminder`; `stop_gear_reminders_by_link(user)` (service
+  role, for the e-mail's one-click link).
+- **`store_trade_settings` (`20261204120200`).** One row per store: `buys_used` and `buy_categories` (guitars, basses,
+  amplifiers, pedals, keyboards), `consignment`, `part_payment` (the default for its listings), `consumables`
+  (strings, reeds, drumheads), `note`. All off by default; public for active stores. `set_store_trade_settings(p_fields)`
+  (buying and consignment need a verified store). `listings.accepts_part_payment boolean` (null follows the store),
+  `listing_accepts_part_payment(id)` and `set_listing_part_payment(id, value)`.
+- **`trade_requests` and `trade_offers`.** A Particular's request (`kind` sell | part_payment) with 2–6 photos in the
+  private bucket `trade-photos` (`<user>/<request>/<n>.jpg`, jpeg, 5 MB; the insert policy uses
+  `trade_photo_folder_is_free`), `offers_until` (24 h, or 72 h for part payment), `decide_until` (+3 days, or +7),
+  `status` (open, accepted, completed, not_completed, withdrawn, expired), the accepted offer, `drop_off_by` (+5 days)
+  and the person's `contact_phone`, shared only with the chosen store. One offer per store and request (sent,
+  accepted, declined, withdrawn). Reads go through `get_my_trade_requests`, `get_my_trade_request`,
+  `get_store_trade_inbox`, `get_store_trade_request`; writes through `create_trade_request` (rate limits, contact
+  details refused, condition from the listing scale), `accept_trade_offer`, `withdraw_trade_request`,
+  `save_trade_offer`, `withdraw_trade_offer`, `close_trade_request`. Who sees a request:
+  `laria_private.trade_store_qualifies` (active, verified, same region, category bought) or the listing's store for
+  part payment. `count_trade_stores(category, region)`, `count_trade_stores_by_category(region)`,
+  `can_view_trade_photo(path)`.
+- **`listing_consignments` (`20261204120300`).** `listing_id`, `store_id`, `owner_user_id`, `status` (invited, active,
+  sold, ended), `invite_token_hash` (sha256 of a 64-hex secret), `invite_expires_at` (7 days); one open row per
+  listing. `create_consignment_invite`, `get_consignment_invite`, `accept_consignment_invite` (Particular),
+  `end_consignment`, `get_listing_consignment` (public label), `get_my_consignments` (views, contacts, saves),
+  `get_store_listing_consignment`. Trigger `listings_selling_consignment_close` (after update of status): sold closes it
+  and e-mails the owner, archived ends it.
+- **`listing_price_steps` (`20261204120400`).** One rule per listing: `floor_pen`, `step_percent` 5 | 10,
+  `interval_days` 7 | 14, `only_without_contacts`, `status` (active, paused, finished), `finished_reason`,
+  `start_price_pen`, `steps_taken`, `next_step_at`, `last_step_at`. `public.listing_price_step_next(price, floor,
+  pct)` is the rounding (whole soles, down). `set_listing_price_steps`, `pause_listing_price_steps`,
+  `delete_listing_price_steps`. The job lowers the price through the usual price change (so `listing_price_drop`
+  alerts follow).
+- **`listing_private_offers` and recipients (`20261204120500`).** One private price per listing per 7 days, valid 1–7
+  days, sent to the people who saved it (never the owner or the store owner); the e-mail is skipped when
+  `email_preferences.price_drop_emails` is false. `get_private_offer_audience`, `send_private_offer`,
+  `cancel_private_offer`, `get_my_private_offer`, `get_listing_selling_tools(uuid[])` (owner's tags) and
+  `get_listing_selling_public(id)` (the listing page's consignment label, part payment and the viewer's offer).
+- **Jobs (`20261204120600`).** `public.run_selling_job(p_job, p_limit)`, service role only: `price-steps`,
+  `gear-reminders` (dedupe `gear_reminder:<gear>:<due>`), `trade-offers` (expiry, stale accepted requests, and the
+  `orphan_photos` list the route removes from Storage: unsent after 2 days, closed more than 90 days ago).
+- **Part payment as a listing detail (`20261204120700`).** Key `part_payment` in `laria_private.listing_detail_writers`
+  with `laria_private.write_listing_part_payment(uuid, jsonb)` (true, false or null; store listings only) and
+  `laria_private.copy_listing_part_payment(uuid, uuid)`.
+<!-- /feature-ideas:selling-tools -->
