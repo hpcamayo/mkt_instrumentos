@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { REMEMBER_COOKIE, remembersSession, withRememberChoice } from "@/lib/auth/remember";
 import type { Database } from "@/lib/supabase/database.types";
 
 export async function getSupabaseServerClient() {
@@ -11,6 +12,8 @@ export async function getSupabaseServerClient() {
   }
 
   const cookieStore = await cookies();
+  // safe-08 (accounts batch): session-only cookies when "Mantener sesión iniciada" was unticked.
+  const remember = remembersSession(cookieStore.get(REMEMBER_COOKIE)?.value);
 
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -20,7 +23,7 @@ export async function getSupabaseServerClient() {
       setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
+            cookieStore.set(name, value, withRememberChoice(options, remember));
           });
         } catch {
           // Server Components cannot always set cookies. Middleware refreshes

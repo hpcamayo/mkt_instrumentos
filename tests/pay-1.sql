@@ -34,9 +34,11 @@ $$;
 create function pg_temp.audits(p_action text, p_store uuid) returns bigint language sql security definer as $$
   select count(*) from public.admin_audit_actions where action = p_action and target_type = 'store' and target_id = p_store
 $$;
+-- Since safe-08 (feature ideas, accounts batch) a store with an approved payment method needs a second-factor session
+-- to change its methods, so the owners here act on one (aal2); tests/feat-accounts.sql covers the first-step refusal.
 create function pg_temp.as_user(p_name text) returns void language plpgsql as $$
 begin
-  perform set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.id(p_name), 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.id(p_name), 'role', 'authenticated', 'aal', 'aal2')::text, true);
 end $$;
 create function pg_temp.as_admin() returns void language plpgsql as $$
 begin

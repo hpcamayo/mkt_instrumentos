@@ -12,6 +12,13 @@ export function loginReason(motivo: string | null, listingTitle: string | null) 
       return { title: listing ? `Ingresa para reportar ${listing}` : "Ingresa para enviar tu reporte", meta: "Al volver, el formulario estará abierto." };
     case "contacto":
       return { title: listing ? `Ingresa para contactar por ${listing}` : "Ingresa para contactar al vendedor", meta: "Volverás a la publicación apenas ingreses." };
+    // safe-08, safe-09 (feature ideas, accounts batch).
+    case "sesiones":
+      return { title: "Cerraste sesión en todos los dispositivos", meta: "Ingresa de nuevo en este dispositivo cuando quieras." };
+    case "recuperado":
+      return { title: "Desactivamos tu app de autenticación", meta: "Ingresa con tu contraseña y vuelve a configurarla en Seguridad." };
+    case "cuenta-eliminada":
+      return { title: "Eliminamos tu cuenta", meta: "Gracias por haber sido parte de Laria. Puedes crear una cuenta nueva cuando quieras." };
     default:
       return listing
         ? { title: `Ingresa para continuar con ${listing}`, meta: "Volverás a la publicación apenas ingreses." }
