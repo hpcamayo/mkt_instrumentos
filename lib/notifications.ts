@@ -42,6 +42,9 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   store_dealer_approved: "Distribuidor oficial aprobado",
   store_dealer_rejected: "Autorización no aprobada",
   store_dealer_revoked: "Distribuidor oficial retirado",
+  // Feature ideas, store-reach batch (reach-05): a campaign entry that did not start or that Admin removed.
+  store_campaign_entry_ineligible: "Publicación fuera de la campaña",
+  store_campaign_entry_removed: "Publicación retirada de la campaña",
 };
 
 export const DEFAULT_NOTIFICATION_LABEL = "Actualización de tu cuenta";
@@ -80,9 +83,11 @@ export function notificationHref(notification: NotificationTarget, listingSlug?:
     ? `/instrumentos/${notification.listing_id}`
     : notification.event_type === "store_stock_summary"
     ? "/mi-cuenta/tienda/inventario?stock=low"
-    // Feature ideas, store-reach batch (reach-04).
+    // Feature ideas, store-reach batch (reach-04, reach-05).
     : notification.event_type.startsWith("store_dealer_")
     ? "/mi-cuenta/tienda/distribuidor"
+    : notification.event_type.startsWith("store_campaign_")
+    ? "/mi-cuenta/tienda/campanas"
     : notification.store_id && notification.event_type.startsWith("store_")
     ? "/mi-cuenta/tienda"
     : notification.store_id
