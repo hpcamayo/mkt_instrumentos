@@ -4,7 +4,6 @@ import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Field, Input } from "@/components/ui/field";
-import { Notice } from "@/components/ui/notice";
 import { PasswordInput } from "@/components/ui/password-input";
 
 // safe-09 (accounts batch): "Eliminar mi cuenta" in two steps, the password (or the account's e-mail when it only uses

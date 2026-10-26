@@ -110,7 +110,7 @@ export default async function AdminReportedGearPage({ searchParams }: { searchPa
                       <Link href={`/admin/publicaciones?buscar=${encodeURIComponent(match.listing.id)}`} className="link w-fit t-meta font-semibold">Abrir en gestión</Link>
                     </>
                   ) : match.inventory_item ? (
-                    <p className="t-body text-ink">{match.inventory_item.name ?? "Producto"} · SKU {match.inventory_item.sku ?? "?"} · {match.inventory_item.store ?? "Tienda"}</p>
+                    <p className="t-body text-ink">{match.inventory_item.name ?? "Equipo sin nombre"} · SKU {match.inventory_item.sku ?? "?"} · {match.inventory_item.store ?? "Tienda"}</p>
                   ) : <p className="t-body text-ink-2">Un equipo de «Mi equipo» (privado).</p>}
                 </div>
               </div>

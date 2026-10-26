@@ -273,7 +273,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         paragraphs: [
           "Al publicar puedes escribir el número de serie del equipo. No aparece en la publicación ni lo ve nadie fuera del equipo de Laria.",
           "Laria lo compara con los reportes de equipos robados. Si coincide, el equipo de Laria lo revisa con calma antes de hacer nada; no se rechaza nada de forma automática y nadie es señalado en público.",
-          "Las tiendas pueden guardar el número de serie en cada producto de su inventario.",
+          "Las tiendas pueden guardar los números de serie de cada SKU de su inventario.",
         ],
       },
     ],
@@ -311,7 +311,7 @@ export const HELP_ARTICLES: HelpArticle[] = [
         ],
       },
       {
-        paragraphs: ["La verificación la decide el equipo de Laria. No es una garantía sobre los productos ni sobre las ventas."],
+        paragraphs: ["La verificación la decide el equipo de Laria. No es una garantía sobre los equipos ni sobre las ventas."],
       },
     ],
   },
@@ -340,9 +340,9 @@ export const HELP_ARTICLES: HelpArticle[] = [
     sections: [
       {
         bullets: [
-          "En Inventario registras tus productos y unidades, uno por uno o con un archivo.",
+          "En Inventario registras tus equipos y sus unidades, uno por uno o con un archivo.",
           "Cuando una publicación se queda sin unidades, muestra «Agotado» y mantiene su enlace; vuelve sola cuando repones stock.",
-          "Las ventas de productos con inventario se registran en Inventario.",
+          "Las ventas de equipos con inventario se registran en Inventario.",
         ],
       },
     ],

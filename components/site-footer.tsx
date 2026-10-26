@@ -34,7 +34,7 @@ const phoneLinks: FooterLink[] = [
   exploreLinks[0], sellLinks[1], legal("/terminos"), helpCenter,
   legal("/consejos-de-seguridad"), legal("/articulos-prohibidos"), legal("/privacidad"), complaintsBook,
 ];
-const slimLinks: FooterLink[] = [helpCenter, ...["/consejos-de-seguridad", "/terminos", "/privacidad"].map(legal), complaintsBook];
+const slimLinks: FooterLink[] = [{ ...helpCenter, label: "Ayuda" }, ...["/consejos-de-seguridad", "/terminos", "/privacidad"].map(legal), complaintsBook];
 
 const PROMISE = "No cobramos comisiones ni procesamos pagos.";
 // The footer's small print: 12 px on phones so the promise line fits one line at 390 px, 13 px from 640 px.

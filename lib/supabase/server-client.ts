@@ -13,7 +13,7 @@ export async function getSupabaseServerClient() {
 
   const cookieStore = await cookies();
   // safe-08 (accounts batch): session-only cookies when "Mantener sesión iniciada" was unticked.
-  const remember = remembersSession(cookieStore.get(REMEMBER_COOKIE)?.value);
+  const remember = remembersSession(cookieStore.getAll().find((cookie) => cookie.name === REMEMBER_COOKIE)?.value);
 
   return createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {

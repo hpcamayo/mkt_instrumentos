@@ -30,7 +30,7 @@ export function HelpSearch({ index, initialQuery }: { index: HelpSearchEntry[]; 
         />
       </form>
       <p id="help-search-status" aria-live="polite" className={searching ? "t-meta" : "sr-only"}>
-        {searching ? (results.length ? `${results.length} ${results.length === 1 ? "artículo" : "artículos"} para «${query.trim()}»` : `No encontramos artículos para «${query.trim()}».`) : ""}
+        {searching ? (results.length ? `${results.length} ${results.length === 1 ? "respuesta" : "respuestas"} para «${query.trim()}»` : `No encontramos respuestas para «${query.trim()}».`) : ""}
       </p>
       {searching && results.length ? (
         <ul className="grid divide-y divide-subtle rounded-panel border border-subtle bg-white">
