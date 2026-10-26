@@ -13,6 +13,8 @@ export type MarketplaceEmailPayload = {
   // Accounts batch (save-07): who the e-mail is for, to sign its one-click links.
   recipient_user_id?: string;
   context: { reason?: string; old_price_pen?: number; new_price_pen?: number; digest_date?: string; week_start?: string; items?: FollowItem[]
+    // Feature ideas, accounts batch (safe-08, safe-10, safe-02).
+    device?: string; signed_in_at?: string; ticket_code?: string; answer?: string; report_code?: string; item?: string;
     // feature-ideas services (bet-02): the service's title and the page the button opens.
     service_title?: string; service_path?: string };
   listing: EmailListing | null;
@@ -131,6 +133,44 @@ function templateContent(payload: MarketplaceEmailPayload): TemplateContent {
       path: listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/notificaciones",
     };
     case "follow_weekly": return followTemplate(payload);
+    // Feature ideas, accounts batch. All four are transactional: they are about the person's own account or request.
+    // safe-08: a sign-in from a browser this account had not used before.
+    case "account_new_device": return {
+      subject: "Nuevo ingreso a tu cuenta de Laria",
+      heading: "Ingresaste desde un dispositivo nuevo",
+      body: "Si fuiste tú, no tienes que hacer nada. Si no reconoces este ingreso, cierra esa sesión desde Seguridad y cambia tu contraseña.",
+      details: [`Dispositivo: ${payload.context.device ?? "Navegador"}`, ...(payload.context.signed_in_at ? [`Fecha: ${payload.context.signed_in_at} (hora de Lima)`] : [])],
+      ctaLabel: "Revisar mis dispositivos",
+      path: "/mi-cuenta/seguridad#dispositivos",
+    };
+    // safe-08: a recovery code replaced the authenticator app.
+    case "account_two_step_reset": return {
+      subject: "Usaste un código de recuperación en Laria",
+      heading: "Desactivamos tu app de autenticación",
+      body: "Alguien ingresó a tu cuenta con uno de tus códigos de recuperación, así que quitamos la app de autenticación y cerramos tus sesiones. Si fuiste tú, vuelve a configurarla. Si no, cambia tu contraseña ahora y escríbenos desde el Centro de ayuda.",
+      details: payload.context.signed_in_at ? [`Fecha: ${payload.context.signed_in_at} (hora de Lima)`] : undefined,
+      ctaLabel: "Configurar de nuevo",
+      path: "/mi-cuenta/seguridad?paso=activar",
+    };
+    // safe-10: Admin answered a question sent from the help center.
+    case "help_ticket_answered": return {
+      subject: `Respondimos tu consulta ${payload.context.ticket_code ?? ""}`.trim(),
+      heading: "Tenemos una respuesta para ti",
+      body: payload.context.answer ?? "Respondimos tu consulta en el Centro de ayuda.",
+      details: payload.context.ticket_code ? [`Consulta ${payload.context.ticket_code}`] : undefined,
+      ctaLabel: "Ver mis consultas",
+      path: "/ayuda/mis-consultas",
+    };
+    // safe-02: Admin confirmed that a listing or an item matches the person's report. The wording never accuses anyone,
+    // and the e-mail does not name the listing or who publishes it.
+    case "stolen_report_match": return {
+      subject: "Hay una coincidencia con tu reporte en Laria",
+      heading: "Una publicación coincide con tu reporte",
+      body: `El equipo de Laria revisó un equipo que coincide con tu reporte${payload.context.item ? ` de ${payload.context.item}` : ""}. Coincidir no prueba nada por sí solo. Si tienes una denuncia policial, comparte el código del reporte con la policía; Laria colabora con las autoridades cuando lo piden por los canales oficiales.`,
+      details: payload.context.report_code ? [`Reporte ${payload.context.report_code}`] : undefined,
+      ctaLabel: "Ver mis reportes",
+      path: "/reportar-robo/mis-reportes",
+    };
     // store-floor (buy-07): try-outs at a store. context.reason is the time ("sábado 14 de diciembre, 11:00 a. m.") and,
     // when the store gave one, " · Motivo: …".
     case "store_tryout_requested":

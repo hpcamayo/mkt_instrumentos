@@ -1469,3 +1469,50 @@ hosted database). Write-up: `docs/feature-ideas/deal-trust.md`. Suite: `tests/fe
   `send_counter_review_reminders()`. No pg_cron job; `GET /api/internal/jobs/deal-trust` with `CRON_SECRET` runs it
   daily.
 <!-- /feature-ideas:deal-trust -->
+
+## Feature ideas: accounts batch (migrations `20261201120000`–`20261201120500`)
+
+Proposed with the accounts batch (`docs/feature-ideas/accounts.md`); not applied to any hosted database. Suite:
+`tests/feat-accounts.sql`. Every new table has RLS on and no direct grants unless noted; reads and writes go through
+`SECURITY DEFINER` functions. Nothing existing is redefined.
+
+- **Shared e-mail registry.** `marketplace_email_deliveries_event_type_check` gains `account_new_device`,
+  `account_two_step_reset`, `help_ticket_answered`, `stolen_report_match`; `marketplace_email_context_check` gains
+  `device`, `signed_in_at`, `ticket_code`, `answer`, `report_code`, `item` (read from the live constraint first).
+- **Two-step (safe-08).** Supabase's `auth.mfa_factors` and `auth.sessions` are read through dynamic SQL (absent tables
+  read as "none"). `laria_private.user_has_verified_factor`, `laria_private.store_two_step_required` (an approved
+  payment method), `laria_private.assert_two_step_session` and `public.my_two_step_requirement()`. Triggers
+  `stores_require_two_step` and `store_payment_methods_require_two_step` refuse contact and payment-method changes from
+  an aal1 session when the code is required (`TWO_STEP_REQUIRED`).
+- `public.account_devices` (user_id, device_hash = SHA-256 of the browser cookie, label, last_session_id, first and
+  last seen): written by `record_sign_in_device` (sends `account_new_device` for a new browser after the first, ten a
+  day at most). `list_my_sessions()`, `revoke_my_session(uuid)`, `prepare_sign_out_everywhere()`.
+- `laria_private.account_recovery_codes` (bcrypt hashes, used_at) and `laria_private.account_recovery_attempts`:
+  `create_my_recovery_codes()` (aal2 when a factor exists) and `use_my_recovery_code(text)` (5 tries per 15 minutes;
+  the server then deletes the factors and sessions and sends `account_two_step_reset`).
+- **A20 stand-in (safe-09).** `laria_private.anonymize_account(uuid, text) returns jsonb`, created only when absent; the
+  integrator drops `20261201120100_feat_anonymize_standin.sql` once A20 is merged.
+- **Your data (safe-09).** `export_my_data()`, `my_account_deletion_check()`, `laria_private.account_deletion_blocker`,
+  `laria_private.anonymize_account_feature_data(uuid)` (this batch's tables) and `service_delete_account(uuid)` (service
+  role: A20, then the feature data; the server soft-deletes the auth user).
+- **Help tickets (safe-10).** `public.help_tickets` (code `AY-XXXXXXXX`, user_id or name and e-mail, topic, message,
+  client_hash, status abierto/respondido/cerrado, answer, answered_by): `submit_help_ticket` (5 per e-mail and per account
+  a day, 10 per client hash an hour), `my_help_tickets`, `admin_help_tickets`, `admin_answer_help_ticket` (sends
+  `help_ticket_answered` to account holders), `admin_set_help_ticket_status`.
+- **Photo hashes and red flags (safe-05).** `public.listing_photo_fingerprints` (listing_id, photo_key, sort_order,
+  owner_key, dhash bit(64)), `laria_private.listing_fingerprint_checks` (photo set last hashed) and
+  `public.listing_red_flags` (listing_id, kind `photo_copy`, matched_listing_id, detail, status open/confirmed/dismissed,
+  review fields).
+  Service role: `listings_needing_fingerprints`, `service_record_listing_fingerprints` (flags pairs of different owners
+  within 5 bits, ignoring near-flat hashes), `service_listings_fingerprint_state`. Admin: `admin_listing_red_flags`,
+  `admin_red_flags`, `admin_review_red_flag`.
+- **Stolen gear (safe-02).** `public.stolen_gear_reports` (code `RB-…`, reporter, brand, model, serial_raw/serial_norm,
+  description, stolen_on, place, police report and station, status active/recovered/withdrawn/rejected),
+  `public.stolen_gear_report_photos` (storage_path, dhash), private serials `public.listing_serials` (one per listing)
+  and `public.inventory_item_serials` (many per SKU), and `public.stolen_report_matches` (source
+  listing/inventory/gear/photo, ref, detail, status pending/confirmed/dismissed). Private bucket `stolen-gear-photos`
+  (5 MB, JPEG/PNG/WebP; owner-folder insert, read and delete). Matching triggers on serials, reports and listing photo
+  hashes; `laria_private.flag_serial_against_stolen_reports(serial, source, ref, owner default null)` is the entry point
+  for other features (Mi equipo). RPCs: `submit_stolen_gear_report`, `my_stolen_reports`, `set_my_stolen_report_status`,
+  `set/get_listing_serial`, `set/get_inventory_item_serials`, `admin_stolen_matches`, `admin_review_stolen_match`
+  (confirming sends `stolen_report_match`), `admin_stolen_reports`, `admin_set_stolen_report_status`.

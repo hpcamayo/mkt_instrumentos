@@ -53,6 +53,10 @@ A Particular profile contains at least:
 - City and region where appropriate.
 
 V1 authentication includes signup, email confirmation, password login, magic-link login, logout, forgot password, password reset, profile editing, and password change. Email change and account deletion are post-V1.
+<!-- Feature ideas, accounts batch (docs/feature-ideas/accounts.md): accounts -->
+*Proposed with the feature-ideas accounts batch; not part of V1 until merged:* e-mail change and self-service account
+deletion, two-step sign-in, sign-in with Google or Apple and a help center (see "Accounts, Help and Safety").
+<!-- end accounts batch: accounts -->
 
 <!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): fixes -->
 WhatsApp numbers are stored as digits with the country code. A Peruvian mobile typed as nine digits starting with 9
@@ -413,6 +417,42 @@ of V1 until merged. Laria still never charges, holds money, checks an instrument
   photo upload cleanup.
 <!-- /feature-ideas:deal-trust -->
 
+<!-- Feature ideas, accounts batch (docs/feature-ideas/accounts.md): accounts, help and safety -->
+## Accounts, Help and Safety (feature ideas, accounts batch)
+
+Proposed with the accounts batch (`docs/feature-ideas/accounts.md`, FD-accounts-1 to FD-accounts-17); not part of V1
+until merged.
+
+- **Staying signed in.** "Mantener sesión iniciada" on the sign-in page, ticked by default: the session survives
+  closing the browser and lasts while it is used (Supabase's 400-day cookies, no session time-box). Unticked, the
+  session ends with the browser. It applies to password, e-mail link and Google or Apple sign-in.
+- **Two-step sign-in.** Optional, with an authenticator app (no SMS) and ten one-time recovery codes. The code is asked
+  only after the password on a browser that is not signed in (a new device or after signing out); the session keeps
+  its second step for its whole life. Required for Admin and for a store owner whose store has an approved payment
+  method (to open Mi tienda and to change the store's contact details or payment methods). Using a recovery code
+  removes the app, closes every session and sends an e-mail.
+- **Devices.** Seguridad lists the account's sessions by browser and last activity, closes one or all of them, and a
+  sign-in from a browser the account has not used before sends one e-mail.
+- **E-mail change** from Seguridad through Supabase's confirmation link; the old address works until it is confirmed.
+- **Tus datos.** The person downloads all their data as one JSON file, and a Particular can delete the account after
+  the password and one confirmation: the profile becomes «Cuenta eliminada», unsold listings are archived, personal
+  lists and notices are erased, verified transactions and their reviews stay. Admin and store-owner accounts are closed
+  with the team.
+- **Google and Apple.** Buttons on sign-in and Particular sign-up, shown only when each provider is enabled; a first
+  sign-in creates a Particular account.
+- **Help center.** `/ayuda` with topics, accent-insensitive search and short articles; "¿No encontraste tu respuesta?"
+  sends a question with a code. Signed-in senders see answers in Mis consultas and by e-mail; Admin answers others from
+  their own mailbox. Laria's WhatsApp support line shows only once its number and hours are set. This is a simple
+  inbox, not a ticketing system.
+- **Stolen-gear registry.** A signed-in person reports stolen gear with the police report number, the serial and
+  private photos. Sellers can add a private serial to a listing, and stores to each SKU. Matching serials or photos
+  create a lead for Admin only; nothing changes on the listing, nobody is named publicly, and only a match Admin
+  confirms tells the reporter, without naming the listing or the seller.
+- **Copied photos.** Listing photos are compared by a perceptual hash computed on Laria's server; a photo nearly
+  identical to another seller's flags the newer listing for Admin at review ("Foto parecida a la de otro vendedor").
+  Flags never reject or hide anything. The price rule waits for typical prices.
+<!-- end accounts batch: accounts, help and safety -->
+
 ## WhatsApp Contact Tracking
 
 Laria records buyer intent when a user initiates WhatsApp contact. It never records WhatsApp message content.
@@ -545,7 +585,7 @@ The following remain post-V1 unless an explicit new product decision changes the
 - Internal messaging or chat (public questions on listings are not messaging; see Public Questions on Listings).
 - Multiple store employee accounts.
 - Automatic SUNAT verification.
-- Account deletion or account email-change workflows.
+- Account deletion or account email-change workflows. <!-- accounts batch: proposed in "Accounts, Help and Safety" -->
 - Sophisticated fraud scoring.
 - Arbitrary new social or community functionality.
 

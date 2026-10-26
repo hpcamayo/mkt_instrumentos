@@ -20,7 +20,9 @@ const sharedAccountItems: AccountNavigationItem[] = [
   { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
   // store-floor (buy-07): a buyer's try-outs live with their purchases.
   { href: "/mi-cuenta/transacciones", label: "Compras y ventas", icon: "transactions", activePaths: ["/mi-cuenta/pruebas"] },
-  { href: "/mi-cuenta/perfil", label: "Perfil y seguridad", icon: "profile", activePaths: ["/mi-cuenta/seguridad", "/mi-cuenta/correos"] },
+  { href: "/mi-cuenta/perfil", label: "Perfil y seguridad", icon: "profile", activePaths: ["/mi-cuenta/seguridad", "/mi-cuenta/correos",
+    // Feature ideas, accounts batch (safe-09).
+    "/mi-cuenta/datos"] },
 ];
 
 // `payments`: the assisted-commerce pilot is on (assistedCommerceEnabled(), read on the server), so a store sees "Pagos"
@@ -75,6 +77,8 @@ export const accountSettingsTabs = [
   { href: "/mi-cuenta/seguridad", label: "Seguridad" },
   // Accounts batch, save-07.
   { href: "/mi-cuenta/correos", label: "Correos" },
+  // Feature ideas, accounts batch (safe-09).
+  { href: "/mi-cuenta/datos", label: "Datos" },
 ] as const;
 
 // Glossary names of the two account types (docs/design-system.md).

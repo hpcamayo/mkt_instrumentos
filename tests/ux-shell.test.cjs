@@ -392,7 +392,8 @@ test("footers: full on the home with four columns, slim everywhere else (N5)", (
   for (const href of full.matchAll(/href="([^"]+)"/g)) assert.doesNotMatch(href[1], /como-funciona|consejos-para-vender/);
   const slim = renderToStaticMarkup(React.createElement(SiteFooter, { variant: "slim" }));
   assert.match(slim, /© 2026 Laria · No cobramos comisiones ni procesamos pagos\./);
-  assert.deepEqual([...slim.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1]), ["/consejos-de-seguridad", "/terminos", "/privacidad", "/libro-de-reclamaciones"]);
+  // Feature ideas, accounts batch (safe-10): the help center comes first.
+  assert.deepEqual([...slim.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1]), ["/ayuda", "/consejos-de-seguridad", "/terminos", "/privacidad", "/libro-de-reclamaciones"]);
 });
 
 test("404 and 500 share one body: title, one line, the search and two links", () => {
