@@ -70,7 +70,7 @@ export function ConsignmentStorePanel({ listingId, listingTitle, storeName, cons
       ) : (
         <>
           <p className="t-ui text-ink-2">
-            Si este equipo es de un particular, envíale un enlace para que lo vincule a su cuenta: verá visitas, contactos y guardados, y le avisaremos cuando lo marques vendido. La comisión la acuerdan ustedes.
+            Si este equipo es de un particular, envíale un enlace para que lo vincule a su cuenta: verá visitas, contactos y guardados, y le avisaremos cuando lo marques vendido. La comisión y el pago los acuerdan ustedes; Laria no interviene.
           </p>
           {open?.status === "invited" && !link ? (
             <p className="t-meta">Hay un enlace enviado que vence el {open.invite_expires_at ? formatLimaDateTime(open.invite_expires_at) : "pronto"}. Si se perdió, crea uno nuevo: el anterior deja de funcionar.</p>

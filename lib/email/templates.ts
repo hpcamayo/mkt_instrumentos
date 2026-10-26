@@ -12,19 +12,43 @@ export type MarketplaceEmailPayload = {
   recipient_name: string | null;
   // Accounts batch (save-07): who the e-mail is for, to sign its one-click links.
   recipient_user_id?: string;
-  context: { reason?: string; old_price_pen?: number; new_price_pen?: number; digest_date?: string; week_start?: string; items?: FollowItem[] };
+  context: { reason?: string; old_price_pen?: number; new_price_pen?: number; digest_date?: string; week_start?: string; items?: FollowItem[]
+    // Feature ideas, selling-tools batch (docs/feature-ideas/selling-tools.md).
+    selling?: SellingEmailContext };
   listing: EmailListing | null;
   store: { name: string; slug: string } | null;
   transaction: { reference_id: string; listing_title: string; review_deadline: string | null } | null;
   search_alert: { id: string; name?: string | null; filters: SearchAlertFilters; frequency: "immediate" | "daily"; matches: EmailListing[] } | null;
 };
 
+// Feature ideas, selling-tools batch: what the selling-tools e-mails carry (each type uses a few of these).
+type SellingEmailContext = {
+  kind?: "sell" | "part_payment" | "strings" | "reeds" | "drumheads";
+  title?: string;
+  place?: string;
+  request_id?: string;
+  offers_until?: string;
+  decide_until?: string;
+  amount_pen?: number;
+  price_pen?: number;
+  public_price_pen?: number;
+  valid_until?: string;
+  message?: string | null;
+  outcome?: "sold";
+  months?: number;
+  gear_id?: string;
+  stores?: { name: string; slug: string; city?: string | null; district?: string | null; is_verified?: boolean }[];
+};
+// /Feature ideas, selling-tools batch
+
 type EmailItem = { title: string; price: number | null; previousPrice?: number | null; imageUrl?: string | null; path: string; note?: string | null };
 type TemplateContent = { subject: string; heading: string; body: string; ctaLabel: string; path: string; details?: string[]; items?: EmailItem[] };
 
 // save-07: e-mails a person can calm down. Alerts, price drops and the weekly digest are not transactional: they say
 // why they arrived and carry one-click links (signed in lib/email/links.ts) and a link to the "Correos" settings.
-export const OPTIONAL_EMAIL_TYPES = ["listing_price_drop", "search_alert_immediate", "search_alert_daily", "follow_weekly"] as const;
+export const OPTIONAL_EMAIL_TYPES = ["listing_price_drop", "search_alert_immediate", "search_alert_daily", "follow_weekly",
+  // Feature ideas, selling-tools batch: a private offer follows the price-drop choice; reminders stop in one click.
+  "listing_private_offer", "gear_reminder_due"] as const;
 export type EmailFooterLink = { label: string; url: string };
 
 export function renderMarketplaceEmail(payload: MarketplaceEmailPayload, baseUrl: string, links: EmailFooterLink[] = []) {
@@ -129,9 +153,86 @@ function templateContent(payload: MarketplaceEmailPayload): TemplateContent {
       path: listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/notificaciones",
     };
     case "follow_weekly": return followTemplate(payload);
+    // Feature ideas, selling-tools batch.
+    case "store_trade_request":
+    case "store_trade_update":
+    case "gear_trade_offer":
+    case "listing_consignment_update":
+    case "listing_private_offer":
+    case "gear_reminder_due":
+      return sellingTemplate(payload);
+    // /Feature ideas, selling-tools batch
     default: throw new Error("EMAIL_TEMPLATE_UNSUPPORTED");
   }
 }
+
+// Feature ideas, selling-tools batch (docs/feature-ideas/selling-tools.md). Every one says plainly that Laria does not
+// take part in the payment; amounts are what a store offered or a seller asked, never a valuation by Laria.
+function sellingTemplate(payload: MarketplaceEmailPayload): TemplateContent {
+  const selling = payload.context.selling ?? {};
+  const listing = payload.listing;
+  const store = payload.store;
+  const title = selling.title ?? listing?.title ?? "tu equipo";
+  const part = selling.kind === "part_payment";
+  const request = selling.request_id ? encodeURIComponent(selling.request_id) : null;
+  switch (payload.event_type) {
+    case "store_trade_request": return {
+      subject: part ? "Te piden un estimado de parte de pago en Laria" : "Te ofrecen un equipo usado en Laria",
+      heading: part ? "Una persona quiere dejar su equipo como parte de pago" : "Una persona quiere vender su equipo",
+      body: `${title}${selling.place ? ` · ${selling.place}` : ""}. Mira las fotos y envía ${part ? "un estimado" : "una oferta"}${selling.offers_until ? ` hasta el ${limaDateTime(selling.offers_until)}` : ""}. El precio final lo confirman en tu tienda al revisarlo. Puedes dejar de recibir pedidos en Ofertas › Qué recibimos.`,
+      ctaLabel: "Ver pedido",
+      path: request ? `/mi-cuenta/tienda/ofertas/${request}` : "/mi-cuenta/tienda/ofertas",
+    };
+    case "store_trade_update": return {
+      subject: `Eligieron tu ${part ? "estimado" : "oferta"} en Laria`,
+      heading: `Eligieron tu ${part ? "estimado" : "oferta"}`,
+      body: `La persona eligió tu ${part ? "estimado" : "oferta"} de ${formatPrice(selling.amount_pen ?? 0)} por ${title}. Escríbele por WhatsApp desde el pedido para coordinar cuándo lo lleva a tu tienda.`,
+      ctaLabel: "Ver pedido",
+      path: request ? `/mi-cuenta/tienda/ofertas/${request}` : "/mi-cuenta/tienda/ofertas",
+    };
+    case "gear_trade_offer": return {
+      subject: `${store?.name ?? "Una tienda"} te envió ${part ? "un estimado" : "una oferta"} en Laria`,
+      heading: part ? "Recibiste un estimado" : "Recibiste una oferta",
+      body: `${store?.name ?? "Una tienda"} ofrece ${formatPrice(selling.amount_pen ?? 0)} por ${title}, sujeto a revisarlo en la tienda. Pueden llegar más${selling.decide_until ? `; eliges hasta el ${limaDateTime(selling.decide_until)}` : ""}. Si ninguna te convence, no tienes que aceptar.`,
+      ctaLabel: "Ver ofertas",
+      path: request ? `/mi-cuenta/equipo/ofertas/${request}` : "/mi-cuenta/equipo/ofertas",
+    };
+    case "listing_consignment_update": return {
+      subject: `${store?.name ?? "La tienda"} vendió “${title}”`,
+      heading: "Se vendió tu equipo en consignación",
+      body: `${store?.name ?? "La tienda"} marcó “${title}” como vendida. Coordina con ella el pago acordado; Laria no interviene en el pago ni en la comisión.`,
+      ctaLabel: "Ver Mi equipo",
+      path: "/mi-cuenta/equipo",
+    };
+    case "listing_private_offer": return {
+      subject: "Una oferta para ti en algo que guardaste",
+      heading: `Oferta para ti: ${formatPrice(selling.price_pen ?? 0)}`,
+      body: `Quien vende “${title}” te ofrece ${formatPrice(selling.price_pen ?? 0)}${selling.valid_until ? ` hasta el ${limaDateTime(selling.valid_until)}` : ""}. El precio publicado sigue en ${formatPrice(selling.public_price_pen ?? listing?.price_pen ?? 0)}. Si te interesa, escríbele por WhatsApp desde la publicación.${selling.message ? ` Su mensaje: “${selling.message}”` : ""}`,
+      ctaLabel: "Ver publicación",
+      path: listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/favoritos",
+      items: listing ? [{ title: listing.title, price: selling.price_pen ?? listing.price_pen, previousPrice: selling.public_price_pen ?? null, imageUrl: listing.image_url, path: `/instrumentos/${listing.slug}` }] : undefined,
+    };
+    case "gear_reminder_due": {
+      const what = selling.kind === "reeds" ? "las cañas" : selling.kind === "drumheads" ? "los parches" : "las cuerdas";
+      const stores = selling.stores ?? [];
+      return {
+        subject: `¿Toca cambiar ${what}?`,
+        heading: `¿Toca cambiar ${what}?`,
+        body: `Ya pasaron ${selling.months === 1 ? "1 mes" : `${selling.months ?? "unos"} meses`} desde que cambiaste ${what} de tu ${title}. Si ya lo hiciste, márcalo en Mi equipo y el próximo aviso se corre solo.`,
+        ctaLabel: "Abrir Mi equipo",
+        path: selling.gear_id ? `/mi-cuenta/equipo/${encodeURIComponent(selling.gear_id)}` : "/mi-cuenta/equipo",
+        details: stores.length ? stores.map((entry) => `${entry.name}${[entry.district, entry.city].filter(Boolean).length ? ` · ${[entry.district, entry.city].filter(Boolean).join(", ")}` : ""}${entry.is_verified ? " · Tienda verificada" : ""}`) : undefined,
+      };
+    }
+    default: throw new Error("EMAIL_TEMPLATE_UNSUPPORTED");
+  }
+}
+function limaDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("es-PE", { timeZone: "America/Lima", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" }).format(date);
+}
+// /Feature ideas, selling-tools batch
 
 // Rejection e-mails open the edit form itself (by slug: the payload has no listing id).
 function editPath(listing: MarketplaceEmailPayload["listing"]) {
@@ -175,7 +276,8 @@ function alertLabel(alert: NonNullable<MarketplaceEmailPayload["search_alert"]>)
   return alert.name?.trim() ? `«${alert.name.trim()}»` : searchAlertSummary(alert.filters);
 }
 function whyText(eventType: string) {
-  if (eventType === "listing_price_drop") return "guardaste esta publicación en favoritos";
+  if (eventType === "listing_price_drop" || eventType === "listing_private_offer") return "guardaste esta publicación en favoritos";
+  if (eventType === "gear_reminder_due") return "activaste este recordatorio en Mi equipo";
   if (eventType === "follow_weekly") return "elegiste recibir el resumen semanal de lo que sigues";
   return "creaste una alerta de búsqueda en Laria";
 }

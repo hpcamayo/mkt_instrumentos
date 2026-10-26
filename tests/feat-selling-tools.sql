@@ -246,6 +246,8 @@ select pg_temp.expect_error(format($q$insert into storage.objects(bucket_id, nam
 do $$ declare result jsonb; fields jsonb; begin
   perform pg_temp.check(public.count_trade_stores('guitars', 'Lima') = 2, 'two Lima stores buy guitars');
   perform pg_temp.check(public.count_trade_stores('keyboards', 'Lima') = 0, 'nobody buys keyboards');
+  perform pg_temp.check((public.count_trade_stores_by_category('Lima')->>'guitars')::int = 2
+    and (public.count_trade_stores_by_category('Lima')->>'keyboards')::int = 0, 'sell page counts stores by category');
   fields := jsonb_build_object('kind', 'sell', 'category', 'guitars', 'instrument_type', 'electric_guitar', 'brand', 'Fender',
     'model', 'Telecaster', 'condition', 'Usado - buen estado', 'description', 'Telecaster mexicana con estuche, trastes en buen estado.',
     'city', 'Lima', 'region', 'Lima', 'asking_price_pen', 2500, 'gear_item_id', pg_temp.id('gear_tele'),
@@ -341,10 +343,12 @@ set local role authenticated;
 select pg_temp.as_user('owner_a');
 select public.set_store_trade_settings('{"buys_used":true,"buy_categories":["guitars","amplifiers"],"consignment":true,"part_payment":true,"consumables":["strings"]}');
 select pg_temp.check(public.listing_accepts_part_payment(pg_temp.id('l_store')), 'store default turns it on');
+select pg_temp.check(public.get_listing_selling_public(pg_temp.id('l_store')) @> '{"part_payment":false,"is_owner":true}', 'the owner is not offered part payment');
 select pg_temp.check(not public.set_listing_part_payment(pg_temp.id('l_store'), false), 'listing can say no');
 select pg_temp.check(public.set_listing_part_payment(pg_temp.id('l_store'), null), 'listing follows the store again');
 select pg_temp.expect_error(format('select public.set_listing_part_payment(%L, true)', pg_temp.id('l_seller')), 'LISTING_NOT_FOUND');
 select pg_temp.as_user('buyer');
+select pg_temp.check(public.get_listing_selling_public(pg_temp.id('l_store')) @> '{"part_payment":true,"is_owner":false}', 'a buyer sees part payment');
 insert into storage.objects(bucket_id, name, owner, owner_id) values
  ('trade-photos', pg_temp.id('buyer')::text || '/' || pg_temp.id('trade_pp')::text || '/1.jpg', pg_temp.id('buyer'), pg_temp.id('buyer')::text),
  ('trade-photos', pg_temp.id('buyer')::text || '/' || pg_temp.id('trade_pp')::text || '/2.jpg', pg_temp.id('buyer'), pg_temp.id('buyer')::text);
@@ -398,6 +402,8 @@ end $$;
 reset role;
 set local role anon;
 select pg_temp.check(public.get_listing_consignment(pg_temp.id('l_store'))->>'store_name' = 'ST Tienda A', 'listing shows the consignment label');
+select pg_temp.check(public.get_listing_selling_public(pg_temp.id('l_store'))->'consignment'->>'store_name' = 'ST Tienda A'
+  and jsonb_typeof(public.get_listing_selling_public(pg_temp.id('l_store'))->'private_offer') = 'null', 'anonymous listing extras: label, no offer');
 reset role;
 -- A sale closes it and tells the owner by e-mail too.
 select set_config('app.allow_listing_admin_fields', 'true', true);
@@ -463,6 +469,7 @@ do $$ declare sent jsonb; begin
 end $$;
 select pg_temp.as_user('buyer');
 select pg_temp.check((public.get_my_private_offer(pg_temp.id('l_seller'))->>'price_pen')::int = 1600, 'saver sees the offer');
+select pg_temp.check((public.get_listing_selling_public(pg_temp.id('l_seller'))->'private_offer'->>'price_pen')::int = 1600, 'listing page shows the saver the offer');
 select pg_temp.as_user('other');
 select pg_temp.check(public.get_my_private_offer(pg_temp.id('l_seller')) is null, 'others do not');
 select pg_temp.check(public.get_listing_selling_tools(array[pg_temp.id('l_seller')]) = '{}'::jsonb, 'tools are owner-only');
@@ -503,6 +510,11 @@ do $$ declare result jsonb; begin
   -- Orphan photos: older than two days, for no request.
   insert into storage.objects(bucket_id, name, owner_id, created_at) values ('trade-photos', pg_temp.id('other')::text || '/f3300000-0000-4000-8000-0000000000aa/1.jpg', pg_temp.id('other')::text, now() - interval '3 days');
   perform pg_temp.check(laria_private.trade_photo_orphans(10) = array[pg_temp.id('other')::text || '/f3300000-0000-4000-8000-0000000000aa/1.jpg'], 'orphan photo listed');
+  -- Photos of a request closed more than 90 days ago go too; the request keeps its text.
+  insert into storage.objects(bucket_id, name, owner_id, created_at) values ('trade-photos', pg_temp.id('other')::text || '/f3300000-0000-4000-8000-000000000009/1.jpg', pg_temp.id('other')::text, now() - interval '100 days');
+  perform pg_temp.check(not (pg_temp.id('other')::text || '/f3300000-0000-4000-8000-000000000009/1.jpg' = any(laria_private.trade_photo_orphans(10))), 'recently closed request keeps its photos');
+  update public.trade_requests set closed_at = now() - interval '91 days' where id = 'f3300000-0000-4000-8000-000000000009';
+  perform pg_temp.check(pg_temp.id('other')::text || '/f3300000-0000-4000-8000-000000000009/1.jpg' = any(laria_private.trade_photo_orphans(10)), 'old closed request photos listed');
 end $$;
 
 set local role authenticated;

@@ -69,7 +69,7 @@ export function StoreTradeSettingsForm({ settings, verified }: { settings: Omit<
 
       <fieldset className="grid gap-2 rounded-panel border border-subtle bg-surface p-5">
         <legend className="px-1 t-section text-ink">Insumos que vendes</legend>
-        <p className="t-ui text-ink-2">Cuando a alguien de tu región le toca cambiar cuerdas, cañas o parches, su recordatorio puede nombrar tu tienda. Sin costo y sin anuncios pagados.</p>
+        <p className="t-ui text-ink-2">Cuando a alguien de tu región le toca cambiar cuerdas, cañas o parches, su recordatorio puede nombrar tu tienda. Sin costo y sin publicidad pagada.</p>
         {CONSUMABLE_OPTIONS.map((option) => (
           <Checkbox key={option.value} checked={values.consumables.includes(option.value)} onChange={(event) => toggle("consumables", option.value, event.target.checked)} label={option.label} />
         ))}
