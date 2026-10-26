@@ -22,6 +22,10 @@ const links = [
   { href: "/admin/resenas", label: "Reseñas" },
   { href: "/admin/transacciones", label: "Transacciones" },
   { href: "/admin/legacy", label: "Publicaciones históricas" },
+  // discovery batch (docs/feature-ideas/discovery.md): collections, maker stores, verified artists.
+  { href: "/admin/colecciones", label: "Colecciones" },
+  { href: "/admin/fabricantes", label: "Fabricantes y talleres" },
+  { href: "/admin/artistas", label: "Artistas verificados" },
   // Feature ideas, store-reach batch: dealer authorizations (reach-04) and Laria's campaigns (reach-05).
   { href: "/admin/distribuidores", label: "Distribuidores" },
   { href: "/admin/campanas", label: "Campañas" },

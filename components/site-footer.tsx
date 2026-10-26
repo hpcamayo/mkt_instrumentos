@@ -17,6 +17,10 @@ const exploreLinks: FooterLink[] = [
   { href: categoryLandingPath("percussion"), label: "Percusión" },
   { href: categoryLandingPath("pedals"), label: "Pedales" },
   { href: VERIFIED_STORES_PATH, label: "Tiendas verificadas" },
+  // discovery batch (docs/feature-ideas/discovery.md)
+  { href: "/hecho-en-peru", label: "Hecho en Perú" },
+  { href: "/regalos", label: "Para regalar" },
+  { href: "/guias", label: "Guías de compra" },
 ];
 // /registrar-tienda sends a signed-out visitor to /registro/tienda and tells a signed-in Particular that a
 // store needs its own account.
