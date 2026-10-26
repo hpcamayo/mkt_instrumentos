@@ -54,11 +54,13 @@ export function BundleOfferForm({ initial, isStore }: { initial: BundleOffer | n
         onChange={setDiscount}
       />
       {discount !== "none" ? (
-        <Field id="combo-minimo" label="Desde cuántas publicaciones">
-          <Select name="combo_min_items" value={minItems} onChange={(event) => setMinItems(event.target.value)} className="max-w-48">
-            {[2, 3, 4, 5].map((value) => <option key={value} value={value}>{value} o más</option>)}
-          </Select>
-        </Field>
+        <div className="max-w-56">
+          <Field id="combo-minimo" label="Desde cuántas publicaciones">
+            <Select name="combo_min_items" value={minItems} onChange={(event) => setMinItems(event.target.value)}>
+              {[2, 3, 4, 5].map((value) => <option key={value} value={value}>{value} o más</option>)}
+            </Select>
+          </Field>
+        </div>
       ) : null}
       {message ? <Notice tone={message.tone}>{message.text}</Notice> : null}
       <div><Button type="submit" variant="secondary" loading={busy} loadingLabel="Guardando…">Guardar descuento</Button></div>

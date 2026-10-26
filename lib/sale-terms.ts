@@ -242,7 +242,8 @@ export function saleTermLines(terms: ListingSaleTerms, categoryLabel: (value: st
   }
   if (value.accepts_trades) {
     const categories = value.trade_categories.map(categoryLabel);
-    const detail = [value.trade_wants, categories.length ? `Categorías: ${listJoin(categories)}.` : ""].filter(Boolean).join(" ");
+    const wants = value.trade_wants && !/[.!?…]$/.test(value.trade_wants) ? `${value.trade_wants}.` : value.trade_wants;
+    const detail = [wants, categories.length ? `Categorías: ${listJoin(categories)}.` : ""].filter(Boolean).join(" ");
     lines.push({ key: "trades", title: "Acepta cambios", detail: detail || undefined });
   }
   return lines;

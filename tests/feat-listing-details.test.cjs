@@ -66,6 +66,11 @@ test("a draft's terms read leniently, copy without the price, and round-trip thr
   assert.equal(saleTerms.lastSaleTermsKey("u1", "listing"), "laria:entrega:u1:listing");
 });
 
+test("the listing page's lines: the seller's words end as sentences before the categories", () => {
+  const lines = saleTerms.saleTermLines({ accepts_trades: true, trade_wants: "Un pedal de delay", trade_categories: ["pedals", "amplifiers"], pickup_area: null }, (value) => ({ pedals: "Pedales", amplifiers: "Amplificadores" })[value]);
+  assert.deepEqual(lines, [{ key: "trades", title: "Acepta cambios", detail: "Un pedal de delay. Categorías: Pedales o Amplificadores." }]);
+});
+
 test("maker marks: discovery's limits, from the form or the writer's shape", () => {
   assert.deepEqual(maker.cleanMakerDetails({ handmade: true, to_order: true, weeks: "6", artist_note: "" }), { ok: true, value: { handmade: true, made_to_order_weeks: 6, artist_note: null } });
   assert.deepEqual(maker.cleanMakerDetails({ handmade: true, made_to_order_weeks: null, artist_note: "  Usado  en la gira 2024 " }), { ok: true, value: { handmade: true, made_to_order_weeks: null, artist_note: "Usado en la gira 2024" } });
