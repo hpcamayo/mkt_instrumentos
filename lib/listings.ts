@@ -1,5 +1,7 @@
 import { instrumentFilterGroups } from "@/lib/instrument-filters";
 import { listingContactMessage } from "@/lib/contact-message";
+import { CONDITION_VALUES, PARTICULAR_CONDITION_VALUES, currentCondition, expandConditionSearch } from "@/lib/listing-condition";
+import { parseListingOptions } from "@/lib/listing-flags";
 import { resolveContactPhone, whatsAppUrl } from "@/lib/seller-contact";
 
 export { resolveContactPhone, resolveParticularSeller, whatsAppNumber } from "@/lib/seller-contact";
@@ -29,11 +31,10 @@ export const legacyCategories: Readonly<Record<string, { category: string; instr
 
 export const cityOptions = ["Lima", "Ayacucho", "Huancayo", "Arequipa"] as const;
 
-export const conditionOptions = [
-  "Nuevo",
-  "Usado - buen estado",
-  "Usado - con detalles",
-] as const;
+// sell-10: the condition scale (lib/listing-condition.ts), best to worst. "Exhibición o caja abierta" is for stores
+// only; a Particular chooses from particularConditionOptions.
+export const conditionOptions = CONDITION_VALUES;
+export const particularConditionOptions = PARTICULAR_CONDITION_VALUES;
 
 export const sellerTypeOptions = [
   { value: "individual", label: "Particular" },
@@ -75,6 +76,9 @@ export type ListingFilters = {
   minPrice?: number;
   maxPrice?: number;
   advanced: Record<string, string | string[] | number | boolean>;
+  // listing-details: yes/no filters ("Envía a provincia", ...), all of them must hold (lib/listing-flags.ts). Optional,
+  // so filters built elsewhere without it mean "none".
+  options?: string[];
   sort: ListingSort;
 };
 
@@ -123,11 +127,15 @@ export type ListingCardData = {
   // list-05: a real price drop, kept by the database (listings_track_content_change); shown for 30 days.
   previous_price_pen?: number | null;
   price_dropped_at?: string | null;
+  // listing-details: the yes/no facts kept by the database (lib/listing-flags.ts) and sell-07's price mode.
+  listing_flags?: string[] | null;
+  price_mode?: PriceMode | null;
   stores: StoreSummary | StoreSummary[] | null;
   listing_photos: ListingPhotoData[];
 };
 
 export type StockState = "in_stock" | "out_of_stock";
+export type PriceMode = "fixed" | "negotiable";
 
 // PostgREST filter for discovery (catalog, home, sitemap, related strips): a listing without inventory, or one with
 // units available. An approved listing at zero stock stays reachable at its URL and on its store page (design §5.2).
@@ -153,9 +161,9 @@ export type ListingDetailData = ListingCardData & {
   profiles: ParticularProfileSummary | ParticularProfileSummary[] | null;
 };
 
-// "Usado - buen estado" reads "Usado · buen estado" on cards, filters and chips; the stored value is unchanged.
+// The condition as people read it. An old value a cached page or an old link still carries reads as its step.
 export function getConditionLabel(condition: string) {
-  return condition.split(" - ").join(" · ");
+  return currentCondition(condition);
 }
 
 export function getCategoryLabel(category: string) {
@@ -255,7 +263,8 @@ export function parseListingFilters(
     ...(q ? { q } : {}),
     category: legacy?.category ?? (readString("category") || undefined),
     cities: locations.length ? locations : readList("city"),
-    conditions: readList("condition"),
+    // sell-10: an old condition in a link reads as its part of the new scale; anything else unknown is dropped.
+    conditions: expandConditionSearch(readList("condition")),
     brand: readString("brand") || undefined,
     sellerType:
       sellerType === "individual" ||
@@ -267,6 +276,7 @@ export function parseListingFilters(
     minPrice: readNumber("min_price"),
     maxPrice: readNumber("max_price"),
     advanced,
+    options: parseListingOptions(readList("opciones")),
     sort: sortOptions.some((option) => option.value === sort) ? (sort as ListingSort) : "newest",
   };
 }
