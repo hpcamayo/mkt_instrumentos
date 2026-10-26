@@ -81,7 +81,7 @@ export default async function StoreFeedPage() {
               Google solo acepta catálogos de páginas cuyo dominio controla quien los envía, así que tu tienda no puede enviar sus publicaciones de Laria
               desde su propia cuenta.{" "}
               {googleShoppingActive()
-                ? "Laria envía todas sus publicaciones activas a la pestaña Shopping de Google desde su propia cuenta, sin anuncios. No tienes que hacer nada."
+                ? "Laria envía todas sus publicaciones activas a la pestaña Shopping de Google desde su propia cuenta, sin pagar publicidad. No tienes que hacer nada."
                 : "Laria prepara el envío de todas sus publicaciones activas a la pestaña Shopping de Google desde su propia cuenta. Aún no está activo."}
             </p>
           </section>

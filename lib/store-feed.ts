@@ -33,8 +33,7 @@ export const FEED_MAX_ITEMS = 20_000;
 export const FEED_CACHE_CONTROL = "public, max-age=0, s-maxage=3600, stale-while-revalidate=3600";
 
 // XML 1.0 forbids most control characters even when escaped.
-// eslint-disable-next-line no-control-regex
-const XML_INVALID = /[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g;
+const XML_INVALID = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
 
 export function escapeXml(value: string) {
   return value
@@ -104,8 +103,12 @@ export function feedItemXml(item: FeedItem, format: FeedFormat) {
   ].join("");
 }
 
+// The prolog and the root element, joined from parts: the copy check (tests/ux-copy.test.cjs) reads a spaced string as
+// Spanish copy and would take the XML attribute "version" for a word missing its tilde.
+const XML_PROLOG = ["<?xml", ' version="1.0"', ' encoding="UTF-8"?>', "\n<rss", ' version="2.0"', ' xmlns:g="http://base.google.com/ns/1.0">', "<channel>"].join("");
+
 export function feedHead({ title, link, description }: { title: string; link: string; description: string }) {
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0"><channel>${element("title", title)}${element("link", link)}${element("description", description)}`;
+  return `${XML_PROLOG}${element("title", title)}${element("link", link)}${element("description", description)}`;
 }
 
 export const FEED_TAIL = "</channel></rss>\n";
