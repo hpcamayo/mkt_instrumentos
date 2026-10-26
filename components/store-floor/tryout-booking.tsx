@@ -154,7 +154,7 @@ export function TryoutBooking({ listingId, storeName, className }: { listingId: 
           {state.kind === "ready" && state.data.available && state.data.slots.length ? (
             <form id="prueba-formulario" className="grid gap-5 pt-4" onSubmit={submit} noValidate>
               {state.data.note ? <Notice tone="info" role="note">{state.data.store_name ?? storeName}: {state.data.note}</Notice> : null}
-              <fieldset className="grid gap-2">
+              <fieldset className="grid min-w-0 gap-2">
                 <legend className="mb-1 t-ui font-semibold text-ink">Día</legend>
                 <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
                   {days.map((entry) => (
@@ -164,7 +164,7 @@ export function TryoutBooking({ listingId, storeName, className }: { listingId: 
                   ))}
                 </div>
               </fieldset>
-              <fieldset className="grid gap-2" aria-describedby={errors.slot ? "prueba-hora-error" : undefined}>
+              <fieldset className="grid min-w-0 gap-2" aria-describedby={errors.slot ? "prueba-hora-error" : undefined}>
                 <legend className="mb-1 t-ui font-semibold text-ink">Hora{state.data.slot_minutes ? ` · ${state.data.slot_minutes} minutos` : ""}</legend>
                 <div className="flex flex-wrap gap-2">
                   {times.map((time) => (

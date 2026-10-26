@@ -44,7 +44,7 @@ function TermsFields({ id, value, onChange }: { id: string; value: FormState; on
         </Field>
       </div>
       {value.warranty !== "" && months > 0 ? (
-        <fieldset className="grid gap-2">
+        <fieldset className="grid min-w-0 gap-2">
           <legend className="mb-1 t-ui font-semibold text-ink">¿Quién da la garantía?</legend>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <Radio name={`${id}-proveedor`} checked={value.provider === "store"} onChange={() => onChange({ ...value, provider: "store" })} label="Tu tienda" />

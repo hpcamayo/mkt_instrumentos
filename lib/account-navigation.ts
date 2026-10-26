@@ -31,9 +31,10 @@ export function getAccountNavigationItems(
   if (accountType === "store_owner") {
     return [
       { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
-      { href: "/mi-cuenta/tienda", label: hasStore ? "Mi tienda" : "Solicitud de tienda", icon: "store", exact: true },
+      // store-floor: Garantía y cambios is a store setting; labels and the poster start from Inventario.
+      { href: "/mi-cuenta/tienda", label: hasStore ? "Mi tienda" : "Solicitud de tienda", icon: "store", exact: true, activePaths: ["/mi-cuenta/tienda/garantia"] },
       ...(hasStore ? [
-        { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory" } as const,
+        { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory", activePaths: ["/mi-cuenta/tienda/etiquetas"] } as const,
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar", icon: "publish" } as const,
         // store-floor (buy-07)
         { href: "/mi-cuenta/tienda/pruebas", label: "Pruebas", icon: "tryouts" } as const,

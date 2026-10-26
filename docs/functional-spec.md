@@ -332,6 +332,31 @@ V1 until merged.
 - **Collections.** Admin saves dated collections of up to four catalog filter sets; the home shows up to three current
   ones and the gift finder card; `/colecciones` lists them.
 
+<!-- feature-ideas:store-floor -->
+## Store floor: arrivals, warranty, labels and try-outs (feature ideas, store-floor batch)
+
+Proposed with the store-floor batch (`docs/feature-ideas/store-floor.md`, FD-store-floor-1 to FD-store-floor-18); not
+part of V1 until merged. Every promise here is the store's; Laria handles no money and sends no WhatsApp.
+
+- **Por llegar.** A SKU without units can carry the date the store expects more (today to a year ahead). Its listing
+  shows "Por llegar" with the date as an estimate and "Avísame cuando llegue" (the back-in-stock watch); it otherwise
+  follows every out-of-stock rule. The date clears when units arrive; dates that pass are removed daily and the store
+  is told once.
+- **Garantía y cambios.** A store states its warranty (months, its own or the brand's) and exchange terms (days and a
+  short note) once per condition group (Nuevos, Exhibición o caja abierta, Usados), or for one listing. Store listings
+  show the lines as the store's offer. "Con garantía" is a yes/no filter and saved-alert option (more than 0 months).
+  Where the store's terms accept exchanges, they replace its gift-exchange line on the store page and `/regalos`.
+- **Labels and poster.** From Inventario, the store prints price labels (name, price, a Code 128 barcode of the SKU
+  for Mostrador, a QR to the listing) on four common papers, and an A4 or A5 "Encuéntranos en Laria" poster with a QR to
+  its store page. Built in the browser; nothing is stored.
+- **Reservar una prueba.** A store that switches try-outs on sets weekly try-out hours; on its listings with units
+  available, a signed-in buyer books a day and time. The store confirms or declines in one tap; both sides get a notice
+  and an e-mail and can open WhatsApp with the details written; confirmed try-outs get one reminder; unanswered
+  requests expire at their time; try-outs are deleted 90 days after their date. A try-out holds a time, never the
+  instrument. Stores see the day's try-outs on Mi tienda and the agenda in Pruebas; buyers see theirs in Mis pruebas.
+- **Daily job.** `/api/internal/jobs/store-floor` (CRON_SECRET), once a day.
+<!-- /feature-ideas:store-floor -->
+
 ## WhatsApp Contact Tracking
 
 Laria records buyer intent when a user initiates WhatsApp contact. It never records WhatsApp message content.

@@ -82,7 +82,7 @@ export function TryoutSettingsForm({ initial }: { initial: TryoutSettings }) {
         description="Quien mira una publicación con stock elige día y hora; tú confirmas en Laria. Reserva un horario, no el instrumento."
       />
 
-      <fieldset className="grid gap-3">
+      <fieldset className="grid min-w-0 gap-3">
         <legend className="mb-1 t-ui font-semibold text-ink">Horario para pruebas</legend>
         <p className="t-meta">{hoursSummary(hours)}</p>
         <ul className="grid gap-3">

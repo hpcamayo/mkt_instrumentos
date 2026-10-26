@@ -54,13 +54,13 @@ export function LabelSheetEditor({ items }: { items: LabelItem[] }) {
             {LABEL_FORMATS.map((entry) => <option key={entry.key} value={entry.key}>{entry.name}</option>)}
           </Select>
         </Field>
-        <fieldset className="grid gap-2">
+        <fieldset className="grid min-w-0 gap-2">
           <legend className="mb-1 t-ui font-semibold text-ink">En cada etiqueta</legend>
           <Checkbox checked={options.price} onChange={(event) => setOptions({ ...options, price: event.target.checked })} label="Precio" />
           <Checkbox checked={options.barcode} onChange={(event) => setOptions({ ...options, barcode: event.target.checked })} label="Código de barras del SKU" description="Mostrador lo lee con la cámara o con un lector USB." />
           <Checkbox checked={options.qr} onChange={(event) => setOptions({ ...options, qr: event.target.checked })} label="QR a la publicación" description="Quien lo escanea ve fotos, detalles y puede guardarla." />
         </fieldset>
-        <fieldset className="grid gap-2">
+        <fieldset className="grid min-w-0 gap-2">
           <legend className="mb-1 t-ui font-semibold text-ink">Cuántas</legend>
           <Radio name="copias" checked={copies === "one"} onChange={() => setCopies("one")} label="Una por SKU" />
           <Radio name="copias" checked={copies === "stock"} onChange={() => setCopies("stock")} label="Una por unidad disponible" description={`Hasta ${MAX_COPIES} por SKU.`} />

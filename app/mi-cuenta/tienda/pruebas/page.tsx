@@ -23,7 +23,7 @@ export default async function StoreTryoutsPage() {
         eyebrow="Mi tienda"
         title="Pruebas"
         meta={settings.enabled
-          ? <p className="max-w-[68ch]">Recibes reservas: {hoursSummary(settings.weekly_hours)}. Una prueba reserva un horario, no el instrumento.</p>
+          ? <p className="max-w-[68ch]">Una prueba reserva un horario, no el instrumento. Recibes reservas: {hoursSummary(settings.weekly_hours)}</p>
           : <p className="max-w-[68ch]">Quien mira una publicación con stock puede pedir un horario para probarla en tu tienda. Por ahora está apagado.</p>}
         actions={<Link href="/mi-cuenta/tienda/pruebas/horario" className={buttonClasses({ variant: settings.enabled ? "secondary" : "primary" })}>{settings.enabled ? "Horario y ajustes" : "Activar pruebas"}</Link>}
       />
