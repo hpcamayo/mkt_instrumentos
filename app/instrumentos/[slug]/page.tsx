@@ -90,6 +90,7 @@ import {
 import { listingBreadcrumbs } from "@/lib/shell";
 import { formatPrice } from "@/lib/price";
 import { absoluteUrl, NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
+import { ListingReachMarks } from "@/components/store-reach/listing-reach-marks";
 
 export const dynamic = "force-dynamic";
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
@@ -502,6 +503,7 @@ function ListingDetail({
                   {place} · {formatPublishedAgo(published, now)}{updated ? ` · ${updated}` : ""}
                 </ListingDetailMetadata>
               </p>
+              {isSold ? null : <ListingReachMarks listing={listing} />}{/* Feature ideas, store-reach batch (reach-04, reach-05). */}
               {/* A seller's recent "sigue disponible" (my listings check-ins) answers the quiet-listing note (list-04). */}
               {availabilityConfirmed ? (
                 <p className="mt-1 t-meta">Quien vende confirmó que sigue disponible el {availabilityConfirmed}.</p>

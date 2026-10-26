@@ -37,6 +37,7 @@ import { listingFiltersToSearchAlert } from "@/lib/search-alerts";
 import type { Crumb } from "@/lib/shell";
 import { LISTING_GRID, LISTING_GRID_SIZES } from "@/lib/ui/listing-grid";
 import { cn } from "@/lib/utils";
+import { BrandDealersSlot } from "@/components/store-reach/dealer-marks";
 
 // The catalog (/listados) and the category landings share this page (UX-3 § Catalog, § Category landings): the
 // title row with the count, the alert entry and sort; the applied chips; the filter column on desktop and the
@@ -115,6 +116,7 @@ export async function CatalogView({
           {lead ? <p className="text-lead mt-3 max-w-[68ch] t-body text-ink-2">{lead}</p> : null}
           {/* Accounts batch, save-12: follow the brand being browsed. */}
           {filters.brand?.trim() ? <div className="mt-3"><FollowButton brand={filters.brand.trim()} label={filters.brand.trim()} showLabel /></div> : null}
+          <BrandDealersSlot brand={filters.brand} />{/* Feature ideas, store-reach batch (reach-04). */}
           {types}
 
           <div className="mt-4 grid grid-cols-2 gap-3 lg:hidden">

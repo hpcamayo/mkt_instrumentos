@@ -41,6 +41,7 @@ import { warnMissingSupabaseEnv, type getPublicSupabaseClient } from "@/lib/supa
 import { getRequestReads } from "@/lib/supabase/public-read-client";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
+import { StoreDealerBrandsSlot } from "@/components/store-reach/dealer-marks";
 
 export const dynamic = "force-dynamic";
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
@@ -446,6 +447,7 @@ function StoreView({
           <ReputationSection reputation={reputation} title={`Reseñas de ${store.name}`} className="min-w-0" />
           <div className="grid min-w-0 content-start gap-6">
             <StoreAboutSection store={store} location={location} preview={preview} className="min-w-0" />
+            {preview ? null : <StoreDealerBrandsSlot storeId={store.id} />}{/* Feature ideas, store-reach batch (reach-04). */}
             <AcceptedPaymentMethods methods={paymentMethods} />
           </div>
         </div>

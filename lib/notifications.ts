@@ -38,6 +38,10 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   listing_availability_checkin: "¿Sigue disponible?",
   listing_purchase_confirmation_reminder: "Confirma una compra",
   listing_review_reminder: "Tu reseña vence pronto",
+  // Feature ideas, store-reach batch (reach-04): Admin's decision on a brand authorization.
+  store_dealer_approved: "Distribuidor oficial aprobado",
+  store_dealer_rejected: "Autorización no aprobada",
+  store_dealer_revoked: "Distribuidor oficial retirado",
 };
 
 export const DEFAULT_NOTIFICATION_LABEL = "Actualización de tu cuenta";
@@ -76,6 +80,9 @@ export function notificationHref(notification: NotificationTarget, listingSlug?:
     ? `/instrumentos/${notification.listing_id}`
     : notification.event_type === "store_stock_summary"
     ? "/mi-cuenta/tienda/inventario?stock=low"
+    // Feature ideas, store-reach batch (reach-04).
+    : notification.event_type.startsWith("store_dealer_")
+    ? "/mi-cuenta/tienda/distribuidor"
     : notification.store_id && notification.event_type.startsWith("store_")
     ? "/mi-cuenta/tienda"
     : notification.store_id

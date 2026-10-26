@@ -9,7 +9,7 @@ export function storeReachDb(supabase: SupabaseClient<any, any, any>): SupabaseC
 }
 
 // The batch's functions raise "CODE: mensaje en español"; the message part is written for the person using the page.
-const REACH_CODES = /^(STORE_REQUIRED|STORE_NOT_ACTIVE|FEED_[A-Z_]+|DEALER_[A-Z_]+|CAMPAIGN_[A-Z_]+|DEMAND_[A-Z_]+|MERCADOLIBRE_[A-Z_]+): ([\s\S]+)$/;
+const REACH_CODES = /^(ADMIN_REQUIRED|STORE_REQUIRED|STORE_NOT_ACTIVE|FEED_[A-Z_]+|DEALER_[A-Z_]+|CAMPAIGN_[A-Z_]+|DEMAND_[A-Z_]+|MERCADOLIBRE_[A-Z_]+): ([\s\S]+)$/;
 
 export function storeReachErrorMessage(error: { message?: string } | null | undefined, fallback: string) {
   const match = REACH_CODES.exec(error?.message ?? "");
