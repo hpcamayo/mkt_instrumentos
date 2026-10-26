@@ -100,6 +100,14 @@ How the notes become requirements:
    - Use `add value if not exists` for enum changes.
    - Respect the store-operations lock order (idempotency key, then listing, then item).
    - Never apply anything to a hosted database.
+   - **Redefined functions.** A `create or replace` of an existing function silently drops whatever an earlier migration added to it, and git shows no conflict.
+     - If your migration redefines a function, put that function alone in its own small migration and name it in your PR.
+     - The batch with the later slot rebuilds it from the merged branch, so its version carries both changes.
+     - Known shared functions:
+       - `laria_private.normalize_saved_search` and `laria_private.listing_matches_saved_search`: owned by listing-details. store-floor adds `with_warranty`.
+       - `catalog_facets`: owned by listing-details.
+       - The submission and update functions: `complete_public_submission`, `update_owned_listing`.
+     - The integrator diffs every redefined function at each merge.
    - Test with the Docker-free Postgres in `/mnt/project-files/store-operations/local-db-setup/` (`setup`, `reset`, `test`). Add SQL suites under `tests/` for every new rule and RLS policy.
 8. **Scheduled work.**
    - Vercel Hobby runs cron at most daily. Put each job behind `app/api/internal/jobs/<name>/route.ts`, protected by `CRON_SECRET` the way the existing internal routes are.
@@ -170,6 +178,9 @@ The integrator uses slot 20261210 and GROW 900-999.
 - **Admin.** Each batch adds its queue as a new section, through the Admin navigation registry.
 - **Seller level (sell-08)** shows on the new seller page, on store pages and next to the seller on listings. deal-trust owns the mark component.
 - **Checklists.** discovery writes the try-out checklists (disc-02). deal-trust's safe meetup sheet links to them.
+- **Saved-search and facet functions.** listing-details merges first and owns them. store-floor then merges `features/marketplace` into its branch and rebuilds those three functions with its `with_warranty` key and an `ok_warranty` facet flag added, so nothing is lost.
+- **QR and barcodes.** store-floor writes a dependency-free QR and Code 128 encoder in `lib/labels/`. deal-trust's Mostrador sale QR imports it instead of adding a library.
+- **Branch names.** Some threads can only push to their own `claude/project-thread-*` branch. That's fine; the PR still targets `features/marketplace`.
 
 ## Integration (the integrator)
 
