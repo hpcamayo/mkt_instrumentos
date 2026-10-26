@@ -20,7 +20,13 @@ end $$;
 create function pg_temp.store(p_id uuid) returns public.stores language sql security definer as $$
   select * from public.stores where id = p_id
 $$;
-grant execute on function pg_temp.check(boolean, text), pg_temp.expect_error(text, text), pg_temp.store(uuid) to anon, authenticated;
+create function pg_temp.notices(p_event text) returns bigint language sql security definer as $$
+  select count(*) from public.notifications
+  where user_id = 'e1200000-0000-4000-8000-000000000002' and store_id = 'e1210000-0000-4000-8000-000000000001'
+    and event_type = p_event
+$$;
+grant execute on function pg_temp.check(boolean, text), pg_temp.expect_error(text, text), pg_temp.store(uuid),
+  pg_temp.notices(text) to anon, authenticated;
 
 insert into auth.users(id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data) values
  ('e1200000-0000-4000-8000-000000000001','authenticated','authenticated','lasec-particular@example.invalid',now(),'{}','{"account_type":"seller","full_name":"Particular","phone":"51999995001","city":"Lima","region":"Lima"}'),
@@ -99,6 +105,7 @@ select pg_temp.check((pg_temp.store('e1210000-0000-4000-8000-000000000001')).is_
 -- Other profile fields don't touch the badge either.
 update public.stores set description = 'Guitarras y bajos', whatsapp_phone = '987654322' where id = 'e1210000-0000-4000-8000-000000000001';
 select pg_temp.check((pg_temp.store('e1210000-0000-4000-8000-000000000001')).is_verified, 'profile edit kept the badge');
+select pg_temp.check(pg_temp.notices('store_verification_lapsed') = 0, 'no notice while the badge stays');
 
 update public.stores set name = 'Yamaha Oficial Peru' where id = 'e1210000-0000-4000-8000-000000000001';
 select pg_temp.check(not (pg_temp.store('e1210000-0000-4000-8000-000000000001')).is_verified, 'a new name lifted the badge');
@@ -106,10 +113,12 @@ select pg_temp.check((pg_temp.store('e1210000-0000-4000-8000-000000000001')).sta
 select pg_temp.check((pg_temp.store('e1210000-0000-4000-8000-000000000001')).verification_lapsed_at is not null, 'lapse recorded');
 select pg_temp.check((pg_temp.store('e1210000-0000-4000-8000-000000000001')).verification_lapsed_from
   = '{"name":"  tienda   REAL ","ruc":"20100047218","razon_social":"Real  SAC"}'::jsonb, 'previous identity kept');
+select pg_temp.check(pg_temp.notices('store_verification_lapsed') = 1, 'the owner is told the badge is waiting');
 -- A second change keeps the first verified identity.
 update public.stores set ruc = '20999999991' where id = 'e1210000-0000-4000-8000-000000000001';
 select pg_temp.check((pg_temp.store('e1210000-0000-4000-8000-000000000001')).verification_lapsed_from ->> 'ruc' = '20100047218',
   'the lapse keeps the identity Admin verified');
+select pg_temp.check(pg_temp.notices('store_verification_lapsed') = 1, 'once per lapse');
 
 -- Admin sees it in Verificacion, and verifying again settles it.
 select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"admin"}}', true);
@@ -138,10 +147,17 @@ select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-0000000
 update public.stores set razon_social = 'OTRA EMPRESA SAC' where id = 'e1210000-0000-4000-8000-000000000001';
 select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"admin"}}', true);
 select pg_temp.check((public.get_admin_moderation_counts()->>'verificacion')::int = 1, 'razón social change waits');
+select pg_temp.check(pg_temp.notices('store_verification_lapsed') = 2, 'a new lapse is a new notice');
 select public.set_store_verification('e1210000-0000-4000-8000-000000000001', false);
 select set_config('app.allow_store_admin_fields', '', true);
 select pg_temp.check((public.get_admin_moderation_counts()->>'verificacion')::int = 0, 'kept unverified, queue empty');
 select pg_temp.check((pg_temp.store('e1210000-0000-4000-8000-000000000001')).verification_lapsed_from is null, 'lapse cleared');
+select pg_temp.check(pg_temp.notices('store_verification_revoked') = 1, 'the waiting owner hears the answer');
+-- An unverified store that wasn't waiting has nothing to hear.
+select public.set_store_verification('e1210000-0000-4000-8000-000000000001', false);
+select set_config('app.allow_store_admin_fields', '', true);
+select pg_temp.check(pg_temp.notices('store_verification_revoked') = 1, 'no notice for a store that was not waiting');
+select pg_temp.check(pg_temp.notices('store_verified') = 1, 'verifying again was announced once');
 reset role;
 
 -- A21: a rejected legacy listing can't be resubmitted without a session or by someone else.

@@ -15,7 +15,9 @@ import type { Json } from "@/lib/supabase/database.types";
 import { getMarketplaceSession, recordMarketplaceEvent } from "@/lib/marketplace-events-server";
 import {
   createSubmissionToken,
+  readRenewableSubmissionToken,
   readSubmissionToken,
+  submissionRenewalKeys,
   submissionTokenSecret,
 } from "@/lib/submission-token";
 
@@ -57,11 +59,21 @@ export async function POST(request: Request) {
     const resumed = createSubmissionToken(draft.kind as "listing" | "store_listing", secret, userData.user.id, draft.id);
     return NextResponse.json({ ...resumed, folder: `${userData.user.id}/${draft.id}` });
   }
+  // Launch audit A35: a token lasts a week, and a draft kept on a device may hold an older one, or one from before tokens
+  // expired. "renew" trades it for a fresh token for the same submission once the caller proves to be its owner, so the
+  // photos already in its folder carry over; any other action with such a token is told to renew it first.
+  const renewing = body.action === "renew";
   const submission =
-    typeof body.token === "string"
-      ? readSubmissionToken(body.token, secret)
-      : null;
-  if (!submission) return failure("Este envío venció o no es válido. Vuelve a intentarlo desde el formulario.", 403);
+    typeof body.token !== "string"
+      ? null
+      : renewing
+        ? readRenewableSubmissionToken(body.token, submissionRenewalKeys())
+        : readSubmissionToken(body.token, secret);
+  if (!submission) {
+    return renewing
+      ? failure("No pudimos recuperar las fotos de este borrador. Vuelve a agregarlas.", 403, { restart: true })
+      : failure("Este envío venció o no es válido. Vuelve a intentarlo desde el formulario.", 403, { renew: true });
+  }
   const { id, kind, ownerUserId } = submission;
   if (kind === "listing" || kind === "store" || kind === "store_listing") {
     const account =
@@ -75,6 +87,9 @@ export async function POST(request: Request) {
     if (!ownerUserId || ownerUserId !== account.userId) {
       return failure("Este envío pertenece a otra cuenta.", 403);
     }
+  }
+  if (renewing) {
+    return NextResponse.json({ ...createSubmissionToken(kind, secret, ownerUserId, id), folder: `${ownerUserId}/${id}` });
   }
   const table = kind === "store" ? "stores" : "listings";
   const bucket = kind === "store" ? "store-assets" : "listing-photos";
@@ -467,8 +482,8 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function failure(message: string, status = 400) {
+function failure(message: string, status = 400, flags?: { renew?: true; restart?: true }) {
   // 4xx validation/constraint failures are definitive noncommits. Unknown
   // database/network failures remain 503 and cannot authorize changed retries.
-  return NextResponse.json({ message, rejected: status >= 400 && status < 500 }, { status });
+  return NextResponse.json({ message, rejected: status >= 400 && status < 500, ...flags }, { status });
 }

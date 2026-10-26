@@ -12,7 +12,8 @@
 --      read-only outside the controlled functions. The verified badge vouches for the business Admin checked: when
 --      the owner of a verified Tienda changes its public name, RUC or razon social, the store stays active but the
 --      badge comes off (verification_lapsed_at, with the previous values in verification_lapsed_from), and the store
---      waits in Admin's "Verificacion" queue until Admin verifies it again or leaves it unverified. Admin's own
+--      waits in Admin's "Verificacion" queue until Admin verifies it again or leaves it unverified. The owner is
+--      notified when the badge comes off (store_verification_lapsed) and when Admin leaves it off. Admin's own
 --      corrections keep the badge.
 -- A21. submit_listing_for_publication refuses a caller without a session. A legacy listing has no owner and an
 --      anonymous caller no id, and "null is distinct from null" is false, so an anonymous caller could push a
@@ -33,11 +34,13 @@
 --
 -- Compatibility: the application before and after this migration works with it (no route inserts stores or listings
 -- directly, and the store form already writes image addresses in that shape), so it can be applied before the deploy.
--- Locks: the policy and grant changes take brief ACCESS EXCLUSIVE locks on stores, listings and storage.objects; the
--- two new nullable columns on stores are metadata-only.
+-- Locks: the policy, grant, trigger and notifications check changes take brief ACCESS EXCLUSIVE locks on stores,
+-- listings, notifications and storage.objects; the two new nullable columns on stores are metadata-only. The new check
+-- on notifications only adds an allowed value, so its validation scan finds nothing to refuse.
 -- Rollback: recreate the dropped policies from 20260427203000_store_registration_fields.sql,
 -- 20260516180000_phase_2_accounts.sql and 20260910190000_store_sprint_2.sql, re-grant the revoked privileges, drop
--- the two triggers, and restore the previous function bodies: submit_listing_for_publication and
+-- the three triggers and their functions (store_verification_lapsed notifications can stay: the type stays allowed),
+-- and restore the previous function bodies: submit_listing_for_publication and
 -- set_store_verification from 20261029120100_review_fixes_lock_order.sql, protect_store_admin_fields from
 -- 20260910190000_store_sprint_2.sql, protect_profile_admin_fields from 20260516180000_phase_2_accounts.sql,
 -- get_admin_moderation_counts from 20260923120000_sprint_8_admin_reports_legacy.sql and get_admin_moderation_queue
@@ -169,10 +172,11 @@ begin
     perform public.create_account_notification(store_record.owner_user_id, 'store_verified', null, p_store_id);
   else
     perform set_config('app.allow_store_admin_fields', 'true', true);
-    -- Leaving a lapsed store unverified also takes it out of the Verificacion queue.
+    -- Leaving a lapsed store unverified also takes it out of the Verificacion queue, and its owner, who was waiting
+    -- for that answer, hears it like any revoked verification.
     update public.stores set is_verified = false, verification_lapsed_at = null, verification_lapsed_from = null
     where id = p_store_id;
-    if store_record.is_verified then
+    if store_record.is_verified or store_record.verification_lapsed_at is not null then
       perform public.create_account_notification(store_record.owner_user_id, 'store_verification_revoked', null, p_store_id);
     end if;
   end if;
@@ -180,6 +184,42 @@ begin
   return jsonb_build_object('store_id', p_store_id, 'is_verified', p_verified, 'approved_pending_count', approved_count);
 end;
 $$;
+
+-- When the badge comes off, the owner gets a notification saying why and what it changes, as the store form said
+-- before saving. In the app only (and push): the owner made the change, so no e-mail.
+select laria_private.ux_extend_text_check(
+  'public.notifications', 'notifications_event_type_check', 'event_type', array['store_verification_lapsed']
+);
+
+create or replace function laria_private.notify_store_verification_lapsed()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.owner_user_id is not null then
+    insert into public.notifications (user_id, event_type, message, store_id)
+    values (
+      new.owner_user_id,
+      'store_verification_lapsed',
+      'Cambiaste el nombre, el RUC o la razón social de tu tienda. Sigue activa, pero deja de mostrarse como Tienda verificada hasta que Laria revise el cambio. Mientras tanto, tus publicaciones nuevas pasan por revisión.',
+      new.id
+    );
+  end if;
+  return null;
+end;
+$$;
+revoke all on function laria_private.notify_store_verification_lapsed() from public, anon, authenticated;
+
+-- Not "after update of verification_lapsed_at": the BEFORE trigger sets it, and a column trigger only sees the
+-- columns the UPDATE itself names.
+drop trigger if exists launch_audit_store_verification_lapsed on public.stores;
+create trigger launch_audit_store_verification_lapsed
+after update on public.stores
+for each row
+when (old.verification_lapsed_at is null and new.verification_lapsed_at is not null)
+execute function laria_private.notify_store_verification_lapsed();
 
 create or replace function public.get_admin_moderation_counts()
 returns jsonb
