@@ -38,6 +38,14 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   listing_availability_checkin: "¿Sigue disponible?",
   listing_purchase_confirmation_reminder: "Confirma una compra",
   listing_review_reminder: "Tu reseña vence pronto",
+  // store-floor (reach-08, buy-07)
+  store_arrival_estimate_passed: "Pasó una fecha de llegada",
+  store_tryout_requested: "Te pidieron una prueba",
+  store_tryout_cancelled: "Cancelaron una prueba",
+  listing_tryout_confirmed: "Prueba confirmada",
+  listing_tryout_declined: "La tienda no confirmó tu prueba",
+  listing_tryout_cancelled: "La tienda canceló tu prueba",
+  listing_tryout_reminder: "Recordatorio de tu prueba",
 };
 
 export const DEFAULT_NOTIFICATION_LABEL = "Actualización de tu cuenta";
@@ -76,6 +84,13 @@ export function notificationHref(notification: NotificationTarget, listingSlug?:
     ? `/instrumentos/${notification.listing_id}`
     : notification.event_type === "store_stock_summary"
     ? "/mi-cuenta/tienda/inventario?stock=low"
+    // store-floor: try-outs open each side's list; a passed arrival date opens the SKU without units.
+    : notification.event_type.startsWith("listing_tryout_")
+    ? "/mi-cuenta/pruebas"
+    : notification.event_type.startsWith("store_tryout_")
+    ? "/mi-cuenta/tienda/pruebas"
+    : notification.event_type === "store_arrival_estimate_passed"
+    ? "/mi-cuenta/tienda/inventario?stock=out"
     : notification.store_id && notification.event_type.startsWith("store_")
     ? "/mi-cuenta/tienda"
     : notification.store_id

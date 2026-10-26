@@ -122,7 +122,7 @@ export function ListingCard({ listing, variant = "grid", source = "catalog", hea
           {/* FIND 10 and list-05: a real drop of the past 30 days shows the old price struck through ("Antes" for screen
               readers), the same one the listing page shows. */}
           <Price value={listing.price_pen} previous={visiblePreviousPrice(listing, Date.now())} />
-          {isOutOfStock(listing) ? <StatusTag domain="stock" status="out_of_stock" /> : null}
+          {isOutOfStock(listing) ? <StatusTag domain="stock" status={listing.restock_expected_on ? "restock_expected" : "out_of_stock"} /> : null}
         </p>
         {specLine ? <p className="truncate t-meta">{specLine}</p> : null}
         <SellerLine listing={listing} />

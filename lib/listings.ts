@@ -1,6 +1,7 @@
 import { instrumentFilterGroups } from "@/lib/instrument-filters";
 import { listingContactMessage } from "@/lib/contact-message";
 import { resolveContactPhone, whatsAppUrl } from "@/lib/seller-contact";
+import type { ListingStoreTerms } from "@/lib/store-floor/warranty";
 
 export { resolveContactPhone, resolveParticularSeller, whatsAppNumber } from "@/lib/seller-contact";
 
@@ -120,6 +121,8 @@ export type ListingCardData = {
   photo_count?: number;
   // Null unless a store links the listing to an inventory item (STORE-1a).
   stock_state?: StockState | null;
+  // store-floor, reach-08: "Por llegar", the date the store expects units while the listing is out of stock.
+  restock_expected_on?: string | null;
   // list-05: a real price drop, kept by the database (listings_track_content_change); shown for 30 days.
   previous_price_pen?: number | null;
   price_dropped_at?: string | null;
@@ -151,7 +154,7 @@ export type ListingDetailData = ListingCardData & {
   // mine-08: when the seller last answered "Sí, sigue disponible".
   availability_confirmed_at?: string | null;
   profiles: ParticularProfileSummary | ParticularProfileSummary[] | null;
-};
+} & ListingStoreTerms;
 
 // "Usado - buen estado" reads "Usado · buen estado" on cards, filters and chips; the stored value is unchanged.
 export function getConditionLabel(condition: string) {

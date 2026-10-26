@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { StoreAllowanceMeter } from "@/components/store-allowance-meter";
 import { StoreInventoryAccess } from "@/components/store-inventory-access";
 import { StoreRegistrationForm, type StoreApplication } from "@/components/store-registration-form";
+import { StoreFloorPanel } from "@/components/store-floor/store-floor-panel";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusEntryTag } from "@/components/ui/tag";
@@ -50,6 +51,8 @@ export default async function StoreAccountPage() {
           {assistedCommerceEnabled() ? <> <Link href="/mi-cuenta/tienda/pagos" className="link font-semibold">Pagos</Link>: indica cómo pueden pagarte los compradores.</> : null}
         </p>
       ) : null}
+      {/* store-floor: today's try-outs, warranty, labels and poster. */}
+      {store && db ? <StoreFloorPanel storeId={store.id} supabase={db} /> : null}
       <StoreRegistrationForm
         store={(store as StoreApplication | null) ?? null}
         photos={photos ?? []}

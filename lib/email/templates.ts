@@ -129,7 +129,39 @@ function templateContent(payload: MarketplaceEmailPayload): TemplateContent {
       path: listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/notificaciones",
     };
     case "follow_weekly": return followTemplate(payload);
+    // store-floor (buy-07): try-outs at a store. context.reason is the time ("sábado 14 de diciembre, 11:00 a. m.") and,
+    // when the store gave one, " · Motivo: …".
+    case "store_tryout_requested":
+    case "store_tryout_cancelled":
+    case "listing_tryout_confirmed":
+    case "listing_tryout_declined":
+    case "listing_tryout_cancelled":
+    case "listing_tryout_reminder": return tryoutTemplate(payload);
     default: throw new Error("EMAIL_TEMPLATE_UNSUPPORTED");
+  }
+}
+
+// store-floor (buy-07): one wording per try-out event. The store's own words go in a separate line, as the store's.
+function tryoutTemplate(payload: MarketplaceEmailPayload): TemplateContent {
+  const [when, motive] = (payload.context.reason ?? "").split(" · Motivo: ");
+  const title = payload.listing?.title ?? "el instrumento";
+  const store = payload.store?.name ?? "La tienda";
+  const at = when ? ` el ${when}` : "";
+  const details = motive ? [`Motivo de la tienda: ${motive}`] : undefined;
+  const otherTime = { ctaLabel: "Elegir otro horario", path: payload.listing ? `/instrumentos/${payload.listing.slug}#prueba` : "/mi-cuenta/pruebas" };
+  switch (payload.event_type) {
+    case "store_tryout_requested":
+      return { subject: "Te pidieron una prueba en Laria", heading: "Alguien quiere probar en tu tienda", body: `Pidieron probar “${title}”${at}. Confírmala con un toque o avisa que no puedes; si no respondes antes de esa hora, la solicitud vence.`, ctaLabel: "Responder", path: "/mi-cuenta/tienda/pruebas" };
+    case "store_tryout_cancelled":
+      return { subject: "Cancelaron una prueba", heading: "Cancelaron una prueba", body: `Quien iba a probar “${title}”${at} la canceló. Ese horario vuelve a estar libre.`, ctaLabel: "Ver pruebas", path: "/mi-cuenta/tienda/pruebas" };
+    case "listing_tryout_confirmed":
+      return { subject: "Tu prueba está confirmada", heading: "Tu prueba está confirmada", body: `${store} te espera${at} para probar “${title}”. Si no puedes ir, cancélala desde Laria para liberar el horario.`, ctaLabel: "Ver mi prueba", path: "/mi-cuenta/pruebas" };
+    case "listing_tryout_declined":
+      return { subject: "La tienda no puede en ese horario", heading: "La tienda no puede en ese horario", body: `${store} no puede recibirte${at} para probar “${title}”. Puedes pedir otro horario desde la publicación.`, details, ...otherTime };
+    case "listing_tryout_cancelled":
+      return { subject: "La tienda canceló tu prueba", heading: "La tienda canceló tu prueba", body: `${store} canceló la prueba de “${title}”${at}. Puedes pedir otro horario desde la publicación.`, details, ...otherTime };
+    default:
+      return { subject: "Recordatorio de tu prueba", heading: "Tu prueba es pronto", body: `Te esperan en ${store}${at} para probar “${title}”. Si no puedes ir, cancélala desde Laria.`, ctaLabel: "Ver mi prueba", path: "/mi-cuenta/pruebas" };
   }
 }
 
