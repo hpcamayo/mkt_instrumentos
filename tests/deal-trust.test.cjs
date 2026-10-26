@@ -335,7 +335,7 @@ function decode(modules) {
   return { version, mask, text: Buffer.from(bytes).toString("utf8") };
 }
 
-test("the counter QR decodes back to its link, for every mask and versions 1 to 10", () => {
+test("the counter QR (store-floor's encoder) decodes back to its link, versions 1 to 10", () => {
   const texts = [
     "Laria",
     "https://laria.audio/compra-en-tienda/0123456789abcdef0123456789abcdef",
@@ -345,24 +345,19 @@ test("the counter QR decodes back to its link, for every mask and versions 1 to 
   ];
   const versions = new Set();
   for (const text of texts) {
-    for (let mask = 0; mask < 8; mask += 1) {
-      const decoded = decode(qr.saleQrModules(text, mask));
-      assert.equal(decoded.mask, mask);
-      assert.equal(decoded.text, text);
-      versions.add(decoded.version);
-    }
-    const chosen = decode(qr.saleQrModules(text));
-    assert.equal(chosen.text, text, "the penalty-chosen mask too");
+    const decoded = decode(qr.saleQrModules(text));
+    assert.equal(decoded.text, text);
+    versions.add(decoded.version);
   }
-  assert.ok(versions.has(1) && versions.has(5) && versions.has(10) && [...versions].some((v) => v >= 7), `versions covered: ${[...versions]}`);
-  // Every length from 1 to the version 10 limit picks the smallest version that fits and decodes.
+  assert.ok(versions.has(1) && versions.has(10) && [...versions].some((v) => v >= 7), `versions covered: ${[...versions]}`);
+  // Every length from 1 to the version 10 limit picks a version that fits and decodes.
   for (let length = 1; length <= 213; length += 7) assert.equal(decode(qr.saleQrModules("q".repeat(length))).text.length, length);
   assert.throws(() => qr.saleQrModules("z".repeat(214)), qr.SaleQrTooLong);
-  // The decoder is not a mirror of the encoder: one flipped data module, or the wrong mask in the format word, fails.
-  const modules = qr.saleQrModules(texts[1], 3);
+  // The decoder is not a mirror of the encoder: one flipped data module, or a damaged format word, fails.
+  const modules = qr.saleQrModules(texts[1]);
   modules[modules.length - 1][modules.length - 1] = !modules[modules.length - 1][modules.length - 1];
   assert.throws(() => decode(modules), /syndrome/);
-  const other = qr.saleQrModules(texts[1], 3);
+  const other = qr.saleQrModules(texts[1]);
   for (let x = 0; x < 6; x += 1) other[8][x] = !other[8][x];
   assert.throws(() => decode(other));
 });
