@@ -60,7 +60,7 @@ insert into public.stores (id,slug,name,razon_social,ruc,email,contact_person,co
 
 insert into public.listings (id,slug,title,seller_type,status,category,instrument_type,brand,model,condition,price_pen,city,region,contact_name,whatsapp_phone,description,owner_user_id,store_id,created_by_source,marketplace_rules_accepted_at) values
  ('5f300000-0000-4000-8000-000000000001','sf-new','Guitarra nueva','store','approved','guitars','electric_guitar','Fender','Player','Nuevo',3500,'Lima','Lima','Contacto A','51999994101','Descripción de prueba válida con más de cuarenta caracteres.','5f100000-0000-4000-8000-000000000001','5f200000-0000-4000-8000-000000000001','self_service',now()),
- ('5f300000-0000-4000-8000-000000000002','sf-used','Bajo usado','store','approved','basses','electric_bass','Ibanez','SR300','Usado - buen estado',1200,'Lima','Lima','Contacto A','51999994101','Descripción de prueba válida con más de cuarenta caracteres.','5f100000-0000-4000-8000-000000000001','5f200000-0000-4000-8000-000000000001','self_service',now()),
+ ('5f300000-0000-4000-8000-000000000002','sf-used','Bajo usado','store','approved','basses','electric_bass','Ibanez','SR300','Muy bueno',1200,'Lima','Lima','Contacto A','51999994101','Descripción de prueba válida con más de cuarenta caracteres.','5f100000-0000-4000-8000-000000000001','5f200000-0000-4000-8000-000000000001','self_service',now()),
  ('5f300000-0000-4000-8000-000000000003','sf-pedal','Pedal de chorus','store','approved','pedals','pedals','Boss','CH-1','Nuevo',400,'Lima','Lima','Contacto A','51999994101','Descripción de prueba válida con más de cuarenta caracteres.','5f100000-0000-4000-8000-000000000001','5f200000-0000-4000-8000-000000000001','self_service',now()),
  ('5f300000-0000-4000-8000-000000000004','sf-particular','Teclado de particular','individual','approved','keyboards','synth','Korg','Minilogue','Nuevo',2000,'Lima','Lima','Ana','51999994103','Descripción de prueba válida con más de cuarenta caracteres.','5f100000-0000-4000-8000-000000000003',null,'self_service',now()),
  ('5f300000-0000-4000-8000-000000000005','sf-b-listing','Batería de la tienda B','store','pending','percussion','drum_kit','Pearl','Roadshow','Nuevo',2800,'Lima','Lima','Contacto B','51999994102','Descripción de prueba válida con más de cuarenta caracteres.','5f100000-0000-4000-8000-000000000002','5f200000-0000-4000-8000-000000000002','self_service',now());
@@ -88,6 +88,9 @@ select pg_temp.check((pg_temp.listing('sf-new')).warranty_months = 12 and (pg_te
   and (pg_temp.listing('sf-new')).returns_days = 7 and (pg_temp.listing('sf-new')).store_terms_source = 'store_policy',
   'a Nuevo listing follows the Nuevo policy');
 select pg_temp.check((pg_temp.listing('sf-used')).warranty_months is null, 'a used listing is not touched by the Nuevo policy');
+-- "Con garantía": the flag follows the warranty (listing flag registry of the listing-details batch).
+select pg_temp.check('con_garantia' = any((pg_temp.listing('sf-new')).listing_flags), 'a listing with a warranty carries the flag');
+select pg_temp.check(not 'con_garantia' = any((pg_temp.listing('sf-used')).listing_flags), 'a listing without one does not');
 
 select public.set_store_warranty_policy('used', '{"warranty_months":3,"returns_days":0}');
 select pg_temp.check((pg_temp.listing('sf-used')).warranty_months = 3 and (pg_temp.listing('sf-used')).warranty_provider = 'store'
@@ -119,7 +122,7 @@ select pg_temp.check(laria_private.listing_condition_group('Nuevo') = 'new'
 
 -- A condition change moves the listing to the other group's policy (as an approved revision would).
 select set_config('app.allow_listing_admin_fields', 'true', true);
-update public.listings set condition = 'Usado - buen estado' where slug = 'sf-new';
+update public.listings set condition = 'Bueno' where slug = 'sf-new';
 select pg_temp.check((pg_temp.listing('sf-new')).warranty_months = 3, 'a re-conditioned listing follows its new group');
 update public.listings set condition = 'Nuevo' where slug = 'sf-new';
 select set_config('app.allow_listing_admin_fields', '', true);
@@ -151,6 +154,10 @@ select pg_temp.owner_a();
 select public.set_store_warranty_policy('used', '{}');
 select pg_temp.check((pg_temp.listing('sf-used')).warranty_months is null and (pg_temp.listing('sf-used')).store_terms_source is null,
   'removing a policy clears its followers');
+select public.set_store_warranty_policy('used', '{"warranty_months":0,"returns_days":7}');
+select pg_temp.check((pg_temp.listing('sf-used')).warranty_months = 0 and not 'con_garantia' = any((pg_temp.listing('sf-used')).listing_flags),
+  '"Sin garantía adicional" is said, without the flag');
+select public.set_store_warranty_policy('used', '{}');
 
 -- Who reads policies: the public for active stores, the owner always.
 reset role;

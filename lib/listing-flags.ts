@@ -18,6 +18,8 @@ export const listingFlagFilters: readonly ListingFlagFilter[] = [
   { flag: "envia_provincia", label: "Envía a provincia", hint: "El vendedor envía por agencia a todo el Perú." },
   { flag: "se_puede_probar", label: "Se puede probar", hint: "Puedes probarlo antes de comprar." },
   { flag: "acepta_cambios", label: "Acepta cambios", hint: "El vendedor considera cambios por otro equipo." },
+  // store-floor (reach-09)
+  { flag: "con_garantia", label: "Con garantía", hint: "La tienda o la marca dan garantía. La ofrece la tienda, no Laria." },
 ];
 // END listing flag filters
 
