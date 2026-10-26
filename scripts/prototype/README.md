@@ -81,6 +81,25 @@ more than the stack:
 - **E-mails** (alerts, price drops, reminders) are logged, as before (`MARKETPLACE_EMAIL_PROVIDER=log`); the e-mail
   worker is started the same way, at `/api/internal/email/process`.
 
+## Deal-trust (feature ideas)
+
+`scripts/prototype/deal-trust-seed.sql` (`docs/feature-ideas/deal-trust.md`) gives the demo accounts five verified
+sales of `particular@laria.test` (their seller page and «Vendedor destacado»), reviews with one approved photo, a
+resale by `comprador@laria.test` linked to its purchase («Historial en Laria»), comprador's buyer card at
+`/comprador/a1b2c3d4e5f60718293a4b5c`, and the demo store as a «Punto seguro Laria». Load it after the demo seed, then
+copy the review photo's file into the local Storage folder:
+
+```sh
+psql "postgresql://postgres@127.0.0.1:54322/postgres" -f scripts/prototype/deal-trust-seed.sql
+install -D scripts/prototype/demo-photos/FEN-MUSTLT25__01.jpg \
+  /tmp/laria-prototype/storage/review-photos/d0000000-0000-4000-8000-000000000003/d8200000-0000-4000-8000-000000000003/d8400000-0000-4000-8000-000000000001.jpg
+```
+
+The Mostrador code (Mi tienda > Inventario > Mostrador, then "Mostrar código al cliente" after a sale) can be confirmed
+by `comprador@laria.test` or `particular@laria.test`, once per store a day each. `scripts/prototype/a11y-deal-trust.cjs`
+runs axe-core on the new pages and sheets (same setup as below). The levels and reminders run with
+`curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/internal/jobs/deal-trust`.
+
 ## Accessibility checks
 
 Two Playwright scripts run axe-core (WCAG 2.0 to 2.2, A and AA) against the running prototype at 390 px and 1366 px,

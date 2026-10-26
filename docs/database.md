@@ -1312,3 +1312,95 @@ Migrations `20261207120000`–`20261207120400` (not applied to any hosted databa
 - Public reads (definer, `anon` and `authenticated`), each returning only public listings and visible makers or
   artists: `get_listing_marks(uuid[])`, `get_public_makers(int)`, `get_store_maker_profile(uuid)`,
   `get_public_artists(int)`, `get_gift_exchange_stores(int)`.
+
+<!-- feature-ideas:deal-trust -->
+## Feature ideas: deal-trust batch
+
+Migrations `20261203100000`–`20261203100500` and the patches `20261203110000`–`20261203110500` (not applied to any
+hosted database). Write-up: `docs/feature-ideas/deal-trust.md`. Suite: `tests/feat-deal-trust.sql`.
+
+### Helpers for extending shared objects (`20261203100000`)
+
+- `laria_private.extend_or_check(p_table regclass, p_constraint text, p_branch text)`: rebuilds a check constraint as
+  `(<current definition>) or (<branch>)`. The branch is first normalized through a scratch `not valid` constraint, and
+  nothing happens if the normalized branch is already in the definition, so it is safe to run again. Raises if the
+  constraint does not exist. Used for `notifications_target_check` (`seller_level_*` notices have no listing or store).
+- `laria_private.patch_function_text(p_function regprocedure, p_old text[], p_new text[])`: reads the live definition
+  with `pg_get_functiondef`, replaces each `p_old[i]` with `p_new[i]` and executes the result (a complete
+  `create or replace`, so owner and grants stay). It raises unless each old piece occurs exactly once, so a patch
+  written against an older body stops the migration instead of overwriting another batch's change. Each use is alone in
+  its own migration: `submit_transaction_review` (counter purchases notify `store_counter_review_revealed`),
+  `get_reputation` and `get_public_review_page` (items gain `photos`), `get_admin_domain_page`,
+  `get_admin_moderation_queue` and `get_account_pendientes` (left join to `listings`, counter purchases titled by the
+  store).
+- `laria_private.trust_notify_once(key, user, type, message, store, transaction)`: one in-app/push notice per key (the
+  `ux_reminders_sent` ledger, prefix `trust:`), no e-mail. Eight `notifications.event_type` values:
+  `store_counter_purchase_confirmed`, `store_counter_review_revealed`, `store_counter_review_reminder`,
+  `store_level_earned`, `store_level_lapsed`, `store_safe_spot_disabled`, `seller_level_earned`, `seller_level_lapsed`.
+
+### Counter purchases (reach-11, `20261203100100`)
+
+- `public.store_counter_sales` (store_id, sale_key = the Mostrador batch key, `lines` snapshot, `token_hash` SHA-256 of
+  the code, status open|claimed|cancelled, `expires_at` ≤ created + 24 h, claimed_by/at, cancelled_at) and
+  `public.store_counter_sale_movements(movement_id pk → store_stock_movements, sale_id)`. No grants to `anon` or
+  `authenticated`.
+- `verified_transactions.claim_id` and `listing_id` are now nullable; new `counter_sale_id` (unique). Check
+  `verified_transactions_origin_check`: either a listing transaction (claim and listing set) or a counter purchase
+  (counter_sale_id set, claim and listing null, `seller_identity_type = 'store'`). Readers that join `listings` must
+  left-join.
+- Trigger `store_stock_movements_counter_sale_guard`: undoing a movement of an open sale cancels its code; of a claimed
+  sale is refused.
+- RPCs (definer): store owner `create_counter_purchase_code(sale_key)` (replaces an open code),
+  `cancel_counter_purchase_code(id)`, `get_counter_purchase_code_status(id)`; anyone `get_counter_purchase(token)`;
+  signed in `claim_counter_purchase(token)` (own store refused, 1 per store per customer a day, 5 a day),
+  `get_counter_transaction_center()`, `get_counter_transaction_detail(id)`; Admin `get_admin_counter_purchases(page,
+  size)`.
+
+### Review photos (safe-06, `20261203100200`)
+
+- Bucket `review-photos` (private, 5 MB, JPEG/PNG/WebP). Insert policy through
+  `public.review_photo_upload_allowed(name)`: `<auth.uid()>/<transaction>/<uuid>.jpg` of the caller's own purchase
+  while its review window is open, at most twelve objects per purchase. Files are read only by
+  `app/api/review-photos/[id]` with the service role after `get_review_photo_object(id)` says `public` (approved, review
+  visible) or `private` (the reviewer or Admin).
+- `public.transaction_review_photos` (review_id, storage_path unique, sort_order 0–2, status pending|approved|hidden,
+  moderated_at/by, moderation_reason). No direct grants.
+- RPCs: `attach_review_photos(review_id, paths[])` (buyer-to-seller reviews only, a day after sending, idempotent),
+  `get_my_review_photos(transaction_id)`, Admin `get_admin_review_photo_queue(status, page, size)` and
+  `moderate_review_photo(id, status, reason)` (audited `review_photo_*`), service role `list_orphan_review_photos(limit)`
+  (unattached uploads older than two days; the job route deletes them through the Storage API).
+
+### Seller pages, levels and buyer track records (sell-09, sell-08, safe-07, `20261203100300`)
+
+- `public.seller_pages` (user_id pk, slug `<first name>-<6 hex>`, hidden). Created by trigger `listings_seller_page`
+  with a Particular's first approved or sold listing, and backfilled. Reads: `get_seller_page(slug)` (anyone; null when
+  hidden), `get_my_seller_page()`, `set_my_seller_page_hidden(bool)`.
+- `public.seller_levels` (subject_user_id or subject_store_id, qualified_since, facts jsonb, computed_at).
+  `laria_private.seller_level_facts` and `seller_level_meets` hold the criteria (5 verified sales, 3 visible buyer
+  reviews averaging ≥ 4.5, no report resolved as upheld in 90 days, no visible question unanswered between 7 and 90 days
+  old, store active). `laria_private.refresh_seller_levels()` (nightly) grants and lifts it and notifies once a day per
+  change. `get_my_seller_levels()` shows the caller's facts.
+- `public.buyer_track_records` (user_id pk, enabled, token 24 hex, a new one each time it is enabled). RPCs
+  `get_my_track_record()`, `set_my_track_record(bool)`, `get_buyer_card(token)` (anyone; null when off; first name,
+  member since, verified purchases, average of the ratings sellers gave and their count).
+
+### Provenance (safe-11, `20261203100400`)
+
+- `public.listing_provenance` (listing_id pk, transaction_id unique, linked_by, linked_at). RPCs
+  `get_my_provenance_options(transaction_id)`, `link_listing_provenance(transaction_id, listing_id)`,
+  `unlink_listing_provenance(listing_id)`; the buyer's own listing-based purchase and their own publication only.
+  `laria_private.listing_provenance_json` follows earlier links (at most ten) for the owner count.
+
+### Safe spots, page reads and the nightly job (safe-03, `20261203100500`)
+
+- `public.store_safe_spots` (store_id pk, enabled, note ≤ 200 without phones or links, admin_disabled_at/by/reason).
+  `laria_private.safe_spot_missing(store)` lists what keeps a store out (active, verified, address shown) and is checked
+  on every read. RPCs: `get_my_safe_spot()`, `set_my_safe_spot(enabled, note)`, `get_safe_meetup_spots(city, region,
+  limit)` (anyone), Admin `get_admin_safe_spots()` and `admin_set_safe_spot(store, allowed, reason)` (audited, notifies
+  the store).
+- Page reads (anyone): `get_listing_trust(listing_id)` (seller page slug, level, provenance, the store's safe spot, the
+  meetup city and region) and `get_store_trust(store_id)`.
+- `public.run_deal_trust_nightly()` (service role only) → `laria_private.run_deal_trust_nightly()`: levels and
+  `send_counter_review_reminders()`. No pg_cron job; `GET /api/internal/jobs/deal-trust` with `CRON_SECRET` runs it
+  daily.
+<!-- /feature-ideas:deal-trust -->
