@@ -9,7 +9,9 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
+      // Feature ideas, store-reach batch (reach-02): Google Merchant Center and Meta read robots.txt before fetching a
+      // product feed; the longer Allow wins over "Disallow: /api/".
+      allow: ["/", "/api/feeds/"],
       disallow: NON_INDEXABLE_PATH_PREFIXES.map((prefix) => (prefix === "/api" ? "/api/" : prefix)),
     },
     sitemap: absoluteUrl("/sitemap.xml"),

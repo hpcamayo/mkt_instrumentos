@@ -81,6 +81,14 @@ more than the stack:
 - **E-mails** (alerts, price drops, reminders) are logged, as before (`MARKETPLACE_EMAIL_PROVIDER=log`); the e-mail
   worker is started the same way, at `/api/internal/email/process`.
 
+## Servicios para músicos (feature ideas, bet-02)
+
+`scripts/prototype/services-seed.sql` (loaded by `start-docker-free.sh seed`, or by hand after `demo-seed.sql`) adds
+five services and two accounts, `estudio@laria.test` and `sonido@laria.test`. Look at `/servicios`, a service page,
+Mi cuenta › Servicios as `particular@laria.test` (a lesson with a review) or `comprador@laria.test` (a confirmation to
+answer and a review to write), and Admin › Servicios as `admin@laria.test` (one new service, one with changes, one
+report). Details: `docs/feature-ideas/services.md`.
+
 ## Deal-trust (feature ideas)
 
 `scripts/prototype/deal-trust-seed.sql` (`docs/feature-ideas/deal-trust.md`) gives the demo accounts five verified

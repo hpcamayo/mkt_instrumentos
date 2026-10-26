@@ -168,6 +168,11 @@ export function inventoryCall(body: InventoryActionBody): InventoryCall | null {
       return uuid(body.event_id) && key(body.key)
         ? { fn: "record_purchase_request_sale", args: { p_event_id: uuid(body.event_id), p_quantity: integer(body.quantity), p_expected_version: integer(body.expected_version), p_idempotency_key: key(body.key) } }
         : null;
+    // store-floor, reach-08 "Por llegar": a date (YYYY-MM-DD) or null for up to 200 SKU.
+    case "arrival":
+      return uuids(body.item_ids) && (body.expected_on === null || (typeof body.expected_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.expected_on)))
+        ? { fn: "set_inventory_arrival", args: { p_item_ids: uuids(body.item_ids), p_expected_on: body.expected_on } }
+        : null;
     default:
       return null;
   }

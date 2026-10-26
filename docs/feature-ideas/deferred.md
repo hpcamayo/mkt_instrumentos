@@ -58,7 +58,6 @@ The catalog autofill must reach main first. It must never be copied from `proto/
 | Idea | What is left | Why |
 | --- | --- | --- |
 | reach-11 Compra en tienda verificada | A code for a Mostrador sale queued offline, and showing a code again from the sale history | The code needs the sale recorded on the server; the offer appears only right after the sale (deal-trust). |
-| reach-11 Compra en tienda verificada | Swap the temporary QR encoder for store-floor's `lib/labels/qr.ts` | Waits for store-floor's encoder to merge (FD-deal-trust-5). |
 | sell-09 Seller page | A "Ver mi página" line in Mis publicaciones | That page belongs to selling-tools; the link is in Compras y ventas for now. |
 | safe-03 Encuentro seguro | Confirming the shopping-center names per city | Someone in Lima should check `lib/safe-meetup-places.ts` before launch (FD-deal-trust-17). |
 

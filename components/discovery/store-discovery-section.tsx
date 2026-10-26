@@ -3,6 +3,7 @@ import { Gift, Hammer } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getRequestReads } from "@/lib/supabase/public-read-client";
 import { GIFTS_PATH } from "@/lib/discovery/gift-finder";
+import { readStoreExchangeTerms, storeExchange, type GiftExchangePolicy } from "@/lib/store-floor/exchange";
 import { GIFT_EXCHANGE_DISCLAIMER, MAKERS_PATH, MAKER_DISCLAIMER, MAKER_KIND_LABELS, giftExchangeLabel, handmadeLabel, type MakerKind } from "@/lib/discovery/makers";
 
 type MakerProfile = { kind: MakerKind; craft_city: string; story: string | null; since_year: number | null };
@@ -12,12 +13,15 @@ type MakerProfile = { kind: MakerKind; craft_city: string; story: string | null;
 export async function StoreDiscoverySection({ storeId }: { storeId: string }) {
   const db = getRequestReads().supabase as unknown as SupabaseClient | null;
   if (!db) return null;
-  const [maker, gift] = await Promise.all([
+  const [maker, gift, terms] = await Promise.all([
     db.rpc("get_store_maker_profile", { p_store_id: storeId }),
     db.from("store_gift_policies").select("exchange_days,note").eq("store_id", storeId).maybeSingle(),
+    readStoreExchangeTerms(db, storeId),
   ]);
   const profile = !maker.error && maker.data && typeof maker.data === "object" ? (maker.data as MakerProfile) : null;
-  const policy = !gift.error && gift.data ? (gift.data as { exchange_days: number; note: string | null }) : null;
+  // store-floor: when the store's own returns terms accept exchanges, those win and the gift line is not shown.
+  const exchange = storeExchange(terms, !gift.error && gift.data ? (gift.data as GiftExchangePolicy) : null);
+  const policy = exchange?.source === "gift" ? { exchange_days: exchange.days, note: exchange.note } : null;
   if (!profile && !policy) return null;
   return (
     <section aria-labelledby="taller-tienda" className="grid gap-4 rounded-panel border border-subtle p-4">

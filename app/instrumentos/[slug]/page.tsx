@@ -7,6 +7,8 @@ import { CategoryLanding } from "@/components/category-landing";
 import { ContentReport } from "@/components/content-report";
 import { JsonLd } from "@/components/json-ld";
 import { ContactModule } from "@/components/listing/contact-module";
+import { StoreTermsLine } from "@/components/store-floor/store-terms";
+import { TryoutEntry } from "@/components/store-floor/tryout-entry";
 import { QuickQuestions, SignInHint } from "@/components/listing/contact-extras";
 import { OwnerBar, RestockAlert, SimilarAlert } from "@/components/listing/listing-viewer";
 import { ListingGallery } from "@/components/listing/listing-gallery";
@@ -97,6 +99,8 @@ import {
 import { listingBreadcrumbs } from "@/lib/shell";
 import { formatPrice } from "@/lib/price";
 import { absoluteUrl, NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
+import { restockNote } from "@/lib/store-floor/arrivals";
+import { ListingReachMarks } from "@/components/store-reach/listing-reach-marks";
 
 export const dynamic = "force-dynamic";
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
@@ -166,6 +170,11 @@ const loadPublicListing = cache(async (slug: string) => {
         id,
         status,
         stock_state,
+        restock_expected_on,
+        warranty_months,
+        warranty_provider,
+        returns_days,
+        returns_note,
         paused_until,
         availability_confirmed_at,
         sold_at,
@@ -500,11 +509,12 @@ function ListingDetail({
               <Suspense fallback={null}><ListingMarks listingId={listing.id} /></Suspense>
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <Price value={listing.price_pen} previous={visiblePreviousPrice(listing, now)} size="detail" />
-                {outOfStock ? <StatusTag domain="stock" status="out_of_stock" /> : null}
+                {outOfStock ? <StatusTag domain="stock" status={listing.restock_expected_on ? "restock_expected" : "out_of_stock"} /> : null}
               </p>
               {outOfStock ? (
                 <p className="mt-2 t-ui text-ink-2">
-                  Sin unidades disponibles por ahora. Te avisamos cuando vuelva, o consulta a la tienda.
+                  {/* store-floor, reach-08: "Por llegar" with the store's estimated date. */}
+                  {restockNote(listing.restock_expected_on)}
                 </p>
               ) : null}
               <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -513,6 +523,9 @@ function ListingDetail({
                   {place} · {formatPublishedAgo(published, now)}{updated ? ` · ${updated}` : ""}
                 </ListingDetailMetadata>
               </p>
+              {/* store-floor, reach-09: the store's warranty and returns. */}
+              {isStore && !isSold ? <StoreTermsLine terms={listing} storeName={store?.name ?? null} className="mt-3" /> : null}
+              {isSold ? null : <ListingReachMarks listing={listing} />}{/* Feature ideas, store-reach batch (reach-04, reach-05). */}
               {/* A seller's recent "sigue disponible" (my listings check-ins) answers the quiet-listing note (list-04). */}
               {availabilityConfirmed ? (
                 <p className="mt-1 t-meta">Quien vende confirmó que sigue disponible el {availabilityConfirmed}.</p>
@@ -537,7 +550,7 @@ function ListingDetail({
               </div>
             ) : (
               <>
-                {outOfStock ? <RestockAlert listingId={listing.id} className="order-3 lg:order-2" /> : null}
+                {outOfStock ? <RestockAlert listingId={listing.id} arriving={Boolean(listing.restock_expected_on)} className="order-3 lg:order-2" /> : null}
                 <div className="order-3 grid gap-3 lg:order-2">
                   {purchase ? null : <QuickQuestions listingId={listing.id} questions={quickQuestions(listing.seller_type)} />}
                   <TrackRecordChip listingId={listing.id} />
@@ -551,6 +564,12 @@ function ListingDetail({
                   safety={needsSafetySheet(listing.price_pen, Boolean(purchase))}
                   className="order-3 lg:order-3"
                 />
+                {/* store-floor, buy-07: "Reservar una prueba" when the store takes try-outs. */}
+                {isStore && store && listing.store_id && !outOfStock ? (
+                  <Suspense fallback={null}>
+                    <TryoutEntry supabase={supabase} storeId={listing.store_id} storeName={store.name} listingId={listing.id} className="order-3 lg:order-3" />
+                  </Suspense>
+                ) : null}
                 <ShareListing
                   url={absoluteUrl(`/instrumentos/${listing.slug}`)}
                   title={listing.title}

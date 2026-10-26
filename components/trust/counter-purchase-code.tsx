@@ -7,7 +7,7 @@ import { CopyLink } from "@/components/trust/copy-link";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { counterPurchaseUrl, readCounterCode, readCounterCodeStatus, trustErrorMessage, type CounterCode, type CounterCodeStatus } from "@/lib/deal-trust";
-import { SaleQrTooLong, saleQrModules } from "@/lib/sale-qr";
+import { qrModules, qrSvgPath, qrVersionFor } from "@/lib/labels/qr";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 // «Compra en tienda verificada» (reach-11) at the Mostrador: after a sale in the store, the owner can show the customer
@@ -137,19 +137,8 @@ function CounterCodeSheet({ saleKey, storeName, onDismiss }: { saleKey: string; 
 // The QR as an SVG: black modules on white with the four-module quiet zone, whatever the page's theme, so any phone
 // reads it.
 export function SaleQr({ text }: { text: string }) {
-  const path = useMemo(() => {
-    try {
-      const modules = saleQrModules(text);
-      let d = "";
-      modules.forEach((row, y) => row.forEach((dark, x) => {
-        if (dark) d += `M${x + 4} ${y + 4}h1v1h-1z`;
-      }));
-      return { d, size: modules.length + 8 };
-    } catch (caught) {
-      if (caught instanceof SaleQrTooLong) return null;
-      throw caught;
-    }
-  }, [text]);
+  // store-floor's encoder (lib/labels/qr.ts); a claim link is far below its 213-byte limit.
+  const path = useMemo(() => (qrVersionFor(text) ? qrSvgPath(qrModules(text)) : null), [text]);
   if (!path) return null;
   return (
     <svg
@@ -160,7 +149,7 @@ export function SaleQr({ text }: { text: string }) {
       className="h-60 w-60 max-w-full rounded-control border border-subtle"
     >
       <rect width={path.size} height={path.size} fill="white" />
-      <path d={path.d} fill="black" />
+      <path d={path.path} fill="black" />
     </svg>
   );
 }

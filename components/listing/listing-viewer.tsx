@@ -89,7 +89,8 @@ export function OwnerBar({ listingId, sold, share, className }: { listingId: str
 
 // "Avísame cuando vuelva" on an Agotado listing (list-11): one notice, in the app and by e-mail, when it has units
 // again; then the request ends. Visitors get a sign-in link that comes back here.
-export function RestockAlert({ listingId, className }: { listingId: string; className?: string }) {
+// store-floor (reach-08): `arriving` when the store gave a date ("Por llegar"); the same watch, worded for an arrival.
+export function RestockAlert({ listingId, className, arriving = false }: { listingId: string; className?: string; arriving?: boolean }) {
   const account = useMarketplaceAccount();
   const pathname = usePathname();
   const viewer = useViewer(listingId);
@@ -124,9 +125,9 @@ export function RestockAlert({ listingId, className }: { listingId: string; clas
   return (
     <div className={cn("grid gap-1", className)}>
       <button type="button" aria-pressed={current} disabled={busy} aria-busy={busy} onClick={() => void toggle()} className={buttonClasses({ variant: "secondary" })}>
-        <BellRing aria-hidden />{current ? "Te avisaremos · Cancelar aviso" : "Avísame cuando vuelva"}
+        <BellRing aria-hidden />{current ? "Te avisaremos · Cancelar aviso" : arriving ? "Avísame cuando llegue" : "Avísame cuando vuelva"}
       </button>
-      <p role="status" className="t-meta">{message ?? (current ? "Te escribiremos una vez cuando vuelva a estar disponible." : "")}</p>
+      <p role="status" className="t-meta">{message ?? (current ? `Te escribiremos una vez cuando ${arriving ? "llegue" : "vuelva a estar disponible"}.` : "")}</p>
     </div>
   );
 }
