@@ -30,6 +30,17 @@ export default async function MyServicesPage({ searchParams }: { searchParams: P
   const services = readOwnerServices(servicesResult?.data);
   const bookings = readServiceBookings(bookingsResult?.data);
   const canAdd = !storeWithoutRequest && services.length < SERVICE_CATEGORIES.length;
+  const clientFirst = services.length === 0 && bookings.length > 0;
+  const bookingsSection = (
+    <section aria-labelledby="contrataciones-titulo" id="contrataciones" className="grid scroll-mt-4 gap-3">
+      <h2 id="contrataciones-titulo" className="t-section text-ink">Contrataciones</h2>
+      <p className="max-w-3xl t-meta">
+        Confirmar una contratación habilita la reseña del cliente durante 30 días. Laria no verifica el pago ni el
+        trabajo, y nunca recibe dinero.
+      </p>
+      <ServiceBookings bookings={bookings} />
+    </section>
+  );
 
   return (
     <section className="grid gap-6">
@@ -46,6 +57,8 @@ export default async function MyServicesPage({ searchParams }: { searchParams: P
           Tu tienda ofrece sus servicios con su nombre y su verificación. Envía la solicitud en Mi tienda y vuelve aquí.
         </Notice>
       ) : null}
+      {/* A client who offers nothing sees their hirings first. */}
+      {clientFirst ? bookingsSection : null}
       {!failed && !storeWithoutRequest && services.length === 0 ? (
         <EmptyState
           title="Aún no ofreces servicios"
@@ -59,14 +72,7 @@ export default async function MyServicesPage({ searchParams }: { searchParams: P
           <MyServices services={services} />
         </section>
       ) : null}
-      <section aria-labelledby="contrataciones-titulo" id="contrataciones" className="grid scroll-mt-4 gap-3">
-        <h2 id="contrataciones-titulo" className="t-section text-ink">Contrataciones</h2>
-        <p className="max-w-3xl t-meta">
-          Confirmar una contratación habilita la reseña del cliente durante 30 días. Laria no verifica el pago ni el
-          trabajo, y nunca recibe dinero.
-        </p>
-        <ServiceBookings bookings={bookings} />
-      </section>
+      {clientFirst ? null : bookingsSection}
     </section>
   );
 }
