@@ -66,7 +66,7 @@ export const accountSettingsTabs = [
   // Accounts batch, save-07.
   { href: "/mi-cuenta/correos", label: "Correos" },
   // Feature ideas, accounts batch (safe-09).
-  { href: "/mi-cuenta/datos", label: "Tus datos" },
+  { href: "/mi-cuenta/datos", label: "Datos" },
 ] as const;
 
 // Glossary names of the two account types (docs/design-system.md).

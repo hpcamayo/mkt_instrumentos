@@ -20,6 +20,7 @@ export function AccountDeletion({ email, hasPassword }: { email: string; hasPass
     const typedEmail = String(data.get("email") ?? "").trim();
     if (hasPassword && !password) return setError("Escribe tu contraseña.");
     if (!hasPassword && !typedEmail) return setError("Escribe el correo de tu cuenta.");
+    setError(null);
     if (!(await confirm({
       title: "¿Eliminar tu cuenta?",
       body: "No se puede deshacer. Tus publicaciones dejarán de verse y no podrás volver a entrar con esta cuenta.",
@@ -27,7 +28,6 @@ export function AccountDeletion({ email, hasPassword }: { email: string; hasPass
       tone: "danger",
     }))) return;
     setBusy(true);
-    setError(null);
     const response = await fetch("/api/account/delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -10,6 +10,7 @@
 const { chromium } = require("playwright-core");
 const fs = require("node:fs");
 const path = require("node:path");
+const twoStep = require("./two-step.cjs"); // feature ideas, accounts batch (safe-08)
 
 const BASE = process.env.BASE || "http://localhost:3000";
 const CHROMIUM = process.env.CHROMIUM || "/opt/pw-browsers/chromium";
@@ -64,6 +65,10 @@ async function login(page, email) {
   await page.getByLabel("Contraseña", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Ingresar", exact: true }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/mi-cuenta"), { timeout: 20000 });
+  // Feature ideas, accounts batch (safe-08): the code step after the password, and the app turned on where Mi tienda
+  // requires it (the demo store has approved payment methods).
+  await twoStep.answer(page, email);
+  if (email.startsWith("demo-tienda@")) await twoStep.enable(page, BASE, email);
 }
 
 async function skuPages(page) {
