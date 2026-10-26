@@ -312,6 +312,38 @@ Proposed with the find batch (`docs/ux-effortless/find.md`, UXD-find-1 to UXD-fi
   precio" and "Vistos recientemente" follow. Nothing of this leaves the device. The vitrina and the category tiles
   are retired.
 
+<!-- feature-ideas:listing-details -->
+## Listing details: condition, sale terms, combos and the map (feature ideas, listing-details batch)
+
+Proposed with the listing-details batch (`docs/feature-ideas/listing-details.md`, FD-listing-details-1 to
+FD-listing-details-18); not part of V1 until merged. Every term is the seller's word; Laria handles no shipping,
+payment or trade and gives no directions.
+
+- **Condition scale.** Condition is one step of a scale, each with a one-line definition: Nuevo, Exhibición o caja
+  abierta (store listings only), Como nuevo, Excelente, Muy bueno, Bueno, Regular, Para reparar. It replaces Nuevo /
+  Usado - buen estado / Usado - con detalles: old listings read Muy bueno or Bueno, and an old search value finds every
+  step it covered. The listing shows the step and opens the whole scale.
+- **Price mode.** Optional "Precio fijo" or "Precio conversable" beside the price and on cards; nothing is pre-chosen.
+- **Cómo se entrega and trades.** Optional terms in the sell and edit forms: pickup (district or zone, never an
+  address), "Se puede probar", delivery in Lima and who pays, shipping to provinces (Shalom, Olva, another agency; paid
+  on sending or at the agency), and "Acepto cambios por…" with categories. They go live when saved, refuse contact
+  details, and the listing says "Lo indica quien vende. Laria no gestiona envíos, pagos ni cambios." "Usar lo de tu
+  última publicación" copies the last terms only when pressed. A listing that takes trades offers the WhatsApp chip
+  "Te propongo un cambio"; chips the listing already answers are not offered.
+- **Yes/no filters.** "Envía a provincia", "Se puede probar" and "Acepta cambios" (`?opciones=`) in the catalog
+  filters, chips, counts and saved alerts, all of the chosen ones at once.
+- **Combos.** "Agregar al combo" keeps a list per seller on the device (up to 10, for 30 days); "Pedir el combo por
+  WhatsApp" sends one message with each listing, the sum of published prices and the seller's declared discount. Each
+  listing counts as a contact. Sellers may declare one discount (5 % to 30 %, from 2 to 5 listings); stores attach up to
+  six "Lo que suele acompañarlo" listings to one. Not offered on sold listings or in the assisted-purchase pilot.
+- **Ver en mapa.** "Lista | Mapa" on the catalog and category pages (the list stays the default; `?vista=mapa`). Stores
+  that show their address and placed their pin (Mi tienda → "Tu tienda en el mapa") are pins with "Abrir en Google
+  Maps" and "Abrir en Waze"; everyone else is an approximate area (a Lima district for a store, the city otherwise).
+  Nearby places merge and part on zoom; a list beside the map does everything the map does. The map shows the newest
+  300 matches. Map data: OpenFreeMap, credited on the map.
+- **Maker marks when selling.** A maker store's and a verified artist's sell form include discovery's marks.
+<!-- /feature-ideas:listing-details -->
+
 ## Discovery: gifts, guides, collections, makers and artists (feature ideas, discovery batch)
 
 Proposed with the discovery batch (`docs/feature-ideas/discovery.md`, FD-discovery-1 to FD-discovery-13); not part of
