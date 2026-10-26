@@ -19,6 +19,8 @@ import { listingLimitMessage } from "@/lib/store-allowance";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 type PhotoInput = {
   image_url?: unknown;
   path?: unknown;
@@ -97,6 +99,16 @@ export async function POST(request: Request, { params }: RouteContext) {
       p_listing_id: id,
       p_details: checked.details as Json,
     });
+    if (error) return rpcFailure(error.message);
+    return NextResponse.json({ ok: true });
+  }
+
+  // listing-details buy-01: "Lo que suele acompañarlo", up to six of the same store's listings shown with this one.
+  if (body.action === "companions") {
+    const given: unknown[] | null = Array.isArray(body.companionIds) ? body.companionIds : null;
+    const ids = given?.filter((value): value is string => typeof value === "string" && UUID_PATTERN.test(value)) ?? [];
+    if (!given || ids.length !== given.length || ids.length > 6) return failure("Elige hasta 6 publicaciones de tu tienda.");
+    const { error } = await supabase.rpc("set_listing_companions", { p_listing_id: id, p_companion_ids: ids });
     if (error) return rpcFailure(error.message);
     return NextResponse.json({ ok: true });
   }
@@ -337,6 +349,7 @@ function rpcFailure(message: string) {
   if (message.includes("LISTING_COPY_INVALID")) return failure("Esta publicación no se puede duplicar.", 409);
   if (message.includes("STORE_NOT_ELIGIBLE")) return failure("Tu tienda no puede recibir publicaciones nuevas en este momento.", 409);
   if (message.includes("LISTING_NOT_EDITABLE")) return failure("Esta publicación ya no se puede editar.", 409);
+  if (message.includes("COMPANIONS_INVALID")) return failure("Elige hasta 6 publicaciones de tu tienda que sigan a la venta.", 409);
   const detailProblem = detailWriterError(message);
   if (detailProblem) return failure(detailProblem, 409);
   if (message.includes("LISTING_CONDITION_INVALID")) return failure("Selecciona una condición válida.", 409);

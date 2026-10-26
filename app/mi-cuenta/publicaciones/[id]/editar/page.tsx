@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ListingEditForm, type EditRejection } from "@/components/listing-edit-form";
 import { ListingMakerFields } from "@/components/discovery/listing-maker-fields";
+import { ListingCompanionSettings } from "@/components/listing-details/companion-settings";
 import { parseRejectionCodes } from "@/lib/rejection-reasons";
 import { returnLabel } from "@/lib/listing-return";
 import { getAccountContext } from "@/lib/account-context";
@@ -110,6 +111,8 @@ export default async function ListingEditPage({
       />
       {/* discovery batch (disc-04, disc-05): Hecho a mano, a pedido and the artist's note, for makers and artists only */}
       <ListingMakerFields supabase={supabase} listingId={listing.id} />
+      {/* listing-details batch (buy-01): "Lo que suele acompañarlo", for a store's listings */}
+      <ListingCompanionSettings supabase={supabase} listingId={listing.id} storeId={listing.store_id} />
     </section>
   );
 }

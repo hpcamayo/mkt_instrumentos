@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { BundleOfferSettings } from "@/components/listing-details/bundle-offer-settings";
 import { StoreDefaultsForm } from "@/components/selling/store-defaults-form";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
@@ -22,7 +23,11 @@ export default async function StoreListingDefaultsPage() {
         meta={<p className="max-w-[68ch]">Lo que repites en cada publicación, una sola vez. Puedes cambiarlo en cada publicación.</p>}
       />
       {eligible ? (
-        <StoreDefaultsForm storeId={store.id} initial={{ condition: row?.condition ?? null, descriptionFooter: row?.description_footer ?? "" }} />
+        <>
+          <StoreDefaultsForm storeId={store.id} initial={{ condition: row?.condition ?? null, descriptionFooter: row?.description_footer ?? "" }} />
+          {/* listing-details batch (buy-01): the store's combo discount */}
+          <BundleOfferSettings supabase={supabase} storeId={store.id} />
+        </>
       ) : (
         <Notice tone="warning" role="note">Necesitas una cuenta de Tienda con una solicitud pendiente o aprobada.</Notice>
       )}

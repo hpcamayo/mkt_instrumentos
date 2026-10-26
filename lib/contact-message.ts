@@ -78,7 +78,7 @@ export function comboContactMessage(
       ? "¿Siguen disponibles? ¿Me harían un precio por todo?"
       : "¿Siguen disponibles? ¿Me harías un precio por todo?";
   return [
-    `Hola, vi ${store ? "estos productos de su tienda" : "estas publicaciones tuyas"} en Laria y me interesan juntos:`,
+    `Hola, vi ${store ? "estas publicaciones de su tienda" : "estas publicaciones tuyas"} en Laria y me interesan juntos:`,
     ...lines,
     ...(sum !== null && items.length > 1 ? [`Suma de precios publicados: ${formatPrice(sum)}.`] : []),
     ask,

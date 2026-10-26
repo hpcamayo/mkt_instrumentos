@@ -5,6 +5,7 @@ import {
   type ManagedListing,
 } from "@/components/listing-management-table";
 import { DraftList } from "@/components/selling/draft-list";
+import { BundleOfferSettings } from "@/components/listing-details/bundle-offer-settings";
 import { getAccountContext } from "@/lib/account-context";
 import { listSellDrafts } from "@/lib/sell-page-data";
 import { getAccountAnalytics } from "@/lib/account-analytics";
@@ -85,6 +86,8 @@ export default async function ParticularListingsPage({ searchParams }: { searchP
         <ListingManagementTable key={myListingsHref(BASE, query)} listings={page.items} emptyMessage="Aún no tienes publicaciones" />
       )}
       {page.pageCount > 1 ? <PageLinks query={query} page={page.page} pageCount={page.pageCount} from={page.from} to={page.to} total={page.total} /> : null}
+      {/* listing-details batch (buy-01): the Particular's combo discount */}
+      {supabase && hasAny ? <div className="border-t border-subtle p-5"><BundleOfferSettings supabase={supabase} userId={user.id} /></div> : null}
       <p className="border-t border-subtle p-5 text-meta leading-6 text-ink-2">{analytics ? "Vistas acumuladas de todo el historial, incluidas las históricas. Contactos por WhatsApp registrados desde el inicio del seguimiento; no equivalen a mensajes ni ventas." : "Las métricas no están disponibles en este momento; no se muestran ceros estimados."} La fecha de publicación corresponde a la primera publicación.</p>
     </section>
   );
