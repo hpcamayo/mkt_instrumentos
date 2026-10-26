@@ -216,6 +216,7 @@ function FacetRow({ id, href, chosen, shape, count, indent = false, children }: 
       <CatalogLink
         id={id}
         href={href}
+        rel="nofollow"
         aria-current={chosen ? "true" : undefined}
         className={cn("-mx-1.5 flex min-h-9 items-center gap-2.5 rounded-control px-1.5 t-ui text-ink transition-colors duration-120 hover:bg-canvas", indent && "pl-6")}
       >

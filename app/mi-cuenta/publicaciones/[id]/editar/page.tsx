@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ListingEditForm, type EditRejection } from "@/components/listing-edit-form";
+import { ListingMakerFields } from "@/components/discovery/listing-maker-fields";
 import { parseRejectionCodes } from "@/lib/rejection-reasons";
 import { returnLabel } from "@/lib/listing-return";
 import { getAccountContext } from "@/lib/account-context";
@@ -107,6 +108,8 @@ export default async function ListingEditPage({
         returnHref={returnHref}
         rejection={rejection && (rejection.reason || rejection.codes.length) ? rejection : null}
       />
+      {/* discovery batch (disc-04, disc-05): Hecho a mano, a pedido and the artist's note, for makers and artists only */}
+      <ListingMakerFields supabase={supabase} listingId={listing.id} />
     </section>
   );
 }
