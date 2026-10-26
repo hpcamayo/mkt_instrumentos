@@ -137,10 +137,10 @@ export function HomeHeader() {
   );
 }
 
-// "Todos los instrumentos", every category (its name opens its landing) with its canonical types, and "Tiendas
-// verificadas": the strip's destinations (lib/shell.ts categoryMenus, PUB-011–015). From 768 px a white panel across
-// the page under the bar, the categories in four columns of two rows, 36 px rows; on phones one stacked list with
-// 44 px rows, the types indented, scrolling inside the panel.
+// "Todos los instrumentos", every category (its name opens its landing) with its canonical types, "Tiendas
+// verificadas" (the strip's destinations, lib/shell.ts categoryMenus, PUB-011–015) and "Servicios para músicos" (its
+// own section, bet-02). From 768 px a white panel across the page under the bar, the categories in four columns of
+// two rows, 36 px rows; on phones one stacked list with 44 px rows, the types indented, scrolling inside the panel.
 const PANEL_ROW = "-mx-2 flex min-h-11 items-center rounded-control px-2 t-ui transition-colors duration-120 hover:bg-canvas md:min-h-9";
 
 function HomeCategoryPanel({ panelRef, onChoose }: { panelRef: Ref<HTMLDivElement>; onChoose: () => void }) {
@@ -167,6 +167,8 @@ function HomeCategoryPanel({ panelRef, onChoose }: { panelRef: Ref<HTMLDivElemen
           ))}
         </ul>
         <Link href={VERIFIED_STORES_PATH} onClick={onChoose} className={cn(PANEL_ROW, "mt-2 font-semibold md:mt-3")}>Tiendas verificadas</Link>
+        {/* feature-ideas services (bet-02): its own section, after the instruments and the stores. */}
+        <Link href="/servicios" onClick={onChoose} className={cn(PANEL_ROW, "font-semibold")}>Servicios para músicos</Link>
       </PageContainer>
     </div>
   );

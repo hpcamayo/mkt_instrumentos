@@ -14,6 +14,7 @@ import { RELATED_ROW_MAX, RelatedListings, RelatedListingsSkeleton } from "@/com
 import { ShareListing } from "@/components/listing/share-button";
 import { ListingGuideLink } from "@/components/discovery/listing-guide-link";
 import { ListingMarks } from "@/components/discovery/listing-marks";
+import { ListingRepairLine } from "@/components/services/service-entry-points";
 import { ListingQuestions } from "@/components/listing/listing-questions";
 import { ReputationSection } from "@/components/listing/reputation-section";
 import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@/components/listing/seller-card";
@@ -601,6 +602,9 @@ function ListingDetail({
 
             {/* discovery batch (disc-02): the buying guide and try-out checklist for this kind of instrument */}
             {isSold ? null : <ListingGuideLink category={listing.category} instrumentType={listing.instrument_type} className="order-8 min-w-0" />}
+
+            {/* feature-ideas services (bet-02): one quiet line to the repair shops on worn or broken gear */}
+            <Suspense fallback={null}><ListingRepairLine condition={listing.condition} sold={isSold} className="order-8 min-w-0" /></Suspense>
 
             <div className="order-11 min-w-0">
               <ListingQuestions
