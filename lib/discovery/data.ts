@@ -13,6 +13,7 @@ import {
   type PublicMaker,
 } from "@/lib/discovery/makers";
 import { DISCOVERABLE_STOCK_FILTER, type ListingCardData, type ListingFilters } from "@/lib/listings";
+import { withStoreExchangeTerms } from "@/lib/store-floor/exchange";
 import { getRequestReads } from "@/lib/supabase/public-read-client";
 
 // Public reads for the discovery pages (docs/feature-ideas/discovery.md), through the render's deadline-bound anonymous
@@ -48,8 +49,10 @@ export function getPublicArtists(listingsPerArtist = 4): Promise<PublicArtist[] 
   return rpc("get_public_artists", { p_listings_per_artist: listingsPerArtist }, parsePublicArtists);
 }
 
-export function getGiftExchangeStores(limit = 12): Promise<GiftExchangeStore[] | null> {
-  return rpc("get_gift_exchange_stores", { p_limit: limit }, parseGiftExchangeStores);
+export async function getGiftExchangeStores(limit = 12): Promise<GiftExchangeStore[] | null> {
+  const stores = await rpc("get_gift_exchange_stores", { p_limit: limit }, parseGiftExchangeStores);
+  // store-floor: a store's own returns terms win over its gift policy (lib/store-floor/exchange.ts).
+  return stores ? withStoreExchangeTerms(client(), stores) : stores;
 }
 
 // Catalog cards for listings named by id, in the order given, through the catalog's own query (RLS decides what is

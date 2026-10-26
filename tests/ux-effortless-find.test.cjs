@@ -74,7 +74,7 @@ test("FIND 07, FIND 08: facet counts, data-driven places and zones, price shortc
   // sell-10: only the steps that have results.
   assert.deepEqual(condition.options.map((option) => [option.value, option.count]), [["Nuevo", 6], ["Muy bueno", 3]]);
   const options = facets.find((facet) => facet.key === "opciones");
-  assert.deepEqual(options.options.map((option) => [option.value, option.count]), [["envia_provincia", 4], ["se_puede_probar", 0], ["acepta_cambios", 0]]);
+  assert.deepEqual(options.options.map((option) => [option.value, option.count]), [["envia_provincia", 4], ["se_puede_probar", 0], ["acepta_cambios", 0], ["con_garantia", 0]]);
   const location = facets.find((facet) => facet.key === "location");
   assert.deepEqual(location.options.map((option) => option.value), ["Lima", "Callao", "Cusco"], "the places that have listings, by zone, largest first");
   const lima = location.zones.find((zone) => zone.label === "Lima y Callao");

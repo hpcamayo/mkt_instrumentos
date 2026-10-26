@@ -74,6 +74,8 @@ const ALERT: Record<string, StatusEntry> = {
 // Stock of an inventory-linked listing (listings.stock_state). It never changes the listing's own status.
 const STOCK: Record<string, StatusEntry> = {
   out_of_stock: { label: "Agotado", tone: "neutral", icon: "stockout" },
+  // store-floor, reach-08: out of stock with a date the store expects units.
+  restock_expected: { label: "Por llegar", tone: "accent", icon: "review" },
 };
 
 // A store's accepted payment method (PAY-1, store_payment_methods.status). Only "Aprobado" is shown to buyers.

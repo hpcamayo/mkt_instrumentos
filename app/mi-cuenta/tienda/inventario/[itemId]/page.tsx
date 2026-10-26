@@ -14,6 +14,7 @@ import {
   type LinkCandidate,
 } from "@/components/inventory/item-detail";
 import { SkuListingDetailsPanel, type SkuListingDetails } from "@/components/inventory/sku-listing-details";
+import { ArrivalForm } from "@/components/store-floor/arrival-control";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
@@ -22,6 +23,7 @@ import { Price } from "@/components/ui/price";
 import { StatusTag } from "@/components/ui/tag";
 import { getAccountContext } from "@/lib/account-context";
 import { formatPrice } from "@/lib/price";
+import { longDate } from "@/lib/store-floor/dates";
 import {
   ACTOR_LABELS,
   CHANGE_LABELS,
@@ -131,6 +133,9 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
         </dl>
         <p className="t-meta">Stock informado por tu tienda. Último movimiento: {formatDateTime(item.last_movement_at)}</p>
         {canWrite && !archived ? <ItemStockActions item={item} /> : null}
+        {/* store-floor, reach-08 "Por llegar" and reach-10 labels. */}
+        {canWrite && !archived && item.quantity_available <= 0 ? <ArrivalForm key={`llegada-${item.version}`} itemId={item.id} current={item.expected_arrival_on ?? null} /> : null}
+        {!archived ? <p className="t-meta"><Link href={`/mi-cuenta/tienda/etiquetas?ids=${item.id}`} className="link font-semibold">Imprimir etiqueta</Link> con precio, código de barras y QR.</p> : null}
       </section>
 
       <section aria-labelledby="publicacion-titulo" className="grid gap-4 rounded-panel border border-subtle bg-white p-5">
@@ -247,5 +252,6 @@ function describeChange(type: string, before: Record<string, unknown>, after: Re
   const show = (value: unknown) => (value === null || value === undefined || value === "" ? "vacío" : String(value));
   if (type === "sku") return `: ${show(before.merchant_sku)} → ${show(after.merchant_sku)}`;
   if (type === "price") return `: ${formatPrice(asPrice(before.unit_price_pen))} → ${formatPrice(asPrice(after.unit_price_pen))}`;
+  if (type === "arrival") return `: ${typeof after.expected_arrival_on === "string" ? longDate(after.expected_arrival_on) : "sin fecha"}`;
   return "";
 }

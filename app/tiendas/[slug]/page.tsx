@@ -90,6 +90,7 @@ const STORE_LISTING_SELECT = `
   region,
   seller_type,
   stock_state,
+  restock_expected_on,
   created_at,
   stores (
     name,
