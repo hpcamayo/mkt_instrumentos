@@ -54,6 +54,13 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   service_booking_confirmed: "Contratación confirmada",
   service_booking_declined: "Contratación no confirmada",
   service_review_received: "Nueva reseña de tu servicio",
+  // Feature ideas, store-reach batch (reach-04): Admin's decision on a brand authorization.
+  store_dealer_approved: "Distribuidor oficial aprobado",
+  store_dealer_rejected: "Autorización no aprobada",
+  store_dealer_revoked: "Distribuidor oficial retirado",
+  // Feature ideas, store-reach batch (reach-05): a campaign entry that did not start or that Admin removed.
+  store_campaign_entry_ineligible: "Publicación fuera de la campaña",
+  store_campaign_entry_removed: "Publicación retirada de la campaña",
 };
 
 export const DEFAULT_NOTIFICATION_LABEL = "Actualización de tu cuenta";
@@ -103,6 +110,11 @@ export function notificationHref(notification: NotificationTarget, listingSlug?:
     ? "/mi-cuenta/tienda/pruebas"
     : notification.event_type === "store_arrival_estimate_passed"
     ? "/mi-cuenta/tienda/inventario?stock=out"
+    // Feature ideas, store-reach batch (reach-04, reach-05).
+    : notification.event_type.startsWith("store_dealer_")
+    ? "/mi-cuenta/tienda/distribuidor"
+    : notification.event_type.startsWith("store_campaign_")
+    ? "/mi-cuenta/tienda/campanas"
     : notification.store_id && notification.event_type.startsWith("store_")
     ? "/mi-cuenta/tienda"
     : notification.store_id

@@ -95,6 +95,7 @@ import { listingBreadcrumbs } from "@/lib/shell";
 import { formatPrice } from "@/lib/price";
 import { absoluteUrl, NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
 import { restockNote } from "@/lib/store-floor/arrivals";
+import { ListingReachMarks } from "@/components/store-reach/listing-reach-marks";
 
 export const dynamic = "force-dynamic";
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
@@ -517,6 +518,7 @@ function ListingDetail({
               </p>
               {/* store-floor, reach-09: the store's warranty and returns. */}
               {isStore && !isSold ? <StoreTermsLine terms={listing} storeName={store?.name ?? null} className="mt-3" /> : null}
+              {isSold ? null : <ListingReachMarks listing={listing} />}{/* Feature ideas, store-reach batch (reach-04, reach-05). */}
               {/* A seller's recent "sigue disponible" (my listings check-ins) answers the quiet-listing note (list-04). */}
               {availabilityConfirmed ? (
                 <p className="mt-1 t-meta">Quien vende confirmó que sigue disponible el {availabilityConfirmed}.</p>

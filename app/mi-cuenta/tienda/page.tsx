@@ -6,6 +6,7 @@ import { StoreAllowanceMeter } from "@/components/store-allowance-meter";
 import { StoreInventoryAccess } from "@/components/store-inventory-access";
 import { StoreRegistrationForm, type StoreApplication } from "@/components/store-registration-form";
 import { StoreFloorPanel } from "@/components/store-floor/store-floor-panel";
+import { StoreReachLinks } from "@/components/store-reach/store-reach-links";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusEntryTag } from "@/components/ui/tag";
@@ -56,6 +57,8 @@ export default async function StoreAccountPage() {
       {store && db ? <StoreFloorPanel storeId={store.id} supabase={db} /> : null}
       {/* discovery batch (docs/feature-ideas/discovery.md): Fabricante o Taller, cambios de regalos */}
       {store && canWrite ? <StoreDiscoveryLink /> : null}
+      {/* Feature ideas, store-reach batch (docs/feature-ideas/store-reach.md): Mercado Libre, feeds, dealers, campaigns, demand */}
+      {store && canWrite ? <StoreReachLinks /> : null}
       <StoreRegistrationForm
         store={(store as StoreApplication | null) ?? null}
         photos={photos ?? []}
