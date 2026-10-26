@@ -38,6 +38,14 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   listing_availability_checkin: "¿Sigue disponible?",
   listing_purchase_confirmation_reminder: "Confirma una compra",
   listing_review_reminder: "Tu reseña vence pronto",
+  // store-floor (reach-08, buy-07)
+  store_arrival_estimate_passed: "Pasó una fecha de llegada",
+  store_tryout_requested: "Te pidieron una prueba",
+  store_tryout_cancelled: "Cancelaron una prueba",
+  listing_tryout_confirmed: "Prueba confirmada",
+  listing_tryout_declined: "La tienda no confirmó tu prueba",
+  listing_tryout_cancelled: "La tienda canceló tu prueba",
+  listing_tryout_reminder: "Recordatorio de tu prueba",
   // feature-ideas services (bet-02)
   service_approved: "Servicio publicado",
   service_rejected: "Servicio por corregir",
@@ -46,6 +54,13 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   service_booking_confirmed: "Contratación confirmada",
   service_booking_declined: "Contratación no confirmada",
   service_review_received: "Nueva reseña de tu servicio",
+  // Feature ideas, store-reach batch (reach-04): Admin's decision on a brand authorization.
+  store_dealer_approved: "Distribuidor oficial aprobado",
+  store_dealer_rejected: "Autorización no aprobada",
+  store_dealer_revoked: "Distribuidor oficial retirado",
+  // Feature ideas, store-reach batch (reach-05): a campaign entry that did not start or that Admin removed.
+  store_campaign_entry_ineligible: "Publicación fuera de la campaña",
+  store_campaign_entry_removed: "Publicación retirada de la campaña",
 };
 
 export const DEFAULT_NOTIFICATION_LABEL = "Actualización de tu cuenta";
@@ -88,6 +103,18 @@ export function notificationHref(notification: NotificationTarget, listingSlug?:
     ? `/instrumentos/${notification.listing_id}`
     : notification.event_type === "store_stock_summary"
     ? "/mi-cuenta/tienda/inventario?stock=low"
+    // store-floor: try-outs open each side's list; a passed arrival date opens the SKU without units.
+    : notification.event_type.startsWith("listing_tryout_")
+    ? "/mi-cuenta/pruebas"
+    : notification.event_type.startsWith("store_tryout_")
+    ? "/mi-cuenta/tienda/pruebas"
+    : notification.event_type === "store_arrival_estimate_passed"
+    ? "/mi-cuenta/tienda/inventario?stock=out"
+    // Feature ideas, store-reach batch (reach-04, reach-05).
+    : notification.event_type.startsWith("store_dealer_")
+    ? "/mi-cuenta/tienda/distribuidor"
+    : notification.event_type.startsWith("store_campaign_")
+    ? "/mi-cuenta/tienda/campanas"
     : notification.store_id && notification.event_type.startsWith("store_")
     ? "/mi-cuenta/tienda"
     : notification.store_id

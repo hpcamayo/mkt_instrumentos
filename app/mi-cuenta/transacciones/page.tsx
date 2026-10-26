@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { TransactionCenter } from "@/components/transaction-center";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
@@ -18,7 +19,7 @@ export default async function TransactionsPage() {
       <PageHeader
         eyebrow="Mi cuenta"
         title="Compras y ventas"
-        meta={<p className="max-w-3xl">Confirma relaciones originadas en Laria y gestiona reseñas. Laria no confirma pagos, entregas, envíos ni la condición del instrumento.</p>}
+        meta={<p className="max-w-3xl">Confirma relaciones originadas en Laria y gestiona reseñas. Laria no confirma pagos, entregas, envíos ni la condición del instrumento. {/* store-floor (buy-07) */}<Link href="/mi-cuenta/pruebas" className="link font-semibold">Tus pruebas en tiendas</Link>.</p>}
       />
       {error ? (
         <Notice tone="danger" role="alert">No pudimos cargar tus transacciones. Intenta nuevamente.</Notice>

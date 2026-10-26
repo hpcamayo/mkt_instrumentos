@@ -4,6 +4,8 @@ export type AccountNavigationItem = {
   icon: "summary" | "listings" | "publish" | "store" | "inventory" | "payments" | "analytics" | "transactions" | "notifications" | "profile" | "security" | "favorites" | "alerts"
     // Effortless Laria, inventory batch (stock-04): purchase requests.
     | "requests"
+    // store-floor (buy-07): try-outs at the store.
+    | "tryouts"
     // feature-ideas services (bet-02)
     | "services";
   exact?: boolean;
@@ -16,7 +18,8 @@ const sharedAccountItems: AccountNavigationItem[] = [
   { href: "/mi-cuenta/favoritos", label: "Favoritos", icon: "favorites" },
   { href: "/mi-cuenta/alertas", label: "Alertas", icon: "alerts" },
   { href: "/mi-cuenta/notificaciones", label: "Notificaciones", icon: "notifications" },
-  { href: "/mi-cuenta/transacciones", label: "Compras y ventas", icon: "transactions" },
+  // store-floor (buy-07): a buyer's try-outs live with their purchases.
+  { href: "/mi-cuenta/transacciones", label: "Compras y ventas", icon: "transactions", activePaths: ["/mi-cuenta/pruebas"] },
   { href: "/mi-cuenta/perfil", label: "Perfil y seguridad", icon: "profile", activePaths: ["/mi-cuenta/seguridad", "/mi-cuenta/correos",
     // Feature ideas, accounts batch (safe-09).
     "/mi-cuenta/datos"] },
@@ -32,10 +35,13 @@ export function getAccountNavigationItems(
   if (accountType === "store_owner") {
     return [
       { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
-      { href: "/mi-cuenta/tienda", label: hasStore ? "Mi tienda" : "Solicitud de tienda", icon: "store", exact: true },
+      // store-floor: Garantía y cambios is a store setting; labels and the poster start from Inventario.
+      { href: "/mi-cuenta/tienda", label: hasStore ? "Mi tienda" : "Solicitud de tienda", icon: "store", exact: true, activePaths: ["/mi-cuenta/tienda/garantia"] },
       ...(hasStore ? [
-        { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory" } as const,
+        { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory", activePaths: ["/mi-cuenta/tienda/etiquetas"] } as const,
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar", icon: "publish" } as const,
+        // store-floor (buy-07)
+        { href: "/mi-cuenta/tienda/pruebas", label: "Pruebas", icon: "tryouts" } as const,
         // Effortless Laria, inventory batch (stock-04): "Solicitudes" exists only while purchase requests do (the pilot).
         ...(payments ? [{ href: "/mi-cuenta/tienda/solicitudes", label: "Solicitudes", icon: "requests" } as const] : []),
         // /Effortless Laria, inventory batch

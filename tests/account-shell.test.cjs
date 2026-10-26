@@ -30,7 +30,7 @@ test("Store Owner navigation changes safely when an owner-bound store exists", (
   const withoutStore = getAccountNavigationItems("store_owner", false);
   assert.deepEqual(withoutStore.map((item) => item.label), ["Resumen", "Solicitud de tienda", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   const withStore = getAccountNavigationItems("store_owner", true);
-  assert.deepEqual(withStore.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(withStore.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar", "Pruebas", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.equal(withStore.some((item) => /publicaciones|instrumento/i.test(item.label)), false);
 });
 

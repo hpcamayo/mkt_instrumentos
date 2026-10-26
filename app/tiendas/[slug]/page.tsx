@@ -42,6 +42,7 @@ import { warnMissingSupabaseEnv, type getPublicSupabaseClient } from "@/lib/supa
 import { getRequestReads } from "@/lib/supabase/public-read-client";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
+import { StoreDealerBrandsSlot } from "@/components/store-reach/dealer-marks";
 
 export const dynamic = "force-dynamic";
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
@@ -90,6 +91,7 @@ const STORE_LISTING_SELECT = `
   region,
   seller_type,
   stock_state,
+  restock_expected_on,
   created_at,
   stores (
     name,
@@ -449,6 +451,7 @@ function StoreView({
             <StoreAboutSection store={store} location={location} preview={preview} className="min-w-0" />
             {/* discovery batch (disc-04, buy-05): the maker's story and the gift exchange policy */}
             <StoreDiscoverySection storeId={store.id} />
+            {preview ? null : <StoreDealerBrandsSlot storeId={store.id} />}{/* Feature ideas, store-reach batch (reach-04). */}
             <AcceptedPaymentMethods methods={paymentMethods} />
           </div>
         </div>

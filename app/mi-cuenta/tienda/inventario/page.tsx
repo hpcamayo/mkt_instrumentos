@@ -149,6 +149,8 @@ async function InventoryView({ summary, storeName, params }: { summary: Inventor
           <p className="flex flex-wrap gap-x-4 gap-y-2">
             <Link href={REORDER_HREF} className="link font-semibold">Reposición</Link>
             <Link href={PRICES_HREF} className="link font-semibold">Precios</Link>
+            {/* store-floor, reach-10 */}
+            <Link href="/mi-cuenta/tienda/etiquetas" className="link font-semibold">Etiquetas</Link>
             {summary.can_write ? <InventorySettingsButton preferences={summary.preferences ?? null} /> : null}
             <InventoryShortcuts />
           </p>
