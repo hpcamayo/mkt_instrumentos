@@ -2,7 +2,8 @@
 // attribute columns of the chosen category (from lib/instrument-filters.ts), and a sheet with the accepted values.
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { instrumentTypesByCategory } from "@/lib/listing-submission";
-import { categoryOptions, conditionOptions } from "@/lib/listings";
+import { categoryOptions } from "@/lib/listings";
+import { conditionScale } from "@/lib/listing-condition";
 import { writeXlsx, type XlsxCell } from "@/lib/spreadsheet/xlsx-write";
 import { columnGuideText } from "./columns-guide";
 import { IMPORT_FIELDS } from "./mapping";
@@ -75,8 +76,8 @@ export function buildTemplateXlsx(category: string | null) {
     },
     {
       name: "Valores",
-      rows: [["Categoría", "Tipo de instrumento"], ...types, ["", ""], ["Condición", ""], ...conditionOptions.map((condition) => [condition, ""])],
-      widths: [26, 32],
+      rows: [["Categoría", "Tipo de instrumento"], ...types, ["", ""], ["Condición", "Qué significa"], ...conditionScale.map((step) => [step.value, step.definition])],
+      widths: [26, 60],
     },
   ]);
 }

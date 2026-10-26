@@ -46,6 +46,8 @@ export function searchEventMetadata(filters: ListingFilters, resultCount: number
     advanced[key] = Array.isArray(value) ? value.slice(0, 20).map((item) => item.slice(0, 100)) : typeof value === "string" ? value.slice(0, 100) : value;
   }
   if (Object.keys(advanced).length) supported.advanced = advanced;
+  // listing-details: the yes/no filters (the database accepts the key since 20261202120300).
+  if (filters.options?.length) supported.options = filters.options.slice(0, 20);
   // BIG 03: the free-text search is the query when there is one; the brand box otherwise, as before.
   return { query: (filters.q ?? filters.brand ?? "").slice(0, 200), filters: supported, result_count: Math.min(10000000, Math.max(0, Math.trunc(resultCount))), zero_results: resultCount === 0 };
 }

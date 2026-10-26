@@ -1,6 +1,7 @@
 // Turns one staged row's cells into typed values and issues, using the confirmed mapping (design §7.4). This is the
 // merchant-facing validation: the database checks the inventory fields again when it plans and commits the row.
-import { categoryOptions, conditionOptions, legacyCategories } from "@/lib/listings";
+import { categoryOptions, legacyCategories } from "@/lib/listings";
+import { conditionFromText } from "@/lib/listing-condition";
 import { instrumentTypesByCategory } from "@/lib/listing-submission";
 import { instrumentFilterGroups } from "@/lib/instrument-filters";
 import { MAX_PRICE_PEN } from "@/lib/price";
@@ -42,6 +43,10 @@ const CATEGORY_BY_NAME: Map<string, string> = (() => {
     map.set(normalizeHeader(option.label), option.value);
   }
   for (const [legacy, target] of Object.entries(legacyCategories)) map.set(normalizeHeader(legacy), target.category);
+  // disc-04: the names stores commonly give the Andean category in their own sheets.
+  for (const name of ["Andinos", "Instrumentos andinos", "Andino", "Tradicionales", "Instrumentos tradicionales", "Folklore", "Folclore", "Folklórico", "Folclórico"]) {
+    map.set(normalizeHeader(name), "andean");
+  }
   return map;
 })();
 
@@ -65,18 +70,6 @@ const CATEGORY_OF_TYPE: Map<string, string> = (() => {
   return map;
 })();
 
-const CONDITION_BY_NAME: Map<string, string> = (() => {
-  const map = new Map<string, string>();
-  for (const condition of conditionOptions) map.set(normalizeHeader(condition).replace(/[^a-z]+/g, " ").trim(), condition);
-  map.set("nuevo", "Nuevo");
-  map.set("nueva", "Nuevo");
-  map.set("new", "Nuevo");
-  map.set("buen estado", "Usado - buen estado");
-  map.set("usado buen estado", "Usado - buen estado");
-  map.set("con detalles", "Usado - con detalles");
-  map.set("usado con detalles", "Usado - con detalles");
-  return map;
-})();
 
 type Context = { issues: ImportIssue[]; formulaWarned: boolean };
 
@@ -248,10 +241,11 @@ export function parseImportRow(cells: ImportCell[], mapping: ImportMapping): { p
   let condition: string | null = null;
   const conditionText = text(cells, mapping, "condition", context, 60);
   if (conditionText) {
-    condition = CONDITION_BY_NAME.get(normalizeHeader(conditionText).replace(/[^a-z]+/g, " ").trim()) ?? null;
+    // sell-10: the scale's steps, their usual synonyms ("seminuevo", "open box") and the three old values.
+    condition = conditionFromText(conditionText);
     if (!condition) {
       issue(context, "condition", "IMPORT_CONDITION_UNKNOWN", "warning",
-        `Condición no reconocida: «${conditionText}». Usa Nuevo, Usado - buen estado o Usado - con detalles.`);
+        `Condición no reconocida: «${conditionText}». Usa un valor de la hoja Valores, como Nuevo, Muy bueno o Bueno.`);
     }
   }
 

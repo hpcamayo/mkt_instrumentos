@@ -11,14 +11,19 @@ type FooterLink = { href: string; label: string };
 
 // Footers link only to pages that exist (docs/ux-redesign/ux-2-shell.md).
 const legal = (href: string) => legalPages.find((page) => page.href === href)!;
+const servicesLink: FooterLink = { href: "/servicios", label: "Servicios para músicos" };
 const exploreLinks: FooterLink[] = [
   { href: CATALOG_PATH, label: "Instrumentos" },
   { href: categoryLandingPath("guitars"), label: "Guitarras" },
   { href: categoryLandingPath("percussion"), label: "Percusión" },
   { href: categoryLandingPath("pedals"), label: "Pedales" },
   { href: VERIFIED_STORES_PATH, label: "Tiendas verificadas" },
+  // discovery batch (docs/feature-ideas/discovery.md)
+  { href: "/hecho-en-peru", label: "Hecho en Perú" },
+  { href: "/regalos", label: "Para regalar" },
+  { href: "/guias", label: "Guías de compra" },
   // feature-ideas services (bet-02): its own section, apart from the instruments.
-  { href: "/servicios", label: "Servicios para músicos" },
+  servicesLink,
 ];
 // /registrar-tienda sends a signed-out visitor to /registro/tienda and tells a signed-in Particular that a
 // store needs its own account.
@@ -36,7 +41,7 @@ const phoneLinks: FooterLink[] = [
   exploreLinks[0], sellLinks[1], legal("/terminos"),
   legal("/consejos-de-seguridad"), legal("/articulos-prohibidos"), legal("/privacidad"), complaintsBook,
   // feature-ideas services (bet-02): the eighth cell of the 2 × 4 grid.
-  exploreLinks[exploreLinks.length - 1],
+  servicesLink,
 ];
 const slimLinks: FooterLink[] = [...["/consejos-de-seguridad", "/terminos", "/privacidad"].map(legal), complaintsBook];
 

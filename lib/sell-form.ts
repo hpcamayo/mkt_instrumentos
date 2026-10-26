@@ -1,4 +1,5 @@
 import { MAX_LISTING_PHOTOS, MIN_LISTING_PHOTOS } from "@/lib/listing-submission";
+import { conditionDefinition } from "@/lib/listing-condition";
 import { getConditionLabel } from "@/lib/listings";
 
 // The sell form's copy and checks (docs/ux-redesign/ux-5-selling.md). Pure, so the form and the tests share them.
@@ -11,15 +12,9 @@ export const PHOTO_GUIDANCE = [
   "Luz natural, sin filtros",
 ] as const;
 
-// Help text for the three stored grades (UX-5 S3, provisional copy; F2, a gear-specific scale, is separate).
-const CONDITION_HELP: Record<string, string> = {
-  Nuevo: "Sin uso, con todo lo que trae de fábrica.",
-  "Usado - buen estado": "Funciona bien; puede tener marcas leves de uso.",
-  "Usado - con detalles": "Desgaste visible o algo por reparar. Cuéntalo en la descripción y muéstralo en las fotos.",
-};
-
+// sell-10: each step of the scale with its one-line definition (lib/listing-condition.ts).
 export function conditionChoices(conditions: readonly string[]) {
-  return conditions.map((value) => ({ value, label: getConditionLabel(value), description: CONDITION_HELP[value] ?? "" }));
+  return conditions.map((value) => ({ value, label: getConditionLabel(value), description: conditionDefinition(value) ?? "" }));
 }
 
 export const DESCRIPTION_MIN = 40;

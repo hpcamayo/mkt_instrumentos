@@ -178,6 +178,7 @@ test("top-level categories link to their Spanish landing and type links never re
   const expected = {
     guitars: "guitarras", basses: "bajos", keyboards: "teclados", percussion: "percusion", winds: "vientos",
     strings: "cuerdas", pedals: "pedales", amplifiers: "amplificadores", microphones: "microfonos", audio: "audio",
+    andean: "andinos",
   };
   assert.deepEqual(Object.fromEntries(categories.categoryLandingPages.map((page) => [page.category, page.slug])), expected);
   for (const [category, slug] of Object.entries(expected)) {

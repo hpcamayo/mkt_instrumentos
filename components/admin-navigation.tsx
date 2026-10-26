@@ -22,6 +22,10 @@ const links = [
   { href: "/admin/resenas", label: "Reseñas" },
   { href: "/admin/transacciones", label: "Transacciones" },
   { href: "/admin/legacy", label: "Publicaciones históricas" },
+  // discovery batch (docs/feature-ideas/discovery.md): collections, maker stores, verified artists.
+  { href: "/admin/colecciones", label: "Colecciones" },
+  { href: "/admin/fabricantes", label: "Fabricantes y talleres" },
+  { href: "/admin/artistas", label: "Artistas verificados" },
   // feature-ideas services (bet-02)
   { href: "/admin/servicios", label: "Servicios" },
 ] as const;

@@ -1,5 +1,8 @@
 import type { MetadataRoute } from "next";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { categoryLandingPages } from "@/lib/category-pages";
+import { collectionPath } from "@/lib/discovery/collections";
+import { discoverySitemapPaths } from "@/lib/discovery/sitemap";
 import { legalPages } from "@/lib/legal-pages";
 import { DISCOVERABLE_STOCK_FILTER } from "@/lib/listings";
 import { absoluteUrl, isIndexableDeployment } from "@/lib/site";
@@ -32,6 +35,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...categoryLandingPages.map((landing): Entry => ({
       url: absoluteUrl(`/instrumentos/${landing.slug}`), changeFrequency: "daily", priority: 0.8,
     })),
+    // discovery batch: the gift finder, guides, Hecho en Perú and artists (collections are added with the stores).
+    ...discoverySitemapPaths().map((path): Entry => ({ url: absoluteUrl(path), changeFrequency: "weekly", priority: 0.5 })),
   ];
 
   // Each batch gets the core budget, all of them 20 s together; a batch that fails ends the list there, as before.
@@ -85,6 +90,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
   } catch {
     // Services are optional in the sitemap.
+  }
+
+  // disc-03: the collections inside their dates (RLS leaves the rest out).
+  const { data: collections } = await (supabase as unknown as SupabaseClient).from("collections").select("slug,updated_at").order("slug").range(0, 99);
+  for (const collection of (collections ?? []) as { slug: string; updated_at: string }[]) {
+    entries.push({ url: absoluteUrl(collectionPath(collection.slug)), lastModified: collection.updated_at, changeFrequency: "weekly", priority: 0.5 });
   }
 
   return entries;
