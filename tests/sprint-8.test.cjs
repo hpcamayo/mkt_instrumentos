@@ -379,7 +379,7 @@ test("authenticated report controls cover public listings, active stores, and re
   assert.match(trigger, /dynamic\(\(\) => import\("@\/components\/content-report-form"\)/);
   assert.doesNotMatch(trigger, /browser-client|getSupabaseBrowserClient/);
 
-  assert.match(control, /type ReportTarget = "listing" \| "store" \| "review"( \| "question")?;/);
+  assert.match(control, /type ReportTarget = "listing" \| "store" \| "review"( \| "question")?( \| "service" \| "service_review")?;/);
   assert.match(control, /useMarketplaceAccount\(\)/);
   assert.match(control, /href=\{`\/login\?next=/);
   assert.match(control, /\.rpc\("submit_content_report"/);

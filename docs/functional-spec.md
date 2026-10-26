@@ -353,6 +353,28 @@ unchanged.
 - **Lo que buscan en Laria.** Active stores see last month's searches and alerts as counts of distinct people by city,
   with active publications next to them, never under 5 people, stored aggregated, and with the report's limits stated
   above the tables. It gives no advice on what to stock.
+## Services for musicians (feature ideas, services batch)
+
+Proposed with the services batch (`docs/feature-ideas/services.md`, FD-services-1 to FD-services-11); not part of V1
+until merged.
+
+- **A separate section.** «Servicios para músicos» (`/servicios`) for lessons, lutherie and repairs, rehearsal rooms,
+  recording studios and sound for events, each kind with its own page. Services have their own tables, pages and Admin
+  queue and never appear in instrument search, the catalog, listing counts, saved alerts, favorites or a store's
+  listing allowance. Services are still not allowed as listings.
+- **Profiles.** A Particular or a store (as the store) offers one service per kind: title, description, a "desde" price
+  in soles per unit, where it happens, skills (lessons and repairs), city and zones, WhatsApp and up to six photos.
+  Contact details in the text are refused.
+- **Moderation.** New services wait for Admin; edits to the title, description, name or photos of an approved service
+  stay public and are rechecked. Rejecting or hiding needs a reason the owner sees. Reports on services and their
+  reviews have their own queue.
+- **Contact.** WhatsApp only, recorded like listing contacts; the owner sees 30-day views and contacts in aggregate.
+- **Confirmed bookings and reviews.** A client who wrote through Laria's button signed in (180 days) can say they hired
+  the provider, or the provider can ask them to confirm; the other side answers within 30 days. A confirmed client can
+  leave one review within 30 days. Confirmation does not verify payment or work. A service with confirmed clients or
+  reviews can be paused, not deleted.
+- **Laria's role.** Laria does not schedule, charge, take payments, verify titles or the quality of the work, or take
+  part in the agreement (Terms § 5 bis, draft pending legal review).
 
 ## WhatsApp Contact Tracking
 

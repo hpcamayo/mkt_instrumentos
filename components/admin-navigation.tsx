@@ -30,6 +30,8 @@ const links = [
   { href: "/admin/distribuidores", label: "Distribuidores" },
   { href: "/admin/campanas", label: "Campañas" },
   // /Feature ideas, store-reach batch
+  // feature-ideas services (bet-02)
+  { href: "/admin/servicios", label: "Servicios" },
 ] as const;
 
 // "Moderación" carries the total of the moderation queues; the other sections are record views without a
