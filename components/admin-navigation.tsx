@@ -24,6 +24,10 @@ const links = [
   // deal-trust batch: review photos, Puntos seguros, counter purchases.
   { href: "/admin/confianza", label: "Confianza" },
   { href: "/admin/legacy", label: "Publicaciones históricas" },
+  // discovery batch (docs/feature-ideas/discovery.md): collections, maker stores, verified artists.
+  { href: "/admin/colecciones", label: "Colecciones" },
+  { href: "/admin/fabricantes", label: "Fabricantes y talleres" },
+  { href: "/admin/artistas", label: "Artistas verificados" },
 ] as const;
 
 // "Moderación" carries the total of the moderation queues; the other sections are record views without a

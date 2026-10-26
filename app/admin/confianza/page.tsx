@@ -71,6 +71,7 @@ async function PhotoQueue({ db, status, page }: { db: SupabaseClient; status: "p
             return (
               <li key={photoId} className="grid content-start gap-3 rounded-panel border border-subtle bg-white p-4">
                 <a href={`/api/review-photos/${photoId}`} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-control border border-subtle">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- the private bucket is served by a checked route */}
                   <img src={`/api/review-photos/${photoId}`} alt="Foto de la reseña" width={320} height={240} loading="lazy" className="h-60 w-full bg-canvas object-contain" />
                 </a>
                 <div className="t-ui text-ink">

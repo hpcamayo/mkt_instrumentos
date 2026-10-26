@@ -16,6 +16,8 @@ const catalogCategoryPrefixes: readonly (readonly [string, string])[] = [
   ["studio.midi_controllers", "keyboards"],
   ["instruments.drums", "percussion"],
   ["instruments.folk.cajon", "percussion"],
+  // disc-04: the other folk instruments (charango, quena, zampoña…) are the Andinos y tradicionales category.
+  ["instruments.folk", "andean"],
   ["instruments.wind", "winds"],
   ["instruments.strings", "strings"],
   ["effects", "pedals"],

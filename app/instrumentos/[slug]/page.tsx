@@ -12,6 +12,8 @@ import { OwnerBar, RestockAlert, SimilarAlert } from "@/components/listing/listi
 import { ListingGallery } from "@/components/listing/listing-gallery";
 import { RELATED_ROW_MAX, RelatedListings, RelatedListingsSkeleton } from "@/components/listing/related-listings";
 import { ShareListing } from "@/components/listing/share-button";
+import { ListingGuideLink } from "@/components/discovery/listing-guide-link";
+import { ListingMarks } from "@/components/discovery/listing-marks";
 import { ListingQuestions } from "@/components/listing/listing-questions";
 import { ReputationSection } from "@/components/listing/reputation-section";
 import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@/components/listing/seller-card";
@@ -20,6 +22,7 @@ import { ListingProvenance, SellerTrust } from "@/components/trust/listing-trust
 import { SafeMeetup } from "@/components/trust/safe-meetup";
 import { TrackRecordChip } from "@/components/trust/track-record-chip";
 import { getListingTrust } from "@/lib/listing-trust";
+import { guidePath, guidesForListing } from "@/lib/discovery/buying-guides";
 import { publicStoreLocation } from "@/lib/store-storefront";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
 import { AcceptedPaymentMethods } from "@/components/payment/accepted-payment-methods";
@@ -460,6 +463,8 @@ function ListingDetail({
     facts,
   };
   const specLine = keySpecLine(getSpecStrip(listing, 5));
+  // deal-trust (safe-03): the meetup sheet links the type's try-out checklist (discovery's guides) when there is one.
+  const tryOutGuide = isStore ? undefined : guidesForListing(listing.category, listing.instrument_type).find((guide) => guide.kind === "revisar");
   const contactHref = purchase ? buildPurchaseWhatsAppUrl(resolveContactPhone(listing), listing, purchase.sku) : buildWhatsAppUrl(listing);
   const typeHref = listing.instrument_type
     ? categoryTypePath(listing.category, listing.instrument_type)
@@ -491,6 +496,8 @@ function ListingDetail({
               </h1>
               {secondaryTitle ? <p className="mt-1 t-ui text-ink-2">{secondaryTitle}</p> : null}
               {specLine ? <p className="mt-1 t-ui font-semibold text-ink">{specLine}</p> : null}
+              {/* discovery batch (disc-04, disc-05): Hecho a mano, a pedido, equipo de artista */}
+              <Suspense fallback={null}><ListingMarks listingId={listing.id} /></Suspense>
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <Price value={listing.price_pen} previous={visiblePreviousPrice(listing, now)} size="detail" />
                 {outOfStock ? <StatusTag domain="stock" status="out_of_stock" /> : null}
@@ -559,6 +566,7 @@ function ListingDetail({
                     sellerFirstName={particular.name?.trim().split(/\s+/)[0] || null}
                     city={listing.city}
                     region={listing.region}
+                    tryOutHref={tryOutGuide ? guidePath(tryOutGuide.slug) : undefined}
                     className="order-5 lg:order-3"
                   />
                 )}
@@ -611,6 +619,9 @@ function ListingDetail({
                 </p>
               )}
             </section>
+
+            {/* discovery batch (disc-02): the buying guide and try-out checklist for this kind of instrument */}
+            {isSold ? null : <ListingGuideLink category={listing.category} instrumentType={listing.instrument_type} className="order-8 min-w-0" />}
 
             <div className="order-11 min-w-0">
               <ListingQuestions

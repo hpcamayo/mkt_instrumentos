@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect, redirect } from "next/navigation";
 import {
   parsePage,
   pageHref,
@@ -9,6 +9,7 @@ import { CatalogView } from "@/components/catalog-view";
 import { ListingFilters } from "@/components/listing-filters";
 import { PageContainer } from "@/components/page-container";
 import {
+  hasRejectedFilterValues,
   parseListingFilters,
   type ListingCardData,
   type ListingFilters as ListingFiltersType,
@@ -35,10 +36,20 @@ type ListingsPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+// Metadata and the page can run independently. Both must clean malformed URLs before starting catalog reads.
+function readCatalogRequest(searchParams: Awaited<ListingsPageProps["searchParams"]>) {
+  const filters = parseListingFilters(searchParams);
+  const page = parsePage(searchParams.page);
+  if (hasRejectedFilterValues(searchParams)) {
+    const cleaned = catalogHref(filters);
+    permanentRedirect(page > 1 ? `${cleaned}${cleaned.includes("?") ? "&" : "?"}page=${page}` : cleaned);
+  }
+  return { filters, page };
+}
+
 export async function generateMetadata({ searchParams }: ListingsPageProps): Promise<Metadata> {
   const resolved = await searchParams;
-  const filters = parseListingFilters(resolved);
-  const page = parsePage(resolved.page);
+  const { filters, page } = readCatalogRequest(resolved);
   // FIND 02: a filtered search's tab says what was searched and how many results ("Fender en Guitarras · Lima (34)").
   const result = applySearchPhrase(filters).changed ? null : await getCatalogPage(filters, page);
   return buildCatalogMetadata(resolved, page, catalogTabTitle(filters, result && !result.error ? result.count : null));
@@ -48,8 +59,7 @@ export default async function ListingsPage({
   searchParams,
 }: ListingsPageProps) {
   const resolvedSearchParams = await searchParams;
-  const filters = parseListingFilters(resolvedSearchParams);
-  const page = parsePage(resolvedSearchParams.page);
+  const { filters, page } = readCatalogRequest(resolvedSearchParams);
   const { supabase } = getRequestReads();
 
   if (!supabase) {

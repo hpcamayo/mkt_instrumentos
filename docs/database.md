@@ -1194,3 +1194,121 @@ Migration `20261109120000_ux_effortless_integration.sql` (not applied to any hos
 - `20261104120100` and `20261104120200` drop their helper `pg_temp.selling_fix`, so every migration also applies in
   one database session, as the Supabase CLI runs them.
 <!-- /ux-effortless:integration -->
+
+<!-- feature-ideas:listing-details -->
+## Feature ideas: listing details (conditions, sale terms, combos, map)
+
+Migrations `20261202120000`–`20261202120600` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/listing-details.md`. Suite: `tests/feat-listing-details.sql`.
+
+### The condition scale (sell-10, `20261202120000`)
+
+- `listings.condition` takes one step of a scale: Nuevo, Como nuevo, Excelente, Muy bueno, Bueno, Regular, Para
+  reparar, and "Exhibición o caja abierta" for a store listing only. `public.listing_condition_is_valid(text, boolean)`
+  is the rule (the boolean says "store"); the trigger `listings_check_condition` applies it on insert and whenever the
+  condition or seller type changes (`LISTING_CONDITION_INVALID`). Test fixtures must use a step ("Bueno", not
+  "Usado").
+- An old value written by any path is mapped, not refused: Usado - buen estado → Muy bueno, Usado - con detalles →
+  Bueno (`laria_private.current_condition`). A search's old value stands for the steps it covered
+  (`laria_private.condition_search_values`, `laria_private.expand_search_conditions`), so saved alerts and old links
+  keep finding what they found. The migration relabelled listings (without touching "Actualizado"), revisions, drafts,
+  SKU details, store defaults and saved alerts.
+
+### Listing flags: the yes/no filters (`20261202120100`)
+
+- `listings.listing_flags text[]` (GIN-indexed) holds the yes/no facts a buyer can filter on. It is derived, never
+  written: `listings_flags_a_reset` (BEFORE INSERT OR UPDATE) empties it, then each batch's `listings_flags_<batch>`
+  trigger appends its own flags from its own columns. A client value is always overwritten. Keep `listing_flags` out of
+  every column grant.
+- Trigger order: Postgres fires a table's BEFORE triggers in name order. A flags trigger must be named
+  `listings_flags_<batch>` (after `listings_flags_a_reset`), fire on `insert or update` with no column list (the reset
+  runs on every update), and only append.
+- `laria_private.listing_flag_filters(flag, label, sort_order)` lists the flags a search may ask for. Saved searches
+  take an `options` key (registered flags, "all of"); `catalog_facets` reads `options` from its filters and returns an
+  `options` object with each flag's count. The site's copy is `lib/listing-flags.ts`; its URL parameter is `opciones`.
+- Flags today: `envia_provincia`, `se_puede_probar`, `acepta_cambios` (listing-details).
+- **Adding a flag:** insert its row into `laria_private.listing_flag_filters`; add a `listings_flags_<batch>` trigger
+  function that does `new.listing_flags := array_append(new.listing_flags, '<flag>')` when the batch's column says so;
+  add one entry in the marked block of `lib/listing-flags.ts`. No shared function changes.
+
+### Listing detail writers: extra listing fields (`20261202120100`)
+
+- A listing's extra fields arrive as one JSON object keyed by the owning batch (`sale_terms` here). Each key has a row in
+  `laria_private.listing_detail_writers(key, writer, copier, owner_batch, note)`: `writer(listing_id uuid, value jsonb)`
+  checks and stores that part; `copier(source_id uuid, target_id uuid)`, when set, carries it to a duplicate or a
+  relisted copy. Both run as the definer after the caller's checks, in key order. An unknown key is refused
+  (`LISTING_DETAILS_INVALID`).
+- `public.complete_listing_submission(p_id, p_kind, p_fields, p_photos, p_details)` (service role): calls
+  `complete_public_submission` unchanged, applies the details only when the listing is new (a retry returns it
+  untouched), and defers the saved-search capture (`laria.defer_alert_capture`) until the details are stored, so an
+  alert on a flag finds a store listing that goes public at once. `app/api/submissions` calls it for listings.
+- `public.update_owned_listing_details(p_listing_id, p_details)` (authenticated): the owner, on a listing that is not
+  sold, archived or hidden by Admin (the same errors as `apply_owned_listing_edit`). Details are not moderated, so each
+  writer refuses what moderation would (contact details in free text).
+- `public.copy_owned_listing` calls `laria_private.copy_listing_details` (patched in `20261202120300`).
+- **Adding a field:** add the columns and their checks in your migration; write `laria_private.write_<field>(uuid, jsonb)`
+  (and a copier if a copy should keep it); insert its row into `laria_private.listing_detail_writers`; add the same key
+  to the marked block of `lib/listing-details.ts` (the routes run that check first); build the input as your own
+  component and place it in the sell and edit forms with a one-line import.
+
+### Sale terms (sell-07, buy-02, sell-06; `20261202120200`)
+
+- Listing columns, every one the seller's word: `price_mode` (fixed | negotiable | null), `delivery_pickup` and
+  `pickup_area` (a district, never an address), `can_try`, `lima_delivery` (buyer | seller | agree), `ships_provinces`,
+  `shipping_carriers` (shalom, olva, other), `shipping_payment` (origin | destination), `accepts_trades`, `trade_wants`
+  (≤ 200 characters) and `trade_categories`. Checks keep dependent values with their switch;
+  `listings_check_sale_terms` refuses contact details in the two free-text fields.
+- Writer `laria_private.write_listing_sale_terms` (key `sale_terms`): a key that is absent keeps its value.
+  `listings_ux_sale_terms_changed` (named after `listings_track_content_change`, which resets the date) moves
+  `content_changed_at`, so a change shows as "Actualizado".
+
+### Shared functions changed (`20261202120300`, `20261202120400`)
+
+- Find-and-replace patches: `laria_private.normalize_saved_search` (new conditions, old values expanded, `options`;
+  STABLE now, as it reads the flag registry), `laria_private.listing_matches_saved_search` (`options`),
+  `laria_private.record_marketplace_event_service` (search events may carry `options`),
+  `laria_private.sanitize_listing_details` and `public.set_store_import_row_publish_fields` (the scale),
+  `public.copy_owned_listing` (details copied).
+- `public.catalog_facets` rebuilt whole with `ok_options` and the `options` counts.
+
+### Combos (buy-01, `20261202120500`)
+
+- `public.seller_bundle_offers`: one declared discount (5–30 %, from 2–5 items) per Particular (`owner_user_id`) or
+  store (`store_id`). Public read; written only through `public.set_bundle_offer(p_store_id, p_discount_percent,
+  p_min_items)` (null store: the caller's own; null discount removes it).
+- `public.listing_companions(listing_id, companion_id, sort_order)`: up to 6 listings of the same store, read while both
+  are public (and by the store owner). Written through `public.set_listing_companions(p_listing_id, p_companion_ids)`.
+- The buyer's combo list itself is kept on the device only.
+
+### Store map pins (buy-08, `20261202120600`)
+
+- `stores.map_latitude`, `stores.map_longitude` (Peru's bounding box, both or neither) are private.
+  `public_map_latitude` and `public_map_longitude` are generated: the pin while `show_address` is true, else null; only
+  they are granted to `anon` and `authenticated`. Written through `public.set_own_store_map_pin(p_store_id, lat, lng)`.
+<!-- /feature-ideas:listing-details -->
+
+## Feature ideas: discovery batch
+
+Migrations `20261207120000`–`20261207120400` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/discovery.md`. Suite: `tests/feat-discovery.sql`.
+
+- Category `andean` / type `andean_instrument` / attribute `andean_type`: `listing_taxonomy_is_valid`,
+  `listing_attribute_keys_are_valid` and `listing_search_text` are each redefined alone in their own migration (the
+  trigram index is rebuilt); `laria_private.normalize_saved_search` is patched in place (its live definition gains
+  `'andean'` and `'andean_type'`, and the migration fails if the lists moved).
+- `public.store_maker_profiles` (store_id pk; kind fabricante|taller, craft_city, story, since_year, hidden_*):
+  owner and Admin read; writes through `set_store_maker_profile` and `admin_set_maker_hidden` (audited).
+- `public.listing_maker_details` (listing_id pk; handmade, made_to_order_weeks 1–26, artist_note 3–140): read by those
+  who can manage the listing; written through `set_listing_maker_details` (makers for the first two, verified artists
+  for the note).
+- `public.store_gift_policies` (store_id pk; exchange_days 3–60, note): public for active stores, owner and Admin
+  always; written through `set_store_gift_policy`.
+- `public.artist_profiles` (user_id pk; slug, display_name, story, https link_url, verified_*, revoked_at): self and
+  Admin read; written through `admin_save_artist_profile` / `admin_revoke_artist_profile` (audited, target type
+  `artist`).
+- `public.collections` (slug, title, intro, sets jsonb of 1–4 `{label, query}`, starts_on, ends_on, published,
+  sort_order): public while published and inside its dates (Lima), Admin always; written through
+  `admin_save_collection` / `admin_delete_collection` (audited, target type `collection`). Six starter rows seeded.
+- Public reads (definer, `anon` and `authenticated`), each returning only public listings and visible makers or
+  artists: `get_listing_marks(uuid[])`, `get_public_makers(int)`, `get_store_maker_profile(uuid)`,
+  `get_public_artists(int)`, `get_gift_exchange_stores(int)`.

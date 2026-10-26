@@ -126,9 +126,9 @@ test("valid representative sitemap passes; full sample URLs (including query) ar
   assert.equal(result.samples.store.href, `${site}/tiendas/tienda-qa?pagina=1`);
   for (const path of [category, listing, "/tiendas/tienda-qa?pagina=1", "/", "/listados", "/registro/vendedor", "/registro/tienda", "/login"]) assert.ok(fetch.requested.includes(path), path);
   // robots.txt + (9 indexable + 3 noindex) for googlebot and bingbot, then the required coverage (first crawler):
-  // page 2 + 10 category aliases + filtered catalog + 1 populated and 9 empty categories + sold listing
+  // page 2 + 11 category aliases + filtered catalog + 1 populated and 10 empty categories + sold listing
   // + home/listing/store JSON-LD + 2 Admin record pages.
-  assert.equal(result.passed.length, 25 + 28);
+  assert.equal(result.passed.length, 25 + 30);
   for (const [surface, state] of Object.entries(result.coverage)) assert.equal(state.status, "verified", surface);
   for (const path of ["/listados?page=2", "/listados?category=audio", "/listados?category=guitars&sort=price_asc", "/instrumentos/cuerdas", soldListing, "/admin/tiendas", "/admin/publicaciones"]) assert.ok(fetch.requested.includes(path), path);
 });
@@ -622,7 +622,7 @@ test("populated categories are indexable with an ItemList; empty categories are 
   const allLandings = smoke.CATEGORY_LANDINGS.map((landing) => `/instrumentos/${landing.slug}`).reverse();
   const all = await run({ sitemapBody: sitemap(["/", "/listados", ...allLandings, listing, store]) });
   assert.equal(all.coverage["populated-category"].detail, "1 populated");
-  assert.equal(all.coverage["empty-category"].detail, "9 empty");
+  assert.equal(all.coverage["empty-category"].detail, "10 empty");
   assert.equal(all.samples.category.pathname, category);
   await failsWith({ pages: { "/instrumentos/cuerdas": page(empty, { jsonLd: [breadcrumb(empty)] }) } }, /empty category \/instrumentos\/cuerdas: expected a noindex, follow robots meta \(found: none\)/);
   await failsWith({ pages: { "/instrumentos/cuerdas": page(empty, { robots: "noindex, follow", jsonLd: [breadcrumb(empty), itemList([`${site}${listing}`])] }) } }, /empty category \/instrumentos\/cuerdas: an empty category must not publish an ItemList/);

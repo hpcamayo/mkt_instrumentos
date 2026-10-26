@@ -69,7 +69,7 @@ test("L9: the table lists Tipo, Marca, Modelo, Condición and every attribute, w
     { label: "Tipo", value: "Guitarras eléctricas" },
     { label: "Marca", value: "Fender" },
     { label: "Modelo", value: "Player Stratocaster" },
-    { label: "Condición", value: "Usado · buen estado" },
+    { label: "Condición", value: "Muy bueno" },
   ]);
   assert.equal(table.length, 4 + Object.keys(guitar.attributes).length);
   for (const label of ["Publicado", "Ciudad", "Vendedor", "Tienda", "Categoría"]) assert.ok(!table.some((spec) => spec.label === label), label);

@@ -51,13 +51,13 @@ insert into public.stores (id,slug,name,razon_social,ruc,email,contact_person,co
  ('d7200000-0000-4000-8000-000000000001','trust-tienda','Tienda Confianza','Tienda Confianza SAC','20999997101','trust-store@example.invalid','Olga','Olga','51999997004','Lima','Lima','Miraflores','Av. Larco 100',true,'d7100000-0000-4000-8000-000000000004','active','free',true);
 
 insert into public.listings (id,slug,title,seller_type,status,category,instrument_type,brand,model,condition,price_pen,city,region,contact_name,whatsapp_phone,description,owner_user_id,store_id,created_by_source,marketplace_rules_accepted_at,attributes) values
- ('d7300000-0000-4000-8000-000000000001','trust-l1','Guitarra Fender Stratocaster','individual','approved','guitars','electric_guitar','Fender','Stratocaster','Usado',3000,'Lima','Lima','María','51999997001','Descripción de prueba con más de cuarenta caracteres para la guitarra.','d7100000-0000-4000-8000-000000000001',null,'self_service',now(),'{"color":"Sunburst"}'),
- ('d7300000-0000-4000-8000-000000000002','trust-l2','Pedal Boss DS-1','individual','approved','pedals','pedals','Boss','DS-1','Usado',200,'Lima','Lima','María','51999997001','Descripción de prueba con más de cuarenta caracteres para el pedal.','d7100000-0000-4000-8000-000000000001',null,'self_service',now(),null),
+ ('d7300000-0000-4000-8000-000000000001','trust-l1','Guitarra Fender Stratocaster','individual','approved','guitars','electric_guitar','Fender','Stratocaster','Bueno',3000,'Lima','Lima','María','51999997001','Descripción de prueba con más de cuarenta caracteres para la guitarra.','d7100000-0000-4000-8000-000000000001',null,'self_service',now(),'{"color":"Sunburst"}'),
+ ('d7300000-0000-4000-8000-000000000002','trust-l2','Pedal Boss DS-1','individual','approved','pedals','pedals','Boss','DS-1','Bueno',200,'Lima','Lima','María','51999997001','Descripción de prueba con más de cuarenta caracteres para el pedal.','d7100000-0000-4000-8000-000000000001',null,'self_service',now(),null),
  ('d7300000-0000-4000-8000-000000000003','trust-l3','Teclado Yamaha de tienda','store','approved','keyboards','keyboard','Yamaha','PSR-E373','Nuevo',1200,'Lima','Lima','Olga','51999997004','Descripción de prueba con más de cuarenta caracteres para el teclado.','d7100000-0000-4000-8000-000000000004','d7200000-0000-4000-8000-000000000001','self_service',now(),null);
 
 -- Four more sales of S, so the seller level has something to count (five verified sales in all with L1).
 insert into public.listings (id,slug,title,seller_type,status,category,instrument_type,brand,model,condition,price_pen,city,region,contact_name,whatsapp_phone,description,owner_user_id,created_by_source,marketplace_rules_accepted_at,sold_at)
-select ('d7300000-0000-4000-8000-00000000001' || n)::uuid, 'trust-sold-' || n, 'Equipo vendido ' || n, 'individual', 'sold', 'pedals', 'pedals', 'Boss', 'TU-3', 'Usado', 300, 'Lima', 'Lima',
+select ('d7300000-0000-4000-8000-00000000001' || n)::uuid, 'trust-sold-' || n, 'Equipo vendido ' || n, 'individual', 'sold', 'pedals', 'pedals', 'Boss', 'TU-3', 'Bueno', 300, 'Lima', 'Lima',
   'María', '51999997001', 'Descripción de prueba con más de cuarenta caracteres para el equipo.', 'd7100000-0000-4000-8000-000000000001', 'self_service', now(), now() - interval '12 days'
 from generate_series(1, 4) n;
 select set_config('app.allow_listing_admin_fields', 'true', true);
@@ -540,9 +540,9 @@ reset role;
 -- ------------------------------------------------------------------ safe-11: provenance
 
 insert into public.listings (id,slug,title,seller_type,status,category,instrument_type,brand,model,condition,price_pen,city,region,contact_name,whatsapp_phone,description,owner_user_id,created_by_source,marketplace_rules_accepted_at) values
- ('d7300000-0000-4000-8000-000000000021','trust-resale-b','Stratocaster, la vendo','individual','approved','guitars','electric_guitar','Fender','Stratocaster','Usado',2800,'Lima','Lima','Bruno','51999997002','Descripción de prueba con más de cuarenta caracteres para la reventa.','d7100000-0000-4000-8000-000000000002','self_service',now()),
- ('d7300000-0000-4000-8000-000000000022','trust-resale-b-draft','Borrador de Bruno','individual','draft','guitars','electric_guitar','Fender','Stratocaster','Usado',2800,'Lima','Lima','Bruno','51999997002','Descripción de prueba con más de cuarenta caracteres para el borrador.','d7100000-0000-4000-8000-000000000002','self_service',now()),
- ('d7300000-0000-4000-8000-000000000023','trust-resale-c','Stratocaster, otra vez','individual','approved','guitars','electric_guitar','Fender','Stratocaster','Usado',2600,'Lima','Lima','Carla','51999997003','Descripción de prueba con más de cuarenta caracteres para la tercera.','d7100000-0000-4000-8000-000000000003','self_service',now());
+ ('d7300000-0000-4000-8000-000000000021','trust-resale-b','Stratocaster, la vendo','individual','approved','guitars','electric_guitar','Fender','Stratocaster','Bueno',2800,'Lima','Lima','Bruno','51999997002','Descripción de prueba con más de cuarenta caracteres para la reventa.','d7100000-0000-4000-8000-000000000002','self_service',now()),
+ ('d7300000-0000-4000-8000-000000000022','trust-resale-b-draft','Borrador de Bruno','individual','draft','guitars','electric_guitar','Fender','Stratocaster','Bueno',2800,'Lima','Lima','Bruno','51999997002','Descripción de prueba con más de cuarenta caracteres para el borrador.','d7100000-0000-4000-8000-000000000002','self_service',now()),
+ ('d7300000-0000-4000-8000-000000000023','trust-resale-c','Stratocaster, otra vez','individual','approved','guitars','electric_guitar','Fender','Stratocaster','Bueno',2600,'Lima','Lima','Carla','51999997003','Descripción de prueba con más de cuarenta caracteres para la tercera.','d7100000-0000-4000-8000-000000000003','self_service',now());
 
 set local role authenticated;
 select pg_temp.as_user('d7100000-0000-4000-8000-000000000002');

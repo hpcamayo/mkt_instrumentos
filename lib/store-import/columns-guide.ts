@@ -48,7 +48,7 @@ export const IMPORT_COLUMN_GROUPS: readonly ColumnGuideGroup[] = [
       { key: "model", note: "Por ejemplo Stratocaster o P-45." },
       { key: "category", note: "Una categoría de Laria; están en la hoja Valores de la plantilla." },
       { key: "instrument_type", note: "Solo si la categoría tiene varios tipos, como Guitarras." },
-      { key: "condition", note: "Nuevo, Usado - buen estado o Usado - con detalles." },
+      { key: "condition", note: "Un paso de la escala: Nuevo, Exhibición o caja abierta, Como nuevo, Excelente, Muy bueno, Bueno, Regular o Para reparar." },
       { key: "description", note: "Al menos 40 caracteres." },
       { key: "unit_price_pen", note: "Soles enteros, sin separador de miles ni céntimos: 1500." },
     ],

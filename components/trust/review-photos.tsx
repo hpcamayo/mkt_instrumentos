@@ -71,6 +71,7 @@ export function ReviewPhotoPicker({
         <ul className="flex flex-wrap gap-2">
           {photos.map((photo, index) => (
             <li key={photo.key} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL */}
               <img src={photo.preview} alt={`Foto ${index + 1} elegida`} width={72} height={72} className="h-[72px] w-[72px] rounded-control border border-subtle object-cover" />
               <IconButton
                 size="sm"
@@ -192,6 +193,7 @@ export function OwnReviewPhotos({ transactionId, reviewId, submittedAt }: { tran
         <ul className="flex flex-wrap gap-3" aria-label="Tus fotos">
           {photos.map((photo, index) => (
             <li key={photo.id} className="grid w-[72px] gap-1">
+              {/* eslint-disable-next-line @next/next/no-img-element -- the private bucket is served by a checked route */}
               <img src={`/api/review-photos/${photo.id}`} alt={`Tu foto ${index + 1}`} width={72} height={72} className="h-[72px] w-[72px] rounded-control border border-subtle bg-canvas object-cover" />
               <span className="t-meta">{STATUS_LABEL[photo.status]}</span>
             </li>

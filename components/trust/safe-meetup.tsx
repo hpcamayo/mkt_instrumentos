@@ -13,8 +13,8 @@ import { mapSearchUrl, meetupPlacesFor, placeQuery, policeStationQuery } from "@
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { cn } from "@/lib/utils";
 
-// Where the "Qué revisar al probarlo" link goes. The discovery batch is writing the try-out checklists (disc-02);
-// until they land it opens the in-person section of the safety tips.
+// Where "Qué revisar al probarlo" goes when the publication's type has no try-out checklist (the discovery batch's
+// guides, guidesForListing): the in-person section of the safety tips.
 export const TRY_OUT_CHECKLIST_HREF = "/consejos-de-seguridad#encuentro";
 
 const OTHER = "otro";
@@ -30,6 +30,7 @@ export function SafeMeetup({
   sellerFirstName,
   city,
   region,
+  tryOutHref = TRY_OUT_CHECKLIST_HREF,
   className,
 }: {
   title: string;
@@ -37,6 +38,8 @@ export function SafeMeetup({
   sellerFirstName: string | null;
   city: string;
   region: string;
+  // The type's try-out checklist (disc-02), when there is one.
+  tryOutHref?: string;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -60,6 +63,7 @@ export function SafeMeetup({
           sellerFirstName={sellerFirstName}
           city={city}
           region={region}
+          tryOutHref={tryOutHref}
           onDismiss={() => {
             setOpen(false);
             opener.current?.focus();
@@ -76,6 +80,7 @@ function MeetupSheet({
   sellerFirstName,
   city,
   region,
+  tryOutHref,
   onDismiss,
 }: {
   title: string;
@@ -83,6 +88,7 @@ function MeetupSheet({
   sellerFirstName: string | null;
   city: string;
   region: string;
+  tryOutHref: string;
   onDismiss: () => void;
 }) {
   const [spots, setSpots] = useState<MeetupSpot[] | null>(null);
@@ -209,7 +215,7 @@ function MeetupSheet({
       <section aria-labelledby={`${formId}-probar`} className="mt-6">
         <h3 id={`${formId}-probar`} className="font-semibold text-ink">Al probarlo</h3>
         <p className="mt-1 t-meta">Revisa el equipo con calma antes de pagar y confirma el pago en tu propia app.</p>
-        <Link href={TRY_OUT_CHECKLIST_HREF} className="link mt-1 inline-block t-ui font-semibold">Qué revisar al probarlo</Link>
+        <Link href={tryOutHref} className="link mt-1 inline-block t-ui font-semibold">Qué revisar al probarlo</Link>
       </section>
     </Sheet>
   );

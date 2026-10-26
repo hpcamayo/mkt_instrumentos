@@ -45,6 +45,7 @@ const INTEREST_CHOICES = [
   { value: "winds", label: "Vientos" },
   { value: "strings", label: "Cuerdas" },
   { value: "audio", label: "Audio y grabación" },
+  { value: "andean", label: "Instrumentos andinos" },
 ] as const;
 
 type Interest = { categories: string[]; answered: boolean };

@@ -1,5 +1,7 @@
 import { citySuggestions, peruRegions } from "@/lib/location";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
+import { CONDITION_VALUES } from "@/lib/listing-condition";
+import { toggleListingOption } from "@/lib/listing-flags";
 import type { ListingFilters } from "@/lib/listings";
 
 // BIG 03 (Effortless Laria): a plain phrase in the search box becomes filters the visitor can see and edit. "bajo 5
@@ -11,7 +13,8 @@ export function foldText(value: string) {
   return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-type Kind = { category: string; instrumentType?: string };
+// `advanced` names one attribute value, for words that name a subtype ("quena" → Andinos, tipo Quena).
+type Kind = { category: string; instrumentType?: string; advanced?: Record<string, string> };
 
 // Words that name a category or a type (folded). Longer phrases are tried first.
 const kindWordsAsWritten: readonly (readonly [string, Kind])[] = [
@@ -54,7 +57,23 @@ const kindWordsAsWritten: readonly (readonly [string, Kind])[] = [
   ["flauta", { category: "winds" }],
   ["violín", { category: "strings" }],
   ["ukulele", { category: "strings" }],
-  ["charango", { category: "strings" }],
+  // disc-04: the Andean instruments have their own category; the cajón stays in Percusión.
+  ["bombo andino", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "bombo_andino" } }],
+  ["instrumentos andinos", { category: "andean" }],
+  ["andinos", { category: "andean" }],
+  ["andino", { category: "andean" }],
+  ["charangos", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "charango" } }],
+  ["charango", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "charango" } }],
+  ["ronroco", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "ronroco" } }],
+  ["quenas", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "quena" } }],
+  ["quena", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "quena" } }],
+  ["quenacho", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "quenacho" } }],
+  ["zampoñas", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "zampona" } }],
+  ["zampoña", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "zampona" } }],
+  ["siku", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "zampona" } }],
+  ["sikus", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "zampona" } }],
+  ["antara", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "antara" } }],
+  ["tinya", { category: "andean", instrumentType: "andean_instrument", advanced: { andean_type: "tinya" } }],
   ["pedales", { category: "pedals" }],
   ["pedal", { category: "pedals" }],
   ["pedalera", { category: "pedals" }],
@@ -129,15 +148,33 @@ export function applySearchPhrase(filters: ListingFilters, knownCities: readonly
     return true;
   });
 
-  // Condition: "nuevo", "usado", "segunda mano".
+  // Condition (sell-10's scale): "seminuevo" is the top used steps, "usado" or "segunda mano" every step but Nuevo,
+  // "para reparar" the last step.
+  take(/ (?:seminuevos?|seminuevas?|semi nuevos?|semi nuevas?) /, () => {
+    next.conditions = ["Como nuevo", "Excelente"];
+    return true;
+  });
   take(/ (?:nuevos?|nuevas?) /, () => {
     next.conditions = ["Nuevo"];
     return true;
   });
-  take(/ (?:usados?|usadas?|de segunda mano|segunda mano|seminuevos?|seminuevas?) /, () => {
-    next.conditions = ["Usado - buen estado", "Usado - con detalles"];
+  take(/ (?:para reparar|para repuestos|malogrados?|malogradas?) /, () => {
+    next.conditions = ["Para reparar"];
     return true;
   });
+  take(/ (?:usados?|usadas?|de segunda mano|segunda mano) /, () => {
+    next.conditions = CONDITION_VALUES.filter((value) => value !== "Nuevo");
+    return true;
+  });
+
+  // listing-details: "con envío a provincia", "acepta cambios", "se puede probar" (lib/listing-flags.ts).
+  const option = (flag: string) => () => {
+    next.options = toggleListingOption((next.options ?? []).filter((item) => item !== flag), flag);
+    return true;
+  };
+  take(/ (?:con )?(?:envios?|envian?) a (?:provincias?|todo el peru) /, option("envia_provincia"));
+  take(/ (?:aceptan?|acepto) (?:cambios?|canjes?) /, option("acepta_cambios"));
+  take(/ (?:se puede probar|para probar|puedo probar) /, option("se_puede_probar"));
 
   // Category and type, when the page has none yet or names the same category.
   for (const [words, kind] of kindWords) {
@@ -147,6 +184,9 @@ export function applySearchPhrase(filters: ListingFilters, knownCities: readonly
     take(pattern, () => {
       next.category = kind.category;
       if (kind.instrumentType && !next.instrumentType) next.instrumentType = kind.instrumentType;
+      if (kind.advanced && next.instrumentType === kind.instrumentType) {
+        for (const [key, value] of Object.entries(kind.advanced)) if (next.advanced[key] === undefined) next.advanced[key] = value;
+      }
       return true;
     });
     break;

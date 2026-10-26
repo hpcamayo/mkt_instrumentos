@@ -10,6 +10,7 @@ export function ReviewPhotoStrip({ photos, className }: { photos: unknown; class
       {items.map((photo, index) => (
         <li key={photo.id}>
           <a href={`/api/review-photos/${photo.id}`} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-control border border-subtle focus-visible:outline-offset-2">
+            {/* eslint-disable-next-line @next/next/no-img-element -- the private bucket is served by a checked route */}
             <img
               src={`/api/review-photos/${photo.id}`}
               alt={`Foto ${index + 1} de ${items.length} de la reseña`}

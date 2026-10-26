@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { StoreDiscoveryLink } from "@/components/discovery/store-discovery-link";
 import { StoreAllowanceMeter } from "@/components/store-allowance-meter";
 import { StoreInventoryAccess } from "@/components/store-inventory-access";
 import { StoreRegistrationForm, type StoreApplication } from "@/components/store-registration-form";
@@ -54,6 +55,8 @@ export default async function StoreAccountPage() {
           {assistedCommerceEnabled() ? <> <Link href="/mi-cuenta/tienda/pagos" className="link font-semibold">Pagos</Link>: indica cómo pueden pagarte los compradores.</> : null}
         </p>
       ) : null}
+      {/* discovery batch (docs/feature-ideas/discovery.md): Fabricante o Taller, cambios de regalos */}
+      {store && canWrite ? <StoreDiscoveryLink /> : null}
       {/* deal-trust (safe-03) */}
       {store && store.status === "active" && safeSpot ? <SafeSpotSettingsCard initial={safeSpot} /> : null}
       <StoreRegistrationForm

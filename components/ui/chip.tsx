@@ -62,7 +62,7 @@ export function ChipLink({
 // ("Quitar filtro: Ubicación: Lima"). A client link that reports to the catalog's pending state.
 export function AppliedChip({ href, text, label, className }: { href: string; text: string; label: string; className?: string }) {
   return (
-    <CatalogLink href={href} aria-label={`Quitar filtro: ${label}`} className={chipClasses("applied", className)}>
+    <CatalogLink href={href} rel="nofollow" aria-label={`Quitar filtro: ${label}`} className={chipClasses("applied", className)}>
       <span className="truncate">{text}</span>
       <X aria-hidden />
     </CatalogLink>

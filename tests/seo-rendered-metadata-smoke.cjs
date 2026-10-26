@@ -1092,6 +1092,7 @@ const CATEGORY_LANDINGS = [
   { category: "amplifiers", slug: "amplificadores" },
   { category: "microphones", slug: "microfonos" },
   { category: "audio", slug: "audio" },
+  { category: "andean", slug: "andinos" },
 ];
 
 // Every release gate must verify these, or waive a data-dependent one explicitly.
