@@ -180,6 +180,8 @@ function ConfirmClientSheet({ service, onClose }: { service: OwnerService; onClo
       onDismiss={() => onClose(sent)}
       footer={sent ? (
         <Button variant="secondary" onClick={() => onClose(true)}>Listo</Button>
+      ) : candidates?.length === 0 || failed && candidates === null ? (
+        <Button variant="secondary" onClick={() => onClose(false)}>Cerrar</Button>
       ) : (
         <Button variant="secondary" loading={busy} loadingLabel="Enviando…" disabled={!chosen} onClick={() => void send()}>Pedir confirmación</Button>
       )}
@@ -193,7 +195,7 @@ function ConfirmClientSheet({ service, onClose }: { service: OwnerService; onClo
         {failed ? <Notice tone="danger" role="alert">{failed}</Notice> : null}
         {!sent && candidates === null && !failed ? <p role="status" className="t-meta">Cargando…</p> : null}
         {!sent && candidates?.length === 0 ? (
-          <p className="t-ui text-ink">Todavía no hay personas para confirmar. Aparecerán aquí cuando te escriban desde tu página de servicio.</p>
+          <p className="t-ui text-ink">No hay personas por confirmar. Aquí aparecen quienes te escriban desde tu página de servicio y aún no tengan una contratación contigo.</p>
         ) : null}
         {!sent && candidates?.length ? (
           <fieldset className="grid gap-1">

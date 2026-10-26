@@ -100,7 +100,7 @@ export function AdminServiceRow({ row }: { row: Record<string, unknown> }) {
       <dl className="grid gap-x-6 gap-y-1 t-ui sm:grid-cols-2">
         <div><dt className="inline font-semibold text-ink">Precio: </dt><dd className="inline text-ink-2">{formatServicePrice(service.priceFrom, service.priceUnit)}</dd></div>
         <div><dt className="inline font-semibold text-ink">Lugar: </dt><dd className="inline text-ink-2">{servicePlaceLine(service) || service.city}</dd></div>
-        <div><dt className="inline font-semibold text-ink">Dónde: </dt><dd className="inline text-ink-2">{service.modalities.map((modality) => serviceModalityLabel(modality, service.category)).join(" · ")}</dd></div>
+        <div><dt className="inline font-semibold text-ink">Dónde: </dt><dd className="inline text-ink-2">{service.modalities.map((modality) => serviceModalityLabel(modality)).join(" · ")}</dd></div>
         {service.skills.length ? <div><dt className="inline font-semibold text-ink">Qué: </dt><dd className="inline text-ink-2">{service.skills.map(serviceSkillLabel).join(" · ")}</dd></div> : null}
         {service.areas.length ? <div className="sm:col-span-2"><dt className="inline font-semibold text-ink">Zonas: </dt><dd className="inline text-ink-2">{service.areas.join(" · ")}</dd></div> : null}
         {service.moderationReason ? <div className="sm:col-span-2"><dt className="inline font-semibold text-ink">Motivo registrado: </dt><dd className="inline text-ink-2">{service.moderationReason}</dd></div> : null}

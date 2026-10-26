@@ -13,11 +13,11 @@ import { servicesDb } from "@/lib/services-db";
 export const metadata = { title: "Servicios" };
 
 const VIEWS = [
-  { key: "pending", label: "Por aprobar" },
-  { key: "recheck", label: "Cambios por revisar" },
-  { key: "reports", label: "Reportes" },
-  { key: "reviews", label: "Reseñas" },
-  { key: "all", label: "Todos" },
+  { key: "pending", param: "pendientes", label: "Por aprobar" },
+  { key: "recheck", param: "cambios", label: "Cambios por revisar" },
+  { key: "reports", param: "reportes", label: "Reportes" },
+  { key: "reviews", param: "resenas", label: "Reseñas" },
+  { key: "all", param: "todos", label: "Todos" },
 ] as const;
 type View = (typeof VIEWS)[number]["key"];
 
@@ -26,7 +26,8 @@ type View = (typeof VIEWS)[number]["key"];
 // reports on services and their reviews have their own queue. Every decision is audited.
 export default async function AdminServicesPage({ searchParams }: { searchParams: Promise<{ vista?: string; page?: string; q?: string }> }) {
   const [{ supabase }, query] = await Promise.all([requireAdmin("/admin/servicios"), searchParams]);
-  const view: View = VIEWS.find((item) => item.key === query.vista)?.key ?? "pending";
+  const current = VIEWS.find((item) => item.param === query.vista) ?? VIEWS[0];
+  const view: View = current.key;
   const page = positivePage(query.page);
   const search = query.q?.trim().slice(0, 80) || null;
   const { data, error } = await servicesDb(supabase).rpc("get_admin_service_queue", { p_view: view, p_search: search, p_page: page, p_page_size: 24 });
@@ -44,7 +45,7 @@ export default async function AdminServicesPage({ searchParams }: { searchParams
       />
       <nav aria-label="Vista de servicios" className="flex flex-wrap gap-2">
         {VIEWS.map((item) => (
-          <ChipLink key={item.key} href={`/admin/servicios?vista=${item.key}`} selected={item.key === view} current="page">
+          <ChipLink key={item.key} href={`/admin/servicios?vista=${item.param}`} selected={item.key === view} current="page">
             {item.label}
             {typeof countFor(item.key) === "number" ? <span className="t-meta tabular-nums"> {countFor(item.key)}</span> : null}
           </ChipLink>
@@ -52,7 +53,7 @@ export default async function AdminServicesPage({ searchParams }: { searchParams
       </nav>
       {view === "pending" || view === "recheck" || view === "all" ? (
         <form action="/admin/servicios" className="flex flex-wrap items-end gap-2">
-          <input type="hidden" name="vista" value={view} />
+          <input type="hidden" name="vista" value={current.param} />
           <Field id="buscar-servicios" label="Buscar por título, nombre, correo o ciudad" className="min-w-0 flex-1 sm:max-w-md">
             <Input name="q" defaultValue={search ?? ""} type="search" />
           </Field>
@@ -70,7 +71,7 @@ export default async function AdminServicesPage({ searchParams }: { searchParams
               : <AdminServiceRow key={`${String(row.id)}:${String(row.version)}`} row={row} />,
             )}
           </ul>
-          <Pagination page={page} total={total} path="/admin/servicios" params={{ vista: view, ...(search ? { q: search } : {}) }} />
+          <Pagination page={page} total={total} path="/admin/servicios" params={{ vista: current.param, ...(search ? { q: search } : {}) }} />
         </>
       ) : (
         <EmptyState headingLevel={2} title="No hay nada en esta vista" description={view === "pending" ? "Cuando alguien envíe un servicio, aparecerá aquí." : "Prueba con otra vista."} />

@@ -54,9 +54,12 @@ export function ServiceBookings({ bookings }: { bookings: ServiceBooking[] }) {
         const actions = bookingActions(booking);
         const note = notes[booking.id];
         const asked = formatMonthYear(booking.createdAt);
-        const line = booking.role === "provider"
-          ? booking.requestedBy === "client" ? `${booking.otherName} dice que contrató tu servicio.` : `Le pediste a ${booking.otherName} que confirme.`
-          : booking.requestedBy === "provider" ? `${booking.otherName} te pide confirmar que contrataste su servicio.` : `Le pediste a ${booking.otherName} que confirme tu contratación.`;
+        const line = booking.status === "confirmed"
+          ? booking.role === "provider" ? `Cliente: ${booking.otherName}.` : `Contrataste a ${booking.otherName}.`
+          : booking.status !== "pending" ? `Con ${booking.otherName}.`
+          : booking.role === "provider"
+            ? booking.requestedBy === "client" ? `${booking.otherName} dice que contrató tu servicio.` : `Le pediste a ${booking.otherName} que confirme.`
+            : booking.requestedBy === "provider" ? `${booking.otherName} te pide confirmar que contrataste su servicio.` : `Le pediste a ${booking.otherName} que confirme tu contratación.`;
         return (
           <li key={booking.id} className="grid gap-2 rounded-panel border border-subtle bg-surface p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
