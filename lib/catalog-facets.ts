@@ -21,6 +21,8 @@ export type CatalogFacetData = {
   brands: { brand: string; count: number }[];
   price: PriceSpread | null;
   advanced: Record<string, Record<string, number>>;
+  // listing-details: per listing flag, how many results adding it gives (lib/listing-flags.ts).
+  options: Record<string, number>;
 };
 
 // The attributes the facets show: the chosen type's, or those of a category with a single type.
@@ -42,6 +44,7 @@ export function facetFiltersJson(filters: ListingFilters): Json {
   if (filters.minPrice !== undefined) json.min_price = filters.minPrice;
   if (filters.maxPrice !== undefined) json.max_price = filters.maxPrice;
   if (Object.keys(filters.advanced).length) json.advanced = filters.advanced as Json;
+  if (filters.options?.length) json.options = filters.options;
   return json;
 }
 
@@ -74,6 +77,7 @@ export function readCatalogFacets(value: unknown): CatalogFacetData | null {
     advanced: Object.fromEntries(
       Object.entries(data.advanced && typeof data.advanced === "object" && !Array.isArray(data.advanced) ? data.advanced : {}).map(([key, counts]) => [key, record(counts)]),
     ),
+    options: record(data.options),
   };
 }
 

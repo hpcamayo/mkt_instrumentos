@@ -219,7 +219,7 @@ do $$ declare sid uuid := pg_temp.id('first'); result jsonb; begin
   perform pg_temp.expect_error(format($q$select public.set_store_import_row_publish_fields(%L, 2, '{"unit_price_pen":"100"}')$q$, sid), 'IMPORT_FIELDS_INVALID');
   perform pg_temp.expect_error(format($q$select public.set_store_import_row_publish_fields(%L, 2, '{"brand":12}')$q$, sid), 'IMPORT_FIELDS_INVALID');
   perform pg_temp.expect_error(format($q$select public.set_store_import_row_publish_fields(%L, 2, '{"category":"theremins"}')$q$, sid), 'IMPORT_FIELDS_INVALID');
-  perform pg_temp.expect_error(format($q$select public.set_store_import_row_publish_fields(%L, 2, '{"condition":"Como nuevo"}')$q$, sid), 'IMPORT_FIELDS_INVALID');
+  perform pg_temp.expect_error(format($q$select public.set_store_import_row_publish_fields(%L, 2, '{"condition":"Casi nuevo"}')$q$, sid), 'IMPORT_FIELDS_INVALID');
   perform pg_temp.expect_error(format('select public.set_store_import_row_publish_fields(%L, 2, %L)', sid, jsonb_build_object('brand', repeat('x', 81))), 'IMPORT_FIELDS_INVALID');
   perform pg_temp.expect_error(format('select public.set_store_import_row_publish_fields(%L, 2, %L)', sid, jsonb_build_object('description', repeat('x', 2001))), 'IMPORT_FIELDS_INVALID');
   perform pg_temp.expect_error(format($q$select public.set_store_import_row_publish_fields(%L, 99, '{"brand":"Fender"}')$q$, sid), 'IMPORT_ROW_NOT_FOUND');
@@ -235,7 +235,8 @@ do $$ declare sid uuid := pg_temp.id('first'); result jsonb; begin
 
   result := public.set_store_import_row_publish_fields(sid, 2, '{"model":"","brand":null,"condition":"Usado - buen estado"}');
   perform pg_temp.check(result->'publish_fields' = jsonb_build_object('category', 'guitars', 'instrument_type', 'electric_guitar',
-    'condition', 'Usado - buen estado', 'description', E'Guitarra eléctrica nueva.\nIncluye estuche rígido y cable de regalo.'),
+    -- An old condition is stored on the new scale (20261202120000).
+    'condition', 'Muy bueno', 'description', E'Guitarra eléctrica nueva.\nIncluye estuche rígido y cable de regalo.'),
     'B5: an empty string or null clears a field, others merge: ' || result::text);
   result := public.set_store_import_row_publish_fields(sid, 2, '{"category":null,"instrument_type":"","condition":"","description":" "}');
   perform pg_temp.check((pg_temp.row_of(sid, 2)).publish_fields is null and result->'publish_fields' = '{}'::jsonb, 'B5: clearing everything leaves no values');

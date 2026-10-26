@@ -1,5 +1,7 @@
 import { citySuggestions, peruRegions } from "@/lib/location";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
+import { CONDITION_VALUES } from "@/lib/listing-condition";
+import { toggleListingOption } from "@/lib/listing-flags";
 import type { ListingFilters } from "@/lib/listings";
 
 // BIG 03 (Effortless Laria): a plain phrase in the search box becomes filters the visitor can see and edit. "bajo 5
@@ -129,15 +131,33 @@ export function applySearchPhrase(filters: ListingFilters, knownCities: readonly
     return true;
   });
 
-  // Condition: "nuevo", "usado", "segunda mano".
+  // Condition (sell-10's scale): "seminuevo" is the top used steps, "usado" or "segunda mano" every step but Nuevo,
+  // "para reparar" the last step.
+  take(/ (?:seminuevos?|seminuevas?|semi nuevos?|semi nuevas?) /, () => {
+    next.conditions = ["Como nuevo", "Excelente"];
+    return true;
+  });
   take(/ (?:nuevos?|nuevas?) /, () => {
     next.conditions = ["Nuevo"];
     return true;
   });
-  take(/ (?:usados?|usadas?|de segunda mano|segunda mano|seminuevos?|seminuevas?) /, () => {
-    next.conditions = ["Usado - buen estado", "Usado - con detalles"];
+  take(/ (?:para reparar|para repuestos|malogrados?|malogradas?) /, () => {
+    next.conditions = ["Para reparar"];
     return true;
   });
+  take(/ (?:usados?|usadas?|de segunda mano|segunda mano) /, () => {
+    next.conditions = CONDITION_VALUES.filter((value) => value !== "Nuevo");
+    return true;
+  });
+
+  // listing-details: "con envío a provincia", "acepta cambios", "se puede probar" (lib/listing-flags.ts).
+  const option = (flag: string) => () => {
+    next.options = toggleListingOption((next.options ?? []).filter((item) => item !== flag), flag);
+    return true;
+  };
+  take(/ (?:con )?(?:envios?|envian?) a (?:provincias?|todo el peru) /, option("envia_provincia"));
+  take(/ (?:aceptan?|acepto) (?:cambios?|canjes?) /, option("acepta_cambios"));
+  take(/ (?:se puede probar|para probar|puedo probar) /, option("se_puede_probar"));
 
   // Category and type, when the page has none yet or names the same category.
   for (const [words, kind] of kindWords) {

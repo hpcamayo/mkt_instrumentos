@@ -5,6 +5,7 @@
 import { getInstrumentFilterGroup, type InstrumentFilterConfig } from "@/lib/instrument-filters";
 import { instrumentTypesByCategory, isInstrumentTypeValid, sanitizeListingAttributes, type ListingSubmissionAttributes } from "@/lib/listing-submission";
 import { categoryOptions, conditionOptions } from "@/lib/listings";
+import { currentCondition } from "@/lib/listing-condition";
 import { normalizeHeader } from "./mapping";
 import type { ParsedImportRow } from "./rows";
 
@@ -125,7 +126,9 @@ export function planPublication(parsed: ParsedImportRow, item: PublicationItem):
   const brand = parsed.brand?.trim() ?? "";
   const model = parsed.model?.trim() ?? "";
   const category = parsed.category && categoryOptions.some((option) => option.value === parsed.category) ? parsed.category : "";
-  const condition = parsed.condition && conditionOptions.some((value) => value === parsed.condition) ? parsed.condition : "";
+  // sell-10: a row staged before the scale keeps its old value until it is published; it publishes as its step.
+  const staged = currentCondition(parsed.condition ?? null);
+  const condition = staged && conditionOptions.some((value) => value === staged) ? staged : "";
   const description = parsed.description?.trim() ?? "";
   let instrumentType = parsed.instrument_type ?? "";
   if (!instrumentType && category) instrumentType = defaultInstrumentType(category) ?? "";
