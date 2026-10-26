@@ -105,6 +105,14 @@ crawl of filter combinations does not write a data-cache entry per combination. 
 - Free-text search: 200 characters (as before; the database also refuses longer).
 - Every other filter value: 80 characters; longer values are ignored.
 - Advanced attribute values: at most 20 per request.
+- Filter values the catalog does not offer are dropped: an unknown category or instrument type, a select or
+  multiselect value outside the filter's options, and a brand or place containing "=". `/listados` answers such an
+  address with one permanent redirect to the cleaned one. Some crawlers decode `&microphone_type` in our links as
+  `µphone_type`; before this, each mangled value was kept, carried into every filter link and produced endless new
+  uncached addresses. Old links keep working where they map to real values (legacy categories); values that never
+  existed no longer narrow the results to nothing.
+- Filter, applied-filter and sort links are `rel="nofollow"` (filtered `/listados` pages are already `noindex, follow`).
+  robots.txt still allows them, because the SEO gate requires noindex pages to stay crawlable.
 - Suggestions: 2 characters minimum, 60 used; the browser waits 250 ms after typing and cancels superseded requests.
 - Draft counts in the filter sheet: 250 ms after the last change, the previous request cancelled, the canonical
   address requested directly.
