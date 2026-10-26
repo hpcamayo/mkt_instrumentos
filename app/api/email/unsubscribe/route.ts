@@ -16,7 +16,10 @@ export async function POST(request: Request) {
   const client = getSupabaseAdminClient();
   let ok = false;
   if (payload && client) {
-    const { data, error } = await client.rpc("apply_email_link_action", { p_user_id: payload.user, p_action: payload.action, ...(payload.alert ? { p_alert_id: payload.alert } : {}) });
+    // Feature ideas, selling-tools batch (buy-06): reminders are rows of their own, removed by their own function.
+    const { data, error } = payload.action === "no_gear_reminders"
+      ? await (client as unknown as import("@supabase/supabase-js").SupabaseClient).rpc("stop_gear_reminders_by_link", { p_user_id: payload.user })
+      : await client.rpc("apply_email_link_action", { p_user_id: payload.user, p_action: payload.action, ...(payload.alert ? { p_alert_id: payload.alert } : {}) });
     ok = !error && data !== false;
   }
   if (fromPage) {

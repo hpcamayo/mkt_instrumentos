@@ -55,6 +55,9 @@ export default async function StoreAccountPage() {
           <Link href="/mi-cuenta/tienda/valores-por-defecto" className="link font-semibold">Valores por defecto</Link>: el estado y el texto que
           repites en cada publicación (garantía, horario, entrega) se llenan solos.
           {assistedCommerceEnabled() ? <> <Link href="/mi-cuenta/tienda/pagos" className="link font-semibold">Pagos</Link>: indica cómo pueden pagarte los compradores.</> : null}
+          {/* Feature ideas, selling-tools batch (sell-02, sell-03, run-04, buy-06). */}
+          {" "}<Link href="/mi-cuenta/tienda/ofertas/ajustes" className="link font-semibold">Qué recibimos</Link>: compra de usados, consignación, parte de pago e insumos que vendes.
+          {/* /Feature ideas, selling-tools batch */}
         </p>
       ) : null}
       {/* store-floor: today's try-outs, warranty, labels and poster. */}

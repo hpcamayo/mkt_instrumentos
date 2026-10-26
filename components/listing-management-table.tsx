@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ImageOff, Pause } from "lucide-react";
 import { useCallback, useState, type FormEvent } from "react";
 import { ControlStockButton } from "@/components/inventory/inventory-actions";
+import { useListingSellingTools } from "@/components/offers/use-listing-selling-tools";
 import { PageNotice } from "@/components/page-notice";
 import { UndoToast, type UndoToastMessage } from "@/components/undo-toast";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ import {
   type UndoableAction,
 } from "@/lib/my-listings";
 import { parseWholeSolPrice } from "@/lib/price";
+import { sellingToolTags, sellingToolsPath } from "@/lib/selling-tools";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { cn } from "@/lib/utils";
 
@@ -70,6 +72,8 @@ export function ListingManagementTable({
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const dismissToast = useCallback(() => setToast(null), []);
+  // Feature ideas, selling-tools batch.
+  const sellingTools = useListingSellingTools(listings.map((listing) => listing.id));
 
   function notify(message: string, onUndo?: () => void) {
     setToast({ id: Date.now(), message, onUndo });
@@ -265,6 +269,9 @@ export function ListingManagementTable({
                       <div className="min-w-0">
                         <p className="font-semibold text-ink">{listing.title}</p>
                         {paused ? <p className="mt-1"><Tag icon={<Pause aria-hidden />}>{paused}</Tag></p> : null}
+                        {sellingToolTags(sellingTools[listing.id]).length ? (
+                          <p className="mt-1 flex flex-wrap gap-1">{sellingToolTags(sellingTools[listing.id]).map((tag) => <Tag key={tag}>{tag}</Tag>)}</p>
+                        ) : null}
                         {listing.revisionStatus === "pending" ? (
                           <p className="mt-1 t-meta font-semibold text-ink">Cambios en revisión; la versión aprobada sigue pública.</p>
                         ) : null}
@@ -335,6 +342,7 @@ export function ListingManagementTable({
                       {actions.withdrawSold ? <ActionButton disabled={busy} onClick={() => runConfirmed(listing, "withdraw_sold")}>Lo vendí, retirar</ActionButton> : null}
                       {actions.duplicate ? <ActionButton disabled={busy} onClick={() => runCopy(listing, "duplicate")}>Duplicar</ActionButton> : null}
                       {actions.controlStock ? <ControlStockButton listing={{ id: listing.id, title: listing.title }} /> : null}
+                      {actions.tools ? <Link href={sellingToolsPath(listing.id)} className="link font-semibold">Herramientas de venta</Link> : null}
                     </div>
                     {actions.isAdminHidden ? <p className="mt-2 text-meta text-ink-2">Solo administración puede restaurarla.</p> : null}
                     {actions.relist ? <p className="mt-2 text-meta text-ink-2">El original es historial inmutable. Republicar crea un borrador nuevo con los mismos datos.</p> : null}

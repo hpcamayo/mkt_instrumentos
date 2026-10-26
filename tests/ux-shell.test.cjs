@@ -246,7 +246,7 @@ test("header: bell, avatar and an account menu with the rail's sections, counts,
   const menu = html.slice(html.indexOf('id="menu-cuenta"'));
   assert.match(menu, /^id="menu-cuenta" hidden=""/);
   const labels = [...menu.matchAll(/<a href="([^"]+)"[^>]*><span[^>]*>([^<]+)<\/span>/g)].map((match) => match[2]);
-  assert.deepEqual(labels, ["Resumen", "Mis publicaciones", "Publicar", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(labels, ["Resumen", "Mis publicaciones", "Publicar", "Mi equipo", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.match(menu, /3 notificaciones sin leer/);
   assert.match(menu, /1 compras requieren tu confirmación/);
   assert.match(menu, /href="\/admin"[^>]*>Admin</);

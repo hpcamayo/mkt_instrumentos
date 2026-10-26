@@ -5,10 +5,12 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 // save-07: one-click links in e-mails ("Pausar esta alerta", "No más bajas de precio", "No más resumen semanal")
 // and the List-Unsubscribe header. A link carries who it is for and what it does, signed with HMAC-SHA256, so it
 // works without signing in and cannot be changed to act on someone else. Links last 180 days.
-export type EmailLinkAction = "pause_alert" | "no_price_drops" | "no_follow_digest";
+export type EmailLinkAction = "pause_alert" | "no_price_drops" | "no_follow_digest"
+  // Feature ideas, selling-tools batch (buy-06): stops every Mi equipo reminder.
+  | "no_gear_reminders";
 export type EmailLinkPayload = { user: string; action: EmailLinkAction; alert?: string; expires: number };
 
-const ACTIONS: readonly EmailLinkAction[] = ["pause_alert", "no_price_drops", "no_follow_digest"];
+const ACTIONS: readonly EmailLinkAction[] = ["pause_alert", "no_price_drops", "no_follow_digest", "no_gear_reminders"];
 const LIFETIME_MS = 180 * 24 * 60 * 60 * 1000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -55,4 +57,6 @@ export const EMAIL_LINK_LABELS: Record<EmailLinkAction, { link: string; done: st
   pause_alert: { link: "Pausar esta alerta", question: "¿Pausar esta alerta?", done: "Pausamos la alerta. Puedes reactivarla cuando quieras en Mi cuenta › Alertas." },
   no_price_drops: { link: "No más bajas de precio", question: "¿Dejar de recibir correos de bajas de precio?", done: "Listo, no te enviaremos más correos de bajas de precio. Seguirás viéndolas en Notificaciones." },
   no_follow_digest: { link: "No más resumen semanal", question: "¿Dejar de recibir el resumen semanal de lo que sigues?", done: "Listo, no te enviaremos más el resumen semanal. Lo nuevo de lo que sigues seguirá en Para ti." },
+  // Feature ideas, selling-tools batch (buy-06).
+  no_gear_reminders: { link: "No más recordatorios", question: "¿Dejar de recibir recordatorios de cuerdas, cañas y parches?", done: "Listo, quitamos tus recordatorios. Puedes volver a activarlos en Mi cuenta › Mi equipo." },
 };
