@@ -208,14 +208,32 @@ select pg_temp.check(not has_function_privilege('authenticated', 'public.is_appr
 select pg_temp.check(not has_function_privilege('anon', 'public.get_admin_review_queue()', 'EXECUTE'), 'anon cannot reach the old review queue');
 select pg_temp.check(has_function_privilege('anon', 'public.increment_listing_view_count(uuid)', 'EXECUTE'), 'the counter tombstone stays');
 
--- A32: logo, banner and store photo addresses must be the caller's own upload for that store.
+-- A32: logo, banner and store photo addresses must be the caller's own upload for that store, in this project's
+-- Storage (the session's issuer names the project).
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000002","role":"authenticated"}', true);
+select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000002","role":"authenticated","iss":"https://abc.supabase.co/auth/v1"}', true);
 select pg_temp.expect_error($sql$
   update public.stores set logo_url = 'https://evil.example/logo.png' where id = 'e1210000-0000-4000-8000-000000000001'
 $sql$, 'STORE_IMAGE_URL_INVALID');
 select pg_temp.expect_error($sql$
   update public.stores set banner_url = 'https://abc.supabase.co/storage/v1/object/public/store-assets/e1200000-0000-4000-8000-000000000001/e1210000-0000-4000-8000-000000000001/b.png'
+  where id = 'e1210000-0000-4000-8000-000000000001'
+$sql$, 'STORE_IMAGE_URL_INVALID');
+-- The right folder on another host is not this project's file.
+select pg_temp.expect_error($sql$
+  update public.stores set logo_url = 'https://evil.example/storage/v1/object/public/store-assets/e1200000-0000-4000-8000-000000000002/e1210000-0000-4000-8000-000000000001/logo.png'
+  where id = 'e1210000-0000-4000-8000-000000000001'
+$sql$, 'STORE_IMAGE_URL_INVALID');
+select pg_temp.expect_error($sql$
+  update public.stores set logo_url = 'https://abc.supabase.co.evil.example/storage/v1/object/public/store-assets/e1200000-0000-4000-8000-000000000002/e1210000-0000-4000-8000-000000000001/logo.png'
+  where id = 'e1210000-0000-4000-8000-000000000001'
+$sql$, 'STORE_IMAGE_URL_INVALID');
+select pg_temp.expect_error($sql$
+  update public.stores set logo_url = 'https://abc.supabase.co/storage/v1/object/public/store-assets/e1200000-0000-4000-8000-000000000002/e1210000-0000-4000-8000-000000000001/..'
+  where id = 'e1210000-0000-4000-8000-000000000001'
+$sql$, 'STORE_IMAGE_URL_INVALID');
+select pg_temp.expect_error($sql$
+  update public.stores set logo_url = 'https://abc.supabase.co/storage/v1/object/public/store-assets/e1200000-0000-4000-8000-000000000002/e1210000-0000-4000-8000-000000000001/sub/logo.png'
   where id = 'e1210000-0000-4000-8000-000000000001'
 $sql$, 'STORE_IMAGE_URL_INVALID');
 update public.stores
@@ -230,7 +248,22 @@ insert into public.store_photos (store_id, image_url, alt_text, sort_order)
 values ('e1210000-0000-4000-8000-000000000001',
   'https://abc.supabase.co/storage/v1/object/public/store-assets/e1200000-0000-4000-8000-000000000002/e1210000-0000-4000-8000-000000000001/profile-2-0.webp',
   'Local', 0);
+-- A session without an issuer matches no address; unchanged values are never checked.
+select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000002","role":"authenticated"}', true);
+select pg_temp.expect_error($sql$
+  update public.stores set banner_url = 'https://abc.supabase.co/storage/v1/object/public/store-assets/e1200000-0000-4000-8000-000000000002/e1210000-0000-4000-8000-000000000001/profile-3-0.png'
+  where id = 'e1210000-0000-4000-8000-000000000001'
+$sql$, 'STORE_IMAGE_URL_INVALID');
+update public.stores set logo_url = logo_url where id = 'e1210000-0000-4000-8000-000000000001';
 reset role;
 select pg_temp.check((select count(*) from public.store_photos where store_id = 'e1210000-0000-4000-8000-000000000001') = 1, 'own photo saved');
+
+-- The notifications check gained a type without scanning the table: it is NOT VALID and still refuses unknown types.
+select pg_temp.check(
+  (select not convalidated from pg_constraint where conrelid = 'public.notifications'::regclass and conname = 'notifications_event_type_check'),
+  'the extended check was added without a validation scan');
+select pg_temp.expect_error($sql$
+  insert into public.notifications (user_id, event_type, message) values ('e1200000-0000-4000-8000-000000000002', 'no_such_event', 'x')
+$sql$, 'notifications_event_type_check');
 
 rollback;

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useTransition, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { catalogRefinementRel } from "@/lib/catalog-links";
 
 // Navigation feedback for the catalog and the category landings (UX-3, Q1 A). The catalog has no route-level
 // loading.tsx: with one, Next.js 15.5 reused the prefetch entry seeded for /listados when moving to another catalog
@@ -84,6 +85,7 @@ export function CatalogLink({ href, onNavigate, prefetch = false, focusId, resul
         navigation.navigate(href, { focusId: focusId ?? props.id, scroll: resultsScroll });
       }}
       {...props}
+      rel={props.rel ?? catalogRefinementRel(href)}
     />
   );
 }

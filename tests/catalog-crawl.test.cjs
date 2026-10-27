@@ -150,3 +150,13 @@ test("catalog SEO preserves category aliases, pagination and noindex-follow on v
   assert.deepEqual(filtered.robots, { index: false, follow: true });
   assert.equal(filtered.alternates, undefined);
 });
+
+test("the page passes normalized filter state to pagination, retry and return-to-results links", async () => {
+  const { route } = loadCatalogRoute();
+  const tree = await route.default({ searchParams: Promise.resolve({ category: "microphones", condition: ["Nuevo", "Usado - buen estado"], location: ["Lima", "Cusco"], page: "2", utm_source: "email", "µphone_type": "dynamic", _rsc: "abc" }) });
+  const view = tree.props.children.find((child) => child?.props?.params);
+  assert.deepEqual(view.props.params, { category: ["microphones"], location: ["Lima", "Cusco"], condition: ["Nuevo", "Usado - buen estado"] });
+  const retry = new URL(view.props.retryHref, "https://laria.audio");
+  assert.equal(retry.searchParams.get("page"), "2");
+  for (const key of ["utm_source", "µphone_type", "_rsc"]) assert.equal(retry.searchParams.has(key), false);
+});

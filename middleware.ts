@@ -4,9 +4,30 @@ import { getLoginPath } from "@/lib/auth/redirects";
 import { isProtectedAccountPath } from "@/lib/auth/protected-paths";
 import { isRefusedCrossSiteApiWrite } from "@/lib/same-origin";
 import type { Database } from "@/lib/supabase/database.types";
+import { blocksCatalogCrawler, isCatalogDataPath } from "@/lib/catalog-crawlers";
+import { parseCatalogRequest, searchParamsRecord } from "@/lib/catalog-request";
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (isCatalogDataPath(request.nextUrl.pathname)) {
+    // Public traffic must leave this branch before constructing a session client or touching cookies.
+    if (blocksCatalogCrawler(request.nextUrl.pathname, request.headers.get("user-agent") ?? "")) {
+      return new NextResponse(request.method === "HEAD" ? null : "Acceso no permitido.", {
+        status: 403,
+        headers: { "Cache-Control": "private, no-store", "Content-Type": "text/plain; charset=utf-8", Vary: "User-Agent" },
+      });
+    }
+    if (request.nextUrl.pathname === "/listados" || request.nextUrl.pathname === "/listados/") {
+      const { redirectHref } = parseCatalogRequest(searchParamsRecord(request.nextUrl.searchParams));
+      if (redirectHref) {
+        return NextResponse.redirect(new URL(redirectHref, request.url), {
+          status: 308,
+          headers: { "Cache-Control": "private, no-store" },
+        });
+      }
+    }
+    return NextResponse.next();
+  }
   if (isRefusedCrossSiteApiWrite(request, pathname)) {
     return NextResponse.json({ error: "Solicitud no permitida." }, { status: 403, headers: { "Cache-Control": "no-store" } });
   }
@@ -65,6 +86,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/listados",
+    "/api/catalog/:path*",
     "/mi-cuenta/:path*",
     "/mis-publicaciones/:path*",
     "/vender",
