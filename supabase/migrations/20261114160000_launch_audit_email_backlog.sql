@@ -20,13 +20,23 @@
 --    quota resets, and what is being sent now. What doesn't fit waits for the next run, and expires by its kind's age
 --    like the rest. An operator changes the limit with laria_private.set_email_daily_limit (SQL editor only).
 --    Claims take a transaction advisory lock, so two runs at once can't both spend the same allowance.
+-- 4. An attempt that may have reached Resend (a transport or provider failure, or a worker that stopped while
+--    sending) is remembered (marketplace_email_deliveries.uncertain_since, set by fail_marketplace_email_delivery and by
+--    the claim's stale-lock recovery). Every attempt sends the delivery's id as Resend's Idempotency-Key, which Resend
+--    keeps for 24 hours, so such a retry is safe only within that time: the claim hands these out before anything
+--    else, and 23 hours after the first uncertain attempt marks one still waiting failed (failure_code
+--    retry_window_closed) instead of risking a second copy.
+-- 5. A digest's day is read only when it is a real calendar date (laria_private.calendar_date); anything else ages from
+--    when the e-mail was queued, so one malformed row can't stop the claim.
 --
--- Compatibility: the claim keeps its signature, its checks and its payload; a kind added later gets a week and the
--- first priority unless it is added to the two functions. Nothing else changes.
--- Locks: none beyond creating the table, the functions and an index on the queue (a few hundred rows).
--- Rollback: recreate claim_marketplace_email_deliveries from 20261029120200_review_fixes_alerts_and_import.sql, then
--- drop set_email_daily_limit, email_settings, email_priority, email_content_time, email_max_age and
--- marketplace_email_sent_idx. Cancelled e-mails stay cancelled.
+-- Compatibility: the claim and fail_marketplace_email_delivery keep their signatures, checks and payload; a kind added
+-- later gets a week and the first priority unless it is added to the two functions. Nothing else changes.
+-- Locks: adding the nullable column takes a brief ACCESS EXCLUSIVE lock on the queue (a few hundred rows); otherwise
+-- none beyond creating the table, the functions and an index on the queue.
+-- Rollback: recreate claim_marketplace_email_deliveries from 20261029120200_review_fixes_alerts_and_import.sql and
+-- fail_marketplace_email_delivery from 20260921120000_sprint_7_marketplace_email_alerts.sql, then drop
+-- set_email_daily_limit, email_settings, email_priority, email_content_time, calendar_date, email_max_age,
+-- marketplace_email_sent_idx and the uncertain_since column. Cancelled e-mails stay cancelled.
 
 set lock_timeout = '10s';
 
@@ -48,8 +58,23 @@ as $$
   end;
 $$;
 
+-- A YYYY-MM-DD text as a date, or null when it isn't a real calendar date (2026-02-30 included), without raising.
+create or replace function laria_private.calendar_date(p_value text)
+returns date
+language sql
+immutable
+set search_path = ''
+as $$
+  select case when p_value ~ '^[1-9][0-9]{3}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$' then
+    case when substr(p_value, 9, 2)::integer <= extract(day from make_date(substr(p_value, 1, 4)::integer,
+        substr(p_value, 6, 2)::integer, 1) + interval '1 month - 1 day')::integer
+      then p_value::date end
+  end;
+$$;
+
 -- When an e-mail's age starts: a daily digest at the end of its day in Lima, the weekly follow digest at the start of
--- its week (the Monday it is sent, 00:00 in Lima), anything else when it was queued.
+-- its week (the Monday it is sent, 00:00 in Lima), anything else, and a digest without a real date, when it was
+-- queued.
 create or replace function laria_private.email_content_time(p_event_type text, p_context jsonb, p_created_at timestamptz)
 returns timestamptz
 language sql
@@ -57,10 +82,10 @@ stable
 set search_path = ''
 as $$
   select case
-    when p_event_type = 'search_alert_daily' and p_context ->> 'digest_date' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-      then ((p_context ->> 'digest_date')::date + 1)::timestamp at time zone 'America/Lima'
-    when p_event_type = 'follow_weekly' and p_context ->> 'week_start' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
-      then (p_context ->> 'week_start')::date::timestamp at time zone 'America/Lima'
+    when p_event_type = 'search_alert_daily' and laria_private.calendar_date(p_context ->> 'digest_date') is not null
+      then (laria_private.calendar_date(p_context ->> 'digest_date') + 1)::timestamp at time zone 'America/Lima'
+    when p_event_type = 'follow_weekly' and laria_private.calendar_date(p_context ->> 'week_start') is not null
+      then laria_private.calendar_date(p_context ->> 'week_start')::timestamp at time zone 'America/Lima'
     else p_created_at
   end;
 $$;
@@ -83,6 +108,7 @@ as $$
 $$;
 
 revoke all on function laria_private.email_max_age(text) from public, anon, authenticated;
+revoke all on function laria_private.calendar_date(text) from public, anon, authenticated;
 revoke all on function laria_private.email_content_time(text, jsonb, timestamptz) from public, anon, authenticated;
 revoke all on function laria_private.email_priority(text) from public, anon, authenticated;
 
@@ -125,9 +151,63 @@ revoke all on function laria_private.set_email_daily_limit(integer, text) from p
 create index if not exists marketplace_email_sent_idx on laria_private.marketplace_email_deliveries (sent_at)
   where status = 'sent';
 
--- ----------------------------------------------------------------------------------------------- 3. the claim
+-- ----------------------------------------------------------------------------------------------- 3. uncertain sends
 
--- From 20261029120200_review_fixes_alerts_and_import.sql, with the lock, the expiry, the allowance and the order added.
+alter table laria_private.marketplace_email_deliveries add column if not exists uncertain_since timestamptz;
+comment on column laria_private.marketplace_email_deliveries.uncertain_since is
+  'When the first attempt that may have reached the provider began (launch audit A25): a transport or provider failure, or a worker that stopped while sending. Resend keeps the Idempotency-Key (the delivery id) for 24 hours, so the claim retries it first and gives up 23 hours after.';
+
+-- From 20260921120000_sprint_7_marketplace_email_alerts.sql, with uncertain_since: a transport or provider failure
+-- (timeouts, lost connections, 408, 409, 5xx, a reply without an id) may have been accepted; a rate limit, a refusal
+-- or a failure before sending was not.
+create or replace function public.fail_marketplace_email_delivery(
+  p_delivery_id uuid,
+  p_worker_id uuid,
+  p_retryable boolean,
+  p_failure_category text,
+  p_failure_code text
+)
+returns text
+language plpgsql
+security definer
+set search_path = public, laria_private
+as $$
+declare delivery_record laria_private.marketplace_email_deliveries; next_status text;
+begin
+  if auth.role() is distinct from 'service_role' then raise exception using errcode = '42501', message = 'EMAIL_SERVICE_REQUIRED'; end if;
+  if p_failure_category not in ('transport','rate_limit','provider','configuration','template','recipient','unknown')
+    or length(coalesce(p_failure_code, '')) > 200 then raise exception 'EMAIL_FAILURE_INVALID'; end if;
+  select * into delivery_record from laria_private.marketplace_email_deliveries
+  where id = p_delivery_id and status = 'processing' and locked_by = p_worker_id for update;
+  if not found then raise exception 'EMAIL_DELIVERY_CLAIM_INVALID'; end if;
+  next_status := case when p_retryable and delivery_record.attempt_count < 5 then 'retry' else 'failed' end;
+  update laria_private.marketplace_email_deliveries
+  set status = next_status,
+      next_attempt_at = case delivery_record.attempt_count
+        when 1 then clock_timestamp() + interval '5 minutes'
+        when 2 then clock_timestamp() + interval '30 minutes'
+        when 3 then clock_timestamp() + interval '2 hours'
+        else clock_timestamp() + interval '8 hours'
+      end,
+      failure_category = p_failure_category,
+      failure_code = nullif(left(coalesce(p_failure_code, ''), 200), ''),
+      uncertain_since = case when p_failure_category in ('transport', 'provider')
+        then coalesce(delivery_record.uncertain_since, delivery_record.last_attempt_at, clock_timestamp())
+        else delivery_record.uncertain_since end,
+      locked_at = null,
+      locked_by = null
+  where id = delivery_record.id;
+  return next_status;
+end;
+$$;
+
+revoke all on function public.fail_marketplace_email_delivery(uuid, uuid, boolean, text, text) from public;
+grant execute on function public.fail_marketplace_email_delivery(uuid, uuid, boolean, text, text) to anon, authenticated, service_role;
+
+-- ----------------------------------------------------------------------------------------------- 4. the claim
+
+-- From 20261029120200_review_fixes_alerts_and_import.sql, with the lock, the retry window, the expiry, the allowance
+-- and the order added.
 create or replace function public.claim_marketplace_email_deliveries(p_worker_id uuid, p_limit integer default 25)
 returns jsonb
 language plpgsql
@@ -148,8 +228,16 @@ begin
   set status = case when attempt_count >= 5 then 'failed' else 'retry' end,
       next_attempt_at = clock_timestamp(), locked_at = null, locked_by = null,
       failure_category = coalesce(failure_category, 'transport'),
-      failure_code = coalesce(failure_code, 'stale_worker_lock')
+      failure_code = coalesce(failure_code, 'stale_worker_lock'),
+      -- A25: the worker may have stopped after Resend accepted it.
+      uncertain_since = coalesce(uncertain_since, last_attempt_at, locked_at)
   where status = 'processing' and locked_at < clock_timestamp() - interval '15 minutes';
+
+  -- A25: Resend forgets the Idempotency-Key after 24 hours; past 23, a retry of an e-mail it may have accepted could
+  -- send a second copy.
+  update laria_private.marketplace_email_deliveries
+  set status = 'failed', failure_code = 'retry_window_closed'
+  where status = 'retry' and uncertain_since < clock_timestamp() - interval '23 hours';
 
   -- A25: an e-mail past its kind's maximum age is not worth sending any more.
   update laria_private.marketplace_email_deliveries delivery
@@ -195,7 +283,8 @@ begin
       and delivery.next_attempt_at <= clock_timestamp()
       and delivery.attempt_count < 5
       and (delivery.search_alert_id is null or alert.status = 'active')
-    order by laria_private.email_priority(delivery.event_type), delivery.created_at, delivery.id
+    -- A25: retries Resend may have accepted first, while its Idempotency-Key still holds.
+    order by delivery.uncertain_since is null, laria_private.email_priority(delivery.event_type), delivery.created_at, delivery.id
     for update of delivery skip locked
     limit allowance
   ), updated as (
@@ -208,7 +297,7 @@ begin
     returning delivery.*
   )
   select coalesce(jsonb_agg(laria_private.marketplace_email_payload(updated)
-    order by laria_private.email_priority(updated.event_type), updated.created_at, updated.id), '[]'::jsonb)
+    order by updated.uncertain_since is null, laria_private.email_priority(updated.event_type), updated.created_at, updated.id), '[]'::jsonb)
   into result from updated;
   return result;
 end;

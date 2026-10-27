@@ -1407,7 +1407,9 @@ so it can be applied before the deploy that schedules the worker (`vercel.json`,
   `listing_purchase_check`, `listing_purchase_confirmation_reminder` and `listing_review_reminder` 3 days; every other
   kind, including any added later, 7 days. Age runs from `laria_private.email_content_time(event_type, context,
   created_at)`: the end of a daily digest's `digest_date` in Lima, 00:00 in Lima of a weekly digest's `week_start`,
-  otherwise `created_at` (the worker's catch-up queues the digests of the seven days before it in one run). Each claim
+  otherwise `created_at` (the worker's catch-up queues the digests of the seven days before it in one run). A date is
+  read only when it is a real calendar date (`laria_private.calendar_date(text)`, null for `2026-02-30` or any other
+  text), so a malformed one ages from `created_at` instead of stopping the claim. Each claim
   first cancels pending and retry e-mails past that (`status = 'cancelled'`, `failure_code = 'expired'`), after giving
   back stale worker locks and before the out-of-stock check of review fix A7. Notifications are untouched.
 - Order (`laria_private.email_priority(event_type)`): 0 an account's own business (every kind not listed below), 1 the
@@ -1418,6 +1420,13 @@ so it can be applied before the deploy that schedules the worker (`vercel.json`,
   (Resend's daily reset; index `marketplace_email_sent_idx`) and those being sent. Claims take
   `pg_advisory_xact_lock` so two at once can't spend the same allowance. `laria_private.set_email_daily_limit(limit,
   reason)` is for an operator in the SQL editor (no API role may call it); 0 pauses marketplace e-mails.
+- Uncertain sends: every attempt sends the delivery's id as Resend's `Idempotency-Key`, which Resend keeps for 24
+  hours. `marketplace_email_deliveries.uncertain_since` is when the first attempt that may have reached Resend began:
+  `fail_marketplace_email_delivery` sets it (from `last_attempt_at`) for a `transport` or `provider` failure (timeouts,
+  lost connections, 408, 409, 5xx, a reply without an id), and the claim's stale-lock recovery for a worker that
+  stopped while sending; a rate limit, a refusal or a failure before sending leaves it empty. The claim hands these
+  retries out before everything else, and marks one still waiting 23 hours after it `failed` with `failure_code =
+  'retry_window_closed'` rather than risk a second copy.
 - Kinds the `features/marketplace` branch adds (account security, offers, trades, services) get 7 days and priority
   0 unless it adds them to both functions.
 <!-- /launch-audit:email -->

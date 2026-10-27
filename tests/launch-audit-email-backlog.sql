@@ -1,6 +1,7 @@
 -- Launch audit A25 (supabase/migrations/20261114160000_launch_audit_email_backlog.sql): queued e-mails expire by kind,
--- the claim hands out an account's own business first, and a daily limit holds back the rest. Local/test database
--- only. Every fixture is rolled back.
+-- the claim hands out an account's own business first, and a daily limit holds back the rest. A send Resend may have
+-- accepted is retried first and given up 23 hours after, before Resend forgets its Idempotency-Key, and a digest's day
+-- that isn't a real date can't stop the claim. Local/test database only. Every fixture is rolled back.
 begin;
 
 create function pg_temp.check(p_condition boolean, p_message text) returns void language plpgsql as $$
@@ -54,6 +55,17 @@ do $$ begin
     = '2026-10-01 12:00:00+00', 'anything else ages from when it was queued');
   perform pg_temp.check(laria_private.email_content_time('search_alert_daily', '{"digest_date":"pronto"}', '2026-10-01 12:00:00+00')
     = '2026-10-01 12:00:00+00', 'a digest without a readable day ages from when it was queued');
+  perform pg_temp.check(laria_private.email_content_time('search_alert_daily', '{"digest_date":"2026-02-30"}', '2026-10-01 12:00:00+00')
+    = '2026-10-01 12:00:00+00' and laria_private.email_content_time('follow_weekly', '{"week_start":"2026-09-31"}',
+    '2026-10-01 12:00:00+00') = '2026-10-01 12:00:00+00', 'a day that doesn''t exist ages from when it was queued, without an error');
+  perform pg_temp.check(laria_private.calendar_date('2026-02-28') = '2026-02-28'::date
+    and laria_private.calendar_date('2024-02-29') = '2024-02-29'::date and laria_private.calendar_date('2026-12-31') = '2026-12-31'::date,
+    'real calendar dates are read');
+  perform pg_temp.check(laria_private.calendar_date('2026-02-29') is null and laria_private.calendar_date('2026-04-31') is null
+    and laria_private.calendar_date('2026-13-01') is null and laria_private.calendar_date('2026-00-10') is null
+    and laria_private.calendar_date('0000-01-01') is null and laria_private.calendar_date('2026-1-01') is null
+    and laria_private.calendar_date('2026-01-01T00:00') is null and laria_private.calendar_date(null) is null,
+    'anything else is no date');
   perform pg_temp.check(laria_private.email_max_age('listing_review_reminder') = interval '3 days'
     and laria_private.email_max_age('follow_weekly') = interval '3 days', 'reminders and the weekly digest last three days');
   perform pg_temp.check(laria_private.email_max_age('transaction_confirmation_requested') = interval '7 days'
@@ -78,6 +90,10 @@ select pg_temp.queue(4, 'store_approved', interval '6 days', 'retry');       -- 
 select pg_temp.queue(5, 'listing_review_reminder', interval '4 days');       -- past its three days
 select pg_temp.queue(8, 'transaction_confirmed', interval '1 hour');         -- still due, the account's own, newest
 select pg_temp.queue(9, 'listing_review_reminder', interval '2 days');       -- still due, a reminder
+-- A digest whose day doesn't exist, queued three days ago: it ages from then, and the claim goes on.
+insert into laria_private.marketplace_email_deliveries(id, event_type, recipient_user_id, dedupe_key, context, created_at, next_attempt_at)
+values (pg_temp.id(16), 'search_alert_daily', 'a2500000-0000-4000-8000-000000000001', 'la25-16', '{"digest_date":"2026-02-30"}',
+  now() - interval '3 days', now() - interval '3 days');
 -- Queued just now by the worker's catch-up, for a day that ended two days ago.
 insert into laria_private.marketplace_email_deliveries(id, event_type, recipient_user_id, dedupe_key, context)
 values (pg_temp.id(15), 'search_alert_daily', 'a2500000-0000-4000-8000-000000000001', 'la25-15',
@@ -114,10 +130,10 @@ reset role;
 
 do $$ begin
   perform pg_temp.check((select array_agg(id order by id) from laria_private.marketplace_email_deliveries
-    where id = any(array[pg_temp.id(1), pg_temp.id(3), pg_temp.id(5), pg_temp.id(6), pg_temp.id(15)])
+    where id = any(array[pg_temp.id(1), pg_temp.id(3), pg_temp.id(5), pg_temp.id(6), pg_temp.id(15), pg_temp.id(16)])
       and status = 'cancelled' and failure_code = 'expired')
-      = array[pg_temp.id(1), pg_temp.id(3), pg_temp.id(5), pg_temp.id(6), pg_temp.id(15)],
-    'e-mails past their age are cancelled as expired, the stopped worker''s and the old day''s digest too');
+      = array[pg_temp.id(1), pg_temp.id(3), pg_temp.id(5), pg_temp.id(6), pg_temp.id(15), pg_temp.id(16)],
+    'e-mails past their age are cancelled as expired, the stopped worker''s, the old day''s digest and the one without a real day too');
   perform pg_temp.check((select count(*) from laria_private.marketplace_email_deliveries
     where id = any(array[pg_temp.id(2), pg_temp.id(4), pg_temp.id(8), pg_temp.id(9)]) and status = 'processing') = 4,
     'the due ones are being sent');
@@ -187,6 +203,64 @@ reset role;
 do $$ begin
   perform pg_temp.check((select status from laria_private.marketplace_email_deliveries where id = pg_temp.id(14)) = 'pending',
     'the paused e-mail still waits');
+end $$;
+
+-- ------------------------------------------------------------------ uncertain sends
+
+select laria_private.set_email_daily_limit(80, 'Vuelta al límite');
+update laria_private.marketplace_email_deliveries set next_attempt_at = now() + interval '30 days'
+where status in ('pending', 'retry');
+select pg_temp.queue(20, 'listing_price_drop', interval '3 hours');
+select pg_temp.queue(21, 'store_approved', interval '2 hours');
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ declare claim jsonb; begin
+  claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000006', 10);
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(21), pg_temp.id(20)], 'both go out: ' || claim::text);
+  -- The price drop's answer is lost; the store e-mail hits Resend's rate limit.
+  perform pg_temp.check(public.fail_marketplace_email_delivery(pg_temp.id(20), 'a2520000-0000-4000-8000-000000000006', true,
+    'transport', 'transport_error') = 'retry', 'a lost answer is retried');
+  perform pg_temp.check(public.fail_marketplace_email_delivery(pg_temp.id(21), 'a2520000-0000-4000-8000-000000000006', true,
+    'rate_limit', 'http_429') = 'retry', 'a rate limit is retried');
+end $$;
+reset role;
+do $$ begin
+  perform pg_temp.check((select uncertain_since is not null and uncertain_since = last_attempt_at
+    from laria_private.marketplace_email_deliveries where id = pg_temp.id(20)), 'a lost answer may have been sent, from that attempt on');
+  perform pg_temp.check((select uncertain_since is null from laria_private.marketplace_email_deliveries where id = pg_temp.id(21)),
+    'a rate limit was not sent');
+end $$;
+
+update laria_private.marketplace_email_deliveries set next_attempt_at = now() - interval '1 minute'
+where id = any(array[pg_temp.id(20), pg_temp.id(21)]);
+-- Retries of sends that may have reached Resend: 24 hours ago (past the window) and 22 hours ago (within it).
+insert into laria_private.marketplace_email_deliveries(id, event_type, recipient_user_id, dedupe_key, status, attempt_count,
+  created_at, next_attempt_at, last_attempt_at, uncertain_since, failure_category, failure_code)
+values
+ (pg_temp.id(22), 'store_approved', 'a2500000-0000-4000-8000-000000000001', 'la25-22', 'retry', 2, now() - interval '30 hours',
+  now() - interval '1 minute', now() - interval '20 hours', now() - interval '24 hours', 'transport', 'transport_error'),
+ (pg_temp.id(23), 'listing_back_in_stock', 'a2500000-0000-4000-8000-000000000001', 'la25-23', 'retry', 1, now() - interval '22 hours',
+  now() - interval '1 minute', now() - interval '22 hours', now() - interval '22 hours', 'provider', 'http_503');
+-- A worker that stopped 20 minutes ago while sending.
+insert into laria_private.marketplace_email_deliveries(id, event_type, recipient_user_id, dedupe_key, status, attempt_count,
+  created_at, next_attempt_at, last_attempt_at, locked_at, locked_by)
+values (pg_temp.id(24), 'listing_approved', 'a2500000-0000-4000-8000-000000000001', 'la25-24', 'processing', 1, now() - interval '1 hour',
+  now() - interval '1 hour', now() - interval '20 minutes', now() - interval '20 minutes', gen_random_uuid());
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ declare claim jsonb; begin
+  claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000007', 10);
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(24), pg_temp.id(23), pg_temp.id(20), pg_temp.id(21)],
+    'sends Resend may have accepted go first, the account''s own first among them; the rest follow: ' || claim::text);
+end $$;
+reset role;
+do $$ begin
+  perform pg_temp.check((select status = 'failed' and failure_code = 'retry_window_closed' and failure_category = 'transport'
+    from laria_private.marketplace_email_deliveries where id = pg_temp.id(22)), 'past 23 hours it is given up, not sent again');
+  perform pg_temp.check((select uncertain_since = now() - interval '20 minutes' and status = 'processing' and attempt_count = 2
+    from laria_private.marketplace_email_deliveries where id = pg_temp.id(24)), 'a stopped worker''s send may have gone out, from its attempt');
 end $$;
 
 rollback;
