@@ -70,7 +70,24 @@ const rejectedCases = [
   { location: overlong },
   { city: overlong },
   { use_case: overlong },
+  { sort: "price_ascµphone_type=dynamic" },
+  { seller_type: "storeµphone_type=dynamic" },
+  { min_price: "100µphone_type=dynamic" },
+  { max_price: "-5" },
 ];
+
+test("sort, seller type and prices that the catalog does not offer are reported; blanks from the form are not", () => {
+  assert.equal(hasRejectedFilterValues({ sort: "price_desc", seller_type: "verified_store", min_price: "100", max_price: "5000" }), false);
+  assert.equal(hasRejectedFilterValues({ sort: "", seller_type: "", min_price: "", max_price: " " }), false);
+  assert.equal(parseListingFilters({ sort: "bogus" }).sort, "newest");
+  assert.equal(parseListingFilters({ seller_type: "bogus" }).sellerType, undefined);
+  // Typed into the no-JavaScript price form: kept, written the way our links write it.
+  for (const typed of ["1,500", "S/ 1500", "1 500"]) {
+    assert.equal(hasRejectedFilterValues({ min_price: typed }), true, typed);
+    assert.equal(parseListingFilters({ min_price: typed }).minPrice, 1500, typed);
+  }
+  assert.equal(parseListingFilters({ min_price: "abc" }).minPrice, undefined);
+});
 
 test("length limits still report values that need a cleanup redirect", () => {
   for (const params of rejectedCases) {
