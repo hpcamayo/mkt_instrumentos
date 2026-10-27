@@ -4,6 +4,7 @@ import { DraftList } from "@/components/selling/draft-list";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
+import { aiHelpersEnabled } from "@/lib/ai/config";
 import { listSellDrafts, loadSellBrands, loadSellPageData } from "@/lib/sell-page-data";
 import { getStoreListingQuota } from "@/lib/store-allowance";
 import { getInventoryItem, getSkuListingDetails, inventoryDb } from "@/lib/store-inventory";
@@ -55,6 +56,7 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
             brandsByCategory={brandsByCategory}
             storeDefaults={storeDefaults}
             serverDraft={data?.serverDraft}
+            aiAssist={aiHelpersEnabled()}
           />
           <DraftList drafts={drafts.filter((draft) => draft.id !== data?.serverDraft?.id)} href="/mi-cuenta/tienda/publicar" />
           <p className="t-meta">La condición y el texto que se agregan a cada publicación se ajustan en <Link href="/mi-cuenta/tienda/valores-por-defecto" className="link font-semibold">valores por defecto</Link>.</p>
