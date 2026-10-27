@@ -72,7 +72,7 @@ test("A17: every reason the database gives has an Admin label", () => {
   const listed = source(migrationFile).match(/reasons <@ array\[([^\]]+)\]/);
   assert.ok(listed, "the migration lists the reasons");
   const reasons = [...listed[1].matchAll(/'([a-z_]+)'/g)].map((match) => match[1]);
-  assert.deepEqual(reasons, ["first_reviews", "new_account", "email_unconfirmed", "repeat_buyer", "same_browser", "same_phone"]);
+  assert.deepEqual(reasons, ["first_reviews", "new_account", "email_unconfirmed", "repeat_buyer", "same_browser"]);
   assert.deepEqual(Object.keys(REVIEW_HOLD_REASON_LABELS).sort(), [...reasons].sort());
   assert.equal(new Set(Object.values(REVIEW_HOLD_REASON_LABELS)).size, reasons.length, "each label says something different");
   assert.equal(reviewHoldReasonLabel("first_reviews"), "Una de las primeras 3 reseñas del vendedor");

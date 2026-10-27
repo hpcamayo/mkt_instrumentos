@@ -14,8 +14,11 @@
 --    email_unconfirmed  the buyer has not confirmed their e-mail;
 --    repeat_buyer       the buyer already reviewed this seller for another sale;
 --    same_browser       the buyer and the seller (or a member of the store) used the same browser on Laria: the
---                       signed first-party session that marketplace events carry;
---    same_phone         the buyer's phone matches the seller's, the store's or the listing's WhatsApp number.
+--                       signed first-party session that marketplace events carry.
+--    One buyer's reviews of one seller are submitted one at a time (a transaction advisory lock on the pair), so a
+--    review sent at the same time as another of the same seller still sees it (repeat_buyer).
+--    Phone numbers are not a reason: both sides type theirs and can change them at any time, so a seller could copy a
+--    buyer's number into their profile, store or listing to hold that buyer's review.
 --    A held review shows nowhere and counts for nothing; the other side's review shows as before. Admin sees held
 --    reviews in the Reseñas queue with their reasons, and publishes one (public.publish_held_review) or hides it
 --    (public.moderate_review, unchanged). Once published, it shows by the usual rule.
@@ -27,9 +30,10 @@
 -- Compatibility: every function keeps its signature and its result's keys; get_transaction_detail and the Reseñas
 -- queue items gain keys. The site before the deploy keeps working: it shows the count under its old label, and a held
 -- review in the queue with only "Ocultar reseña".
--- Locks: adding the nullable column takes a brief ACCESS EXCLUSIVE lock on transaction_reviews. The index on
--- marketplace_events covers signed-in visitors' events only, and blocks writes to the events while it builds (seconds
--- for a few million rows). Every lock wait is capped at 10 seconds.
+-- Locks: the index on marketplace_events comes first. It covers signed-in visitors' events only, and blocks writes to
+-- the events while it builds and until the commit (about a second per million rows); reads go on. Adding the nullable
+-- column then takes an ACCESS EXCLUSIVE lock on transaction_reviews, held until the commit, which only redefines
+-- functions after it, so reviews wait for milliseconds, not for the index. Every lock wait is capped at 10 seconds.
 -- Rollback: recreate the six functions from the migrations named next to each, then drop publish_held_review,
 -- review_hold_reasons, counted_buyers, laria_private.review_holds, the index and the column. Reviews still held
 -- then show at once.
@@ -37,6 +41,11 @@
 set lock_timeout = '10s';
 
 -- ----------------------------------------------------------------------------------------------- 1. what is kept
+
+-- same_browser looks up a person's sessions, then whether someone else used one of them. Built before the column, so
+-- the lock on transaction_reviews below isn't held while it builds.
+create index if not exists marketplace_events_actor_session_idx on public.marketplace_events(actor_user_id, session_id)
+  where actor_user_id is not null and session_id is not null;
 
 alter table public.transaction_reviews add column if not exists held_at timestamptz;
 comment on column public.transaction_reviews.held_at is
@@ -47,16 +56,12 @@ create table if not exists laria_private.review_holds (
   review_id uuid primary key references public.transaction_reviews(id) on delete cascade,
   reasons text[] not null check (
     cardinality(reasons) > 0
-    and reasons <@ array['first_reviews', 'new_account', 'email_unconfirmed', 'repeat_buyer', 'same_browser', 'same_phone']
+    and reasons <@ array['first_reviews', 'new_account', 'email_unconfirmed', 'repeat_buyer', 'same_browser']
   ),
   created_at timestamptz not null default now()
 );
 alter table laria_private.review_holds enable row level security;
 revoke all on laria_private.review_holds from public, anon, authenticated;
-
--- same_browser looks up a person's sessions, then whether someone else used one of them.
-create index if not exists marketplace_events_actor_session_idx on public.marketplace_events(actor_user_id, session_id)
-  where actor_user_id is not null and session_id is not null;
 
 -- ----------------------------------------------------------------------------------------------- 2. the rules
 
@@ -107,7 +112,6 @@ declare
   published integer;
   buyer_created timestamptz;
   buyer_confirmed timestamptz;
-  buyer_phone text;
   reasons text[] := '{}';
 begin
   select * into sale from public.verified_transactions where id = p_transaction_id;
@@ -167,18 +171,6 @@ begin
       and buyer_event.actor_user_id is not null and buyer_event.session_id is not null
   ) then reasons := reasons || 'same_browser'::text; end if;
 
-  -- The last nine digits: a Peruvian mobile number with or without +51.
-  select right(regexp_replace(coalesce(p.phone, ''), '[^0-9]', '', 'g'), 9) into buyer_phone
-  from public.profiles p where p.id = sale.buyer_user_id;
-  if length(buyer_phone) = 9 and (
-    exists (select 1 from public.profiles p where p.id = any(seller_side)
-      and right(regexp_replace(coalesce(p.phone, ''), '[^0-9]', '', 'g'), 9) = buyer_phone)
-    or exists (select 1 from public.stores s where s.id = sale.store_id
-      and right(regexp_replace(coalesce(s.whatsapp_phone, ''), '[^0-9]', '', 'g'), 9) = buyer_phone)
-    or exists (select 1 from public.listings l where l.id = sale.listing_id
-      and right(regexp_replace(coalesce(l.whatsapp_phone, ''), '[^0-9]', '', 'g'), 9) = buyer_phone)
-  ) then reasons := reasons || 'same_phone'::text; end if;
-
   return reasons;
 end;
 $$;
@@ -187,7 +179,9 @@ revoke all on function laria_private.review_hold_reasons(uuid) from public, anon
 -- ------------------------------------------------------------------------------------- 3. submitting a review
 
 -- From 20260918120000_sprint_6_transactions_reviews.sql. A buyer's review is held when review_hold_reasons gives a
--- reason, and "Ambas reseñas" goes out only once neither review is held. The deal-trust batch on features/marketplace
+-- reason, and "Ambas reseñas" goes out only once neither review is held. Before the rules run, the buyer takes a lock
+-- on the pair of buyer and seller (the store for a store's sale) until the commit: a second review of the same seller
+-- by the same buyer waits for the first, and its rules, which read with a snapshot taken after the wait, see it. The deal-trust batch on features/marketplace
 -- patches the notification line in place, so that line stays as it was.
 create or replace function public.submit_transaction_review(p_transaction_id uuid,p_rating integer,p_comment text default null)
 returns uuid language plpgsql security definer set search_path=public as $$
@@ -202,6 +196,7 @@ begin
  if clean_comment is not null and length(clean_comment)>2000 then raise exception 'REVIEW_COMMENT_TOO_LONG'; end if;
  if auth.uid()=transaction_record.buyer_user_id then
   review_direction:='buyer_to_seller'; subject_user:=case when transaction_record.store_id is null then transaction_record.seller_user_id end; subject_store:=transaction_record.store_id;
+  perform pg_advisory_xact_lock(hashtextextended('laria-buyer-review:'||transaction_record.buyer_user_id::text||':'||coalesce(transaction_record.store_id,transaction_record.seller_user_id)::text,0));
   hold_reasons:=laria_private.review_hold_reasons(transaction_record.id);
  elsif auth.uid()=transaction_record.seller_user_id then
   review_direction:='seller_to_buyer'; subject_user:=transaction_record.buyer_user_id;

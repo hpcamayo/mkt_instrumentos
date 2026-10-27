@@ -111,7 +111,6 @@ export const REVIEW_HOLD_REASON_LABELS: Record<string, string> = {
   email_unconfirmed: "Correo del comprador sin confirmar",
   repeat_buyer: "El comprador ya reseñó a este vendedor",
   same_browser: "Comprador y vendedor usaron el mismo navegador",
-  same_phone: "Comprador y vendedor tienen el mismo teléfono",
 };
 
 export function reviewHoldReasonLabel(reason: string) {

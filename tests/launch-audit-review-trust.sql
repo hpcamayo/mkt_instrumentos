@@ -1,7 +1,9 @@
 -- Launch audit A17 (supabase/migrations/20261114150000_launch_audit_review_trust.sql): the seller card counts each
 -- buyer once, after their account is a week old with a confirmed e-mail; a buyer's review waits for Admin when it is
--- one of the seller's first three, comes from a new or unconfirmed account, repeats a buyer, or shares a browser or a
--- phone with the seller. Local/test database only. Every fixture is rolled back.
+-- one of the seller's first three, comes from a new or unconfirmed account, repeats a buyer, or shares a browser with
+-- the seller; a phone that matches holds nothing, since either side can type any number. Two reviews of one seller by
+-- one buyer at once: tests/launch-audit-review-trust.integration.cjs. Local/test database only. Every fixture is
+-- rolled back.
 begin;
 
 create function pg_temp.check(p_condition boolean, p_message text) returns void language plpgsql as $$
@@ -49,7 +51,7 @@ values
   ('a1700000-0000-4000-8000-000000000006','authenticated','authenticated','a17-new@example.invalid',crypt('qa-password',gen_salt('bf')),now() - interval '2 days',now() - interval '2 days','{}','{"account_type":"seller","full_name":"Compradora Nueva","phone":"51911170006","city":"Lima","region":"Lima"}'),
   -- An e-mail never confirmed.
   ('a1700000-0000-4000-8000-000000000007','authenticated','authenticated','a17-unconfirmed@example.invalid',crypt('qa-password',gen_salt('bf')),null,now() - interval '30 days','{}','{"account_type":"seller","full_name":"Comprador Sin Confirmar","phone":"51911170007","city":"Lima","region":"Lima"}'),
-  -- The seller's own number, written another way.
+  -- The seller's own number, written another way: no reason to hold, a seller could copy any buyer's number.
   ('a1700000-0000-4000-8000-000000000008','authenticated','authenticated','a17-phone@example.invalid',crypt('qa-password',gen_salt('bf')),now() - interval '30 days',now() - interval '30 days','{}','{"account_type":"seller","full_name":"Comprador Teléfono","phone":"+51 911-170-001","city":"Lima","region":"Lima"}'),
   -- Shares a browser with the store's staff.
   ('a1700000-0000-4000-8000-000000000009','authenticated','authenticated','a17-browser@example.invalid',crypt('qa-password',gen_salt('bf')),now() - interval '30 days',now() - interval '30 days','{}','{"account_type":"seller","full_name":"Compradora Navegador","phone":"51911170009","city":"Lima","region":"Lima"}'),
@@ -279,7 +281,7 @@ insert into a17_reviews values (4, pg_temp.buyer_review('a1740000-0000-4000-8000
 select pg_temp.check((select held_at is null from public.transaction_reviews where id = (select review_id from a17_reviews where n = 4))
   and pg_temp.reasons((select review_id from a17_reviews where n = 4)) is null, 'after three published reviews, no hold');
 
--- Sales 5 to 8: a new account, an unconfirmed e-mail, a buyer reviewing again, the seller's own number.
+-- Sales 5 to 8: a new account, an unconfirmed e-mail, a buyer reviewing again, and a buyer with the seller's number.
 insert into a17_reviews values (5, pg_temp.buyer_review('a1740000-0000-4000-8000-000000000005', 5));
 insert into a17_reviews values (6, pg_temp.buyer_review('a1740000-0000-4000-8000-000000000006', 5));
 insert into a17_reviews values (7, pg_temp.buyer_review('a1740000-0000-4000-8000-000000000007', 5));
@@ -287,7 +289,15 @@ insert into a17_reviews values (8, pg_temp.buyer_review('a1740000-0000-4000-8000
 select pg_temp.check(pg_temp.reasons((select review_id from a17_reviews where n = 5)) = array['new_account'], 'a new account');
 select pg_temp.check(pg_temp.reasons((select review_id from a17_reviews where n = 6)) = array['email_unconfirmed'], 'an unconfirmed e-mail');
 select pg_temp.check(pg_temp.reasons((select review_id from a17_reviews where n = 7)) = array['repeat_buyer'], 'a buyer reviewing again');
-select pg_temp.check(pg_temp.reasons((select review_id from a17_reviews where n = 8)) = array['same_phone'], 'the seller''s own number');
+select pg_temp.check((select held_at is null from public.transaction_reviews where id = (select review_id from a17_reviews where n = 8))
+  and pg_temp.reasons((select review_id from a17_reviews where n = 8)) is null, 'a phone that matches the seller''s holds nothing');
+-- Nor does a seller who copies a buyer's number into their profile and the listing.
+update public.profiles set phone = '51911170005' where id = 'a1700000-0000-4000-8000-000000000001';
+select set_config('app.allow_listing_admin_fields', 'true', true);
+update public.listings set whatsapp_phone = '51911170005' where id = 'a1720000-0000-4000-8000-000000000004';
+select pg_temp.check(laria_private.review_hold_reasons('a1740000-0000-4000-8000-000000000004') = '{}'::text[],
+  'a seller can''t hold a buyer''s review by copying their number');
+update public.profiles set phone = '51911170001' where id = 'a1700000-0000-4000-8000-000000000001';
 
 -- The review period ends: a held review still shows nowhere.
 update public.verified_transactions set verified_at = now() - interval '10 days', review_deadline = now()
@@ -322,11 +332,11 @@ select pg_temp.check(pg_temp.reasons((select review_id from a17_reviews where n 
 select pg_temp.check((select subject_store_id = 'a1710000-0000-4000-8000-000000000001' from public.transaction_reviews
   where id = (select review_id from a17_reviews where n = 102)), 'a store''s review is the store''s');
 
--- The queue now holds the five held reviews still waiting (6, 7, 8, 101, 102) and nothing else of these sales.
+-- The queue now holds the four held reviews still waiting (6, 7, 101, 102) and nothing else of these sales.
 select pg_temp.as_admin();
 set local role authenticated;
 select pg_temp.check((select count(*) from jsonb_array_elements(public.get_admin_moderation_queue('resenas', 1, 25) -> 'items') i
-  where i.value ->> 'id' in (select review_id::text from a17_reviews)) = 5, 'the queue holds the reviews still waiting');
+  where i.value ->> 'id' in (select review_id::text from a17_reviews)) = 4, 'the queue holds the reviews still waiting');
 reset role;
 
 select 'launch audit A17: buyers counted once, held reviews, Admin publishing' as result;

@@ -1282,10 +1282,11 @@ deploy brings the buyers' wording, the notes on the transaction page and Admin's
   - `email_unconfirmed`: the buyer has not confirmed their e-mail;
   - `repeat_buyer`: the buyer already reviewed this seller for another sale;
   - `same_browser`: the buyer and the seller, or a member of the store, carry the same first-party session in
-    `marketplace_events` (the signed 24-hour cookie, kept across sign-out; index `marketplace_events_actor_session_idx`);
-  - `same_phone`: the last nine digits of the buyer's profile phone match the seller's or a store member's, the
-    store's WhatsApp or the listing's.
-  A seller's review of the buyer is never held. A held review shows nowhere: `laria_private.review_is_visible` is false
+    `marketplace_events` (the signed 24-hour cookie, kept across sign-out; index `marketplace_events_actor_session_idx`).
+  `submit_transaction_review` takes a transaction advisory lock on the buyer and the seller (the store, for a store's
+  sale) before the rules run, so two reviews of one seller by one buyer sent at once go one after the other and the
+  second is `repeat_buyer`. Phone numbers are no reason: both sides type theirs and can change them at will, so a
+  seller could copy a buyer's number to hold that buyer's review. A seller's review of the buyer is never held. A held review shows nowhere: `laria_private.review_is_visible` is false
   for it, so reputation, the review pages, the store directory, the transaction page and reports leave it out. "Ambas
   reseñas" waits until neither review of the sale is held.
 - Admin: the Reseñas queue (`get_admin_moderation_queue('resenas')`, counted by `get_admin_moderation_counts`) lists
@@ -1296,9 +1297,10 @@ deploy brings the buyers' wording, the notes on the transaction page and Admin's
   any other; a hidden one can't be published (`REVIEW_HIDDEN`).
 - `get_transaction_detail` adds `own_review.held_at` and `counterpart_review_held`: the other side's review waits, said
   only once reviews would otherwise show, so a seller never learns before reviewing that the buyer did.
-- Locks: adding the column takes a brief ACCESS EXCLUSIVE lock on `transaction_reviews`; building the events index
-  blocks event writes while it runs (it covers only events with an account and a session). Every lock wait is capped
-  at 10 seconds.
+- Locks: the events index is built first and blocks event writes from then until the commit (it covers only events
+  with an account and a session; about a second per million rows). Adding the column then takes an ACCESS EXCLUSIVE
+  lock on `transaction_reviews` until the commit, while only functions are redefined, so reviews never wait for the
+  index. Every lock wait is capped at 10 seconds.
 - A new public read of reviews goes through `laria_private.review_is_visible`, and a new public count of a seller's
   sales through `laria_private.counted_buyers`.
 <!-- /launch-audit:reviews -->
