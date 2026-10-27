@@ -28,8 +28,9 @@ bash scripts/local-db/setup-local-db.sh start     # after the container restarts
 - A database integration test is one whose usage line reads `// Usage: node tests/<name> [postgresql://...]`;
   `run-db-integration.sh` picks those up by that line, so a new one runs in CI with no other change. Every other
   `tests/*.integration.cjs` must be listed in that script as left out, with why. It fails on a file that is neither,
-  on a listed one that is gone, when it finds no database test, when neither safeupdate nor the stand-in loads, and on
-  a test that prints a line starting with `SKIP`.
+  on a listed one that is gone, on a left-out app test that names a database URL, when it finds no database test,
+  when neither safeupdate nor the stand-in loads, on a test that prints a line starting with `SKIP`, and on one that
+  prints no line starting with `PASS`.
 - The same files are in the project's shared folder (`/mnt/project-files/store-operations/local-db-setup/`) for
   sessions that work on an older branch; this copy is the one CI uses.
 

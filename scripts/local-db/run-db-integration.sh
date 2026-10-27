@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Runs every database integration test against the database setup-local-db.sh built. Each tests/*.integration.cjs is
 # either a database test, whose usage line reads `// Usage: node tests/<its own name> [postgresql://...]`, or one of the
-# tests left out below. Any other file, a listed one that is gone, or no database test at all fails the run, so a test
-# can't drop out of CI unnoticed; so does a test that prints SKIP, since everything these tests need is here.
+# tests left out below. Any other file, a listed one that is gone, an app test that names a database URL (in any
+# spelling), or no database test at all fails the run, so a test can't drop out of CI unnoticed; so does a test that
+# prints SKIP, since everything these tests need is here, or one that exits without printing a line starting with PASS.
 # tests/api-safeupdate.integration.cjs needs the pg_safeupdate stand-in built once first (safeupdate/build.sh).
 # Usage: run-db-integration.sh [repo-dir]
 set -euo pipefail
@@ -31,9 +32,11 @@ for name in "${APP_TESTS[@]}" "${RUN_ELSEWHERE[@]}"; do
     problems+=("tests/$name.integration.cjs is left out here, but there is no such file")
   fi
 done
+# An app test never takes a database URL, so one that names one, as postgresql:// or postgres://, anywhere in the file
+# has turned into a database test.
 for name in "${APP_TESTS[@]}"; do
-  if database_test "$name"; then
-    problems+=("tests/$name.integration.cjs takes a postgresql:// URL, but is left out here as an app test")
+  if grep -qsE "postgres(ql)?://" "$REPO/tests/$name.integration.cjs"; then
+    problems+=("tests/$name.integration.cjs names a postgresql:// URL, but is left out here as an app test")
   fi
 done
 selected=()
@@ -73,6 +76,9 @@ for t in "${selected[@]}"; do
   if (cd "$REPO" && node "$t" "$URL") 2>&1 | tee "$output"; then
     if grep -q "^SKIP" "$output"; then
       echo "FAIL tests/$name skipped a check (above)"
+      failed=1
+    elif ! grep -q "^PASS" "$output"; then
+      echo "FAIL tests/$name printed no PASS line, so it checked nothing"
       failed=1
     else
       ran=$((ran + 1))
