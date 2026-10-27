@@ -14,7 +14,9 @@ export const CACHE_PROBE_PATH = "/api/public-pages/probe";
 
 // The deployment this code runs in. Each deployment has a cache of its own, and a clear reaches only the cache of the
 // deployment that asks for it, so the check page names the deployment that built it and the job trusts only its own.
-// Vercel sets both at build time and at run time; outside Vercel there is none.
+// Vercel sets both at build time and at run time, while its system environment variables are on (the default). Without
+// either (outside Vercel too) the job can't tell one cache from another, so it counts no change as done and clears the
+// pages on every run while changes wait.
 export function currentDeployment() {
   return process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_URL || null;
 }

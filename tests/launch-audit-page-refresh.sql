@@ -1,4 +1,4 @@
--- Launch audit A19 page refresh record (supabase/migrations/20261112130000_launch_audit_page_refresh.sql): which
+-- Launch audit A19 page refresh record (supabase/migrations/20261113130000_launch_audit_page_refresh.sql): which
 -- changes leave a row, the job's claim and report, and who may run them. Local/test database only. Every fixture is
 -- rolled back.
 begin;
@@ -34,7 +34,7 @@ $$;
 create function pg_temp.armed_in(p_nonce text, p_deployment text) returns bigint language sql security definer as $$
   select count(*) from laria_private.public_page_changes where armed_nonce = p_nonce and armed_deployment = p_deployment
 $$;
-create function pg_temp.report(p_claim text, p_nonce text, p_deployment text default null) returns jsonb language sql as $$
+create function pg_temp.report(p_claim text, p_nonce text, p_deployment text default 'dpl_test') returns jsonb language sql as $$
   select public.complete_public_page_changes(p_claim::uuid, p_nonce, p_deployment)
 $$;
 grant execute on function pg_temp.check(boolean, text), pg_temp.expect_error(text, text), pg_temp.take(),
@@ -227,12 +227,12 @@ select pg_temp.expect_error('select public.claim_public_page_changes()', '42501'
 set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
 select pg_temp.expect_error('select public.claim_public_page_changes(''dpl_x'')', '42501');
-select pg_temp.expect_error('select public.complete_public_page_changes(gen_random_uuid(), ''nonce-1234'')', '42501');
+select pg_temp.expect_error('select public.complete_public_page_changes(gen_random_uuid(), ''nonce-1234'', ''dpl_x'')', '42501');
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"e1400000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 select pg_temp.expect_error('select public.claim_public_page_changes()', '42501');
-select pg_temp.expect_error('select public.complete_public_page_changes(gen_random_uuid(), ''nonce-1234'')', '42501');
+select pg_temp.expect_error('select public.complete_public_page_changes(gen_random_uuid(), ''nonce-1234'', ''dpl_x'')', '42501');
 reset role;
 
 -- A first claim folds what waits into one row; a change after it waits for the next run.
@@ -297,8 +297,8 @@ select pg_temp.check(pg_temp.waiting() = 0, 'nothing waits');
 -- deployment, stay apart.
 insert into laria_private.public_page_changes (first_claimed_at, armed_nonce, armed_deployment)
 select now() - interval '2 minutes', nonce, deployment
-from (values ('nonce-dddd-4444', null), ('nonce-dddd-4444', null), ('nonce-eeee-5555', null), ('nonce-dddd-4444', 'dpl_other'))
-  v(nonce, deployment);
+from (values ('nonce-dddd-4444', 'dpl_test'), ('nonce-dddd-4444', 'dpl_test'), ('nonce-eeee-5555', 'dpl_test'),
+  ('nonce-dddd-4444', 'dpl_other')) v(nonce, deployment);
 set local role service_role;
 select set_config('lapr.claim8', public.claim_public_page_changes()::text, true);
 reset role;
@@ -363,8 +363,9 @@ select pg_temp.check(pg_temp.report(current_setting('lapr.claim_a3'), 'nonce-a-0
 select pg_temp.check(pg_temp.report(current_setting('lapr.claim_a3'), 'nonce-a-000003', repeat('x', 201)) = '{"done": 0, "waiting": 2}',
   'a malformed deployment name moves nothing');
 reset role;
--- Outside Vercel no deployment is named: rows armed in a deployment are armed again, and rows armed with none are
--- judged among themselves.
+-- A run in a deployment with no name (the sixth review's case: Vercel's system environment variables turned off, or
+-- outside Vercel) can't tell its cache from another's, so it arms and finishes nothing. Codex's sequence: A and B both
+-- unnamed; B's run would arm a row with B's nonce, and A's, after a rollback, would finish it with A's.
 update laria_private.public_page_changes set first_claimed_at = first_claimed_at - interval '40 seconds';
 set local role service_role;
 select set_config('lapr.claim_a4', public.claim_public_page_changes('dpl_a')::text, true);
@@ -374,12 +375,47 @@ select set_config('lapr.claim_n1', public.claim_public_page_changes(null)::text,
 reset role;
 select pg_temp.check(pg_temp.waiting() = 1, 'rows armed with the same nonce in the same deployment fold into one');
 set local role service_role;
-select pg_temp.check(pg_temp.report(current_setting('lapr.claim_n1'), 'nonce-n-000001') = '{"done": 0, "waiting": 1}',
+select pg_temp.check(pg_temp.report(current_setting('lapr.claim_n1'), 'nonce-n-000001', null) = '{"done": 0, "waiting": 1}',
   'a report naming no deployment finishes nothing armed in A');
-select pg_temp.check(pg_temp.report(current_setting('lapr.claim_n1'), 'nonce-n-000002') = '{"done": 1, "waiting": 0}',
-  'and finishes it after a new nonce with no deployment');
+select pg_temp.check(pg_temp.report(current_setting('lapr.claim_n1'), 'nonce-n-000002', null) = '{"done": 0, "waiting": 1}',
+  'nor after another nonce');
+select pg_temp.check(pg_temp.report(current_setting('lapr.claim_n1'), 'nonce-n-000003', '') = '{"done": 0, "waiting": 1}',
+  'an empty name is no name');
+reset role;
+select pg_temp.check(pg_temp.armed_in('nonce-a-000004', 'dpl_a') = 1, 'the row stays armed in A');
+-- A row waiting to be armed, past its 35 seconds, stays unarmed through any number of unnamed runs.
+select pg_temp.take();
+update public.listings set price_pen = 1240 where id = 'e1420000-0000-4000-8000-000000000001';
+set local role service_role;
+select set_config('lapr.claim_n2', public.claim_public_page_changes(null)::text, true);
+reset role;
+update laria_private.public_page_changes set first_claimed_at = first_claimed_at - interval '40 seconds';
+set local role service_role;
+select set_config('lapr.claim_n3', public.claim_public_page_changes(null)::text, true);
+select pg_temp.check(pg_temp.report(current_setting('lapr.claim_n3'), 'nonce-n-000004', null) = '{"done": 0, "waiting": 1}',
+  'an unnamed run arms nothing');
+select set_config('lapr.claim_n4', public.claim_public_page_changes(null)::text, true);
+select pg_temp.check(pg_temp.report(current_setting('lapr.claim_n4'), 'nonce-n-000005', null) = '{"done": 0, "waiting": 1}',
+  'and the next unnamed run, with another nonce, finishes nothing');
+reset role;
+select pg_temp.check(pg_temp.armed('nonce-n-000004') = 0 and pg_temp.waiting() = 1, 'the change still waits, unarmed');
+-- The first run in a named deployment adds its row, arms both after their 35 seconds, and a new nonce there ends them.
+set local role service_role;
+select set_config('lapr.claim_c1', public.claim_public_page_changes('dpl_c')::text, true);
+reset role;
+update laria_private.public_page_changes set first_claimed_at = first_claimed_at - interval '40 seconds';
+set local role service_role;
+select set_config('lapr.claim_c2', public.claim_public_page_changes('dpl_c')::text, true);
+select pg_temp.check(pg_temp.report(current_setting('lapr.claim_c2'), 'nonce-c-000001', 'dpl_c') = '{"done": 0, "waiting": 2}',
+  'a named deployment arms the waiting rows');
+select set_config('lapr.claim_c3', public.claim_public_page_changes('dpl_c')::text, true);
+select pg_temp.check(pg_temp.report(current_setting('lapr.claim_c3'), 'nonce-c-000002', 'dpl_c') = '{"done": 1, "waiting": 0}',
+  'and a new nonce there proves the clear');
 reset role;
 select pg_temp.check(pg_temp.waiting() = 0, 'nothing waits');
+-- A row is armed with a nonce and a deployment together.
+select pg_temp.expect_error($$insert into laria_private.public_page_changes (first_claimed_at, armed_nonce) values (now(), 'nonce-x-000001')$$, '23514');
+select pg_temp.expect_error($$insert into laria_private.public_page_changes (first_claimed_at, armed_deployment) values (now(), 'dpl_x')$$, '23514');
 -- The report has one signature, which only the service role may run.
 select pg_temp.check(to_regprocedure('public.complete_public_page_changes(uuid, text)') is null
   and has_function_privilege('service_role', 'public.complete_public_page_changes(uuid, text, text)', 'execute')

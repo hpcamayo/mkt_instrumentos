@@ -267,14 +267,17 @@ test("A19: every minute, recorded changes clear every cached page until the chec
     assert.deepEqual(steps.splice(0).at(-1), ["drop"]);
     report = { done: 0, waiting: 1 };
 
-    // Outside Vercel there is no deployment: the claim and the report say so, and the check page, built the same way,
-    // names none either.
+    // Codex's sixth review: without a deployment name (Vercel's system environment variables off, or outside Vercel)
+    // every deployment would call itself the same, so a run can't tell its cache from another's. It reads no check page
+    // and reports no nonce: the changes wait, the pages are cleared on every run, and each run says why.
     deployment = null;
-    await get(SECRET);
     probes.push({ status: 200, headers: { "x-nextjs-cache": "HIT" }, body: { nonce: NONCE_B, deployment: null } });
-    await get(SECRET);
-    assert.deepEqual(steps.splice(0), [claimed(null), ["probe"], ["wait", 1000], ["probe"], ["wait", 1000], ["probe"], reported(null, null), ["drop"],
-      claimed(null), ["probe"], reported(NONCE_B, null), ["drop"]]);
+    assert.equal((await get(SECRET)).status, 200);
+    assert.deepEqual(steps.splice(0), [claimed(null), reported(null, null), ["drop"]]);
+    assert.ok(logs.includes("public_pages_no_deployment VERCEL_DEPLOYMENT_ID and VERCEL_URL are missing"));
+    assert.match(logs.at(-1), /^public_pages_refreshed \{"done":0,"waiting":1,"checked":false\}$/);
+    assert.equal(probes.length, 1);
+    probes.length = 0;
     claim = null;
     await get(SECRET);
     assert.deepEqual(steps.splice(0), [claimed(null)]);
@@ -291,7 +294,7 @@ test("A19: every minute, recorded changes clear every cached page until the chec
 });
 
 test("A19: the database records changes to what the cached pages show, from listings to reviews", () => {
-  const migration = read("supabase/migrations/20261112130000_launch_audit_page_refresh.sql");
+  const migration = read("supabase/migrations/20261113130000_launch_audit_page_refresh.sql");
   const all = ["insert", "update", "delete"];
   const triggers = {
     "public.listings": all, "public.listing_photos": all, "public.listing_sound_clips": all, "public.stores": all,
@@ -356,8 +359,13 @@ test("A19: the database records changes to what the cached pages show, from list
   // The claim and the report are the service role's alone (tests/launch-audit-page-refresh.sql runs them).
   assert.match(migration, /grant execute on function public\.claim_public_page_changes\(text\), public\.complete_public_page_changes\(uuid, text, text\)\nto service_role;/);
   assert.match(migration, /claimed_at >= first_claimed_at \+ interval '35 seconds'/);
-  // A proof counts only in the deployment that armed the row.
-  assert.match(migration, /armed_nonce <> p_nonce and armed_deployment is not distinct from p_deployment/);
+  // A proof counts only in the deployment that armed the row, and only a run in a named deployment arms or finishes one.
+  assert.match(migration, /if length\(p_nonce\) between 8 and 100 and length\(p_deployment\) between 1 and 200 then\n\s+delete from laria_private\.public_page_changes\n\s+where claim_id = p_claim and armed_deployment = p_deployment and armed_nonce <> p_nonce;/);
+  assert.match(migration, /check \(\(armed_nonce is null\) = \(armed_deployment is null\)\)/);
+  assert.doesNotMatch(migration, /is not distinct from p_deployment|p_deployment is null/);
+  // Codex's sixth review: a second run locks nothing of the record before the triggers' tables, since a writer holds
+  // its table's lock while its trigger inserts into the record.
+  assert.doesNotMatch(migration, /^\s*(alter table|create (unique )?index|drop function|create policy|lock table)\b/im);
   for (const page of ["app/page.tsx", "app/instrumentos/[slug]/page.tsx"]) assert.match(read(page), /\nexport const maxDuration = 30;\n/, page);
   assert.match(read("tests/launch-audit-page-refresh.sql"), /the third review's case/);
 });

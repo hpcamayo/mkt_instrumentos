@@ -43,7 +43,9 @@
 -- done; a run in another deployment (a deploy or a rollback since) arms the row again with its own. Until then every
 -- run clears again, so a failed run, a clear the cache lost or a check page that can't be read leaves the rows for
 -- later runs. A deployment the job hasn't run in before (a deploy, or a rollback to an older one, with pages from its
--- build or its own past) adds a row, so its pages are cleared too.
+-- build or its own past) adds a row, so its pages are cleared too. A run whose deployment has no name (Vercel's system
+-- environment variables turned off, or outside Vercel) can't tell one cache from another, so it arms and finishes
+-- nothing: its rows wait, and every run clears the pages, until the job runs in a named deployment.
 --
 -- Compatibility: nothing before this change reads these tables, so the migration can be applied before the deploy;
 -- rows wait until the job runs, and its first claim folds them into one.
@@ -51,7 +53,9 @@
 -- on a second run too. The lock blocks writes to that table, never reads, and is held until the migration commits, so
 -- the tables come in order of how often they are written, listings last. Each lock wait is capped at 10 seconds
 -- (lock_timeout): behind a long-running query the migration fails and can be run again, instead of holding up the
--- traffic queued behind it. Applying it scans no table.
+-- traffic queued behind it. Applying it scans no table. On a second run nothing here locks the record's tables
+-- (create table if not exists leaves an existing table alone): a writer holds its own table's lock while its trigger
+-- inserts into the record, so a lock on the record taken before a trigger's table could close a cycle with it.
 -- The transition tables hold the rows each statement touched, so a bulk update pays a small cost per row even when
 -- nothing is recorded. Each run of the job looks for the changes that come with time through the review deadline
 -- index, and reads public.listings for pauses that ended (no index covers paused_until; once a minute, that is a
@@ -67,15 +71,12 @@ create table if not exists laria_private.public_page_changes (
   claim_id uuid,
   claimed_at timestamptz,
   first_claimed_at timestamptz,
-  -- The check page's nonce, read by a run at least 35 seconds after first_claimed_at.
+  -- The check page's nonce, read by a run at least 35 seconds after first_claimed_at, and that run's deployment.
   armed_nonce text check (armed_nonce is null or length(armed_nonce) between 8 and 100),
-  check (armed_nonce is null or first_claimed_at is not null)
+  armed_deployment text check (armed_deployment is null or length(armed_deployment) between 1 and 200),
+  check (armed_nonce is null or first_claimed_at is not null),
+  check ((armed_nonce is null) = (armed_deployment is null))
 );
--- The deployment of the run that armed the row (null where the job runs outside Vercel). Added on its own, so a
--- database that has the table from an earlier version of this file gains it too.
-alter table laria_private.public_page_changes
-  add column if not exists armed_deployment text
-    check (armed_deployment is null or (armed_nonce is not null and length(armed_deployment) between 1 and 200));
 
 -- The deployment the job last ran in.
 create table if not exists laria_private.public_page_deployment (
@@ -648,10 +649,10 @@ $$;
 -- p_nonce after claiming (null when it couldn't). A row armed in this deployment with another nonce is done, since a
 -- clear reached this deployment's cache after it was armed. A row armed in another deployment, whose proof says nothing
 -- about this one's cache, is armed again here, and so is a row first claimed at least 35 seconds before this claim.
--- Rows another run has claimed since are left to it. Returns the rows done and the rows still waiting for a clear.
--- An earlier version of this file made the function without p_deployment.
-drop function if exists public.complete_public_page_changes(uuid, text);
-create or replace function public.complete_public_page_changes(p_claim uuid, p_nonce text, p_deployment text default null)
+-- Without a deployment name nothing is armed or done: such a run can't tell its cache from another's (Codex's sixth
+-- review). Rows another run has claimed since are left to it. Returns the rows done and the rows still waiting for a
+-- clear.
+create or replace function public.complete_public_page_changes(p_claim uuid, p_nonce text, p_deployment text)
 returns jsonb
 language plpgsql
 security definer
@@ -664,14 +665,14 @@ begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'Not allowed.' using errcode = '42501';
   end if;
-  if length(p_nonce) between 8 and 100 and (p_deployment is null or length(p_deployment) between 1 and 200) then
+  if length(p_nonce) between 8 and 100 and length(p_deployment) between 1 and 200 then
     delete from laria_private.public_page_changes
-    where claim_id = p_claim and armed_nonce <> p_nonce and armed_deployment is not distinct from p_deployment;
+    where claim_id = p_claim and armed_deployment = p_deployment and armed_nonce <> p_nonce;
     get diagnostics done = row_count;
     update laria_private.public_page_changes
     set armed_nonce = p_nonce, armed_deployment = p_deployment
     where claim_id = p_claim
-      and ((armed_nonce is not null and armed_deployment is distinct from p_deployment)
+      and ((armed_nonce is not null and armed_deployment <> p_deployment)
         or (armed_nonce is null and claimed_at >= first_claimed_at + interval '35 seconds'));
   end if;
   select count(*) into waiting from laria_private.public_page_changes where claim_id = p_claim;

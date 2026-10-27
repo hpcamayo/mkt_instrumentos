@@ -14,10 +14,11 @@ const NONCE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 // Launch audit A19: runs every minute (vercel.json), CRON_SECRET-protected like the e-mail worker. Every change to what
 // the cached public pages show is recorded in the database, whichever path made it
-// (supabase/migrations/20261112130000_launch_audit_page_refresh.sql, which explains the steps). While changes wait,
+// (supabase/migrations/20261113130000_launch_audit_page_refresh.sql, which explains the steps). While changes wait,
 // each run claims them, reads the check page's nonce, reports it, and clears every cached listing page, the home and the
 // check page (lib/listing-cache.ts). A change is done once a later run in the same deployment reads a new nonce; a run
 // that fails anywhere leaves its changes to the next one. A quiet minute does one database call and clears nothing.
+// A deployment without a name can't prove a clear of its own cache, so its runs only clear (Codex's sixth review).
 export async function GET(request: Request) {
   if (!isAuthorized(request)) return NextResponse.json({ message: "No autorizado." }, { status: 401, headers: NO_STORE });
   const client = getSupabaseAdminClient();
@@ -30,7 +31,8 @@ export async function GET(request: Request) {
   if (claim.error) return failure("claim", claim.error.message);
   if (!claim.data) return NextResponse.json({ refreshed: false }, { headers: NO_STORE });
 
-  const nonce = await readProbeNonce(deployment);
+  if (!deployment) console.warn("public_pages_no_deployment", "VERCEL_DEPLOYMENT_ID and VERCEL_URL are missing");
+  const nonce = deployment ? await readProbeNonce(deployment) : null;
   const report = await db.rpc("complete_public_page_changes", { p_claim: claim.data, p_nonce: nonce, p_deployment: deployment });
   const counts = report.error ? null : readCounts(report.data);
   // Nothing left waiting needs no clear; after a failed report the changes still wait, so the pages are cleared anyway.
@@ -46,7 +48,7 @@ export async function GET(request: Request) {
 // apart, since the cache rebuilds it in the background, and so is a copy from another deployment: the site's domain
 // moves to a new deployment (a deploy, a rollback) while runs of the old one finish, and a clear here says nothing about
 // another deployment's cache.
-async function readProbeNonce(deployment: string | null) {
+async function readProbeNonce(deployment: string) {
   let seen = "";
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (attempt > 0) await sleep(1000);
