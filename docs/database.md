@@ -1201,6 +1201,33 @@ Migration `20261109120000_ux_effortless_integration.sql` (not applied to any hos
   one database session, as the Supabase CLI runs them.
 <!-- /ux-effortless:integration -->
 
+<!-- launch-audit:monitoring -->
+## Launch audit: error counts and health
+
+Migration `20261114170000_launch_audit_monitoring.sql` (launch audit A13; suite `tests/launch-audit-monitoring.sql`).
+New objects only, so it can be applied before the deploy.
+
+- `laria_private.app_errors`: one row per kind of error (`fingerprint`) and 10-minute `bucket`, with its `source`
+  (`server` or `browser`), `kind` (for the server the route type: `render`, `route`, `action` or `middleware`; for a
+  browser `error`, `unhandledrejection` or `boundary`), `route`, `name`, `message`, `client` (browser family),
+  `digest` (Next.js), `occurrences`, `first_at` and `last_at`. RLS on, no API access. The pg_cron job
+  `app-error-retention` (daily 09:50 UTC, `laria_private.run_app_error_retention()`) deletes buckets older than 30 days.
+- `public.record_app_error(source, kind, route, name, message, client, digest)`, service role only, called by
+  `instrumentation.ts` (server errors, under the route's file pattern) and `/api/client-errors` (browser errors, 30 per
+  visitor every 10 minutes). `laria_private.scrub_error_text` replaces query strings with values, e-mail addresses,
+  UUIDs, tokens and runs of 7 or more digits before anything is stored, and no account, IP address or stack is ever
+  passed. A browser error's route is kept (the latest seen) but is not part of its fingerprint, and digits never split
+  a kind. At most 25 kinds per source in a bucket; the rest are counted under `overflow-server` or `overflow-browser`.
+- `public.get_admin_app_errors(p_days 1..30, p_source)`: `assert_admin()` (aal2); the period's kinds grouped by
+  fingerprint, newest first, at most 200 (`/admin/errores`).
+- `public.get_app_health()`, service role only: `{"server_errors": n}` for this bucket and the one before.
+  `/api/health` answers 503 `{"status":"degraded","reason":"database"}` when the call fails or takes over 3 seconds,
+  503 with `"reason":"errors"` from 20 errors, and otherwise 200 `{"status":"ok"}`; the uptime workflow
+  (`.github/workflows/uptime.yml`) reads it every 10 minutes.
+
+Rollback: `select cron.unschedule('app-error-retention');`, then drop the five functions and the table.
+<!-- /launch-audit:monitoring -->
+
 <!-- launch-audit:security -->
 ## Launch audit: security fixes
 
