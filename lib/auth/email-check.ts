@@ -19,3 +19,16 @@ export async function checkEmailAvailability(email: string): Promise<EmailCheck>
     return "unknown";
   }
 }
+
+// Supabase's sign-up answers with the account an address already has instead of making a new one: a confirmed account
+// comes back without identities, and one still waiting for its confirmation comes back as it was first registered
+// (Supabase sends its confirmation again and keeps its data, account type included). Codex's fourth review of #55: when
+// the check above couldn't answer, an unconfirmed account of the other type must not read as the account asked for.
+export function signUpFoundExistingAccount(
+  user: { identities?: unknown[] | null; user_metadata?: Record<string, unknown> | null } | null | undefined,
+  accountType: string,
+) {
+  if (!user) return false;
+  if (Array.isArray(user.identities) && user.identities.length === 0) return true;
+  return !!user.user_metadata && user.user_metadata.account_type !== accountType;
+}

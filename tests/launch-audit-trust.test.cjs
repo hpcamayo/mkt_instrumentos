@@ -472,12 +472,27 @@ test("A28: the sign-up check says whether an address has an account, or that it 
   }
 });
 
+test("A28: Supabase's sign-up answer is read as the account asked for only when it is a new or pending one of that type", () => {
+  const { signUpFoundExistingAccount } = require("@/lib/auth/email-check");
+  const cases = [
+    [null, false],
+    [{ identities: [], user_metadata: {} }, true],
+    [{ identities: [], user_metadata: { account_type: "seller" } }, true],
+    [{ identities: [{ id: "i" }], user_metadata: { account_type: "seller" } }, false],
+    [{ identities: [{ id: "i" }], user_metadata: { account_type: "store_owner" } }, true],
+    [{ identities: [{ id: "i" }], user_metadata: {} }, true],
+    [{ identities: [{ id: "i" }] }, false],
+  ];
+  for (const [user, expected] of cases) assert.equal(signUpFoundExistingAccount(user, "seller"), expected, JSON.stringify(user));
+});
+
 // A sign-up form, rendered with its hooks recorded, submitted with the given address.
 function signupHarness(file, name) {
   const state = [];
   let hookIndex = 0;
   const calls = { signUps: [], fieldErrors: {} };
-  let signUpAnswer = { data: { user: { id: "u-1", identities: [{ id: "i-1" }] }, session: null }, error: null };
+  // By default Supabase's answer for a new address: the account just made, with the data the form sent.
+  let signUpAnswer = (input) => ({ data: { user: { id: "u-1", identities: [{ id: "i-1" }], user_metadata: { ...input.options.data, email: input.email } }, session: null }, error: null });
   const Notice = function Notice() { return null; };
   const component = loadModule(file, {
     react: {
@@ -496,7 +511,7 @@ function signupHarness(file, name) {
     "@/lib/supabase/browser-client": {
       getSupabaseBrowserClient: () => ({ auth: {
         getUser: async () => ({ data: { user: null } }),
-        signUp: async (input) => { calls.signUps.push(input.email); return signUpAnswer; },
+        signUp: async (input) => { calls.signUps.push(input.email); return typeof signUpAnswer === "function" ? signUpAnswer(input) : signUpAnswer; },
       } }),
     },
     "@/lib/auth/profile": {
@@ -542,11 +557,10 @@ test("A28: a sign-up goes on to Supabase when the e-mail check can't answer, and
   globalThis.FormData = class { constructor(form) { this.fields = form.fields; } get(field) { return field in this.fields ? this.fields[field] : null; } };
   globalThis.window = { location: { origin: "https://laria.audio" } };
   const forms = [
-    { file: "components/seller-signup-form.tsx", name: "SellerSignupForm", sent: /^Revisa tu correo para confirmar tu cuenta\./,
+    { file: "components/seller-signup-form.tsx", name: "SellerSignupForm", type: "seller", other: "store_owner", sent: /^Revisa tu correo para confirmar tu cuenta\./,
       exists: "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo." },
-    { file: "components/store-owner-signup-form.tsx", name: "StoreOwnerSignupForm", sent: /^Revisa tu correo para confirmar la cuenta de Tienda\./,
-      exists: "Ese correo ya está registrado. Usa un correo exclusivo para la Tienda.",
-      refused: "No se pudo crear la cuenta. Usa un correo exclusivo para la Tienda e intenta nuevamente." },
+    { file: "components/store-owner-signup-form.tsx", name: "StoreOwnerSignupForm", type: "store_owner", other: "seller", sent: /^Revisa tu correo para confirmar la cuenta de Tienda\./,
+      exists: "Ese correo ya está registrado. Usa un correo exclusivo para la Tienda." },
   ];
   try {
     for (const form of forms) {
@@ -558,13 +572,29 @@ test("A28: a sign-up goes on to Supabase when the e-mail check can't answer, and
         assert.deepEqual(signup.calls.signUps, ["nueva@example.com"], `${form.name} ${answer.status ?? answer.message}`);
         assert.match(signup.message(), form.sent, form.name);
       }
-      // Supabase's sign-up still finds an address that has an account.
-      const duplicate = signupHarness(form.file, form.name);
-      duplicate.signUpAnswers({ data: { user: { id: "u-2", identities: [] }, session: null }, error: null });
+      // Supabase's sign-up still finds an address that has an account: a confirmed one comes back without identities.
       check.answer = { status: 503, body: { ok: false, available: false } };
+      const duplicate = signupHarness(form.file, form.name);
+      duplicate.signUpAnswers({ data: { user: { id: "u-2", identities: [], user_metadata: {} }, session: null }, error: null });
       await duplicate.submit("ana@example.com");
       assert.deepEqual(duplicate.calls.signUps, ["ana@example.com"]);
-      assert.equal(duplicate.message(), form.refused ?? form.exists, form.name);
+      assert.equal(duplicate.message(), form.exists, form.name);
+      assert.equal(duplicate.calls.fieldErrors.email, form.exists, form.name);
+      // Codex's fourth review of #55: an account of the other type still waiting for its confirmation comes back as it
+      // was registered, with its identity (Supabase sent its confirmation again). It is not the account asked for.
+      for (const metadata of [{ account_type: form.other, full_name: "Ana Pérez" }, { full_name: "Ana Pérez" }]) {
+        const pending = signupHarness(form.file, form.name);
+        pending.signUpAnswers({ data: { user: { id: "u-3", identities: [{ id: "i-3" }], user_metadata: metadata }, session: null }, error: null });
+        await pending.submit("pendiente@example.com");
+        assert.deepEqual(pending.calls.signUps, ["pendiente@example.com"], form.name);
+        assert.equal(pending.message(), form.exists, `${form.name} ${JSON.stringify(metadata)}`);
+        assert.equal(pending.calls.fieldErrors.email, form.exists, form.name);
+      }
+      // One of the same type still waiting is the account asked for: its confirmation went out again.
+      const sameType = signupHarness(form.file, form.name);
+      sameType.signUpAnswers({ data: { user: { id: "u-4", identities: [{ id: "i-4" }], user_metadata: { account_type: form.type, full_name: "Ana" } }, session: null }, error: null });
+      await sameType.submit("pendiente@example.com");
+      assert.match(sameType.message(), form.sent, form.name);
       // Over the visitor's limit, or an address with an account: no sign-up.
       const limited = signupHarness(form.file, form.name);
       check.answer = { status: 429, body: { ok: false, available: false } };
