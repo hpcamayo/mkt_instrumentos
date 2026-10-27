@@ -8,6 +8,7 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const fixture = "http://127.0.0.1:43135";
 const local = /^http:\/\/(127\.0\.0\.1|localhost):\d+$/;
+const inventoryPaths = new Set(["/rest/v1/listings", "/rest/v1/public_listings"]);
 
 if (process.argv[2] === "fixture") {
   let requests = [];
@@ -42,7 +43,7 @@ if (process.argv[2] === "fixture") {
     let data = [];
     let count = 0;
     let delay = 0;
-    if (url.pathname === "/rest/v1/listings") {
+    if (inventoryPaths.has(url.pathname)) {
       count = 100;
       delay = delays.core;
       const offset = Number(url.searchParams.get("offset") || 0);
@@ -86,11 +87,11 @@ if (process.argv[2] === "fixture") {
     await measure("warmup", "/listados?brand=Latency+warmup");
     for (let i = 0; i < 5; i++) {
       const reads = await measure(`cold-${i}`, `/listados?brand=Latency+cold+${i}`);
-      assert.equal(reads.filter((read) => read.path === "/rest/v1/listings").length, 1, "metadata/page share core inventory");
+      assert.equal(reads.filter((read) => inventoryPaths.has(read.path)).length, 1, "metadata/page share core inventory");
       assert.equal(reads.filter((read) => read.path === "/rest/v1/rpc/catalog_facets").length, 1, "one facet read per cold key");
     }
     const warm = await measure("warm", "/listados?brand=Latency+cold+4");
-    assert.equal(warm.filter((read) => read.path === "/rest/v1/listings").length, 1, "warm aggregate never caches live inventory");
+    assert.equal(warm.filter((read) => inventoryPaths.has(read.path)).length, 1, "warm aggregate never caches live inventory");
     assert.equal(warm.filter((read) => read.path === "/rest/v1/rpc/catalog_facets").length, 0);
     await measure("slow-core", "/listados?brand=Latency+slow+core", { ...normal, core: 1200 });
     await measure("facet-timeout", "/listados?brand=Latency+timeout", { ...normal, facets: 2400 });
