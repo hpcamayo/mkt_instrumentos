@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { catalogRefinementRel } from "@/lib/catalog-links";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useRef, type Ref } from "react";
 import { Bell, ChevronDown, Heart, Search, UserRound } from "lucide-react";
@@ -159,7 +160,7 @@ function HomeCategoryPanel({ panelRef, onChoose }: { panelRef: Ref<HTMLDivElemen
               <ul>
                 {category.types.map((type) => (
                   <li key={type.value}>
-                    <Link href={type.href} onClick={onChoose} className={cn(PANEL_ROW, "pl-6 text-ink-2 hover:text-ink md:pl-2")}>{type.label}</Link>
+                    <Link href={type.href} rel={catalogRefinementRel(type.href)} onClick={onChoose} className={cn(PANEL_ROW, "pl-6 text-ink-2 hover:text-ink md:pl-2")}>{type.label}</Link>
                   </li>
                 ))}
               </ul>

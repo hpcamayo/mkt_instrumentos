@@ -242,9 +242,16 @@ test("robots.txt blocks private, account, Admin, API and auth routes and adverti
   const robots = load("app/robots.ts").default;
   withEnv({ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: undefined }, () => {
     const result = robots();
-    for (const path of ["/mi-cuenta", "/admin", "/api/", "/login", "/logout", "/auth", "/vender", "/restablecer-contrasena", "/registro/vendedor", "/registro/tienda"]) assert.ok(result.rules.disallow.includes(path), path);
-    for (const path of ["/registro/vendedor/invitacion", "/registro/tienda/invitacion"]) assert.ok(result.rules.disallow.some((rule) => path.startsWith(rule)), path);
-    for (const path of ["/listados", "/instrumentos", "/tiendas", "/terminos"]) assert.equal(result.rules.disallow.some((rule) => path.startsWith(rule)), false, path);
+    const general = result.rules.find((rule) => rule.userAgent === "*");
+    for (const rule of result.rules) {
+      for (const path of ["/mi-cuenta", "/admin", "/api/", "/login", "/logout", "/auth", "/vender", "/restablecer-contrasena", "/registro/vendedor", "/registro/tienda"]) assert.ok(rule.disallow.includes(path), path);
+      for (const path of ["/registro/vendedor/invitacion", "/registro/tienda/invitacion"]) assert.ok(rule.disallow.some((entry) => path.startsWith(entry)), path);
+      for (const path of ["/instrumentos", "/tiendas", "/terminos"]) assert.equal(rule.disallow.some((entry) => path.startsWith(entry)), false, path);
+    }
+    assert.equal(general.disallow.includes("/listados"), false, "Google/Bing and other discovery agents retain catalog pagination");
+    const limited = result.rules.find((rule) => Array.isArray(rule.userAgent));
+    assert.deepEqual(limited.userAgent, ["Amazonbot", "Reflectionbot", "MJ12bot"]);
+    assert.ok(limited.disallow.includes("/listados"));
     assert.equal(result.sitemap, "https://laria.audio/sitemap.xml");
   });
   withEnv({ VERCEL_ENV: "preview" }, () => assert.deepEqual(robots().rules, { userAgent: "*", disallow: "/" }));
