@@ -137,7 +137,7 @@ test("list-10, trust-03: the seller card leads with verified facts and explains 
   assert.equal(page.readSellerFacts([]), null);
   assert.equal(page.lastActiveLabel("today"), "Activo hoy");
   assert.equal(page.lastActiveLabel("year"), null);
-  assert.equal(page.verifiedSalesLabel(1), "1 venta confirmada en Laria");
+  assert.equal(page.verifiedSalesLabel(1), "1 comprador confirmó su compra en Laria");
   assert.equal(page.isNewMember(ago(20), now), true);
   assert.equal(page.isNewMember(ago(90), now), false);
 
@@ -147,7 +147,7 @@ test("list-10, trust-03: the seller card leads with verified facts and explains 
     seller: { name: "Ana", kind: "particular", place: "Lima", rating: null, since: null, facts: { ...facts, store: null } },
   }));
   assert.match(particular, /Activo esta semana/);
-  assert.match(particular, /3 ventas confirmadas en Laria/);
+  assert.match(particular, /3 compradores confirmaron su compra en Laria/);
   assert.match(particular, /Nuevo en Laria/);
   assert.match(particular, /Correo confirmado/);
   const store = html(React.createElement(SellerCard, {
