@@ -9,6 +9,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
 import { PriceInput } from "@/components/ui/price-input";
+import { refreshListingPages } from "@/lib/listing-page-refresh";
 import type { Pendiente } from "@/lib/pendientes";
 import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -76,6 +77,8 @@ function PendienteActions({ item, onDone }: { item: Pendiente; onDone: (message:
       setError(failure.message.includes("INVENTORY_MANAGED_LISTING") ? "Esta publicación está vinculada a Inventario. Registra la venta desde Inventario." : transactionErrorMessage(failure.message));
       return;
     }
+    // A sale, a new price or a confirmed listing shows on its cached public page at once.
+    if (action.kind === "availability" || action.kind === "buyer_report") void refreshListingPages({ listings: [action.listingId] });
     const href = next?.(data) ?? null;
     if (href) {
       router.push(href);

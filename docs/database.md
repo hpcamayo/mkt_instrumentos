@@ -1260,3 +1260,64 @@ Migration `20261113120000_launch_audit_trust.sql` (findings A15, A16 and A28 of 
   Admin would be locked out until the deploy; the new application works with the old function too, except that the
   sign-up forms can't check an address until the migration is in, so it goes in as soon as the deploy is ready.
 <!-- /launch-audit:trust -->
+
+<!-- launch-audit:page-refresh -->
+## Launch audit: public page refresh
+
+Migration `20261113130000_launch_audit_page_refresh.sql` (finding A19 of the 26 Oct 2026 launch audit). Suite:
+`tests/launch-audit-page-refresh.sql`. Nothing before it reads the new tables, so it can be applied before the deploy.
+Its triggers are made with `create or replace trigger`, which takes a SHARE ROW EXCLUSIVE lock (writes wait, reads
+don't), on a second run too. Writers take those nine tables in many orders (a listing's price edit updates its
+inventory item, an inventory price edit its listing, a new listing its photos), so the first statement takes all nine
+locks at once with `nowait`: while one is held it lets go of the others and tries again 20 to 100 ms later, and after
+30 seconds of busy tables it fails with `PAGE_REFRESH_TABLES_BUSY` and can be run again. From then on it waits for no
+writer; every other lock wait is capped at 10 seconds. A second run takes no lock on the record's tables: a writer
+holds its own table's lock while its trigger inserts into the record, so locking the record could deadlock with it.
+`tests/launch-audit-page-refresh-locks.integration.cjs` (local database, `pg` from `node_modules`) replays a writer
+holding each of the nine tables and then taking the other eight and the record while a second run applies, and checks
+itself by running the migration without its first statement, where a listing price edit deadlocks with it.
+
+- `laria_private.public_page_changes` (`id` identity, `changed_at`, `claim_id`, `claimed_at`, `first_claimed_at`,
+  `armed_nonce`, `armed_deployment`; no API access): one row per statement that changes what the cached home and
+  listing pages show. Statement-level triggers with transition tables (`<table>_public_page_changes_insert|update|delete`)
+  write it:
+  - `listings`: a listing shown publicly before or after the statement (`laria_private.listing_row_is_shown`: approved
+    or sold, from a Particular or an active store, for a row's own values) added, removed or changed in any column but
+    `view_count`, `availability_checkin_at` and `updated_at`;
+  - `listing_photos` and `listing_sound_clips`: a photo or the sound clip of such a listing added, removed or changed
+    (a photo's `updated_at` alone doesn't count);
+  - `stores`: a store entering or leaving `active`, or an active store added, removed or changed in a column the pages
+    show (`laria_private.mark_store_page_changes` lists them; e-mail, contact person, plan and the like don't count);
+  - `profiles` (update and delete only): `full_name`, `phone`, `city`, `region` or `created_at` changed, or a profile
+    removed;
+  - `transaction_reviews`: a review added, changed or removed, in either direction (the second review of a sale reveals
+    the first, `laria_private.review_is_visible`);
+  - while the payments pilot is on, what `public.get_listing_purchase_request` shows: `store_payment_methods` (an
+    approved method of an active, verified store added, removed or relabelled) and `store_inventory_items` (the SKU of
+    a shown listing's active item, or the most a buyer can ask for, its available quantity from 1 to 10);
+    `laria_private.assisted_commerce_settings` (the pilot switched on or off).
+  Writers only insert, so they never wait on each other or on the job.
+- `laria_private.public_page_deployment`: the deployment the job last ran in (one row).
+- `laria_private.public_page_clock`: when the job last looked for changes that come with time alone (one row).
+- `claim_public_page_changes(p_deployment text default null)` (service role only): a deployment other than the last one
+  adds a row, and so does a review deadline passed since the previous look on a sale with a review, or a shown
+  listing's pause that ended since (midnight in Lima on its `paused_until` date; the first look only starts the clock,
+  and the clock never goes back). Then it puts a new claim on every row, folds rows waiting for the same thing into one
+  (not armed and first claimed by the same run, or armed with the same nonce in the same deployment), and returns the
+  claim, or null when none wait.
+- `complete_public_page_changes(p_claim uuid, p_nonce text, p_deployment text)` (service role only): `p_nonce` is the
+  nonce of the check page (`app/api/public-pages/probe`) the run read after claiming, or null, and `p_deployment` the
+  deployment the run is in, which the check page names too (the job ignores a check page built by another deployment).
+  It deletes the claim's rows armed in this deployment with another nonce (a clear reached this deployment's cache
+  since), arms again the rows armed in another deployment, arms the rows first claimed at least 35 seconds before this
+  claim, and returns `{done, waiting}`. A row is armed with a nonce and a deployment together. Without a deployment name
+  (`VERCEL_DEPLOYMENT_ID` and `VERCEL_URL` both missing: Vercel's system environment variables turned off, or outside
+  Vercel) it arms and deletes nothing, since every unnamed deployment would look the same; the rows wait and every run
+  clears the pages, logging `public_pages_no_deployment`. A claim another run took over since does nothing. The job is
+  `app/api/internal/public-pages/refresh/route.ts`, every minute from `vercel.json`; it clears the pages while rows wait.
+- Columns added later count as shown on a page, except on `stores` and `profiles`, which list theirs, and on the
+  pilot's tables, which compare what the purchase details show. A column that a job updates on shown listings without
+  any page showing it belongs in the listing trigger's exclusion list, or the job clears the cache each time it runs; a
+  new store or profile field a cached page shows belongs in its list, and a new table a cached page reads needs its own
+  triggers.
+<!-- /launch-audit:page-refresh -->

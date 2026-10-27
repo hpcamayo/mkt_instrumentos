@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { HomeBanner } from "@/components/home/home-banner";
 import { RecentlyViewed } from "@/components/catalog-recently-viewed";
 import { HomeFollowedArrivals } from "@/components/home/home-followed";
@@ -11,14 +10,14 @@ import { PageContainer } from "@/components/page-container";
 import { fetchHomeData, type HomeData } from "@/lib/home";
 import { pickHomeBanner } from "@/lib/home-banner";
 import { buildHomeMetadata, buildOrganizationJsonLd } from "@/lib/seo";
-import { buttonClasses } from "@/components/ui/button";
-import { NoticeIcon, noticeClassName } from "@/components/ui/notice";
+import { renderPerRequestIfBuilding } from "@/lib/cache-build";
 import { getListingCounts } from "@/lib/catalog-brands";
 import { warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
 
-// Dynamic: the banner piece is picked per request (H11) and the listings refresh by themselves (H2).
-export const dynamic = "force-dynamic";
+// Launch audit A19: one cached page for everyone, rebuilt in the background at most once a minute. The banner piece
+// (H11) changes with each rebuild and new listings show within a minute (H2); the personal rows load in the browser.
+export const revalidate = 60;
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
 export const maxDuration = 30;
 
@@ -31,7 +30,8 @@ const UNAVAILABLE: HomeData = { pool: null, priceDrops: null, total: null, categ
 // search, the category chips, then instruments right away: "¿Qué tocas?" on a first visit, "Nuevo desde tu última
 // visita", "Para ti" (or the newest first), "Bajaron de precio" and "Vistos recientemente"; then "Cómo funciona Laria",
 // "Tiendas verificadas" and the sell block. A failed listing query leaves its section out (logged on the server); when
-// the newest listings themselves fail, the feed says so with a retry instead of looking like an empty marketplace. An
+// the newest listings themselves fail, the page throws, so visitors keep the last good copy instead of a failure cached
+// for a minute (lib/cache-build.ts: during the deploy, this deployment renders the home on each request instead). An
 // empty marketplace shows the empty feed.
 export default async function HomePage() {
   const banner = pickHomeBanner();
@@ -40,6 +40,10 @@ export default async function HomePage() {
   const { pool, priceDrops, total, categoryCounts, stores } = supabase
     ? await fetchHomeData(supabase, getListingCounts(optionalReadSignal(deadline)))
     : UNAVAILABLE;
+  if (supabase && !pool) {
+    await renderPerRequestIfBuilding("/");
+    throw new Error("The home feed could not be read.");
+  }
 
   return (
     <>
@@ -48,7 +52,7 @@ export default async function HomePage() {
       <PageContainer className="flex flex-col gap-8 pb-8 pt-4 md:gap-12 md:pb-12 md:pt-6">
         <CategoryTiles counts={categoryCounts} />
         <HomeFollowedArrivals />
-        {pool?.length ? <HomeForYou pool={pool} total={total} /> : pool ? <RecentListings /> : supabase ? <FeedUnavailable /> : null}
+        {pool?.length ? <HomeForYou pool={pool} total={total} /> : pool ? <RecentListings /> : null}
         {priceDrops?.length ? <PriceDropsSection listings={priceDrops} /> : null}
         <RecentlyViewed />
         <HowItWorks />
@@ -56,20 +60,5 @@ export default async function HomePage() {
         <SellBlock />
       </PageContainer>
     </>
-  );
-}
-
-// The newest listings could not be read (a database failure or the read's deadline): say so, never "no listings".
-function FeedUnavailable() {
-  return (
-    <div role="alert" className={noticeClassName("danger")}>
-      <NoticeIcon tone="danger" />
-      <div className="min-w-0 flex-1">
-        <p>No pudimos cargar las publicaciones. Vuelve a intentarlo en unos minutos.</p>
-        <Link href="/" prefetch={false} className={buttonClasses({ variant: "secondary", size: "sm", className: "mt-3" })}>
-          Reintentar
-        </Link>
-      </div>
-    </div>
   );
 }

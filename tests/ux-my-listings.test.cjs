@@ -47,7 +47,7 @@ test("Pendientes are ordered by urgency and each one is a single tap from done",
   assert.equal(byKey["store:import:imp"].action.href, "/mi-cuenta/tienda/inventario/importar/imp");
   assert.equal(byKey["store:saved-out"].action.href, "/mi-cuenta/tienda/inventario?stock=out");
   assert.deepEqual(byKey["check:l3"].action, { kind: "purchase_check", listingId: "l3" });
-  assert.deepEqual(byKey["report:k1"].action, { kind: "buyer_report", checkinId: "k1", stockManaged: false });
+  assert.deepEqual(byKey["report:k1"].action, { kind: "buyer_report", checkinId: "k1", listingId: "l4", stockManaged: false });
   assert.deepEqual(byKey["available:l5"].action, { kind: "availability", listingId: "l5", price: 900 });
   assert.match(byKey["sale:l6"].detail, /3 personas te escribieron/);
   for (const item of items) assert.doesNotMatch(`${item.title} ${item.detail ?? ""}`, /!|¡|artículo|producto/i);
