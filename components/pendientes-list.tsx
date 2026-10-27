@@ -146,6 +146,40 @@ function PendienteActions({ item, onDone }: { item: Pendiente; onDone: (message:
     );
   }
 
+  // talk-06: through the listing's manage route, which refreshes its public page and tells the people waiting.
+  async function answerReservation(listingId: string, outcome: "available" | "sold") {
+    if (busy) return;
+    if (outcome === "sold" && !(await confirm({ title: "¿Se vendió esta publicación?", body: "Quedará marcada como vendida y avisaremos a quienes esperaban que se libere.", confirmLabel: "Sí, se vendió" }))) return;
+    setBusy(true);
+    setError("");
+    const response = await fetch(`/api/listings/${listingId}/manage`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "end_reservation", outcome }) }).catch(() => null);
+    const result = response ? await response.json().catch(() => null) : null;
+    setBusy(false);
+    if (!response?.ok) {
+      setError(result?.message ?? "No se pudo completar la acción. Intenta de nuevo.");
+      return;
+    }
+    if (outcome === "sold") {
+      router.push(`/mi-cuenta/transacciones/${listingId}`);
+      return;
+    }
+    onDone(typeof result?.told === "number" && result.told > 0 ? "Listo: avisamos a quienes esperaban que se libere." : "Listo: sigue disponible.");
+    router.refresh();
+  }
+
+  if (action.kind === "reservation") {
+    return (
+      <div className="grid gap-2">
+        <div className="flex flex-wrap gap-2 sm:justify-end">
+          <Button variant="secondary" disabled={busy} onClick={() => void answerReservation(action.listingId, "sold")}>Sí, se vendió</Button>
+          <Button variant="quiet" disabled={busy} onClick={() => void answerReservation(action.listingId, "available")}>No, sigue disponible</Button>
+        </div>
+        {confirmDialog}
+        {errorLine}
+      </div>
+    );
+  }
+
   async function lowerPrice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (action.kind !== "availability") return;

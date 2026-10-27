@@ -8,6 +8,7 @@ import { DraftList } from "@/components/selling/draft-list";
 import { getAccountContext } from "@/lib/account-context";
 import { listSellDrafts } from "@/lib/sell-page-data";
 import { getAccountAnalytics } from "@/lib/account-analytics";
+import { isReservationRunning, readMyListingReservations } from "@/lib/listing-reservations";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -37,7 +38,7 @@ export default async function ParticularListingsPage({ searchParams }: { searchP
   const { user, profile, supabase } = await getAccountContext();
   if (profile?.account_type === "store_owner") redirect("/mi-cuenta/tienda/inventario");
   const query = parseMyListingsQuery((await searchParams) ?? {});
-  const [{ data: listings }, analytics] = await Promise.all([
+  const [{ data: listings }, analytics, reservations] = await Promise.all([
     supabase
       ? supabase
         .from("listings")
@@ -49,18 +50,25 @@ export default async function ParticularListingsPage({ searchParams }: { searchP
         .limit(1, { foreignTable: "listing_photos" })
       : { data: [] },
     getAccountAnalytics(0),
+    // talk-06: the reserved listings and the ended periods waiting for "¿Se vendió?".
+    supabase ? readMyListingReservations(supabase) : null,
   ]);
+  const reservationByListing = new Map((reservations ?? []).map((reservation) => [reservation.listing_id, reservation]));
   const drafts = supabase ? await listSellDrafts(supabase, "listing") : [];
   const analyticsByListing = new Map(analytics?.listings.map((listing) => [listing.id, listing]) ?? []);
   const listingIds = listings?.map((listing) => listing.id) ?? [];
   const revisionByListing = supabase && listingIds.length ? await loadRevisionStates(supabase, listingIds) : new Map();
-  const managedListings: ManagedListing[] = (listings ?? []).map(({ listing_photos: photos, ...listing }) => ({
-    ...listing,
-    photoUrl: firstPhotoUrl(photos),
-    analytics: analyticsByListing.get(listing.id),
-    revisionStatus: revisionByListing.get(listing.id)?.status ?? null,
-    revisionReason: revisionByListing.get(listing.id)?.reason ?? null,
-  }));
+  const managedListings: ManagedListing[] = (listings ?? []).map(({ listing_photos: photos, ...listing }) => {
+    const reservation = reservationByListing.get(listing.id);
+    return {
+      ...listing,
+      photoUrl: firstPhotoUrl(photos),
+      analytics: analyticsByListing.get(listing.id),
+      revisionStatus: revisionByListing.get(listing.id)?.status ?? null,
+      revisionReason: revisionByListing.get(listing.id)?.reason ?? null,
+      reservation: reservation ? { until: reservation.reserved_until, ended: !isReservationRunning(reservation), watchers: reservation.watchers } : null,
+    };
+  });
   const page = selectMyListingsPage(managedListings, query);
   const hasAny = managedListings.length > 0;
   return (
@@ -82,7 +90,7 @@ export default async function ParticularListingsPage({ searchParams }: { searchP
           actions={<Link href={BASE} className={buttonClasses({ variant: "secondary" })}>Ver todas</Link>}
         />
       ) : (
-        <ListingManagementTable key={myListingsHref(BASE, query)} listings={page.items} emptyMessage="Aún no tienes publicaciones" />
+        <ListingManagementTable key={myListingsHref(BASE, query)} listings={page.items} emptyMessage="Aún no tienes publicaciones" canReserve />
       )}
       {page.pageCount > 1 ? <PageLinks query={query} page={page.page} pageCount={page.pageCount} from={page.from} to={page.to} total={page.total} /> : null}
       <p className="border-t border-subtle p-5 text-meta leading-6 text-ink-2">{analytics ? "Vistas acumuladas de todo el historial, incluidas las históricas. Contactos por WhatsApp registrados desde el inicio del seguimiento; no equivalen a mensajes ni ventas." : "Las métricas no están disponibles en este momento; no se muestran ceros estimados."} La fecha de publicación corresponde a la primera publicación.</p>

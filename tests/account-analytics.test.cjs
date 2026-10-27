@@ -205,11 +205,16 @@ test("Particular home opens on Pendientes, keeps the recent five and leaves metr
     seller: { rejected: [{ listing_id: "l1", title: "Bajo", reason: "Pocas fotos", kind: "listing" }], admin_hidden: [], drafts: [], buyer_reports: [], availability: [], unattributed: [], paused_until: null },
     store: null,
   };
+  // talk-06 (maybes): a reservation that ended asks "¿Se vendió?"; one still running asks nothing.
+  const reservations = [
+    { listing_id: "l7", title: "Guitarra", slug: "guitarra", reserved_until: "2026-10-01T12:00:00Z", ended_at: "2026-10-01T12:00:30Z", watchers: 2 },
+    { listing_id: "l8", title: "Pedal", slug: "pedal", reserved_until: "2099-10-01T12:00:00Z", ended_at: null, watchers: 0 },
+  ];
   const PendientesList = ({ items, title }) => React.createElement("section", null, React.createElement("h2", null, title), items.map((item) => React.createElement("p", { key: item.key }, item.title)));
   const page = load("app/mi-cuenta/page.tsx", {
     "next/link": { default: Link },
     "lucide-react": { CheckCircle2: () => null, Circle: () => null, ExternalLink: () => null },
-    "@/lib/account-context": { getAccountContext: async () => ({ user: { id: "owner", email: "owner@example.test" }, profile: { account_type: "seller", full_name: "Dueño" }, store: null, supabase: { from: () => query, rpc: async (name) => { rpcs.push(name); return { data: pendientes, error: null }; } } }) },
+    "@/lib/account-context": { getAccountContext: async () => ({ user: { id: "owner", email: "owner@example.test" }, profile: { account_type: "seller", full_name: "Dueño" }, store: null, supabase: { from: () => query, rpc: async (name) => { rpcs.push(name); return { data: name === "get_my_listing_reservations" ? reservations : pendientes, error: null }; } } }) },
     "@/lib/account-ui": { listingStatusLabel: (value) => value },
     "@/lib/auth/profile": { isSellerProfileComplete: () => true },
     "@/lib/pendientes": load("lib/pendientes.ts"),
@@ -218,7 +223,9 @@ test("Particular home opens on Pendientes, keeps the recent five and leaves metr
     "@/components/vacation-mode": { VacationMode: () => React.createElement("p", null, "Modo vacaciones") },
   }).default;
   const html = renderToStaticMarkup(await page({ searchParams: Promise.resolve({}) }));
-  assert.deepEqual(rpcs, ["get_account_pendientes"]);
+  assert.deepEqual(rpcs, ["get_account_pendientes", "get_my_listing_reservations"]);
+  assert.match(html, /¿Se vendió «Guitarra»\?/);
+  assert.doesNotMatch(html, /Pedal/);
   assert.ok(queries.some(([method, value]) => method === "limit" && value === 5));
   assert.equal((html.match(/Reciente \d/g) ?? []).length, 5);
   assert.match(html, /<h2>Pendientes<\/h2>/);

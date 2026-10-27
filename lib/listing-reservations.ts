@@ -147,6 +147,11 @@ export function isReservationRunning(period: { reserved_until: string; ended_at?
   return Number.isFinite(end) && end > now;
 }
 
+// The periods that ended and wait for the seller's "¿Se vendió?" (Pendientes on the account home).
+export function endedReservations(rows: MyListingReservation[], now = Date.now()) {
+  return rows.filter((row) => !isReservationRunning(row, now));
+}
+
 export function reservationDaysLabel(days: ReservationDays) {
   return days === 1 ? "1 día" : `${days} días`;
 }
