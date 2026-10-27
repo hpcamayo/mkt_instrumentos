@@ -37,9 +37,10 @@ type Place = { url: string; id: string; pages: number; at: number };
 
 export type FeedPage = { listings: DescubrirItem[]; total: number | null };
 
-async function fetchFeedPage(filters: ListingFilters, since: string | null, page: number): Promise<FeedPage> {
+// Null when the route fails; a fetch that fails offline throws, and the feed treats both the same.
+async function fetchFeedPage(filters: ListingFilters, since: string | null, page: number): Promise<FeedPage | null> {
   const response = await fetch(feedPageUrl({ filters, since, page }));
-  if (!response.ok) throw new Error("Descubrir page unavailable");
+  if (!response.ok) return null;
   const body = (await response.json()) as { listings?: unknown; total?: unknown };
   return { listings: Array.isArray(body.listings) ? (body.listings as DescubrirItem[]) : [], total: typeof body.total === "number" ? body.total : null };
 }
@@ -125,10 +126,14 @@ export function DescubrirFeed({ mode, filters, title, exit, today, now, since: i
       let from = since;
       let result = await fetchFeedPage(filters, from, page);
       // A quiet week: "Lo nuevo" reaches back 30 days, as the server's first screens do.
-      if (page === 1 && mode === "nuevo" && from === windowStart(today, NEW_WINDOW_DAYS) && result.total !== null && result.total < SPARSE_MINIMUM) {
+      if (result && page === 1 && mode === "nuevo" && from === windowStart(today, NEW_WINDOW_DAYS) && result.total !== null && result.total < SPARSE_MINIMUM) {
         from = windowStart(today, SPARSE_WINDOW_DAYS);
         result = await fetchFeedPage(filters, from, 1);
-        setSince(from);
+        if (result) setSince(from);
+      }
+      if (!result) {
+        setStatus("error");
+        return;
       }
       setItems((current) => merge(current, result.listings));
       setServerTotal((current) => result.total ?? current);

@@ -37,14 +37,16 @@ export async function openWhatsApp(listingId: string, source: EventSource) {
     });
     const body = response.ok ? ((await response.json()) as { url?: unknown }) : null;
     const url = typeof body?.url === "string" && body.url.startsWith("https://wa.me/") ? body.url : null;
-    if (!url) throw new Error("No contact link");
-    if (tab && !tab.closed) tab.location.replace(url);
-    else window.location.assign(url);
-    return true;
+    if (url) {
+      if (tab && !tab.closed) tab.location.replace(url);
+      else window.location.assign(url);
+      return true;
+    }
   } catch {
-    tab?.close();
-    return false;
+    // Offline: the same as a refused contact, below.
   }
+  tab?.close();
+  return false;
 }
 
 export function DescubrirContact({ listingId, slug, pricePen, source, className }: { listingId: string; slug: string; pricePen: number | null; source: EventSource; className?: string }) {

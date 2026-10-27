@@ -442,4 +442,8 @@ test("big-02: the entries, the frame, the crawler guard and the index rules", ()
   const { NON_INDEXABLE_PATH_PREFIXES } = require("@/lib/site");
   assert.ok(NON_INDEXABLE_PATH_PREFIXES.includes("/descubrir"));
   assert.match(source("middleware.ts"), /"\/descubrir",/);
+  // Nothing here throws a message of its own, so the A13 list of the site's messages needs no new entry.
+  for (const file of ["lib/descubrir.ts", "app/descubrir/page.tsx", "components/descubrir/descubrir-feed.tsx", "components/descubrir/descubrir-screen.tsx", "components/descubrir/descubrir-stop.tsx", "components/descubrir/descubrir-contact.tsx"]) {
+    assert.doesNotMatch(source(file), /throw new Error|throw Error/, file);
+  }
 });
