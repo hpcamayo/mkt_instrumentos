@@ -1,7 +1,8 @@
 -- Store floor demo data (docs/feature-ideas/store-floor.md), for the local prototype only. Run after demo-seed.sql:
 --   psql "$PGURL" -v ON_ERROR_STOP=1 -f scripts/prototype/store-floor-seed.sql
 -- Laria Demo Música gets a warranty for new gear, try-outs switched on, a "Por llegar" date on the Boss TU-3 (out of
--- stock) and two try-outs from comprador@laria.test: the soonest one confirmed, a later one waiting for the store.
+-- stock) and two try-outs from comprador@laria.test: the soonest one confirmed, a later one waiting for the store; and
+-- interest-free installments (buy-09).
 begin;
 
 do $floor$
@@ -44,5 +45,23 @@ begin
   perform public.respond_store_tryout((first_tryout ->> 'id')::uuid, 'confirm', null);
 end
 $floor$;
+
+-- buy-09 "Cuotas": up to 12 interest-free installments with BCP, BBVA or Interbank from S/ 500, approved by Admin. The
+-- demo seed already approved "Tarjeta con POS al recoger", so the store's listings from S/ 500 show them.
+do $cuotas$
+begin
+  if to_regprocedure('public.set_store_installments(integer,text[],integer,text,boolean)') is null then
+    raise notice 'Cuotas not present; skipping';
+    return;
+  end if;
+  perform set_config('request.jwt.claims', '{"sub":"d0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  perform public.set_store_installments(12, array['BCP', 'BBVA', 'Interbank'], 500, 'Las procesa Izipay en el POS.', true);
+  perform set_config('request.jwt.claims',
+    '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+  perform public.admin_review_store_installments('d1000000-0000-4000-8000-000000000001', 'approve',
+    'Izipay ofrece estas cuotas sin intereses', (select revision from public.store_installment_offers
+      where store_id = 'd1000000-0000-4000-8000-000000000001'));
+end
+$cuotas$;
 
 commit;

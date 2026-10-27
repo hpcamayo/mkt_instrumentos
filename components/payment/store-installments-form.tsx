@@ -16,7 +16,6 @@ import {
   INSTALLMENT_CHOICES,
   formatInstallmentAmount,
   installmentLine,
-  installmentOfferText,
   readInstallmentOffer,
 } from "@/lib/payment-methods";
 import { parseWholeSolPrice } from "@/lib/price";
@@ -111,7 +110,12 @@ export function StoreInstallments({ offer, cardMethod, canEdit }: {
             <h3 className="t-body font-semibold text-ink">Hasta {parsed.maxInstallments} cuotas sin intereses</h3>
             <StatusTag domain="payment" status={current.status} />
           </div>
-          <p className="t-ui text-ink-2">{installmentOfferText(parsed)}</p>
+          <dl className="grid gap-1 t-ui text-ink-2 sm:grid-cols-[max-content_1fr] sm:gap-x-4">
+            <dt className="font-semibold text-ink">Tarjetas</dt>
+            <dd>{parsed.cards.length ? parsed.cards.join(", ") : "Cualquier tarjeta de crédito"}</dd>
+            <dt className="font-semibold text-ink">Desde</dt>
+            <dd>{parsed.minPricePen ? formatInstallmentAmount(parsed.minPricePen) : "Todas tus publicaciones"}</dd>
+          </dl>
           <p className="t-meta">
             Ejemplo en una publicación de S/ 3,000: «{installmentLine(3000, parsed.maxInstallments)}».
           </p>
