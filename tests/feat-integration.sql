@@ -1,6 +1,6 @@
--- Feature ideas, integration (migrations 20261210120000..120200): "Mi equipo" serials (selling-tools) in the stolen-gear
--- matching (accounts batch, safe-02), both directions, and Admin's view of a gear match. Actual Auth claims; local/test
--- database only, every fixture rolls back.
+-- Feature ideas, integration (migrations 20261210120000..120200, 120600): "Mi equipo" serials (selling-tools) in the
+-- stolen-gear matching (accounts batch, safe-02), both directions, Admin's view of a gear match, and the e-mail rules of
+-- the branch's kinds. Actual Auth claims; local/test database only, every fixture rolls back.
 begin;
 
 create function pg_temp.check(p_condition boolean, p_message text) returns void language plpgsql as $$
@@ -111,6 +111,28 @@ do $$ begin
     and position('inventory_item_serials' in pg_get_functiondef('laria_private.match_new_stolen_report()'::regprocedure)) > 0
     and position('gear_items' in pg_get_functiondef('laria_private.match_new_stolen_report()'::regprocedure)) > 0,
     'match_new_stolen_report lost a scan');
+end $$;
+
+-- E-mail ages and priorities for the branch's kinds (20261210120600, launch audit A25); main's kinds unchanged.
+do $$ declare kind text; begin
+  perform pg_temp.check(laria_private.email_max_age('search_alert_daily') = interval '1 day'
+    and laria_private.email_max_age('listing_price_drop') = interval '2 days'
+    and laria_private.email_max_age('listing_review_reminder') = interval '3 days'
+    and laria_private.email_max_age('listing_approved') = interval '7 days'
+    and laria_private.email_priority('follow_weekly') = 2 and laria_private.email_priority('listing_purchase_check') = 1
+    and laria_private.email_priority('transaction_confirmed') = 0, 'main''s kinds keep their rules');
+  foreach kind in array array['account_new_device', 'listing_tryout_reminder', 'listing_tryout_confirmed',
+      'listing_tryout_declined', 'listing_tryout_cancelled', 'store_tryout_requested', 'store_tryout_cancelled'] loop
+    perform pg_temp.check(laria_private.email_max_age(kind) = interval '1 day', kind || ' ages out in a day');
+  end loop;
+  perform pg_temp.check(laria_private.email_max_age('listing_private_offer') = interval '2 days'
+    and laria_private.email_priority('listing_private_offer') = 2, 'a private offer goes like a price drop');
+  perform pg_temp.check(laria_private.email_max_age('gear_reminder_due') = interval '3 days'
+    and laria_private.email_priority('gear_reminder_due') = 1 and laria_private.email_priority('listing_tryout_reminder') = 1,
+    'reminders go after an account''s own business');
+  perform pg_temp.check(laria_private.email_max_age('stolen_report_match') = interval '7 days'
+    and laria_private.email_priority('stolen_report_match') = 0 and laria_private.email_priority('account_new_device') = 0,
+    'the rest is an account''s own business');
 end $$;
 
 rollback;

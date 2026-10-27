@@ -3,12 +3,12 @@ import "server-only";
 // Import photos, server side (design §8). The owner's own session asks for upload slots and arranges photos; only the
 // completion step uses the service role, to read the stored bytes and record the check, because an owner must not be
 // able to mark their own upload as valid.
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient, FunctionCall } from "@/lib/supabase/database";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { checkPhoto, PHOTO_MAX_BYTES, type PhotoCheck } from "./photo-check";
 import { ImportRequestError, importErrorFrom } from "./server";
 
-type Db = SupabaseClient;
+type Db = DatabaseClient;
 
 export const PHOTO_BUCKET = "store-import-photos";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -51,7 +51,7 @@ export type UploadSlot = { asset_id: string; bucket: string; path: string; name:
 
 export type PhotoFileRequest = { name: string; type: string; bytes: number; manifest_sku?: string | null; manifest_order?: number | null };
 
-async function call<T>(db: Db, fn: string, args: Record<string, unknown>): Promise<T> {
+async function call<T>(db: Db, ...[fn, args]: FunctionCall): Promise<T> {
   const { data, error } = await db.rpc(fn, args);
   if (error) throw importErrorFrom(error);
   return data as T;
@@ -97,7 +97,7 @@ const CHECK_BUDGET_MS = 30_000;
 // soon as it passes the limit, without being held in memory. The bucket's own 5 MB limit is the first bound; this
 // one does not rely on it.
 export async function completePhotoUploads(db: Db, ownerUserId: string, sessionId: string, assetIds: string[]) {
-  const admin = getSupabaseAdminClient() as unknown as Db | null;
+  const admin = getSupabaseAdminClient();
   if (!admin) throw new ImportRequestError("IMPORT_UNAVAILABLE", "No pudimos revisar las fotos. Intenta de nuevo.", 503);
   const ids = [...new Set(assetIds.filter((id) => UUID.test(id)))].slice(0, 25);
   if (!ids.length) throw new ImportRequestError("IMPORT_PHOTO_REQUEST_INVALID", "Solicitud de fotos inválida.", 400);
@@ -112,7 +112,7 @@ export async function completePhotoUploads(db: Db, ownerUserId: string, sessionI
   const waiting = ((data ?? []) as { id: string; object_path: string; status: string }[]).filter((asset) => asset.status === "awaiting_upload");
 
   const started = Date.now();
-  const results: Record<string, unknown>[] = [];
+  const results: (PhotoCheck & { asset_id: string })[] = [];
   for (const asset of waiting) {
     if (Date.now() - started > CHECK_BUDGET_MS) break;
     const check = await checkStoredPhoto(admin, asset.object_path);

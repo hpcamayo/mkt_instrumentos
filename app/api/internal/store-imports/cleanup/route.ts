@@ -8,23 +8,21 @@ export const maxDuration = 60;
 // Daily import retention (design §7.9): runs the database retention (expire idle sessions, drop staged rows 30 days
 // after close) and deletes the queued source files through the Storage API. CRON_SECRET-protected like the email
 // worker; it never applies anything to inventory. It also deletes import photos nothing uses (STORE-3a).
-// Not scheduled yet (no vercel.json before go-live): the scheduler
-// that calls the email worker calls this too.
+// Vercel Cron runs it daily at 08:15 UTC (vercel.json, launch audit A25).
 export async function GET(request: Request) {
   if (!isAuthorized(request)) return NextResponse.json({ message: "No autorizado." }, { status: 401 });
   const client = getSupabaseAdminClient();
   if (!client) return NextResponse.json({ message: "Configuración incompleta." }, { status: 503 });
-  const db = client as unknown as import("@supabase/supabase-js").SupabaseClient;
   let deleted = 0;
   try {
     for (let batch = 0; batch < 5; batch += 1) {
-      const { data, error } = await db.rpc("claim_store_import_file_deletions", { p_limit: 100 });
+      const { data, error } = await client.rpc("claim_store_import_file_deletions", { p_limit: 100 });
       if (error) throw new Error(error.message);
       const paths = ((data ?? []) as { bucket: string; path: string }[]).filter((row) => row.bucket === "store-imports").map((row) => row.path);
       if (!paths.length) break;
-      const { error: removeError } = await db.storage.from("store-imports").remove(paths);
+      const { error: removeError } = await client.storage.from("store-imports").remove(paths);
       if (removeError) throw new Error(removeError.message);
-      const { data: done, error: completeError } = await db.rpc("complete_store_import_file_deletions", { p_paths: paths });
+      const { data: done, error: completeError } = await client.rpc("complete_store_import_file_deletions", { p_paths: paths });
       if (completeError) throw new Error(completeError.message);
       deleted += Number(done ?? 0);
       if (paths.length < 100) break;
@@ -32,13 +30,13 @@ export async function GET(request: Request) {
     // STORE-3a: rejected photos and photos of closed imports that no listing uses (design §8.5).
     let photos = 0;
     for (let batch = 0; batch < 10; batch += 1) {
-      const { data, error } = await db.rpc("claim_store_import_photo_deletions", { p_limit: 100 });
+      const { data, error } = await client.rpc("claim_store_import_photo_deletions", { p_limit: 100 });
       if (error) throw new Error(error.message);
       const paths = ((data ?? []) as { bucket: string; path: string }[]).filter((row) => row.bucket === "store-import-photos").map((row) => row.path);
       if (!paths.length) break;
-      const { error: removeError } = await db.storage.from("store-import-photos").remove(paths);
+      const { error: removeError } = await client.storage.from("store-import-photos").remove(paths);
       if (removeError) throw new Error(removeError.message);
-      const { data: done, error: completeError } = await db.rpc("complete_store_import_photo_deletions", { p_paths: paths });
+      const { data: done, error: completeError } = await client.rpc("complete_store_import_photo_deletions", { p_paths: paths });
       if (completeError) throw new Error(completeError.message);
       photos += Number(done ?? 0);
       if (paths.length < 100) break;

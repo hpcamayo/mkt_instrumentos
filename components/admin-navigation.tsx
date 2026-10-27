@@ -21,6 +21,7 @@ const links = [
   { href: "/admin/reportes", label: "Reportes" },
   { href: "/admin/resenas", label: "Reseñas" },
   { href: "/admin/transacciones", label: "Transacciones" },
+  { href: "/admin/errores", label: "Errores" },
   // deal-trust batch: review photos, Puntos seguros, counter purchases.
   { href: "/admin/confianza", label: "Confianza" },
   { href: "/admin/legacy", label: "Publicaciones históricas" },

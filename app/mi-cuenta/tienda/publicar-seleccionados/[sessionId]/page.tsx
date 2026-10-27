@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { PublishSelection } from "@/components/store-import/publish-selection";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -17,7 +16,7 @@ export default async function PublishSelectionPage({ params }: { params: Promise
   if (profile?.account_type !== "store_owner") redirect("/mi-cuenta/publicaciones");
   if (!store) redirect("/mi-cuenta/tienda");
   if (!isImportSessionId(sessionId) || !supabase) notFound();
-  const session = await readImportSession(supabase as unknown as SupabaseClient, sessionId).catch(() => null);
+  const session = await readImportSession(supabase, sessionId).catch(() => null);
   if (!session || session.store_id !== store.id) notFound();
   const count = session.row_count ?? 0;
   return (

@@ -3,7 +3,6 @@ import { NOINDEX_ROBOTS } from "@/lib/site";
 import { AccountNavigation } from "@/components/account-navigation";
 import { getAccountContext } from "@/lib/account-context";
 import { assistedCommerceEnabled } from "@/lib/payment-methods";
-import { inventoryDb } from "@/lib/store-inventory";
 
 // Private account/Admin surfaces are never indexable.
 export const metadata: Metadata = { robots: NOINDEX_ROBOTS };
@@ -18,7 +17,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
         .select("id", { count: "exact", head: true })
         .is("read_at", null), supabase.rpc("get_pending_buyer_confirmation_count"),
       // Effortless Laria, inventory batch (stock-04): the count on "Solicitudes".
-      payments ? inventoryDb(supabase).rpc("get_store_purchase_request_count") : Promise.resolve({ data: 0 })])
+      payments ? supabase.rpc("get_store_purchase_request_count") : Promise.resolve({ data: 0 })])
     : [{ count: 0 }, { data: 0 }, { data: 0 }];
 
   return (

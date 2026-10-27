@@ -1,0 +1,56 @@
+# Launch audit A13: an outside check of laria.audio every 10 minutes, from GitHub's servers. A run fails when the home
+# page, the catalog, the search suggestions or /api/health (the database answers, and fewer than 20 server errors
+# arrived in the last 10 to 20 minutes) don't answer as expected twice in a row, 20 seconds apart. GitHub e-mails a
+# failed run to whoever last changed this schedule (their GitHub settings, Notifications > Actions); the errors
+# themselves are listed in Admin > Errores. GitHub may start a scheduled run a few minutes late, and pauses the schedule
+# after 60 days without activity in the repository (Actions > Uptime > Enable workflow). The log is public, so it
+# prints only paths, status codes, times and /api/health's one-word reason.
+name: Uptime
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uptime
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE: https://laria.audio
+    steps:
+      - name: Check laria.audio
+        run: |
+          failed=0
+          check() {
+            path="$1"
+            expected="$2"
+            for attempt in 1 2; do
+              rm -f body.txt
+              result=$(curl --silent --show-error --location --max-redirs 3 --max-time 15 \
+                --user-agent "LariaUptime/1.0 (+https://github.com/${GITHUB_REPOSITORY})" \
+                --output body.txt --write-out '%{http_code} %{time_total}s' "$SITE$path") || result="000 (no answer)"
+              status="${result%% *}"
+              if [ "$status" = "200" ] && grep -qF -- "$expected" body.txt && ! grep -qF "Algo salió mal" body.txt; then
+                echo "ok     $path  $result"
+                return 0
+              fi
+              reason=""
+              if [ "$path" = "/api/health" ] && [ -f body.txt ]; then reason=" $(head -c 120 body.txt)"; fi
+              echo "failed $path  $result$reason"
+              if [ "$attempt" = 1 ]; then sleep 20; fi
+            done
+            echo "::error title=Laria no responde::$path ($result)$reason"
+            return 1
+          }
+          check "/" "</html>" || failed=1
+          check "/listados" "</html>" || failed=1
+          check "/api/catalog/suggest?q=guitarra" "[" || failed=1
+          check "/api/health" '"status":"ok"' || failed=1
+          exit "$failed"

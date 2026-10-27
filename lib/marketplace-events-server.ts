@@ -87,6 +87,52 @@ export async function recordMarketplaceEvent(event: {
   }
 }
 
+export type MarketplaceEventReceipt = { eventId: string; recorded: boolean; view_count?: number | null };
+
+// Launch audit A33: a visitor's batch from /api/events (up to 20 events) in one database call and one transaction
+// (public.record_marketplace_events), with the same rules as recordMarketplaceEvent. One receipt per event, in order, or
+// null when the batch wasn't recorded: the browser then sends it once more, with the same event ids.
+export async function recordMarketplaceEvents(batch: {
+  sessionId: string; actorId: string | null; requestId?: string;
+  events: { type: string; eventId: string; listingId?: string; storeId?: string; source?: EventSource; metadata?: Json }[];
+}): Promise<MarketplaceEventReceipt[] | null> {
+  const client = getSupabaseAdminClient();
+  if (!client) {
+    logMarketplaceEventFailure({ requestId: batch.requestId, type: "event_batch", category: "configuration", code: "admin_client_unavailable" });
+    return null;
+  }
+  try {
+    const { data, error } = await client.rpc("record_marketplace_events", {
+      p_session_id: batch.sessionId, p_actor_user_id: batch.actorId ?? undefined,
+      p_events: batch.events.map((event) => ({
+        event_id: event.eventId, event_type: event.type, listing_id: event.listingId, store_id: event.storeId,
+        source: event.source ?? "other", metadata: event.metadata ?? {},
+      })),
+    }).abortSignal(AbortSignal.timeout(3000));
+    if (error) {
+      logMarketplaceEventFailure({ requestId: batch.requestId, type: "event_batch", category: "database_rpc", code: error.code ?? "rpc_error" });
+      return null;
+    }
+    // The receipts come back in the order sent, each with its event's id.
+    const rows = (Array.isArray(data) ? data : []) as { event_id?: unknown; recorded?: unknown; view_count?: number | null }[];
+    if (rows.length !== batch.events.length || rows.some((row, index) => row?.event_id !== batch.events[index].eventId || typeof row.recorded !== "boolean")) {
+      logMarketplaceEventFailure({ requestId: batch.requestId, type: "event_batch", category: "database_rpc", code: "receipt_mismatch" });
+      return null;
+    }
+    return rows.map((row, index) => ({
+      eventId: batch.events[index].eventId, recorded: row.recorded as boolean, ...("view_count" in row ? { view_count: row.view_count } : {}),
+    }));
+  } catch (error) {
+    logMarketplaceEventFailure({
+      requestId: batch.requestId,
+      type: "event_batch",
+      category: error instanceof DOMException && error.name === "TimeoutError" ? "timeout" : "transport",
+      code: error instanceof Error ? error.name : "unknown_error",
+    });
+    return null;
+  }
+}
+
 export function logMarketplaceEventFailure({ requestId, type, category, code }: { requestId?: string; type: string; category: string; code: string }) {
   console.error("marketplace_event_failure", JSON.stringify({
     request_id: requestId ?? "unavailable",

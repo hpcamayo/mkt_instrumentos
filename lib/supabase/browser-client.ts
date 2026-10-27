@@ -1,6 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import { parseCookieHeader, REMEMBER_COOKIE, remembersSession, serializeCookie, withRememberChoice } from "@/lib/auth/remember";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 
 let browserClient: ReturnType<typeof createBrowserClient<Database>> | null =
   null;

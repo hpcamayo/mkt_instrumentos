@@ -194,9 +194,13 @@ function assertLocalTargetMatches(appBase, supabaseUrl) {
     assert.match(storeHtml, /Mi tienda/);
     assert.match(storeHtml, /Inventario/);
     assert.match(storeHtml, /En revisión/);
-    assert.match(storeHtml, /Tus publicaciones nuevas pasan por revisión antes de aparecer/);
-    assert.match(storeHtml, /La tienda y sus publicaciones siguen ocultas al público hasta que se apruebe la solicitud/);
+    // Since the stores batch's account home, its checklist says the store page waits for the approval, and Mi tienda
+    // says how new listings are reviewed.
+    assert.match(storeHtml, /Se publica cuando aprobamos la solicitud/);
     assert.doesNotMatch(storeHtml, /Publicar instrumento/);
+    const storePage = await fetch(`${base}/mi-cuenta/tienda`, { headers: { Cookie: storeCookie } });
+    assert.equal(storePage.status, 200);
+    assert.match(await storePage.text(), /Tus publicaciones nuevas pasan por revisión antes de aparecer/);
     const staleRegistration = await fetch(`${base}/registrar-tienda`, { headers: { Cookie: storeCookie }, redirect: 'manual' });
     assert.equal(staleRegistration.status, 307);
     assert.equal(new URL(staleRegistration.headers.get('location'), base).pathname, '/mi-cuenta/tienda');

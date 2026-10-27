@@ -1,7 +1,7 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/supabase/database";
 import { sameOriginEventRequest } from "@/lib/marketplace-events-server";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import { ImportRequestError } from "./server";
@@ -27,7 +27,7 @@ export function importErrorResponse(error: unknown) {
 }
 
 // The signed-in owner's client. Writes also require a same-origin request (the cookie session is the credential).
-export async function importClient(request: Request, write: boolean): Promise<{ db: SupabaseClient } | { response: NextResponse }> {
+export async function importClient(request: Request, write: boolean): Promise<{ db: DatabaseClient } | { response: NextResponse }> {
   if (write && !sameOriginEventRequest(request)) {
     return { response: importJson({ code: "IMPORT_FORBIDDEN", message: "Solicitud inválida." }, 403) };
   }
@@ -36,5 +36,5 @@ export async function importClient(request: Request, write: boolean): Promise<{ 
   if (!client || !data?.user) {
     return { response: importJson({ code: "IMPORT_AUTH_REQUIRED", message: "Ingresa con tu cuenta de tienda." }, 401) };
   }
-  return { db: client as unknown as SupabaseClient };
+  return { db: client };
 }

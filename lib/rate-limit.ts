@@ -17,6 +17,9 @@ export const RATE_LIMITS = {
   // The sign-up forms check the address before creating the account.
   checkEmail: { bucket: "auth.check_email", limit: 20, windowSeconds: 600 },
   resendConfirmation: { bucket: "auth.resend", limit: 6, windowSeconds: 600 },
+  // A13: browser error reports (app/api/client-errors). A page sends at most five; a counter that can't count lets the
+  // report through, to the database's own cap on kinds.
+  clientErrors: { bucket: "app.client_errors", limit: 30, windowSeconds: 600 },
 } satisfies Record<string, RateLimitRule>;
 
 // Vercel sets both headers to the visitor's address and overwrites whatever a client sends.

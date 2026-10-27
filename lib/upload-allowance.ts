@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/supabase/database";
 
 // Launch audit A18: an account may add only so many files to each upload bucket in 24 hours
 // (laria_private.upload_daily_limit, supabase/migrations/20261114120000_launch_audit_privacy.sql). Storage refuses the
@@ -22,9 +22,9 @@ export function uploadLimitMessage(bucket: string, limit: number, nextAt: string
 
 // The limit as an error when the caller has used every place in the bucket; null when places are left or the database
 // can't say (signed out, offline), so the form keeps its own message.
-export async function uploadLimitReached(client: unknown, bucket: string) {
+export async function uploadLimitReached(client: Pick<DatabaseClient, "rpc">, bucket: string) {
   try {
-    const { data, error } = await (client as SupabaseClient).rpc("my_upload_allowance", { p_bucket: bucket });
+    const { data, error } = await client.rpc("my_upload_allowance", { p_bucket: bucket });
     if (error || !data || typeof data !== "object") return null;
     const { limit, used, next_at: nextAt } = data as { limit?: unknown; used?: unknown; next_at?: unknown };
     if (typeof limit !== "number" || typeof used !== "number" || used < limit) return null;

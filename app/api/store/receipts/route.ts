@@ -3,8 +3,9 @@ import { NUBEFACT_TOKEN, NUBEFACT_URL, canRetry, type ReceiptRecord } from "@/li
 import { einvoiceAvailable, einvoiceKey, sealToken, tokenHint } from "@/lib/einvoice/secret";
 import { sendReceipt, sendVoid, storeCredentials, testConnection } from "@/lib/einvoice/server";
 import { receiptError } from "@/lib/einvoice/errors";
-import { inventoryDb } from "@/lib/store-inventory";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import type { FunctionCall } from "@/lib/supabase/database";
+import type { Json } from "@/lib/supabase/database.types";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 // Feature ideas, store-locations batch, run-03 "Boleta electrónica". The owner's session does everything the owner
@@ -18,8 +19,9 @@ function failure(message: string, status = 400, code = "INVALID") {
   return NextResponse.json({ code, message }, { status });
 }
 
+// A request's JSON object (or null).
 function object(value: unknown) {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as { [key: string]: Json | undefined }) : null;
 }
 
 export async function POST(request: Request) {
@@ -31,17 +33,18 @@ export async function POST(request: Request) {
   if (!supabase) return failure("No se pudo validar tu cuenta.", 503, "UNAVAILABLE");
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return failure("Ingresa a tu cuenta.", 401, "AUTH_REQUIRED");
-  const db = inventoryDb(supabase);
+  const db = supabase;
   const admin = getSupabaseAdminClient();
 
-  async function rpc<T>(fn: string, args: Record<string, unknown>) {
+  function rpcFailure(fn: string, error: { code: string; message: string }) {
+    const known = receiptError(error.message);
+    if (known.code === "UNKNOWN") console.error("receipt action failed", fn, error.code, error.message);
+    return NextResponse.json(known, { status: known.code === "UNKNOWN" ? 500 : 400 });
+  }
+
+  async function rpc<T>(...[fn, args]: FunctionCall) {
     const { data, error } = await db.rpc(fn, args);
-    if (error) {
-      const known = receiptError(error.message);
-      if (known.code === "UNKNOWN") console.error("receipt action failed", fn, error.code, error.message);
-      return { error: NextResponse.json(known, { status: known.code === "UNKNOWN" ? 500 : 400 }) };
-    }
-    return { data: data as T };
+    return error ? { error: rpcFailure(fn, error) } : { data: data as T };
   }
 
   async function ownStoreId() {
@@ -89,7 +92,7 @@ export async function POST(request: Request) {
       if (!fields) return failure("Solicitud inválida.");
       const storeId = await ownStoreId();
       if (!storeId) return failure("Necesitas una tienda.", 404, "STORE_REQUIRED");
-      const next: Record<string, unknown> = {};
+      const next: { [key: string]: Json | undefined } = {};
       for (const name of ["boleta_series", "factura_series", "igv_affectation"] as const) {
         if (typeof fields[name] === "string") next[name] = (fields[name] as string).trim().slice(0, 20);
       }
@@ -133,9 +136,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, data: updated.data });
     }
     case "disconnect": {
-      const result = await rpc<Record<string, unknown>>("disconnect_einvoice", {});
-      if (result.error) return result.error;
-      return NextResponse.json({ ok: true, data: result.data });
+      const { data, error } = await db.rpc("disconnect_einvoice");
+      if (error) return rpcFailure("disconnect_einvoice", error);
+      return NextResponse.json({ ok: true, data });
     }
     default:
       return failure("Solicitud inválida.");

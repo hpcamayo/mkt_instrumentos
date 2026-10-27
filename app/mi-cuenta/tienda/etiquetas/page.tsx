@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 import { formatPrice } from "@/lib/price";
 import { absoluteUrl } from "@/lib/site";
-import { UUID, getInventorySummary, inventoryDb, parseInventoryFilters } from "@/lib/store-inventory";
+import { UUID, getInventorySummary, parseInventoryFilters } from "@/lib/store-inventory";
 
 export const metadata = { title: "Etiquetas para la tienda" };
 
@@ -42,7 +42,7 @@ export default async function StoreLabelsPage({ searchParams }: { searchParams?:
   let truncated = false;
   if (!ids.length && typeof params.lista === "string" && params.lista.length <= 1200 && summary?.inventory_enabled) {
     const { filters } = parseInventoryFilters(Object.fromEntries(new URLSearchParams(params.lista)));
-    const { data } = await inventoryDb(supabase).rpc("get_inventory_item_ids", {
+    const { data } = await supabase.rpc("get_inventory_item_ids", {
       p_filters: { q: filters.q, stock: filters.stock, publication: filters.publication, category: filters.category, sort: filters.sort, price: filters.price },
     });
     const all = ((data as { ids?: string[] } | null)?.ids ?? []).filter((id) => UUID.test(id));
@@ -81,8 +81,7 @@ export default async function StoreLabelsPage({ searchParams }: { searchParams?:
 }
 
 async function loadLabelItems(supabase: NonNullable<Awaited<ReturnType<typeof getAccountContext>>["supabase"]>, storeId: string, ids: string[]): Promise<LabelItem[]> {
-  const db = inventoryDb(supabase);
-  const { data } = await db
+  const { data } = await supabase
     .from("store_inventory_items")
     .select("id,merchant_sku,product_name,variant_label,unit_price_pen,quantity_available,inventory_status,listing_id")
     .eq("store_id", storeId)
@@ -91,7 +90,7 @@ async function loadLabelItems(supabase: NonNullable<Awaited<ReturnType<typeof ge
   const rows = (data ?? []) as ItemRow[];
   const listingIds = rows.map((row) => row.listing_id).filter((id): id is string => Boolean(id));
   const { data: listings } = listingIds.length
-    ? await db.from("listings").select("id,slug,status,price_pen,stock_state").in("id", listingIds)
+    ? await supabase.from("listings").select("id,slug,status,price_pen,stock_state").in("id", listingIds)
     : { data: [] };
   const byId = new Map(((listings ?? []) as { id: string; slug: string; status: string; price_pen: number | null }[]).map((listing) => [listing.id, listing]));
   const order = new Map(ids.map((id, index) => [id, index]));

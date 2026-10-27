@@ -23,17 +23,16 @@ export async function GET(request: Request) {
   if (!isAuthorized(request)) return NextResponse.json({ message: "No autorizado." }, { status: 401, headers: NO_STORE });
   const client = getSupabaseAdminClient();
   if (!client) return NextResponse.json({ message: "Configuración incompleta." }, { status: 503, headers: NO_STORE });
-  const db = client as unknown as import("@supabase/supabase-js").SupabaseClient;
 
   // A deploy or a rollback serves pages from its build or its own past, so a new deployment counts as a change.
   const deployment = currentDeployment();
-  const claim = await db.rpc("claim_public_page_changes", { p_deployment: deployment });
+  const claim = await client.rpc("claim_public_page_changes", { p_deployment: deployment });
   if (claim.error) return failure("claim", claim.error.message);
   if (!claim.data) return NextResponse.json({ refreshed: false }, { headers: NO_STORE });
 
   if (!deployment) console.warn("public_pages_no_deployment", "VERCEL_DEPLOYMENT_ID and VERCEL_URL are missing");
   const nonce = deployment ? await readProbeNonce(deployment) : null;
-  const report = await db.rpc("complete_public_page_changes", { p_claim: claim.data, p_nonce: nonce, p_deployment: deployment });
+  const report = await client.rpc("complete_public_page_changes", { p_claim: claim.data, p_nonce: nonce, p_deployment: deployment });
   const counts = report.error ? null : readCounts(report.data);
   // Nothing left waiting needs no clear; after a failed report the changes still wait, so the pages are cleared anyway.
   const cleared = counts?.waiting === 0 || dropCachedListingPages();

@@ -18,7 +18,7 @@ import { recordSignInDevice } from "@/lib/auth/devices";
 import { getAssurance, twoStepPath } from "@/lib/auth/mfa";
 import { rememberMarker, remembersSession, withRememberChoice } from "@/lib/auth/remember";
 import { RATE_LIMITS, allowRequest } from "@/lib/rate-limit";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 import { visitorAuthKey } from "@/lib/supabase/visitor-auth";
 
 export async function GET(request: NextRequest) {

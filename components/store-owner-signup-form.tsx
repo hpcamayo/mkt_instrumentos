@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { LocationFields } from "@/components/location-fields";
 import { profileFieldErrors } from "@/lib/form-validation";
-import { checkEmailAvailability, signUpFoundExistingAccount } from "@/lib/auth/email-check";
+import { checkEmailAvailability, signUpErrorFoundExistingAccount, signUpFoundExistingAccount } from "@/lib/auth/email-check";
 import { SIGN_UP_PAUSED, TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
 import {
@@ -114,12 +114,15 @@ export function StoreOwnerSignupForm() {
       setMessage(SIGN_UP_PAUSED);
       return;
     }
-    if (error) {
+    const existingAccount = error
+      ? signUpErrorFoundExistingAccount(error)
+      : signUpFoundExistingAccount(data.user, STORE_OWNER_ACCOUNT_TYPE);
+    if (error && !existingAccount) {
       setState("error");
       setMessage("No se pudo crear la cuenta. Usa un correo exclusivo para la Tienda e intenta nuevamente.");
       return;
     }
-    if (signUpFoundExistingAccount(data.user, STORE_OWNER_ACCOUNT_TYPE)) {
+    if (existingAccount) {
       setState("error");
       setMessage("Ese correo ya está registrado. Usa un correo exclusivo para la Tienda.");
       validation.setFieldError("email", "Ese correo ya está registrado. Usa un correo exclusivo para la Tienda.");

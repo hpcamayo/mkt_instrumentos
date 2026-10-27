@@ -240,7 +240,7 @@ const loadOwnedStore = cache(async (slug: string) => {
     .eq("owner_user_id", viewerId)
     .order("sort_order", { foreignTable: "store_photos", ascending: true })
     .maybeSingle<StoreRow>();
-  return data ? { store: data, supabase: supabase as unknown as PublicSupabaseClient } : null;
+  return data ? { store: data, supabase } : null;
 });
 
 // Whether the signed-in visitor owns this active store, with their own session (owners may filter on owner_user_id).

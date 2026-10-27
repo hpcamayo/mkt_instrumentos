@@ -7,7 +7,7 @@ import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   upsertBasicSellerProfile,
 } from "@/lib/auth/profile";
-import { checkEmailAvailability, signUpFoundExistingAccount } from "@/lib/auth/email-check";
+import { checkEmailAvailability, signUpErrorFoundExistingAccount, signUpFoundExistingAccount } from "@/lib/auth/email-check";
 import { SIGN_UP_PAUSED, TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
@@ -143,13 +143,16 @@ export function SellerSignupForm() {
       },
     });
 
-    if (error) {
+    const existingAccount = error
+      ? signUpErrorFoundExistingAccount(error)
+      : signUpFoundExistingAccount(data.user, INDIVIDUAL_SELLER_ACCOUNT_TYPE);
+    if (error && !existingAccount) {
       setState("error");
       setMessage(isAuthRateLimited(error) ? SIGN_UP_PAUSED : "No se pudo crear la cuenta. Revisa los datos e intenta nuevamente.");
       return;
     }
 
-    if (signUpFoundExistingAccount(data.user, INDIVIDUAL_SELLER_ACCOUNT_TYPE)) {
+    if (existingAccount) {
       validation.setFieldError("email", "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.");
       setState("duplicate");
       setMessage(

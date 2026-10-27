@@ -149,7 +149,7 @@ test("L12: related sections show four cards in the catalog grid and are left out
 });
 
 test("L3: the gallery has a button per photo, six thumbnails (four on phones), +N tiles and eager first two photos", () => {
-  const { ListingGallery } = load("components/listing/listing-gallery.tsx", { ...mocks, "@/components/listing/lightbox": { Lightbox: () => null } });
+  const { ListingGallery } = load("components/listing/listing-gallery.tsx", { ...mocks, "@/components/listing/listing-lazy": { Lightbox: () => null, preloadLightbox() {} } });
   const photos = Array.from({ length: 8 }, (_, n) => ({ id: `p${n}`, image_url: `/p${n}.jpg`, alt_text: null, sort_order: n }));
   const markup = html(React.createElement(ListingGallery, { photos, title: "Strat" }));
   assert.equal((markup.match(/aria-label="Ampliar foto \d de 8"/g) ?? []).length, 8);

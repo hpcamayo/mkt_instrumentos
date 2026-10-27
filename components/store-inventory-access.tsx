@@ -9,14 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import type { StoreAdminRequest } from "@/lib/store-allowance";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
-type Rpc = { rpc: (fn: string, args: object) => Promise<{ data: unknown; error: { message?: string } | null }> };
-
 const dateFormat = new Intl.DateTimeFormat("es-PE", { dateStyle: "long", timeZone: "America/Lima" });
 
 // stock-21 (Effortless Laria, stores): Admin turns inventory on store by store; a store without it can raise its hand
 // here instead of finding a closed door. The request only reaches Admin; nothing changes until Admin turns it on.
 export function StoreInventoryAccess({ openRequest }: { openRequest: StoreAdminRequest | null }) {
-  const supabase = useMemo(() => getSupabaseBrowserClient() as unknown as Rpc | null, []);
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
   const [asking, setAsking] = useState(false);
   const [message, setMessage] = useState("");

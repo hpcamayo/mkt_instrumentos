@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
-import { Lightbox } from "@/components/listing/lightbox";
+import { Lightbox, preloadLightbox } from "@/components/listing/listing-lazy";
 import { IconButton } from "@/components/ui/button";
 import type { ListingPhotoData } from "@/lib/listings";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ export const THUMB_SIZES = "(max-width: 1023px) 56px, 72px";
 // arrows move it. Each frame is a button that opens the lightbox. The first photo is the page's LCP: eager with high
 // priority; the second is eager too (Effortless list-01) so the first swipe or arrow shows it at once; the rest lazy.
 // Thumbnails (PHOTO-017) choose the photo; past six (four on phones) a "+N" tile opens the lightbox at the next photo.
+// The lightbox's code loads when a pointer or the focus first reaches the gallery (launch audit A29).
 export function ListingGallery({ photos, title }: { photos: ListingPhotoData[]; title: string }) {
   const [active, setActive] = useState(0);
   const [lightboxAt, setLightboxAt] = useState<number | null>(null);
@@ -67,7 +68,7 @@ export function ListingGallery({ photos, title }: { photos: ListingPhotoData[]; 
   const thumbs = photos.slice(0, THUMBS_WIDE);
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-3" onPointerEnter={preloadLightbox} onFocus={preloadLightbox}>
       <div className="relative overflow-hidden rounded-panel border border-subtle bg-surface">
         <div
           ref={trackRef}

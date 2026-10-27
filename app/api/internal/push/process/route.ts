@@ -1,11 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { processPushBatch, type PushQueueClient } from "@/lib/push/push-worker";
+import { processPushBatch } from "@/lib/push/push-worker";
 import { createPushSender, type PushSender } from "@/lib/push/web-push";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
 // big-12 (docs/ux-effortless/speed.md): sends pending push notices. CRON_SECRET-protected like the e-mail worker
-// and, like it, started by hand until a scheduler runs it every few minutes after launch.
+// and, like it, run by Vercel Cron every 5 minutes (vercel.json, launch audit A25).
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   try {
     const totals = { quiet: false, people: 0, sent: 0, retried: 0, failed: 0, skipped: 0 };
     for (let index = 0; index < 4; index += 1) {
-      const batch = await processPushBatch({ client: client as unknown as PushQueueClient, sender });
+      const batch = await processPushBatch({ client, sender });
       totals.quiet = batch.quiet;
       totals.people += batch.people;
       totals.sent += batch.sent;

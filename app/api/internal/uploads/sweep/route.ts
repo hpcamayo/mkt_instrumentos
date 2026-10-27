@@ -22,20 +22,19 @@ export async function GET(request: Request) {
   if (!isAuthorized(request)) return NextResponse.json({ message: "No autorizado." }, { status: 401, headers: NO_STORE });
   const client = getSupabaseAdminClient();
   if (!client) return NextResponse.json({ message: "Configuración incompleta." }, { status: 503, headers: NO_STORE });
-  const db = client as unknown as import("@supabase/supabase-js").SupabaseClient;
 
   const stopAt = Date.now() + TIME_BUDGET_MS;
   let removed = 0;
   for (let batch = 0; batch < MAX_BATCHES && Date.now() < stopAt; batch += 1) {
-    const claim = await db.rpc("claim_upload_removals", { p_limit: BATCH });
+    const claim = await client.rpc("claim_upload_removals", { p_limit: BATCH });
     if (claim.error) return failure("claim", claim.error.message, removed);
     const rows = (claim.data ?? []) as Removal[];
     if (!rows.length) break;
     for (const [bucket, paths] of byBucket(rows)) {
       // Storage leaves out a file that is gone already, so a batch removed before a failed report removes cleanly again.
-      const { error: removeError } = await db.storage.from(bucket).remove(paths);
+      const { error: removeError } = await client.storage.from(bucket).remove(paths);
       if (removeError) return failure("remove", removeError.message, removed, bucket);
-      const done = await db.rpc("complete_upload_removals", { p_bucket: bucket, p_paths: paths });
+      const done = await client.rpc("complete_upload_removals", { p_bucket: bucket, p_paths: paths });
       if (done.error) return failure("complete", done.error.message, removed, bucket);
       removed += Number(done.data ?? 0);
     }

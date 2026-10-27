@@ -1,10 +1,20 @@
 import { UUID } from "@/lib/store-inventory";
+import type { Database, InventoryActionFunction } from "@/lib/supabase/database";
+import type { Json } from "@/lib/supabase/database.types";
 
 // Maps an inventory action posted by the Inventario screens to its database function and arguments
 // (app/api/store/inventory/route.ts). It only shapes arguments; every rule is enforced by the function itself.
 
-export type InventoryActionBody = Record<string, unknown>;
-export type InventoryCall = { fn: string; args: Record<string, unknown> };
+// The request's JSON body.
+export type InventoryActionBody = { [key: string]: Json | undefined };
+
+type Functions = Database["public"]["Functions"];
+// One of the Inventario functions with its arguments, any of which can be null (lib/supabase/database.ts).
+export type InventoryCall = {
+  [Name in InventoryActionFunction]: [Functions[Name]["Args"]] extends [never]
+    ? { fn: Name; args?: undefined }
+    : { fn: Name; args: Functions[Name]["Args"] };
+}[InventoryActionFunction];
 
 const KEY = /^[A-Za-z0-9:_-]{8,160}$/;
 // The database's bulk limit (laria_private.inventory_bulk_limit, stock-14).
@@ -33,12 +43,12 @@ function key(value: unknown) {
   return typeof value === "string" && KEY.test(value) ? value : null;
 }
 
-function object(value: unknown) {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+function object(value: Json | undefined) {
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
 
 // Inventario filters as the screens send them: known keys, short strings. The database validates the values.
-function filters(value: unknown) {
+function filters(value: Json | undefined) {
   const entries = object(value);
   if (!entries) return null;
   const clean: Record<string, string> = {};
@@ -90,7 +100,7 @@ export function inventoryCall(body: InventoryActionBody): InventoryCall | null {
         : null;
     case "threshold_bulk":
       return uuids(body.item_ids) && key(body.key) && (body.threshold === null || integer(body.threshold) !== null)
-        ? { fn: "set_inventory_threshold_bulk", args: { p_item_ids: uuids(body.item_ids), p_threshold: body.threshold, p_batch_key: key(body.key) } }
+        ? { fn: "set_inventory_threshold_bulk", args: { p_item_ids: uuids(body.item_ids), p_threshold: integer(body.threshold), p_batch_key: key(body.key) } }
         : null;
     case "hide_bulk":
       return uuids(body.item_ids) && key(body.key)
@@ -159,7 +169,7 @@ export function inventoryCall(body: InventoryActionBody): InventoryCall | null {
     case "view_delete":
       return uuid(body.view_id) ? { fn: "delete_inventory_view", args: { p_view_id: uuid(body.view_id) } } : null;
     case "counter_index":
-      return { fn: "get_counter_index", args: {} };
+      return { fn: "get_counter_index" };
     case "request_mark":
       return uuid(body.event_id) && (body.status === null || body.status === "answered" || body.status === "not_sold")
         ? { fn: "mark_store_purchase_request", args: { p_event_id: uuid(body.event_id), p_status: body.status } }

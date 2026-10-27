@@ -4,7 +4,7 @@ import { Counter } from "@/components/inventory/counter";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
-import { getInventorySummary, inventoryDb } from "@/lib/store-inventory";
+import { getInventorySummary } from "@/lib/store-inventory";
 import { einvoiceAvailable } from "@/lib/einvoice/secret";
 import { getLocationStock, getOwnLocations } from "@/lib/store-locations-server";
 
@@ -19,7 +19,7 @@ export default async function CounterPage() {
   const summary = await getInventorySummary(supabase);
   if (!summary?.inventory_enabled) redirect("/mi-cuenta/tienda/inventario");
   // store-locations: the location each sale comes from (run-02) and the comprobante (run-03), when connected.
-  const [locations, einvoice] = await Promise.all([getOwnLocations(supabase), inventoryDb(supabase).rpc("get_einvoice_settings")]);
+  const [locations, einvoice] = await Promise.all([getOwnLocations(supabase), supabase.rpc("get_einvoice_settings")]);
   const stock = locations.length ? (await getLocationStock(supabase, store.id, null)) ?? [] : [];
   const locationStock: Record<string, Record<string, number>> = {};
   for (const row of stock) (locationStock[row.location_id] ??= {})[row.item_id] = row.quantity_on_hand;

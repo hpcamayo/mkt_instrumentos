@@ -6,7 +6,7 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 import { assistedCommerceEnabled, isPaymentMethod, readyReplies, type ReplyMethod } from "@/lib/payment-methods";
-import { getInventorySummary, inventoryDb } from "@/lib/store-inventory";
+import { getInventorySummary } from "@/lib/store-inventory";
 
 export const metadata = { title: "Solicitudes de compra" };
 
@@ -21,11 +21,10 @@ export default async function PurchaseRequestsPage({ searchParams }: { searchPar
   if (!store || !supabase) redirect("/mi-cuenta/tienda");
   const params = (await searchParams) ?? {};
   const all = params.ver === "todas";
-  const db = inventoryDb(supabase);
 
   // The store's address comes from the owner's own read (get_own_store): the public cannot read the street address.
   const [requestsResult, methodsResult, summary] = await Promise.all([
-    db.rpc("get_store_purchase_requests", { p_status: all ? "all" : "waiting", p_limit: 100 }),
+    supabase.rpc("get_store_purchase_requests", { p_status: all ? "all" : "waiting", p_limit: 100 }),
     supabase.from("store_payment_methods").select("method,status,holder_name,provider_label").eq("store_id", store.id).eq("status", "approved"),
     getInventorySummary(supabase),
   ]);

@@ -3,7 +3,7 @@
 // notice. Pure functions, shared by app/mi-cuenta/publicaciones and components/listing-management-table.tsx, so the
 // page, the table and the tests agree.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 
 export type ManagedListing = {
   id: string;

@@ -2,7 +2,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { READ_BUDGETS, budgetSignal, createDeadline, type Deadline } from "@/lib/request-deadline";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 
 // The anonymous client for public catalog reads (docs/operations/catalog-performance.md § Budgets): the same anon key
 // and row-level security as lib/supabase/public-client.ts, plus

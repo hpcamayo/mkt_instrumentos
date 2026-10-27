@@ -3,6 +3,7 @@
 // the tests share it. Nothing here is trusted by the server: publishing validates everything again.
 import { currentCondition } from "@/lib/listing-condition";
 import { readMakerForm } from "@/lib/maker-details";
+import type { Json } from "@/lib/supabase/database.types";
 import { deliveryTermsOnly, readSaleTerms } from "@/lib/sale-terms";
 
 export type SellValues = {
@@ -153,7 +154,8 @@ export function serverDraftRow(draft: LocalDraft, kind: "listing" | "store_listi
     store_id: kind === "store_listing" ? storeId : null,
     inventory_item_id: draft.skuId ?? null,
     title: draft.values.title.slice(0, 200),
-    form: draft.values,
+    // Plain JSON, as the copy on the device: the details are what the form's fields hold.
+    form: draft.values as Json,
     photos: draft.photos.map(({ path, shot }) => (shot ? { path, shot } : { path })),
     sound_clip: draft.soundClip,
   };

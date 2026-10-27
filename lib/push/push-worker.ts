@@ -3,15 +3,14 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { pushMessageFor, type PushNotice } from "@/lib/push/notice";
 import type { PushDevice, PushSender, PushSendResult } from "@/lib/push/web-push";
+import type { DatabaseClient } from "@/lib/supabase/database";
 
 // big-12 (docs/ux-effortless/speed.md): one run of the push worker (app/api/internal/push/process). It claims people
 // with pending notices, sends each person one message on every device they turned on, and reports back. Nothing is
 // sent from 22:00 to 08:00 in Lima: those notices wait and go out together in the morning.
 
-type RpcError = { message: string; code?: string };
-export type PushQueueClient = {
-  rpc(name: string, args?: Record<string, unknown>): PromiseLike<{ data: unknown; error: RpcError | null }>;
-};
+// The service role client, or a stand-in with the same calls in tests.
+export type PushQueueClient = Pick<DatabaseClient, "rpc">;
 
 export type PushBatchResult = { quiet: boolean; people: number; sent: number; retried: number; failed: number; skipped: number };
 type Outcome = "sent" | "retry" | "failed" | "skipped";

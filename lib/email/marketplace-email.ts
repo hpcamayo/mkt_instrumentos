@@ -5,11 +5,10 @@ import { createMarketplaceEmailProvider, MarketplaceEmailProviderError, type Mar
 import { createEmailLinkToken, EMAIL_LINK_LABELS, type EmailLinkAction } from "@/lib/email/links";
 import { parseMarketplaceEmailPayload, renderMarketplaceEmail, type MarketplaceEmailPayload } from "@/lib/email/templates";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import type { DatabaseClient } from "@/lib/supabase/database";
 
-type RpcError = { message: string; code?: string };
-export type MarketplaceEmailQueueClient = {
-  rpc(name: string, args?: Record<string, unknown>): PromiseLike<{ data: unknown; error: RpcError | null }>;
-};
+// The service role client, or a stand-in with the same calls in tests.
+export type MarketplaceEmailQueueClient = Pick<DatabaseClient, "rpc">;
 
 export type MarketplaceEmailBatchResult = { claimed: number; sent: number; retried: number; failed: number; invalid: number };
 
@@ -20,7 +19,9 @@ export async function prepareDueLimaDayDigests(client: MarketplaceEmailQueueClie
   let digestDate = localDate;
   // Replaying a bounded week makes scheduler outages recoverable without ever
   // combining different Lima calendar days into one digest. Database dedupe
-  // makes every replay safe.
+  // makes every replay safe. The claim cancels a digest more than a day past
+  // the end of its day (launch audit A25), so after an outage only the latest
+  // one goes out.
   for (let daysAgo = 1; daysAgo <= 7; daysAgo += 1) {
     digestDate = previousCalendarDate(digestDate);
     const { data, error } = await client.rpc("prepare_daily_search_alert_emails", { p_digest_date: digestDate, p_limit: 100 });
@@ -68,7 +69,7 @@ export function emailLinks(payload: MarketplaceEmailPayload, baseUrl: string) {
 }
 
 export async function processMarketplaceEmailBatch({
-  client = getSupabaseAdminClient() as unknown as MarketplaceEmailQueueClient | null,
+  client = getSupabaseAdminClient(),
   provider = createMarketplaceEmailProvider(),
   baseUrl = process.env.MARKETPLACE_EMAIL_BASE_URL,
   workerId = randomUUID(),

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { StoreDiscoveryLink } from "@/components/discovery/store-discovery-link";
 import { StoreAllowanceMeter } from "@/components/store-allowance-meter";
 import { StoreInventoryAccess } from "@/components/store-inventory-access";
@@ -25,16 +24,15 @@ export const metadata = { title: "Mi tienda" };
 export default async function StoreAccountPage() {
   const { user, profile, store, supabase } = await getAccountContext();
   if (profile?.account_type !== "store_owner") redirect("/mi-cuenta");
-  const db = supabase as unknown as SupabaseClient | null;
-  const [{ data: photos }, paymentMethods, allowance, summary, inventoryRequest, safeSpot] = store && db
+  const [{ data: photos }, paymentMethods, allowance, summary, inventoryRequest, safeSpot] = store && supabase
     ? await Promise.all([
-        db.from("store_photos").select("id,image_url,alt_text").eq("store_id", store.id).order("sort_order"),
-        db.from("store_payment_methods").select("method", { count: "exact", head: true }).eq("store_id", store.id).in("status", ["approved", "pending_review"]),
-        getStoreAllowanceDetail(db),
-        getInventorySummary(db),
-        getOpenStoreRequest(db, "inventory_access"),
+        supabase.from("store_photos").select("id,image_url,alt_text").eq("store_id", store.id).order("sort_order"),
+        supabase.from("store_payment_methods").select("method", { count: "exact", head: true }).eq("store_id", store.id).in("status", ["approved", "pending_review"]),
+        getStoreAllowanceDetail(supabase),
+        getInventorySummary(supabase),
+        getOpenStoreRequest(supabase, "inventory_access"),
         // deal-trust (safe-03): «Punto seguro Laria»; a failed read leaves the card out.
-        db.rpc("get_my_safe_spot").then(({ data, error }) => (error ? null : readSafeSpotSettings(data)), () => null),
+        supabase.rpc("get_my_safe_spot").then(({ data, error }) => (error ? null : readSafeSpotSettings(data)), () => null),
       ])
     : [{ data: [] }, { count: 0 }, null, null, null, null];
   const inventoryEnabled = Boolean(summary?.inventory_enabled);
@@ -62,9 +60,9 @@ export default async function StoreAccountPage() {
         </p>
       ) : null}
       {/* store-floor: today's try-outs, warranty, labels and poster. */}
-      {store && db ? <StoreFloorPanel storeId={store.id} supabase={db} /> : null}
+      {store && supabase ? <StoreFloorPanel storeId={store.id} supabase={supabase} /> : null}
       {/* store-locations: Sedes and Comprobantes */}
-      {store && db && inventoryEnabled ? <StoreLocationsSummary supabase={db} /> : null}
+      {store && supabase && inventoryEnabled ? <StoreLocationsSummary supabase={supabase} /> : null}
       {/* discovery batch (docs/feature-ideas/discovery.md): Fabricante o Taller, cambios de regalos */}
       {store && canWrite ? <StoreDiscoveryLink /> : null}
       {/* Feature ideas, store-reach batch (docs/feature-ideas/store-reach.md): Mercado Libre, feeds, dealers, campaigns, demand */}

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { parseClientEvent } from "@/lib/marketplace-event-payload";
-import { getMarketplaceActor, getMarketplaceSession, logMarketplaceEventFailure, readSearchReceipt, recordMarketplaceEvent, sameOriginEventRequest } from "@/lib/marketplace-events-server";
+import { getMarketplaceActor, getMarketplaceSession, logMarketplaceEventFailure, readSearchReceipt, recordMarketplaceEvents, sameOriginEventRequest } from "@/lib/marketplace-events-server";
 
 export async function POST(request: Request) {
   const requestId = randomUUID();
@@ -15,12 +15,9 @@ export async function POST(request: Request) {
   if (prepared.some((item) => !item.metadata)) return failure(400, requestId);
   try {
     const [actorId, sessionId] = await Promise.all([getMarketplaceActor(), getMarketplaceSession()]);
-    const results = [];
-    for (const { event, metadata } of prepared) {
-      const result = await recordMarketplaceEvent({ type: event.type, actorId, sessionId, eventId: event.eventId, listingId: event.listingId, storeId: event.storeId, source: event.source, metadata, requestId });
-      if (!result) return failure(503, requestId);
-      results.push({ eventId: event.eventId, ...result });
-    }
+    // Launch audit A33: the whole batch in one database call.
+    const results = await recordMarketplaceEvents({ actorId, sessionId, requestId, events: prepared.map(({ event, metadata }) => ({ type: event.type, eventId: event.eventId, listingId: event.listingId, storeId: event.storeId, source: event.source, metadata })) });
+    if (!results) return failure(503, requestId);
     return NextResponse.json({ events: results }, { headers: responseHeaders(requestId) });
   } catch (error) {
     logMarketplaceEventFailure({

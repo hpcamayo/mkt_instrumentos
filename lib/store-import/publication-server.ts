@@ -4,7 +4,7 @@ import "server-only";
 // import and SKUs are theirs. Publishing re-reads each selected row's cells as they were staged, validates them with
 // the publish form's rules (publication.ts) and then calls the service-role function, the same way the publish form
 // calls complete_public_submission(); the database re-checks ownership, the SKU, the photos and the allowance.
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/supabase/database";
 import { MAX_PRICE_PEN } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import type { ImportMapping } from "./mapping";
@@ -14,6 +14,7 @@ import {
   applyPublishFields,
   planPublication,
   type MissingField,
+  type PublicationFields,
   type PublicationItem,
   type PublishFieldOverrides,
 } from "./publication";
@@ -21,7 +22,7 @@ import { parseImportRow, type ParsedImportRow } from "./rows";
 import { ImportRequestError, importErrorFrom } from "./server";
 import type { ImportCell } from "./types";
 
-type Db = SupabaseClient;
+type Db = DatabaseClient;
 
 export type ListingQuota = { store_id: string; allowance: number; used: number; remaining: number; is_default: boolean };
 
@@ -216,7 +217,7 @@ export function parsePublishRequest(body: unknown): { rows: number[]; rulesAccep
 // Publishes up to 20 rows. Rows that are not complete by the publish form's rules are reported and never sent.
 export async function publishImportRows(db: Db, ownerUserId: string, sessionId: string, rowNumbers: number[], rulesAccepted: boolean) {
   if (!rulesAccepted) throw new ImportRequestError("IMPORT_PUBLISH_RULES_REQUIRED", "Debes aceptar las reglas del marketplace.", 400);
-  const admin = getSupabaseAdminClient() as unknown as Db | null;
+  const admin = getSupabaseAdminClient();
   if (!admin) throw new ImportRequestError("IMPORT_UNAVAILABLE", "No pudimos publicar. Intenta de nuevo.", 503);
   const session = await readSession(db, sessionId);
   const reason = closedReason(session.status, Boolean(session.rows_purged_at));
@@ -232,7 +233,7 @@ export async function publishImportRows(db: Db, ownerUserId: string, sessionId: 
   const items = await readItems(db, [...new Set([...staged.values()].map((row) => row.applied_item_id).filter((id): id is string => Boolean(id)))]);
 
   const outcomes: PublishOutcome[] = [];
-  const send: { row_number: number; fields: unknown }[] = [];
+  const send: { row_number: number; fields: PublicationFields | Record<string, never> }[] = [];
   for (const rowNumber of rowNumbers) {
     const row = staged.get(rowNumber);
     if (!row) {
@@ -298,14 +299,14 @@ async function readStagedRow(db: Db, sessionId: string, rowNumber: number) {
   if (!row || row.commit_status !== "applied" || !row.applied_item_id) {
     throw new ImportRequestError("IMPORT_ROW_NOT_FOUND", "Esa fila no se aplicó al inventario.", 404);
   }
-  return row;
+  return { ...row, applied_item_id: row.applied_item_id };
 }
 
 // One row's current values for the "Completar datos" form.
 export async function readPublishRowFields(db: Db, sessionId: string, rowNumber: number): Promise<PublishRowFields> {
   const session = await readSession(db, sessionId);
   const row = await readStagedRow(db, sessionId, rowNumber);
-  const item = (await readItems(db, [row.applied_item_id!])).get(row.applied_item_id!);
+  const item = (await readItems(db, [row.applied_item_id])).get(row.applied_item_id);
   if (!item) throw new ImportRequestError("IMPORT_ROW_NOT_FOUND", "El SKU de esta fila ya no está en tu inventario.", 404);
   const parsed = applyPublishFields(parseImportRow(row.raw ?? [], session.column_mapping ?? {}).parsed, row.publish_fields);
   const { missing_fields, photos_missing } = rowState(row, item, parsed);
@@ -324,7 +325,11 @@ export async function readPublishRowFields(db: Db, sessionId: string, rowNumber:
   };
 }
 
-export type PublishFieldsRequest = { row: number; fields: PublishFieldOverrides | null; price: number | null; itemVersion: number | null };
+// A new price always comes with the version of the SKU it was read from.
+export type PublishFieldsRequest = { row: number; fields: PublishFieldOverrides | null } & (
+  | { price: number; itemVersion: number }
+  | { price: null; itemVersion: number | null }
+);
 
 export function parsePublishFieldsRequest(body: unknown): PublishFieldsRequest | null {
   const input = body as { row?: unknown; fields?: unknown; price?: unknown; itemVersion?: unknown } | null;
@@ -342,7 +347,9 @@ export function parsePublishFieldsRequest(body: unknown): PublishFieldsRequest |
   if (itemVersion !== null && !Number.isSafeInteger(itemVersion)) return null;
   if (price !== null && itemVersion === null) return null;
   if (!fields && price === null) return null;
-  return { row: input.row as number, fields, price: price as number | null, itemVersion: itemVersion as number | null };
+  const row = input.row as number;
+  if (price === null) return { row, fields, price, itemVersion: itemVersion as number | null };
+  return { row, fields, price: price as number, itemVersion: itemVersion as number };
 }
 
 // Saves what the owner completed: the price goes to the SKU (the inventory's own price rules and history), the rest

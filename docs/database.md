@@ -42,7 +42,7 @@ Older Laria business docs describe the intended model in product language. The c
 
 Migration files and the live Supabase schema are the source of truth for current implementation only. The functional specification wins for required V1 behavior. Product names should become schema names only through an explicit migration and app update.
 
-`lib/supabase/database.types.ts` includes the Phase 2 account tables, ownership fields, enums, and helper RPCs. Keep it aligned with later migrations. The PostgREST computed photo-count field uses explicit query result types because the SDK select parser does not infer computed columns.
+`lib/supabase/database.types.ts` is generated from production's schema with `pnpm db:types` (the Supabase CLI, signed in to the project) and is never edited by hand: generate it again once a migration is applied to production, and commit it with the code that uses the change. A branch whose migrations aren't in production yet can generate it from a local stack that has them (`supabase gen types typescript --local --schema public,graphql_public`), or without Docker from the database `scripts/local-db/setup-local-db.sh` builds (`scripts/local-db/gen-types.sh`, the same generator). Every client is typed with `lib/supabase/database.ts`, which takes the generated types and lets the function arguments the app passes null to accept it, since PostgreSQL doesn't record which arguments do: a list of arguments by function, and every argument of the Inventario actions (`lib/inventory-actions.ts`), whose functions answer a missing value with their own message. A call to a function or table that isn't in the generated types fails the typecheck. The PostgREST computed photo-count field uses explicit query result types because the SDK select parser does not infer computed columns.
 
 ### `public.profiles`
 
@@ -263,6 +263,54 @@ Event rows contain UUID `id`, `event_type`, `created_at`, nullable listing/store
 - Search receipts are signed from existing canonical filters and the actual result count. Database validation bounds metadata and derives `zero_results`; there is no parallel search engine or zero-result event type. Contact events never contain WhatsApp messages/drafts, passwords, tokens, IP addresses, or user-agent fingerprints.
 - Listing submission/approval/rejection/sold and store application/approval/verification triggers record real transitions inside their domain transaction. Creation/application-start events come from the trusted signed-submission start path. Sprint 5 added favorite lifecycle events; production Sprint 6 adds confirmation requested/confirmed/declined, transaction verified and review submitted, for 23 current types without historical backfill.
 - Owner reports use one grouped aggregate RPC, not one query per listing. Lifetime views retain the historical `view_count`; 7/30-day views and ratio denominators use recorded events only. Active counts require approved listings with an active parent store where applicable. Sprint 6 keeps sold state separate from buyer-confirmed transactions and exposes only labelled counts/rates, never buyer identities, payment, delivery or revenue.
+
+<!-- launch-audit:analytics -->
+### Launch audit: lighter event writes
+
+Migration `20261114180000_launch_audit_analytics.sql` (finding A33 of the 26 Oct 2026 launch audit). Suites:
+`tests/launch-audit-analytics.sql`, `tests/launch-audit-analytics.test.cjs` and, with several connections,
+`tests/launch-audit-analytics.integration.cjs`. The application before it keeps working
+with it, so it can be applied before the deploy.
+
+- `public.record_marketplace_events(p_session_id, p_events, p_actor_user_id)` (service role only): `/api/events`
+  records a visitor's batch, 1 to 20 events with only `event_id`, `event_type`, `listing_id`, `store_id`, `source` and
+  `metadata`, in one call and one transaction. Each event goes through `laria_private.record_marketplace_event_service`
+  with the same rules as one at a time. Events are handled by type, then listing or store, then position, so two
+  batches take the 30-minute dedupe locks and the listing rows (a view's `view_count`) in the same order and can't
+  deadlock. It answers one receipt per event in the order sent, `{event_id, recorded, view_count}`. Any error rolls the
+  whole batch back: the route answers 503 and the browser sends the batch once more with the same event ids, which
+  can't count twice. `public.record_marketplace_event` stays for the routes that record a single event.
+- `laria_private.listing_impression_days` (`listing_id`, Lima `day`, `seller_user_id`, `store_id`, `impressions`) and
+  `laria_private.listing_impression_rollup_clock` (the first day not yet finished), with no API access. Each row keeps
+  the seller and the store its impressions were recorded for, as their events had them, with the same rules on delete
+  (removed with its listing or store; the seller cleared when their profile goes). Launch audit A18's account
+  anonymization clears the seller here too, as it does on the events (trigger
+  `account_anonymizations_unlink_impression_days`). A listing, day, seller and store may have more than one row; the
+  readers add them up.
+- The pg_cron job `listing-impression-rollup` (every 5 minutes) runs one step,
+  `laria_private.roll_up_listing_impressions(10000)`: card impressions of every Lima day that ended 90 days ago or more
+  move into the daily rows and are deleted, up to 10,000 per step, so each step is a short transaction. It first locks
+  the row A18's retention locks first (`laria_private.marketplace_event_scrub_clock`), so the rollup and
+  `marketplace-event-retention` (09:45 UTC) take turns. After that it never waits: it skips impressions another
+  transaction holds, then holds the listing, seller and store of the impressions it took (for key share, as the daily
+  rows' foreign keys do) and leaves out those another transaction holds: an account anonymization holds the profile,
+  and a deletion its row, before they reach the events. What it leaves waits, with its day, for the next step. An
+  anonymization or a deletion may wait for a step, never the other way round, so they can't deadlock
+  (`tests/launch-audit-analytics.integration.cjs` replays both with the real deletion and anonymization). Views,
+  contacts and every other event stay as they are, and the retention still clears the visitor of those.
+- All-time numbers (`p_days = 0`) add the daily rows, read the way the events are read: impressions and the
+  click-through denominator of `get_account_analytics_before_favorites` (Mis estadísticas, the rows recorded for that
+  seller) and `get_marketplace_admin_analytics_before_favorites` (Admin, all rows). The 7- and 30-day periods, and the
+  7-, 30- and 90-day periods of `get_listing_statistics`, only read events younger than 90 days, which stay, so no
+  number changes when impressions move. A new reader of card impressions older than 90 days must add the daily rows
+  the same way.
+- Locks: the migration first takes SHARE ROW EXCLUSIVE locks on `listings`, `profiles`, `stores` and
+  `laria_private.account_anonymizations` at once without waiting (retrying for up to 30 seconds), then only creates
+  objects and replaces functions.
+- Rollback: `select cron.unschedule('listing-impression-rollup');`, then drop the trigger
+  `account_anonymizations_unlink_impression_days`, `public.record_marketplace_events` and the rollup function. Keep the
+  daily table and the two analytics functions while it has rows: it is the only record of the impressions it counts.
+<!-- /launch-audit:analytics -->
 
 ### Sprint 6 transaction, review, and review-report records
 
@@ -585,7 +633,15 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 6. Give every UPDATE and DELETE in a function or trigger a WHERE clause (`where true` when every row is meant).
    Supabase loads pg_safeupdate for API connections, which refuses one without, the statements of the functions and
    triggers an API call runs included; local Postgres and the migration connection don't load it, so only production
-   fails. `tests/api-safeupdate.integration.cjs` scans every function of `public` and `laria_private` after a reset.
+   fails. `tests/api-safeupdate.integration.cjs` scans every plpgsql and sql function of `public` and `laria_private`
+   after a reset, with the SQL each one builds for EXECUTE (its strings with their escapes, pieces joined with `||`,
+   and `format()` filled in as PostgreSQL fills it in, which it checks against the database's own `format()`), and the
+   SQL that SQL builds, three levels down; deeper fails. It can't see what a variable built elsewhere (over several
+   assignments, say), a table or another function (`concat()`, `replace()`, `string_agg()`) adds, `format()`
+   arguments passed as a VARIADIC array other than `ARRAY[...]`, nor `U&''` strings, so write the WHERE in the string
+   itself. A sql function written `BEGIN ATOMIC` keeps no source text, so the test reads its body back with
+   `pg_get_function_sqlbody()`. It can also report what isn't there: a WHERE that only such an unseen part adds reads
+   as missing, and text that reads like an UPDATE or DELETE without being run (a message, say) counts as one.
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
@@ -1676,7 +1732,7 @@ writes to every table below are revoked and go through definer functions. Errors
 <!-- /feature-ideas:selling-tools -->
 
 <!-- feature-ideas:integration -->
-## Feature ideas: integration (migrations `20261210120000`–`20261210120500`)
+## Feature ideas: integration (migrations `20261210120000`–`20261210120600`)
 
 Wiring between batches, written by the integrator (not applied to any hosted database).
 
@@ -1731,19 +1787,26 @@ Wiring between batches, written by the integrator (not applied to any hosted dat
   and returns, `store_terms_source`, `restock_expected_on`, `installments_max`) get the same grant to anon and
   authenticated and their place at the end of `public.public_listings`, after main's columns and in the same order. A
   listing column the branch adds later is private until it is added to both.
-- **Held reviews and counted buyers (launch audit A17, below "Launch audit: review trust").** A buyer's review held
-  for Admin shows nowhere on the branch's pages either: they read reviews through `laria_private.review_is_visible`,
-  and review photos through it too (`get_review_photo_object`). `public.get_counter_transaction_detail` gains
-  `counterpart_review_held` as `get_transaction_detail` does, and its `own_review` carries `held_at`;
-  `public.get_admin_review_photo_queue` items gain `review_held`; `public.export_my_data` leaves a held review out of
-  `reviews_received`. The seller page (`get_seller_page`) and the level (`laria_private.seller_level_facts`) count
-  buyers with `laria_private.counted_buyers`, under the key `verified_sales`, like the seller card. When Admin
-  publishes a held review of a counter purchase and both reviews are in, `publish_held_review` sends
-  `store_counter_review_revealed` (patch `20261203110600`). These are edits of the deal-trust and accounts batches'
-  own migrations plus that patch.
-- Tests: `tests/feat-integration.sql`, `tests/feat-page-refresh.sql`, `tests/feat-account-privacy.sql`,
-  `tests/feat-deal-trust.sql` (held reviews, Admin publishing, counted buyers); `tests/feat-integration.test.cjs`
-  checks the grant, the view's order and the cards' columns.
+- **Held reviews and counted buyers (launch audit A17, below "Launch audit: confirmed buyers and held reviews").** A
+  buyer's review held for Admin shows nowhere on the branch's pages either: they read reviews through
+  `laria_private.review_is_visible`, and review photos through it too (`get_review_photo_object`).
+  `public.get_counter_transaction_detail` gains `counterpart_review_held` as `get_transaction_detail` does, and its
+  `own_review` carries `held_at`; `public.get_admin_review_photo_queue` items gain `review_held`;
+  `public.export_my_data` leaves a held review out of `reviews_received`. The seller page (`get_seller_page`) and the
+  level (`laria_private.seller_level_facts`) count buyers with `laria_private.counted_buyers`, under the key
+  `verified_sales`, like the seller card. When Admin publishes a held review of a counter purchase and both reviews are
+  in, `publish_held_review` sends `store_counter_review_revealed` (patch `20261203110600`). These are edits of the
+  deal-trust and accounts batches' own migrations plus that patch.
+- **The branch's e-mails under the daily limit (`20261210120600`, launch audit A25, below "Launch audit: e-mail
+  backlog").** Recreates `laria_private.email_max_age` and `laria_private.email_priority` with main's cases unchanged
+  and these added: a sign-in from a new device and the try-out e-mails (requested, confirmed, declined, cancelled, the
+  reminder the day before) are dropped after a day; a private offer to the people who saved a listing after two days,
+  with the alerts' priority (2, optional like a price drop); the Mi equipo reminder after three days, with the
+  reminders' priority (1), as is the try-out reminder. The branch's other e-mails are an account's own business (help
+  answers, consignments, trades, offers, services, a stolen-gear match) and keep the default: a week, priority 0.
+- Tests: `tests/feat-integration.sql` (also the e-mail rules), `tests/feat-page-refresh.sql`,
+  `tests/feat-account-privacy.sql`, `tests/feat-deal-trust.sql` (held reviews, Admin publishing, counted buyers);
+  `tests/feat-integration.test.cjs` checks the grant, the view's order and the cards' columns.
 <!-- /feature-ideas:integration -->
 
 <!-- feature-ideas:store-locations -->
@@ -1782,6 +1845,67 @@ function is redefined.
   row lock, replays per sale), `request_store_receipt_void(uuid, text)` (7 days),
   `record_store_receipt_result(uuid, jsonb)` (service_role only; never downgrades accepted or voided).
 <!-- /feature-ideas:store-locations -->
+
+<!-- launch-audit:monitoring -->
+## Launch audit: error counts and health
+
+Migration `20261114170000_launch_audit_monitoring.sql` (launch audit A13; suite `tests/launch-audit-monitoring.sql`).
+New objects only, so it can be applied before the deploy.
+
+- `laria_private.app_errors`: one row per kind of error (`fingerprint`) and 10-minute `bucket`, with its `source`
+  (`server` or `browser`), `kind` (for the server the route type: `render`, `route`, `action` or `middleware`; for a
+  browser `error`, `unhandledrejection` or `boundary`), `route`, `name`, `message`, `client` (browser family),
+  `digest` (Next.js), `occurrences`, `first_at` and `last_at`. RLS on, no API access. The pg_cron job
+  `app-error-retention` (daily 09:50 UTC, `laria_private.run_app_error_retention()`) deletes buckets older than 30 days.
+- `public.record_app_error(source, kind, route, name, message, client, digest)`, service role only, called by
+  `instrumentation.ts` (server errors, under the route's file pattern) and `/api/client-errors` (browser errors, 30 per
+  visitor every 10 minutes). Before anything is stored:
+  - the route becomes one of the site's own patterns (`laria_private.app_error_route`, the list in
+    `laria_private.app_error_route_patterns()`: every page and route under `app/` on main and features/marketplace,
+    the metadata files and Next.js's own). A browser page's path is matched the way Next.js matches it, a fixed
+    segment before a `[param]` and a `[param]` before a `[...catch-all]`, so a store's or a listing's slug reads
+    `[slug]` or `[id]` even when it is spelled like a folder (`/tiendas/taller` reads `/tiendas/[slug]`). The server's
+    route file pattern is matched the same way without `(group)`, `@slot`, the final `page` or `route` and a metadata
+    image's suffix. A path no pattern matches keeps its first segment when that begins one of the patterns, then `/…`;
+    anything else reads `/…`. A new page or route goes in the list (a unit test checks it, and the suite checks every
+    pattern reads as itself);
+  - the name must be one of JavaScript's or the DOM's own, or on the server an app class ending in `Error` or
+    `Exception` (`laria_private.app_error_name`); anything else is `Error`;
+  - the message, from the server or a browser, is kept only as one of a fixed set (`laria_private.app_error_message`),
+    read as one line (NFKC, so fullwidth digits and letters read as plain ones; any kind of space, tab or line break
+    as one space; without `Uncaught `, an error name in front, or a database code a browser added at the end, `…
+    (PGRST301)`):
+    - one of the site's own messages as written (`laria_private.app_error_own_messages()`, about 800: the codes and
+      messages its database functions raise and the messages its code throws, on main, the launch audit's branches
+      and features/marketplace at 7f88917);
+    - one of those followed by `:` (`EMAIL_CLAIM_FAILED: …`, `AUTH_REQUIRED: Inicia sesión…`), kept as that part,
+      then `: ` and the rest only when the rest is itself one of the site's own or a known message, otherwise `…`;
+    - a known message (`laria_private.app_error_known_message`, the list in `laria_private.app_error_messages()`:
+      about 140 messages of browsers, JavaScript engines, React, Next.js, Node, Postgres, PostgREST, Supabase and
+      Resend), tried in order, each replacing the whole line with its own wording and `…` for any value (`Cannot read
+      properties of undefined (reading '…')`, `duplicate key value violates unique constraint "…"`); `\1` and `\2`
+      bring back only a word from the pattern's own fixed list. A React error keeps its number only when it is one of
+      React's own codes (those of the builds Next.js 15.5 ships), otherwise `Minified React error #…`;
+    - anything else reads `Otro mensaje (no se guarda el texto)`, so nothing a visitor, a database value, an extension
+      or a made-up report writes is kept. A message the site adds later reads that way too until a migration adds it
+      to the list; the server's full message stays in Vercel's runtime logs, found by the route, the time and the
+      digest. The suite checks that every own and known message reads back as itself;
+  - the client must be one of `browserFamily`'s labels or `Otro`, and only the server's digest is kept.
+  No account, IP address or stack is ever passed. Only an aal2 Admin reads the counts, and they go after 30 days. A
+  browser error's route is kept (the latest seen) but is not part of its fingerprint, and since a message is one of a
+  fixed set, a value never splits a kind. At most 25 kinds per
+  source in a bucket: a new kind takes a transaction advisory lock on its source and bucket before counting the kinds
+  there, so kinds reported together are admitted one at a time; the rest are counted under `overflow-server` or
+  `overflow-browser`.
+- `public.get_admin_app_errors(p_days 1..30, p_source)`: `assert_admin()` (aal2); the period's kinds grouped by
+  fingerprint, newest first, at most 200 (`/admin/errores`).
+- `public.get_app_health()`, service role only: `{"server_errors": n}` for this bucket and the one before.
+  `/api/health` answers 503 `{"status":"degraded","reason":"database"}` when the call fails or takes over 3 seconds,
+  503 with `"reason":"errors"` from 20 errors, and otherwise 200 `{"status":"ok"}`; the uptime workflow
+  (`.github/workflows/uptime.yml`) reads it every 10 minutes.
+
+Rollback: `select cron.unschedule('app-error-retention');`, then drop the eleven functions and the table.
+<!-- /launch-audit:monitoring -->
 
 <!-- launch-audit:security -->
 ## Launch audit: security fixes
@@ -1842,10 +1966,11 @@ nothing the site reads, so it is applied before its application deploys:
 - The application: the catalog, the home, the store page, the compare page and the listing page's similar and seller
   rows read `public_listings`. The contact button (`app/api/contact`) reads the listing with the public key, so the
   policies still decide it is public, and its contact (`contact_name`, `whatsapp_phone`, the owner's profile) with the
-  service role. "Más de este vendedor" for an old Particular listing without an account matches the seller by
-  WhatsApp number on the server with the service role, then reads the cards as usual. Admin's listing editor loads
-  through `admin_get_listing`. `tests/launch-audit-contacts.test.cjs` checks that no read through the public key
-  names a private column, a computed field on `listings` or another user's profile.
+  service role. "Más de este vendedor" for an old Particular listing without an account matches the seller by WhatsApp
+  number on the server with the service role, which gives the four newest ids and the seller's count however many
+  listings there are, then reads the cards as usual. Admin's listing editor loads through `admin_get_listing`.
+  `tests/launch-audit-contacts.test.cjs` checks that no read through the public key names a private column, a computed
+  field on `listings` or another user's profile.
 
 Step 2, `20261114140000_launch_audit_contact_columns.sql` (suite `tests/launch-audit-contact-columns.sql`; three
 older suites now read a visitor's view the same way), is applied once step 1's application is live: it revokes
@@ -2000,6 +2125,35 @@ named `laria_safeupdate`), and checks itself on the claim as first applied.
   triggers.
 <!-- /launch-audit:page-refresh -->
 
+<!-- launch-audit:database-speed -->
+## Launch audit: foreign key indexes and policies that read the account once
+
+Migrations `20261114190000_launch_audit_foreign_key_indexes.sql` and
+`20261114191000_launch_audit_policy_checks_once.sql` (finding A34 of the 26 Oct 2026 launch audit). Suite:
+`tests/launch-audit-database-speed.sql`. Neither changes what anybody can read or write, so they can be applied before
+or after any deploy.
+
+- Indexes: each foreign key of `public` and `laria_private` has an index that starts with its columns and covers every
+  row a lookup by the key can match, so deleting the row it points at, and joins on it, read only the matching rows.
+  54 were added, partial (`where ... is not null`) on a column that may be null. 7 of these keys already had an index
+  for some rows only (`marketplace_events.actor_user_id` for WhatsApp contacts, `listing_revisions.listing_id` for the
+  pending revision, and the like), which leaves the other rows to a full read. Left out on purpose:
+  `marketplace_events.event_type` (a fixed list never deleted, on the busiest table), and `store_inventory_items
+  (listing_id, store_id)` and `store_import_photo_assignments (asset_id, session_id)`, whose first column has a unique
+  index of its own. The suite fails on any other foreign key without such an index (no condition, or only `is not
+  null` on the key's columns), so a new one needs its index in the same migration.
+- Policies: 60 policies of `public` and `storage` wrote `auth.uid()` or `public.is_admin()` as is, which Postgres runs
+  for every row it checks (`is_admin()` parses the JWT claims each time). They now read `(select auth.uid())` and
+  `(select public.is_admin())`, which run once per statement, and are otherwise the same text as before. The suite
+  fails on a policy of either schema that calls them as is, so new policies should use the same form. Calls that take
+  a value of the row (`public.is_store_member(store_id)`, `public.is_store_owner(store_id)`) stay per row.
+- Locks: an index build takes a SHARE lock (writes wait, reads don't) and a policy change an ACCESS EXCLUSIVE lock
+  (reads wait too), held until the migration commits. Each migration first takes all its locks at once with `nowait`
+  (31 tables, then 36 with `storage.objects`): while one is held it lets go of the others and tries again 20 to 100 ms
+  later, and after 30 seconds it fails and can be run again. Locally each one runs in under 0.1 seconds.
+- Rollback: drop the 54 indexes; alter each of the 60 policies back to the same text without the `(select ...)`.
+<!-- /launch-audit:database-speed -->
+
 <!-- launch-audit:privacy -->
 ## Launch audit: privacy
 
@@ -2075,3 +2229,60 @@ application before it calls none of the new functions, so it can be applied befo
   EXCLUSIVE lock on its table. The first statement takes all of them at once with `nowait`, retrying for 30 seconds
   (`PRIVACY_TABLES_BUSY`); every other lock wait is capped at 10 seconds.
 <!-- /launch-audit:privacy -->
+
+<!-- launch-audit:email -->
+## Launch audit: e-mail backlog
+
+Migration `20261114160000_launch_audit_email_backlog.sql` (finding A25 of the 26 Oct 2026 launch audit). Suite:
+`tests/launch-audit-email-backlog.sql`. It changes only how `public.claim_marketplace_email_deliveries` picks e-mails,
+so it can be applied before the deploy that schedules the worker (`vercel.json`, every 5 minutes).
+
+- Maximum age (`laria_private.email_max_age(event_type)`): `search_alert_immediate` and `search_alert_daily` 1 day;
+  `listing_price_drop` and `listing_back_in_stock` 2 days; `follow_weekly`, `listing_availability_checkin`,
+  `listing_purchase_check`, `listing_purchase_confirmation_reminder` and `listing_review_reminder` 3 days; every other
+  kind, including any added later, 7 days. Age runs from `laria_private.email_content_time(event_type, context,
+  created_at)`: the end of a daily digest's `digest_date` in Lima, 00:00 in Lima of a weekly digest's `week_start`,
+  otherwise `created_at` (the worker's catch-up queues the digests of the seven days before it in one run). A date is
+  read only when it is a real calendar date (`laria_private.calendar_date(text)`, null for `2026-02-30` or any other
+  text), so a malformed one ages from `created_at` instead of stopping the claim. Each claim
+  first cancels pending and retry e-mails past that (`status = 'cancelled'`, `failure_code = 'expired'`), after giving
+  back stale worker locks and before the out-of-stock check of review fix A7. Notifications are untouched.
+- Order (`laria_private.email_priority(event_type)`): 0 an account's own business (every kind not listed below), 1 the
+  four reminders above, 2 alerts and digests (`search_alert_immediate`, `search_alert_daily`, `listing_price_drop`,
+  `listing_back_in_stock`, `follow_weekly`); oldest first within each. The payload array follows the same order.
+- Daily limit: `laria_private.email_settings` (one row; `daily_limit` 80, `changed_at`, `changed_by`, `reason`; no API
+  access). A claim hands out at most `p_limit`, and new e-mails only up to the limit minus what Resend may have
+  counted since midnight UTC (its daily reset): the e-mails sent since then (index `marketplace_email_sent_idx`),
+  those being sent, those tried from 15 minutes before midnight on that may have reached Resend without being marked
+  sent (`uncertain_since` set, any other status; index `marketplace_email_uncertain_idx`; the worker sends within its
+  60 seconds, and the stale-lock recovery already treats 15 minutes as stopped), and holds left by deleted e-mails
+  (below). A retry of one of those uncertain e-mails already has its place and carries the same `Idempotency-Key`, so
+  it goes out first even when nothing is left. Claims take `pg_advisory_xact_lock` so two at once can't spend the
+  same allowance. `laria_private.set_email_daily_limit(limit, reason)` is for an operator in the SQL editor (no API
+  role may call it); 0 stops every hand-out, retries included.
+- Places that stay taken: an e-mail cancelled while it was being sent (pausing or deleting its alert) can't record
+  its completion, so the trigger `marketplace_email_deliveries_keep_attempt`
+  (`laria_private.marketplace_email_keep_attempt()`) marks any move from `processing` to `pending` or `cancelled` as
+  uncertain. Deleting e-mails (an account's deletion, `laria_private.anonymize_account`, or the cascade from its
+  profile) leaves a row in `laria_private.email_limit_holds` (`sent_at` or `attempted_at` only; no API access) for
+  each one sent in the last day, being sent, or uncertain and tried in the last day, through the trigger
+  `marketplace_email_deliveries_hold_count` (`laria_private.marketplace_email_hold_count()`); the claim counts them
+  like the rest and deletes holds older than two days.
+- Uncertain sends: every attempt sends the delivery's id as Resend's `Idempotency-Key`, which Resend keeps for 24
+  hours. `marketplace_email_deliveries.uncertain_since` is when the first attempt that may have reached Resend began:
+  `fail_marketplace_email_delivery` sets it (from `last_attempt_at`) for a `transport` or `provider` failure (timeouts,
+  lost connections, 408, 409, 5xx, a reply without an id), and the claim's stale-lock recovery for a worker that
+  stopped while sending; a rate limit, a refusal or a failure before sending leaves it empty. The claim hands these
+  retries out before everything else, and marks one still waiting 23 hours after it `failed` with `failure_code =
+  'retry_window_closed'` rather than risk a second copy. E-mails the old worker had tried and not sent count as
+  uncertain from `created_at`.
+- Only the claim hands out: the trigger `marketplace_email_deliveries_claim_fence`
+  (`laria_private.marketplace_email_claim_fence()`) refuses any change into `processing` (`EMAIL_CLAIM_OUTDATED`)
+  unless the transaction set `laria.email_claim` to `a25`, which the claim does for its own transaction. A call that
+  began with an earlier claim before a migration replacing it committed, and waited for the queue's lock, runs that
+  earlier body after the commit; its hand-out fails instead and the next run uses the new claim
+  (`tests/launch-audit-email-backlog.integration.cjs` replays it). A migration that replaces the claim again changes
+  the value in both places.
+- Kinds the `features/marketplace` branch adds (account security, offers, trades, services) get 7 days and priority
+  0 unless it adds them to both functions.
+<!-- /launch-audit:email -->

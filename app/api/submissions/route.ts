@@ -55,8 +55,7 @@ export async function POST(request: Request) {
     const supabase = await getSupabaseServerClient();
     const { data: userData } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
     if (!supabase || !userData.user) return failure("Ingresa a tu cuenta para continuar tu borrador.", 401);
-    const db = supabase as unknown as import("@supabase/supabase-js").SupabaseClient;
-    const { data: draft } = await db.from("listing_drafts").select("id,kind").eq("id", body.draft_id).maybeSingle();
+    const { data: draft } = await supabase.from("listing_drafts").select("id,kind").eq("id", body.draft_id).maybeSingle();
     if (!draft) return failure("No encontramos ese borrador.", 404);
     const resumed = createSubmissionToken(draft.kind as "listing" | "store_listing", secret, userData.user.id, draft.id);
     return NextResponse.json({ ...resumed, folder: `${userData.user.id}/${draft.id}` });
@@ -380,8 +379,7 @@ async function recordSoundClip(client: AdminClient, id: string, folder: string, 
   if (match && Number.isFinite(duration) && duration >= 0.5 && duration <= 20.5) {
     const { data: objects } = await client.storage.from(SOUND_BUCKET).list(folder, { limit: 100 });
     if (objects?.some((object) => `${folder}/${object.name}` === clip!.path)) {
-      const db = client as unknown as import("@supabase/supabase-js").SupabaseClient;
-      await db.from("listing_sound_clips").upsert({
+      await client.from("listing_sound_clips").upsert({
         listing_id: id,
         clip_url: client.storage.from(SOUND_BUCKET).getPublicUrl(clip!.path as string).data.publicUrl,
         mime_type: SOUND_TYPES[match[1]],

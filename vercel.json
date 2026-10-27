@@ -8,6 +8,9 @@
     { "path": "/api/internal/jobs/store-floor", "schedule": "0 13 * * *" },
     { "path": "/api/internal/jobs/price-steps", "schedule": "0 14 * * *" },
     { "path": "/api/internal/jobs/gear-reminders", "schedule": "0 15 * * *" },
-    { "path": "/api/internal/jobs/trade-offers", "schedule": "0 * * * *" }
+    { "path": "/api/internal/jobs/trade-offers", "schedule": "0 * * * *" },
+    { "path": "/api/internal/email/process", "schedule": "*/5 * * * *" },
+    { "path": "/api/internal/push/process", "schedule": "*/5 * * * *" },
+    { "path": "/api/internal/store-imports/cleanup", "schedule": "15 8 * * *" }
   ]
 }

@@ -6,7 +6,7 @@ import { TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
 import { getAssurance } from "@/lib/auth/mfa";
 import { rememberMarker, withRememberChoice } from "@/lib/auth/remember";
 import { RATE_LIMITS, allowRequest } from "@/lib/rate-limit";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 import { visitorAuthKey } from "@/lib/supabase/visitor-auth";
 
 // Sign-in for scripts and tests. The login form signs in from the browser (launch audit A16): from here every
