@@ -208,8 +208,6 @@ export function ownerNotice(status: StoreStatus) {
   }
 }
 
-// A signed-in visitor carries a Supabase auth cookie (sb-<project>-auth-token, possibly split in chunks). Without one
-// the page skips the session lookup, so anonymous store visits cost no extra auth call.
-export function hasSupabaseAuthCookie(names: readonly string[]) {
-  return names.some((name) => /^sb-.+-auth-token(?:\.\d+)?$/.test(name));
-}
+// A signed-in visitor carries a Supabase auth cookie. Without one the page skips the session lookup, so anonymous store
+// visits cost no extra auth call.
+export { hasSupabaseAuthCookie } from "@/lib/supabase/auth-cookie";

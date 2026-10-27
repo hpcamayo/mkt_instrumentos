@@ -101,6 +101,35 @@ Sprint 7 production release (2026-09-22): migration `20260921120000_sprint_7_mar
 - Manual legacy linking locks and revalidates the listing, accepts only an unowned `created_by_source='legacy'` individual row and an existing Particular profile, then sets `owner_user_id` once and appends the audit record in the same transaction. Concurrent or replayed links have one winner; direct user claims and owner reassignment remain denied. No background/email/phone matching exists.
 - Sprint 8 changes no catalog pagination, image path, submission retry, event dedupe, store-cap, transaction/review or marketplace-email queue mechanism. It adds no Admin email fan-out and preserves the Sprint 7 pre-go-live requirement for a supported frequent worker scheduler.
 
+## Launch audit A29: the listing page's first load
+
+The listing page is where phones land from WhatsApp and Google. Its first load had grown to 229 kB of JavaScript (Next.js's
+figure; 223.7 kB gzipped at level 9), because big-08's "¿Cómo te fue?" imported the Supabase browser client:
+supabase-js with Realtime and Auth, and the Buffer polyfill it pulls in, about 62 kB compressed, for a question only a
+signed-in buyer can see. The photo lightbox and the questions section also loaded with the page before anyone used them.
+
+- `components/after-page.tsx` loads these parts after the page, in the browser only, as `next/dynamic` with
+  `ssr: false` does, with one difference: if a part's code fails to download (a phone losing signal, say), only that
+  part says so, and its "Reintentar", or its next showing, downloads the code again. With `next/dynamic` that failure
+  reached `app/error.tsx`, which replaced the whole listing, and a retry never downloaded the part again.
+- `components/purchase-checkin.tsx` loads `components/purchase-checkin-question.tsx` (the question and its client)
+  only for a visitor who may be signed in: when the browser has a Supabase auth cookie, as before A29, or when the
+  account check finds the visitor signed in, whichever comes first, so a failed or slow account check doesn't hide it.
+  If its code fails to download, the question just isn't asked that time.
+- `components/listing/listing-lazy.tsx` holds the other parts that load after the page: the lightbox (on the first
+  photo opened; its download starts when a pointer or the focus reaches the photos, here and on the store page; if it
+  fails, "No pudimos abrir la foto." with "Reintentar" and "Cerrar") and "Preguntas", which reads its questions in the
+  browser anyway. The server sends the same heading and "Cargando preguntas…" as before; if the section's code fails
+  to download, it says "No pudimos cargar las preguntas." with "Reintentar", as when its questions don't load.
+- The safety sheet stays with the page: it opens from the contact button, the page's main action, and must not wait for
+  a download. The related listings' cards stay too: they are server-rendered and hydrate with the page.
+
+Production build of 27 Oct 2026 (main `35c3d23` against this change, gzipped at level 9): the listing page 223.7 kB to
+154.6 kB (Next.js shows 229 kB to 158 kB), the store page 156.0 kB to 154.3 kB, every other page within 0.1 kB.
+`tests/launch-audit-listing-bundle.test.cjs` follows the page's static imports through its client components and fails
+if the Supabase client, the lightbox or the questions section is back in the page's bundle. It also checks when "¿Cómo
+te fue?" loads, and what each part shows, and downloads again, when its code fails to download.
+
 ## Checks
 
 Sprint 5 reliability additions (deployed 2026-09-18): favorite states are registered once in a shared context, batched after 25 ms with at most 100 IDs per request, and never fetched separately per card. Unknown/failed state is unavailable rather than false; successful mutations update the shared state. Header controls use one trusted private hydrated state path, without a public SSR Auth query or importing the browser Auth SDK into the global provider. Listing IDs accept historical Postgres UUIDs rather than misusing the stricter event-ID validator.
