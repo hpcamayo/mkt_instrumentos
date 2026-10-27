@@ -73,6 +73,14 @@ refresh job, as production's cron does every minute (`tests/support/page-refresh
 Effortless Laria's price alert rule (save-08): a listing alerts at most once in 24 hours, and only for a drop of 5% or
 more.
 
+## What `cases.tsv` records
+
+The run of 27 Oct 2026 (GitHub Actions run 40574393086, commit 30e9c1f) passed every check. The 52 Automated cases
+among the 68 are Pass, with the run as evidence. The 14 Manual or Both ones (PUB-006, PUB-007, LIST-011, SEO-006,
+SEO-007, LEGAL-005, LEGAL-006, SCOPE-001 to SCOPE-006 and SCOPE-008) keep Not Run with the run added to their evidence,
+because a person still reviews them. LIST-008 waits for the owner's call (above), and ALERT-005 stays Blocked (below).
+The registry then counts 384 Pass, 154 Not Run and 1 Blocked among its 539 cases.
+
 ## Not covered here
 
 - ALERT-005 needs the daily digest in a real inbox in production; it stays Blocked until then.
