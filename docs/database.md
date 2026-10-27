@@ -570,6 +570,10 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 3. Prefer `supabase migration list` and `supabase db push` when the CLI is logged in and linked.
 4. If using SQL Editor manually, verify migration history/state afterward so old migrations are not replayed later.
 5. Deploy code only after production Supabase has the required schema.
+6. Give every UPDATE and DELETE in a function or trigger a WHERE clause (`where true` when every row is meant).
+   Supabase loads pg_safeupdate for API connections, which refuses one without, the statements of the functions and
+   triggers an API call runs included; local Postgres and the migration connection don't load it, so only production
+   fails. `tests/api-safeupdate.integration.cjs` scans every function of `public` and `laria_private` after a reset.
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
@@ -1276,6 +1280,11 @@ holds its own table's lock while its trigger inserts into the record, so locking
 `tests/launch-audit-page-refresh-locks.integration.cjs` (local database, `pg` from `node_modules`) replays a writer
 holding each of the nine tables and then taking the other eight and the record while a second run applies, and checks
 itself by running the migration without its first statement, where a listing price edit deadlocks with it.
+Follow-up `20261113140000_launch_audit_page_refresh_safeupdate.sql`: the claim's update of every waiting row had no
+WHERE clause, which Supabase refuses on API calls (pg_safeupdate), so every run of the job failed after the deploy of
+27 Oct 2026 until it was applied; it is the same function with `where true`. `tests/api-safeupdate.integration.cjs`
+runs both functions with that check loaded when the database has it (`safeupdate`, or a local build of the same check
+named `laria_safeupdate`), and checks itself on the claim as first applied.
 
 - `laria_private.public_page_changes` (`id` identity, `changed_at`, `claim_id`, `claimed_at`, `first_claimed_at`,
   `armed_nonce`, `armed_deployment`; no API access): one row per statement that changes what the cached home and
