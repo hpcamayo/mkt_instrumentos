@@ -176,6 +176,10 @@ async function handleAuth(req, res, url) {
     }
     if (req.method === "PUT") {
       const body = JSON.parse((await readBody(req)).toString() || "{}");
+      // Like Supabase: with an authenticator app, the password and the address change only in a session that passed its code.
+      if ((body.password || body.email) && claims.aal !== "aal2" && (await factorsOf(u.id)).some((f) => f.status === "verified")) {
+        return send(res, 401, { code: 401, error_code: "insufficient_aal", msg: "AAL2 session is required to update email or password when MFA is enabled." });
+      }
       if (body.password) await db.query("update auth.users set encrypted_password = extensions.crypt($2, extensions.gen_salt('bf')) where id = $1", [u.id, body.password]);
       if (body.data) await db.query("update auth.users set raw_user_meta_data = coalesce(raw_user_meta_data,'{}'::jsonb) || $2::jsonb where id = $1", [u.id, JSON.stringify(body.data)]);
       // safe-09: the new address waits for its confirmation link, which the local stack never sends.

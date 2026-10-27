@@ -26,12 +26,16 @@ export function clientAddress(request: Request) {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
 }
 
-// True when the request may go on. A database failure never blocks anyone: the request goes on and the failure is
-// logged.
-export async function allowRequest(rule: RateLimitRule, request: Request) {
+export type RateLimitVerdict = "allowed" | "limited" | "unavailable";
+
+// "limited" once the visitor is over the limit. Until the migration that adds the counter is applied (PostgREST can't
+// find consume_rate_limit), every request is allowed, as before A16. Any other failure is "unavailable", logged, and
+// each route decides: the e-mail check then refuses to answer, since it would otherwise say whether an address has an
+// account with no limit at all; the routes that call Supabase Auth go on (allowRequest), under Supabase's own limits.
+export async function checkRequest(rule: RateLimitRule, request: Request): Promise<RateLimitVerdict> {
   const admin = getSupabaseAdminClient();
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!admin || !secret) return true;
+  if (!admin || !secret) return "unavailable";
   const key = createHmac("sha256", createHash("sha256").update(`laria-rate-limit:${secret}`).digest())
     .update(clientAddress(request))
     .digest("hex");
@@ -41,9 +45,12 @@ export async function allowRequest(rule: RateLimitRule, request: Request) {
     p_limit: rule.limit,
     p_window_seconds: rule.windowSeconds,
   });
-  if (error) {
-    console.warn("rate-limit-unavailable", rule.bucket, error.code ?? error.message);
-    return true;
-  }
-  return data !== false;
+  if (!error && typeof data === "boolean") return data ? "allowed" : "limited";
+  console.warn("rate-limit-unavailable", rule.bucket, error ? error.code ?? error.message : "unexpected answer");
+  return error?.code === "PGRST202" ? "allowed" : "unavailable";
+}
+
+// True unless the visitor is over the limit: a counter that can't count never blocks a sign-in or an e-mail link.
+export async function allowRequest(rule: RateLimitRule, request: Request) {
+  return (await checkRequest(rule, request)) !== "limited";
 }

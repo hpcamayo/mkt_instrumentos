@@ -29,7 +29,7 @@ function loadTypeScript(filename, overrides = {}) {
       constructor(values) { this.values = values; }
       get(name) { return this.values[name]; }
     },
-    { location: { origin: "https://laria.audio" } },
+    { location: { origin: "https://laria.audio", pathname: "/restablecer-contrasena", search: "?paso=nueva" } },
   );
   return mod.exports;
 }
@@ -39,8 +39,9 @@ const redirects = loadTypeScript(path.resolve("lib/auth/redirects.ts"));
 const genericError = "No se pudo actualizar la contraseña. Solicita un nuevo enlace o intenta nuevamente.";
 const samePasswordError = "La nueva contraseña debe ser diferente de tu contraseña actual.";
 
-function formHarness({ mode = "reset", error = null, session = { user: { id: "qa" } } } = {}) {
+function formHarness({ mode = "reset", error = null, session = { user: { id: "qa" } }, level = { currentLevel: "aal1", nextLevel: "aal1" } } = {}) {
   const state = [];
+  const effects = [];
   const calls = { updates: [], destinations: [], sessions: 0, refreshes: 0 };
   let hookIndex = 0;
   const { PasswordUpdateForm } = loadTypeScript(path.resolve("components/password-form.tsx"), {
@@ -55,6 +56,10 @@ function formHarness({ mode = "reset", error = null, session = { user: { id: "qa
         if (!(index in state)) state[index] = initial;
         return [state[index], (value) => { state[index] = typeof value === "function" ? value(state[index]) : value; }];
       },
+      // Recorded, not run: a test runs them when it needs the page's first load.
+      useEffect(effect) {
+        effects.push(effect);
+      },
     },
     "next/link": { __esModule: true, default: () => null },
     "next/navigation": {
@@ -67,10 +72,12 @@ function formHarness({ mode = "reset", error = null, session = { user: { id: "qa
     "@/lib/auth/password": password,
     "@/lib/auth/redirects": redirects,
     "@/components/page-notice": { PageNotice: () => null },
+    "@/components/auth/two-step-verification": { TwoStepVerification: function TwoStepVerification() { return null; } },
     "@/lib/supabase/browser-client": {
       getSupabaseBrowserClient: () => ({ auth: {
         getSession: async () => { calls.sessions++; return { data: { session } }; },
         updateUser: async (fields) => { calls.updates.push(fields); return { error }; },
+        mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: level, error: null }) },
       } }),
     },
   });
@@ -80,6 +87,20 @@ function formHarness({ mode = "reset", error = null, session = { user: { id: "qa
   }
   return {
     calls,
+    // The page's first load: runs the effects of the first render, then lets their requests answer.
+    async load({ leaveFirst = false } = {}) {
+      render();
+      const cleanups = effects.splice(0).map((effect) => effect());
+      if (leaveFirst) cleanups.forEach((cleanup) => cleanup?.());
+      await new Promise((resolve) => setImmediate(resolve));
+    },
+    // The code step's TwoStepVerification props, or null while the form shows.
+    codeStep() {
+      const view = render();
+      if (view.type === "form") return null;
+      const step = [view.props.children].flat().find((child) => child?.type?.name === "TwoStepVerification");
+      return step ? step.props : "missing";
+    },
     async submit(value = "new-password", confirmation = value) {
       await render().props.onSubmit({
         preventDefault() {},
@@ -163,3 +184,36 @@ test("password confirmation validation remains before any provider request", asy
   assert.ok(form.fieldError("confirmation").endsWith("Las contraseñas no coinciden."));
   assert.deepEqual(form.calls.updates, []);
 });
+
+// Launch audit A15: Supabase changes the password of an account with an authenticator app only in a session that
+// passed the app's code, and a recovery link opens one without it.
+test("with an authenticator app, the reset page asks for the code before the new password", async () => {
+  const form = formHarness({ level: { currentLevel: "aal1", nextLevel: "aal2" } });
+  assert.equal(form.codeStep(), null);
+  await form.load();
+  assert.deepEqual(form.codeStep(), { next: "/restablecer-contrasena?paso=nueva", framed: false });
+  assert.deepEqual(form.calls.updates, []);
+});
+
+test("without an app, or with the code already given, the reset page shows the form", async () => {
+  for (const level of [{ currentLevel: "aal1", nextLevel: "aal1" }, { currentLevel: "aal2", nextLevel: "aal2" }, null]) {
+    const form = formHarness({ level });
+    await form.load();
+    assert.equal(form.codeStep(), null, JSON.stringify(level));
+  }
+  // A page left before the answer arrives changes nothing.
+  const left = formHarness({ level: { currentLevel: "aal1", nextLevel: "aal2" } });
+  await left.load({ leaveFirst: true });
+  assert.equal(left.codeStep(), null);
+});
+
+for (const mode of ["reset", "change"]) {
+  test(`${mode} form refused for a missing code goes to the code step, then back to the same page`, async () => {
+    const form = formHarness({ mode, error: { code: "insufficient_aal", message: "AAL2 session is required to update email or password when MFA is enabled." } });
+    await form.submit();
+    assert.deepEqual(form.calls.updates, [{ password: "new-password" }]);
+    assert.deepEqual(form.codeStep(), { next: "/restablecer-contrasena?paso=nueva", framed: false });
+    assert.deepEqual(form.calls.destinations, []);
+    assert.equal(form.calls.refreshes, 0);
+  });
+}

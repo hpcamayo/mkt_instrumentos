@@ -97,4 +97,26 @@ select pg_temp.check(not exists (select 1 from laria_private.rate_limit_hits whe
 select pg_temp.check(exists (select 1 from laria_private.rate_limit_hits where key_hash = 'latru-key'),
   'current counts stay');
 
+-- A sweep removes at most 500 old counts, found by an index, so no request waits on a long delete.
+select pg_temp.check(exists (select 1 from pg_indexes where schemaname = 'laria_private' and tablename = 'rate_limit_hits'
+    and indexname = 'rate_limit_hits_window_start_idx'), 'old counts are found by an index');
+insert into laria_private.rate_limit_hits (bucket, key_hash, window_start, hits)
+  select 'auth.login', 'latru-bulk-' || i, now() - interval '3 days', 1 from generate_series(1, 700) i;
+do $$
+declare
+  before_count integer;
+  after_count integer;
+begin
+  for i in 1..2000 loop
+    select count(*) into before_count from laria_private.rate_limit_hits where key_hash like 'latru-bulk-%';
+    perform public.consume_rate_limit('auth.check_email', 'latru-bulk-sweep', 100000, 600);
+    select count(*) into after_count from laria_private.rate_limit_hits where key_hash like 'latru-bulk-%';
+    if after_count < before_count then
+      perform pg_temp.check(before_count - after_count = 500, 'one sweep removes 500 old counts, not ' || (before_count - after_count));
+      return;
+    end if;
+  end loop;
+  raise exception 'FAILED: no sweep in 2000 requests';
+end $$;
+
 rollback;

@@ -90,7 +90,7 @@ export function TwoStepVerification({ next, framed = true }: { next: string | nu
       ) : null}
       {state.step === "active" ? (
         <Notice tone="success" className="mt-4">
-          <p>Activa. Cada vez que ingreses con tu contraseña, te pediremos el código de tu app antes de abrir Administración.</p>
+          <p>Activa. Cada vez que ingreses con tu contraseña, te pediremos el código de tu app.</p>
         </Notice>
       ) : null}
       {state.step === "setup" && !state.enrollment ? (
@@ -134,7 +134,7 @@ export function TwoStepVerification({ next, framed = true }: { next: string | nu
     <section id={SECTION_ID} aria-labelledby="dos-pasos-titulo" className="max-w-md scroll-mt-24 rounded-panel border border-subtle bg-white p-6">
       <h2 id="dos-pasos-titulo" className="t-section text-ink">Verificación en dos pasos</h2>
       <p className="mt-1 t-meta text-ink-2">
-        Para entrar a Administración, además de tu contraseña, Laria te pide un código de 6 dígitos de una app de autenticación.
+        Además de tu contraseña, Laria te pide un código de 6 dígitos de una app de autenticación. Para Administración es obligatoria.
       </p>
       {body}
     </section>

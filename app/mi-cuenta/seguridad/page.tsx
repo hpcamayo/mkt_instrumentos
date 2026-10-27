@@ -10,14 +10,15 @@ import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 export const metadata = { title: "Seguridad" };
 
-// Admin accounts also get the two-step section (launch audit A15): alone while the session still owes the
-// authenticator code (?paso=codigo), and before the password panel when an Admin page sent them to set it up
-// (?paso=activar). Both come back to ?next= afterwards.
+// The two-step section (launch audit A15). Any account with an authenticator app whose session still owes its code sees
+// only the code step (?paso=codigo), so an account that stopped being Admin can still finish signing in. Admin accounts
+// always get the section, before the password panel when an Admin page sent them to set it up (?paso=activar); other
+// accounts with an app see it to know it's on. Both steps come back to ?next= afterwards.
 export default async function SecurityPage({ searchParams }: { searchParams: Promise<{ paso?: string; next?: string }> }) {
   const [user, params] = await Promise.all([getCurrentUser(), searchParams]);
   const next = params.next ? getSafeAuthRedirect(params.next, "") || null : null;
   const admin = user?.app_metadata?.role === "admin";
-  const supabase = admin ? await getSupabaseServerClient() : null;
+  const supabase = user ? await getSupabaseServerClient() : null;
   const assurance = supabase ? await getAssurance(supabase) : null;
 
   if (assurance?.needsCode) {
@@ -29,7 +30,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
     );
   }
 
-  const twoStep = admin ? <TwoStepVerification next={next} /> : null;
+  const twoStep = admin || assurance?.hasFactor ? <TwoStepVerification next={next} /> : null;
   const setupFirst = admin && params.paso === "activar";
   return (
     <>

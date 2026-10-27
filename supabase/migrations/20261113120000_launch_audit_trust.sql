@@ -4,8 +4,12 @@
 -- A15  Admin needs a second factor: is_admin() and assert_admin() require an aal2 session (Supabase MFA, TOTP), and
 --      the catalog tables that checked the role inline use is_admin() too.
 --
--- Locks: replacing functions and policies takes brief locks on the catalog tables; no table is rewritten.
+-- Locks: replacing the catalog tables' policies takes an ACCESS EXCLUSIVE lock on each until the commit; no table is
+-- rewritten or scanned. Every lock wait is capped at 10 seconds (lock_timeout): behind a long-running query the migration
+-- fails and can be run again, instead of holding up the reads queued behind it.
 -- Rollback: restore the previous bodies of public.is_admin() and laria_private.assert_admin() (the role check alone).
+
+set lock_timeout = '10s';
 
 -- A15 ----------------------------------------------------------------------------------------------------------------
 
@@ -57,7 +61,7 @@ create policy "catalog_search_log admin read" on public.catalog_search_log
 -- Request counts for the server routes that call Supabase Auth or reveal account facts (lib/rate-limit.ts): sign-in,
 -- the e-mail link callback, the e-mail check and the confirmation resend. Fixed windows per bucket and key; the key
 -- is an HMAC of the visitor's address made by the app, so no address is stored. Rows older than a day are removed
--- as new ones arrive.
+-- as new ones arrive, through the window_start index.
 create table if not exists laria_private.rate_limit_hits (
   bucket text not null,
   key_hash text not null,
@@ -65,6 +69,7 @@ create table if not exists laria_private.rate_limit_hits (
   hits integer not null default 1,
   primary key (bucket, key_hash, window_start)
 );
+create index if not exists rate_limit_hits_window_start_idx on laria_private.rate_limit_hits (window_start);
 alter table laria_private.rate_limit_hits enable row level security;
 revoke all on laria_private.rate_limit_hits from public, anon, authenticated;
 
@@ -85,15 +90,25 @@ begin
     raise exception using errcode = '22023', message = 'RATE_LIMIT_INVALID';
   end if;
   window_begin := to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds);
+  -- One request in fifty removes up to 500 old rows first, so the visitor's own count isn't locked meanwhile, and skips
+  -- the rows another request is removing instead of waiting for it.
+  if random() < 0.02 then
+    delete from laria_private.rate_limit_hits
+    where ctid in (
+      select ctid from laria_private.rate_limit_hits
+      where window_start < now() - interval '1 day'
+      limit 500
+      for update skip locked
+    );
+  end if;
   insert into laria_private.rate_limit_hits as h (bucket, key_hash, window_start, hits)
   values (p_bucket, p_key, window_begin, 1)
   on conflict (bucket, key_hash, window_start) do update set hits = h.hits + 1
   returning hits into total;
-  if random() < 0.02 then
-    delete from laria_private.rate_limit_hits where window_start < now() - interval '1 day';
-  end if;
   return total <= p_limit;
 end;
 $$;
 revoke all on function public.consume_rate_limit(text, text, integer, integer) from public, anon, authenticated;
 grant execute on function public.consume_rate_limit(text, text, integer, integer) to service_role;
+
+reset lock_timeout;
