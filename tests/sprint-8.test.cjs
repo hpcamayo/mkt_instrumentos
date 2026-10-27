@@ -281,7 +281,11 @@ test("Admin moderation clients use only canonical RPCs and expose no generic use
   ]);
   assert.doesNotMatch(clientCode, /\.from\(|\.update\(|\.delete\(|\.insert\(/);
   assert.doesNotMatch(clientCode, /getSupabaseAdminClient|service[_-]?role|auth\.admin|deleteUser|updateUserById|createUser|imperson/i);
-  assert.match(domain, /sin poderes de suplantación, cambio de acceso o eliminación/);
+  assert.match(domain, /sin poderes de suplantación ni de cambio de acceso\. Una cuenta solo se anonimiza cuando su titular lo pide\./);
+  // Launch audit A20: the one way Admin removes a person's data is the anonymization they ask for, through its own RPC.
+  const anonymize = source("components/admin-anonymize-account.tsx");
+  assert.deepEqual([...anonymize.matchAll(/\.rpc\("([a-z0-9_]+)"/g)].map((match) => match[1]), ["admin_anonymize_account"]);
+  assert.doesNotMatch(anonymize, /\.from\(|\.update\(|\.delete\(|\.insert\(|getSupabaseAdminClient|service[_-]?role|auth\.admin|deleteUser|updateUserById|createUser|imperson/i);
   assert.match(domain, /Vista de soporte y auditoría; Admin no confirma ni altera relaciones verificadas/);
 });
 

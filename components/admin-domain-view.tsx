@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { AdminAnonymizeAccount } from "@/components/admin-anonymize-account";
 import { AdminInviteUser } from "@/components/admin-invite-user";
 import { AdminListingEditor, AdminStoreEditor } from "@/components/admin-record-editors";
 import { AdminStoreAllowance } from "@/components/admin-store-allowance";
@@ -46,7 +47,7 @@ const domainCopy: Record<AdminDomain, { title: string; description: string }> = 
   },
   usuarios: {
     title: "Usuarios",
-    description: "Inspección operativa de cuentas sin poderes de suplantación, cambio de acceso o eliminación.",
+    description: "Inspección operativa de cuentas, sin poderes de suplantación ni de cambio de acceso. Una cuenta solo se anonimiza cuando su titular lo pide.",
   },
   reportes: {
     title: "Reportes",
@@ -220,7 +221,9 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
           ? "report"
           : domain === "resenas"
             ? "review"
-            : "";
+            : domain === "usuarios"
+              ? "account"
+              : "";
   const slug = adminString(item, "slug");
   const publicHref = slug && domain === "publicaciones" && ["approved", "sold"].includes(adminString(item, "status"))
     ? `/instrumentos/${slug}`
@@ -307,6 +310,7 @@ function DomainCard({ domain, item, onComplete }: { domain: AdminDomain; item: A
       ) : null}
       {domain === "tiendas" && id ? <AdminStoreRequests storeId={id} onComplete={onComplete} /> : null}
       {domain === "tiendas" && id ? <AdminStoreAllowance storeId={id} onComplete={onComplete} /> : null}
+      {domain === "usuarios" && id ? <AdminAnonymizeAccount userId={id} onComplete={onComplete} /> : null}
       <DomainActions domain={domain} item={item} onComplete={onComplete} />
     </article>
   );

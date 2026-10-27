@@ -242,6 +242,14 @@ Open `/admin/legacy` only when the owner has supplied reliable offline evidence:
 - Enter a meaningful audit note, review the confirmation summary, then link once.
 - The operation preserves the listing ID, status, photos and history. It cannot be replayed or used to move an already-owned listing to someone else.
 
+### Anonymize an Account on Request (launch audit A20)
+
+Only when the account's owner asks for their data to be deleted (cancelación). Follow `docs/privacy/arco.md` for the deadlines and the answer:
+- Open `/admin/usuarios`, find the account by name, phone or ID, and use `Anonimizar cuenta`. Write the reason (the request, who made it and its date), tick the confirmation and press `Anonimizar`. There is no undo.
+- An active store is hidden first (`Ocultar tienda` in `/admin/tiendas`); an Admin account loses its role first.
+- The name becomes `Cuenta eliminada`; phone, e-mail, password, sessions, favorites, alerts, drafts and notices are deleted, and unsold listings are archived without contact data. Sales, reviews, reports and Libro de Reclamaciones entries stay.
+- `Ver auditoría` on the card shows when it was done, by whom and why.
+
 ### Invite Sellers Or Store Owners
 
 Go to `/admin`, log in as an admin, and use `Invitar usuario`.
@@ -342,7 +350,13 @@ If a revision already waits for review, another save updates that same proposal 
 
 After an uncertain final response, retry in the same open editor to reuse the signed attempt and existing uploads without duplicating revisions. Success/error notices receive accessible focus and scroll into view, and the account menu stays available. Do not reload a partly uploaded form expecting in-memory retry state to survive.
 
-Cleanup is a trusted, owner-bound operation, not a manual browser Storage delete. It protects live, sold, relisted/shared, and retained moderation-history references; errors remain visible/retryable. Old public/legacy photo URLs are preserved. Closing a page mid-upload may still leave an unattached private object; this sprint does not add a scheduled orphan sweeper.
+Cleanup is a trusted, owner-bound operation, not a manual browser Storage delete. It protects live, sold, relisted/shared, and retained moderation-history references; errors remain visible/retryable. Old public/legacy photo URLs are preserved. Closing a page mid-upload may still leave an unattached private object; the daily cleanup below removes it after 48 hours.
+
+### Upload limits and the daily cleanup (launch audit A18, A33)
+
+- Each account may add, in 24 hours, 120 listing photos (600 for the owner of an active store), 120 photos for listing edits, 20 sound clips and 40 store images. Past that, the forms say "Llegaste al límite de … en 24 horas" and when the next file fits. Changing a limit is a migration (`laria_private.upload_daily_limit`).
+- Every day at 09:30 UTC, `/api/internal/uploads/sweep` (Vercel cron, `CRON_SECRET`) deletes uploaded files nothing has used for 48 hours, such as the photos of a draft kept only on a phone. The logs show `uploads_sweep` with the count, or `uploads_sweep_failure` with the step; a failed run leaves its files for the next one.
+- Every day at 09:45 UTC, the database job `marketplace-event-retention` removes the account, session and identity from browsing events older than 90 days and from other events older than 365 days. To check it: `select status, return_message, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'marketplace-event-retention') order by start_time desc limit 5;`
 
 ### Contact and event semantics — production Sprint 4
 
