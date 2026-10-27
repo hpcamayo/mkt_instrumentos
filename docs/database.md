@@ -1390,10 +1390,11 @@ nothing the site reads, so it is applied before its application deploys:
 - The application: the catalog, the home, the store page, the compare page and the listing page's similar and seller
   rows read `public_listings`. The contact button (`app/api/contact`) reads the listing with the public key, so the
   policies still decide it is public, and its contact (`contact_name`, `whatsapp_phone`, the owner's profile) with the
-  service role. "Más de este vendedor" for an old Particular listing without an account matches the seller by
-  WhatsApp number on the server with the service role, then reads the cards as usual. Admin's listing editor loads
-  through `admin_get_listing`. `tests/launch-audit-contacts.test.cjs` checks that no read through the public key
-  names a private column, a computed field on `listings` or another user's profile.
+  service role. "Más de este vendedor" for an old Particular listing without an account matches the seller by WhatsApp
+  number on the server with the service role, which gives the four newest ids and the seller's count however many
+  listings there are, then reads the cards as usual. Admin's listing editor loads through `admin_get_listing`.
+  `tests/launch-audit-contacts.test.cjs` checks that no read through the public key names a private column, a computed
+  field on `listings` or another user's profile.
 
 Step 2, `20261114140000_launch_audit_contact_columns.sql` (suite `tests/launch-audit-contact-columns.sql`; three
 older suites now read a visitor's view the same way), is applied once step 1's application is live: it revokes
