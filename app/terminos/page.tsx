@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { TermsAssistedCommerceSection } from "@/components/legal/assisted-commerce-legal";
 import { TermsServicesSection } from "@/components/legal/services-legal";
+import { TermsFeatureToolsSection } from "@/components/legal/feature-ideas-legal"; // feature ideas: pending legal review
 import { LegalContact, LegalPage, LegalSection, MarketplaceLimitations } from "@/components/legal-page";
 import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
 
@@ -72,6 +73,8 @@ export default function TermsPage() {
       </LegalSection>
 
       <TermsServicesSection />
+
+      <TermsFeatureToolsSection />
 
       <LegalSection title="6. Conducta no permitida">
         <ul>

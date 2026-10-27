@@ -227,8 +227,8 @@ a one-line follow-up). No attachments on tickets.
   the one entry point for serials held elsewhere; selling-tools' "Mi equipo" calls it with source `gear`.
 
 **Limitations.** A new report is checked against listing and SKU serials and hashed listing photos; serials saved in
-Mi equipo are checked when they are saved, but a report filed later does not yet scan Mi equipo (one more `insert` in
-`laria_private.match_new_stolen_report` once selling-tools' table is merged; noted for the integrator). Serials typed
+Mi equipo are checked when they are saved, and a report filed later scans Mi equipo too (integration, migrations
+`20261210120000`–`20261210120200`). Serials typed
 before this ships are not there to match.
 
 ## safe-05: red flags at review time (photo copies)

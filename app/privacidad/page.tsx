@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PrivacyAssistedCommerceSection } from "@/components/legal/assisted-commerce-legal";
 import { PrivacyServicesSection } from "@/components/legal/services-legal";
+import { PrivacyFeatureCookies, PrivacyFeatureProviders, PrivacyFeatureRights, PrivacyFeatureToolsSection } from "@/components/legal/feature-ideas-legal"; // feature ideas: pending legal review
 import { LegalContact, LegalPage, LegalSection } from "@/components/legal-page";
 import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
 
@@ -64,16 +65,20 @@ export default function PrivacyPage() {
 
       <PrivacyServicesSection />
 
+      <PrivacyFeatureToolsSection />
+
       <LegalSection title="5. Cookies">
         <ul>
           <li>Cookies de sesión necesarias para iniciar sesión y mantener tu cuenta segura.</li>
           <li>Una cookie propia de sesión del marketplace, válida por 24 horas, con un identificador aleatorio que nos permite contar vistas y búsquedas sin identificarte.</li>
+          <PrivacyFeatureCookies />
           <li>No usamos cookies publicitarias ni de redes sociales.</li>
         </ul>
       </LegalSection>
 
       <LegalSection title="6. Proveedores">
         <p>Para operar Laria usamos proveedores que tratan datos por nuestra cuenta: Supabase (base de datos, autenticación y almacenamiento de fotos), Vercel (alojamiento del sitio) y Resend (envío de correos). Estos servicios pueden procesar datos fuera del Perú. Al contactar a un vendedor, pasas a WhatsApp, que se rige por sus propias políticas.</p>
+        <PrivacyFeatureProviders />
       </LegalSection>
 
       <LegalSection title="7. Conservación">
@@ -82,6 +87,7 @@ export default function PrivacyPage() {
 
       <LegalSection title="8. Tus derechos">
         <p>Puedes actualizar tu nombre, WhatsApp, ciudad y región desde <Link href="/mi-cuenta/perfil">Mi cuenta</Link>. También puedes solicitar el acceso, la rectificación, la cancelación de tus datos o la oposición a su tratamiento.</p>
+        <PrivacyFeatureRights />
         <LegalContact purpose="Para ejercer estos derechos o hacer consultas sobre privacidad," />
       </LegalSection>
 
