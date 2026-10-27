@@ -96,7 +96,7 @@ begin
 end $$;
 
 -- Admin: every field through admin_get_store.
-select set_config('request.jwt.claims','{"sub":"9a000000-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"9a000000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$
 begin
   if (select ruc from public.admin_get_store('9b000000-0000-4000-8000-000000000001')) <> '20999999991' then

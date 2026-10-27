@@ -22,7 +22,7 @@ do $$ declare result jsonb; replay jsonb; denied boolean := false; photos jsonb 
  if not denied then raise exception 'Changed retry was accepted'; end if;
  if (select count(*) from public.listing_photos where listing_id='64000000-0000-4000-8000-000000000002') <> 2 then raise exception 'Proposal leaked into live photos'; end if;
 end $$;
-select set_config('request.jwt.claims','{"sub":"64000000-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"64000000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare revision_id uuid; begin
  select id into revision_id from public.listing_revisions where listing_id='64000000-0000-4000-8000-000000000002' and status='pending';
  perform public.review_listing_revision(revision_id,'approve',2,null);

@@ -113,7 +113,7 @@ reset role;
 
 -- mine-03: rejection codes, readable reason and the checklist; cleared on resubmission.
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"71999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"71999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare result public.listings; begin
   result := public.review_listing('73000000-0000-4000-8000-000000000005','reject',' Sube una foto del mástil ',array['falta_reverso','precio_incoherente','falta_reverso']);
   if result.rejection_codes <> array['falta_reverso','precio_incoherente']

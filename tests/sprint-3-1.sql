@@ -101,7 +101,7 @@ $$;
 select public.update_owned_listing('53000000-0000-4000-8000-000000000001','{}','{"title":"Título aprobado final"}',null);
 select public.update_owned_listing('53000000-0000-4000-8000-000000000001','{}','{"model":"Modelo actualizado"}',null);
 
-select set_config('request.jwt.claims','{"sub":"51999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"51999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$
 declare
   target_revision uuid;
@@ -122,7 +122,7 @@ $$;
 select set_config('request.jwt.claims','{"sub":"51000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select public.update_owned_listing('53000000-0000-4000-8000-000000000001','{}','{"title":"Título rechazado"}',null);
 select public.update_owned_listing('53000000-0000-4000-8000-000000000001','{}','{"model":"Modelo también rechazado"}',null);
-select set_config('request.jwt.claims','{"sub":"51999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"51999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare target_revision uuid; begin
   select id into target_revision from public.listing_revisions where listing_id='53000000-0000-4000-8000-000000000001' and status='pending';
   perform public.review_listing_revision(target_revision,'reject',2,'El título no corresponde al producto');

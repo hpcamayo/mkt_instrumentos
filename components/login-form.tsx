@@ -11,7 +11,9 @@ import { Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Notice } from "@/components/ui/notice";
 import { ResendConfirmation } from "@/components/auth/resend-confirmation";
-import { EMAIL_NOT_CONFIRMED } from "@/lib/auth/confirmation";
+import { isEmailNotConfirmedError } from "@/lib/auth/confirmation";
+import { TOO_MANY_ATTEMPTS, TOO_MANY_EMAILS, isAuthRateLimited } from "@/lib/auth/limits";
+import { twoStepPath } from "@/lib/auth/two-step";
 
 type FormState = "idle" | "submitting" | "sent" | "error";
 type LoginMode = "password" | "magic-link";
@@ -61,19 +63,25 @@ export function LoginForm() {
         return;
       }
 
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const result = (await response.json().catch(() => null)) as { code?: string; message?: string } | null;
+      // Launch audit A16: the browser signs in itself, so Supabase Auth counts attempts per visitor instead of
+      // against the server's address, which every visitor shares.
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) {
         setState("error");
-        if (result?.code === EMAIL_NOT_CONFIRMED) {
+        setMessage("No se pudo iniciar sesión.");
+        return;
+      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setState("error");
+        // Supabase checks the password before the confirmation, so this answer does not reveal unconfirmed accounts.
+        if (isEmailNotConfirmedError(error)) {
           setUnconfirmedEmail(email);
-          setMessage(result.message ?? "Confirma tu correo para ingresar.");
+          setMessage("Te enviamos un enlace al registrarte. Ábrelo para activar tu cuenta y vuelve a ingresar.");
+          return;
+        }
+        if (isAuthRateLimited(error)) {
+          setMessage(TOO_MANY_ATTEMPTS);
           return;
         }
         setFailedEmail(email);
@@ -81,7 +89,9 @@ export function LoginForm() {
         return;
       }
 
-      window.location.assign(nextPath);
+      // Launch audit A15: an account with an authenticator app finishes signing in with its code.
+      const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      window.location.assign(level?.currentLevel === "aal1" && level.nextLevel === "aal2" ? twoStepPath("codigo", nextPath) : nextPath);
       return;
     }
 
@@ -111,7 +121,7 @@ export function LoginForm() {
     if (error) {
       setState("error");
       setMessage(
-        "No se pudo enviar el enlace. Verifica que ya tengas una cuenta.",
+        isAuthRateLimited(error) ? TOO_MANY_EMAILS : "No se pudo enviar el enlace. Verifica que ya tengas una cuenta.",
       );
       return;
     }

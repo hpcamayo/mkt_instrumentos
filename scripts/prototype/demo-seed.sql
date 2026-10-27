@@ -71,10 +71,10 @@ values ('d1000000-0000-4000-8000-000000000001', 'laria-demo-musica', 'Laria Demo
   'd0000000-0000-4000-8000-000000000001', 'active', 'growth_50', true)
 on conflict (id) do nothing;
 
--- Admin enables the pilot gate (audited).
+-- Admin enables the pilot gate (audited). Admin sessions have passed the authenticator code (aal2, launch audit A15).
 set local role authenticated;
 select set_config('request.jwt.claims',
-  '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+  '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 select public.admin_set_store_inventory_enabled('d1000000-0000-4000-8000-000000000001', true, 'Tienda de demostración del prototipo');
 reset role;
 
@@ -176,7 +176,7 @@ begin
     select public.set_store_payment_method('link_de_pago', 'Laria Demo Música SAC', 'Mercado Pago', 'Te enviamos el link por WhatsApp');
   $q$;
   perform set_config('request.jwt.claims',
-    '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+    '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
   execute format($q$
     select public.admin_review_store_payment_method(m.store_id, m.method, 'approve', 'Titular coincide con la razón social', m.%I)
     from public.store_payment_methods m

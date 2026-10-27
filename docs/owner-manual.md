@@ -424,9 +424,22 @@ Supabase email/password authentication must be enabled if `/login` and `/registr
 
 Supabase Auth redirect URLs should include:
 - Local callback: `http://localhost:3000/auth/callback`
-- Production callback: `https://laria.audio/auth/callback` or the active production domain.
-- Current Vercel production callback if testing before the custom domain is fixed: `https://mkt-instrumentos.vercel.app/auth/callback`
-- Vercel preview callback pattern if preview magic-link testing is needed.
+- Production callback: `https://laria.audio/auth/callback`.
+
+Since the launch audit (26 Oct 2026) `mkt-instrumentos.vercel.app` and `laria.pro` answer with a permanent redirect to `laria.audio`, and their callback entries were removed from the allowlist, so e-mail links on preview deployments don't sign anyone in. Sign-in passwords need at least 8 characters.
+
+### Admin sign-in with an authenticator app (launch audit A15)
+
+Admin asks for a 6-digit code from an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password) on top of the password. Supabase calls this MFA with TOTP; it is on by default in Auth.
+1. The first time, sign in at `https://laria.audio/login` with the Admin account. Laria opens `Mi cuenta → Seguridad` with "Configurar la verificación": scan the QR code with the app (or type the key shown under it) and enter the code it shows. Admin opens.
+2. From then on, every new sign-in asks for the app's code before Admin opens. Signing in as Admin with the password alone opens the rest of the account as usual.
+3. A lost phone: in the Supabase dashboard, Authentication → Users → the Admin user, remove its MFA factor (or, in the SQL editor, delete that user's rows from `auth.mfa_factors`), then sign in and set up the app again.
+
+### Sign-in limits per visitor (launch audit A16, A28)
+
+`/api/auth/login`, `/auth/callback`, `/api/auth/check-email` and `/api/auth/resend-confirmation` count requests per visitor in the database (`lib/rate-limit.ts`). The login form signs in from the browser, so Supabase Auth's own limits count each visitor's address. When the count can't be kept, the e-mail check answers "No se pudo verificar el correo en este momento." instead of saying whether the address has an account; sign-in, e-mail links and the resend go on under Supabase's own limits.
+
+Required in production for A16: the e-mail link callback and the resend call Supabase from the server, so without forwarding Supabase counts them under Vercel's address, and a handful of visitors opening made-up links can use up its 30 link checks every 5 minutes for everyone behind that address. Create a secret API key (`sb_secret_...`) in Supabase (Project Settings, API Keys), add it in Vercel as `SUPABASE_SECRET_KEY` for Production, redeploy, and turn on "IP Address Forwarding" in Authentication, Rate Limits (or `security_sb_forwarded_for_enabled` through the Management API). Supabase then counts the visitor's address there too. Until then the logs show `auth-forwarding-off` once per server instance.
 
 Magic-link, signup confirmation, recovery, and invite flows should redirect through `/auth/callback?next=...`. The three owner-facing email templates must use the `token_hash` links in `docs/auth-email-templates.md`; the callback also retains PKCE-code compatibility. Current signup confirmation lands on `/mi-cuenta?confirmed=1`; `/confirmacion-correo` remains a legacy success page. Supabase still only needs the callback URL allowlisted.
 
