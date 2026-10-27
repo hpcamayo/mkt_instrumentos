@@ -138,9 +138,10 @@ type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClien
 
 // `countOnly` asks for the exact count and no rows; page queries ask for rows only. find-14: the category and brand
 // filters narrow both parts the same way the catalog does (category exact, brand contains).
+// public_listings: photo_count reads a row of public columns (lib/catalog.ts).
 function storeListingsQuery(supabase: PublicSupabaseClient, storeId: string, filters: ListingFilters, outOfStock: boolean, countOnly = false) {
   let query = supabase
-    .from("listings")
+    .from("public_listings")
     .select(STORE_LISTING_SELECT, countOnly ? { count: "exact", head: true } : undefined)
     .eq("status", "approved")
     .eq("store_id", storeId);

@@ -269,6 +269,13 @@ export type Database = {
             referencedRelation: "listings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "listing_photos_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_listings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       listing_price_drops: {
@@ -1507,6 +1514,57 @@ export type Database = {
       }
     }
     Views: {
+      // Launch audit A27 (20261114130000): a listing's public columns, security invoker, with the table's types;
+      // listing_photo_count is its computed field, as on listings.
+      public_listings: {
+        Row: {
+          attributes: Json | null
+          availability_confirmed_at: string | null
+          brand: string | null
+          category: string
+          city: string
+          condition: string | null
+          content_changed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          instrument_type: string | null
+          listing_photo_count: number | null
+          model: string | null
+          owner_user_id: string | null
+          paused_until: string | null
+          previous_price_pen: number | null
+          price_dropped_at: string | null
+          price_pen: number | null
+          published_at: string | null
+          region: string
+          seller_type: Database["public"]["Enums"]["seller_type"]
+          slug: string
+          sold_at: string | null
+          status: Database["public"]["Enums"]["listing_status"]
+          stock_state: string | null
+          store_id: string | null
+          title: string
+          updated_at: string
+          view_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listings_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listings_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       review_reports: {
         Row: {
           created_at: string | null
@@ -1570,6 +1628,16 @@ export type Database = {
       }
     }
     Functions: {
+      admin_get_listing: {
+        Args: { p_listing_id: string }
+        Returns: Database["public"]["Tables"]["listings"]["Row"][]
+        SetofOptions: {
+          from: "*"
+          to: "listings"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       admin_get_store: {
         Args: { p_store_id: string }
         Returns: Database["public"]["Tables"]["stores"]["Row"][]
@@ -1585,8 +1653,8 @@ export type Database = {
       catalog_facets: { Args: { p_attribute_keys?: string[]; p_filters: Json; p_q?: string }; Returns: Json }
       catalog_search: {
         Args: { p_q: string }
-        Returns: Database["public"]["Tables"]["listings"]["Row"][]
-        SetofOptions: { from: "*"; to: "listings"; isOneToOne: false; isSetofReturn: true }
+        Returns: Database["public"]["Views"]["public_listings"]["Row"][]
+        SetofOptions: { from: "*"; to: "public_listings"; isOneToOne: false; isSetofReturn: true }
       }
       catalog_suggest: {
         Args: { p_limit?: number; p_q: string }

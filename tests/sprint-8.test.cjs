@@ -304,8 +304,10 @@ test("Admin preserves invite and strictly allowlisted listing/store editing", ()
 
   assert.deepEqual(
     [...editors.matchAll(/\.from\("([a-z_]+)"\)/g)].map((match) => match[1]),
-    ["listings", "listings", "stores"],
+    ["listings", "stores"],
   );
+  // The listing editor loads the contact through admin_get_listing (launch audit A27), and saves on the table.
+  assert.match(editors, /\.rpc\("admin_get_listing", \{ p_listing_id: listingId \}\)\.select\(listingSelect\)/);
   // The store editor loads private fields (RUC, e-mail, address) through admin_get_store, not the stores table.
   assert.match(editors, /\.rpc\("admin_get_store", \{ p_store_id: storeId \}\)\.select\(storeSelect\)/);
   assert.doesNotMatch(editors, /\.delete\(|\.insert\(|getSupabaseAdminClient|service[_-]?role|auth\.admin/i);
