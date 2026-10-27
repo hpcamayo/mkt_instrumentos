@@ -101,7 +101,8 @@ plus updates to `tests/marketplace-tracking.test.cjs`, `tests/ux-listing.test.cj
 ### list-10 The seller at a glance and trust-03 Badges that explain themselves
 
 - **What changed.** The seller card leads with facts Laria records when the seller has fewer than 10 reviews:
-  "Activo hoy / esta semana / este mes" (coarse, from the last sign-in), "N ventas confirmadas en Laria", "Nuevo en
+  "Activo hoy / esta semana / este mes" (coarse, from the last sign-in), "N compradores confirmaron su compra en
+  Laria" (each buyer once, after their account is a week old with a confirmed e-mail; launch audit A17), "Nuevo en
   Laria" under 60 days (else "En Laria desde …"), and "Correo confirmado" for Particulares. WhatsApp reply time is
   left out (Laria does not record it). "Tienda verificada" opens to say what Laria checked by hand and since when: RUC,
   razón social, address and that a contact phone is on file, plus what verification does not mean.
