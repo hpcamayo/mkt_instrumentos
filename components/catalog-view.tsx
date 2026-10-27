@@ -1,3 +1,5 @@
+import { GalleryVerticalEnd } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CompareTray } from "@/components/catalog-compare";
@@ -31,6 +33,7 @@ import {
   withQuery,
   type CatalogScope,
 } from "@/lib/catalog-filters";
+import { descubrirHref } from "@/lib/descubrir";
 import type { ListingCardData, ListingFilters as ListingFiltersType } from "@/lib/listings";
 import { LISTINGS_PAGE_SIZE, pageHref } from "@/lib/pagination";
 import { listingFiltersToSearchAlert } from "@/lib/search-alerts";
@@ -98,6 +101,8 @@ export async function CatalogView({
   const alertFilters = listingFiltersToSearchAlert(filters);
   const lastPage = page >= Math.ceil(totalCount / LISTINGS_PAGE_SIZE);
   const clearHref = catalogHref(clearedFilters(scope), scope);
+  // Descubrir (big-02): these results, with their filters and order, one per screen. The grid stays the default.
+  const descubrir = !error && listings.length > 0 ? descubrirHref(filters) : null;
 
   return (
     <CatalogNavigation>
@@ -112,6 +117,12 @@ export async function CatalogView({
             </p>
             <div className="hidden items-center gap-2 self-center lg:ml-auto lg:flex">
               {narrowed ? <CreateSearchAlert filters={alertFilters} variant="button" align="right" /> : null}
+              {descubrir ? (
+                <Link href={descubrir} prefetch={false} className={buttonClasses({ variant: "secondary" })}>
+                  <GalleryVerticalEnd aria-hidden="true" />
+                  Ver en Descubrir
+                </Link>
+              ) : null}
               <SortMenu filters={filters} scope={scope} />
             </div>
           </div>
@@ -124,6 +135,12 @@ export async function CatalogView({
             <FilterSheetButton filters={filters} scope={scope} appliedCount={applied.length} facets={facets} />
             <SortSheetButton filters={filters} scope={scope} />
           </div>
+          {descubrir ? (
+            <Link href={descubrir} prefetch={false} className="mt-2 inline-flex min-h-11 items-center gap-2 t-ui font-semibold text-ink underline decoration-accent decoration-2 underline-offset-[3px] hover:decoration-ink lg:hidden">
+              <GalleryVerticalEnd className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+              Ver en Descubrir
+            </Link>
+          ) : null}
 
           {applied.length > 0 || narrowed ? (
             // Without chips the row only holds the phone alert entry.

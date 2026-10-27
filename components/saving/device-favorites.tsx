@@ -60,7 +60,7 @@ export function DeviceFavorites() {
   }, []);
 
   async function clearAll() {
-    if (!(await confirm({ title: "¿Borrar lo guardado en este dispositivo?", body: "Se borran tus favoritos y lo que viste aquí. Tu cuenta, si tienes una, no cambia.", confirmLabel: "Borrar", tone: "danger" }))) return;
+    if (!(await confirm({ title: "¿Borrar lo guardado en este dispositivo?", body: "Se borran tus favoritos, lo que viste aquí y lo que ocultaste en Descubrir. Tu cuenta, si tienes una, no cambia.", confirmLabel: "Borrar", tone: "danger" }))) return;
     clearDeviceSaves();
     setCards([]);
   }

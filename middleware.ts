@@ -87,6 +87,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/listados",
+    "/descubrir",
     "/api/catalog/:path*",
     "/mi-cuenta/:path*",
     "/mis-publicaciones/:path*",

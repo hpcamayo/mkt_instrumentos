@@ -79,4 +79,7 @@ export const NON_INDEXABLE_PATH_PREFIXES = [
   "/registro/tienda",
   // Photos shared from the phone to the installed app (big-12).
   "/compartir",
+  // Descubrir (big-02): the catalog's listings again, one per screen, under any filters. The listings and the
+  // catalog are the pages to index.
+  "/descubrir",
 ] as const;

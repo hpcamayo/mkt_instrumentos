@@ -29,6 +29,8 @@ function under(pathname: string, prefix: string) {
 export function getShellLayout(pathname: string): ShellLayout {
   // Admin draws its own frame (sidebar, <main>) and has no footer.
   if (under(pathname, "/admin")) return { header: "none", strip: "none", phoneSearch: "none", footer: "none" };
+  // Descubrir (big-02) fills the screen with one listing and draws its own bar and <main>.
+  if (under(pathname, "/descubrir")) return { header: "none", strip: "none", phoneSearch: "none", footer: "none" };
   // The home: its banner carries the search, so the bar has none and phones get no search row (UX-3 § Home header).
   if (pathname === "/") return { header: "home", strip: "none", phoneSearch: "none", footer: "full" };
   if (PUBLISHING_PATHS.has(pathname)) return { header: "publishing", strip: "wide", phoneSearch: "none", footer: "slim" };
