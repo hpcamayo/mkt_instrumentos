@@ -1251,11 +1251,12 @@ Migration `20261113120000_launch_audit_trust.sql` (findings A15, A16 and A28 of 
   the limit). One call in fifty first removes up to 500 rows older than a day through the `window_start` index,
   skipping rows another call is removing, so a visitor's own count is never locked during the sweep.
   `lib/rate-limit.ts` uses it for `/api/auth/login`, `/auth/callback`, `/api/auth/check-email` and
-  `/api/auth/resend-confirmation`. Before the migration (the function doesn't exist yet) every request goes on; any
-  other database failure is logged, the e-mail check then refuses to answer, and the other routes go on under
+  `/api/auth/resend-confirmation`. When it can't count (before the migration the function doesn't exist yet, or any
+  other database failure), the failure is logged, the e-mail check refuses to answer, and the other routes go on under
   Supabase's own limits.
 - Locks: replacing the catalog policies takes an ACCESS EXCLUSIVE lock on each table until the commit, and every lock
   wait is capped at 10 seconds (`lock_timeout`), so behind a long query the migration fails and can be run again.
 - Order: deploy first, then apply. The application before this change has no code step, so with the migration alone
-  Admin would be locked out until the deploy; the new application works with the old function too.
+  Admin would be locked out until the deploy; the new application works with the old function too, except that the
+  sign-up forms can't check an address until the migration is in, so it goes in as soon as the deploy is ready.
 <!-- /launch-audit:trust -->

@@ -234,10 +234,13 @@ test("A16, A28: each visitor is counted under an HMAC of their address; a count 
     reply = { data: false, error: null };
     assert.equal(await checkRequest(RATE_LIMITS.login, visitor), "limited");
     assert.equal(await allowRequest(RATE_LIMITS.login, visitor), false);
-    // Before the migration the function doesn't exist yet: everyone goes on, as before A16.
+    // Before the migration the function doesn't exist yet: the e-mail check can't count, so it is told so (Codex's
+    // second review); a sign-in still goes on, as before A16.
     reply = { data: null, error: { code: "PGRST202", message: "function not found" } };
-    assert.equal(await checkRequest(RATE_LIMITS.checkEmail, visitor), "allowed");
+    assert.equal(await checkRequest(RATE_LIMITS.checkEmail, visitor), "unavailable");
     assert.deepEqual(warnings.at(-1), ["rate-limit-unavailable", "auth.check_email", "PGRST202"]);
+    assert.equal(await allowRequest(RATE_LIMITS.login, visitor), true);
+    assert.deepEqual(warnings.at(-1), ["rate-limit-unavailable", "auth.login", "PGRST202"]);
     // Any other failure (a timeout, a lost grant, an odd answer) is reported and logged; the Auth routes still go on.
     const logged = warnings.length;
     for (const failing of [{ data: null, error: { code: "57014", message: "canceling statement due to statement timeout" } },

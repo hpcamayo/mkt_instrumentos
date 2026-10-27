@@ -28,10 +28,10 @@ export function clientAddress(request: Request) {
 
 export type RateLimitVerdict = "allowed" | "limited" | "unavailable";
 
-// "limited" once the visitor is over the limit. Until the migration that adds the counter is applied (PostgREST can't
-// find consume_rate_limit), every request is allowed, as before A16. Any other failure is "unavailable", logged, and
-// each route decides: the e-mail check then refuses to answer, since it would otherwise say whether an address has an
-// account with no limit at all; the routes that call Supabase Auth go on (allowRequest), under Supabase's own limits.
+// "limited" once the visitor is over the limit. A counter that can't count, including before the migration that adds it
+// is applied (PostgREST can't find consume_rate_limit), is "unavailable", logged, and each route decides: the e-mail
+// check then refuses to answer, since it would otherwise say whether an address has an account with no limit at all;
+// the routes that call Supabase Auth go on (allowRequest), under Supabase's own limits.
 export async function checkRequest(rule: RateLimitRule, request: Request): Promise<RateLimitVerdict> {
   const admin = getSupabaseAdminClient();
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -47,7 +47,7 @@ export async function checkRequest(rule: RateLimitRule, request: Request): Promi
   });
   if (!error && typeof data === "boolean") return data ? "allowed" : "limited";
   console.warn("rate-limit-unavailable", rule.bucket, error ? error.code ?? error.message : "unexpected answer");
-  return error?.code === "PGRST202" ? "allowed" : "unavailable";
+  return "unavailable";
 }
 
 // True unless the visitor is over the limit: a counter that can't count never blocks a sign-in or an e-mail link.
