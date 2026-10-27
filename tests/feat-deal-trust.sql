@@ -27,7 +27,7 @@ end $$;
 create function pg_temp.as_admin() returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claims',
-    '{"sub":"d7100000-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+    '{"sub":"d7100000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 end $$;
 
 -- Values carried between steps (the role switches end each do block).

@@ -33,7 +33,7 @@ begin
 end $$;
 create function pg_temp.as_admin() returns void language plpgsql as $$
 begin
-  perform set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.id('admin'), 'role', 'authenticated',
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.id('admin'), 'role', 'authenticated', 'aal', 'aal2',
     'app_metadata', jsonb_build_object('role', 'admin'))::text, true);
 end $$;
 -- Reads the browser roles cannot make (the tables are closed to them).

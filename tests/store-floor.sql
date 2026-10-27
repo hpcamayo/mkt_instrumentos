@@ -182,7 +182,7 @@ select pg_temp.check((select count(*) from public.store_warranty_policies where 
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claims',
-  '{"sub":"e1000000-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+  '{"sub":"e1000000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 select public.admin_set_store_inventory_enabled('5f200000-0000-4000-8000-000000000001', true, 'Piloto store-floor');
 
 select pg_temp.owner_a();

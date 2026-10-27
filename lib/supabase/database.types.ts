@@ -1805,6 +1805,15 @@ export type Database = {
         Args: { p_listing_id: string }
         Returns: Database["public"]["Tables"]["listings"]["Row"]
       }
+      consume_rate_limit: {
+        Args: {
+          p_bucket: string
+          p_key: string
+          p_limit: number
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
       copy_owned_listing: {
         Args: { p_listing_id: string; p_mode: string }
         Returns: Database["public"]["Tables"]["listings"]["Row"]

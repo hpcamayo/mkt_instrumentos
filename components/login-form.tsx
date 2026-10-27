@@ -11,8 +11,10 @@ import { Checkbox, Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Notice } from "@/components/ui/notice";
 import { ResendConfirmation } from "@/components/auth/resend-confirmation";
-import { EMAIL_NOT_CONFIRMED } from "@/lib/auth/confirmation";
 import { OAuthButtons, oauthProvidersEnabled } from "@/components/auth/oauth-buttons";
+import { isEmailNotConfirmedError } from "@/lib/auth/confirmation";
+import { TOO_MANY_ATTEMPTS, TOO_MANY_EMAILS, isAuthRateLimited } from "@/lib/auth/limits";
+import { rememberMarker, serializeCookie } from "@/lib/auth/remember";
 import { twoStepPath } from "@/lib/auth/two-step";
 
 type FormState = "idle" | "submitting" | "sent" | "error";
@@ -66,19 +68,29 @@ export function LoginForm() {
         return;
       }
 
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, remember }),
-      });
-
-      if (!response.ok) {
-        const result = (await response.json().catch(() => null)) as { code?: string; message?: string } | null;
+      // Launch audit A16: the browser signs in itself, so Supabase Auth counts attempts per visitor instead of
+      // against the server's address, which every visitor shares.
+      const supabase = getSupabaseBrowserClient();
+      if (!supabase) {
         setState("error");
-        if (result?.code === EMAIL_NOT_CONFIRMED) {
+        setMessage("No se pudo iniciar sesión.");
+        return;
+      }
+      // safe-08: the "Mantener sesión iniciada" marker goes first, because the browser client reads it when it writes
+      // the session cookies.
+      const marker = rememberMarker(remember, window.location.protocol === "https:");
+      document.cookie = serializeCookie(marker.name, marker.value, marker.options);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setState("error");
+        // Supabase checks the password before the confirmation, so this answer does not reveal unconfirmed accounts.
+        if (isEmailNotConfirmedError(error)) {
           setUnconfirmedEmail(email);
-          setMessage(result.message ?? "Confirma tu correo para ingresar.");
+          setMessage("Te enviamos un enlace al registrarte. Ábrelo para activar tu cuenta y vuelve a ingresar.");
+          return;
+        }
+        if (isAuthRateLimited(error)) {
+          setMessage(TOO_MANY_ATTEMPTS);
           return;
         }
         setFailedEmail(email);
@@ -86,8 +98,12 @@ export function LoginForm() {
         return;
       }
 
-      const result = (await response.json().catch(() => null)) as { needsCode?: boolean } | null;
-      window.location.assign(result?.needsCode ? twoStepPath("codigo", nextPath) : nextPath);
+      // safe-08: the server records this browser (its identifier cookie is httpOnly) and e-mails about a new one. It
+      // never holds up the sign-in.
+      await fetch("/api/account/sessions/device", { method: "POST", credentials: "include" }).catch(() => null);
+      // Launch audit A15: an account with an authenticator app finishes signing in with its code.
+      const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      window.location.assign(level?.currentLevel === "aal1" && level.nextLevel === "aal2" ? twoStepPath("codigo", nextPath) : nextPath);
       return;
     }
 
@@ -117,7 +133,7 @@ export function LoginForm() {
     if (error) {
       setState("error");
       setMessage(
-        "No se pudo enviar el enlace. Verifica que ya tengas una cuenta.",
+        isAuthRateLimited(error) ? TOO_MANY_EMAILS : "No se pudo enviar el enlace. Verifica que ya tengas una cuenta.",
       );
       return;
     }

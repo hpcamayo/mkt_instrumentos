@@ -2,7 +2,7 @@ import { Suspense, type ReactNode } from "react";
 import { AccountSettingsTabs } from "@/components/account-settings-tabs";
 import { DeviceSessions, type DeviceSession } from "@/components/account/device-sessions";
 import { EmailChangeForm } from "@/components/account/email-change-form";
-import { TwoStepSetup, type TwoStepState } from "@/components/auth/two-step-setup";
+import { TwoStepCode, TwoStepSetup, type TwoStepState } from "@/components/auth/two-step-setup";
 import { PasswordUpdateForm } from "@/components/password-form";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
@@ -31,7 +31,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
       <div className="max-w-md rounded-panel border border-subtle bg-white p-5 sm:p-6">
         <PageHeader title="Escribe tu código" meta="Tu cuenta tiene la verificación en dos pasos activa." />
         <div className="mt-6">
-          <TwoStepSetup state={{ hasFactor: true, aal: "aal1", required: false, reason: null, recoveryCodesLeft: 0 }} next={next} />
+          <TwoStepCode next={next} />
         </div>
       </div>
     );

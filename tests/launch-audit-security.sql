@@ -121,7 +121,7 @@ select pg_temp.check((pg_temp.store('e1210000-0000-4000-8000-000000000001')).ver
 select pg_temp.check(pg_temp.notices('store_verification_lapsed') = 1, 'once per lapse');
 
 -- Admin sees it in Verificacion, and verifying again settles it.
-select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 do $$
 declare queue jsonb;
 begin
@@ -145,7 +145,7 @@ select pg_temp.check((public.get_admin_moderation_counts()->>'verificacion')::in
 -- Leaving a lapsed store unverified takes it out of the queue.
 select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000002","role":"authenticated"}', true);
 update public.stores set razon_social = 'OTRA EMPRESA SAC' where id = 'e1210000-0000-4000-8000-000000000001';
-select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000003","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000003","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 select pg_temp.check((public.get_admin_moderation_counts()->>'verificacion')::int = 1, 'razón social change waits');
 select pg_temp.check(pg_temp.notices('store_verification_lapsed') = 2, 'a new lapse is a new notice');
 select public.set_store_verification('e1210000-0000-4000-8000-000000000001', false);

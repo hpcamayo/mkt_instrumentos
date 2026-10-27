@@ -333,7 +333,8 @@ test("header state endpoint returns the rail's counts, the admin check and the n
   assert.match(route, /client\.rpc\("is_admin"\)/);
   assert.match(route, /\.from\("notifications"\)\.select\("id", \{ count: "exact", head: true \}\)\.is\("read_at", null\)/);
   assert.match(route, /client\.rpc\("get_pending_buyer_confirmation_count"\)/);
-  assert.match(route, /admin: !adminResult\.error && adminResult\.data === true/);
+  // An Admin still waiting to enter the authenticator code sees the link too (launch audit A15).
+  assert.match(route, /admin: \(!adminResult\.error && adminResult\.data === true\) \|\| data\.user\.app_metadata\?\.role === "admin"/);
   assert.match(route, /"Cache-Control": "private, no-store"/);
 });
 

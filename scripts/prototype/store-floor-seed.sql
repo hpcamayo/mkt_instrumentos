@@ -58,7 +58,7 @@ begin
   perform set_config('request.jwt.claims', '{"sub":"d0000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2"}', true);
   perform public.set_store_installments(12, array['BCP', 'BBVA', 'Interbank'], 500, 'Las procesa Izipay en el POS.', true);
   perform set_config('request.jwt.claims',
-    '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+    '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
   perform public.admin_review_store_installments('d1000000-0000-4000-8000-000000000001', 'approve',
     'Izipay ofrece estas cuotas sin intereses', (select revision from public.store_installment_offers
       where store_id = 'd1000000-0000-4000-8000-000000000001'));

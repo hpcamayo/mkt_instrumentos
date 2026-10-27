@@ -83,7 +83,7 @@ begin
 end;
 $$;
 
-select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare denied boolean := false; begin
   perform public.review_listing('43000000-0000-4000-8000-000000000005','approve',null);
   if (select status <> 'approved' or published_at is null from public.listings where id='43000000-0000-4000-8000-000000000005') then raise exception 'LIFE-001 admin approval failed'; end if;
@@ -153,7 +153,7 @@ end $$;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"41000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select public.update_owned_listing('43000000-0000-4000-8000-000000000001','{"price_pen":875}','{}',null);
-select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare revision_id uuid; revision_version integer; begin
   select id, version into revision_id, revision_version from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000001' and status='pending';
   perform public.review_listing_revision(revision_id,'approve',revision_version,null);
@@ -179,7 +179,7 @@ do $$ declare result jsonb; begin
     raise exception 'Dependent attributes leaked before the type revision was approved';
   end if;
 end $$;
-select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare revision_id uuid; begin
   select id into revision_id from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000001' and status='pending';
   perform public.review_listing_revision(revision_id,'approve',1,null);
@@ -189,7 +189,7 @@ do $$ declare revision_id uuid; begin
 end $$;
 select set_config('request.jwt.claims','{"sub":"41000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select public.update_owned_listing('43000000-0000-4000-8000-000000000001','{}','{"model":"Modelo rechazado","condition":"Nuevo"}',null);
-select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare revision_id uuid; denied boolean := false; begin
   select id into revision_id from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000001' and status='pending';
   begin perform public.review_listing_revision(revision_id,'reject',1,''); exception when others then denied := true; end;
@@ -207,7 +207,7 @@ do $$ declare result jsonb; begin
   if (select condition from public.listings where id='43000000-0000-4000-8000-000000000003') <> 'Nuevo' then raise exception 'Normal Tienda leaked pending condition'; end if;
 end $$;
 
-select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 select public.set_store_verification('42000000-0000-4000-8000-000000000003',true);
 do $$ declare revision_id uuid; begin
   select id into revision_id from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000003' and status='pending';
@@ -228,14 +228,14 @@ do $$ declare result jsonb; begin
   end if;
 end $$;
 
-select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 select public.set_store_verification('42000000-0000-4000-8000-000000000004',false);
 select set_config('request.jwt.claims','{"sub":"41000000-0000-4000-8000-000000000004","role":"authenticated"}',true);
 do $$ declare result jsonb; begin
   result := public.update_owned_listing('43000000-0000-4000-8000-000000000004','{}','{"model":"Revocado moderado"}',null);
   if result->>'mode' <> 'revision' then raise exception 'Revoked store kept revision bypass'; end if;
 end $$;
-select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"41999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 select public.set_store_verification('42000000-0000-4000-8000-000000000004',true);
 do $$ begin
   if not exists (select 1 from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000004' and status='pending') then

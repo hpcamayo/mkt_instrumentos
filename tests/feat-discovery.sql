@@ -18,6 +18,7 @@ begin
   else
     perform set_config('role', 'authenticated', true);
     perform set_config('request.jwt.claims', json_build_object('sub', p_user, 'role', 'authenticated',
+      'aal', case when p_user = 'd7000000-0000-4000-8000-000000000009' then 'aal2' else 'aal1' end,
       'app_metadata', case when p_user = 'd7000000-0000-4000-8000-000000000009' then json_build_object('role', 'admin') else '{}'::json end)::text, true);
   end if;
   begin
@@ -35,6 +36,7 @@ create function pg_temp.as_user(p_user uuid) returns void language plpgsql as $$
 begin
   perform set_config('role', case when p_user is null then 'anon' else 'authenticated' end, true);
   perform set_config('request.jwt.claims', case when p_user is null then '{"role":"anon"}' else json_build_object('sub', p_user, 'role', 'authenticated',
+      'aal', case when p_user = 'd7000000-0000-4000-8000-000000000009' then 'aal2' else 'aal1' end,
     'app_metadata', case when p_user = 'd7000000-0000-4000-8000-000000000009' then json_build_object('role', 'admin') else '{}'::json end)::text end, true);
 end $$;
 

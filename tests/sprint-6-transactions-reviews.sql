@@ -214,7 +214,7 @@ do $$ declare denied boolean:=false; transaction_uuid uuid; begin
  begin perform public.submit_transaction_review(transaction_uuid,4,'Duplicada'); exception when others then denied:=sqlerrm like '%REVIEW_ALREADY_SUBMITTED%'; end;
  if not denied then raise exception 'Duplicate buyer review accepted'; end if;
 end $$;
-select set_config('request.jwt.claims','{"sub":"61999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"61999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare queue jsonb; review_uuid uuid; begin
  select id into review_uuid from qa_s6_ids where name='main_buyer_review';
  queue:=public.get_admin_review_queue();
@@ -254,7 +254,7 @@ do $$ declare review_uuid uuid; denied boolean:=false; begin
  begin perform public.get_admin_review_queue(); exception when others then denied:=sqlerrm like '%ADMIN_REQUIRED%'; end;
  if not denied then raise exception 'Nonadmin inspected review/transaction moderation queue'; end if;
 end $$;
-select set_config('request.jwt.claims','{"sub":"61999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"61999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare review_uuid uuid; denied boolean:=false; queue jsonb; begin
  select id into review_uuid from qa_s6_ids where name='main_buyer_review';
  begin perform public.moderate_review(review_uuid,true,''); exception when others then denied:=sqlerrm like '%REVIEW_MODERATION_REASON_REQUIRED%'; end;

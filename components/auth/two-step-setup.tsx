@@ -5,11 +5,13 @@ import { Button } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
+import { readTwoStepCode, twoStepErrorMessage } from "@/lib/auth/two-step-input";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 // Two-step sign-in with an authenticator app (safe-08, accounts batch; the Admin requirement is launch audit A15).
 // One component for the three moments: the code after signing in (the session is first-step only), turning it on
-// (with ten recovery codes), and managing it. The session keeps its level for as long as it lasts, so with "Mantener
+// (with ten recovery codes), and managing it. TwoStepCode is the code step alone, for the forms that need it first
+// (a password change or reset in a first-step session). The session keeps its level for as long as it lasts, so with "Mantener
 // sesión iniciada" the code is asked again only on a new device or after signing out.
 
 export type TwoStepState = {
@@ -22,10 +24,12 @@ export type TwoStepState = {
 
 type Enrolment = { factorId: string; qrCode: string; secret: string };
 
-const CODE_PATTERN = /^\d{6}$/;
-
 function safeNext(next: string | null) {
   return next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : null;
+}
+
+export function TwoStepCode({ next }: { next: string | null }) {
+  return <CodeStep destination={safeNext(next)} />;
 }
 
 export function TwoStepSetup({ state, next, startSetup = false }: { state: TwoStepState; next: string | null; startSetup?: boolean }) {
@@ -50,8 +54,8 @@ function CodeStep({ destination }: { destination: string | null }) {
 
   async function verify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const code = String(new FormData(event.currentTarget).get("code") ?? "").replace(/\s/g, "");
-    if (!CODE_PATTERN.test(code)) return setError("Escribe los 6 números que muestra tu app.");
+    const code = readTwoStepCode(new FormData(event.currentTarget).get("code"));
+    if (!code) return setError("Escribe los 6 números que muestra tu app.");
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return setError("No pudimos conectar con Laria. Vuelve a intentarlo.");
     setBusy(true);
@@ -65,9 +69,7 @@ function CodeStep({ destination }: { destination: string | null }) {
     const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({ factorId: factor.id, code });
     if (verifyError) {
       setBusy(false);
-      return setError(verifyError.status === 429
-        ? "Hiciste muchos intentos. Espera unos minutos y vuelve a intentarlo."
-        : "El código no coincide o ya venció. Escribe el que muestra tu app ahora.");
+      return setError(twoStepErrorMessage(verifyError));
     }
     window.location.assign(destination ?? "/mi-cuenta");
   }
@@ -167,8 +169,8 @@ function SetupStep({ state, destination, startSetup }: { state: TwoStepState; de
   async function confirm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!enrolment) return;
-    const code = String(new FormData(event.currentTarget).get("code") ?? "").replace(/\s/g, "");
-    if (!CODE_PATTERN.test(code)) return setError("Escribe los 6 números que muestra tu app.");
+    const code = readTwoStepCode(new FormData(event.currentTarget).get("code"));
+    if (!code) return setError("Escribe los 6 números que muestra tu app.");
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return setError("No pudimos conectar con Laria. Vuelve a intentarlo.");
     setBusy(true);

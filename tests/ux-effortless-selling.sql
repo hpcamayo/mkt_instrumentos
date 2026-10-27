@@ -29,7 +29,7 @@ end $$;
 create function pg_temp.as_admin() returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claims',
-    '{"sub":"c5100000-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+    '{"sub":"c5100000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 end $$;
 create function pg_temp.drafts(p_id uuid) returns bigint language sql security definer as $$
   select count(*) from public.listing_drafts where id = p_id
