@@ -637,8 +637,11 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
    after a reset, with the SQL each one builds for EXECUTE (its strings with their escapes, pieces joined with `||`,
    and `format()` filled in as PostgreSQL fills it in, which it checks against the database's own `format()`), and the
    SQL that SQL builds, three levels down; deeper fails. It can't see what a variable built elsewhere (over several
-   assignments, say), a table or another function (`concat()`, `replace()`, `string_agg()`) adds, nor `format()`
-   arguments passed as a VARIADIC array other than `ARRAY[...]`, so write the WHERE in the string itself.
+   assignments, say), a table or another function (`concat()`, `replace()`, `string_agg()`) adds, `format()`
+   arguments passed as a VARIADIC array other than `ARRAY[...]`, nor `U&''` strings, so write the WHERE in the string
+   itself. A sql function written `BEGIN ATOMIC` keeps no source text, so the test reads its body back with
+   `pg_get_function_sqlbody()`. It can also report what isn't there: a WHERE that only such an unseen part adds reads
+   as missing, and text that reads like an UPDATE or DELETE without being run (a message, say) counts as one.
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
