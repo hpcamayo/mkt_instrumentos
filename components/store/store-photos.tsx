@@ -9,6 +9,8 @@ import type { ListingPhotoData } from "@/lib/listings";
 // when a pointer or the focus first reaches them (launch audit A29).
 export function StorePhotos({ photos, storeName }: { photos: ListingPhotoData[]; storeName: string }) {
   const [openAt, setOpenAt] = useState<number | null>(null);
+  // Each press of a photo opens the lightbox anew, so one whose code failed to download tries again at that photo.
+  const [opened, setOpened] = useState(0);
   const opener = useRef<HTMLButtonElement | null>(null);
   const shown = photos.slice(0, 5);
   if (shown.length === 0) return null;
@@ -23,6 +25,7 @@ export function StorePhotos({ photos, storeName }: { photos: ListingPhotoData[];
               onClick={(event) => {
                 opener.current = event.currentTarget;
                 setOpenAt(index);
+                setOpened((count) => count + 1);
               }}
               className="relative block h-16 w-16 overflow-hidden rounded-control ring-1 ring-subtle hover:ring-line-strong lg:h-[72px] lg:w-[72px]"
             >
@@ -33,6 +36,7 @@ export function StorePhotos({ photos, storeName }: { photos: ListingPhotoData[];
       </ul>
       {openAt !== null ? (
         <Lightbox
+          key={opened}
           photos={shown}
           title={`el local de ${storeName}`}
           start={openAt}

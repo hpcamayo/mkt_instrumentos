@@ -12,7 +12,9 @@ import { Button, buttonClasses } from "@/components/ui/button";
 // download when a pointer or the focus reaches a photo, so it is usually there by the click.
 export const Lightbox = afterPage(() => import("@/components/listing/lightbox").then((module) => module.Lightbox), {
   loading: () => <LightboxLoading />,
-  failed: (retry, { start, onClose }) => <LightboxFailed retry={retry} close={() => onClose(start)} />,
+  failed: (retry, { start, onClose }, focus) => (
+    <LightboxFailed retry={retry} close={() => onClose(start)} takeFocus={focus.free()} restoreFocus={focus.restore} />
+  ),
 });
 
 // A preload that fails is tried again when the lightbox opens.
@@ -30,9 +32,20 @@ export function LightboxLoading() {
   );
 }
 
-// The focus moves to "Reintentar", so a keyboard can answer at once, and Escape closes the note as it closes the
-// lightbox; either way the focus goes back to the photo that opened it.
-export function LightboxFailed({ retry, close }: { retry: () => void; close: () => void }) {
+// The focus moves to "Reintentar", so a keyboard can answer at once, unless the visitor took it elsewhere while the code
+// downloaded (to type a question, say). "Reintentar" gives the focus back to the photo while the code downloads again.
+// Escape closes the note as it closes the lightbox; either way the focus goes back to the photo that opened it.
+export function LightboxFailed({
+  retry,
+  close,
+  takeFocus,
+  restoreFocus,
+}: {
+  retry: () => void;
+  close: () => void;
+  takeFocus: boolean;
+  restoreFocus: () => void;
+}) {
   return (
     <div
       role="alert"
@@ -42,7 +55,17 @@ export function LightboxFailed({ retry, close }: { retry: () => void; close: () 
       className="fixed inset-x-4 bottom-4 z-50 mx-auto flex max-w-md flex-wrap items-center gap-3 rounded-panel border border-subtle bg-surface p-4"
     >
       <p className="t-ui text-ink">No pudimos abrir la foto.</p>
-      <Button variant="secondary" size="sm" onClick={retry} autoFocus>Reintentar</Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={() => {
+          restoreFocus();
+          retry();
+        }}
+        autoFocus={takeFocus}
+      >
+        Reintentar
+      </Button>
       <Button variant="quiet" size="sm" onClick={close}>Cerrar</Button>
     </div>
   );
