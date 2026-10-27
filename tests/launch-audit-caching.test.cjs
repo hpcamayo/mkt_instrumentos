@@ -363,9 +363,21 @@ test("A19: the database records changes to what the cached pages show, from list
   assert.match(migration, /if length\(p_nonce\) between 8 and 100 and length\(p_deployment\) between 1 and 200 then\n\s+delete from laria_private\.public_page_changes\n\s+where claim_id = p_claim and armed_deployment = p_deployment and armed_nonce <> p_nonce;/);
   assert.match(migration, /check \(\(armed_nonce is null\) = \(armed_deployment is null\)\)/);
   assert.doesNotMatch(migration, /is not distinct from p_deployment|p_deployment is null/);
-  // Codex's sixth review: a second run locks nothing of the record before the triggers' tables, since a writer holds
-  // its table's lock while its trigger inserts into the record.
-  assert.doesNotMatch(migration, /^\s*(alter table|create (unique )?index|drop function|create policy|lock table)\b/im);
+  // Codex's sixth review: a second run locks nothing of the record, since a writer holds its table's lock while its
+  // trigger inserts into the record.
+  assert.doesNotMatch(migration, /^\s*(alter table|create (unique )?index|drop function|create policy)\b/im);
+  // Codex's seventh review: writers take the triggers' tables in many orders, so the first statement locks all of them
+  // at once without waiting, lets go of all of them while one is busy, and gives up after 30 seconds. Nothing else
+  // locks a table. tests/launch-audit-page-refresh-locks.integration.cjs replays a writer on each of them.
+  const locks = [...migration.matchAll(/^\s*lock table ([\s\S]*?)\n\s*in (\w+(?: \w+)*) mode( nowait)?;/gm)];
+  assert.equal(locks.length, 1);
+  assert.equal(migration.match(/\block table\b/g).length, 1);
+  assert.deepEqual(locks[0][1].split(",").map((table) => table.trim()).sort(), Object.keys(triggers).sort());
+  assert.equal(locks[0][2], "share row exclusive");
+  assert.equal(locks[0][3], " nowait");
+  const statements = migration.replace(/^--.*\n/gm, "").trimStart();
+  assert.match(statements, /^set lock_timeout = '10s';\n\ndo \$\$\ndeclare\n  give_up timestamptz := clock_timestamp\(\) \+ interval '30 seconds';\nbegin\n  loop\n    begin\n      lock table /);
+  assert.match(migration, / in share row exclusive mode nowait;\n      exit;\n    exception when lock_not_available then\n      if clock_timestamp\(\) > give_up then\n        raise exception using errcode = 'lock_not_available',\n          message = 'PAGE_REFRESH_TABLES_BUSY: [^']+';\n      end if;\n      perform pg_sleep\(/);
   for (const page of ["app/page.tsx", "app/instrumentos/[slug]/page.tsx"]) assert.match(read(page), /\nexport const maxDuration = 30;\n/, page);
   assert.match(read("tests/launch-audit-page-refresh.sql"), /the third review's case/);
 });

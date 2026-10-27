@@ -50,12 +50,15 @@
 -- Compatibility: nothing before this change reads these tables, so the migration can be applied before the deploy;
 -- rows wait until the job runs, and its first claim folds them into one.
 -- Locks: every trigger is made with create or replace trigger, which takes a SHARE ROW EXCLUSIVE lock on its table,
--- on a second run too. The lock blocks writes to that table, never reads, and is held until the migration commits, so
--- the tables come in order of how often they are written, listings last. Each lock wait is capped at 10 seconds
--- (lock_timeout): behind a long-running query the migration fails and can be run again, instead of holding up the
--- traffic queued behind it. Applying it scans no table. On a second run nothing here locks the record's tables
--- (create table if not exists leaves an existing table alone): a writer holds its own table's lock while its trigger
--- inserts into the record, so a lock on the record taken before a trigger's table could close a cycle with it.
+-- on a second run too. The lock blocks writes to that table, never reads, and is held until the migration commits.
+-- Writers take these nine tables in many orders (a listing's price edit updates its inventory item, an inventory price
+-- edit its listing, a new listing its photos), so a migration that waited for one of them while holding another could
+-- close a cycle with a writer. So the first statement takes all nine locks at once without waiting: while one is held,
+-- it lets go of the others and tries again a moment later, and after 30 seconds of busy tables it fails and can be run
+-- again. From then on the migration waits for no writer. Every other lock wait is capped at 10 seconds (lock_timeout).
+-- Applying it scans no table. On a second run nothing here locks the record's tables (create table if not exists
+-- leaves an existing table alone): a writer holds its own table's lock while its trigger inserts into the record, so a
+-- lock on the record could close a cycle with it too.
 -- The transition tables hold the rows each statement touched, so a bulk update pays a small cost per row even when
 -- nothing is recorded. Each run of the job looks for the changes that come with time through the review deadline
 -- index, and reads public.listings for pauses that ended (no index covers paused_until; once a minute, that is a
@@ -63,6 +66,30 @@
 -- Rollback: drop the twenty-four triggers, the thirteen functions and the three tables.
 
 set lock_timeout = '10s';
+
+-- The nine tables that get a trigger below, all at once and without waiting (see Locks above; Codex's seventh review).
+-- A lock taken inside the block's own begin ... exception is let go when the attempt fails.
+do $$
+declare
+  give_up timestamptz := clock_timestamp() + interval '30 seconds';
+begin
+  loop
+    begin
+      lock table laria_private.assisted_commerce_settings, public.store_payment_methods, public.transaction_reviews,
+        public.listing_sound_clips, public.profiles, public.listing_photos, public.stores, public.store_inventory_items,
+        public.listings
+      in share row exclusive mode nowait;
+      exit;
+    exception when lock_not_available then
+      if clock_timestamp() > give_up then
+        raise exception using errcode = 'lock_not_available',
+          message = 'PAGE_REFRESH_TABLES_BUSY: the tables this migration adds triggers to stayed busy for 30 seconds; run it again.';
+      end if;
+      perform pg_sleep(0.02 + random() * 0.08);
+    end;
+  end loop;
+end;
+$$;
 
 create table if not exists laria_private.public_page_changes (
   id bigint generated always as identity primary key,
@@ -449,8 +476,8 @@ revoke all on function laria_private.mark_listing_page_changes(), laria_private.
   laria_private.mark_pilot_page_changes()
 from public, anon, authenticated;
 
--- Transition tables allow one event per trigger, so each table has one trigger per event. The tables come in order of
--- how often they are written, so the busiest are locked the shortest (see Locks above).
+-- Transition tables allow one event per trigger, so each table has one trigger per event. Their tables are locked
+-- already, by the first statement.
 create or replace trigger assisted_commerce_settings_public_page_changes_update
 after update on laria_private.assisted_commerce_settings
 referencing old table as old_rows new table as new_rows

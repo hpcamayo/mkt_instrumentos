@@ -1267,9 +1267,15 @@ Migration `20261113120000_launch_audit_trust.sql` (findings A15, A16 and A28 of 
 Migration `20261113130000_launch_audit_page_refresh.sql` (finding A19 of the 26 Oct 2026 launch audit). Suite:
 `tests/launch-audit-page-refresh.sql`. Nothing before it reads the new tables, so it can be applied before the deploy.
 Its triggers are made with `create or replace trigger`, which takes a SHARE ROW EXCLUSIVE lock (writes wait, reads
-don't), on a second run too; each lock wait is capped at 10 seconds. A second run takes no lock on the record's
-tables: a writer holds its own table's lock while its trigger inserts into the record, so locking the record before a
-trigger's table could deadlock with it.
+don't), on a second run too. Writers take those nine tables in many orders (a listing's price edit updates its
+inventory item, an inventory price edit its listing, a new listing its photos), so the first statement takes all nine
+locks at once with `nowait`: while one is held it lets go of the others and tries again 20 to 100 ms later, and after
+30 seconds of busy tables it fails with `PAGE_REFRESH_TABLES_BUSY` and can be run again. From then on it waits for no
+writer; every other lock wait is capped at 10 seconds. A second run takes no lock on the record's tables: a writer
+holds its own table's lock while its trigger inserts into the record, so locking the record could deadlock with it.
+`tests/launch-audit-page-refresh-locks.integration.cjs` (local database, `pg` from `node_modules`) replays a writer
+holding each of the nine tables and then taking the other eight and the record while a second run applies, and checks
+itself by running the migration without its first statement, where a listing price edit deadlocks with it.
 
 - `laria_private.public_page_changes` (`id` identity, `changed_at`, `claim_id`, `claimed_at`, `first_claimed_at`,
   `armed_nonce`, `armed_deployment`; no API access): one row per statement that changes what the cached home and
