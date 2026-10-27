@@ -68,7 +68,7 @@ test("A25: a failure Resend may have accepted is the kind the claim retries firs
   const uncertain = [...listed[1].matchAll(/'([a-z_]+)'/g)].map((match) => match[1]);
   assert.deepEqual(uncertain, ["transport", "provider"]);
   assert.match(migration, /uncertain_since = coalesce\(uncertain_since, last_attempt_at, locked_at\)/, "a worker that stopped while sending");
-  assert.match(migration, /set status = 'failed', failure_code = 'retry_window_closed'\n  where status = 'retry' and uncertain_since < clock_timestamp\(\) - interval '23 hours';/);
+  assert.match(migration, /set status = 'failed', failure_code = 'retry_window_closed'\n  where status in \('pending', 'retry'\) and uncertain_since < clock_timestamp\(\) - interval '23 hours';/);
   assert.match(migration, /order by delivery\.uncertain_since is null, laria_private\.email_priority/);
 
   const { ResendMarketplaceEmailProvider } = load("lib/email/provider.ts", { "server-only": {} });
@@ -96,4 +96,15 @@ test("A25: a failure Resend may have accepted is the kind the claim retries firs
     const error = await failure(reply(status));
     assert.ok(!uncertain.includes(error.category), `${label}: ${error.category}`);
   }
+});
+
+test("A25: e-mails the old worker already tried count as uncertain from when they were queued", () => {
+  const migration = read(migrationFile);
+  // Codex's second review: their earlier failures can't be told apart, so none may be resent after Resend forgets them.
+  const backfill = "update laria_private.marketplace_email_deliveries\nset uncertain_since = created_at\n"
+    + "where uncertain_since is null and attempt_count > 0 and status in ('pending', 'retry', 'processing');";
+  const at = migration.indexOf(backfill);
+  assert.ok(at > 0, "the migration marks them");
+  assert.ok(at > migration.indexOf("add column if not exists uncertain_since timestamptz;"), "after the column exists");
+  assert.ok(at < migration.indexOf("create or replace function public.claim_marketplace_email_deliveries"), "before the new claim");
 });

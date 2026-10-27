@@ -247,6 +247,12 @@ insert into laria_private.marketplace_email_deliveries(id, event_type, recipient
   created_at, next_attempt_at, last_attempt_at, locked_at, locked_by)
 values (pg_temp.id(24), 'listing_approved', 'a2500000-0000-4000-8000-000000000001', 'la25-24', 'processing', 1, now() - interval '1 hour',
   now() - interval '1 hour', now() - interval '20 minutes', now() - interval '20 minutes', gen_random_uuid());
+-- One the old worker tried, queued 26 hours ago and waiting again: the migration marks it uncertain from when it was
+-- queued (Codex's second review), whatever its status.
+insert into laria_private.marketplace_email_deliveries(id, event_type, recipient_user_id, dedupe_key, status, attempt_count,
+  created_at, next_attempt_at, last_attempt_at, uncertain_since, failure_category, failure_code)
+values (pg_temp.id(25), 'store_approved', 'a2500000-0000-4000-8000-000000000001', 'la25-25', 'pending', 1, now() - interval '26 hours',
+  now() - interval '1 minute', now() - interval '25 hours', now() - interval '26 hours', 'rate_limit', 'http_429');
 
 set local role service_role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
@@ -259,6 +265,8 @@ reset role;
 do $$ begin
   perform pg_temp.check((select status = 'failed' and failure_code = 'retry_window_closed' and failure_category = 'transport'
     from laria_private.marketplace_email_deliveries where id = pg_temp.id(22)), 'past 23 hours it is given up, not sent again');
+  perform pg_temp.check((select status = 'failed' and failure_code = 'retry_window_closed' and attempt_count = 1
+    from laria_private.marketplace_email_deliveries where id = pg_temp.id(25)), 'a waiting e-mail the old worker tried is given up too');
   perform pg_temp.check((select uncertain_since = now() - interval '20 minutes' and status = 'processing' and attempt_count = 2
     from laria_private.marketplace_email_deliveries where id = pg_temp.id(24)), 'a stopped worker''s send may have gone out, from its attempt');
 end $$;

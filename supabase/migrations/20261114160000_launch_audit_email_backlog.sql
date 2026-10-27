@@ -25,14 +25,16 @@
 --    the claim's stale-lock recovery). Every attempt sends the delivery's id as Resend's Idempotency-Key, which Resend
 --    keeps for 24 hours, so such a retry is safe only within that time: the claim hands these out before anything
 --    else, and 23 hours after the first uncertain attempt marks one still waiting failed (failure_code
---    retry_window_closed) instead of risking a second copy.
+--    retry_window_closed) instead of risking a second copy. An e-mail the old worker had already tried, and not yet
+--    sent, counts as uncertain from when it was queued: its earlier failures can't be told apart.
 -- 5. A digest's day is read only when it is a real calendar date (laria_private.calendar_date); anything else ages from
 --    when the e-mail was queued, so one malformed row can't stop the claim.
 --
 -- Compatibility: the claim and fail_marketplace_email_delivery keep their signatures, checks and payload; a kind added
 -- later gets a week and the first priority unless it is added to the two functions. Nothing else changes.
--- Locks: adding the nullable column takes a brief ACCESS EXCLUSIVE lock on the queue (a few hundred rows); otherwise
--- none beyond creating the table, the functions and an index on the queue.
+-- Locks: adding the nullable column takes a brief ACCESS EXCLUSIVE lock on the queue (a few hundred rows), held while
+-- the e-mails already tried are marked; otherwise none beyond creating the table, the functions and an index on the
+-- queue.
 -- Rollback: recreate claim_marketplace_email_deliveries from 20261029120200_review_fixes_alerts_and_import.sql and
 -- fail_marketplace_email_delivery from 20260921120000_sprint_7_marketplace_email_alerts.sql, then drop
 -- set_email_daily_limit, email_settings, email_priority, email_content_time, calendar_date, email_max_age,
@@ -157,6 +159,15 @@ alter table laria_private.marketplace_email_deliveries add column if not exists 
 comment on column laria_private.marketplace_email_deliveries.uncertain_since is
   'When the first attempt that may have reached the provider began (launch audit A25): a transport or provider failure, or a worker that stopped while sending. Resend keeps the Idempotency-Key (the delivery id) for 24 hours, so the claim retries it first and gives up 23 hours after.';
 
+-- Codex's second review: an e-mail the old worker already tried may have reached Resend on any of its attempts, and
+-- only the last failure's category is kept, so none of them can be told apart. Each counts as uncertain from when it
+-- was queued, the earliest its first attempt can have been: the claim retries it only while that is under 23 hours
+-- and otherwise closes it (retry_window_closed). This runs before the new claim exists, in the same transaction, and
+-- the column's lock keeps the old worker out until it commits.
+update laria_private.marketplace_email_deliveries
+set uncertain_since = created_at
+where uncertain_since is null and attempt_count > 0 and status in ('pending', 'retry', 'processing');
+
 -- From 20260921120000_sprint_7_marketplace_email_alerts.sql, with uncertain_since: a transport or provider failure
 -- (timeouts, lost connections, 408, 409, 5xx, a reply without an id) may have been accepted; a rate limit, a refusal
 -- or a failure before sending was not.
@@ -237,7 +248,7 @@ begin
   -- send a second copy.
   update laria_private.marketplace_email_deliveries
   set status = 'failed', failure_code = 'retry_window_closed'
-  where status = 'retry' and uncertain_since < clock_timestamp() - interval '23 hours';
+  where status in ('pending', 'retry') and uncertain_since < clock_timestamp() - interval '23 hours';
 
   -- A25: an e-mail past its kind's maximum age is not worth sending any more.
   update laria_private.marketplace_email_deliveries delivery
