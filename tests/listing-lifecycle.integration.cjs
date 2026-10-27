@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const { loadEnvFile } = require("node:process");
 const { createClient } = require("@supabase/supabase-js");
 const { enrollTwoStep } = require("./support/two-step.cjs");
+const { pageOnceRefreshed } = require("./support/page-refresh.cjs");
 
 loadEnvFile(".env.local");
 const base = process.argv[2];
@@ -77,10 +78,10 @@ const storeIds = [];
     })).error, null);
     const after = await service.from("listings").select("title,condition,price_pen,status").eq("id", liveId).single();
     assert.deepEqual(after.data, { title: "Título propuesto de integración", condition: "Usado - con detalles", price_pen: 1100, status: "approved" });
-    const approvedDetailHtml = await (await fetch(`${base}/instrumentos/${exactPriceApi.data.slug}`)).text();
-    const approvedCatalogHtml = await (await fetch(`${base}/listados?sort=newest`)).text();
-    assert.match(approvedDetailHtml, /Título propuesto de integración/);
-    assert.match(approvedCatalogHtml, /Título propuesto de integración/);
+    // Admin's approval reaches the cached pages through the refresh job, which runs every minute in production.
+    const approvedTitle = (html) => /Título propuesto de integración/.test(html);
+    const approvedDetailHtml = await pageOnceRefreshed(base, `/instrumentos/${exactPriceApi.data.slug}`, approvedTitle, "the approved title");
+    await pageOnceRefreshed(base, "/listados?sort=newest", approvedTitle, "the approved title");
     assert.match(approvedDetailHtml, /1[,.]100/);
 
     const cookie = await loginCookie(owner.email, owner.password);

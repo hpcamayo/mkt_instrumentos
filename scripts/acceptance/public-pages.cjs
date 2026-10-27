@@ -19,6 +19,9 @@ if (!/^https?:\/\/[^/]+$/.test(base)) {
 
 const CATEGORY_PAGES = ["guitarras", "bajos", "amplificadores", "audio", "cuerdas", "microfonos", "pedales", "percusion", "teclados", "vientos"];
 const NO_PATHS = /href="\/(checkout|carrito|pago|pagar|envios|chat|mensajes|suscripcion|planes)(\/|"|\?)/i;
+// A sentence about payments or escrow must deny it, or say that whoever claims it is lying: the safety tips' "Si
+// alguien te dice que Laria cobra el pago… es un intento de estafa" and the Terms' "con el pretexto de que Laria cobra".
+const DENIES = /\bno\b|\bni\b|intento de estafa|con el pretexto de que/i;
 
 const results = [];
 async function check(id, summary, run) {
@@ -82,7 +85,7 @@ function firstLink(html, pattern) {
       assert.doesNotMatch(text, GUARANTEE, path);
       assert.doesNotMatch(text, CHECKOUT, path);
       const payment = sentencesWith(text, /\b(procesa|procesamos|cobra|cobramos|retiene|retenemos)\b[^.]{0,40}\b(pagos?|dinero)\b/i);
-      for (const sentence of payment) assert.match(sentence, /\bno\b|\bni\b/i, `${path}: "${sentence}"`);
+      for (const sentence of payment) assert.match(sentence, DENIES, `${path}: "${sentence}"`);
     }
     return pagesNote;
   });
@@ -127,10 +130,10 @@ function firstLink(html, pattern) {
     for (const { path, text } of pages) {
       for (const sentence of sentencesWith(text, /escrow|custodia (el|tu) dinero|retenemos el pago/i)) {
         mentions += 1;
-        assert.match(sentence, /\bno\b/i, `${path}: "${sentence}"`);
+        assert.match(sentence, DENIES, `${path}: "${sentence}"`);
       }
     }
-    return `${mentions} mentions, all negative`;
+    return `${mentions} mentions, each denying it or warning against it`;
   });
 
   await check("SCOPE-003", "no shipping workflow: no shipping cost, courier or tracking step", () => {

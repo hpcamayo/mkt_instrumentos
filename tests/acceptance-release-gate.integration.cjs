@@ -13,8 +13,9 @@ const { loadEnvFile } = require("node:process");
 const { setTimeout: sleep } = require("node:timers/promises");
 const { createClient } = require("@supabase/supabase-js");
 const { enrollTwoStep } = require("./support/two-step.cjs");
+const { refreshPublicPages } = require("./support/page-refresh.cjs");
 const { visibleText, sentencesWith, GUARANTEE, CHECKOUT, PAID_PROMOTION, SHIPPING_WORKFLOW, CHAT_FEATURE, CHAT_LINK } = require("./support/page-text.cjs");
-const { signUpFoundExistingAccount } = require("@/lib/auth/email-check");
+const { signUpErrorFoundExistingAccount, signUpFoundExistingAccount } = require("@/lib/auth/email-check");
 const { getInstrumentTypeOptions } = require("@/lib/listing-submission");
 
 loadEnvFile(".env.local");
@@ -270,17 +271,12 @@ async function contact(cookie, listingId) {
   return result.body;
 }
 
-// The listing pages are cached for a minute and cleared by the refresh job (launch audit A19), as in production.
-async function refreshPages() {
-  const response = await fetch(`${base}/api/internal/public-pages/refresh`, { headers: { Authorization: `Bearer ${process.env.CRON_SECRET}` } });
-  if (response.status !== 200) throw new Error(`the page refresh job answered ${response.status}`);
-}
-
+// The listing pages are cached and cleared by the refresh job (launch audit A19), as in production.
 async function pageShows(path, test, what) {
   let last = "";
   for (let attempt = 0; attempt < 8; attempt += 1) {
     if (attempt > 0) {
-      await refreshPages();
+      await refreshPublicPages(base);
       await sleep(1500);
     }
     const response = await app(path);
@@ -363,20 +359,22 @@ function digits(value) {
     const answer = await post("/api/auth/check-email", { email: seller.email.toUpperCase() }, { ip });
     assert.equal(answer.status, 200);
     assert.deepEqual(answer.body, { ok: true, available: false });
-    // The address check can be unavailable (A28); the form's sign-up then still recognises the account.
+    // The address check can be unavailable (A28); the form's sign-up then still recognises the account. Supabase answers
+    // with the account without identities, or, when Auth confirms addresses or phone numbers on its own, with the error
+    // user_already_exists; the form reads both as the duplicate.
     const anon = createClient(url, anonKey, { auth: { persistSession: false } });
     const { data, error } = await anon.auth.signUp({
       email: seller.email,
       password: `Qa-${randomUUID()}`,
       options: { emailRedirectTo: `${base}/auth/callback?next=%2Fmi-cuenta`, data: { account_type: "seller", full_name: "QA Duplicado", marketplace_rules_accepted: true } },
     });
-    assert.equal(error, null, error?.message);
+    const recognised = error ? signUpErrorFoundExistingAccount(error) : signUpFoundExistingAccount(data.user, "seller");
+    assert.ok(recognised, `the form would not recognise the duplicate (${error ? `${error.code}: ${error.message}` : "a new account"})`);
     assert.equal(data.session, null, "the second sign-up opened a session");
-    assert.equal(signUpFoundExistingAccount(data.user, "seller"), true, "the form would not recognise the duplicate");
     assert.equal((await usersWithEmail(seller.email)).length, 1);
     assert.equal((await service.from("profiles").select("full_name").eq("id", seller.id).single()).data.full_name, seller.name);
     assert.equal((await post("/api/auth/login", { email: seller.email, password: seller.password }, { ip })).status, 200, "the original password stopped working");
-    return "one account, name and password unchanged; the form says \"Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.\"";
+    return `Supabase answered ${error ? error.code : "the account without identities"}; one account, name and password unchanged; the form says "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo."`;
   });
 
   await check("AUTH-004", "a used or invalid sign-up link goes to sign-in with a message, sets no session and leaves an open one alone", async () => {
@@ -799,23 +797,26 @@ function digits(value) {
     });
   }
 
+  // A new category or type comes with that type's characteristics, as the edit page sends them (none filled in here):
+  // the old type's don't fit it, so they go to review with it and the live listing keeps its own.
   const moderatedEdits = [
-    ["REV-006", "category", { category: "basses", instrument_type: "bass" }, "category"],
-    ["REV-007", "instrument type", { instrument_type: "acoustic_guitar" }, "instrument_type"],
-    ["REV-008", "brand", { brand: "Gibson" }, "brand"],
-    ["REV-009", "model", { model: "Les Paul Junior" }, "model"],
+    ["REV-006", "category", { category: "basses", instrument_type: "bass" }, "category", { attributes: {} }],
+    ["REV-007", "instrument type", { instrument_type: "acoustic_guitar" }, "instrument_type", { attributes: {} }],
+    ["REV-008", "brand", { brand: "Gibson" }, "brand", {}],
+    ["REV-009", "model", { model: "Les Paul Junior" }, "model", {}],
   ];
-  for (const [id, what, moderated, field] of moderatedEdits) {
+  for (const [id, what, moderated, field, immediate] of moderatedEdits) {
     await check(id, `a ${what} change waits for review while the published version stays live`, async () => {
       const live = await insertListing(listingRow(seller, { title: `QA Gate ${tag} revisión ${field}` }));
-      const answer = await manage(sellerCookie, live.id, { action: "edit", immediate: {}, moderated });
+      const answer = await manage(sellerCookie, live.id, { action: "edit", immediate, moderated });
       assert.equal(answer.status, 200, answer.body?.message);
       const revision = await service.from("listing_revisions").select("status,changed_fields").eq("listing_id", live.id).eq("status", "pending");
       assert.equal(revision.data.length, 1, "no pending review");
       assert.ok(revision.data[0].changed_fields.includes(field), `the review holds ${revision.data[0].changed_fields}`);
-      const row = await listing(live.id, `status,${field}`);
+      const row = await listing(live.id, `status,${field},attributes`);
       assert.equal(row.status, "approved");
       assert.equal(row[field], live[field], `the live ${field} changed`);
+      assert.deepEqual(row.attributes, live.attributes, "the live characteristics changed");
       await pageShows(`/instrumentos/${live.slug}`, (text) => text.includes(live.title), "the listing");
       return `live ${field} stays "${live[field]}"`;
     });
