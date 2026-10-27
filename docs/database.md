@@ -1231,23 +1231,37 @@ New objects only, so it can be applied before the deploy.
 - `public.record_app_error(source, kind, route, name, message, client, digest)`, service role only, called by
   `instrumentation.ts` (server errors, under the route's file pattern) and `/api/client-errors` (browser errors, 30 per
   visitor every 10 minutes). Before anything is stored:
-  - the route becomes a pattern (`laria_private.app_error_route`): a browser page's address keeps only the segments
-    in `laria_private.app_error_route_segments()` (the folders under `app/` on main and features/marketplace, and the
-    metadata files) and any other, such as a store's or a listing's slug, reads `[…]`; the server's route file pattern
-    also keeps `[param]`, `(group)`, `@slot`, `app`, `page`, `route` and metadata routes. A new folder under `app/`
-    goes in that list (a unit test checks it);
+  - the route becomes one of the site's own patterns (`laria_private.app_error_route`, the list in
+    `laria_private.app_error_route_patterns()`: every page and route under `app/` on main and features/marketplace,
+    the metadata files and Next.js's own). A browser page's path is matched the way Next.js matches it, a fixed
+    segment before a `[param]` and a `[param]` before a `[...catch-all]`, so a store's or a listing's slug reads
+    `[slug]` or `[id]` even when it is spelled like a folder (`/tiendas/taller` reads `/tiendas/[slug]`). The server's
+    route file pattern is matched the same way without `(group)`, `@slot`, the final `page` or `route` and a metadata
+    image's suffix. A path no pattern matches keeps its first segment when that begins one of the patterns, then `/…`;
+    anything else reads `/…`. A new page or route goes in the list (a unit test checks it, and the suite checks every
+    pattern reads as itself);
   - the name must be one of JavaScript's or the DOM's own, or on the server an app class ending in `Error` or
     `Exception` (`laria_private.app_error_name`); anything else is `Error`;
-  - `laria_private.scrub_error_text` reads every kind of space and dash as a plain one, cuts web addresses to their
-    scheme and host, and replaces query strings, e-mail addresses, UUIDs, tokens (JSON web tokens, 16 or more
-    characters with a digit, any 32 or more), paths past their first segment, quoted text, whatever follows the first
-    `: `, and runs of 7 or more digits;
+  - a browser's message is kept only as one of `laria_private.app_error_browser_messages()`
+    (`laria_private.app_error_browser_message`): about 95 messages of browsers, JavaScript engines, React, Next.js and
+    Supabase, tried in order on the message as one line (without `Uncaught ` or an error name in front), each
+    replacing the whole line with its own wording and `…` for any value (`Cannot read properties of undefined
+    (reading '…')`); `\1` and `\2` bring back only a word from the pattern's own fixed list (`Minified React error
+    #418`). Any other message reads `Otro mensaje (no se guarda el texto)`, so nothing a visitor, an extension or a
+    made-up report writes is kept;
+  - the server's message goes through `laria_private.scrub_error_text`: compatibility forms read as plain ones (NFKC:
+    fullwidth digits and letters), every kind of space, tab, line break and dash as a plain one; web addresses lose
+    their user, password, path, query and fragment, and a host that isn't one of the services Laria uses reads
+    `<host>`; query strings, e-mail addresses (any word with `@` or `%40`), UUIDs, tokens (JSON web tokens, 16 or more
+    characters with a digit, any 32 or more), whatever follows `Bearer` or `Basic`, values given to a name
+    (`password=…`), IPv6 addresses, paths past their first segment, quoted text, whatever follows the first `: `, and
+    runs of 7 or more digits are replaced;
   - the client must be one of `browserFamily`'s labels or `Otro`, and only the server's digest is kept.
-  No account, IP address or stack is ever passed. A message our own code writes may still hold a name in plain words,
-  which is why only an aal2 Admin reads the counts and they go after 30 days. A browser error's route is kept (the
-  latest seen) but is not part of its fingerprint, and digits never split a kind. At most 25 kinds per source in a
-  bucket: a new kind takes a transaction advisory lock on its source and bucket before counting the kinds there, so
-  kinds reported together are admitted one at a time; the rest are counted under `overflow-server` or
+  No account, IP address or stack is ever passed. A message the server's own code writes may still hold a name in
+  plain words, which is why only an aal2 Admin reads the counts and they go after 30 days. A browser error's route is
+  kept (the latest seen) but is not part of its fingerprint, and digits never split a server kind. At most 25 kinds per
+  source in a bucket: a new kind takes a transaction advisory lock on its source and bucket before counting the kinds
+  there, so kinds reported together are admitted one at a time; the rest are counted under `overflow-server` or
   `overflow-browser`.
 - `public.get_admin_app_errors(p_days 1..30, p_source)`: `assert_admin()` (aal2); the period's kinds grouped by
   fingerprint, newest first, at most 200 (`/admin/errores`).
@@ -1256,7 +1270,7 @@ New objects only, so it can be applied before the deploy.
   503 with `"reason":"errors"` from 20 errors, and otherwise 200 `{"status":"ok"}`; the uptime workflow
   (`.github/workflows/uptime.yml`) reads it every 10 minutes.
 
-Rollback: `select cron.unschedule('app-error-retention');`, then drop the eight functions and the table.
+Rollback: `select cron.unschedule('app-error-retention');`, then drop the ten functions and the table.
 <!-- /launch-audit:monitoring -->
 
 <!-- launch-audit:security -->

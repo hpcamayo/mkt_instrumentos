@@ -353,31 +353,35 @@ test("A13: the migration keeps its place and lock step, and grants each function
   assert.match(migration, /select cron\.schedule\('app-error-retention', '50 9 \* \* \*', \$\$select laria_private\.run_app_error_retention\(\)\$\$\);/);
 });
 
-test("A13: every fixed segment of Laria's addresses is in the database's route list, and every browser family in its client list", () => {
+test("A13: every page and route of the site is in the database's list of route patterns, and every browser family in its client list", () => {
   const migration = read(migrationFile);
-  const start = migration.indexOf("select array[", migration.indexOf("create or replace function laria_private.app_error_route_segments()"));
-  const listed = new Set([...migration.slice(start, migration.indexOf("]::text[]", start)).matchAll(/'([^']+)'/g)].map((match) => match[1]));
-  assert.ok(listed.size > 200 && listed.has("listados"), "the database's route list");
-  // The folders under app/ (not [param], (group), @slot or _private ones, nor what is inside a private one) and the
-  // metadata files at its root, as their addresses read.
-  const segments = new Set();
-  const metadata = { robots: "robots.txt", sitemap: "sitemap.xml", manifest: "manifest.webmanifest", "opengraph-image": "opengraph-image", "twitter-image": "twitter-image" };
-  const walk = (dir, top) => {
+  const start = migration.indexOf("select array[", migration.indexOf("create or replace function laria_private.app_error_route_patterns()"));
+  const listed = [...migration.slice(start, migration.indexOf("]::text[]", start)).matchAll(/'([^']+)'/g)].map((match) => match[1]);
+  assert.ok(listed.length > 200 && listed.includes("/tiendas/[slug]"), "the database's list of route patterns");
+  assert.equal(new Set(listed).size, listed.length, "each pattern once");
+  for (const pattern of listed) assert.match(pattern, /^\/$|^(\/[A-Za-z0-9_.\-[\]]+)+$/, pattern);
+  // Every page and route file under app/ and every metadata file, as its address reads: no (group), @slot or _private
+  // folder, nor what is inside a private one.
+  const routes = new Set();
+  const metadata = { robots: "/robots.txt", sitemap: "/sitemap.xml", manifest: "/manifest.webmanifest" };
+  const walk = (dir, address) => {
     for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
       if (entry.isDirectory()) {
         if (entry.name.startsWith("_")) continue;
-        if (!/^[[(@]/.test(entry.name)) segments.add(entry.name);
-        walk(path.join(dir, entry.name), false);
-      } else if (top) {
-        const name = metadata[entry.name.replace(/\.(tsx?|jsx?)$/, "")];
-        if (name) segments.add(name);
-        else if (/^(icon|apple-icon)\.(svg|png|ico|jpg)$/.test(entry.name)) segments.add(entry.name);
+        walk(path.join(dir, entry.name), /^(\(.*\)|@.+)$/.test(entry.name) ? address : `${address}/${entry.name}`);
+        continue;
       }
+      const base = entry.name.replace(/\.(tsx?|jsx?)$/, "");
+      if (base === entry.name) {
+        if (address === "" && /^(icon|apple-icon)\.(svg|png|ico|jpg)$/.test(entry.name)) routes.add(`/${entry.name}`);
+      } else if (base === "page" || base === "route") routes.add(address || "/");
+      else if (base === "opengraph-image" || base === "twitter-image") routes.add(`${address}/${base}`);
+      else if (address === "" && metadata[base]) routes.add(metadata[base]);
     }
   };
-  walk("app", true);
-  assert.ok(segments.has("listados") && segments.has("robots.txt") && segments.size > 50);
-  assert.deepEqual([...segments].filter((segment) => !listed.has(segment)).sort(), [], "add these to laria_private.app_error_route_segments()");
+  walk("app", "");
+  assert.ok(routes.has("/") && routes.has("/listados") && routes.has("/tiendas/[slug]") && routes.has("/robots.txt") && routes.size > 100);
+  assert.deepEqual([...routes].filter((route) => !listed.includes(route)).sort(), [], "add these to laria_private.app_error_route_patterns()");
 
   // The browser families lib/monitoring/record-error.ts gives, with and without a platform, all pass the database's list.
   const client = migration.match(/p_client ~ '(\^\([^']+\)\( iOS\| Android\)\?\$)' or p_client = 'Otro'/);
