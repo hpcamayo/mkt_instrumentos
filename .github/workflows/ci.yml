@@ -1,0 +1,72 @@
+# Launch audit A30: every pull request, and every push to main, runs the checks that used to run only when someone
+# remembered to: the unit tests, types, lint and the production build; and, on a clean Postgres 16 with pg_cron and a
+# small Supabase stand-in (scripts/local-db), a replay of every migration, every SQL suite and the database
+# integration tests. Nothing here reads hosted Supabase, Vercel or any secret. Each action is pinned to a commit, the
+# one its v5 tag pointed to on 27 Oct 2026. docs/operations/ci.md has the details and how to update them.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Tests, types, lint and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+      - name: Unit tests
+        run: pnpm test
+      - name: Types
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+
+  database:
+    name: Migrations, SQL suites and database integration tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+      - name: Postgres 16 with pg_cron and every migration
+        run: sudo env "PATH=$PATH" bash scripts/local-db/setup-local-db.sh reset
+      - name: pg_safeupdate stand-in
+        run: sudo env "PATH=$PATH" bash scripts/local-db/safeupdate/build.sh
+      - name: SQL suites and the store concurrency suite
+        run: sudo env "PATH=$PATH" bash scripts/local-db/setup-local-db.sh test
+      - name: Database integration tests
+        run: bash scripts/local-db/run-db-integration.sh
