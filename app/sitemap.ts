@@ -5,13 +5,16 @@ import { collectionPath } from "@/lib/discovery/collections";
 import { discoverySitemapPaths } from "@/lib/discovery/sitemap";
 import { legalPages } from "@/lib/legal-pages";
 import { DISCOVERABLE_STOCK_FILTER } from "@/lib/listings";
+import { renderPerRequestIfBuilding } from "@/lib/cache-build";
 import { absoluteUrl, isIndexableDeployment } from "@/lib/site";
 import { READ_BUDGETS, createDeadline } from "@/lib/request-deadline";
 import { createPublicReadClient } from "@/lib/supabase/public-read-client";
 import { SERVICE_CATEGORIES, serviceCategoryPath } from "@/lib/services";
 import { servicesDb } from "@/lib/services-db";
 
-export const dynamic = "force-dynamic";
+// Launch audit A19: built at most once an hour instead of on every crawler request. A failed read throws, so the cache
+// keeps the last full sitemap rather than an hour of a partial one (during the deploy, lib/cache-build.ts).
+export const revalidate = 3600;
 
 // Bounded: batches of 1000, well under the 50,000-URL sitemap limit.
 const BATCH_SIZE = 1000;
@@ -39,7 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...discoverySitemapPaths().map((path): Entry => ({ url: absoluteUrl(path), changeFrequency: "weekly", priority: 0.5 })),
   ];
 
-  // Each batch gets the core budget, all of them 20 s together; a batch that fails ends the list there, as before.
+  // Each batch gets the core budget, all of them 20 s together.
   const supabase = createPublicReadClient(createDeadline(20_000), READ_BUDGETS.coreMs);
   if (!supabase) return entries;
 
@@ -50,7 +53,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .eq("status", "active")
       .order("id")
       .range(offset, offset + BATCH_SIZE - 1);
-    if (error || !data) break;
+    if (error || !data) return readFailed("stores", error);
     for (const store of data) {
       entries.push({ url: absoluteUrl(`/tiendas/${store.slug}`), lastModified: store.updated_at, changeFrequency: "weekly", priority: 0.6 });
     }
@@ -66,7 +69,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .or(DISCOVERABLE_STOCK_FILTER)
       .order("id")
       .range(offset, offset + BATCH_SIZE - 1);
-    if (error || !data) break;
+    if (error || !data) return readFailed("listings", error);
     for (const listing of data) {
       entries.push({ url: absoluteUrl(`/instrumentos/${listing.slug}`), lastModified: listing.updated_at, changeFrequency: "weekly", priority: 0.7 });
     }
@@ -78,25 +81,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl("/servicios"), changeFrequency: "daily", priority: 0.6 },
     ...SERVICE_CATEGORIES.map((category): Entry => ({ url: absoluteUrl(serviceCategoryPath(category)), changeFrequency: "daily", priority: 0.5 })),
   );
-  // A failed services read leaves the instrument entries above intact.
-  try {
-    for (let offset = 0; offset < MAX_SERVICES; offset += BATCH_SIZE) {
-      const { data, error } = await servicesDb(supabase).rpc("get_public_service_paths", { p_offset: offset, p_limit: BATCH_SIZE });
-      if (error || !Array.isArray(data)) break;
-      for (const service of data as { path: string; updated_at: string }[]) {
-        entries.push({ url: absoluteUrl(service.path), lastModified: service.updated_at, changeFrequency: "weekly", priority: 0.5 });
-      }
-      if (data.length < BATCH_SIZE) break;
+  // Like the batches above, a failed read throws (launch audit A19).
+  for (let offset = 0; offset < MAX_SERVICES; offset += BATCH_SIZE) {
+    const { data, error } = await servicesDb(supabase).rpc("get_public_service_paths", { p_offset: offset, p_limit: BATCH_SIZE });
+    if (error || !Array.isArray(data)) return readFailed("services", error);
+    for (const service of data as { path: string; updated_at: string }[]) {
+      entries.push({ url: absoluteUrl(service.path), lastModified: service.updated_at, changeFrequency: "weekly", priority: 0.5 });
     }
-  } catch {
-    // Services are optional in the sitemap.
+    if (data.length < BATCH_SIZE) break;
   }
 
   // disc-03: the collections inside their dates (RLS leaves the rest out).
-  const { data: collections } = await (supabase as unknown as SupabaseClient).from("collections").select("slug,updated_at").order("slug").range(0, 99);
-  for (const collection of (collections ?? []) as { slug: string; updated_at: string }[]) {
+  const { data: collections, error: collectionsError } = await (supabase as unknown as SupabaseClient)
+    .from("collections").select("slug,updated_at").order("slug").range(0, 99);
+  if (collectionsError || !collections) return readFailed("collections", collectionsError);
+  for (const collection of collections as { slug: string; updated_at: string }[]) {
     entries.push({ url: absoluteUrl(collectionPath(collection.slug)), lastModified: collection.updated_at, changeFrequency: "weekly", priority: 0.5 });
   }
 
   return entries;
+}
+
+async function readFailed(what: string, error: { message: string } | null): Promise<never> {
+  await renderPerRequestIfBuilding("/sitemap.xml");
+  throw new Error(`The sitemap's ${what} could not be read: ${error?.message ?? "no rows"}`);
 }

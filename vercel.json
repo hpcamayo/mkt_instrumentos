@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/internal/public-pages/refresh", "schedule": "* * * * *" },
+    { "path": "/api/internal/jobs/photo-fingerprints", "schedule": "0 6 * * *" },
+    { "path": "/api/internal/jobs/deal-trust", "schedule": "30 7 * * *" },
+    { "path": "/api/internal/jobs/store-floor", "schedule": "0 13 * * *" },
+    { "path": "/api/internal/jobs/price-steps", "schedule": "0 14 * * *" },
+    { "path": "/api/internal/jobs/gear-reminders", "schedule": "0 15 * * *" },
+    { "path": "/api/internal/jobs/trade-offers", "schedule": "0 * * * *" }
+  ]
+}

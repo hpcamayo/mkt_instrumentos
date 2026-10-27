@@ -5,7 +5,6 @@ import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { cache, Suspense } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { CategoryLanding } from "@/components/category-landing";
 import { ContentReport } from "@/components/content-report";
 import { JsonLd } from "@/components/json-ld";
 import { ContactModule } from "@/components/listing/contact-module";
@@ -69,7 +68,6 @@ import {
   getListingSecondaryTitle,
   isOutOfStock,
   normalizeStore,
-  parseListingFilters,
   resolveContactPhone,
   resolveParticularSeller,
   type ListingCardData,
@@ -91,23 +89,14 @@ import {
   type InstallmentOffer,
   type PurchaseRequest,
 } from "@/lib/payment-methods";
-import { fetchCatalogPage } from "@/lib/catalog";
-import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
 import {
   categoryLandingPath,
   categoryTypePath,
-  getCategoryLandingBySlug,
   legacyCategoryRedirect,
-  type CategoryLandingPage,
 } from "@/lib/category-pages";
-import { createSearchReceipt } from "@/lib/marketplace-events-server";
-import { searchEventMetadata } from "@/lib/marketplace-event-payload";
-import { getPageRedirect, pageHref, parsePage } from "@/lib/pagination";
 import {
-  buildCategoryMetadata,
   buildListingJsonLd,
   buildListingMetadata,
-  categoryFilterRedirect,
 } from "@/lib/seo";
 import { listingBreadcrumbs } from "@/lib/shell";
 import { formatPrice } from "@/lib/price";
@@ -115,7 +104,16 @@ import { absoluteUrl, NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
 import { restockNote } from "@/lib/store-floor/arrivals";
 import { ListingReachMarks } from "@/components/store-reach/listing-reach-marks";
 
-export const dynamic = "force-dynamic";
+// Launch audit A19: a listing page is cached for everyone and rebuilt in the background at most once a minute, so a
+// price, status or moderation change shows within a minute; the viewer's own parts (owner bar, alerts, questions
+// form) load in the browser. Nothing here may read the query string, cookies or headers: the category landings, which
+// read ?page, have their own folders (app/instrumentos/_category/landing.tsx).
+export const revalidate = 60;
+
+// No listing is built ahead of time: each one is built on its first visit, then served from the cache.
+export async function generateStaticParams() {
+  return [];
+}
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
 export const maxDuration = 30;
 
@@ -123,7 +121,6 @@ type ListingDetailPageProps = {
   params: Promise<{
     slug: string;
   }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 type PublicSupabaseClient = NonNullable<
@@ -286,21 +283,10 @@ const loadPublicListing = cache(async (slug: string) => {
   return { configured: true as const, listing: data as ListingDetailData };
 });
 
-export async function generateMetadata({ params, searchParams }: ListingDetailPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: ListingDetailPageProps): Promise<Metadata> {
   const { slug } = await params;
   // A retired category landing only redirects (below); it has no metadata of its own.
   if (legacyCategoryRedirect(slug)) return { robots: NOINDEX_FOLLOW_ROBOTS };
-  const landing = getCategoryLandingBySlug(slug);
-  if (landing) {
-    const resolvedSearchParams = await searchParams;
-    // Filtered category URLs redirect to /listados; skip the inventory query.
-    if (categoryFilterRedirect(landing, resolvedSearchParams)) {
-      return { title: landing.heading, robots: NOINDEX_FOLLOW_ROBOTS };
-    }
-    const page = parsePage(resolvedSearchParams.page);
-    const { count, error } = await loadCategoryPage(landing.category, page);
-    return buildCategoryMetadata(landing, page, error ? null : count);
-  }
 
   const { listing } = await loadPublicListing(slug);
   if (!listing) {
@@ -311,15 +297,10 @@ export async function generateMetadata({ params, searchParams }: ListingDetailPa
 
 export default async function ListingDetailPage({
   params,
-  searchParams,
 }: ListingDetailPageProps) {
   const { slug } = await params;
   const moved = legacyCategoryRedirect(slug);
   if (moved) permanentRedirect(moved);
-  const landing = getCategoryLandingBySlug(slug);
-  if (landing) {
-    return renderCategoryLanding(landing, await searchParams);
-  }
 
   const { supabase } = getRequestReads();
   const { configured, listing } = await loadPublicListing(slug);
@@ -411,10 +392,12 @@ async function loadListingCombo(supabase: PublicSupabaseClient, listing: Listing
 async function findListingSlug(id: string) {
   const client = getSupabaseAdminClient();
   if (!client) return null;
-  const { data } = await client.from("listings").select("slug").eq("id", id).in("status", ["approved", "sold"])
+  const { data, error } = await client.from("listings").select("slug").eq("id", id).in("status", ["approved", "sold"])
     .retry(false)
     .abortSignal(budgetSignal(getRequestReads().deadline, READ_BUDGETS.coreMs))
     .maybeSingle();
+  // Like the main read: a failed lookup throws, since a cached 404 would outlive the failure.
+  if (error) throw new Error(`The listing's address could not be read: ${error.message}`);
   return data?.slug && data.slug !== id ? data.slug : null;
 }
 
@@ -438,49 +421,6 @@ async function loadInstallments(supabase: PublicSupabaseClient, listing: Listing
   const { data, error } = await (supabase as unknown as SupabaseClient).rpc("get_store_installment_offer", { p_store_id: listing.store_id });
   const offer = error ? null : readInstallmentOffer(data);
   return offer && (!offer.minPricePen || (listing.price_pen ?? 0) >= offer.minPricePen) ? offer : null;
-}
-
-const loadCategoryPage = cache(async (category: string, page: number) => {
-  const { supabase } = getRequestReads();
-  if (!supabase) return { configured: false as const, count: null, data: null, error: null };
-  const filters = parseListingFilters({ category });
-  const result = await fetchCatalogPage(supabase, filters, page);
-  return { configured: true as const, count: result.count, data: result.data, error: result.error };
-});
-
-async function renderCategoryLanding(
-  landing: CategoryLandingPage,
-  searchParams: Record<string, string | string[] | undefined>,
-) {
-  const path = `/instrumentos/${landing.slug}`;
-  // Filtering happens in the canonical catalog; forward filter parameters there.
-  const forwarded = categoryFilterRedirect(landing, searchParams);
-  if (forwarded) redirect(forwarded);
-
-  const page = parsePage(searchParams.page);
-  const filters = parseListingFilters({ category: landing.category });
-  const [result, catalogBrands] = await Promise.all([loadCategoryPage(landing.category, page), getCatalogBrandsByCategory(optionalReadSignal(getRequestReads().deadline))]);
-  if (!result.configured) return <SupabaseSetupMessage />;
-
-  const redirectPage = getPageRedirect(page, result.count, result.error);
-  if (redirectPage !== null) redirect(pageHref(path, {}, redirectPage));
-
-  const searchReceipt = !result.error && page === 1 ? createSearchReceipt(filters, result.count ?? 0) : null;
-  const searchState = searchEventMetadata(filters, result.count ?? 0);
-
-  return (
-    <CategoryLanding
-      landing={landing}
-      brands={catalogBrands[landing.category] ?? []}
-      filters={filters}
-      listings={(result.data ?? []) as ListingCardData[]}
-      totalCount={result.count ?? 0}
-      page={page}
-      errorMessage={result.error?.message}
-      searchReceipt={searchReceipt}
-      searchSignature={JSON.stringify(searchState.filters)}
-    />
-  );
 }
 
 // The listing page (docs/ux-redesign/ux-4-listing-store.md § Listing page, answers L1–L21). From 1024 px two columns:

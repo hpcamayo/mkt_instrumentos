@@ -27,6 +27,7 @@ import {
   type ManagedListing,
   type UndoableAction,
 } from "@/lib/my-listings";
+import { refreshListingPages } from "@/lib/listing-page-refresh";
 import { parseWholeSolPrice } from "@/lib/price";
 import { sellingToolTags, sellingToolsPath } from "@/lib/selling-tools";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -159,7 +160,9 @@ export function ListingManagementTable({
     if (!supabase) return { ok: false as const, message: "No se pudo completar la acción." };
     const { data, error: rpcError } = await supabase.rpc("set_owned_listings_lifecycle_bulk", { p_listing_ids: ids, p_action: action });
     if (rpcError) return { ok: false as const, message: "No se pudo completar la acción. Revisa el estado e intenta nuevamente." };
-    return { ok: true as const, ...parseBulkResult(data) };
+    const result = parseBulkResult(data);
+    if (result.changed.length) void refreshListingPages({ listings: result.changed });
+    return { ok: true as const, ...result };
   }
 
   async function bulk(action: UndoableAction, ids: string[]) {

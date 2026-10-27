@@ -212,7 +212,16 @@ test("protected manual worker rejects untrusted callers and accepts only CRON_SE
   assert.match(source, /timingSafeEqual/);
   assert.match(source, /Authorization|authorization/);
   assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY.*NextResponse/);
-  assert.equal(fs.existsSync("vercel.json"), false, "pre-go-live Hobby release must not register an unsupported frequent cron");
+  // Vercel Pro since the launch (the Hobby plan allowed no frequent cron): vercel.json may schedule internal routes, each
+  // one CRON_SECRET-protected with a timing-safe comparison.
+  const crons = fs.existsSync("vercel.json") ? JSON.parse(fs.readFileSync("vercel.json", "utf8")).crons ?? [] : [];
+  for (const cron of crons) {
+    assert.match(cron.path, /^\/api\/internal\//);
+    // A route may hand the request to a shared job runner it imports (feature ideas: lib/selling-jobs.ts), which checks it.
+    const route = fs.readFileSync(`app${cron.path}/route.ts`, "utf8");
+    const runners = [...route.matchAll(/from "@\/(lib\/[a-z0-9/-]+)"/g)].map(([, lib]) => fs.readFileSync(`${lib}.ts`, "utf8"));
+    assert.ok([route, ...runners].some((code) => /CRON_SECRET[\s\S]*timingSafeEqual/.test(code)), cron.path);
+  }
 });
 
 test("Sprint 7 migration is prospective, indexed, private and database-deduplicated", () => {

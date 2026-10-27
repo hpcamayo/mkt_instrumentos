@@ -32,10 +32,12 @@ so on its page.
 
 ## Scheduled jobs
 
-Each route is `GET` with `Authorization: Bearer $CRON_SECRET`. All of them can safely run twice. Vercel Hobby runs
-crons at most once a day, and the account needs Pro anyway (commercial use).
+Each route is `GET` with `Authorization: Bearer $CRON_SECRET`. All of them can safely run twice. The account is on
+Vercel Pro since 26 Oct 2026, so `vercel.json` schedules the six Vercel jobs below next to main's page refresh: they
+start on the first deploy of this branch, which comes after its migrations. Vercel sends
+`Authorization: Bearer $CRON_SECRET` on cron calls; main's page refresh job already needs `CRON_SECRET`.
 
-| Route | Batch | What it does | Suggested schedule (UTC) |
+| Route | Batch | What it does | Schedule (UTC) |
 | --- | --- | --- | --- |
 | `/api/internal/jobs/photo-fingerprints` | accounts | Hashes listing photos for copy and stolen-gear checks | daily, 06:00 |
 | `/api/internal/jobs/deal-trust` | deal-trust | Seller levels, counter-purchase review reminders, unused review photos | daily, 07:30 (02:30 Lima) |
@@ -50,24 +52,6 @@ The two pg_cron jobs start by themselves when their migrations are applied, like
 
 Main's own jobs (e-mail queue, push, import cleanup) are not part of this list. The launch audit (A25) owns their
 schedule.
-
-A `vercel.json` with these crons, for when Henri is on Pro (not added to the repo, because it starts the jobs on the
-next deploy):
-
-```json
-{
-  "crons": [
-    { "path": "/api/internal/jobs/photo-fingerprints", "schedule": "0 6 * * *" },
-    { "path": "/api/internal/jobs/deal-trust", "schedule": "30 7 * * *" },
-    { "path": "/api/internal/jobs/store-floor", "schedule": "0 13 * * *" },
-    { "path": "/api/internal/jobs/price-steps", "schedule": "0 14 * * *" },
-    { "path": "/api/internal/jobs/gear-reminders", "schedule": "0 15 * * *" },
-    { "path": "/api/internal/jobs/trade-offers", "schedule": "0 * * * *" }
-  ]
-}
-```
-
-Vercel sends `Authorization: Bearer $CRON_SECRET` on cron calls when `CRON_SECRET` is set.
 
 ## Outside accounts
 
