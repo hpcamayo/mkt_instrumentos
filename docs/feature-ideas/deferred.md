@@ -53,6 +53,21 @@ The catalog autofill must reach main first. It must never be copied from `proto/
 | buy-09 Installments | Henri's note: "next wave". It ships as store-floor's second PR. |
 | run-02 Several locations, run-03 Boleta from the counter | They change stock, so they start after store-floor's wave-1 PR is merged. |
 
+## Parts of built ideas left for later
+
+| Idea | What is left | Why |
+| --- | --- | --- |
+| reach-11 Compra en tienda verificada | A code for a Mostrador sale queued offline, and showing a code again from the sale history | The code needs the sale recorded on the server; the offer appears only right after the sale (deal-trust). |
+| sell-09 Seller page | A "Ver mi página" line in Mis publicaciones | That page belongs to selling-tools; the link is in Compras y ventas for now. |
+| safe-03 Encuentro seguro | Confirming the shopping-center names per city | Someone in Lima should check `lib/safe-meetup-places.ts` before launch (FD-deal-trust-17). |
+| buy-08 Ver en mapa | Finding the store's pin from its typed address | A geocoding service (an outside account and its terms); stores place the pin by hand today. |
+| buy-08 Ver en mapa | More than the 300 newest results on the map, and map pins for Particulares | Server-side clustering if the catalog outgrows it; Particulares stay city areas by design (FD-listing-details-13). |
+| buy-08 Ver en mapa | Places outside the short district and city list | A fuller gazetteer (INEI's district centroids) in `lib/places.ts`. |
+| buy-01 Combos | Combos for listings in the assisted-purchase pilot | Pilot A's own review, so a listing never shows two ways to buy. |
+| buy-01 Combos | A server copy of the buyer's combo (to continue on another device) | His call; it would need an account and a new table. |
+| sell-10 Condition scale | Admin's editor offering open box only on store listings | A small Admin change; the database already refuses it on a Particular listing. |
+| buy-02 Cómo se entrega | Shipping booked or priced by Laria | money-02 (above). |
+
 ## Still open from Effortless Laria (not part of this list)
 
 - **Maybes:** big-02, big-07, stock-24, talk-06, talk-07.

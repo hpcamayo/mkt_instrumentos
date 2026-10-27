@@ -241,6 +241,8 @@ export type RowActions = {
   select: boolean;
   attribute: boolean;
   controlStock: boolean;
+  // Feature ideas, selling-tools batch: "Herramientas de venta" (price steps, private offer, part payment, consignment).
+  tools: boolean;
 };
 
 // A listing whose stock Inventario controls is sold and priced from Inventario (D-15): no sale or price actions here.
@@ -270,6 +272,7 @@ export function rowActions(listing: Pick<ManagedListing, "status" | "hidden_sour
     select: status === "approved" || ownerHidden,
     attribute: status === "sold",
     controlStock: !stockManaged && canControlStock && edit,
+    tools: status === "approved" || status === "pending" || ownerHidden,
   };
 }
 

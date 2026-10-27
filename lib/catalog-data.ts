@@ -68,6 +68,26 @@ export type RescueWay = { chip: AppliedFilter; count: number };
 export type CatalogRescue = { ways: RescueWay[]; closest: ListingCardData[]; closestLabel: string };
 type RescueScope = { landing?: { category: string; path: string } };
 
+// Adjacent empty searches often ask the same "without this filter" question. Share only these optional counts;
+// the primary catalog result and its visibility remain request-scoped. No persistent entry per arbitrary URL.
+const rescueCounts = sharedAggregate<[string], number>({
+  key: "catalog-rescue-count-v1",
+  revalidateSeconds: 60,
+  memoryFreshMs: 60_000,
+  maxStaleMs: 60_000,
+  persist: false,
+  maxEntries: 500,
+  loadBudgetMs: READ_BUDGETS.optionalMs,
+  breaker: optionalBreaker,
+  async load(deadline: Deadline, value: string) {
+    const supabase = createPublicReadClient(deadline, READ_BUDGETS.optionalMs);
+    if (!supabase) throw new Error("Supabase is not configured");
+    const count = await countCatalog(supabase, filtersFromKey(value));
+    if (count === null) throw new Error("the rescue count failed");
+    return count;
+  },
+});
+
 // Every count and fallback read draws on one optional deadline: the counts run together, the fallbacks one after the
 // other, and none gets a fresh budget. A failed count leaves its way out; a failed fallback tries the next one.
 async function loadRescue(deadline: Deadline, value: string, scopeValue: string): Promise<CatalogRescue> {
@@ -80,7 +100,8 @@ async function loadRescue(deadline: Deadline, value: string, scopeValue: string)
     chips.map((chip) => {
       const url = new URL(chip.href, "https://laria.local");
       const next = parseListingFilters(Object.fromEntries([...url.searchParams.keys()].map((name) => [name, url.searchParams.getAll(name)])));
-      return countCatalog(supabase, scope.landing && url.pathname === scope.landing.path ? { ...next, category: scope.landing.category } : next);
+      const scoped = scope.landing && url.pathname === scope.landing.path ? { ...next, category: scope.landing.category } : next;
+      return rescueCounts.get(deadline.signal, key({ ...scoped, sort: "newest" }));
     }),
   );
   const ways = chips.flatMap((chip, index) => (counts[index] ? [{ chip, count: counts[index] as number }] : [])).sort((a, b) => b.count - a.count).slice(0, 4);
@@ -90,8 +111,12 @@ async function loadRescue(deadline: Deadline, value: string, scopeValue: string)
   if (filters.q && (filters.category || filters.instrumentType)) tries.push({ filters: { ...base, category: filters.category, instrumentType: filters.instrumentType }, label: "Lo más parecido" });
   if (filters.category) tries.push({ filters: { ...base, category: filters.category }, label: "Lo más parecido" });
   tries.push({ filters: base, label: "Lo más nuevo en Laria" });
+  const attempted = new Set<string>();
   for (const attempt of tries) {
     if (deadline.signal.aborted) break;
+    const attemptKey = key(attempt.filters);
+    if (attempted.has(attemptKey)) continue;
+    attempted.add(attemptKey);
     const { data, error } = await fetchCatalogPage(supabase, attempt.filters, 1, 4);
     if (!error && data && data.length > 0) return { ways, closest: data, closestLabel: attempt.label };
   }
@@ -122,6 +147,7 @@ export async function getCatalogRescue(filters: ListingFilters, scope: RescueSco
 export function resetCatalogDataForTests() {
   facets.reset();
   rescues.reset();
+  rescueCounts.reset();
   optionalBreaker.reset();
 }
 

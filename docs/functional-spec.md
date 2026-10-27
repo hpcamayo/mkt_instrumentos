@@ -53,6 +53,10 @@ A Particular profile contains at least:
 - City and region where appropriate.
 
 V1 authentication includes signup, email confirmation, password login, magic-link login, logout, forgot password, password reset, profile editing, and password change. Email change and account deletion are post-V1.
+<!-- Feature ideas, accounts batch (docs/feature-ideas/accounts.md): accounts -->
+*Proposed with the feature-ideas accounts batch; not part of V1 until merged:* e-mail change and self-service account
+deletion, two-step sign-in, sign-in with Google or Apple and a help center (see "Accounts, Help and Safety").
+<!-- end accounts batch: accounts -->
 
 <!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): fixes -->
 WhatsApp numbers are stored as digits with the country code. A Peruvian mobile typed as nine digits starting with 9
@@ -312,6 +316,38 @@ Proposed with the find batch (`docs/ux-effortless/find.md`, UXD-find-1 to UXD-fi
   precio" and "Vistos recientemente" follow. Nothing of this leaves the device. The vitrina and the category tiles
   are retired.
 
+<!-- feature-ideas:listing-details -->
+## Listing details: condition, sale terms, combos and the map (feature ideas, listing-details batch)
+
+Proposed with the listing-details batch (`docs/feature-ideas/listing-details.md`, FD-listing-details-1 to
+FD-listing-details-18); not part of V1 until merged. Every term is the seller's word; Laria handles no shipping,
+payment or trade and gives no directions.
+
+- **Condition scale.** Condition is one step of a scale, each with a one-line definition: Nuevo, Exhibición o caja
+  abierta (store listings only), Como nuevo, Excelente, Muy bueno, Bueno, Regular, Para reparar. It replaces Nuevo /
+  Usado - buen estado / Usado - con detalles: old listings read Muy bueno or Bueno, and an old search value finds every
+  step it covered. The listing shows the step and opens the whole scale.
+- **Price mode.** Optional "Precio fijo" or "Precio conversable" beside the price and on cards; nothing is pre-chosen.
+- **Cómo se entrega and trades.** Optional terms in the sell and edit forms: pickup (district or zone, never an
+  address), "Se puede probar", delivery in Lima and who pays, shipping to provinces (Shalom, Olva, another agency; paid
+  on sending or at the agency), and "Acepto cambios por…" with categories. They go live when saved, refuse contact
+  details, and the listing says "Lo indica quien vende. Laria no gestiona envíos, pagos ni cambios." "Usar lo de tu
+  última publicación" copies the last terms only when pressed. A listing that takes trades offers the WhatsApp chip
+  "Te propongo un cambio"; chips the listing already answers are not offered.
+- **Yes/no filters.** "Envía a provincia", "Se puede probar" and "Acepta cambios" (`?opciones=`) in the catalog
+  filters, chips, counts and saved alerts, all of the chosen ones at once.
+- **Combos.** "Agregar al combo" keeps a list per seller on the device (up to 10, for 30 days); "Pedir el combo por
+  WhatsApp" sends one message with each listing, the sum of published prices and the seller's declared discount. Each
+  listing counts as a contact. Sellers may declare one discount (5 % to 30 %, from 2 to 5 listings); stores attach up to
+  six "Lo que suele acompañarlo" listings to one. Not offered on sold listings or in the assisted-purchase pilot.
+- **Ver en mapa.** "Lista | Mapa" on the catalog and category pages (the list stays the default; `?vista=mapa`). Stores
+  that show their address and placed their pin (Mi tienda → "Tu tienda en el mapa") are pins with "Abrir en Google
+  Maps" and "Abrir en Waze"; everyone else is an approximate area (a Lima district for a store, the city otherwise).
+  Nearby places merge and part on zoom; a list beside the map does everything the map does. The map shows the newest
+  300 matches. Map data: OpenFreeMap, credited on the map.
+- **Maker marks when selling.** A maker store's and a verified artist's sell form include discovery's marks.
+<!-- /feature-ideas:listing-details -->
+
 ## Discovery: gifts, guides, collections, makers and artists (feature ideas, discovery batch)
 
 Proposed with the discovery batch (`docs/feature-ideas/discovery.md`, FD-discovery-1 to FD-discovery-13); not part of
@@ -357,6 +393,28 @@ part of V1 until merged. Every promise here is the store's; Laria handles no mon
 - **Daily job.** `/api/internal/jobs/store-floor` (CRON_SECRET), once a day.
 <!-- /feature-ideas:store-floor -->
 
+## Store reach: Mercado Libre import, social catalog, dealers, campaigns and demand (feature ideas, store-reach batch)
+
+Proposed with the store-reach batch (`docs/feature-ideas/store-reach.md`, FD-store-reach-1 to FD-store-reach-19); not
+part of V1 until merged. Every page below is linked from Mi tienda → "Más alcance para tu tienda"; the account menu is
+unchanged.
+
+- **Importar desde Mercado Libre.** A store connects its Mercado Libre account (OAuth with PKCE), picks up to 100 active
+  publications and gets an ordinary inventory import; photos are copied from Mercado Libre through the import's photo
+  check. Laria only reads, never publishes or changes anything there. Off without the server's credentials.
+- **Catálogo para redes.** A store turns on its feed (off by default) and connects `/api/feeds/tiendas/<slug>` to its
+  Meta catalog once. Laria's own feed `/api/feeds/laria` is for Laria's Google Merchant Center account.
+- **Distribuidor oficial.** A store sends a brand's authorization; Admin approves, rejects or revokes it with a reason.
+  While in force, the store's new publications of that brand show the mark with what Laria checked (a document, not
+  the instruments or the warranty); the store page and the brand filter name the dealers.
+- **Campañas Laria.** Admin publishes dated campaigns of up to 30 days with a minimum discount. Stores add publications
+  whose current price is the lowest of the 30 days before (Laria's own price history), choose what happens at the end,
+  and Laria applies and restores prices. A store's own price change takes the publication out. Plain dates, never
+  countdowns.
+- **Lo que buscan en Laria.** Active stores see last month's searches and alerts as counts of distinct people by city,
+  with active publications next to them, never under 5 people, stored aggregated, and with the report's limits stated
+  above the tables. It gives no advice on what to stock.
+
 ## Services for musicians (feature ideas, services batch)
 
 Proposed with the services batch (`docs/feature-ideas/services.md`, FD-services-1 to FD-services-11); not part of V1
@@ -379,6 +437,105 @@ until merged.
   reviews can be paused, not deleted.
 - **Laria's role.** Laria does not schedule, charge, take payments, verify titles or the quality of the work, or take
   part in the agreement (Terms § 5 bis, draft pending legal review).
+
+<!-- feature-ideas:deal-trust -->
+## Deal trust: seller pages, safer meetups and verified store purchases (feature ideas, deal-trust batch)
+
+Proposed with the deal-trust batch (`docs/feature-ideas/deal-trust.md`, FD-deal-trust-1 to FD-deal-trust-18); not part
+of V1 until merged. Laria still never charges, holds money, checks an instrument or guarantees a deal.
+
+- **Verified store purchases (reach-11).** After a Mostrador sale the store can show a one-time QR (24 hours, one
+  use). The customer signs in and confirms "Sí, compré en <Tienda>", which creates a verified transaction for the
+  store with the usual double-blind reviews. This changes two rules on purpose: a customer who confirms a counter code
+  becomes a verified buyer without a WhatsApp contact, and a counter sale unlocks reviews once the customer confirms
+  (a stock movement alone still does not). Never at one's own store; one per store per customer a day, five a day.
+- **Review photos (safe-06).** A buyer's review of the seller can carry up to three photos of what arrived. Each one
+  waits for Admin and shows only once approved and its review is visible.
+- **Seller page (sell-09).** Every Particular who published has `/vendedores/<slug>`: first name, city, member since,
+  verified sales, the level, reviews and active publications. Not indexed; the seller can hide it.
+- **Vendedor destacado / Tienda destacada (sell-08).** Granted and lifted every night from public criteria: 5 verified
+  sales, 3 visible reviews averaging 4.5, no upheld report in 90 days, no public question unanswered over 7 days.
+  Nobody applies or pays.
+- **Buyer track record (safe-07).** Off by default. Once the buyer turns it on, a line with a link to a small card
+  (first name, buying since, verified purchases, average rating from sellers) joins their WhatsApp messages; it can be
+  removed per listing. Turning it off kills the link.
+- **History on Laria (safe-11).** A buyer who resells an instrument bought through a verified transaction can link the
+  new listing to it: "Comprado en Laria en <mes> · N dueños anteriores en Laria" and the original specs. Nothing about
+  the previous seller is shown.
+- **Safe meetups (safe-03).** On a Particular's listing, "Encuentro seguro" lists «Punto seguro Laria» stores in the
+  city (verified, active stores showing their address that opted in; Admin can turn one off with a reason), public
+  shopping centers and the nearest police station, prepares an "Avisar a alguien" WhatsApp message and links the
+  try-out checklist. The copy never promises safety.
+- **Admin > Confianza** reviews photos, Puntos seguros and confirmed counter purchases (repeat confirmations flagged).
+  A daily job (`/api/internal/jobs/deal-trust`, `CRON_SECRET`) runs the levels, counter-purchase review reminders and
+  photo upload cleanup.
+<!-- /feature-ideas:deal-trust -->
+
+<!-- Feature ideas, accounts batch (docs/feature-ideas/accounts.md): accounts, help and safety -->
+## Accounts, Help and Safety (feature ideas, accounts batch)
+
+Proposed with the accounts batch (`docs/feature-ideas/accounts.md`, FD-accounts-1 to FD-accounts-17); not part of V1
+until merged.
+
+- **Staying signed in.** "Mantener sesión iniciada" on the sign-in page, ticked by default: the session survives
+  closing the browser and lasts while it is used (Supabase's 400-day cookies, no session time-box). Unticked, the
+  session ends with the browser. It applies to password, e-mail link and Google or Apple sign-in.
+- **Two-step sign-in.** Optional, with an authenticator app (no SMS) and ten one-time recovery codes. The code is asked
+  only after the password on a browser that is not signed in (a new device or after signing out); the session keeps
+  its second step for its whole life. Required for Admin and for a store owner whose store has an approved payment
+  method (to open Mi tienda and to change the store's contact details or payment methods). Using a recovery code
+  removes the app, closes every session and sends an e-mail.
+- **Devices.** Seguridad lists the account's sessions by browser and last activity, closes one or all of them, and a
+  sign-in from a browser the account has not used before sends one e-mail.
+- **E-mail change** from Seguridad through Supabase's confirmation link; the old address works until it is confirmed.
+- **Tus datos.** The person downloads all their data as one JSON file, and a Particular can delete the account after
+  the password and one confirmation: the profile becomes «Cuenta eliminada», unsold listings are archived, personal
+  lists and notices are erased, verified transactions and their reviews stay. Admin and store-owner accounts are closed
+  with the team.
+- **Google and Apple.** Buttons on sign-in and Particular sign-up, shown only when each provider is enabled; a first
+  sign-in creates a Particular account.
+- **Help center.** `/ayuda` with topics, accent-insensitive search and short articles; "¿No encontraste tu respuesta?"
+  sends a question with a code. Signed-in senders see answers in Mis consultas and by e-mail; Admin answers others from
+  their own mailbox. Laria's WhatsApp support line shows only once its number and hours are set. This is a simple
+  inbox, not a ticketing system.
+- **Stolen-gear registry.** A signed-in person reports stolen gear with the police report number, the serial and
+  private photos. Sellers can add a private serial to a listing, and stores to each SKU. Matching serials or photos
+  create a lead for Admin only; nothing changes on the listing, nobody is named publicly, and only a match Admin
+  confirms tells the reporter, without naming the listing or the seller.
+- **Copied photos.** Listing photos are compared by a perceptual hash computed on Laria's server; a photo nearly
+  identical to another seller's flags the newer listing for Admin at review ("Foto parecida a la de otro vendedor").
+  Flags never reject or hide anything. The price rule waits for typical prices.
+<!-- end accounts batch: accounts, help and safety -->
+
+<!-- feature-ideas:selling-tools -->
+## Selling Tools: Mi equipo, store offers, consignment, price steps and private offers (feature ideas, selling-tools batch)
+
+Proposed with the selling-tools batch (`docs/feature-ideas/selling-tools.md`, FD-selling-tools-1 to FD-selling-tools-15);
+not part of V1 until merged. Laria never charges, handles money or values gear in any of these.
+
+- **Mi equipo.** A Particular's private list of their gear (Mi cuenta › Mi equipo): brand, model, serial, purchase date,
+  warranty end and a note. Confirmed purchases are added by themselves. "Vender esto" opens the sell form with the
+  item's details. No estimated value.
+- **¿Prefieres vender ya?** Verified stores opt in to buying used guitars, basses, amplifiers, pedals or keyboards. A
+  Particular sends photos and a description to every such store of their region, sees how many will receive it
+  first, gets offers within 24 hours and has 3 days to choose one or none. Choosing shares their WhatsApp with that
+  store only; they bring the gear within 5 days and the store confirms the price and pays directly.
+- **Consignment.** A verified store lists a Particular's instrument as its own listing, marked "En consignación en
+  <Tienda>", and invites the owner by a one-time link; the owner follows its views, contacts and saves and is told when
+  it sells. The commission is agreed between them.
+- **Part payment.** A store listing can say "Aceptamos tu equipo como parte de pago" (store default, per-listing
+  choice). The buyer sends their gear from Mi equipo or with photos to that store, which answers with an estimate.
+- **Bajada automática.** The owner of a listing sets a floor and a pace (5 % or 10 % every 7 or 14 days, optionally
+  only without WhatsApp contacts). A daily job lowers the price until the floor, a sale or a pause; each step is a
+  normal price change, so saved-listing alerts follow. Buyers see no countdown.
+- **Oferta a interesados.** Once per listing per week, the owner sends one private price, for 1 to 7 days, to the
+  people who saved it, by notification and e-mail (respecting the price-drop e-mail choice). The listing shows it to
+  them with a WhatsApp button that quotes it; the public price does not change.
+- **Reminders.** A Mi equipo item with strings, reeds or drumheads can have one reminder (off by default, every 1 to 12
+  months) that names up to three stores of the region that sell them; one tap stops it, also from the e-mail.
+- **Ofertas (stores).** The store inbox for sell and part-payment requests and the "Qué recibimos" settings (used gear,
+  consignment, part payment, consumables). Mis publicaciones links each listing's "Herramientas de venta".
+<!-- /feature-ideas:selling-tools -->
 
 ## WhatsApp Contact Tracking
 
@@ -414,6 +571,10 @@ When a seller marks a listing sold:
 8. If the buyer declines or never confirms, the listing remains sold without a verified transaction or review relationship.
 
 This confirmation verifies only that both parties identify the sale as a Laria-originated transaction. It does not verify payment amount, delivery, or item condition.
+
+<!-- feature-ideas:deal-trust -->
+Proposed (deal-trust batch, reach-11): a store's Mostrador sale can also become a verified transaction, with no listing and no WhatsApp contact, when the customer confirms the store's one-time code. See "Deal trust" above.
+<!-- /feature-ideas:deal-trust -->
 
 <!-- ux my-listings: start -->
 The loop can also start from the buyer: 3 to 30 days after a signed-in buyer opened WhatsApp on a listing, Laria asks them once `¿Compraste …?` (in Pendientes, on the listing as `¿Cómo te fue?`, and by e-mail). `Sí` notifies the seller, who confirms with one tap (`Sí, me lo compró`): the listing becomes sold and the transaction is verified without a second buyer confirmation, because the buyer already said yes. `No` only stops the question. If the seller already asked that buyer, the buyer's `Sí` answers that request. Stock-managed store listings are excluded; their sales are recorded in Inventario. The buyer list a seller chooses from shows each person's name, contact date and the last three digits of their WhatsApp, with no one pre-selected.
@@ -508,7 +669,7 @@ The following remain post-V1 unless an explicit new product decision changes the
 - Internal messaging or chat (public questions on listings are not messaging; see Public Questions on Listings).
 - Multiple store employee accounts.
 - Automatic SUNAT verification.
-- Account deletion or account email-change workflows.
+- Account deletion or account email-change workflows. <!-- accounts batch: proposed in "Accounts, Help and Safety" -->
 - Sophisticated fraud scoring.
 - Arbitrary new social or community functionality.
 

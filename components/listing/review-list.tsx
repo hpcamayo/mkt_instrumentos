@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ContentReport } from "@/components/content-report";
+import { ReviewPhotoStrip } from "@/components/trust/review-photo-strip";
 import { formatMonthYear, reviewerDisplayName, type ReviewItem, type ReviewPage } from "@/lib/listing-page";
 
 export function ReviewCard({ review }: { review: ReviewItem }) {
@@ -16,6 +17,7 @@ export function ReviewCard({ review }: { review: ReviewItem }) {
         {formatMonthYear(review.submitted_at) ? <span className="t-meta">{formatMonthYear(review.submitted_at)}</span> : null}
       </p>
       {review.comment ? <p className="mt-2 whitespace-pre-line t-ui text-ink-2">{review.comment}</p> : null}
+      <ReviewPhotoStrip photos={review.photos} className="mt-3" />
       <div className="mt-3">
         <ContentReport targetType="review" targetId={review.id} label="Reportar reseña" />
       </div>

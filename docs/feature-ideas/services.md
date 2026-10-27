@@ -5,7 +5,7 @@ the note "love this. we shouldnt mix service listings with items though." Branch
 `features/marketplace`.
 
 Nothing here is applied to a hosted database. Proposed decisions are numbered FD-services-n; acceptance proposals are
-in `services-acceptance.tsv` (GROW-700 to GROW-733, Not Run).
+in `services-acceptance.tsv` (GROW-700 to GROW-735, Not Run).
 
 ## Migration (slot 20261208)
 
@@ -84,6 +84,19 @@ with a reason.
 **Not mixed with instruments.** Separate tables, RPCs, pages, cards and Admin queue. Services never appear in the
 catalog, the instrument search, listing counts, saved alerts, favorites or the store's listing allowance.
 
+**Entry points from the instrument side** (follow-up PR). They link to the section and never show a service among
+instruments:
+
+- The home header's Categorías menu (the same panel is the phone menu) ends with "Servicios para músicos", after
+  "Tiendas verificadas".
+- The home, under the category chips: one bordered row with "Servicios para músicos", up to four kinds that have
+  services (most first) with their counts, and "Ver servicios". Left out while no service is public.
+- A listing marked Bueno, Regular or Para reparar (worn or broken gear) and still for sale shows one quiet line after
+  the description: "¿Necesita un ajuste o una reparación?" (or "¿Lo vas a reparar?") "Ver luthiers y talleres", only
+  while someone offers repairs.
+- The counts come from `lib/services-counts.ts`, shared for five minutes, so neither the home nor a listing page adds
+  a query per view.
+
 **Wiring.** Footer (Explora: Servicios para músicos; Vende: Ofrecer un servicio; the phone grid's eighth cell), the
 account menu ("Servicios", after Estadísticas, for Particulars and for store owners with a store), Admin navigation,
 in-app notices and e-mails, the shared report form, the sitemap (the section, five kinds and every public service, up
@@ -98,12 +111,14 @@ to 5,000), Terms, Privacy and Artículos prohibidos.
   `app/mi-cuenta/servicios/page.tsx`, `app/mi-cuenta/servicios/nuevo/page.tsx`,
   `app/mi-cuenta/servicios/[id]/editar/page.tsx`, `app/admin/servicios/page.tsx`, `app/api/services/events/route.ts`.
 - Components: `components/services/*` (card, directory, contact and view recording, hire panel, review form, reviews,
-  my services, bookings, form, Admin queue), `components/legal/services-legal.tsx`.
+  my services, bookings, form, Admin queue, entry points), `components/legal/services-legal.tsx`; `lib/services-counts.ts`.
 - Shared files, small marked edits ("feature-ideas services (bet-02)"): `lib/ui/status.ts`,
   `lib/account-navigation.ts`, `components/admin-navigation.tsx`, `lib/notifications.ts`, `lib/email/templates.ts`,
   `components/content-report.tsx`, `components/content-report-form.tsx`, `components/site-footer.tsx`,
   `app/sitemap.ts`, `app/terminos/page.tsx`, `app/privacidad/page.tsx`, `app/articulos-prohibidos/page.tsx`,
-  `scripts/prototype/start-docker-free.sh`, `scripts/prototype/README.md`.
+  `scripts/prototype/start-docker-free.sh`, `scripts/prototype/README.md`; follow-up: `components/site-header.tsx`
+  (one menu row), `app/page.tsx` (the teaser), `app/instrumentos/[slug]/page.tsx` (the repair line),
+  `tests/ux-shell.test.cjs` (the pinned menu) and `tests/ux-home.test.cjs` (a mock for the counts).
 - Tests pinned to shared navigation, updated for the new "Servicios" entry: `tests/account-shell.test.cjs`,
   `tests/sprint-9.test.cjs`, `tests/store-ops-review-ux.test.cjs`, `tests/ux-shell.test.cjs`; the report target type in
   `tests/sprint-8.test.cjs`. New: `tests/services.test.cjs`.
@@ -147,16 +162,17 @@ to 5,000), Terms, Privacy and Artículos prohibidos.
   deleted, only paused.
 - **FD-services-9. Separate section, never mixed.** Services have their own tables and pages and never appear in
   instrument search, listing counts, alerts, favorites or the store's listing allowance (Henri's note).
-- **FD-services-10. Entry points.** Footer, account menu, Admin menu and sitemap now; not the category strip or the home
-  Categorías panel (see Limitations).
+- **FD-services-10. Entry points.** Footer, account menu, Admin menu and sitemap; then (follow-up PR, agreed with the
+  integrator) the home header's Categorías menu, which is also the phone menu, a home teaser and one repair line on
+  worn gear. Never the category strip, so services do not read as items.
 - **FD-services-11. Photos.** Public bucket `service-photos`, 5 MB, JPEG/PNG/WebP, uploaded into the owner's folder;
   the owner can remove only photos no service uses, so a photo still on a service (even a hidden one) stays.
 
 ### Limitations and follow-ups
 
-- **Entry points.** The category strip and the home Categorías panel are pinned by `tests/ux-shell.test.cjs` and the
-  strip is already tight at 1280 px with the eleventh category. Suggested follow-up for the integrator: a "Servicios"
-  item at the end of the strip (or in the "Instrumentos" menu) and a small home teaser.
+- **Not in the category strip** on purpose (FD-services-10), so pages other than the home reach services through the
+  footer, the account menu and the repair line.
+- **No line on results pages.** A line among instrument results read as mixing; only the listing page has one.
 - **No provider reply to reviews**, unlike store reviews; a later step.
 - **No booking calendar, quotes or availability.** By design: Laria does not schedule or charge.
 - **No full-text search inside services**; the filters cover kind, city, place, skill and order.

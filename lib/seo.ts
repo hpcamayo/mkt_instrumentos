@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { CategoryLandingPage } from "@/lib/category-pages";
 import { getCategoryLandingByValue } from "@/lib/category-pages";
 import { instrumentFilterGroups } from "@/lib/instrument-filters";
+import { conditionSchemaOrg } from "@/lib/listing-condition";
 import {
   formatPrice,
   getCategoryLabel,
@@ -36,6 +37,8 @@ export const catalogFilterKeys: ReadonlySet<string> = new Set([
   "min_price",
   "max_price",
   "sort",
+  // listing-details: "Envía a provincia", "Se puede probar", "Acepta cambios" (lib/listing-flags.ts).
+  "opciones",
   ...instrumentFilterGroups.flatMap((group) => group.filters.map((filter) => filter.key)),
 ]);
 
@@ -181,7 +184,8 @@ export function buildListingJsonLd(listing: ListingDetailData) {
                 : isOutOfStock(listing)
                   ? "https://schema.org/OutOfStock"
                   : "https://schema.org/InStock",
-            itemCondition: listing.condition === "Nuevo" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
+            // sell-10: "Para reparar" is DamagedCondition; open box is sold as used (lib/listing-condition.ts).
+            itemCondition: conditionSchemaOrg(listing.condition),
             // Individual sellers are not named in structured data; stores are public businesses.
             ...(store ? { seller: { "@type": "Organization", name: store.name } } : {}),
           },

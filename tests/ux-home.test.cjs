@@ -211,6 +211,8 @@ async function renderHome(data, random = 0) {
     "@/lib/home": { ...home, fetchHomeData: async () => data },
     // The discovery batch's collections row (docs/feature-ideas/discovery.md); none here, so only the gift card shows.
     "@/lib/discovery/data": { getCurrentCollections: async () => null },
+    // feature-ideas services (bet-02): no services here, so the teaser stays out (tests/services.test.cjs renders it).
+    "@/lib/services-counts": { getServiceKindCounts: async () => null },
     // Signed-in only, read after load (save-12, UXD-integration-10): nothing in the server render.
     "@/components/home/home-followed": { HomeFollowedArrivals: () => null },
   });

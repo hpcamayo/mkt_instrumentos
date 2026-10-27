@@ -17,10 +17,23 @@ import { RELATED_ROW_MAX, RelatedListings, RelatedListingsSkeleton } from "@/com
 import { ShareListing } from "@/components/listing/share-button";
 import { ListingGuideLink } from "@/components/discovery/listing-guide-link";
 import { ListingMarks } from "@/components/discovery/listing-marks";
+import { ComboPanel } from "@/components/listing-details/combo";
+import { CompanionList, type Companion } from "@/components/listing-details/companions";
+import { ConditionExplainer } from "@/components/listing-details/condition-explainer";
+import { SaleTermsSummary } from "@/components/listing-details/sale-terms-summary";
+import { comboSellerKey, readBundleOffer, type BundleOffer } from "@/lib/combo";
+import { answeredQuestionIds, PRICE_MODE_LABELS } from "@/lib/sale-terms";
+import { whatsAppNumber } from "@/lib/seller-contact";
+import { ListingRepairLine } from "@/components/services/service-entry-points";
 import { ListingQuestions } from "@/components/listing/listing-questions";
 import { ReputationSection } from "@/components/listing/reputation-section";
 import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@/components/listing/seller-card";
 import { SpecTable } from "@/components/listing/spec-table";
+import { ListingProvenance, SellerTrust } from "@/components/trust/listing-trust";
+import { SafeMeetup } from "@/components/trust/safe-meetup";
+import { TrackRecordChip } from "@/components/trust/track-record-chip";
+import { getListingTrust } from "@/lib/listing-trust";
+import { guidePath, guidesForListing } from "@/lib/discovery/buying-guides";
 import { publicStoreLocation } from "@/lib/store-storefront";
 import { ListingDetailMetadata } from "@/components/listing-detail-metadata";
 import { AcceptedPaymentMethods } from "@/components/payment/accepted-payment-methods";
@@ -46,12 +59,11 @@ import {
   type ReviewPage,
   type SellerFacts,
 } from "@/lib/listing-page";
-import { needsSafetySheet, quickQuestions } from "@/lib/contact-message";
+import { needsSafetySheet, quickQuestions, tradeQuestion } from "@/lib/contact-message";
 import { isEntityId } from "@/lib/marketplace-event-payload";
 import {
   DISCOVERABLE_STOCK_FILTER,
   buildWhatsAppUrl,
-  getConditionLabel,
   getListingDisplayTitle,
   getListingSecondaryTitle,
   isOutOfStock,
@@ -63,6 +75,7 @@ import {
   type ListingDetailData,
 } from "@/lib/listings";
 import { ListingSoundClip } from "@/components/selling/listing-sound-clip";
+import { ListingSellingExtras } from "@/components/offers/listing-selling-extras";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { warnMissingSupabaseEnv, type getPublicSupabaseClient } from "@/lib/supabase/public-client";
 import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
@@ -96,6 +109,7 @@ import { listingBreadcrumbs } from "@/lib/shell";
 import { formatPrice } from "@/lib/price";
 import { absoluteUrl, NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
 import { restockNote } from "@/lib/store-floor/arrivals";
+import { ListingReachMarks } from "@/components/store-reach/listing-reach-marks";
 
 export const dynamic = "force-dynamic";
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
@@ -186,6 +200,17 @@ const loadPublicListing = cache(async (slug: string) => {
         model,
         condition,
         price_pen,
+        price_mode,
+        delivery_pickup,
+        pickup_area,
+        can_try,
+        lima_delivery,
+        ships_provinces,
+        shipping_carriers,
+        shipping_payment,
+        accepts_trades,
+        trade_wants,
+        trade_categories,
         instrument_type,
         attributes,
         published_at,
@@ -317,13 +342,14 @@ export default async function ListingDetailPage({
       : null;
   // fast-01: every call the page waits for runs at once. A failed reputation call leaves the reviews (and the rating
   // figure) out instead of claiming there are none; failed facts or breakdown leave only those parts out.
-  const [reputationResult, reviewPageResult, factsResult, purchase] = await Promise.all([
+  const [reputationResult, reviewPageResult, factsResult, purchase, combo] = await Promise.all([
     reputationTarget ? supabase.rpc("get_public_reputation", reputationTarget) : null,
     reviewSubject
       ? supabase.rpc("get_public_review_page", { p_subject_user_id: reviewSubject.user, p_subject_store_id: reviewSubject.store, p_offset: 0, p_limit: 1 })
       : null,
     supabase.rpc("get_public_seller_facts", { p_listing_id: listing.id }),
     loadPurchaseRequest(supabase, listing),
+    loadListingCombo(supabase, listing),
   ]);
   const reputation = reputationResult && !reputationResult.error ? readPublicReputation(reputationResult.data) : null;
   const reviewPage = reviewPageResult && !reviewPageResult.error ? readReviewPage(reviewPageResult.data) : null;
@@ -339,9 +365,40 @@ export default async function ListingDetailPage({
         reviewSubject={reviewSubject}
         facts={facts}
         purchase={purchase}
+        combo={combo}
       />
     </>
   );
+}
+
+// buy-01: the seller's declared combo discount and, for a store, what it attaches to this listing. Both are optional
+// extras: a failed read leaves them out.
+async function loadListingCombo(supabase: PublicSupabaseClient, listing: ListingDetailData): Promise<{ offer: BundleOffer | null; companions: Companion[] }> {
+  if (listing.status !== "approved") return { offer: null, companions: [] };
+  const offerQuery = supabase.from("seller_bundle_offers").select("discount_percent,min_items");
+  const [offerResult, companionResult] = await Promise.all([
+    listing.store_id
+      ? offerQuery.eq("store_id", listing.store_id).maybeSingle()
+      : listing.owner_user_id ? offerQuery.eq("owner_user_id", listing.owner_user_id).maybeSingle() : null,
+    listing.store_id
+      ? supabase
+        .from("listing_companions")
+        .select("sort_order, companion:listings!listing_companions_companion_id_fkey(id,title,slug,price_pen,stock_state,listing_photos(image_url,alt_text,sort_order))")
+        .eq("listing_id", listing.id)
+        .order("sort_order")
+        .abortSignal(optionalReadSignal(getRequestReads().deadline))
+      : null,
+  ]);
+  const offer = offerResult && !offerResult.error ? readBundleOffer(offerResult.data) : null;
+  type CompanionRow = { companion: { id: string; title: string; slug: string; price_pen: number | null; stock_state: string | null; listing_photos: { image_url: string; alt_text: string | null; sort_order: number }[] | null } | null };
+  const companions = companionResult && !companionResult.error
+    ? ((companionResult.data ?? []) as unknown as CompanionRow[]).flatMap(({ companion }) => {
+      if (!companion || companion.stock_state === "out_of_stock") return [];
+      const photo = [...(companion.listing_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order)[0];
+      return [{ id: companion.id, title: companion.title, slug: companion.slug, price_pen: companion.price_pen, photo: photo ? { url: photo.image_url, alt: photo.alt_text } : null }];
+    })
+    : [];
+  return { offer, companions };
 }
 
 async function findListingSlug(id: string) {
@@ -424,6 +481,7 @@ function ListingDetail({
   reviewSubject,
   facts,
   purchase,
+  combo,
 }: {
   listing: ListingDetailData;
   supabase: PublicSupabaseClient;
@@ -432,6 +490,7 @@ function ListingDetail({
   reviewSubject: { user?: string; store?: string } | null;
   facts: SellerFacts | null;
   purchase: PurchaseRequest | null;
+  combo: { offer: BundleOffer | null; companions: Companion[] };
 }) {
   const now = Date.now();
   const store = normalizeStore(listing);
@@ -467,6 +526,19 @@ function ListingDetail({
     facts,
   };
   const specLine = keySpecLine(getSpecStrip(listing, 5));
+  // sell-07, talk-02, sell-06: the price mode beside the price; quick questions the listing already answers are left
+  // out, and a listing that takes trades adds "Te propongo un cambio".
+  const priceMode = listing.price_mode === "fixed" || listing.price_mode === "negotiable" ? listing.price_mode : null;
+  const answered = answeredQuestionIds(listing);
+  const questions = [
+    ...quickQuestions(listing.seller_type).filter((question) => !answered.includes(question.id)),
+    ...(listing.accepts_trades ? [tradeQuestion(listing.seller_type)] : []),
+  ];
+  // buy-01: the combo is per seller; a listing without units cannot go into one.
+  const sellerKey = comboSellerKey(listing);
+  const comboSeller = sellerKey && !outOfStock ? { key: sellerKey, name: seller.name, type: listing.seller_type } : null;
+  // deal-trust (safe-03): the meetup sheet links the type's try-out checklist (discovery's guides) when there is one.
+  const tryOutGuide = isStore ? undefined : guidesForListing(listing.category, listing.instrument_type).find((guide) => guide.kind === "revisar");
   const contactHref = purchase ? buildPurchaseWhatsAppUrl(resolveContactPhone(listing), listing, purchase.sku) : buildWhatsAppUrl(listing);
   const typeHref = listing.instrument_type
     ? categoryTypePath(listing.category, listing.instrument_type)
@@ -502,6 +574,8 @@ function ListingDetail({
               <Suspense fallback={null}><ListingMarks listingId={listing.id} /></Suspense>
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <Price value={listing.price_pen} previous={visiblePreviousPrice(listing, now)} size="detail" />
+                {/* sell-07: the seller's word on the price. */}
+                {priceMode && listing.price_pen !== null ? <Tag tone="line">{PRICE_MODE_LABELS[priceMode]}</Tag> : null}
                 {outOfStock ? <StatusTag domain="stock" status={listing.restock_expected_on ? "restock_expected" : "out_of_stock"} /> : null}
               </p>
               {outOfStock ? (
@@ -510,20 +584,23 @@ function ListingDetail({
                   {restockNote(listing.restock_expected_on)}
                 </p>
               ) : null}
-              <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
-                {listing.condition ? <Tag>{getConditionLabel(listing.condition)}</Tag> : null}
+              <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+                {/* sell-10: tap the condition to read what it means on the scale. */}
+                {listing.condition ? <ConditionExplainer condition={listing.condition} className="order-last" /> : null}
                 <ListingDetailMetadata listingId={listing.id} trackView={!isSold}>
                   {place} · {formatPublishedAgo(published, now)}{updated ? ` · ${updated}` : ""}
                 </ListingDetailMetadata>
-              </p>
+              </div>
               {/* store-floor, reach-09: the store's warranty and returns. */}
               {isStore && !isSold ? <StoreTermsLine terms={listing} storeName={store?.name ?? null} className="mt-3" /> : null}
+              {isSold ? null : <ListingReachMarks listing={listing} />}{/* Feature ideas, store-reach batch (reach-04, reach-05). */}
               {/* A seller's recent "sigue disponible" (my listings check-ins) answers the quiet-listing note (list-04). */}
               {availabilityConfirmed ? (
                 <p className="mt-1 t-meta">Quien vende confirmó que sigue disponible el {availabilityConfirmed}.</p>
               ) : quiet ? (
                 <p className="mt-2 t-meta">Esta publicación tiene un tiempo: consulta si sigue disponible.</p>
               ) : null}
+              {isSold ? null : <SaleTermsSummary terms={listing} className="mt-5" />}
             </div>
 
             {isSold ? (
@@ -544,7 +621,8 @@ function ListingDetail({
               <>
                 {outOfStock ? <RestockAlert listingId={listing.id} arriving={Boolean(listing.restock_expected_on)} className="order-3 lg:order-2" /> : null}
                 <div className="order-3 grid gap-3 lg:order-2">
-                  {purchase ? null : <QuickQuestions listingId={listing.id} questions={quickQuestions(listing.seller_type)} />}
+                  {purchase ? null : <QuickQuestions listingId={listing.id} questions={questions} />}
+                  <TrackRecordChip listingId={listing.id} />
                   <SignInHint />
                 </div>
                 {/* store-locations (run-02): "Disponible en …" and where to collect, for stores with sedes. */}
@@ -567,6 +645,7 @@ function ListingDetail({
                     <TryoutEntry supabase={supabase} storeId={listing.store_id} storeName={store.name} listingId={listing.id} className="order-3 lg:order-3" />
                   </Suspense>
                 ) : null}
+                <ListingSellingExtras listingId={listing.id} title={displayTitle} contactHref={contactHref} className="order-3 lg:order-3" />
                 <ShareListing
                   url={absoluteUrl(`/instrumentos/${listing.slug}`)}
                   title={listing.title}
@@ -575,6 +654,26 @@ function ListingDetail({
                   variant="module"
                   className="order-5 lg:order-3"
                 />
+                {comboSeller && !purchase ? (
+                  <ComboPanel
+                    seller={comboSeller}
+                    item={{ id: listing.id, title: listing.title, slug: listing.slug, price_pen: listing.price_pen }}
+                    offer={combo.offer}
+                    whatsappNumber={whatsAppNumber(resolveContactPhone(listing))}
+                    className="order-5 lg:order-3"
+                  />
+                ) : null}
+                {isStore ? null : (
+                  <SafeMeetup
+                    title={displayTitle}
+                    url={absoluteUrl(`/instrumentos/${listing.slug}`)}
+                    sellerFirstName={particular.name?.trim().split(/\s+/)[0] || null}
+                    city={listing.city}
+                    region={listing.region}
+                    tryOutHref={tryOutGuide ? guidePath(tryOutGuide.slug) : undefined}
+                    className="order-5 lg:order-3"
+                  />
+                )}
               </>
             )}
             <div className="order-3 empty:hidden lg:order-3"><PurchaseCheckin listingId={listing.id} /></div>
@@ -593,6 +692,7 @@ function ListingDetail({
               sold={isSold}
               now={now}
               className="order-9 lg:order-5"
+              trust={<Suspense fallback={null}><SellerTrust listingId={listing.id} /></Suspense>}
               listingCount={
                 <Suspense fallback={<li aria-hidden="true"><Skeleton className="inline-block h-[18px] w-28 align-middle" /></li>}>
                   <SellerInventory supabase={supabase} listing={listing} />
@@ -607,6 +707,7 @@ function ListingDetail({
 
           <div className="contents lg:col-span-7 lg:col-start-1 lg:row-start-2 lg:flex lg:min-w-0 lg:flex-col lg:gap-10">
             <SpecTable specs={getSpecTable(listing)} className="order-7 min-w-0" />
+            <Suspense fallback={null}><ListingProvenance listingId={listing.id} className="order-7 min-w-0" /></Suspense>
 
             <ListingSoundClip listingId={listing.id} />
 
@@ -623,8 +724,13 @@ function ListingDetail({
               )}
             </section>
 
+            {isSold ? null : <CompanionList companions={combo.companions} seller={comboSeller} className="order-8" />}
+
             {/* discovery batch (disc-02): the buying guide and try-out checklist for this kind of instrument */}
             {isSold ? null : <ListingGuideLink category={listing.category} instrumentType={listing.instrument_type} className="order-8 min-w-0" />}
+
+            {/* feature-ideas services (bet-02): one quiet line to the repair shops on worn or broken gear */}
+            <Suspense fallback={null}><ListingRepairLine condition={listing.condition} sold={isSold} className="order-8 min-w-0" /></Suspense>
 
             <div className="order-11 min-w-0">
               <ListingQuestions
@@ -779,11 +885,13 @@ async function SellerListings({
   storeHref: string | null;
 }) {
   const result = await getMoreFromSellerListings(supabase, listing);
+  // deal-trust (sell-09): a Particular's strip links to their seller page when they have one.
+  const sellerPageSlug = storeHref ? null : (await getListingTrust(listing.id))?.sellerPageSlug ?? null;
   return (
     <RelatedListings
       id="mas-del-vendedor"
       title={listing.seller_type === "store" ? "Más de esta tienda" : "Más de este vendedor"}
-      link={storeHref ? { href: storeHref, label: "Ver la tienda" } : null}
+      link={storeHref ? { href: storeHref, label: "Ver la tienda" } : sellerPageSlug ? { href: `/vendedores/${sellerPageSlug}`, label: "Ver perfil" } : null}
       listings={result.listings}
     />
   );

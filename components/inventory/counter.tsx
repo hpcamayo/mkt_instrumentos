@@ -4,6 +4,7 @@ import { Camera, CameraOff, Minus, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { undoMovements } from "@/components/inventory/stock-action-sheet";
 import { UndoNotice, type InventoryNotice } from "@/components/inventory/undo-notice";
+import { CounterPurchaseOffer } from "@/components/trust/counter-purchase-code";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
@@ -43,8 +44,9 @@ function storage() {
 // (run-03) offers the boleta or factura with the sale when the store connected its Nubefact account.
 export type CounterLocation = { id: string; name: string; is_primary: boolean };
 
-export function Counter({ storeId, locations = [], locationStock = {}, receipts = null }: {
+export function Counter({ storeId, storeName = "la tienda", locations = [], locationStock = {}, receipts = null }: {
   storeId: string;
+  storeName?: string;
   locations?: CounterLocation[];
   locationStock?: Record<string, Record<string, number>>;
   receipts?: { storeName: string } | null;
@@ -68,6 +70,8 @@ export function Counter({ storeId, locations = [], locationStock = {}, receipts 
   const [receiptDraft, setReceiptDraft] = useState<ReceiptDraft>(EMPTY_RECEIPT);
   const [lastReceipt, setLastReceipt] = useState<ReceiptRecord | null>(null);
   const [receiptNote, setReceiptNote] = useState("");
+  // deal-trust (reach-11): the last sale recorded online in the store, for its customer code.
+  const [lastSale, setLastSale] = useState<string | null>(null);
   // The shared Input does not forward refs; the field's id finds it.
   const codeInput = { get current() { return typeof document === "undefined" ? null : document.getElementById(`${id}-entrada`) as HTMLInputElement | null; } };
   const changeNotice = useCallback((next: InventoryNotice) => setNotice(next), []);
@@ -226,6 +230,7 @@ export function Counter({ storeId, locations = [], locationStock = {}, receipts 
     setCart([]);
     setReceiptDraft(EMPTY_RECEIPT);
     setSaleKey(newRequestKey("mostrador"));
+    setLastSale(sale.channel === "tienda_fisica" ? sale.key : null);
     setNotice({
       kind: "success",
       message: `Venta registrada: ${numbers.format(units)} ${units === 1 ? "unidad" : "unidades"} (${CHANNEL_LABELS[channel]}${locationName ? `, ${locationName}` : ""}).`,
@@ -304,6 +309,7 @@ export function Counter({ storeId, locations = [], locationStock = {}, receipts 
       <section aria-labelledby={`${id}-venta`} className="grid gap-4 rounded-panel border border-subtle bg-white p-4 md:p-5 lg:sticky lg:top-4">
         <h2 id={`${id}-venta`} className="t-section text-ink">Venta</h2>
         {notice ? <UndoNotice notice={notice} onChange={changeNotice} /> : null}
+        {lastSale ? <CounterPurchaseOffer key={lastSale} saleKey={lastSale} storeName={storeName} onDismiss={() => setLastSale(null)} /> : null}
         {cart.length ? (
           <ul className="divide-y divide-subtle rounded-control border border-subtle">
             {cart.map((line) => (
@@ -343,7 +349,7 @@ export function Counter({ storeId, locations = [], locationStock = {}, receipts 
         </Button>
         {receiptNote ? <Notice tone="warning" role="alert">{receiptNote}</Notice> : null}
         {lastReceipt && receipts ? <ReceiptOutcome receipt={lastReceipt} storeName={receipts.storeName} onChange={setLastReceipt} /> : null}
-        <p className="t-meta">Es una anotación de tu tienda: descuenta stock, pero no crea una venta verificada en Laria ni cobra nada.</p>
+        <p className="t-meta">Es una anotación de tu tienda: descuenta stock y no cobra nada. Para que cuente como compra verificada en Laria, muestra el código al cliente después de registrarla.</p>
         {waiting.length ? (
           <Notice tone="warning" role="status">
             {waiting.length === 1 ? "1 venta espera conexión" : `${waiting.length} ventas esperan conexión`} en este equipo. Se registrarán solas; no cierres sesión en este equipo hasta entonces.{" "}

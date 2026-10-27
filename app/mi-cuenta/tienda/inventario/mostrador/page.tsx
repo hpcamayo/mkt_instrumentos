@@ -29,7 +29,7 @@ export default async function CounterPage() {
       <Breadcrumbs items={[{ label: "Inventario", href: "/mi-cuenta/tienda/inventario" }, { label: "Mostrador" }]} />
       <PageHeader eyebrow={store.name} title="Mostrador" meta="Registra ventas de tu tienda escaneando o escribiendo el código." />
       {summary.can_write ? (
-        <Counter storeId={store.id} locations={locations.map(({ id, name, is_primary }) => ({ id, name, is_primary }))} locationStock={locationStock} receipts={receipts} />
+        <Counter storeId={store.id} storeName={store.name} locations={locations.map(({ id, name, is_primary }) => ({ id, name, is_primary }))} locationStock={locationStock} receipts={receipts} />
       ) : (
         <Notice tone="warning" role="note">Tu tienda no puede registrar cambios de inventario en este momento.</Notice>
       )}

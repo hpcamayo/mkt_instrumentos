@@ -54,6 +54,33 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   service_booking_confirmed: "Contratación confirmada",
   service_booking_declined: "Contratación no confirmada",
   service_review_received: "Nueva reseña de tu servicio",
+  // Feature ideas, store-reach batch (reach-04): Admin's decision on a brand authorization.
+  store_dealer_approved: "Distribuidor oficial aprobado",
+  store_dealer_rejected: "Autorización no aprobada",
+  store_dealer_revoked: "Distribuidor oficial retirado",
+  // Feature ideas, store-reach batch (reach-05): a campaign entry that did not start or that Admin removed.
+  store_campaign_entry_ineligible: "Publicación fuera de la campaña",
+  store_campaign_entry_removed: "Publicación retirada de la campaña",
+  // --- deal-trust batch (docs/feature-ideas/deal-trust.md) ---
+  store_counter_purchase_confirmed: "Compra en tienda confirmada",
+  store_counter_review_revealed: "Reseñas disponibles",
+  store_counter_review_reminder: "Tu reseña vence pronto",
+  store_level_earned: "Tu tienda es Tienda destacada",
+  store_level_lapsed: "Tu tienda dejó de ser destacada",
+  store_safe_spot_disabled: "Punto seguro desactivado",
+  seller_level_earned: "Eres Vendedor destacado",
+  seller_level_lapsed: "Dejaste de ser Vendedor destacado",
+  // --- end deal-trust batch ---
+  // Feature ideas, selling-tools batch.
+  listing_price_step: "Bajada automática",
+  listing_private_offer: "Oferta de un favorito",
+  listing_consignment_update: "Consignación",
+  store_trade_request: "Pedido de oferta",
+  store_trade_update: "Novedad en Ofertas",
+  gear_trade_offer: "Te enviaron una oferta",
+  gear_trade_update: "Novedad de tu pedido",
+  gear_reminder_due: "Recordatorio de Mi equipo",
+  // /Feature ideas, selling-tools batch
 };
 
 export const DEFAULT_NOTIFICATION_LABEL = "Actualización de tu cuenta";
@@ -73,7 +100,14 @@ export function isQuestionNotification(eventType: string) {
 // listingSlug: the list passes the public listing's address it looked up for an alert match (null when the listing is
 // no longer public, which opens the alerts instead); a push leaves it out and links the listing by id, which the
 // listing page forwards to its address.
+// deal-trust (sell-08): a seller level earned or lost opens its progress card in Compras y ventas.
+export const SELLER_LEVEL_EVENTS = new Set(["seller_level_earned", "seller_level_lapsed", "store_level_earned", "store_level_lapsed"]);
+
 export function notificationHref(notification: NotificationTarget, listingSlug?: string | null) {
+  // Feature ideas, selling-tools batch.
+  const selling = sellingNotificationHref(notification);
+  if (selling) return selling;
+  // /Feature ideas, selling-tools batch
   const transactionReference = notification.transaction_id ?? notification.claim_id;
   // feature-ideas services (bet-02): every service notice opens Mi cuenta › Servicios (bookings at their section).
   if (notification.event_type.startsWith("service_")) {
@@ -81,6 +115,8 @@ export function notificationHref(notification: NotificationTarget, listingSlug?:
   }
   return transactionReference
     ? `/mi-cuenta/transacciones/${transactionReference}`
+    : SELLER_LEVEL_EVENTS.has(notification.event_type)
+    ? "/mi-cuenta/transacciones#perfil-laria"
     : notification.event_type === "listing_alert_match"
     ? listingSlug ? `/instrumentos/${listingSlug}` : listingSlug === undefined && notification.listing_id ? `/instrumentos/${notification.listing_id}` : "/mi-cuenta/alertas"
     // ux my-listings: these are answered from Pendientes on the account home; rejections open the edit form.
@@ -103,9 +139,39 @@ export function notificationHref(notification: NotificationTarget, listingSlug?:
     ? "/mi-cuenta/tienda/pruebas"
     : notification.event_type === "store_arrival_estimate_passed"
     ? "/mi-cuenta/tienda/inventario?stock=out"
+    // Feature ideas, store-reach batch (reach-04, reach-05).
+    : notification.event_type.startsWith("store_dealer_")
+    ? "/mi-cuenta/tienda/distribuidor"
+    : notification.event_type.startsWith("store_campaign_")
+    ? "/mi-cuenta/tienda/campanas"
     : notification.store_id && notification.event_type.startsWith("store_")
     ? "/mi-cuenta/tienda"
     : notification.store_id
       ? "/mi-cuenta/tienda/inventario"
       : "/mi-cuenta/publicaciones";
 }
+
+// Feature ideas, selling-tools batch (docs/feature-ideas/selling-tools.md): requests and offers open their inbox, a price
+// step opens the listing's selling tools, a private offer opens the listing, a reminder opens Mi equipo.
+function sellingNotificationHref(notification: NotificationTarget) {
+  const listing = notification.listing_id;
+  switch (notification.event_type) {
+    case "gear_trade_offer":
+    case "gear_trade_update":
+      return "/mi-cuenta/equipo/ofertas";
+    case "store_trade_request":
+    case "store_trade_update":
+      return "/mi-cuenta/tienda/ofertas";
+    case "gear_reminder_due":
+      return "/mi-cuenta/equipo";
+    case "listing_price_step":
+      return listing ? `/mi-cuenta/publicaciones/${listing}/herramientas` : "/mi-cuenta/publicaciones";
+    case "listing_private_offer":
+      return listing ? `/instrumentos/${listing}` : "/mi-cuenta/favoritos";
+    case "listing_consignment_update":
+      return notification.store_id && listing ? `/mi-cuenta/publicaciones/${listing}/herramientas` : "/mi-cuenta/equipo";
+    default:
+      return null;
+  }
+}
+// /Feature ideas, selling-tools batch

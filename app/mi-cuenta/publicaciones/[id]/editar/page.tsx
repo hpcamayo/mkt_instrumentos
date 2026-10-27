@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ListingEditForm, type EditRejection } from "@/components/listing-edit-form";
 import { ListingMakerFields } from "@/components/discovery/listing-maker-fields";
+import { ListingCompanionSettings } from "@/components/listing-details/companion-settings";
 import { parseRejectionCodes } from "@/lib/rejection-reasons";
 import { returnLabel } from "@/lib/listing-return";
 import { getAccountContext } from "@/lib/account-context";
+import { SALE_TERMS_COLUMNS } from "@/lib/sale-terms";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 
@@ -24,7 +26,7 @@ export default async function ListingEditPage({
   const { data: listing } = await supabase
     .from("listings")
     .select(
-      "id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,region,description,owner_user_id,store_id,hidden_source,updated_at,rejection_reason,rejection_codes,listing_photos(id,image_url,alt_text,sort_order)",
+      `id,title,status,category,instrument_type,attributes,brand,model,condition,price_pen,city,region,description,owner_user_id,store_id,hidden_source,updated_at,rejection_reason,rejection_codes,${SALE_TERMS_COLUMNS},listing_photos(id,image_url,alt_text,sort_order)`,
     )
     .eq("id", id)
     .eq("owner_user_id", user.id)
@@ -109,6 +111,8 @@ export default async function ListingEditPage({
       />
       {/* discovery batch (disc-04, disc-05): Hecho a mano, a pedido and the artist's note, for makers and artists only */}
       <ListingMakerFields supabase={supabase} listingId={listing.id} />
+      {/* listing-details batch (buy-01): "Lo que suele acompañarlo", for a store's listings */}
+      <ListingCompanionSettings supabase={supabase} listingId={listing.id} storeId={listing.store_id} />
     </section>
   );
 }

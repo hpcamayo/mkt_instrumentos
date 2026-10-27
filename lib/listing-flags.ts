@@ -46,6 +46,11 @@ export function parseListingOptions(values: readonly string[]) {
   return ORDER.filter((flag) => wanted.has(flag));
 }
 
+// Whether a URL names an option that is no filter (a mangled or invented link), so the catalog can clean it up.
+export function hasUnknownListingOption(values: readonly string[]) {
+  return values.flatMap((value) => value.split(",")).map((value) => value.trim().toLowerCase().replace(/-/g, "_")).some((value) => value && !KNOWN.has(value));
+}
+
 export function listingFlagLabel(flag: string) {
   return listingFlagFilters.find((filter) => filter.flag === flag)?.label ?? null;
 }

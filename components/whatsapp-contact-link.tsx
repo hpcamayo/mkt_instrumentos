@@ -3,6 +3,7 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { getQuestions, markSafetySheetSeen, safetySheetSeen } from "@/components/listing/contact-state";
 import { SafetySheet } from "@/components/listing/safety-sheet";
+import { trackRecordLineFor } from "@/components/trust/track-record-state";
 import { withQuestions } from "@/lib/contact-message";
 import { ensureMarketplaceSession } from "@/lib/marketplace-events-client";
 import type { EventSource } from "@/lib/marketplace-event-payload";
@@ -47,7 +48,10 @@ export function WhatsAppContactLink({ href, listingId, storeId, intent, quantity
 
   function contact(event: MouseEvent<HTMLAnchorElement>) {
     const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
-    const { destination, sheet } = planContact({ href, questions: listingId ? getQuestions(listingId) : [], safety, modified, seen: safety ? safetySheetSeen() : true });
+    // deal-trust (safe-07): the buyer's track record line, when they turned it on and left it in for this listing.
+    const track = listingId ? trackRecordLineFor(listingId) : null;
+    const questions = listingId ? [...getQuestions(listingId), ...(track ? [track] : [])] : [];
+    const { destination, sheet } = planContact({ href, questions, safety, modified, seen: safety ? safetySheetSeen() : true });
     if (sheet) {
       event.preventDefault();
       setPending(destination);

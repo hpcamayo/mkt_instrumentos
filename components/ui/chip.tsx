@@ -38,6 +38,7 @@ export function ChipLink({
   current = "true",
   id,
   scroll,
+  rel,
   className,
   children,
 }: {
@@ -47,11 +48,12 @@ export function ChipLink({
   id?: string;
   // false keeps the page where it is after navigating (filter chips in the middle of a long page).
   scroll?: boolean;
+  rel?: string;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <CatalogLink id={id} href={href} scroll={scroll} aria-current={selected ? current : undefined} className={chipClasses(selected ? "selected" : "default", className)}>
+    <CatalogLink id={id} href={href} scroll={scroll} rel={rel} aria-current={selected ? current : undefined} className={chipClasses(selected ? "selected" : "default", className)}>
       {selected ? <Check aria-hidden /> : null}
       <span className="truncate">{children}</span>
     </CatalogLink>

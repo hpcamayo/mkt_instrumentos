@@ -5,7 +5,9 @@ import {
   isInstrumentTypeValid,
   sanitizeListingAttributes,
 } from "@/lib/listing-submission";
-import { categoryOptions, conditionOptions } from "@/lib/listings";
+import { isValidCondition } from "@/lib/listing-condition";
+import { checkListingDetails, detailWriterError } from "@/lib/listing-details";
+import { categoryOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
@@ -16,6 +18,8 @@ import { cleanupListingEditUploads } from "@/lib/listing-photo-cleanup";
 import { listingLimitMessage } from "@/lib/store-allowance";
 
 type RouteContext = { params: Promise<{ id: string }> };
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type PhotoInput = {
   image_url?: unknown;
@@ -38,7 +42,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const { data: listing, error: listingError } = await supabase
     .from("listings")
     .select(
-      "id,owner_user_id,status,title,category,instrument_type,brand,model,condition,price_pen,city,region,description,attributes,listing_photos(image_url,alt_text,sort_order)",
+      "id,owner_user_id,store_id,status,title,category,instrument_type,brand,model,condition,price_pen,city,region,description,attributes,listing_photos(image_url,alt_text,sort_order)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -84,6 +88,29 @@ export async function POST(request: Request, { params }: RouteContext) {
     });
     if (error) return rpcFailure(error.message);
     return NextResponse.json({ ok: true, listing: data });
+  }
+
+  // listing-details: sale terms and other batches' fields (lib/listing-details.ts). They go live at once, like the
+  // price and the description, through update_owned_listing_details (20261202120100).
+  if (body.action === "details") {
+    const checked = checkListingDetails(body.details, { isStore: Boolean(listing.store_id) });
+    if (!checked.ok) return failure(checked.message);
+    const { error } = await supabase.rpc("update_owned_listing_details", {
+      p_listing_id: id,
+      p_details: checked.details as Json,
+    });
+    if (error) return rpcFailure(error.message);
+    return NextResponse.json({ ok: true });
+  }
+
+  // listing-details buy-01: "Lo que suele acompañarlo", up to six of the same store's listings shown with this one.
+  if (body.action === "companions") {
+    const given: unknown[] | null = Array.isArray(body.companionIds) ? body.companionIds : null;
+    const ids = given?.filter((value): value is string => typeof value === "string" && UUID_PATTERN.test(value)) ?? [];
+    if (!given || ids.length !== given.length || ids.length > 6) return failure("Elige hasta 6 publicaciones de tu tienda.");
+    const { error } = await supabase.rpc("set_listing_companions", { p_listing_id: id, p_companion_ids: ids });
+    if (error) return rpcFailure(error.message);
+    return NextResponse.json({ ok: true });
   }
 
   if (body.action === "resubmit") {
@@ -162,6 +189,7 @@ function validateEdit(
   listing: {
     category: string;
     instrument_type: string | null;
+    store_id: string | null;
   },
 ) {
   const immediateSource = asObject(immediateInput);
@@ -215,7 +243,8 @@ function validateEdit(
     if (moderatedSource[key] === undefined) continue;
     const value = readText(moderatedSource[key]);
     if (!value) return { ok: false as const, message: "Completa los campos principales." };
-    if (key === "condition" && !conditionOptions.some((option) => option === value)) {
+    // sell-10: the scale, with "Exhibición o caja abierta" for stores only.
+    if (key === "condition" && !isValidCondition(value, Boolean(listing.store_id))) {
       return { ok: false as const, message: "Selecciona una condición válida." };
     }
     moderated[key] = value;
@@ -319,6 +348,11 @@ function rpcFailure(message: string) {
   if (message.includes("LISTING_RELIST_INVALID")) return failure("Solo se puede republicar una publicación vendida.", 409);
   if (message.includes("LISTING_COPY_INVALID")) return failure("Esta publicación no se puede duplicar.", 409);
   if (message.includes("STORE_NOT_ELIGIBLE")) return failure("Tu tienda no puede recibir publicaciones nuevas en este momento.", 409);
+  if (message.includes("LISTING_NOT_EDITABLE")) return failure("Esta publicación ya no se puede editar.", 409);
+  if (message.includes("COMPANIONS_INVALID")) return failure("Elige hasta 6 publicaciones de tu tienda que sigan a la venta.", 409);
+  const detailProblem = detailWriterError(message);
+  if (detailProblem) return failure(detailProblem, 409);
+  if (message.includes("LISTING_CONDITION_INVALID")) return failure("Selecciona una condición válida.", 409);
   if (message.includes("SOLD_LISTING_IMMUTABLE")) {
     return failure("La publicación vendida es un registro histórico y no puede modificarse.", 409);
   }
