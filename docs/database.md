@@ -1548,6 +1548,35 @@ named `laria_safeupdate`), and checks itself on the claim as first applied.
   triggers.
 <!-- /launch-audit:page-refresh -->
 
+<!-- launch-audit:database-speed -->
+## Launch audit: foreign key indexes and policies that read the account once
+
+Migrations `20261114190000_launch_audit_foreign_key_indexes.sql` and
+`20261114191000_launch_audit_policy_checks_once.sql` (finding A34 of the 26 Oct 2026 launch audit). Suite:
+`tests/launch-audit-database-speed.sql`. Neither changes what anybody can read or write, so they can be applied before
+or after any deploy.
+
+- Indexes: each foreign key of `public` and `laria_private` has an index that starts with its columns and covers every
+  row a lookup by the key can match, so deleting the row it points at, and joins on it, read only the matching rows.
+  54 were added, partial (`where ... is not null`) on a column that may be null. 7 of these keys already had an index
+  for some rows only (`marketplace_events.actor_user_id` for WhatsApp contacts, `listing_revisions.listing_id` for the
+  pending revision, and the like), which leaves the other rows to a full read. Left out on purpose:
+  `marketplace_events.event_type` (a fixed list never deleted, on the busiest table), and `store_inventory_items
+  (listing_id, store_id)` and `store_import_photo_assignments (asset_id, session_id)`, whose first column has a unique
+  index of its own. The suite fails on any other foreign key without such an index (no condition, or only `is not
+  null` on the key's columns), so a new one needs its index in the same migration.
+- Policies: 60 policies of `public` and `storage` wrote `auth.uid()` or `public.is_admin()` as is, which Postgres runs
+  for every row it checks (`is_admin()` parses the JWT claims each time). They now read `(select auth.uid())` and
+  `(select public.is_admin())`, which run once per statement, and are otherwise the same text as before. The suite
+  fails on a policy of either schema that calls them as is, so new policies should use the same form. Calls that take
+  a value of the row (`public.is_store_member(store_id)`, `public.is_store_owner(store_id)`) stay per row.
+- Locks: an index build takes a SHARE lock (writes wait, reads don't) and a policy change an ACCESS EXCLUSIVE lock
+  (reads wait too), held until the migration commits. Each migration first takes all its locks at once with `nowait`
+  (31 tables, then 36 with `storage.objects`): while one is held it lets go of the others and tries again 20 to 100 ms
+  later, and after 30 seconds it fails and can be run again. Locally each one runs in under 0.1 seconds.
+- Rollback: drop the 54 indexes; alter each of the 60 policies back to the same text without the `(select ...)`.
+<!-- /launch-audit:database-speed -->
+
 <!-- launch-audit:privacy -->
 ## Launch audit: privacy
 
