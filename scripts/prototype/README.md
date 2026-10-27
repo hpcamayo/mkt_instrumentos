@@ -108,6 +108,22 @@ by `comprador@laria.test` or `particular@laria.test`, once per store a day each.
 runs axe-core on the new pages and sheets (same setup as below). The levels and reminders run with
 `curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/internal/jobs/deal-trust`.
 
+## Feature ideas, all batches together
+
+`start-docker-free.sh seed` loads every batch seed after the demo seed (services, discovery, deal-trust,
+selling-tools, store-floor, store-reach and store-locations), copies deal-trust's review photo into the local Storage
+folder, and writes a local-only `LARIA_EINVOICE_KEY` into a new `.env.local` (the key store-locations' seed sealed the
+demo Nubefact token with). With an older `.env.local`, add that line by hand or delete the file before seeding.
+`demo-tienda@laria.test` and `admin@laria.test` must turn on two-step sign-in; `two-step.cjs` does it for scripts.
+
+`feature-ideas-tour.cjs` takes one screenshot of every new or changed screen of the program, as the role that sees
+it, at 390 px (and 1366 px where the layout changes), and writes JPEGs plus `manifest.json`
+(`docs/feature-ideas/build-plan.md` lists the ideas):
+
+```sh
+node scripts/prototype/feature-ideas-tour.cjs /tmp/laria-prototype/feature-ideas-tour
+```
+
 ## Accessibility checks
 
 Two Playwright scripts run axe-core (WCAG 2.0 to 2.2, A and AA) against the running prototype at 390 px and 1366 px,

@@ -36,6 +36,13 @@ if [ "${1:-}" = "seed" ]; then
   psql "$PGURL" -v ON_ERROR_STOP=1 -q -o /dev/null -f scripts/prototype/listing-details-seed.sql
   # feature-ideas services (bet-02): Servicios para músicos (docs/feature-ideas/services.md).
   psql "$PGURL" -v ON_ERROR_STOP=1 -q -o /dev/null -f scripts/prototype/services-seed.sql
+  # Feature ideas, the other batches (docs/feature-ideas/*.md): every one runs after demo-seed.sql.
+  for batch in discovery deal-trust selling-tools store-floor store-reach store-locations; do
+    psql "$PGURL" -v ON_ERROR_STOP=1 -q -o /dev/null -f "scripts/prototype/$batch-seed.sql"
+  done
+  # deal-trust's approved review photo (scripts/prototype/README.md § Deal-trust).
+  install -D scripts/prototype/demo-photos/FEN-MUSTLT25__01.jpg \
+    "$LOG_DIR/storage/review-photos/d0000000-0000-4000-8000-000000000003/d8200000-0000-4000-8000-000000000003/d8400000-0000-4000-8000-000000000001.jpg"
 fi
 
 pkill -f "postgrest $LOG_DIR/postgrest.conf" 2>/dev/null || true
@@ -54,6 +61,8 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 MARKETPLACE_EMAIL_PROVIDER=log
 CRON_SECRET=local-cron-secret
 LARIA_ASSISTED_COMMERCE=1
+# store-locations: the local-only key its seed sealed the demo Nubefact token with (never use it anywhere else).
+LARIA_EINVOICE_KEY=ERERERERERERERERERERERERERERERERERERERERERE=
 EOF
 fi
 sleep 2
