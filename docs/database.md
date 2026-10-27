@@ -367,7 +367,10 @@ The `laria_private` schema is revoked from `public`, `anon`, and `authenticated`
 
 Public read policies:
 - Active stores are readable by `anon` and `authenticated`, but only through column grants (migration `20261022130000_store_public_columns.sql`): `id`, `name`, `slug`, `description`, `status`, `city`, `district`, `region`, `whatsapp_phone`, `logo_url`, `banner_url`, `is_verified`, `created_at`, `updated_at` and the four social/web URLs; `authenticated` also reads `owner_user_id`. RUC, razón social, e-mail, contact person, legacy contact name, street address, rejection reason and plan are private: the owner reads them with `get_own_store()`, Admin with `admin_get_store(p_store_id)`. A column added to `stores` later is private until a migration grants it.
-- Individual approved listings are public; store listings additionally require an active parent store.
+- Individual approved listings are public; store listings additionally require an active parent store. Public pages
+  that use a computed field (`photo_count:listing_photo_count`, `recent_price_drop_at`, `seller_verified_rank`) read
+  them on `public.public_listings`, a security invoker view of a listing's public columns, and the catalog's free-text
+  search returns its rows (launch audit A27, below).
 - Listing photos follow the same combined listing/store eligibility predicate. Store photos require an active store.
 
 Public insert policies:
@@ -395,6 +398,9 @@ Admin policies:
 
 `public.get_own_store()` / `public.admin_get_store(p_store_id)`:
 - Return every column of the signed-in owner's store, or of any store for Admin (raises `ADMIN_REQUIRED` otherwise). SECURITY DEFINER; not callable by `anon`.
+
+`public.admin_get_listing(p_listing_id)`:
+- Returns every column of one listing for Admin (raises `ADMIN_REQUIRED` otherwise; `is_admin()` asks for the second sign-in step). SECURITY DEFINER; not callable by `anon`. Admin's listing editor reads the contact name and WhatsApp through it.
 
 `public.is_admin()`:
 - Used by the admin panel to verify access.
@@ -1237,6 +1243,49 @@ be applied before the deploy.
 - Locks: nothing scans a table (the `notifications` check is re-added `NOT VALID`), and the migration sets
   `lock_timeout = '10s'`, so behind a long-running query it fails and can be run again instead of queueing traffic.
 <!-- /launch-audit:security -->
+
+<!-- launch-audit:contacts -->
+## Launch audit: phone numbers and contacts
+
+Finding A27 of the 26 Oct 2026 launch audit: through the public API key anyone could read every column of a public
+listing, `contact_name` and `whatsapp_phone` included, and the name, phone, city and region of every Particular with
+an approved listing (the policy "Public can read profiles for approved listings"). A listing page shows its seller's
+name and number by design; the API handed out all of them in one paginated request, past the firewall and its rate
+limits. The fix is column grants on `listings`, as `stores` has, and no access to other users' profiles, in two steps
+so the running site never reads what it may no longer read.
+
+Step 1, `20261114130000_launch_audit_contact_reads.sql` (suite `tests/launch-audit-contact-reads.sql`), changes
+nothing the site reads, so it is applied before its application deploys:
+- `public.public_listings`: a listing's public columns (`id`, `store_id`, `owner_user_id`, `seller_type`, `status`,
+  `title`, `slug`, `description`, `category`, `instrument_type`, `brand`, `model`, `condition`, `attributes`,
+  `price_pen`, `previous_price_pen`, `price_dropped_at`, `city`, `region`, `view_count`, `stock_state`, `published_at`,
+  `created_at`, `updated_at`, `content_changed_at`, `availability_confirmed_at`, `paused_until`, `sold_at`), a
+  security invoker view, so the policies on `listings` decide which rows a caller sees. Select only for `anon` and
+  `authenticated`. PostgREST embeds `stores` and `listing_photos` through it from the base table's foreign keys.
+- `listing_photo_count`, `recent_price_drop_at` and `seller_verified_rank` also take a `public_listings` row, with the
+  bodies and rights of the `listings` ones. A computed field reads the whole row, and a whole `listings` row needs
+  SELECT on every column, so under column grants only the view's rows can carry them.
+- `catalog_search(p_q)` returns `setof public_listings` (same rows and rule as `20261111120000`).
+- `admin_get_listing(p_listing_id)` (RPC Functions above).
+- The application: the catalog, the home, the store page, the compare page and the listing page's similar and seller
+  rows read `public_listings`. The contact button (`app/api/contact`) reads the listing with the public key, so the
+  policies still decide it is public, and its contact (`contact_name`, `whatsapp_phone`, the owner's profile) with the
+  service role. "Más de este vendedor" for an old Particular listing without an account matches the seller by
+  WhatsApp number on the server with the service role, then reads the cards as usual. Admin's listing editor loads
+  through `admin_get_listing`. `tests/launch-audit-contacts.test.cjs` checks that no read through the public key
+  names a private column, a computed field on `listings` or another user's profile.
+
+Step 2, `20261114140000_launch_audit_contact_columns.sql`, is applied once step 1's application is live: it revokes
+the table-wide SELECT on `listings` from `anon` and `authenticated`, grants them the columns of `public_listings`,
+grants `authenticated` also `rejection_reason`, `rejection_codes`, `hidden_source` and `hidden_reason` (owners see
+them on their own listings; approval and showing a listing again clear them), drops the public profile policy and
+revokes `anon`'s SELECT on `profiles`. A signed-in user still reads their own profile, Admin every profile.
+
+From step 2 on, a column added to `listings` is private by default: a public one needs its column grant to `anon`
+and `authenticated` and, when a public page reads it next to a computed field, its place at the end of
+`public_listings` (`create or replace view` keeps the existing columns in order and adds new ones last). A public read
+of another user's profile goes through the server or a security definer function.
+<!-- /launch-audit:contacts -->
 
 <!-- launch-audit:trust -->
 ## Launch audit: trust fixes

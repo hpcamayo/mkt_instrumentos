@@ -7,7 +7,9 @@ type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClien
 
 // The card's columns. status and stock_state are listed because PostgREST only filters on the columns a function's
 // result selects (the free-text search runs through public.catalog_search); previous_price_pen and price_dropped_at
-// give the "Antes S/" line (list-05, lib/listing-page.ts visiblePreviousPrice).
+// give the "Antes S/" line (list-05, lib/listing-page.ts visiblePreviousPrice). Cards read public.public_listings, a
+// listing's public columns: the computed fields (photo_count and the sort fields) read the whole row, which the
+// public API key may not read on listings itself (launch audit A27, docs/database.md).
 const CARD_COLUMNS = `
         id,
         title,
@@ -56,7 +58,7 @@ export function catalogCardSelect(storeRelation: "stores" | "stores!inner" = "st
 function source(supabase: PublicSupabaseClient, filters: ListingFilters, select: string, options: { count?: "exact"; head?: boolean }) {
   return filters.q
     ? supabase.rpc("catalog_search", { p_q: filters.q }, options).select(select)
-    : supabase.from("listings").select(select, options);
+    : supabase.from("public_listings").select(select, options);
 }
 
 // The catalog's filters on a query, the same for the page, its count and the rescue counts (FIND 04).
