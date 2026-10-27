@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Radio, Select } from "@/components/ui/field";
-import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
 import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
 import { receiptAction } from "@/lib/einvoice/client";

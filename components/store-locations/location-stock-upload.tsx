@@ -88,8 +88,8 @@ export function LocationStockUpload({ locations }: { locations: StoreLocation[] 
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button href="/api/store/inventory/export?format=xlsx" variant="secondary" icon={<Download aria-hidden />}>Descargar Excel</Button>
-        <Button href="/api/store/inventory/export?format=csv" variant="quiet" icon={<Download aria-hidden />}>Descargar CSV</Button>
+        <Button href="/api/store/inventory/export?format=xlsx" prefetch={false} variant="secondary" icon={<Download aria-hidden />}>Descargar Excel</Button>
+        <Button href="/api/store/inventory/export?format=csv" prefetch={false} variant="quiet" icon={<Download aria-hidden />}>Descargar CSV</Button>
       </div>
       <Field id={`${id}-archivo`} label="Sube el archivo con tus conteos" hint=".xlsx o .csv, hasta 5 MB.">
         <FileInput accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onFile} />
