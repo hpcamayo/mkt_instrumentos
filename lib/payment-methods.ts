@@ -62,6 +62,65 @@ export function paymentMethodText(item: PublicPaymentMethod) {
   return item.provider_label ? `${label} (${item.provider_label})` : label;
 }
 
+// ------------------------------------------------------------------ buy-09 "Cuotas"
+
+// A verified store that takes credit cards may offer interest-free installments, reviewed by Laria like a method
+// (store-floor, docs/feature-ideas/store-floor.md). Only interest-free offers exist: with interest the TCEA would have
+// to be shown. The store's card provider runs them; Laria shows the offer and the amount per installment, nothing more.
+
+// The methods a buyer can pay in installments with; an offer is public only while one of them is approved.
+export const CARD_PAYMENT_METHODS: readonly PaymentMethod[] = ["pos_tarjeta_al_recoger", "link_de_pago"];
+
+// The numbers a store can choose (the database takes 2 to 36).
+export const INSTALLMENT_CHOICES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 18, 24, 36] as const;
+
+// The credit cards a store may name, in this spelling (laria_private.installment_card_options). None: any credit card.
+export const INSTALLMENT_CARDS = [
+  "BCP", "BBVA", "Interbank", "Scotiabank", "BanBif", "Banco Pichincha", "Diners Club", "American Express",
+  "Banco Falabella", "Banco Ripley", "Tarjeta Oh",
+] as const;
+
+export type InstallmentOffer = { maxInstallments: number; cards: string[]; minPricePen: number | null };
+
+// The row returned by get_store_installment_offer (or the owner's and Admin's rows), or null.
+export function readInstallmentOffer(value: unknown): InstallmentOffer | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const max = record.max_installments;
+  if (typeof max !== "number" || !Number.isInteger(max) || max < 2 || max > 36) return null;
+  const cards = Array.isArray(record.cards)
+    ? INSTALLMENT_CARDS.filter((card) => (record.cards as unknown[]).includes(card))
+    : [];
+  const min = record.min_price_pen;
+  return { maxInstallments: max, cards: [...cards], minPricePen: typeof min === "number" && min > 0 ? min : null };
+}
+
+// Soles with the cents only when there are any, grouped like the prices ("S/ 1,250", "S/ 358.25"). Written out
+// instead of Intl so the server and the browser always print the same text.
+export function formatInstallmentAmount(value: number) {
+  const cents = Math.round(value * 100);
+  const whole = Math.floor(cents / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const rest = cents % 100;
+  return `S/ ${whole}${rest ? `.${rest.toString().padStart(2, "0")}` : ""}`;
+}
+
+// "o 12 cuotas sin intereses de S/ 358.25": the price split evenly, rounded to the cent.
+export function installmentLine(pricePen: number | null | undefined, installments: number | null | undefined) {
+  if (!pricePen || pricePen <= 0 || !installments || installments < 2) return null;
+  return `o ${installments} cuotas sin intereses de ${formatInstallmentAmount(pricePen / installments)}`;
+}
+
+function joinWithO(items: readonly string[]) {
+  return items.length > 1 ? `${items.slice(0, -1).join(", ")} o ${items[items.length - 1]}` : items[0] ?? "";
+}
+
+// The store's offer as one sentence, for its store page and the methods box of its listings.
+export function installmentOfferText(offer: InstallmentOffer) {
+  const cards = offer.cards.length ? `con tarjetas de crédito ${joinWithO(offer.cards)}` : "con tarjeta de crédito";
+  const from = offer.minPricePen ? `, en compras desde ${formatInstallmentAmount(offer.minPricePen)}` : "";
+  return `Hasta ${offer.maxInstallments} cuotas sin intereses ${cards}${from}.`;
+}
+
 // maxQuantity (stock-23): the most units the buyer can ask for, what is available up to 10. Never shown as a number.
 export type PurchaseRequest = { methods: PublicPaymentMethod[]; sku: string | null; maxQuantity: number };
 

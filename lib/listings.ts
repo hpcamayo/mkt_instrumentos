@@ -135,6 +135,8 @@ export type ListingCardData = {
   // listing-details: the yes/no facts kept by the database (lib/listing-flags.ts) and sell-07's price mode.
   listing_flags?: string[] | null;
   price_mode?: PriceMode | null;
+  // store-floor, buy-09: the store's interest-free installments for this price, while the payments pilot is on.
+  installments_max?: number | null;
   stores: StoreSummary | StoreSummary[] | null;
   listing_photos: ListingPhotoData[];
 };

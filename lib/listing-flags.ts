@@ -11,6 +11,9 @@ export type ListingFlagFilter = {
   label: string;
   // One line under the option in the filter sheet.
   hint: string;
+  // Offered only when some result carries it (or it is chosen): for a flag no listing may have for a long time, such
+  // as "Acepta cuotas" while the payments pilot is off.
+  onlyWhenListed?: true;
 };
 
 // BEGIN listing flag filters (additive: one entry per flag, in the order the filters show them)
@@ -20,6 +23,8 @@ export const listingFlagFilters: readonly ListingFlagFilter[] = [
   { flag: "acepta_cambios", label: "Acepta cambios", hint: "El vendedor considera cambios por otro equipo." },
   // store-floor (reach-09)
   { flag: "con_garantia", label: "Con garantía", hint: "La tienda o la marca dan garantía. La ofrece la tienda, no Laria." },
+  // store-floor (buy-09)
+  { flag: "acepta_cuotas", label: "Acepta cuotas", hint: "La tienda ofrece cuotas sin intereses con tarjeta de crédito.", onlyWhenListed: true },
 ];
 // END listing flag filters
 
