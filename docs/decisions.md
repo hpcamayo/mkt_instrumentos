@@ -720,6 +720,13 @@ Detail: [docs/feature-ideas/store-floor.md](feature-ideas/store-floor.md).
 - FD-store-floor-16: A try-out, with the buyer's name and number, is deleted 90 days after its date.
 - FD-store-floor-17: Buyers reach their try-outs from Compras y ventas (and every notice), with no new buyer menu entry.
 - FD-store-floor-18: listing-details' "Se puede probar" flag (a seller's yes/no) stays separate from booking.
+- FD-store-floor-19: Only interest-free offers exist.
+- FD-store-floor-20: One offer per store, not per listing or card: the most common shape ("hasta 12 cuotas sin intereses con …"), and what the Admin can check against the provider.
+- FD-store-floor-21: The amount is the price divided evenly, rounded to the cent, written without Intl so the server and the browser print the same text.
+- FD-store-floor-22: The offer follows PAY-1 Pilot A: same review states, revision check, error style, both pilot switches, and safe-08's second step for owners once a method is approved.
+- FD-store-floor-23: The card list is fixed (BCP, BBVA, Interbank, Scotiabank, BanBif, Banco Pichincha, Diners Club, American Express, Banco Falabella, Banco Ripley, Tarjeta Oh), so no free text reaches buyers.
+- FD-store-floor-24: "Acepta cuotas" is hidden from the filters while no result carries it (a new `onlyWhenListed` mark in `lib/listing-flags.ts`), so the filter does not sit at zero for as long as the pilot is off.
+- FD-store-floor-25: Sold listings keep the value they had (a sold listing cannot change), and nothing shows them: the line needs an approved, in-stock listing.
 
 ### Discovery (discovery)
 
@@ -754,6 +761,31 @@ Detail: [docs/feature-ideas/services.md](feature-ideas/services.md).
 - FD-services-9: Separate section, never mixed. Services have their own tables and pages and never appear in instrument search, listing counts, alerts, favorites or the store's listing allowance (Henri's note).
 - FD-services-10: Entry points. Footer, account menu, Admin menu and sitemap; then (follow-up PR, agreed with the integrator) the home header's Categorías menu, which is also the phone menu, a home teaser and one repair line on worn gear.
 - FD-services-11: Photos. Public bucket `service-photos`, 5 MB, JPEG/PNG/WebP, uploaded into the owner's folder; the owner can remove only photos no service uses, so a photo still on a service (even a hidden one) stays.
+
+### Store locations: sedes and the counter boleta (store-locations)
+
+Detail: [docs/feature-ideas/store-locations.md](feature-ideas/store-locations.md).
+
+- FD-store-locations-1: `quantity_on_hand` stays the store total and `store_location_stock` is the split.
+- FD-store-locations-2: Movements that don't name a sede (imports, purchase requests, Admin, the inventory table's ±1, older clients): increases go to the main sede; decreases come from the main sede first and then from the others in their order.
+- FD-store-locations-3: Transfers don't change the total, so they are not stock movements; they have their own append-only ledger (`store_stock_transfers`) with idempotency keys.
+- FD-store-locations-4: A count at a sede is converted to a new store total (total + counted − at that sede); other sedes don't change.
+- FD-store-locations-5: A Mostrador batch key is bound to one sede, so a retried sale can never land in another sede.
+- FD-store-locations-6: The listing shows sede names only, and only with two or more active sedes; quantities per sede stay private.
+- FD-store-locations-7: Pickup is a sentence in the WhatsApp message ("Quiero recogerlo en Miraflores."), not a reservation.
+- FD-store-locations-8: Addresses are private by default; a sede's address is public only when the owner ticks "Mostrar la dirección".
+- FD-store-locations-9: Limit 20 active sedes per store; names unique among active sedes.
+- FD-store-locations-10: Map pins stay one per store (listing-details' map); sedes are not pinned yet.
+- FD-store-locations-11: The provider is Nubefact (JSON API v1).
+- FD-store-locations-12: The feature is off, and the route answers 503 `EINVOICE_OFF`, until `LARIA_EINVOICE_KEY` (32 bytes, base64 or hex) is set.
+- FD-store-locations-13: The token is sealed with AES-256-GCM using `LARIA_EINVOICE_KEY` and the store id as associated data, so a ciphertext copied to another store doesn't open.
+- FD-store-locations-14: The owner's session prepares the receipt (`prepare_store_receipt`): it checks the sale (the Mostrador batch, matched by exact movement keys), validates DNI (8 digits), RUC (11 digits starting 10, 15, 17 or 20), factura (RUC and razón social required) and boletas from S/ 700 (document and name required), and takes the next number under a row lock on the settings row, so two receipts never share a number.
+- FD-store-locations-15: Only the server with the service role records what Nubefact answered (`record_store_receipt_result`), so no browser can mark a receipt "aceptada".
+- FD-store-locations-16: When Nubefact says the number already exists, or the call times out (20 s), Laria looks the document up before anything else, so a retry never issues twice.
+- FD-store-locations-17: Prices are IGV-included, as on Laria; the payload splits base and IGV (18 %) per line when the store is gravado.
+- FD-store-locations-18: Voiding is a comunicación de baja through Nubefact, up to 7 days after the issue date.
+- FD-store-locations-19: Receipts are issued after the sale is recorded, never before.
+- FD-store-locations-20: Offline sales keep their receipt request and issue it when the sale goes through.
 
 ### Integration (integrator)
 

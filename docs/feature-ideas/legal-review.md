@@ -12,14 +12,14 @@ should reach main only after this review, or with the drafts Henri chooses to ho
 | Page | Section | Source | Shown |
 | --- | --- | --- | --- |
 | Terms | 3 and 4: four lines on made to order, Fabricante or Taller, Artista verificado and gift exchanges | discovery, in `app/terminos/page.tsx` | always |
-| Terms | 4 bis. Medios de pago… (piloto) | PAY-1, `components/legal/assisted-commerce-legal.tsx` | only with the pilot switch on |
+| Terms | 4 bis. Medios de pago… (piloto), plus one line on installments (store-floor buy-09) | PAY-1, `components/legal/assisted-commerce-legal.tsx` | only with the pilot switch on |
 | Terms | 5 bis. Servicios para músicos | services, `components/legal/services-legal.tsx` | always |
 | Terms | 5 ter. Seguridad, confianza y herramientas de venta | integrator, `components/legal/feature-ideas-legal.tsx` | always |
 | Privacy | 4 bis. Medios de pago… (piloto) | PAY-1 | only with the pilot switch on |
 | Privacy | 4 ter. Servicios para músicos | services | always |
 | Privacy | 4 quáter. Seguridad, confianza y herramientas de venta | integrator | always |
 | Privacy | 5. Cookies: three new lines (session length, `laria_dispositivo`, data kept only in the browser) | integrator | always |
-| Privacy | 6. Proveedores: Google and Apple, OpenFreeMap, Mercado Libre, Meta and Google catalogs | integrator | always |
+| Privacy | 6. Proveedores: Google and Apple, OpenFreeMap, Mercado Libre, Nubefact, Meta and Google catalogs | integrator | always |
 | Privacy | 8. Tus derechos: download and delete from Tus datos | integrator | always |
 
 The integrator wrote 5 ter, 4 quáter and the lines in sections 5, 6 and 8. Their facts come from the batches'
@@ -33,8 +33,6 @@ privacy points without writing them.
   the `id` anchors (`#servicios`, `#herramientas`), because pages link to them.
 - **`LEGAL_LAST_UPDATED`** (`lib/legal-pages.ts`, now "27 de septiembre de 2026") changes on the day the approved text
   reaches production, in the same PR. PAY-1 changes it again when the pilot goes live.
-- Store-locations (wave 2, counter boleta through Nubefact) will add a provider and the buyer's data on a boleta. Its
-  lines are added here when that batch merges.
 
 ## Points for the reviewer's judgment
 
@@ -52,6 +50,12 @@ privacy points without writing them.
 6. **Mercado Libre and Meta or Google** (store-reach): use of the Mercado Libre API under its developer terms. The
    catalog steps name Meta and Google, and Laria runs no ads.
 7. **Minors in lessons** (services): "acompáñala… Laria no revisa antecedentes".
+8. **Counter receipts** (store-locations): Laria keeps the customer's document, name, fiscal address and e-mail with
+   each boleta or factura, and sends them to the store's Nubefact account. The draft says Laria processes them on the
+   store's behalf. The retention period isn't set yet: the reviewer should say how long Laria keeps them, since the
+   store holds the tax copy in Nubefact.
+9. **Installments** (store-floor buy-09, pilot only): "o N cuotas sin intereses de S/ X" is shown without a TCEA,
+   because only interest-free offers exist, and the store confirms that the buyer pays no interest or surcharge.
 
 ## Product lines to review, by batch
 
@@ -132,7 +136,7 @@ Draft, to be settled before launch, together with the section numbers and `LEGAL
 - The hire panel and Mi cuenta: "Confirmar habilita la reseña; Laria no verifica el pago, la calidad del trabajo ni los
   títulos de quien ofrece el servicio."
 
-### Store floor: arrivals, warranty and exchanges, labels, try-outs
+### Store floor: arrivals, warranty and exchanges, labels, try-outs, installments
 
 From `docs/feature-ideas/store-floor.md`.
 
@@ -141,6 +145,9 @@ From `docs/feature-ideas/store-floor.md`.
   checked.
 - "Lo ofrece {tienda}, no Laria. Confirma las condiciones y pide tu boleta al comprar." under every warranty line.
 - "Cambios hasta N días después de la compra: {nota}" as the store's exchange promise.
+- Cuotas: "o N cuotas sin intereses de S/ X" without a TCEA (only interest-free offers exist), the store's line "Las
+  cobra el proveedor de tarjetas de la tienda", and the owner's confirmation "Confirmo que el comprador no paga
+  intereses ni recargos por pagar en cuotas".
 - The buyer's WhatsApp number shared with the store for a try-out ("Solo lo ve la tienda, para coordinar la prueba")
   and kept for 90 days after the date.
 
@@ -155,6 +162,17 @@ From `docs/feature-ideas/store-reach.md`.
 - Catálogo para redes: the steps naming Meta and Google, and the line that Laria does not run ads.
 - Lo que buscan en Laria: "Qué no te dice este reporte" and "Cómo se cuenta" (also for the privacy policy: aggregated
   search counts shown to stores).
+
+### Store locations: sedes and the counter boleta
+
+From `docs/feature-ideas/store-locations.md`.
+
+- Comprobantes: "La cuenta, sus series y su costo son de tu tienda; Laria solo le envía las ventas que registras en el
+  Mostrador." and "Lo emite tu tienda con su cuenta de Nubefact."
+- The customer data kept with each receipt (document, name, address, e-mail) and for how long; the Privacy draft
+  should say stores keep it for their tax records and Laria processes it on their behalf.
+- Listing: "Lo agregamos a tu mensaje de WhatsApp. La tienda confirma la disponibilidad."
+- Anular: "La anulación se comunica a SUNAT por Nubefact. No cambia el stock."
 
 ### Integration
 

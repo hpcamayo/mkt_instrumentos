@@ -2,8 +2,8 @@ import Link from "next/link";
 import { LegalSection } from "@/components/legal-page";
 
 // Feature ideas (docs/feature-ideas/legal-review.md): the Terms and Privacy lines for the accounts, deal-trust,
-// listing-details, selling-tools, store-floor and store-reach batches, gathered by the integrator from each batch's
-// "Copy for legal review". DRAFT PENDING LEGAL REVIEW: the wording, the section numbers and LEGAL_LAST_UPDATED in
+// listing-details, selling-tools, store-floor, store-reach and store-locations batches, gathered by the integrator
+// from each batch's "Copy for legal review". DRAFT PENDING LEGAL REVIEW: the wording, the section numbers and LEGAL_LAST_UPDATED in
 // lib/legal-pages.ts are settled in that review, before features/marketplace reaches main. Services and discovery keep
 // their own drafts (components/legal/services-legal.tsx, app/terminos/page.tsx).
 
@@ -23,6 +23,7 @@ export function TermsFeatureToolsSection() {
           <li>En una campaña de Laria, Laria comprueba con su propio historial de precios que el precio «Antes» fue el más bajo de esa publicación en los 30 días anteriores a la campaña. El descuento y la disponibilidad son de la tienda.</li>
           <li>La marca «Distribuidor oficial» indica que Laria revisó un documento de autorización de la marca. No verifica cada instrumento ni su garantía.</li>
           <li>Una tienda puede importar sus publicaciones de Mercado Libre. Laria solo lee esa cuenta, no publica ni cambia nada en ella, y su uso se rige también por los términos de Mercado Libre.</li>
+          <li>Una tienda puede emitir boletas y facturas desde su Mostrador con su propia cuenta de Nubefact. La tienda es quien emite el comprobante y responde por él ante SUNAT; Laria solo envía a esa cuenta las ventas que la tienda registra. La disponibilidad por sede la informa la tienda.</li>
         </ul>
       </LegalSection>
     </div>
@@ -48,6 +49,7 @@ export function PrivacyFeatureToolsSection() {
           <li><strong>Lo que buscan en Laria.</strong> Las tiendas activas ven cuántas personas distintas buscaron algo, por ciudad, nunca en grupos de menos de 5. Ese informe se guarda solo como cifras, sin cuentas ni sesiones, durante 13 meses.</li>
           <li><strong>Niveles.</strong> «Vendedor destacado» y «Tienda destacada» se calculan con tu actividad en Laria: ventas verificadas, reseñas, reportes aceptados en tu contra y preguntas sin responder.</li>
           <li><strong>Artistas verificados.</strong> Laria guarda cómo comprobó la identidad de un artista solo para su registro interno. El nombre artístico, su página y su historia son públicos.</li>
+          <li><strong>Comprobantes de tiendas.</strong> Cuando una tienda emite una boleta o factura desde su Mostrador, guardamos con el comprobante el documento, el nombre, la dirección fiscal y el correo que la tienda registra, y los enviamos a la cuenta de Nubefact de esa tienda. La tienda es responsable de esos datos, que guarda para sus obligaciones tributarias; Laria los trata por encargo de la tienda.</li>
           <li><strong>Tiendas conectadas a Mercado Libre.</strong> Guardamos cifrado el acceso que Mercado Libre nos da para leer sus publicaciones, y lo borramos cuando la tienda se desconecta.</li>
         </ul>
       </LegalSection>
@@ -71,6 +73,7 @@ export function PrivacyFeatureProviders() {
       <li>Google y Apple, si inicias sesión con ellos.</li>
       <li>OpenFreeMap, que entrega las imágenes del mapa: tu navegador se las pide directamente, así que recibe tu dirección IP.</li>
       <li>Mercado Libre, solo para las tiendas que conectan su cuenta.</li>
+      <li>Nubefact, solo para las tiendas que emiten comprobantes con su propia cuenta.</li>
       <li>Meta y Google reciben datos públicos de publicaciones, nunca datos de cuentas, en los catálogos que una tienda activa y en el de Laria.</li>
     </ul>
   );

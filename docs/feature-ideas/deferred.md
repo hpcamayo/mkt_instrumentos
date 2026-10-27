@@ -2,7 +2,7 @@
 
 This is the single list of approved or possible ideas that the current build does not include, with the reason for each. Full descriptions, sources and costs are in `ideas.json`, and Henri's marks and notes are in `verdicts.json`. The marking page is https://claude.ai/artifact/7iWMJuxxKLaxsdibsWEZQd.
 
-Last updated: 2026-10-26, when the build started.
+Last updated: 2026-10-27, when every batch had merged into features/marketplace.
 
 ## Approved, marked "later" by Henri (13)
 
@@ -46,12 +46,10 @@ The catalog autofill must reach main first. It must never be copied from `proto/
 | sell-01 Mi equipo, the estimated value only | Typical prices. Mi equipo itself is built now. |
 | safe-05 Red flags, the price rule only | Typical prices. The photo-copy rule is built now. |
 
-## Approved, built in wave 2 of this program
+## Wave 2 of this program (built)
 
-| Idea | Why it waits |
-| --- | --- |
-| buy-09 Installments | Henri's note: "next wave". It ships as store-floor's second PR. |
-| run-02 Several locations, run-03 Boleta from the counter | They change stock, so they start after store-floor's wave-1 PR is merged. |
+buy-09 Installments (store-floor, PR #52), run-02 Several locations and run-03 Boleta from the counter (store-locations,
+PR #51) are built and merged into features/marketplace. What they left for later is in the next table.
 
 ## Parts of built ideas left for later
 
@@ -67,6 +65,10 @@ The catalog autofill must reach main first. It must never be copied from `proto/
 | buy-01 Combos | A server copy of the buyer's combo (to continue on another device) | His call; it would need an account and a new table. |
 | sell-10 Condition scale | Admin's editor offering open box only on store listings | A small Admin change; the database already refuses it on a Particular listing. |
 | buy-02 Cómo se entrega | Shipping booked or priced by Laria | money-02 (above). |
+| buy-09 Cuotas | Offers with interest (with their TCEA), and offers per card or per listing | Only interest-free, one offer per store, for now (FD-store-floor-19, 20). It also waits for the payments pilot to go live. |
+| run-03 Boleta desde el mostrador | Credit notes, guías de remisión, and comprobantes for online sales | Mostrador only for now; a returned item is a return in Inventario (FD-store-locations-18). |
+| run-03 Boleta desde el mostrador | A test against a real Nubefact account | The payload has never been sent to Nubefact; it needs a demo-account check before any store uses it. |
+| run-02 Sedes | Map pins and one Nubefact series per sede | One pin and one connection per store for now. |
 
 ## Still open from Effortless Laria (not part of this list)
 

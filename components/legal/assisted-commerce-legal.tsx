@@ -16,6 +16,8 @@ export function TermsAssistedCommerceSection() {
         <li>El pago se hace directamente a la tienda. Laria no procesa pagos, no recibe ni retiene dinero, no muestra enlaces de pago y no es parte de la compraventa.</li>
         <li>«Solicitar compra» abre WhatsApp con un mensaje para la tienda. No reserva unidades ni crea un pedido: la tienda confirma la disponibilidad, el precio final, el pago y la entrega. La disponibilidad que muestra Laria la informa la tienda y puede no estar al día.</li>
         <li>La tienda es responsable de emitir el comprobante de pago (boleta o factura), de atender cambios, devoluciones y garantías, y de su Libro de Reclamaciones, según las normas de protección al consumidor.</li>
+        {/* Feature ideas, store-floor buy-09 (docs/feature-ideas/legal-review.md): pending legal review. */}
+        <li>Las cuotas sin intereses que muestra una tienda son una oferta de esa tienda con sus tarjetas: las cobra el proveedor de tarjetas de la tienda, y Laria no financia ni cobra nada. La tienda confirma que el comprador no paga intereses ni recargos por pagar en cuotas.</li>
         <li>Paga solo por los medios que la tienda indica en su página de Laria. Nadie cobra en nombre de Laria; si alguien lo hace, repórtalo y revisa los <Link href="/consejos-de-seguridad">consejos de seguridad</Link>.</li>
         <li>Laria puede desactivar un medio de pago o dejar de mostrarlo si la tienda pierde la verificación, cambia sus datos comerciales o incumple estas reglas.</li>
       </ul>

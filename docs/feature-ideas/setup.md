@@ -2,7 +2,7 @@
 
 What the feature-ideas build needs outside the code, collected from every batch's write-up. Nothing here is set
 anywhere yet, and nothing has to be set before the merge to main: each feature without its setting stays off or says
-so on its page. Store-locations (wave 2) adds its Nubefact settings here when it merges.
+so on its page.
 
 ## Environment variables (Vercel)
 
@@ -17,6 +17,7 @@ so on its page. Store-locations (wave 2) adds its Nubefact settings here when it
 | `MERCADOLIBRE_TOKEN_KEY` | store-reach | 32 random bytes (hex or base64) that encrypt the stores' tokens. Never change it without disconnecting every store first | Same |
 | `MERCADOLIBRE_REDIRECT_URI` | store-reach | Optional. Default `https://<site>/api/store/mercado-libre/callback`, which must be registered in the app | The default is used |
 | `LARIA_GOOGLE_SHOPPING_ACTIVE` | store-reach | `true` once Laria's Google Merchant Center account reads `/api/feeds/laria` | The social catalog page says Google isn't active yet |
+| `LARIA_EINVOICE_KEY` | store-locations | 32 random bytes (`openssl rand -base64 32`) that encrypt each store's Nubefact token. Never change it without reconnecting every store | Comprobantes off: the receipts route answers 503 `EINVOICE_OFF` |
 | `CRON_SECRET` | all jobs | Already used on main. Protects every route below | The job routes answer 401 |
 | `SUPABASE_SERVICE_ROLE_KEY` | several | Already used on main | Deletion, recovery codes, photo hashes and job routes fail closed |
 
@@ -77,7 +78,9 @@ Vercel sends `Authorization: Bearer $CRON_SECRET` on cron calls when `CRON_SECRE
 | Mercado Libre developer app (read-only scopes) | store-reach | Import from Mercado Libre |
 | Google Merchant Center, Meta Commerce Manager | store-reach | Laria's own product feed; stores connect their own Meta catalog |
 | Partner stores for Punto seguro, and a check of the meetup places per city | deal-trust | `lib/safe-meetup-places.ts` (FD-deal-trust-17) |
+| A Nubefact demo account | store-locations | One test boleta and factura before any store uses Comprobantes: the payload follows Nubefact's JSON API v1 but has never been sent to the real service (the "clientes varios" document type and the IGV rounding per line especially). Each store then uses its own Nubefact account |
 
 ## No setup
 
-listing-details (the map uses OpenFreeMap's public tiles, no key), discovery and services.
+listing-details (the map uses OpenFreeMap's public tiles, no key), discovery, services, store-locations' sedes, and
+store-floor's installments (they follow the payments pilot switch, which stays off until legal review).
