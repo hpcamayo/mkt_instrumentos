@@ -119,7 +119,52 @@ test("A25: only the claim hands an e-mail out, and a send Resend may have accept
   const claim = migration.slice(migration.indexOf("create or replace function public.claim_marketplace_email_deliveries"));
   const fence = claim.indexOf("perform set_config('laria.email_claim', 'a25', true);");
   assert.ok(fence > 0 && fence < claim.indexOf("set status = 'processing'"), "the claim sets the fence, for its transaction, before its hand-out");
-  assert.match(claim, /where maybe\.uncertain_since is not null and maybe\.status not in \('sent', 'processing'\)\n\s+and maybe\.last_attempt_at >= day_start\)\)\)/,
+  assert.match(claim, /where maybe\.uncertain_since is not null and maybe\.status not in \('sent', 'processing'\)\n\s+and maybe\.last_attempt_at >= count_start\)/,
     "the allowance keeps the places of sends Resend may have accepted today");
   assert.match(migration, /create index if not exists marketplace_email_uncertain_idx on laria_private\.marketplace_email_deliveries \(last_attempt_at\)\n  where uncertain_since is not null and status not in \('sent', 'processing'\);/);
+});
+
+test("A25: a retry that has its place goes out at the limit, and nothing gives a place back while Resend may count it", () => {
+  const migration = read(migrationFile);
+  const claim = migration.slice(migration.indexOf("create or replace function public.claim_marketplace_email_deliveries"));
+  // Codex's fourth review, 1: a retry of a send already counted today needs no new place.
+  const held = claim.indexOf("into held");
+  const used = claim.indexOf("into used;");
+  const fresh = claim.indexOf("into fresh");
+  assert.ok(held > 0 && held < used && used < fresh, "retries with a place are picked before the allowance, the rest within it");
+  assert.match(claim, /and delivery\.uncertain_since is not null and delivery\.last_attempt_at >= count_start\n\s+order by/);
+  assert.match(claim, /and \(delivery\.uncertain_since is not null and delivery\.last_attempt_at >= count_start\) is not true\n/);
+  assert.match(claim, /greatest\(0, least\(p_limit - cardinality\(held\), day_limit - used\)\)/);
+  assert.match(claim, /if day_limit = 0 then\n\s+return '\[\]'::jsonb;/, "an operator's 0 stops retries too");
+  assert.ok(claim.indexOf("if day_limit = 0 then") < held);
+  assert.match(claim, /where delivery\.id = any\(held \|\| fresh\) and auth_user\.id = delivery\.recipient_user_id/);
+  // Codex's fourth review, 3: an attempt that began shortly before midnight may reach Resend after it. The worker gets
+  // 60 seconds, well inside the stale-lock recovery's 15 minutes the window reuses.
+  assert.match(claim, /count_start timestamptz := day_start - interval '15 minutes';/);
+  assert.match(claim, /locked_at < clock_timestamp\(\) - interval '15 minutes'/);
+  assert.match(read("app/api/internal/email/process/route.ts"), /export const maxDuration = 60;/);
+  // Codex's fourth review, 2: an e-mail cancelled while it was being sent stays maybe sent.
+  assert.match(migration, /create trigger marketplace_email_deliveries_keep_attempt\nbefore update of status on laria_private\.marketplace_email_deliveries\nfor each row when \(old\.status = 'processing' and new\.status in \('pending', 'cancelled'\)\)\nexecute function laria_private\.marketplace_email_keep_attempt\(\);/);
+  assert.match(migration, /new\.uncertain_since := coalesce\(new\.uncertain_since, old\.last_attempt_at, clock_timestamp\(\)\);/);
+  // Same reasoning: deleting an account's e-mails leaves a hold for each one Resend may count.
+  assert.match(migration, /create trigger marketplace_email_deliveries_hold_count\nafter delete on laria_private\.marketplace_email_deliveries\nfor each row execute function laria_private\.marketplace_email_hold_count\(\);/);
+  assert.match(claim, /where hold\.sent_at >= day_start or hold\.attempted_at >= count_start\)/);
+  assert.match(claim, /delete from laria_private\.email_limit_holds where coalesce\(sent_at, attempted_at\) < clock_timestamp\(\) - interval '2 days';/);
+  for (const trigger of ["marketplace_email_deliveries_keep_attempt", "marketplace_email_deliveries_hold_count"]) {
+    assert.ok(migration.indexOf(`create trigger ${trigger}`) > migration.indexOf("add column if not exists uncertain_since timestamptz;"), trigger);
+  }
+  // Every other way out of processing (besides fail, which records what it knows) is a completion, the stale-lock
+  // recovery, which marks it uncertain itself, or a cancellation, which the trigger marks.
+  const exits = [];
+  for (const file of fs.readdirSync(path.join(root, "supabase/migrations")).filter((name) => name.endsWith(".sql"))) {
+    const sql = read(`supabase/migrations/${file}`);
+    for (const match of sql.matchAll(/update laria_private\.marketplace_email_deliveries[^;]*?\bset status = ([^,\n]+)[^;]*;/g)) {
+      const where = match[0].slice(match[0].search(/\bwhere\b/));
+      if (/status = 'processing'|status in \([^)]*'processing'/.test(where)) exits.push(`${file}: ${match[1]}`);
+    }
+  }
+  assert.ok(exits.length >= 6, exits.join("\n"));
+  for (const exit of exits) {
+    assert.match(exit, /: ('cancelled'|'sent'|case when attempt_count >= 5 then 'failed' else 'retry' end)$/, exit);
+  }
 });

@@ -16,14 +16,18 @@
 -- 2. The claim hands out an account's own business first (moderation, sales, reviews, questions, stores), then
 --    reminders, then alerts and digests (laria_private.email_priority), oldest first within each.
 -- 3. A daily limit (laria_private.email_settings, 80 by default, so sign-up and password e-mails keep 20 of Resend's
---    free 100): the claim hands out at most the limit minus what was sent since midnight UTC, when Resend's daily
---    quota resets, what is being sent now, and what was tried since midnight and may have reached Resend without being
---    marked sent (point 4): Resend may have counted it. What doesn't fit waits for the next run, and expires by its
---    kind's age like the rest. An operator changes the limit with laria_private.set_email_daily_limit (SQL editor
---    only). Claims take a transaction advisory lock, so two runs at once can't both spend the same allowance.
--- 4. An attempt that may have reached Resend (a transport or provider failure, or a worker that stopped while
---    sending) is remembered (marketplace_email_deliveries.uncertain_since, set by fail_marketplace_email_delivery and by
---    the claim's stale-lock recovery). Every attempt sends the delivery's id as Resend's Idempotency-Key, which Resend
+--    free 100): the claim hands out at most the limit minus what Resend may have counted since midnight UTC, when its
+--    daily quota resets: what was sent since then, what is being sent now, what was tried from 15 minutes before
+--    midnight on (a worker sends within 60 seconds of its claim) and may have reached Resend without being marked sent
+--    (point 4), and any of these that an account's deletion removed (laria_private.email_limit_holds). A retry of an
+--    e-mail that may have reached Resend in that time already has its place, so it goes out even when nothing is left.
+--    What doesn't fit waits for the next run, and expires by its kind's age like the rest. An operator changes the
+--    limit with laria_private.set_email_daily_limit (SQL editor only); 0 stops every hand-out. Claims take a
+--    transaction advisory lock, so two runs at once can't both spend the same allowance.
+-- 4. An attempt that may have reached Resend (a transport or provider failure, a worker that stopped while sending, or
+--    an e-mail cancelled while it was being sent, when its alert is paused or deleted) is remembered
+--    (marketplace_email_deliveries.uncertain_since, set by fail_marketplace_email_delivery, the claim's stale-lock
+--    recovery and laria_private.marketplace_email_keep_attempt). Every attempt sends the delivery's id as Resend's Idempotency-Key, which Resend
 --    keeps for 24 hours, so such a retry is safe only within that time: the claim hands these out before anything
 --    else, and 23 hours after the first uncertain attempt marks one still waiting failed (failure_code
 --    retry_window_closed) instead of risking a second copy. An e-mail the old worker had already tried, and not yet
@@ -41,13 +45,14 @@
 -- else changes.
 -- Locks: the queue is small (a few hundred rows). Its sent index takes a SHARE lock, then adding the nullable column an
 -- ACCESS EXCLUSIVE lock, held to the commit while the e-mails already tried are marked and the second index and the
--- fence's trigger are created; otherwise none beyond creating the table and the functions.
--- Rollback: drop the trigger marketplace_email_deliveries_claim_fence and laria_private.marketplace_email_claim_fence,
--- recreate claim_marketplace_email_deliveries from 20261029120200_review_fixes_alerts_and_import.sql and
--- fail_marketplace_email_delivery from 20260921120000_sprint_7_marketplace_email_alerts.sql, then drop
--- set_email_daily_limit, email_settings, email_priority, email_content_time, calendar_date, email_max_age,
--- marketplace_email_sent_idx, marketplace_email_uncertain_idx and the uncertain_since column. Cancelled e-mails stay
--- cancelled.
+-- three triggers are created; otherwise none beyond creating the tables and the functions.
+-- Rollback: drop the triggers marketplace_email_deliveries_claim_fence, marketplace_email_deliveries_keep_attempt and
+-- marketplace_email_deliveries_hold_count and their functions (laria_private.marketplace_email_claim_fence,
+-- marketplace_email_keep_attempt, marketplace_email_hold_count), recreate claim_marketplace_email_deliveries from
+-- 20261029120200_review_fixes_alerts_and_import.sql and fail_marketplace_email_delivery from
+-- 20260921120000_sprint_7_marketplace_email_alerts.sql, then drop set_email_daily_limit, email_settings,
+-- email_limit_holds, email_priority, email_content_time, calendar_date, email_max_age, marketplace_email_sent_idx,
+-- marketplace_email_uncertain_idx and the uncertain_since column. Cancelled e-mails stay cancelled.
 
 set lock_timeout = '10s';
 
@@ -177,7 +182,7 @@ update laria_private.marketplace_email_deliveries
 set uncertain_since = created_at
 where uncertain_since is null and attempt_count > 0 and status in ('pending', 'retry', 'processing');
 
--- Tried today and may have reached Resend, without being marked sent, for the limit (Codex's third review).
+-- Tried and may have reached Resend, without being marked sent, for the limit (Codex's third review).
 create index if not exists marketplace_email_uncertain_idx on laria_private.marketplace_email_deliveries (last_attempt_at)
   where uncertain_since is not null and status not in ('sent', 'processing');
 
@@ -205,6 +210,64 @@ create trigger marketplace_email_deliveries_claim_fence
 before update of status on laria_private.marketplace_email_deliveries
 for each row when (new.status = 'processing' and old.status is distinct from 'processing')
 execute function laria_private.marketplace_email_claim_fence();
+
+-- Codex's fourth review: pausing or deleting an alert cancels its e-mails, one being sent among them, and the worker's
+-- completion then finds it cancelled and records nothing, though Resend may have accepted it. Only complete (sent) and
+-- fail (retry or failed, which records whether the attempt may have reached Resend) settle an attempt; an e-mail that
+-- leaves processing any other way keeps it as uncertain, and so keeps its place in the day's limit.
+create or replace function laria_private.marketplace_email_keep_attempt()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  new.uncertain_since := coalesce(new.uncertain_since, old.last_attempt_at, clock_timestamp());
+  return new;
+end;
+$$;
+revoke all on function laria_private.marketplace_email_keep_attempt() from public, anon, authenticated;
+
+drop trigger if exists marketplace_email_deliveries_keep_attempt on laria_private.marketplace_email_deliveries;
+create trigger marketplace_email_deliveries_keep_attempt
+before update of status on laria_private.marketplace_email_deliveries
+for each row when (old.status = 'processing' and new.status in ('pending', 'cancelled'))
+execute function laria_private.marketplace_email_keep_attempt();
+
+-- Codex's fourth review, same reasoning: an account's deletion removes its e-mails (laria_private.anonymize_account,
+-- or the cascade from its profile), and Resend still counts one sent today, or tried and maybe sent, among them. Each
+-- leaves a hold in the day's limit, only its times: when it was sent, or when its last attempt began. The claim
+-- forgets holds after two days.
+create table if not exists laria_private.email_limit_holds (
+  id            bigint generated always as identity primary key,
+  sent_at       timestamptz,
+  attempted_at  timestamptz,
+  check ((sent_at is null) <> (attempted_at is null))
+);
+alter table laria_private.email_limit_holds enable row level security;
+revoke all on laria_private.email_limit_holds from public, anon, authenticated;
+
+create or replace function laria_private.marketplace_email_hold_count()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if old.status = 'sent' and old.sent_at >= clock_timestamp() - interval '1 day' then
+    insert into laria_private.email_limit_holds (sent_at) values (old.sent_at);
+  elsif (old.status = 'processing' or old.uncertain_since is not null)
+    and old.last_attempt_at >= clock_timestamp() - interval '1 day 15 minutes' then
+    insert into laria_private.email_limit_holds (attempted_at) values (old.last_attempt_at);
+  end if;
+  return old;
+end;
+$$;
+revoke all on function laria_private.marketplace_email_hold_count() from public, anon, authenticated;
+
+drop trigger if exists marketplace_email_deliveries_hold_count on laria_private.marketplace_email_deliveries;
+create trigger marketplace_email_deliveries_hold_count
+after delete on laria_private.marketplace_email_deliveries
+for each row execute function laria_private.marketplace_email_hold_count();
 
 -- From 20260921120000_sprint_7_marketplace_email_alerts.sql, with uncertain_since: a transport or provider failure
 -- (timeouts, lost connections, 408, 409, 5xx, a reply without an id) may have been accepted; a rate limit, a refusal
@@ -256,7 +319,8 @@ grant execute on function public.fail_marketplace_email_delivery(uuid, uuid, boo
 -- ----------------------------------------------------------------------------------------------- 4. the claim
 
 -- From 20261029120200_review_fixes_alerts_and_import.sql, with the lock, the retry window, the expiry, the allowance
--- and the order added.
+-- and the order added. Candidates are picked in two steps (retries that already have their place, then what fits),
+-- each with the original conditions.
 create or replace function public.claim_marketplace_email_deliveries(p_worker_id uuid, p_limit integer default 25)
 returns jsonb
 language plpgsql
@@ -265,9 +329,17 @@ set search_path = public, laria_private, auth
 as $$
 declare
   result jsonb;
+  day_limit integer;
+  used bigint;
   allowance integer;
+  held uuid[];
+  fresh uuid[] := '{}';
   -- Resend's day starts at midnight UTC.
   day_start timestamptz := date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC';
+  -- Codex's fourth review: an attempt reaches Resend within the worker's 60 seconds after its claim, and one still
+  -- processing after 15 minutes counts as stopped (below), so one that began up to 15 minutes before midnight may have
+  -- been counted today.
+  count_start timestamptz := day_start - interval '15 minutes';
 begin
   if auth.role() is distinct from 'service_role' or p_worker_id is null or p_limit not between 1 and 100 then
     raise exception using errcode = '42501', message = 'EMAIL_SERVICE_REQUIRED';
@@ -315,24 +387,20 @@ begin
       or (delivery.event_type = 'search_alert_daily'
           and not exists (select 1 from laria_private.search_alert_matches match where match.delivery_id = delivery.id)));
 
-  -- A25: what is left of today's limit, less what is being sent now, and less what was tried today and may have reached
-  -- Resend without being marked sent (Codex's third review): Resend may have counted it, so its place stays taken.
-  select greatest(0, least(p_limit, settings.daily_limit
-      - (select count(*) from laria_private.marketplace_email_deliveries sent
-         where sent.status = 'sent' and sent.sent_at >= day_start)
-      - (select count(*) from laria_private.marketplace_email_deliveries busy where busy.status = 'processing')
-      - (select count(*) from laria_private.marketplace_email_deliveries maybe
-         where maybe.uncertain_since is not null and maybe.status not in ('sent', 'processing')
-           and maybe.last_attempt_at >= day_start)))
-  into allowance
-  from laria_private.email_settings settings
-  where settings.id;
-  allowance := coalesce(allowance, p_limit);
-  if allowance = 0 then
+  -- A25: an operator's 0 stops every hand-out.
+  select settings.daily_limit into day_limit from laria_private.email_settings settings where settings.id;
+  if day_limit = 0 then
     return '[]'::jsonb;
   end if;
 
-  with candidates as (
+  -- A25: what an account's deletion took out of the limit is forgotten after two days.
+  delete from laria_private.email_limit_holds where coalesce(sent_at, attempted_at) < clock_timestamp() - interval '2 days';
+
+  -- A25 (Codex's fourth review): a retry of an e-mail tried since count_start that may have reached Resend already has
+  -- its place in today's limit (counted below as maybe), and carries the same Idempotency-Key, so the two attempts make
+  -- one e-mail at most: it goes out even when nothing is left for anything else.
+  select coalesce(array_agg(picked.id), '{}') into held
+  from (
     select delivery.id
     from laria_private.marketplace_email_deliveries delivery
     left join public.saved_search_alerts alert on alert.id = delivery.search_alert_id
@@ -340,17 +408,55 @@ begin
       and delivery.next_attempt_at <= clock_timestamp()
       and delivery.attempt_count < 5
       and (delivery.search_alert_id is null or alert.status = 'active')
-    -- A25: retries Resend may have accepted first, while its Idempotency-Key still holds.
-    order by delivery.uncertain_since is null, laria_private.email_priority(delivery.event_type), delivery.created_at, delivery.id
+      and delivery.uncertain_since is not null and delivery.last_attempt_at >= count_start
+    order by laria_private.email_priority(delivery.event_type), delivery.created_at, delivery.id
     for update of delivery skip locked
-    limit allowance
-  ), updated as (
+    limit p_limit
+  ) picked;
+
+  -- A25: what Resend may have counted today: sent since midnight, being sent now, tried since count_start and maybe
+  -- sent without being marked sent (Codex's third review), and any of these an account's deletion removed (Codex's
+  -- fourth review).
+  select (select count(*) from laria_private.marketplace_email_deliveries sent
+          where sent.status = 'sent' and sent.sent_at >= day_start)
+       + (select count(*) from laria_private.marketplace_email_deliveries busy where busy.status = 'processing')
+       + (select count(*) from laria_private.marketplace_email_deliveries maybe
+          where maybe.uncertain_since is not null and maybe.status not in ('sent', 'processing')
+            and maybe.last_attempt_at >= count_start)
+       + (select count(*) from laria_private.email_limit_holds hold
+          where hold.sent_at >= day_start or hold.attempted_at >= count_start)
+  into used;
+  allowance := case when day_limit is null then p_limit - cardinality(held)
+    else greatest(0, least(p_limit - cardinality(held), day_limit - used)) end;
+
+  if allowance > 0 then
+    select coalesce(array_agg(picked.id), '{}') into fresh
+    from (
+      select delivery.id
+      from laria_private.marketplace_email_deliveries delivery
+      left join public.saved_search_alerts alert on alert.id = delivery.search_alert_id
+      where delivery.status in ('pending','retry')
+        and delivery.next_attempt_at <= clock_timestamp()
+        and delivery.attempt_count < 5
+        and (delivery.search_alert_id is null or alert.status = 'active')
+        and (delivery.uncertain_since is not null and delivery.last_attempt_at >= count_start) is not true
+      -- A25: retries Resend may have accepted first, while its Idempotency-Key still holds.
+      order by delivery.uncertain_since is null, laria_private.email_priority(delivery.event_type), delivery.created_at, delivery.id
+      for update of delivery skip locked
+      limit allowance
+    ) picked;
+  end if;
+  if cardinality(held) + cardinality(fresh) = 0 then
+    return '[]'::jsonb;
+  end if;
+
+  with updated as (
     update laria_private.marketplace_email_deliveries delivery
     set status = 'processing', attempt_count = attempt_count + 1,
         last_attempt_at = clock_timestamp(), locked_at = clock_timestamp(), locked_by = p_worker_id,
         recipient_email = auth_user.email, failure_category = null, failure_code = null
-    from candidates, auth.users auth_user
-    where delivery.id = candidates.id and auth_user.id = delivery.recipient_user_id
+    from auth.users auth_user
+    where delivery.id = any(held || fresh) and auth_user.id = delivery.recipient_user_id
     returning delivery.*
   )
   select coalesce(jsonb_agg(laria_private.marketplace_email_payload(updated)

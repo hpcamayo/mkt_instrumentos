@@ -1531,12 +1531,23 @@ so it can be applied before the deploy that schedules the worker (`vercel.json`,
   four reminders above, 2 alerts and digests (`search_alert_immediate`, `search_alert_daily`, `listing_price_drop`,
   `listing_back_in_stock`, `follow_weekly`); oldest first within each. The payload array follows the same order.
 - Daily limit: `laria_private.email_settings` (one row; `daily_limit` 80, `changed_at`, `changed_by`, `reason`; no API
-  access). A claim hands out at most `p_limit` and at most the limit minus the e-mails sent since midnight UTC
-  (Resend's daily reset; index `marketplace_email_sent_idx`), those being sent, and those tried since midnight that may
-  have reached Resend without being marked sent (`uncertain_since` set, any other status; index
-  `marketplace_email_uncertain_idx`): Resend may have counted them, so their places stay taken. Claims take
-  `pg_advisory_xact_lock` so two at once can't spend the same allowance. `laria_private.set_email_daily_limit(limit,
-  reason)` is for an operator in the SQL editor (no API role may call it); 0 pauses marketplace e-mails.
+  access). A claim hands out at most `p_limit`, and new e-mails only up to the limit minus what Resend may have
+  counted since midnight UTC (its daily reset): the e-mails sent since then (index `marketplace_email_sent_idx`),
+  those being sent, those tried from 15 minutes before midnight on that may have reached Resend without being marked
+  sent (`uncertain_since` set, any other status; index `marketplace_email_uncertain_idx`; the worker sends within its
+  60 seconds, and the stale-lock recovery already treats 15 minutes as stopped), and holds left by deleted e-mails
+  (below). A retry of one of those uncertain e-mails already has its place and carries the same `Idempotency-Key`, so
+  it goes out first even when nothing is left. Claims take `pg_advisory_xact_lock` so two at once can't spend the
+  same allowance. `laria_private.set_email_daily_limit(limit, reason)` is for an operator in the SQL editor (no API
+  role may call it); 0 stops every hand-out, retries included.
+- Places that stay taken: an e-mail cancelled while it was being sent (pausing or deleting its alert) can't record
+  its completion, so the trigger `marketplace_email_deliveries_keep_attempt`
+  (`laria_private.marketplace_email_keep_attempt()`) marks any move from `processing` to `pending` or `cancelled` as
+  uncertain. Deleting e-mails (an account's deletion, `laria_private.anonymize_account`, or the cascade from its
+  profile) leaves a row in `laria_private.email_limit_holds` (`sent_at` or `attempted_at` only; no API access) for
+  each one sent in the last day, being sent, or uncertain and tried in the last day, through the trigger
+  `marketplace_email_deliveries_hold_count` (`laria_private.marketplace_email_hold_count()`); the claim counts them
+  like the rest and deletes holds older than two days.
 - Uncertain sends: every attempt sends the delivery's id as Resend's `Idempotency-Key`, which Resend keeps for 24
   hours. `marketplace_email_deliveries.uncertain_since` is when the first attempt that may have reached Resend began:
   `fail_marketplace_email_delivery` sets it (from `last_attempt_at`) for a `transport` or `provider` failure (timeouts,

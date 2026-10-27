@@ -290,9 +290,11 @@ end $$;
 
 -- ------------------------------------------------------------------ the limit and uncertain sends
 
--- Codex's third review: a send Resend may have accepted keeps its place in today's limit after it fails, until it is
--- sent or the day ends; a refused one gives its place back. A fresh day: none of this suite's e-mails count.
+-- Codex's third and fourth reviews: a send Resend may have accepted keeps its place in today's limit after it fails,
+-- until it is sent or the day ends, and its retry needs no other place; a refused one gives its place back. A fresh
+-- day: none of this suite's e-mails count (deleting them left holds, cleared here; "an account's deletion" checks them).
 delete from laria_private.marketplace_email_deliveries where recipient_user_id = 'a2500000-0000-4000-8000-000000000001';
+delete from laria_private.email_limit_holds where id is not null;
 select laria_private.set_email_daily_limit(3, 'Prueba de envíos inciertos');
 select pg_temp.queue(31, 'store_approved', interval '3 hours');
 select pg_temp.queue(32, 'store_approved', interval '2 hours');
@@ -311,19 +313,172 @@ end $$;
 reset role;
 update laria_private.marketplace_email_deliveries set next_attempt_at = now() - interval '1 minute'
 where id = any(array[pg_temp.id(31), pg_temp.id(32)]);
+select pg_temp.queue(34, 'store_approved', interval '30 minutes');
 
 set local role service_role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 do $$ declare claim jsonb; begin
-  -- 3 a day: 33 sent and 31 maybe sent leave room for 1, and 31's retry goes first (the old count gave room for 2).
+  -- 3 a day: 33 sent and 31 maybe sent leave room for 1 (the count before the third review gave room for 2). 31's
+  -- retry already has its place and goes first; 32 takes the one left, and 34 waits.
   claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000009', 10);
-  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(31)], 'the maybe-sent e-mail keeps its place: ' || claim::text);
-  -- Its retry carries the same Idempotency-Key, so the two attempts make one e-mail at most: 32 still fits.
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(31), pg_temp.id(32)],
+    'the maybe-sent e-mail keeps its place, and a refused send gave its place back: ' || claim::text);
+  -- 32 is sent and 31's answer is lost again: nothing is left.
+  perform public.complete_marketplace_email_delivery(pg_temp.id(32), 'a2520000-0000-4000-8000-000000000009', 'qa-32');
+  perform public.fail_marketplace_email_delivery(pg_temp.id(31), 'a2520000-0000-4000-8000-000000000009', true, 'transport', 'transport_error');
+end $$;
+reset role;
+update laria_private.marketplace_email_deliveries set next_attempt_at = now() - interval '1 minute' where id = pg_temp.id(31);
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ declare claim jsonb; begin
+  -- Codex's fourth review: with nothing left, 31's retry still goes out. It carries the same Idempotency-Key, so its
+  -- attempts make one e-mail at most, already counted.
   claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000010', 10);
-  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(32)], 'a refused send gave its place back: ' || claim::text);
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(31)], 'a retry with its place goes out at the limit: ' || claim::text);
+  perform public.complete_marketplace_email_delivery(pg_temp.id(31), 'a2520000-0000-4000-8000-000000000010', 'qa-31');
   claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000011', 10);
   perform pg_temp.check(claim = '[]'::jsonb, 'nothing more today: ' || claim::text);
 end $$;
 reset role;
+do $$ begin
+  perform pg_temp.check((select status from laria_private.marketplace_email_deliveries where id = pg_temp.id(34)) = 'pending',
+    'what didn''t fit waits');
+end $$;
+
+-- An operator's 0 stops retries too.
+update laria_private.marketplace_email_deliveries set status = 'retry', next_attempt_at = now() - interval '1 minute',
+  uncertain_since = now() - interval '10 minutes', last_attempt_at = now() - interval '10 minutes'
+where id = pg_temp.id(34);
+select laria_private.set_email_daily_limit(0, 'Pausa de prueba');
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ begin
+  perform pg_temp.check(public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000012', 10) = '[]'::jsonb,
+    'a limit of 0 sends nothing, not even a retry with its place');
+end $$;
+reset role;
+
+-- ------------------------------------------------------------------ midnight
+
+-- Codex's fourth review: an attempt that began in the last minutes before midnight UTC may have reached Resend after
+-- it, so it counts today; one that began before the worker could still be sending at midnight doesn't.
+delete from laria_private.marketplace_email_deliveries where recipient_user_id = 'a2500000-0000-4000-8000-000000000001';
+delete from laria_private.email_limit_holds where id is not null;
+select laria_private.set_email_daily_limit(2, 'Prueba de medianoche');
+insert into laria_private.marketplace_email_deliveries(id, event_type, recipient_user_id, dedupe_key, status, attempt_count,
+  created_at, next_attempt_at, last_attempt_at, uncertain_since, failure_category, failure_code)
+select pg_temp.id(attempt.n), 'store_approved', 'a2500000-0000-4000-8000-000000000001', 'la25-' || attempt.n, 'retry', 1,
+  day.start - interval '1 hour', now() + interval '1 hour', day.start - attempt.before, day.start - attempt.before,
+  'transport', 'transport_error'
+from (values (41, interval '5 minutes'), (42, interval '20 minutes')) attempt(n, before),
+  (select date_trunc('day', now() at time zone 'UTC') at time zone 'UTC' as start) day;
+select pg_temp.queue(43, 'store_approved', interval '2 hours');
+select pg_temp.queue(44, 'store_approved', interval '1 hour');
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ declare claim jsonb; begin
+  -- 2 a day: 41, tried 5 minutes before midnight, may count today, so only 43 fits; 42, tried 20 minutes before, can't.
+  claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000013', 10);
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(43)], 'a send begun just before midnight counts today: ' || claim::text);
+end $$;
+reset role;
+
+-- ------------------------------------------------------------------ cancelled while being sent
+
+-- Codex's fourth review: pausing an alert cancels its e-mails, one being sent among them. Its completion then fails,
+-- though Resend may have accepted it, so it keeps its place.
+delete from laria_private.marketplace_email_deliveries where recipient_user_id = 'a2500000-0000-4000-8000-000000000001';
+delete from laria_private.email_limit_holds where id is not null;
+insert into public.saved_search_alerts (id, user_id, search_filters, search_hash, match_bucket, frequency) values
+ ('a2530000-0000-4000-8000-000000000051', 'a2500000-0000-4000-8000-000000000001', '{}', repeat('a', 64), 'all', 'immediate');
+insert into laria_private.marketplace_email_deliveries(id, event_type, recipient_user_id, dedupe_key, search_alert_id, created_at, next_attempt_at)
+values (pg_temp.id(51), 'search_alert_immediate', 'a2500000-0000-4000-8000-000000000001', 'la25-51',
+  'a2530000-0000-4000-8000-000000000051', now() - interval '1 hour', now() - interval '1 hour');
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ declare claim jsonb; begin
+  claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000014', 10);
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(51)], 'the alert''s e-mail goes out: ' || claim::text);
+end $$;
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"a2500000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+select public.set_saved_search_alert_status('a2530000-0000-4000-8000-000000000051', false);
+reset role;
+select laria_private.set_email_daily_limit(2, 'Prueba de cancelación');
+select pg_temp.queue(52, 'store_approved', interval '2 hours');
+select pg_temp.queue(53, 'store_approved', interval '1 hour');
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ declare claim jsonb; begin
+  perform pg_temp.expect_error($sql$select public.complete_marketplace_email_delivery('a2510000-0000-4000-8000-000000000051',
+    'a2520000-0000-4000-8000-000000000014', 'qa-51')$sql$, 'EMAIL_DELIVERY_CLAIM_INVALID');
+  -- 2 a day: the cancelled e-mail may have been sent, so only 52 fits.
+  claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000015', 10);
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(52)], 'a send cancelled mid-way keeps its place: ' || claim::text);
+end $$;
+reset role;
+do $$ begin
+  perform pg_temp.check((select status = 'cancelled' and uncertain_since = last_attempt_at
+    from laria_private.marketplace_email_deliveries where id = pg_temp.id(51)), 'the cancelled send is kept as maybe sent');
+end $$;
+
+-- ------------------------------------------------------------------ an account's deletion
+
+-- Codex's fourth review, same reasoning: deleting an account deletes its e-mails (laria_private.anonymize_account),
+-- and Resend still counts one sent today or maybe sent. Each leaves a hold of its times, for two days.
+delete from laria_private.marketplace_email_deliveries where recipient_user_id = 'a2500000-0000-4000-8000-000000000001';
+delete from laria_private.email_limit_holds where id is not null;
+insert into auth.users(id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data) values
+ ('a2500000-0000-4000-8000-000000000002','authenticated','authenticated','la25-dos@example.invalid',now(),'{}','{"account_type":"seller","full_name":"Persona A25 dos","phone":"51999992502","city":"Lima","region":"Lima"}');
+insert into laria_private.marketplace_email_deliveries(id, event_type, recipient_user_id, dedupe_key, status, attempt_count,
+  created_at, next_attempt_at, last_attempt_at, sent_at, provider_message_id, uncertain_since, locked_at, locked_by)
+values
+ -- Sent just now, and two days ago.
+ (pg_temp.id(61), 'store_approved', 'a2500000-0000-4000-8000-000000000002', 'la25-61', 'sent', 1, now() - interval '2 hours',
+  now(), now(), now(), 'qa-61', null, null, null),
+ (pg_temp.id(62), 'store_approved', 'a2500000-0000-4000-8000-000000000002', 'la25-62', 'sent', 1, now() - interval '50 hours',
+  now() - interval '48 hours', now() - interval '48 hours', now() - interval '48 hours', 'qa-62', null, null, null),
+ -- Being sent, and maybe sent 10 minutes ago.
+ (pg_temp.id(63), 'store_approved', 'a2500000-0000-4000-8000-000000000002', 'la25-63', 'processing', 1, now() - interval '1 hour',
+  now() - interval '1 minute', now() - interval '1 minute', null, null, null, now() - interval '1 minute', gen_random_uuid()),
+ (pg_temp.id(64), 'store_approved', 'a2500000-0000-4000-8000-000000000002', 'la25-64', 'retry', 1, now() - interval '1 hour',
+  now() + interval '1 hour', now() - interval '10 minutes', null, null, now() - interval '10 minutes', null, null),
+ -- Never tried.
+ (pg_temp.id(65), 'store_approved', 'a2500000-0000-4000-8000-000000000002', 'la25-65', 'pending', 0, now() - interval '1 hour',
+  now() + interval '1 hour', null, null, null, null, null, null);
+delete from laria_private.marketplace_email_deliveries where recipient_user_id = 'a2500000-0000-4000-8000-000000000002';
+-- One from three days ago, to be forgotten.
+insert into laria_private.email_limit_holds (sent_at) values (now() - interval '3 days');
+do $$ begin
+  perform pg_temp.check((select count(*) filter (where sent_at = now()) = 1
+      and count(*) filter (where attempted_at = now() - interval '1 minute') = 1
+      and count(*) filter (where attempted_at = now() - interval '10 minutes') = 1 and count(*) = 4
+    from laria_private.email_limit_holds), 'the sent, the being sent and the maybe sent e-mails leave holds');
+  perform pg_temp.check(not exists (select 1 from information_schema.columns
+    where table_schema = 'laria_private' and table_name = 'email_limit_holds'
+      and column_name not in ('id', 'sent_at', 'attempted_at')), 'a hold keeps only times');
+end $$;
+select laria_private.set_email_daily_limit(4, 'Prueba de cuentas borradas');
+select pg_temp.queue(66, 'store_approved', interval '2 hours');
+select pg_temp.queue(67, 'store_approved', interval '1 hour');
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ declare claim jsonb; begin
+  perform pg_temp.expect_error('select count(*) from laria_private.email_limit_holds', '42501');
+  -- 4 a day: the deleted account's three holds leave room for 1.
+  claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000016', 10);
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(66)], 'a deleted account''s sends keep their places: ' || claim::text);
+end $$;
+reset role;
+do $$ begin
+  perform pg_temp.check((select count(*) from laria_private.email_limit_holds) = 3, 'holds older than two days are forgotten');
+end $$;
 
 rollback;
