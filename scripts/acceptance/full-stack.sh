@@ -23,7 +23,10 @@ for file in supabase/config.toml .env .env.local .env.production .env.production
     exit 1
   fi
 done
-if [ -n "$(docker ps -aq --filter "name=^${DB_CONTAINER}\$")" ]; then
+# The CLI labels a project's containers and data volumes with its id (`supabase stop` without --no-backup says to list
+# them by it). A volume a killed run left behind would be reused, and the run wouldn't start from an empty database.
+project_label="com.supabase.cli.project=$PROJECT_ID"
+if [ -n "$(docker ps -aq --filter "label=$project_label")$(docker volume ls -q --filter "label=$project_label")" ]; then
   echo "A $PROJECT_ID stack is already there (another run, or one that was killed). Remove it with" >&2
   echo "supabase stop --no-backup --project-id $PROJECT_ID, then run this again." >&2
   exit 1

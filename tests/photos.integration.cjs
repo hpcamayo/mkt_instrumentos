@@ -1,7 +1,8 @@
 // Sprint 4 actual-storage/API photo lifecycle proof. Local Supabase only.
 // LARIA_TEST_ENV_FILE=/absolute/local.env node tests/photos.integration.cjs http://localhost:3100
 // Add LARIA_PHOTO_BROWSER=1 for optional actual browser editor proof (agent-browser required).
-// LARIA_TEST_DB_CONTAINER selects an isolated local stack; defaults to the documented local project.
+// LARIA_TEST_DB_CONTAINER selects an isolated local stack; it defaults to the documented local project's, so a stack
+// whose API isn't on the CLI's default port must name its own.
 const assert = require("node:assert/strict");
 const { loadEnvFile } = require("node:process");
 const { createClient } = require("@supabase/supabase-js");
@@ -27,6 +28,11 @@ const objects = [];
 const suffix = crypto.randomUUID();
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9S8AAAAASUVORK5CYII=", "base64");
 const privateBucket = "listing-edit-photos";
+// The default container belongs to the stack on the CLI's default API port; another stack's fixture must not reach it.
+assert.ok(
+  process.env.LARIA_TEST_DB_CONTAINER || new URL(url).port === "54321",
+  "Set LARIA_TEST_DB_CONTAINER to this stack's database container.",
+);
 const databaseContainer = process.env.LARIA_TEST_DB_CONTAINER ?? "supabase_db_mkt_instrumentos";
 assert.match(databaseContainer, /^supabase_db_[a-zA-Z0-9_-]+$/, "Use a local Supabase database container.");
 

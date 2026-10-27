@@ -104,7 +104,8 @@ bash scripts/acceptance/full-stack.sh /tmp/laria-acceptance
 
 Its stack is a project of its own, `laria_acceptance`, on its own ports (55321 for the API, 55322 for the database,
 55324 for the e-mail viewer). The CLI names containers and data volumes after the project, so the run never reuses,
-stops or wipes another local Supabase, and can run beside one. It refuses to start when one of those ports is taken or
-a `laria_acceptance` stack is already there; `supabase stop --no-backup --project-id laria_acceptance` removes one left
-by a killed run. It takes the images from the registry `SUPABASE_INTERNAL_IMAGE_REGISTRY` names, or from the CLI's
-default, public.ecr.aws, and tries the other two in turn if that one refuses them.
+stops or wipes another local Supabase, and can run beside one. It refuses to start when one of those ports is taken or a
+`laria_acceptance` stack is already there, even just its data volumes, which it would otherwise reuse;
+`supabase stop --no-backup --project-id laria_acceptance` removes what a killed run left. It takes the images from the
+registry `SUPABASE_INTERNAL_IMAGE_REGISTRY` names, or from the CLI's default, public.ecr.aws, and tries the other two in
+turn if that one refuses them.
