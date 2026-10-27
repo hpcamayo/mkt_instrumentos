@@ -53,6 +53,10 @@ A Particular profile contains at least:
 - City and region where appropriate.
 
 V1 authentication includes signup, email confirmation, password login, magic-link login, logout, forgot password, password reset, profile editing, and password change. Email change and account deletion are post-V1.
+<!-- Feature ideas, accounts batch (docs/feature-ideas/accounts.md): accounts -->
+*Proposed with the feature-ideas accounts batch; not part of V1 until merged:* e-mail change and self-service account
+deletion, two-step sign-in, sign-in with Google or Apple and a help center (see "Accounts, Help and Safety").
+<!-- end accounts batch: accounts -->
 
 <!-- Effortless Laria, accounts batch (docs/ux-effortless/accounts.md): fixes -->
 WhatsApp numbers are stored as digits with the country code. A Peruvian mobile typed as nine digits starting with 9
@@ -445,6 +449,72 @@ of V1 until merged. Laria still never charges, holds money, checks an instrument
   photo upload cleanup.
 <!-- /feature-ideas:deal-trust -->
 
+<!-- Feature ideas, accounts batch (docs/feature-ideas/accounts.md): accounts, help and safety -->
+## Accounts, Help and Safety (feature ideas, accounts batch)
+
+Proposed with the accounts batch (`docs/feature-ideas/accounts.md`, FD-accounts-1 to FD-accounts-17); not part of V1
+until merged.
+
+- **Staying signed in.** "Mantener sesión iniciada" on the sign-in page, ticked by default: the session survives
+  closing the browser and lasts while it is used (Supabase's 400-day cookies, no session time-box). Unticked, the
+  session ends with the browser. It applies to password, e-mail link and Google or Apple sign-in.
+- **Two-step sign-in.** Optional, with an authenticator app (no SMS) and ten one-time recovery codes. The code is asked
+  only after the password on a browser that is not signed in (a new device or after signing out); the session keeps
+  its second step for its whole life. Required for Admin and for a store owner whose store has an approved payment
+  method (to open Mi tienda and to change the store's contact details or payment methods). Using a recovery code
+  removes the app, closes every session and sends an e-mail.
+- **Devices.** Seguridad lists the account's sessions by browser and last activity, closes one or all of them, and a
+  sign-in from a browser the account has not used before sends one e-mail.
+- **E-mail change** from Seguridad through Supabase's confirmation link; the old address works until it is confirmed.
+- **Tus datos.** The person downloads all their data as one JSON file, and a Particular can delete the account after
+  the password and one confirmation: the profile becomes «Cuenta eliminada», unsold listings are archived, personal
+  lists and notices are erased, verified transactions and their reviews stay. Admin and store-owner accounts are closed
+  with the team.
+- **Google and Apple.** Buttons on sign-in and Particular sign-up, shown only when each provider is enabled; a first
+  sign-in creates a Particular account.
+- **Help center.** `/ayuda` with topics, accent-insensitive search and short articles; "¿No encontraste tu respuesta?"
+  sends a question with a code. Signed-in senders see answers in Mis consultas and by e-mail; Admin answers others from
+  their own mailbox. Laria's WhatsApp support line shows only once its number and hours are set. This is a simple
+  inbox, not a ticketing system.
+- **Stolen-gear registry.** A signed-in person reports stolen gear with the police report number, the serial and
+  private photos. Sellers can add a private serial to a listing, and stores to each SKU. Matching serials or photos
+  create a lead for Admin only; nothing changes on the listing, nobody is named publicly, and only a match Admin
+  confirms tells the reporter, without naming the listing or the seller.
+- **Copied photos.** Listing photos are compared by a perceptual hash computed on Laria's server; a photo nearly
+  identical to another seller's flags the newer listing for Admin at review ("Foto parecida a la de otro vendedor").
+  Flags never reject or hide anything. The price rule waits for typical prices.
+<!-- end accounts batch: accounts, help and safety -->
+
+<!-- feature-ideas:selling-tools -->
+## Selling Tools: Mi equipo, store offers, consignment, price steps and private offers (feature ideas, selling-tools batch)
+
+Proposed with the selling-tools batch (`docs/feature-ideas/selling-tools.md`, FD-selling-tools-1 to FD-selling-tools-15);
+not part of V1 until merged. Laria never charges, handles money or values gear in any of these.
+
+- **Mi equipo.** A Particular's private list of their gear (Mi cuenta › Mi equipo): brand, model, serial, purchase date,
+  warranty end and a note. Confirmed purchases are added by themselves. "Vender esto" opens the sell form with the
+  item's details. No estimated value.
+- **¿Prefieres vender ya?** Verified stores opt in to buying used guitars, basses, amplifiers, pedals or keyboards. A
+  Particular sends photos and a description to every such store of their region, sees how many will receive it
+  first, gets offers within 24 hours and has 3 days to choose one or none. Choosing shares their WhatsApp with that
+  store only; they bring the gear within 5 days and the store confirms the price and pays directly.
+- **Consignment.** A verified store lists a Particular's instrument as its own listing, marked "En consignación en
+  <Tienda>", and invites the owner by a one-time link; the owner follows its views, contacts and saves and is told when
+  it sells. The commission is agreed between them.
+- **Part payment.** A store listing can say "Aceptamos tu equipo como parte de pago" (store default, per-listing
+  choice). The buyer sends their gear from Mi equipo or with photos to that store, which answers with an estimate.
+- **Bajada automática.** The owner of a listing sets a floor and a pace (5 % or 10 % every 7 or 14 days, optionally
+  only without WhatsApp contacts). A daily job lowers the price until the floor, a sale or a pause; each step is a
+  normal price change, so saved-listing alerts follow. Buyers see no countdown.
+- **Oferta a interesados.** Once per listing per week, the owner sends one private price, for 1 to 7 days, to the
+  people who saved it, by notification and e-mail (respecting the price-drop e-mail choice). The listing shows it to
+  them with a WhatsApp button that quotes it; the public price does not change.
+- **Reminders.** A Mi equipo item with strings, reeds or drumheads can have one reminder (off by default, every 1 to 12
+  months) that names up to three stores of the region that sell them; one tap stops it, also from the e-mail.
+- **Ofertas (stores).** The store inbox for sell and part-payment requests and the "Qué recibimos" settings (used gear,
+  consignment, part payment, consumables). Mis publicaciones links each listing's "Herramientas de venta".
+<!-- /feature-ideas:selling-tools -->
+
 ## WhatsApp Contact Tracking
 
 Laria records buyer intent when a user initiates WhatsApp contact. It never records WhatsApp message content.
@@ -577,7 +647,7 @@ The following remain post-V1 unless an explicit new product decision changes the
 - Internal messaging or chat (public questions on listings are not messaging; see Public Questions on Listings).
 - Multiple store employee accounts.
 - Automatic SUNAT verification.
-- Account deletion or account email-change workflows.
+- Account deletion or account email-change workflows. <!-- accounts batch: proposed in "Accounts, Help and Safety" -->
 - Sophisticated fraud scoring.
 - Arbitrary new social or community functionality.
 

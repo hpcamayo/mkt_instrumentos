@@ -28,6 +28,10 @@ const links = [
   { href: "/admin/colecciones", label: "Colecciones" },
   { href: "/admin/fabricantes", label: "Fabricantes y talleres" },
   { href: "/admin/artistas", label: "Artistas verificados" },
+  // Feature ideas, accounts batch (safe-10, safe-05, safe-02).
+  { href: "/admin/ayuda", label: "Ayuda" },
+  { href: "/admin/fotos-repetidas", label: "Fotos repetidas" },
+  { href: "/admin/equipos-reportados", label: "Equipos reportados" },
   // feature-ideas services (bet-02)
   { href: "/admin/servicios", label: "Servicios" },
   // Feature ideas, store-reach batch: dealer authorizations (reach-04) and Laria's campaigns (reach-05).

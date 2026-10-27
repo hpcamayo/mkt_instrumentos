@@ -23,6 +23,12 @@ const detailChecks: Record<string, DetailCheck> = {
     const result = cleanMakerDetails(value);
     return result.ok ? { ok: true, value: result.value } : { ok: false, message: result.message, field: result.field };
   },
+  // Feature ideas, selling-tools batch (run-04): true, false or null (follow the store's default). Stores only.
+  part_payment: (value, { isStore }) => {
+    if (value !== null && typeof value !== "boolean") return { ok: false, message: "Elige si aceptas equipos como parte de pago." };
+    if (value === true && !isStore) return { ok: false, message: "Parte de pago es para publicaciones de tiendas." };
+    return { ok: true, value };
+  },
 };
 // END listing detail checks
 

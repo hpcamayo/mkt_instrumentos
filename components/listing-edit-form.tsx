@@ -34,6 +34,7 @@ import { PriceInput } from "@/components/ui/price-input";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
+import { ListingSerialField } from "@/components/stolen-gear/listing-serial-field";
 
 type ExistingPhoto = {
   id: string;
@@ -535,6 +536,8 @@ export function ListingEditForm({
         </fieldset>
       ) : null}
       <ListingDetailFields idPrefix="editar" heading="h2" details={details} onChange={setDetail} error={detailError} isStore={isStore} />
+      {/* Feature ideas, accounts batch (safe-02): the private serial number, saved on its own. */}
+      <ListingSerialField listingId={listing.id} />
       </fieldset>
       {busy ? <p role="status" aria-live="polite" className="t-ui font-semibold text-ink-2">{progress}</p> : null}
       {showsReviewSplit && (pendingKinds.immediate || pendingKinds.moderated) ? (

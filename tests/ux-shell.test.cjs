@@ -246,7 +246,7 @@ test("header: bell, avatar and an account menu with the rail's sections, counts,
   const menu = html.slice(html.indexOf('id="menu-cuenta"'));
   assert.match(menu, /^id="menu-cuenta" hidden=""/);
   const labels = [...menu.matchAll(/<a href="([^"]+)"[^>]*><span[^>]*>([^<]+)<\/span>/g)].map((match) => match[2]);
-  assert.deepEqual(labels, ["Resumen", "Mis publicaciones", "Publicar", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(labels, ["Resumen", "Mis publicaciones", "Publicar", "Mi equipo", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.match(menu, /3 notificaciones sin leer/);
   assert.match(menu, /1 compras requieren tu confirmación/);
   assert.match(menu, /href="\/admin"[^>]*>Admin</);
@@ -392,7 +392,8 @@ test("footers: full on the home with four columns, slim everywhere else (N5)", (
   for (const href of full.matchAll(/href="([^"]+)"/g)) assert.doesNotMatch(href[1], /como-funciona|consejos-para-vender/);
   const slim = renderToStaticMarkup(React.createElement(SiteFooter, { variant: "slim" }));
   assert.match(slim, /© 2026 Laria · No cobramos comisiones ni procesamos pagos\./);
-  assert.deepEqual([...slim.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1]), ["/consejos-de-seguridad", "/terminos", "/privacidad", "/libro-de-reclamaciones"]);
+  // Feature ideas, accounts batch (safe-10): the help center comes first.
+  assert.deepEqual([...slim.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1]), ["/ayuda", "/consejos-de-seguridad", "/terminos", "/privacidad", "/libro-de-reclamaciones"]);
 });
 
 test("404 and 500 share one body: title, one line, the search and two links", () => {

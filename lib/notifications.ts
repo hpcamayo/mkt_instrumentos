@@ -71,6 +71,16 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   seller_level_earned: "Eres Vendedor destacado",
   seller_level_lapsed: "Dejaste de ser Vendedor destacado",
   // --- end deal-trust batch ---
+  // Feature ideas, selling-tools batch.
+  listing_price_step: "Bajada automática",
+  listing_private_offer: "Oferta de un favorito",
+  listing_consignment_update: "Consignación",
+  store_trade_request: "Pedido de oferta",
+  store_trade_update: "Novedad en Ofertas",
+  gear_trade_offer: "Te enviaron una oferta",
+  gear_trade_update: "Novedad de tu pedido",
+  gear_reminder_due: "Recordatorio de Mi equipo",
+  // /Feature ideas, selling-tools batch
 };
 
 export const DEFAULT_NOTIFICATION_LABEL = "Actualización de tu cuenta";
@@ -94,6 +104,10 @@ export function isQuestionNotification(eventType: string) {
 export const SELLER_LEVEL_EVENTS = new Set(["seller_level_earned", "seller_level_lapsed", "store_level_earned", "store_level_lapsed"]);
 
 export function notificationHref(notification: NotificationTarget, listingSlug?: string | null) {
+  // Feature ideas, selling-tools batch.
+  const selling = sellingNotificationHref(notification);
+  if (selling) return selling;
+  // /Feature ideas, selling-tools batch
   const transactionReference = notification.transaction_id ?? notification.claim_id;
   // feature-ideas services (bet-02): every service notice opens Mi cuenta › Servicios (bookings at their section).
   if (notification.event_type.startsWith("service_")) {
@@ -136,3 +150,28 @@ export function notificationHref(notification: NotificationTarget, listingSlug?:
       ? "/mi-cuenta/tienda/inventario"
       : "/mi-cuenta/publicaciones";
 }
+
+// Feature ideas, selling-tools batch (docs/feature-ideas/selling-tools.md): requests and offers open their inbox, a price
+// step opens the listing's selling tools, a private offer opens the listing, a reminder opens Mi equipo.
+function sellingNotificationHref(notification: NotificationTarget) {
+  const listing = notification.listing_id;
+  switch (notification.event_type) {
+    case "gear_trade_offer":
+    case "gear_trade_update":
+      return "/mi-cuenta/equipo/ofertas";
+    case "store_trade_request":
+    case "store_trade_update":
+      return "/mi-cuenta/tienda/ofertas";
+    case "gear_reminder_due":
+      return "/mi-cuenta/equipo";
+    case "listing_price_step":
+      return listing ? `/mi-cuenta/publicaciones/${listing}/herramientas` : "/mi-cuenta/publicaciones";
+    case "listing_private_offer":
+      return listing ? `/instrumentos/${listing}` : "/mi-cuenta/favoritos";
+    case "listing_consignment_update":
+      return notification.store_id && listing ? `/mi-cuenta/publicaciones/${listing}/herramientas` : "/mi-cuenta/equipo";
+    default:
+      return null;
+  }
+}
+// /Feature ideas, selling-tools batch

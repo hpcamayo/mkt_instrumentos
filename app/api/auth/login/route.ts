@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import { EMAIL_NOT_CONFIRMED, isEmailNotConfirmedError } from "@/lib/auth/confirmation";
+import { recordSignInDevice } from "@/lib/auth/devices";
+import { getAssurance } from "@/lib/auth/mfa";
+import { rememberMarker, withRememberChoice } from "@/lib/auth/remember";
 import type { Database } from "@/lib/supabase/database.types";
 
 export async function POST(request: NextRequest) {
@@ -17,17 +20,21 @@ export async function POST(request: NextRequest) {
       : "";
   const password =
     body && typeof body.password === "string" ? body.password : "";
+  // safe-08: "Mantener sesión iniciada" (ticked unless the person unticks it).
+  const remember = !(body && body.remember === false);
   if (!email || !password) {
     return failure("Ingresa tu correo y contraseña.", 400);
   }
 
-  const response = NextResponse.json({ ok: true });
+  let response = NextResponse.json({ ok: true });
+  const sessionCookies: { name: string; value: string; options: Parameters<typeof withRememberChoice>[0] }[] = [];
   const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (values) => {
         for (const { name, value, options } of values) {
-          response.cookies.set(name, value, options);
+          request.cookies.set(name, value);
+          sessionCookies.push({ name, value, options });
         }
       },
     },
@@ -46,6 +53,16 @@ export async function POST(request: NextRequest) {
       401,
     );
   }
+
+  // safe-08: an account with an authenticator app finishes signing in with its code.
+  const assurance = await getAssurance(supabase);
+  response = NextResponse.json({ ok: true, needsCode: assurance.needsCode });
+  for (const { name, value, options } of sessionCookies) {
+    response.cookies.set(name, value, withRememberChoice(options, remember));
+  }
+  const marker = rememberMarker(remember, request.nextUrl.protocol === "https:");
+  response.cookies.set(marker.name, marker.value, marker.options);
+  await recordSignInDevice(supabase, request, response);
 
   return response;
 }

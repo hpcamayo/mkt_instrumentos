@@ -2722,6 +2722,68 @@ export type Database = {
         }
         Returns: Json
       }
+      // Feature ideas, accounts batch (docs/feature-ideas/accounts.md): safe-08, safe-09, safe-10, safe-02, safe-05.
+      record_sign_in_device: { Args: { p_device_hash: string; p_label: string }; Returns: Json }
+      list_my_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          session_id: string
+          device_label: string | null
+          user_agent: string | null
+          ip: string | null
+          created_at: string
+          last_active_at: string | null
+          aal: string
+          is_current: boolean
+        }[]
+      }
+      revoke_my_session: { Args: { p_session_id: string }; Returns: boolean }
+      prepare_sign_out_everywhere: { Args: Record<PropertyKey, never>; Returns: number }
+      my_two_step_requirement: { Args: Record<PropertyKey, never>; Returns: Json }
+      create_my_recovery_codes: { Args: Record<PropertyKey, never>; Returns: string[] }
+      use_my_recovery_code: { Args: { p_code: string }; Returns: boolean }
+      export_my_data: { Args: Record<PropertyKey, never>; Returns: Json }
+      my_account_deletion_check: { Args: Record<PropertyKey, never>; Returns: Json }
+      service_delete_account: { Args: { p_user_id: string }; Returns: Json }
+      submit_help_ticket: {
+        Args: { p_name: string; p_email: string | null; p_topic: string; p_message: string; p_page_path?: string | null; p_client_hash?: string | null }
+        Returns: Json
+      }
+      my_help_tickets: { Args: Record<PropertyKey, never>; Returns: Json }
+      admin_help_tickets: { Args: { p_status?: string | null; p_limit?: number }; Returns: Json }
+      admin_answer_help_ticket: { Args: { p_ticket_id: string; p_answer: string; p_close?: boolean }; Returns: Json }
+      admin_set_help_ticket_status: { Args: { p_ticket_id: string; p_status: string }; Returns: string }
+      listings_needing_fingerprints: { Args: { p_limit?: number }; Returns: Json }
+      service_record_listing_fingerprints: { Args: { p_listing_id: string; p_items: Json }; Returns: Json }
+      service_listings_fingerprint_state: { Args: { p_listing_ids: string[] }; Returns: Json }
+      admin_listing_red_flags: { Args: { p_listing_ids: string[] }; Returns: Json }
+      admin_red_flags: { Args: { p_status?: string; p_limit?: number }; Returns: Json }
+      admin_review_red_flag: { Args: { p_flag_id: string; p_status: string; p_note?: string | null }; Returns: string }
+      submit_stolen_gear_report: {
+        Args: {
+          p_brand: string
+          p_model: string | null
+          p_description: string
+          p_serial: string | null
+          p_stolen_on: string
+          p_place: string
+          p_police_report: string
+          p_police_station: string | null
+          p_photos?: Json
+        }
+        Returns: Json
+      }
+      my_stolen_reports: { Args: Record<PropertyKey, never>; Returns: Json }
+      set_my_stolen_report_status: { Args: { p_report_id: string; p_status: string }; Returns: string }
+      set_listing_serial: { Args: { p_listing_id: string; p_serial: string | null }; Returns: boolean }
+      get_listing_serial: { Args: { p_listing_id: string }; Returns: string | null }
+      set_inventory_item_serials: { Args: { p_item_id: string; p_serials: string[] }; Returns: number }
+      get_inventory_item_serials: { Args: { p_item_id: string }; Returns: string[] }
+      admin_stolen_matches: { Args: { p_status?: string; p_limit?: number }; Returns: Json }
+      admin_review_stolen_match: { Args: { p_match_id: string; p_status: string; p_note?: string | null }; Returns: Json }
+      admin_stolen_reports: { Args: { p_status?: string; p_limit?: number }; Returns: Json }
+      admin_set_stolen_report_status: { Args: { p_report_id: string; p_status: string; p_reason?: string | null }; Returns: string }
+      // End of the accounts batch block.
     }
     Enums: {
       listing_status:

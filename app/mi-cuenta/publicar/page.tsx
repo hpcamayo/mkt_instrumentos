@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SellListingForm } from "@/components/sell-listing-form";
 import { DraftList } from "@/components/selling/draft-list";
+import { SellToStorePrompt } from "@/components/offers/sell-to-store-prompt";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
@@ -34,6 +35,7 @@ export default async function PublishParticularPage({ searchParams }: { searchPa
       />
       {data?.draftMissing ? <Notice tone="warning" role="note">Ese borrador ya no existe: puede que ya lo hayas publicado o descartado.</Notice> : null}
       {complete && profile && data ? <>
+        {data.serverDraft ? null : <SellToStorePrompt supabase={supabase} region={normalizePeruRegion(profile.region)} />}
         {/* key: opening another draft from the drafts list starts a fresh form. */}
         <SellListingForm
           key={data.serverDraft?.id ?? "nuevo"}
