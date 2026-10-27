@@ -27,7 +27,7 @@ const SQUIER = "d5000000-0000-4000-8000-000000000001";
 const TOUR = {
   visitor: [
     [["buy-08"], "Catálogo en mapa", "/listados?vista=mapa", true],
-    [["sell-06", "sell-07", "buy-02"], "Publicación de un Particular: entrega, parte de pago y combo", "/instrumentos/demo-particular-squier-bullet", true],
+    [["sell-06", "sell-07", "buy-02", "buy-01"], "Publicación de un Particular: entrega, cambios, precio y combo", "/instrumentos/demo-particular-squier-bullet", true],
     [["reach-09", "buy-07", "buy-09", "run-02"], "Publicación de tienda: garantía, prueba, cuotas y sedes", "/instrumentos/demo-fender-player-strat-3ts", true],
     [["reach-08"], "Por llegar en un instrumento agotado", "/instrumentos/demo-boss-tu-3", false],
     [["reach-04", "reach-05"], "Distribuidor oficial y campaña en una publicación", "/instrumentos/demo-boss-ds-1", false],
@@ -41,8 +41,8 @@ const TOUR = {
     [["safe-07"], "Comprador con historial", "/comprador/a1b2c3d4e5f60718293a4b5c", false],
     [["disc-02"], "Guías de compra", "/guias", false],
     [["disc-02"], "Una guía", "/guias/que-revisar-en-una-guitarra-usada", false],
-    [["disc-03"], "Buscador de regalos", "/regalos", true],
-    [["buy-05"], "Colección", "/colecciones/andino", false],
+    [["buy-05"], "Buscador de regalos", "/regalos", true],
+    [["disc-03"], "Colección", "/colecciones/andino", false],
     [["disc-05"], "Artistas verificados", "/artistas", false],
     [["reach-05"], "Campañas Laria", "/campanas", false],
     [["reach-05"], "Una campaña", "/campanas/semana-de-la-musica", true],
@@ -60,7 +60,7 @@ const TOUR = {
     [["sell-05"], "Oferta para ti en una publicación guardada", "/instrumentos/demo-particular-squier-bullet", false],
   ],
   seller: [
-    [["sell-01"], "Mi equipo", "/mi-cuenta/equipo", true],
+    [["sell-01", "buy-06"], "Mi equipo", "/mi-cuenta/equipo", true],
     [["sell-01"], "Agregar a Mi equipo", "/mi-cuenta/equipo/nuevo", false],
     [["sell-02"], "Pedir ofertas a tiendas", "/mi-cuenta/equipo/ofertas/nueva", false],
     [["run-04"], "Parte de pago", "/mi-cuenta/equipo/parte-de-pago", false],
@@ -95,7 +95,7 @@ const TOUR = {
     [["safe-06", "safe-03", "reach-11"], "Admin: confianza", "/admin/confianza", true],
     [["reach-05"], "Admin: campañas", "/admin/campanas", false],
     [["reach-04"], "Admin: distribuidores", "/admin/distribuidores", false],
-    [["buy-05"], "Admin: colecciones", "/admin/colecciones", false],
+    [["disc-03"], "Admin: colecciones", "/admin/colecciones", false],
     [["disc-04"], "Admin: fabricantes y talleres", "/admin/fabricantes", false],
     [["disc-05"], "Admin: artistas verificados", "/admin/artistas", false],
     [["bet-02"], "Admin: servicios", "/admin/servicios", false],
