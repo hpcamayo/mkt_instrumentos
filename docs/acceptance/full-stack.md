@@ -81,6 +81,10 @@ SEO-007, LEGAL-005, LEGAL-006, SCOPE-001 to SCOPE-006 and SCOPE-008) keep Not Ru
 because a person still reviews them. LIST-008 waits for the owner's call (above), and ALERT-005 stays Blocked (below).
 The registry then counts 384 Pass, 154 Not Run and 1 Blocked among its 539 cases.
 
+After the review, the checks of AUTH-004, AUTH-008, AUTH-013, LIST-022 and SDASH-003 grew to the whole of each case
+(expired links, Supabase's own refusal, a retry with other photos, removing assets and links). They passed in run
+40587182089 (commit 675fb6a), which those five cases' evidence adds.
+
 ## Not covered here
 
 - ALERT-005 needs the daily digest in a real inbox in production; it stays Blocked until then.
