@@ -24,8 +24,9 @@ here nothing is.
 
 ## The Acceptance workflow
 
-`.github/workflows/acceptance.yml` runs on the same events: it starts a full local Supabase (Postgres 17, Auth,
-PostgREST, Storage), builds and starts the app, and runs the integration tests that need both
+`.github/workflows/acceptance.yml` runs on every pull request into `main`, every push to `main` and by hand: it starts
+a full local Supabase (Postgres 17, Auth, PostgREST, Storage), builds and starts the app, and runs the integration tests
+that need both
 (`acceptance-release-gate`, `submissions`, `listing-lifecycle`, `sprint-3-1`, `photos`, `analytics`, `favorites`,
 `alerts`, `transactions`, `sprint-8-admin-reports`) and the public pages check. It reads no repository secret either.
 `docs/acceptance/full-stack.md` has the details.

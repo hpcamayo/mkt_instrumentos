@@ -3,7 +3,9 @@
 # Auth, PostgREST, Storage) and the production build of the app on http://localhost:3100, with throwaway accounts only.
 # Nothing here reads hosted Supabase or production. CI runs it (.github/workflows/acceptance.yml); elsewhere it needs
 # Docker and the Supabase CLI, and a clean worktree: it writes supabase/config.toml and .env.local, so it refuses a
-# folder that already has either. docs/acceptance/full-stack.md explains it.
+# folder that already has either, or another env file the app's build would read. Its stack is its own project,
+# laria_acceptance, on its own ports, so another local stack is never reused, stopped or wiped.
+# docs/acceptance/full-stack.md explains it.
 # Usage: scripts/acceptance/full-stack.sh [results-dir]
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -11,11 +13,25 @@ REPO="$PWD"
 mkdir -p "${1:-acceptance-results}"
 RESULTS="$(cd "${1:-acceptance-results}" && pwd)"
 BASE=http://localhost:3100
-DB_CONTAINER=supabase_db_mkt_instrumentos
+PROJECT_ID=laria_acceptance
+DB_CONTAINER="supabase_db_$PROJECT_ID"
 
-for file in supabase/config.toml .env.local; do
+# next build and next start read these too, and .env.production.local even over .env.local.
+for file in supabase/config.toml .env .env.local .env.production .env.production.local; do
   if [ -e "$file" ]; then
-    echo "$file exists: run this from a clean worktree, so your own setup is never replaced." >&2
+    echo "$file exists: run this from a clean worktree, so your own setup is never replaced or used." >&2
+    exit 1
+  fi
+done
+if [ -n "$(docker ps -aq --filter "name=^${DB_CONTAINER}\$")" ]; then
+  echo "A $PROJECT_ID stack is already there (another run, or one that was killed). Remove it with" >&2
+  echo "supabase stop --no-backup --project-id $PROJECT_ID, then run this again." >&2
+  exit 1
+fi
+# The API, database and e-mail ports of scripts/acceptance/supabase-config.toml.
+for port in 55321 55322 55324; do
+  if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+    echo "Port $port is taken; the acceptance stack needs 55321, 55322 and 55324." >&2
     exit 1
   fi
 done
@@ -23,9 +39,9 @@ done
 APP_PID=""
 cleanup() {
   if [ -n "$APP_PID" ]; then kill "$APP_PID" 2>/dev/null || true; fi
-  # On a developer's machine, leave nothing behind; a CI runner is discarded anyway.
-  if [ -z "${CI:-}" ]; then
-    supabase stop --no-backup >/dev/null 2>&1 || true
+  # On a developer's machine, leave nothing behind; a GitHub runner is discarded anyway.
+  if [ "${GITHUB_ACTIONS:-}" != "true" ]; then
+    supabase stop --no-backup --project-id "$PROJECT_ID" >/dev/null 2>&1 || true
     rm -f "$REPO/supabase/config.toml" "$REPO/.env.local"
   fi
 }
@@ -38,7 +54,7 @@ cp scripts/acceptance/supabase-config.toml supabase/config.toml
 # CLI's own default is public.ecr.aws). Each try starts from an empty database.
 registries=()
 for registry in "${SUPABASE_INTERNAL_IMAGE_REGISTRY:-public.ecr.aws}" docker.io ghcr.io public.ecr.aws; do
-  case " ${registries[*]} " in *" $registry "*) ;; *) registries+=("$registry") ;; esac
+  case " ${registries[*]-} " in *" $registry "*) ;; *) registries+=("$registry") ;; esac
 done
 tries=6
 started=""
@@ -50,7 +66,7 @@ for attempt in $(seq 1 "$tries"); do
     started=1
     break
   fi
-  supabase stop --no-backup >/dev/null 2>&1 || true
+  supabase stop --no-backup --project-id "$PROJECT_ID" >/dev/null 2>&1 || true
   if [ "$attempt" -lt "$tries" ]; then
     echo "Supabase did not start from $registry; trying again in $((attempt * 20)) seconds." >&2
     sleep $((attempt * 20))

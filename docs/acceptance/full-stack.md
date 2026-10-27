@@ -37,19 +37,19 @@ app's own pages make: the same route, database function or table call, signed in
 | Cases | What is checked |
 |---|---|
 | AUTH-002 | A second sign-up with a registered address creates no account and the form recognises it. The stack confirms neither addresses nor phone numbers on its own, like production (read on 27 Oct 2026), so Supabase answers with an account that has no identities; where Auth confirms either on its own, it answers with the error `user_already_exists` instead. Both forms read either answer as an existing account (`signUpFoundExistingAccount`, `signUpErrorFoundExistingAccount`). |
-| AUTH-004, AUTH-013 | A used or invalid sign-up or reset link goes to `/login` with its message, sets no cookie, keeps an open session and leaves the password as it was. |
+| AUTH-004, AUTH-013 | An expired, used or invalid sign-up or reset link goes to `/login` with its message, sets no cookie, keeps an open session, leaves the address unconfirmed and the password as it was. A link expires by moving its sent time two hours back, past `otp_expiry`. |
 | AUTH-005, AUTH-006 | Password sign-in reaches `/mi-cuenta`; a wrong password and an unknown address get the same 401 and no cookie. |
-| AUTH-008, AUTH-011 | A sign-in link or a reset for an unknown address creates no account; the reset answers alike for any address. |
+| AUTH-008, AUTH-011 | A sign-in link for an unknown address is refused ("Signups not allowed for otp") and creates no account; a reset creates none either and answers alike for any address. |
 | AUTH-009 | Signing out clears the session cookies, `/mi-cuenta` then goes to `/login`, and the old session can't be renewed. |
 | AUTH-014, AUTH-015 | A password change takes effect; profile changes save and show; the account type can't be changed. |
 | AUTH-016 | One Particular account saves a favorite and an alert, contacts a seller and has its own listings. |
 | AUTH-019, AUTH-020 | An account page without a session goes to sign-in and back; outside return addresses land on `/mi-cuenta`. |
-| LIST-001 to LIST-012, LIST-014, LIST-020 to LIST-022 | The publishing route: sign-in required, each required field, rules acceptance and price refused with its message and nothing kept; a tampered request (status, owner, store, timestamps) creates the account's own pending listing; retries don't duplicate or change it; forged or foreign capabilities are refused; characteristics show with their labels and never as raw keys. |
+| LIST-001 to LIST-012, LIST-014, LIST-020 to LIST-022 | The publishing route: sign-in required, each required field, rules acceptance and price refused with its message and nothing kept; a tampered request (status, owner, store, timestamps) creates the account's own pending listing; retries, with the same or changed data or photos, don't duplicate or change it; forged or foreign capabilities are refused; characteristics show with their labels and never as raw keys. |
 | LIST-015 to LIST-019 | An account's listing shows the profile's name and opens WhatsApp to the profile's number, also after a change; a listing without an account keeps its own contact and isn't claimed by a new account with the same number. |
 | LIFE-001, LIFE-002 | Admin's approval publishes and sets the first publication time; a rejection keeps the listing hidden, shows the reason to the owner and queues the e-mail. |
 | LIFE-007, LIFE-008, LIFE-010 to LIFE-012 | A sold listing leaves the catalog and can't be put back on sale; relisted copies go to review, except a Tienda Verificada's. |
 | REV-001 to REV-004, REV-006 to REV-009 | Price, description, place and characteristics change at once; category, type, brand and model wait for review while the live version, its characteristics included, stays. A category or type change sends the new type's characteristics, as the edit page does. |
-| SDASH-002, SDASH-003 | A store owner changes its details, logo, banner, shop photos and links; Admin's fields and outside images are refused. |
+| SDASH-002, SDASH-003 | A store owner changes its details, logo, banner, shop photos and links, and removes them; Admin's fields and outside images are refused. |
 | WA-008 to WA-010 | Only signed-in contacts make a buyer selectable when the listing is sold; others aren't; a buyer appears once. |
 | SCOPE-001, SCOPE-003 to SCOPE-006, LEGAL-006 | The account pages (Particular and store) offer no checkout, shipping, commission, paid plan, chat or guarantee. |
 
@@ -92,7 +92,8 @@ The registry then counts 384 Pass, 154 Not Run and 1 Blocked among its 539 cases
 ## Running it on your machine
 
 It needs Docker, the Supabase CLI and a clean worktree: it writes `supabase/config.toml` and `.env.local`, so it
-refuses a folder that has either, and it removes both and stops its stack when it ends.
+refuses a folder that has either, or `.env`, `.env.production` or `.env.production.local` (the build would read them
+too), and it removes both and stops its stack when it ends.
 
 ```sh
 git worktree add ../mkt_instrumentos-acceptance origin/main
@@ -101,6 +102,9 @@ pnpm install --frozen-lockfile
 bash scripts/acceptance/full-stack.sh /tmp/laria-acceptance
 ```
 
-Its stack uses the CLI's default ports (54321 and 54322), so stop another local Supabase first. It takes the images
-from the registry `SUPABASE_INTERNAL_IMAGE_REGISTRY` names, or from the CLI's default, public.ecr.aws, and tries the
-other two in turn if that one refuses them.
+Its stack is a project of its own, `laria_acceptance`, on its own ports (55321 for the API, 55322 for the database,
+55324 for the e-mail viewer). The CLI names containers and data volumes after the project, so the run never reuses,
+stops or wipes another local Supabase, and can run beside one. It refuses to start when one of those ports is taken or
+a `laria_acceptance` stack is already there; `supabase stop --no-backup --project-id laria_acceptance` removes one left
+by a killed run. It takes the images from the registry `SUPABASE_INTERNAL_IMAGE_REGISTRY` names, or from the CLI's
+default, public.ecr.aws, and tries the other two in turn if that one refuses them.

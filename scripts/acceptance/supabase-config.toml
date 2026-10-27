@@ -1,20 +1,22 @@
 # Launch audit A14: the local Supabase that scripts/acceptance/full-stack.sh starts for the end-to-end acceptance run
 # (in CI, .github/workflows/acceptance.yml). It copies this file to supabase/config.toml, which the repository doesn't
-# track, so a developer's own config is never replaced. Auth is set like production where the release-gate cases
-# depend on it: e-mail and phone confirmation on, passwords of at least 8 characters, authenticator codes (Admin needs
-# aal2). The limits are raised because the tests sign in many throwaway accounts from one address.
-project_id = "mkt_instrumentos"
+# track, so a developer's own config is never replaced. Its project id and ports are its own: the CLI names containers
+# and data volumes after the project id, so the run never reuses, stops or wipes another local stack, and it can run
+# beside one. Auth is set like production where the release-gate cases depend on it: e-mail and phone confirmation on,
+# passwords of at least 8 characters, authenticator codes (Admin needs aal2). The limits are raised because the tests
+# sign in many throwaway accounts from one address.
+project_id = "laria_acceptance"
 
 [api]
 enabled = true
-port = 54321
+port = 55321
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-port = 54322
-shadow_port = 54320
+port = 55322
+shadow_port = 55320
 major_version = 17
 
 [db.seed]
@@ -29,7 +31,7 @@ enabled = false
 
 [inbucket]
 enabled = true
-port = 54324
+port = 55324
 
 [storage]
 enabled = true
@@ -58,6 +60,8 @@ token_verifications = 1000
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
+# Off in production too (Secure password change, read on 27 Oct 2026). The app's password form has no reauthentication
+# step, so with it on, an account signed in more than 24 hours ago couldn't change its password.
 secure_password_change = false
 max_frequency = "1s"
 otp_length = 6

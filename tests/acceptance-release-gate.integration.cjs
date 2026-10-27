@@ -296,6 +296,13 @@ function databaseValue(sql) {
   return execFileSync("docker", ["exec", container, "psql", "-U", "postgres", "-d", "postgres", "-Atc", sql], { encoding: "utf8" }).trim();
 }
 
+// Makes a link generated a moment ago read as sent two hours ago. Auth refuses a link once that time is older than
+// otp_expiry (an hour, scripts/acceptance/supabase-config.toml); a new link for the same account replaces it.
+function expireLink(userId, column) {
+  assert.match(userId, /^[0-9a-f-]{36}$/);
+  assert.equal(databaseValue(`update auth.users set ${column} = now() - interval '2 hours' where id = '${userId}'`), "UPDATE 1");
+}
+
 function digits(value) {
   return String(value ?? "").replace(/\D/g, "");
 }
@@ -378,16 +385,21 @@ function digits(value) {
     return `Supabase answered with the account without identities, as production does; one account, name and password unchanged; the form says "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo."`;
   });
 
-  await check("AUTH-004", "a used or invalid sign-up link goes to sign-in with a message, sets no session and leaves an open one alone", async () => {
-    const email = `qa-gate-signup-${tag}@example.invalid`;
-    const link = await service.auth.admin.generateLink({ type: "signup", email, password: `Qa-${randomUUID()}`, options: { data: { account_type: "seller", full_name: `QA Alta ${tag}` } } });
-    assert.equal(link.error, null, link.error?.message);
-    created.users.push(link.data.user.id);
+  await check("AUTH-004", "an expired, used or invalid sign-up link goes to sign-in with a message, sets no session and leaves an open one alone", async () => {
+    const signUpLink = async (email, name) => {
+      const link = await service.auth.admin.generateLink({ type: "signup", email, password: `Qa-${randomUUID()}`, options: { data: { account_type: "seller", full_name: name } } });
+      assert.equal(link.error, null, link.error?.message);
+      created.users.push(link.data.user.id);
+      return link.data;
+    };
+    const late = await signUpLink(`qa-gate-signup-late-${tag}@example.invalid`, `QA Alta Tarde ${tag}`);
+    expireLink(late.user.id, "confirmation_sent_at");
+    const link = await signUpLink(`qa-gate-signup-${tag}@example.invalid`, `QA Alta ${tag}`);
     const callback = (hash) => `/auth/callback?token_hash=${encodeURIComponent(hash)}&type=signup&next=${encodeURIComponent("/mi-cuenta?confirmed=1")}`;
-    const first = await app(callback(link.data.properties.hashed_token));
+    const first = await app(callback(link.properties.hashed_token));
     assert.equal(first.status, 307);
     assert.equal(location(first).pathname, "/mi-cuenta", "the first use of the link failed");
-    for (const hash of [link.data.properties.hashed_token, "0".repeat(56)]) {
+    for (const hash of [late.properties.hashed_token, link.properties.hashed_token, "0".repeat(56)]) {
       const response = await app(callback(hash), { cookie: sellerCookie });
       assert.equal(response.status, 307);
       const target = location(response);
@@ -395,8 +407,10 @@ function digits(value) {
       assert.equal(target.searchParams.get("error"), "No se pudo confirmar la sesión.");
       assert.equal(response.headers.getSetCookie().length, 0, "a refused link changed cookies");
     }
+    const lateUser = await service.auth.admin.getUserById(late.user.id);
+    assert.equal(lateUser.data.user.email_confirmed_at ?? null, null, "the expired link confirmed the address");
     assert.equal((await app("/mi-cuenta", { cookie: sellerCookie })).status, 200, "the session that was open was lost");
-    return "\"No se pudo confirmar la sesión.\" on /login";
+    return "\"No se pudo confirmar la sesión.\" on /login for each; the expired link's address stays unconfirmed";
   });
 
   await check("AUTH-008", "a sign-in link for an unknown address creates no account", async () => {
@@ -404,7 +418,7 @@ function digits(value) {
     const anon = createClient(url, anonKey, { auth: { persistSession: false } });
     // The login form's call (components/login-form.tsx).
     const { error } = await anon.auth.signInWithOtp({ email, options: { emailRedirectTo: `${base}/auth/callback?next=%2Fmi-cuenta`, shouldCreateUser: false } });
-    assert.ok(error, "Supabase accepted a sign-in link for an address without an account");
+    assert.match(error?.message ?? "", /Signups not allowed for otp/, "Supabase didn't refuse the link for an address without an account");
     assert.equal((await usersWithEmail(email)).length, 0);
     assert.deepEqual((await post("/api/auth/check-email", { email })).body, { ok: true, available: true });
     return `Supabase refused it ("${error.message}"); the form says "No se pudo enviar el enlace. Verifica que ya tengas una cuenta."`;
@@ -424,19 +438,25 @@ function digits(value) {
     return "both answer alike; the form says \"Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.\"";
   });
 
-  await check("AUTH-013", "a used or invalid reset link goes to sign-in with a message and leaves the password as it was", async () => {
-    const link = await service.auth.admin.generateLink({ type: "recovery", email: other.email });
-    assert.equal(link.error, null, link.error?.message);
+  await check("AUTH-013", "an expired, used or invalid reset link goes to sign-in with a message and leaves the password as it was", async () => {
     const callback = (hash) => `/auth/callback?token_hash=${encodeURIComponent(hash)}&type=recovery&next=%2Fmi-cuenta`;
-    const first = await app(callback(link.data.properties.hashed_token));
-    assert.equal(location(first).pathname, "/restablecer-contrasena", "the first use of the link failed");
-    for (const hash of [link.data.properties.hashed_token, "0".repeat(56)]) {
+    const refused = async (hash) => {
       const response = await app(callback(hash));
       const target = location(response);
       assert.equal(target.pathname, "/login");
       assert.equal(target.searchParams.get("error"), "El enlace de recuperación no es válido o ya venció.");
       assert.equal(response.headers.getSetCookie().length, 0, "a refused link set cookies");
-    }
+    };
+    // The expired link first: the next one generated for the account replaces it.
+    const late = await service.auth.admin.generateLink({ type: "recovery", email: other.email });
+    assert.equal(late.error, null, late.error?.message);
+    expireLink(other.id, "recovery_sent_at");
+    await refused(late.data.properties.hashed_token);
+    const link = await service.auth.admin.generateLink({ type: "recovery", email: other.email });
+    assert.equal(link.error, null, link.error?.message);
+    const first = await app(callback(link.data.properties.hashed_token));
+    assert.equal(location(first).pathname, "/restablecer-contrasena", "the first use of the link failed");
+    for (const hash of [link.data.properties.hashed_token, "0".repeat(56)]) await refused(hash);
     assert.equal((await post("/api/auth/login", { email: other.email, password: other.password })).status, 200, "the password changed");
     return "\"El enlace de recuperación no es válido o ya venció.\" on /login";
   });
@@ -627,12 +647,23 @@ function digits(value) {
     assert.equal(photos.data.length, draft.paths.length);
   });
 
-  await check("LIST-022", "the same capability with changed data, a forged one or another account's can't change or copy the listing", async () => {
+  await check("LIST-022", "the same capability with changed data or photos, a forged one or another account's can't change or copy the listing", async () => {
     assert.ok(submitted, "LIST-003 created nothing");
+    const photos = async () => (await service.from("listing_photos").select("id,image_url,sort_order").eq("listing_id", draft.id).order("sort_order")).data;
+    const photosBefore = await photos();
+    assert.equal(photosBefore.length, draft.paths.length);
     const changed = await complete(sellerCookie, draft, listingFields({ title: "Título cambiado al reintentar", price_pen: 1 }));
     assert.equal(changed.status, 200, changed.body?.message);
     const stored = await listing(draft.id, "title,price_pen");
     assert.deepEqual(stored, { title: submitted.title, price_pen: submitted.price_pen }, "the retry changed the listing");
+    // Other photos: a new one in the submission's folder, then the second of the two first sent.
+    const extra = `${draft.folder}/2.png`;
+    const uploaded = await sellerClient.storage.from("listing-photos").upload(extra, png, { contentType: "image/png" });
+    assert.equal(uploaded.error, null, uploaded.error?.message);
+    created.uploads.push({ bucket: "listing-photos", path: extra });
+    const otherPhotos = await complete(sellerCookie, { ...draft, paths: [extra, draft.paths[1]] }, listingFields());
+    assert.equal(otherPhotos.status, 200, otherPhotos.body?.message);
+    assert.deepEqual(await photos(), photosBefore, "the retry changed the photos");
     const forged = await post("/api/submissions", { action: "complete", token: `${draft.token}x`, fields: listingFields(), paths: draft.paths, roles: [null, null] }, { cookie: sellerCookie });
     assert.equal(forged.status, 403);
     const foreign = await complete(buyerCookie, draft, listingFields({ title: "Copia de otra cuenta" }));
@@ -640,7 +671,7 @@ function digits(value) {
     assert.equal(foreign.body.message, "Este envío pertenece a otra cuenta.");
     const { count } = await service.from("listings").select("id", { count: "exact", head: true }).ilike("title", `%${tag}%Fender Stratocaster%`);
     assert.equal(count, 1, "the listing was copied");
-    return "a changed retry answers \"completed\" and changes nothing; forged: 403; another account: 403";
+    return "a retry with changed data or photos answers \"completed\" and changes nothing; forged: 403; another account: 403";
   });
 
   // LIST-008 asks for a category without instrument types. Since the marketplace categories (migration 20261022120000)
@@ -949,7 +980,7 @@ function digits(value) {
     return `${locked.length} protected fields refused; the store page shows the change`;
   });
 
-  await check("SDASH-003", "a store owner sets the logo, banner and shop photos, and only from its own folder", async () => {
+  await check("SDASH-003", "a store owner sets and removes the logo, banner, shop photos and links, and only from its own folder", async () => {
     const client = await browserClient(storeOwner);
     const folder = `${storeOwner.id}/${normalStore.id}`;
     const uploaded = {};
@@ -971,7 +1002,15 @@ function digits(value) {
     const removed = await client.from("store_photos").delete().eq("id", photo.data.id).select("id");
     assert.equal(removed.error, null, removed.error?.message);
     assert.equal((await service.from("store_photos").select("id").eq("id", photo.data.id)).data.length, 0, "the photo wasn't removed");
-    return "logo, banner and a shop photo saved, the photo removed; an outside image refused; social links saved in SDASH-002";
+    // The form's "Quitar la imagen actual" sends null for the logo or the banner; an emptied link field sends "".
+    const cleared = await client.from("stores").update({ logo_url: null, banner_url: null, instagram_url: "" }).eq("id", normalStore.id);
+    assert.equal(cleared.error, null, cleared.error?.message);
+    const stored = (await service.from("stores").select("logo_url,banner_url,instagram_url,facebook_url").eq("id", normalStore.id).single()).data;
+    assert.equal(stored.logo_url, null);
+    assert.equal(stored.banner_url, null);
+    assert.ok(!stored.instagram_url, "the Instagram link wasn't removed");
+    assert.equal(stored.facebook_url, "https://www.facebook.com/qagate", "another link changed");
+    return "logo, banner and a shop photo saved, then removed, with the Instagram link; an outside image refused; links saved in SDASH-002";
   });
 
   // ----------------------------------------------------------------------------- one account, buying and selling
