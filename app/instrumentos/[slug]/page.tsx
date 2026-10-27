@@ -11,7 +11,7 @@ import { OwnerBar, RestockAlert, SimilarAlert } from "@/components/listing/listi
 import { ListingGallery } from "@/components/listing/listing-gallery";
 import { RELATED_ROW_MAX, RelatedListings, RelatedListingsSkeleton } from "@/components/listing/related-listings";
 import { ShareListing } from "@/components/listing/share-button";
-import { ListingQuestions } from "@/components/listing/listing-questions";
+import { ListingQuestions } from "@/components/listing/listing-lazy";
 import { ReputationSection } from "@/components/listing/reputation-section";
 import { RatingFigure, SellerCard, sellerKindLabel, type SellerSummary } from "@/components/listing/seller-card";
 import { SpecTable } from "@/components/listing/spec-table";

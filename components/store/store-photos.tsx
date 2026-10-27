@@ -2,10 +2,11 @@
 
 import { useRef, useState } from "react";
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
-import { Lightbox } from "@/components/listing/lightbox";
+import { Lightbox, preloadLightbox } from "@/components/listing/listing-lazy";
 import type { ListingPhotoData } from "@/lib/listings";
 
-// "Fotos del local" (UX-4 L18 A): up to five square thumbnails that open the listing page's lightbox.
+// "Fotos del local" (UX-4 L18 A): up to five square thumbnails that open the listing page's lightbox, whose code loads
+// when a pointer or the focus first reaches them (launch audit A29).
 export function StorePhotos({ photos, storeName }: { photos: ListingPhotoData[]; storeName: string }) {
   const [openAt, setOpenAt] = useState<number | null>(null);
   const opener = useRef<HTMLButtonElement | null>(null);
@@ -13,7 +14,7 @@ export function StorePhotos({ photos, storeName }: { photos: ListingPhotoData[];
   if (shown.length === 0) return null;
   return (
     <>
-      <ul className="flex flex-wrap gap-2">
+      <ul className="flex flex-wrap gap-2" onPointerEnter={preloadLightbox} onFocus={preloadLightbox}>
         {shown.map((photo, index) => (
           <li key={photo.id ?? photo.image_url}>
             <button

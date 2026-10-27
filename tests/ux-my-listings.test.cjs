@@ -145,7 +145,8 @@ test("notifications for the new reminders have labels and open the place they ar
 });
 
 test("big-08 the listing page asks the buyer once, and only a signed-in buyer who wrote", () => {
-  const checkin = source("components/purchase-checkin.tsx");
+  // The question loads only for a signed-in visitor (launch audit A29, tests/launch-audit-listing-bundle.test.cjs).
+  const checkin = source("components/purchase-checkin-question.tsx");
   assert.match(checkin, /auth\.getSession/);
   assert.match(checkin, /get_purchase_checkin/);
   assert.match(checkin, /¿Cómo te fue\?/);

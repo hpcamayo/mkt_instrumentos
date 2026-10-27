@@ -101,6 +101,27 @@ Sprint 7 production release (2026-09-22): migration `20260921120000_sprint_7_mar
 - Manual legacy linking locks and revalidates the listing, accepts only an unowned `created_by_source='legacy'` individual row and an existing Particular profile, then sets `owner_user_id` once and appends the audit record in the same transaction. Concurrent or replayed links have one winner; direct user claims and owner reassignment remain denied. No background/email/phone matching exists.
 - Sprint 8 changes no catalog pagination, image path, submission retry, event dedupe, store-cap, transaction/review or marketplace-email queue mechanism. It adds no Admin email fan-out and preserves the Sprint 7 pre-go-live requirement for a supported frequent worker scheduler.
 
+## Launch audit A29: the listing page's first load
+
+The listing page is where phones land from WhatsApp and Google. Its first load had grown to 229 kB of JavaScript (Next.js's
+figure; 223.7 kB gzipped at level 9), because big-08's "¿Cómo te fue?" imported the Supabase browser client:
+supabase-js with Realtime and Auth, and the Buffer polyfill it pulls in, about 62 kB compressed, for a question only a
+signed-in buyer can see. The photo lightbox and the questions section also loaded with the page before anyone used them.
+
+- `components/purchase-checkin.tsx` renders `components/purchase-checkin-question.tsx` (the question and its client)
+  with `next/dynamic` and `ssr: false`, and only once the account check says the visitor is signed in.
+- `components/listing/listing-lazy.tsx` holds the parts that load after the page: the lightbox (on the first photo
+  opened; its download starts when a pointer or the focus reaches the photos, here and on the store page) and
+  "Preguntas", which reads its questions in the browser anyway. The server sends the same heading and "Cargando
+  preguntas…" as before.
+- The safety sheet stays with the page: it opens from the contact button, the page's main action, and must not wait for
+  a download. The related listings' cards stay too: they are server-rendered and hydrate with the page.
+
+Production build of 27 Oct 2026 (main `d263269` against this change, gzipped at level 9): the listing page 223.7 kB to
+154.1 kB (Next.js shows 229 kB to 158 kB), the store page 156.0 kB to 153.9 kB, every other page within 0.1 kB.
+`tests/launch-audit-listing-bundle.test.cjs` follows the page's static imports through its client components and fails
+if the Supabase client, the lightbox or the questions section is back in the page's bundle.
+
 ## Checks
 
 Sprint 5 reliability additions (deployed 2026-09-18): favorite states are registered once in a shared context, batched after 25 ms with at most 100 IDs per request, and never fetched separately per card. Unknown/failed state is unavailable rather than false; successful mutations update the shared state. Header controls use one trusted private hydrated state path, without a public SSR Auth query or importing the browser Auth SDK into the global provider. Listing IDs accept historical Postgres UUIDs rather than misusing the stricter event-ID validator.
