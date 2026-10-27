@@ -218,7 +218,8 @@ export function DescubrirFeed({ mode, filters, title, exit, today, now, since: i
     setAnnouncement(slotAnnouncement(slot, total, context));
     const focused = document.activeElement;
     const screen = feed.current?.querySelector(`[data-slot="${position}"]`);
-    const stray = !focused || focused === document.body || (feed.current?.contains(focused) && !screen?.contains(focused));
+    // Nowhere in particular (the page, or <main> after the route change), or on the screen that left.
+    const stray = !focused || focused === document.body || focused.contains(feed.current) || (feed.current?.contains(focused) && !screen?.contains(focused));
     if (focusNext.current || stray) document.getElementById(headingId(slot))?.focus({ preventScroll: true });
     focusNext.current = false;
     // `total` and `context` only change the words, never which screen is in view.
@@ -315,12 +316,12 @@ export function DescubrirFeed({ mode, filters, title, exit, today, now, since: i
             title={copy!.title}
             body={copy!.body}
             note={note ? (
-              <p className="max-w-[34ch] t-ui text-muted-dark">
-                {note}{" "}
+              <div className="flex flex-col items-center">
+                <p className="max-w-[34ch] t-ui text-muted-dark">{note}</p>
                 <button type="button" onClick={showSkipped} className="link-on-frame inline-flex min-h-11 items-center font-semibold underline decoration-accent decoration-2 underline-offset-[3px]">
                   Volver a mostrarlas
                 </button>
-              </p>
+              </div>
             ) : null}
             primary={mode === "nuevo" ? { label: "Ver todo el catálogo", href: CATALOG_PATH } : list}
             secondary={home}

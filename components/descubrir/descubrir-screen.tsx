@@ -91,6 +91,10 @@ function Photos({ photos, title, loading, current }: { photos: ListingPhotoData[
     <div className="relative min-h-0 flex-1">
       <div
         ref={track}
+        // A scrolling region the keyboard can reach too (axe scrollable-region-focusable): focused, ← → move the photos.
+        tabIndex={total > 1 ? 0 : undefined}
+        role={total > 1 ? "group" : undefined}
+        aria-label={total > 1 ? `Fotos de ${title}` : undefined}
         onScroll={() => {
           const node = track.current;
           if (!node || node.clientWidth === 0) return;
@@ -100,7 +104,8 @@ function Photos({ photos, title, loading, current }: { photos: ListingPhotoData[
         className="scrollbar-none flex h-full snap-x snap-mandatory overflow-x-auto overscroll-x-contain"
       >
         {photos.map((photo, index) => (
-          <div key={photo.id ?? photo.image_url} className="relative h-full w-full shrink-0 snap-center">
+          // snap-always: a flick moves one photo, as the counter and the arrows do.
+          <div key={photo.id ?? photo.image_url} className="relative h-full w-full shrink-0 snap-center snap-always">
             <Image
               fill
               sizes={PHOTO_SIZES}

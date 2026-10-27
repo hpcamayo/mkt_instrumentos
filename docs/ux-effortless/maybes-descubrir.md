@@ -11,8 +11,9 @@ keyboard and the bar's buttons).
 
 ## Entry points
 
-- **Home**: "Descubrir lo nuevo", a secondary button beside the "Para ti" heading's controls. It is a plain link, the
-  same for everyone, so the cached home (#42) stays one page for all.
+- **Home**: "Descubrir lo nuevo", a secondary button under the heading of the home's listings ("Lo más nuevo", or "Para
+  ti" once the device has a taste), beside its controls. It is a plain link, the same for everyone, so the cached home
+  (#42) stays one page for all.
 - **Results lists** (`/listados` and the category landings): "Ver en Descubrir", a secondary button beside "Ordenar"
   on desktop and a text link under the filter and sort buttons on phones. It carries the list's filters and order, and
   shows only when the list has results and no read error.
@@ -37,8 +38,9 @@ The photos fill the frame (contained, so a whole instrument shows whatever the p
 - **WhatsApp** (the one primary button), **♥** (the existing favorites, device or account), **No me interesa** and
   **Ver publicación**.
 
-Photos move sideways by swipe, by the two 44 px arrows ("Foto anterior", "Foto siguiente") or by ← →; a counter reads
-"Foto 2 / 4". No wrap-around: the last photo is the last. A listing without photos shows "Sin foto".
+Photos move sideways by swipe (one photo a flick), by the two 44 px arrows ("Foto anterior", "Foto siguiente") or by ← →;
+a counter reads "Foto 2 / 4". The photos are a focusable group ("Fotos de …"), so the keyboard reaches them like any
+scrolling region. No wrap-around: the last photo is the last. A listing without photos shows "Sin foto".
 
 ## Moving through the feed
 
@@ -146,8 +148,9 @@ list of ids, and the feed already applies the page route's `reserved` list when 
   `middleware.ts` (the crawler guard).
 - Tests: `tests/maybes-descubrir.test.cjs`; `tests/ux-shell.test.cjs` gains `/descubrir`.
 - Local demo: `scripts/prototype/maybes-descubrir-seed.sql` (16 listings published relative to when it runs: 5 today, 3
-  yesterday, 6 over the days before, 2 older) and `scripts/prototype/make-descubrir-photos.py` (drawn photos, portrait
-  and landscape).
+  yesterday, 6 over the days before, 2 older), `scripts/prototype/make-descubrir-photos.py` (drawn photos, portrait
+  and landscape) and `scripts/prototype/maybes-descubrir-walk.cjs` (the browser walk-through: 37 checks, axe-core and
+  the screenshots).
 
 ## How to test
 
@@ -156,9 +159,12 @@ list of ids, and the feed already applies the page route's `reserved` list when 
    then
    `python3 scripts/prototype/make-descubrir-photos.py "$STORAGE_DIR/listing-photos/descubrir"` and
    `psql "$LOCAL_DB" -v ON_ERROR_STOP=1 -v photo_base="$GATEWAY_URL/storage/v1/object/public/listing-photos/descubrir" -f scripts/prototype/maybes-descubrir-seed.sql`.
-3. On a phone-sized window: the home's "Descubrir lo nuevo"; swipe through today's five, the "de hoy" stop, the earlier
-   days and the end; swipe photos sideways; "No me interesa" then "Deshacer"; "Ver publicación" and back; the catalog's
-   "Ver en Descubrir" with a filter and a sort, to "Viste todos los resultados". On a computer, the same with ↑ ↓ ← →.
+3. `BASE=http://localhost:3000 node scripts/prototype/maybes-descubrir-walk.cjs` runs the walk-through below with touch
+   on a phone and the keyboard on a computer, axe-core at both widths and the screenshots.
+4. By hand, on a phone-sized window: the home's "Descubrir lo nuevo"; swipe through today's listings, the "de hoy" stop,
+   the earlier days and the end; swipe photos sideways; "No me interesa" then "Deshacer"; "Ver publicación" and back;
+   the catalog's "Ver en Descubrir" with a filter and a sort, to "Viste todos los resultados". On a computer, the same
+   with ↑ ↓ ← →.
 
 ## Defaults picked
 

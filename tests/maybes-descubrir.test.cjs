@@ -353,6 +353,7 @@ test("big-02: a listing's screen has its photos, the facts, and a plain button f
   assert.match(html, /aria-keyshortcuts="ArrowLeft"/);
   assert.match(html, /<span class="sr-only">Foto <\/span>1 \/ 3/);
   assert.match(html, /alt="Fender Player Telecaster, foto 2"/);
+  assert.match(html, /<div tabindex="0" role="group" aria-label="Fotos de Fender Player Telecaster"/, "the keyboard reaches the photos' scrolling region");
   assert.match(html, /data-priority="yes"/, "the first screen's first photo comes first");
   assert.equal((html.match(/loading="eager"/g) ?? []).length, 1, "then its second; the rest wait for a swipe");
   assert.match(html, /data-contact=/);
