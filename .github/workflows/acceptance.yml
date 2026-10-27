@@ -1,7 +1,8 @@
 # Launch audit A14: the release-gate cases of acceptance/cases.tsv, end to end, on every pull request into main, every
 # push to main and by hand. scripts/acceptance/full-stack.sh starts a full local Supabase on the runner (Postgres 17,
 # Auth, PostgREST, Storage), builds and starts the app, and runs the end-to-end tests with throwaway accounts. Nothing
-# here reads a repository secret, hosted Supabase or production. docs/acceptance/full-stack.md has the details.
+# here reads a repository secret, hosted Supabase or production. Each action is pinned to a commit, the one its tag
+# pointed to on 27 Oct 2026. docs/acceptance/full-stack.md has the details.
 name: Acceptance
 
 on:
@@ -26,11 +27,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1
         with:
           version: 2.98.2
       - name: Install dependencies
@@ -40,7 +43,7 @@ jobs:
           pnpm install --frozen-lockfile
       # ghcr.io limits anonymous downloads from the shared runner addresses, and refused every try of the Supabase images
       # (toomanyrequests). Signed in with the run's own token, which can only read, the downloads count as this
-      # repository's instead.
+      # repository's instead. If it still refuses them, full-stack.sh takes them from public.ecr.aws on the next try.
       - name: Sign in to the image registry
         run: printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
         env:
@@ -52,7 +55,7 @@ jobs:
       # The stack's start, each test's output, the build and the app's log, kept for two weeks.
       - name: Keep the logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: acceptance-logs
           path: ${{ runner.temp }}/acceptance

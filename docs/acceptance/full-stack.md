@@ -3,7 +3,10 @@
 Launch audit A14 found that 68 release-gate cases of `acceptance/cases.tsv` had never been run. This run checks them
 end to end, on every pull request into `main`, every push to `main` and by hand (GitHub > Actions > Acceptance > Run
 workflow). It never reads a repository secret, hosted Supabase or production: it only signs in to ghcr.io with the
-run's own read-only token, to download the Supabase images.
+run's own read-only token, to download the Supabase images. ghcr.io still refuses them on some runs (toomanyrequests),
+so every other try of the stack's start takes them from Supabase's other registry, public.ecr.aws, with up to four
+tries. Each action the workflow uses is pinned to a commit, the one its tag pointed to on 27 Oct 2026; to update one,
+check the new version's diff and change its commit and comment together.
 
 ## What runs
 

@@ -33,17 +33,22 @@ trap cleanup EXIT
 
 cp scripts/acceptance/supabase-config.toml supabase/config.toml
 echo "== Starting Supabase (every migration, then supabase/seed.sql)"
-# The CLI pulls its images in parallel, and the registry sometimes refuses such a burst (toomanyrequests). The layers
-# already pulled stay, so another try finishes the pull; each try starts from an empty database.
+# The CLI pulls its images in parallel, and the registry sometimes refuses such a burst (toomanyrequests), on some runs
+# every try. The layers already pulled stay, so another try finishes the pull, and every other try takes the images
+# from Supabase's other registry (they are the same images). Each try starts from an empty database.
+first_registry="${SUPABASE_INTERNAL_IMAGE_REGISTRY:-ghcr.io}"
+if [ "$first_registry" = public.ecr.aws ]; then other_registry=ghcr.io; else other_registry=public.ecr.aws; fi
 started=""
-for attempt in 1 2 3; do
+for attempt in 1 2 3 4; do
+  if [ $((attempt % 2)) = 1 ]; then registry="$first_registry"; else registry="$other_registry"; fi
+  export SUPABASE_INTERNAL_IMAGE_REGISTRY="$registry"
   if supabase start 2>&1 | tee -a "$RESULTS/supabase-start.log"; then
     started=1
     break
   fi
   supabase stop --no-backup >/dev/null 2>&1 || true
-  if [ "$attempt" -lt 3 ]; then
-    echo "Supabase did not start (try $attempt of 3); trying again in $((attempt * 30)) seconds." >&2
+  if [ "$attempt" -lt 4 ]; then
+    echo "Supabase did not start from $registry (try $attempt of 4); trying again in $((attempt * 30)) seconds." >&2
     sleep $((attempt * 30))
   fi
 done
