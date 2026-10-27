@@ -264,6 +264,37 @@ Event rows contain UUID `id`, `event_type`, `created_at`, nullable listing/store
 - Listing submission/approval/rejection/sold and store application/approval/verification triggers record real transitions inside their domain transaction. Creation/application-start events come from the trusted signed-submission start path. Sprint 5 added favorite lifecycle events; production Sprint 6 adds confirmation requested/confirmed/declined, transaction verified and review submitted, for 23 current types without historical backfill.
 - Owner reports use one grouped aggregate RPC, not one query per listing. Lifetime views retain the historical `view_count`; 7/30-day views and ratio denominators use recorded events only. Active counts require approved listings with an active parent store where applicable. Sprint 6 keeps sold state separate from buyer-confirmed transactions and exposes only labelled counts/rates, never buyer identities, payment, delivery or revenue.
 
+<!-- launch-audit:analytics -->
+### Launch audit: lighter event writes
+
+Migration `20261114180000_launch_audit_analytics.sql` (finding A33 of the 26 Oct 2026 launch audit). Suites:
+`tests/launch-audit-analytics.sql` and `tests/launch-audit-analytics.test.cjs`. The application before it keeps working
+with it, so it can be applied before the deploy.
+
+- `public.record_marketplace_events(p_session_id, p_events, p_actor_user_id)` (service role only): `/api/events`
+  records a visitor's batch, 1 to 20 events with only `event_id`, `event_type`, `listing_id`, `store_id`, `source` and
+  `metadata`, in one call and one transaction. Each event goes through `laria_private.record_marketplace_event_service`
+  with the same rules as one at a time. Events are handled by type, then listing or store, then position, so two
+  batches take the 30-minute dedupe locks and the listing rows (a view's `view_count`) in the same order and can't
+  deadlock. It answers one receipt per event in the order sent, `{event_id, recorded, view_count}`. Any error rolls the
+  whole batch back: the route answers 503 and the browser sends the batch once more with the same event ids, which
+  can't count twice. `public.record_marketplace_event` stays for the routes that record a single event.
+- `laria_private.listing_impression_days` (`listing_id`, Lima `day`, `impressions`; removed with its listing) and
+  `laria_private.listing_impression_rollup_clock` (the first day not yet finished), with no API access. The pg_cron job
+  `listing-impression-rollup` (daily at 09:40 UTC) runs `laria_private.run_listing_impression_rollup()`: card
+  impressions of every Lima day that ended 90 days ago or more move into one row per listing and day and are deleted,
+  in steps of 10,000 (`laria_private.roll_up_listing_impressions(p_limit)`) and up to 500,000 per run; the rest waits
+  for the next run. Views, contacts and every other event stay as they are, and launch audit A18's
+  `marketplace-event-retention` (09:45 UTC) still clears the visitor of those.
+- All-time numbers (`p_days = 0`) add the daily rows: impressions and the click-through denominator of
+  `get_account_analytics_before_favorites` (Mis estadísticas) and `get_marketplace_admin_analytics_before_favorites`
+  (Admin). The 7- and 30-day periods, and the 7-, 30- and 90-day periods of `get_listing_statistics`, only read events
+  younger than 90 days, which stay, so no number changes when impressions move.
+- Rollback: `select cron.unschedule('listing-impression-rollup');`, then drop `public.record_marketplace_events` and
+  the two rollup functions. Keep the daily table and the two analytics functions while it has rows: it is the only
+  record of the impressions it counts.
+<!-- /launch-audit:analytics -->
+
 ### Sprint 6 transaction, review, and review-report records
 
 Added by `20260918120000_sprint_6_transactions_reviews.sql`; applied locally and in production on 2026-09-19.

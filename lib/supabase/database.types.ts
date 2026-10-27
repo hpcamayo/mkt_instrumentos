@@ -2149,6 +2149,10 @@ export type Database = {
         }
         Returns: Json
       }
+      record_marketplace_events: {
+        Args: { p_actor_user_id?: string; p_events: Json; p_session_id: string }
+        Returns: Json
+      }
       relist_sold_listing: {
         Args: { p_listing_id: string }
         Returns: {
