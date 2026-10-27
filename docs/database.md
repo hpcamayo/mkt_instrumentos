@@ -1321,3 +1321,76 @@ itself by running the migration without its first statement, where a listing pri
   new store or profile field a cached page shows belongs in its list, and a new table a cached page reads needs its own
   triggers.
 <!-- /launch-audit:page-refresh -->
+
+<!-- launch-audit:privacy -->
+## Launch audit: privacy
+
+Migration `20261114120000_launch_audit_privacy.sql` (findings A18 and A20 of the 26 Oct 2026 launch audit, and the
+retention part of A33). Suites: `tests/launch-audit-privacy.sql`, and `tests/launch-audit-privacy.integration.cjs`
+(local database, `pg` from `node_modules`) for the sweep's locks. Procedure for requests: `docs/privacy/arco.md`. The
+application before it calls none of the new functions, so it can be applied before the deploy.
+
+- Daily upload allowance (A18): the restrictive policy "Daily upload allowance" (insert on `storage.objects`, for
+  `authenticated`) calls `public.storage_upload_allowed(bucket, name)`. Per account and 24 hours: 120 files in
+  `listing-photos` (600 for the owner of an active store), 120 in `listing-edit-photos`, 20 in `listing-sound-clips`
+  and 40 in `store-assets` (`laria_private.upload_daily_limit`); other buckets have none. It counts the account's own
+  files of the bucket (its folder) created in the last 24 hours, so removing one frees its place; a path that exists
+  already always passes, so a repeated upload still fails as a duplicate. Parallel uploads can each see the last free
+  place. `public.my_upload_allowance(bucket) → {bucket, limit, used, next_at}` (`authenticated`) lets a form whose
+  upload failed say so and when the next place frees up (`lib/upload-allowance.ts`).
+- Sweep of files nothing uses (A18): `laria_private.upload_removals` (bucket, path, `queued_at`, `removed_at`; no API
+  access) is the queue. `public.claim_upload_removals(p_limit 1–500)` (service role only) hands out files queued and
+  not removed yet; when there are none it queues up to `p_limit` files of `listing-photos`, `listing-edit-photos`,
+  `listing-sound-clips` and `store-assets` that are over 48 hours old, carry a name the forms give
+  (`laria_private.upload_is_sweepable`) and that nothing points at (`laria_private.upload_references`: listing, edit
+  and store photos, sound clips, store logos and banners, the photos and clip of saved drafts, and the edit photos
+  another cleanup is removing). `public.complete_upload_removals(bucket, paths)` (service role only) marks them removed
+  and drops rows removed over 30 days ago. `app/api/internal/uploads/sweep` runs both daily (`vercel.json`, 09:30 UTC)
+  and deletes the files through the Storage API in between; a batch that fails stays queued for the next run.
+  - A file is never queued while something points at it: the claim takes a per-file transaction lock
+    (`pg_try_advisory_xact_lock`, skipping a file whose lock is held, so it never waits) and checks again in its own
+    statement; the triggers `*_guard_upload` on `listing_photos`, `listing_revision_photos`, `listing_sound_clips`,
+    `store_photos`, `stores` (logo, banner) and `listing_drafts` (photos, clip) take the same locks in (bucket, path)
+    order for every address they add and refuse a queued or removed one with `UPLOAD_REMOVED` (P0001).
+  - A new place that keeps a file of these buckets belongs in `laria_private.upload_references` and gets the guard;
+    a new file name the forms give belongs in `laria_private.upload_is_sweepable`, or the sweep leaves such files.
+  - A draft kept only on the device points at nothing, so its files go after 48 hours: `/api/submissions` "renew"
+    returns `present` (the files still in the folder, by bucket) and the sell form drops the missing ones.
+- Anonymising an account (A20): `laria_private.anonymize_account(p_user_id, p_reason default null)` (service role only,
+  `ANONYMIZE_SERVICE_REQUIRED`; the self-service deletion of `features/marketplace` calls it) and
+  `public.admin_anonymize_account(p_user_id, p_reason)` (Admin with the authenticator code; a reason of 3–500
+  characters, `ANONYMIZE_REASON_REQUIRED`; writes `admin_audit_actions` with `action = 'anonymize_account'`,
+  `target_type = 'account'`) run `laria_private.anonymize_account_core`:
+  - refuses an Admin account (`ANONYMIZE_ADMIN`) and the owner of an active store (`ANONYMIZE_ACTIVE_STORE`: Admin hides
+    the store first); `ANONYMIZE_ACCOUNT_NOT_FOUND` without a profile;
+  - listings not sold are archived, and every listing of the account and its stores loses `contact_name` and
+    `whatsapp_phone`; pending revisions are cancelled; a pending store application is rejected, and the account's
+    stores lose their contact data (name, person, e-mail, WhatsApp, address) but keep RUC and business name; their
+    payment methods are withdrawn without holder or note (the method history is append-only and stays);
+  - deletes store memberships, favorites, shared lists, follows, search alerts and matches, stock watches, drafts, edit
+    attempts, e-mail preferences and deliveries, push deliveries and devices, notifications, check-ins outside a sale
+    and unanswered questions no report points at; analytics events lose the account as actor or seller and its
+    identity key;
+  - the profile becomes "Cuenta eliminada" without phone or city; `laria_private.anonymize_auth_user` empties the Auth
+    user's e-mail, phone, password, metadata and pending tokens, bans it and deletes its identities, sessions, refresh
+    tokens, factors, one-time tokens, flow states and Auth audit entries (the access token already issued lasts until
+    it expires, an hour at most);
+  - calls `laria_private.anonymize_account_feature_data(uuid)` when it exists (from `features/marketplace`) and keeps
+    what it returns under `features`; that function must not check the caller's role, since Admin runs reach it too,
+    and queues any files to remove in `laria_private.upload_removals`, any bucket, for the sweep;
+  - records the run in `laria_private.account_anonymizations` (first and last time, the first reason and Admin, the
+    counts); a second run finds nothing more to clear. Sales, reviews, reports and Libro de Reclamaciones entries stay.
+- Admin: "Anonimizar cuenta" on each card of `/admin/usuarios` (reason and confirmation), and the account's history at
+  `/admin/auditoria/account/<id>`; `get_admin_audit_history` and the `admin_audit_actions.target_type` check accept
+  `account`.
+- Retention of analytics events (A33): pg_cron job `marketplace-event-retention` (09:45 UTC) runs
+  `laria_private.run_marketplace_event_retention()`, which calls `laria_private.scrub_marketplace_events(5000)` until a
+  batch comes back short (at most 100 batches a day). Browsing events (`listing_impression`, `listing_view`,
+  `store_view`, `search`, `filter_applied`, `favorite_added`, `favorite_removed`) lose `actor_user_id`, `session_id` and
+  `identity_key` after 90 days, every other event after 365 days; the seller and the counts stay.
+  `laria_private.marketplace_event_scrub_clock` keeps where each kind left off, so no run reads a cleared row again.
+- Locks: the policy takes an ACCESS EXCLUSIVE lock on `storage.objects` (uploads and Storage reads wait for the
+  migration, well under a second), the target-type check one on `admin_audit_actions`, and each guard a SHARE ROW
+  EXCLUSIVE lock on its table. The first statement takes all of them at once with `nowait`, retrying for 30 seconds
+  (`PRIVACY_TABLES_BUSY`); every other lock wait is capped at 10 seconds.
+<!-- /launch-audit:privacy -->
