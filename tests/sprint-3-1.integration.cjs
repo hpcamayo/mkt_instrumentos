@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const { loadEnvFile } = require("node:process");
 const { createClient } = require("@supabase/supabase-js");
+const { enrollTwoStep } = require("./support/two-step.cjs");
 
 loadEnvFile(".env.local");
 const base = process.argv[2];
@@ -34,6 +35,7 @@ const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
     const [ownerSession, storeSession, otherSession, adminSession] = await Promise.all(
       [owner, storeOwner, other, admin].map(signIn),
     );
+    await enrollTwoStep(adminSession.client);
 
     const initial = await submit("listing", ownerSession, listingFields("QA Sprint 3.1 título original"));
     await rpc(adminSession.client, "review_listing", { p_listing_id: initial.id, p_decision: "approve" });
