@@ -1,10 +1,11 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieMethodsServer } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import {
   getAuthCallbackDestination,
   getAuthCallbackErrorUrl,
   parseEmailOtpType,
 } from "@/lib/auth/callback";
+import { TOO_MANY_LINK_OPENS, isAuthRateLimited } from "@/lib/auth/limits";
 import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   STORE_OWNER_ACCOUNT_TYPE,
@@ -13,7 +14,9 @@ import {
   upsertSellerProfile,
   upsertStoreOwnerProfile,
 } from "@/lib/auth/profile";
+import { RATE_LIMITS, allowRequest } from "@/lib/rate-limit";
 import type { Database } from "@/lib/supabase/database.types";
+import { visitorAuthKey } from "@/lib/supabase/visitor-auth";
 
 export async function GET(request: NextRequest) {
   const requestUrl = request.nextUrl;
@@ -51,37 +54,53 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Launch audit A16: a refused attempt doesn't use up the link, so the message asks to open it again later.
+  if (!(await allowRequest(RATE_LIMITS.callback, request))) {
+    return NextResponse.redirect(getAuthCallbackErrorUrl(origin, TOO_MANY_LINK_OPENS));
+  }
+
   let response = NextResponse.redirect(new URL(next, origin));
-  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
-          request.cookies.set(name, value),
-        );
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
-        );
-      },
+  const cookies: CookieMethodsServer = {
+    getAll: () => request.cookies.getAll(),
+    setAll(cookiesToSet) {
+      cookiesToSet.forEach(({ name, value }) =>
+        request.cookies.set(name, value),
+      );
+      cookiesToSet.forEach(({ name, value, options }) =>
+        response.cookies.set(name, value, options),
+      );
     },
+  };
+  // The link is checked under the visitor's address when the server can forward it; the session it opens lands in
+  // the same cookies either way.
+  const forwarded = visitorAuthKey(request);
+  const verifier = createServerClient<Database>(supabaseUrl, forwarded?.key ?? supabaseAnonKey, {
+    cookies,
+    ...(forwarded ? { global: { headers: forwarded.headers } } : {}),
   });
 
   const { error: exchangeError } = tokenHash && type
-    ? await supabase.auth.verifyOtp({ token_hash: tokenHash, type })
-    : await supabase.auth.exchangeCodeForSession(code!);
+    ? await verifier.auth.verifyOtp({ token_hash: tokenHash, type })
+    : await verifier.auth.exchangeCodeForSession(code!);
 
   if (exchangeError) {
+    const limited = isAuthRateLimited(exchangeError);
+    if (limited) console.warn("auth-callback-rate-limited", exchangeError.code ?? exchangeError.status);
     response = NextResponse.redirect(
       getAuthCallbackErrorUrl(
         origin,
-        type === "recovery"
-          ? "El enlace de recuperación no es válido o ya venció."
-          : "No se pudo confirmar la sesión.",
+        limited
+          ? TOO_MANY_LINK_OPENS
+          : type === "recovery"
+            ? "El enlace de recuperación no es válido o ya venció."
+            : "No se pudo confirmar la sesión.",
       ),
     );
     return response;
   }
 
+  // The profile is read and saved with the anon key and the new session, as before.
+  const supabase = forwarded ? createServerClient<Database>(supabaseUrl, supabaseAnonKey, { cookies }) : verifier;
   const { data } = await supabase.auth.getUser();
   const metadata = data.user?.user_metadata;
 

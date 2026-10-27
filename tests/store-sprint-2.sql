@@ -137,7 +137,7 @@ end $$;
 
 -- Basic approval/rejection and atomic verification are admin-only operations.
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"31999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"31999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$
 declare denied boolean := false;
 begin
@@ -156,7 +156,7 @@ reset role;
 insert into public.listings (id,slug,title,seller_type,status,category,city,region,whatsapp_phone,owner_user_id,store_id)
 values ('33000000-0000-4000-8000-000000000010','atomic-invalid','Atomic invalid','store','pending','guitars','Lima','Lima','51999999001','31000000-0000-4000-8000-000000000001','32000000-0000-4000-8000-000000000001');
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"31999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"31999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare denied boolean := false; begin
   begin perform public.set_store_verification('32000000-0000-4000-8000-000000000001',true); exception when others then denied := true; end;
   if not denied then raise exception 'Malformed pending inventory allowed verification'; end if;
@@ -194,7 +194,7 @@ insert into public.listing_photos (listing_id,image_url,sort_order)
 select '33000000-0000-4000-8000-000000000011', 'https://example.invalid/verify-'||n||'.jpg', n from generate_series(0,1)n;
 
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"31999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"31999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ begin
   perform public.set_store_verification('32000000-0000-4000-8000-000000000003',true);
   if not (select is_verified from public.stores where id='32000000-0000-4000-8000-000000000003') then raise exception 'Verification flag was not set'; end if;
@@ -214,7 +214,7 @@ do $$ declare submitted public.listings; begin
   submitted := public.submit_listing_for_publication('33000000-0000-4000-8000-000000000015');
   if submitted.status <> 'approved' then raise exception 'Verified store did not directly publish valid inventory'; end if;
 end $$;
-select set_config('request.jwt.claims','{"sub":"31999999-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"31999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 select public.set_store_verification('32000000-0000-4000-8000-000000000003',false);
 do $$ begin
   if (select status from public.stores where id='32000000-0000-4000-8000-000000000003') <> 'active' then raise exception 'Revocation hid approved Tienda'; end if;

@@ -24,7 +24,7 @@ create function pg_temp.as_user(p_user text) returns void language sql as $$
 $$;
 create function pg_temp.as_admin() returns void language sql as $$
   select set_config('request.jwt.claims',
-    '{"sub":"e1000000-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+    '{"sub":"e1000000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 $$;
 
 insert into auth.users(id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data) values

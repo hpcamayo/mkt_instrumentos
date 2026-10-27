@@ -83,7 +83,7 @@ insert into public.stores (id,slug,name,razon_social,ruc,email,contact_person,co
  ('e6100000-0000-4000-8000-000000000001','ux-tienda','Tienda UX','Tienda UX SAC','20999996001','ux@example.invalid','Contacto UX','Contacto UX','51999996001','Lima','Lima','Av. UX 1','e6100000-0000-4000-8000-0000000000a1','active','free',true);
 
 select set_config('request.jwt.claims',
-  '{"sub":"e1000000-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+  '{"sub":"e1000000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 set local role authenticated;
 select public.admin_set_store_inventory_enabled('e6100000-0000-4000-8000-000000000001', true, 'Piloto UX');
 select set_config('request.jwt.claims', '{"sub":"e6100000-0000-4000-8000-0000000000a1","role":"authenticated"}', true);
