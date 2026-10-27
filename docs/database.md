@@ -1713,10 +1713,11 @@ so it can be applied before the deploy that schedules the worker (`vercel.json`,
 - Kinds the `features/marketplace` branch adds (account security, offers, trades, services) get 7 days and priority
   0 unless it adds them to both functions.
 - Known limits, left from the review as Lows: `day_start` and `count_start` are read when the claim starts, before
-  its advisory lock, so a claim that waits on the lock across midnight UTC counts from the day before (it hands out
-  less, and the review found it matters only with a limit under 25). And the one-click links in alerts, price drops
-  and the weekly digest expire 180 days after each attempt (`lib/email/links.ts`), so a retry of an uncertain send
-  has another body under the same `Idempotency-Key`: Resend answers 409, no second copy goes out, and after 5 tries
-  the e-mail ends `failed` although the first attempt was delivered. Taking the expiry from the delivery's
-  `created_at`, added to its payload, would fix it.
+  its advisory lock, so a claim that waits on the lock across midnight UTC counts from the day before. It hands out
+  fewer new e-mails, and the retries of the day before's uncertain e-mails go out as if they had their place in the
+  new day, outside its allowance; the worker claims 25 at a time, so the review found this matters only with a limit
+  under 25. And the one-click links in alerts, price drops and the weekly digest expire 180 days after each attempt
+  (`lib/email/links.ts`), so a retry of an uncertain send has another body under the same `Idempotency-Key`: Resend
+  answers 409, no second copy goes out, and after 5 tries the e-mail ends `failed` although the first attempt was
+  delivered. Taking the expiry from the delivery's `created_at`, added to its payload, would fix it.
 <!-- /launch-audit:email -->
