@@ -323,6 +323,7 @@ function ReviewSection({
       {detail.own_review ? (
         <Notice tone="success" role="note" title="Tu reseña fue enviada" className="mt-4">
           <p className="mt-1 text-ink-2">{stars(detail.own_review.rating)}{detail.own_review.comment ? ` · ${detail.own_review.comment}` : ""}</p>
+          {detail.own_review.held_at ? <p className="mt-2 t-meta">El equipo de Laria la revisará antes de mostrarla.</p> : null}
           <p className="mt-2 t-meta">No puede editarse ni eliminarse libremente.</p>
           {photoProblem ? <p role="alert" className="mt-2 t-meta font-semibold text-danger">{photoProblem}</p> : null}
           {detail.transaction_id && detail.own_review.direction === "buyer_to_seller" ? (
@@ -346,6 +347,11 @@ function ReviewSection({
           {detail.visible_reviews.map((review) => <VisibleReview key={review.id} review={review} busy={busy} run={run} />)}
         </div>
       ) : <p className="mt-5 text-sm text-ink-2">Todavía no hay reseñas reveladas.</p>}
+      {detail.counterpart_review_held ? (
+        <p className="mt-3 t-meta">
+          {detail.role === "seller" ? "La reseña del comprador" : "La reseña del vendedor"} se publicará cuando el equipo de Laria la revise.
+        </p>
+      ) : null}
     </section>
   );
 }

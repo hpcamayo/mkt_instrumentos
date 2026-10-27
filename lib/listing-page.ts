@@ -101,8 +101,9 @@ export function lastActiveLabel(value: unknown) {
 // Under this many reviews the seller card leads with the other verified facts (list-10).
 export const FEW_REVIEWS = 10;
 
+// Launch audit A17: the count is of buyers, each once, after their account is a week old with a confirmed e-mail.
 export function verifiedSalesLabel(count: number) {
-  return count === 1 ? "1 venta confirmada en Laria" : `${count} ventas confirmadas en Laria`;
+  return count === 1 ? "1 comprador confirmó su compra en Laria" : `${count} compradores confirmaron su compra en Laria`;
 }
 
 // Social links on the store page (UX-4 L18 A): only http(s) URLs are links; anything else is left out.

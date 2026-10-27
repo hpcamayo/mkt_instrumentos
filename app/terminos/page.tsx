@@ -69,6 +69,7 @@ export default function TermsPage() {
           <li>Esa confirmación solo indica que ambas partes reconocen que la venta se originó en Laria. No verifica el pago, el monto, la entrega ni el estado del artículo.</li>
           <li>Solo las transacciones confirmadas permiten reseñas. Deben ser honestas y referirse a la experiencia real. Una reseña publicada no se puede editar ni eliminar libremente.</li>
           <li>Laria puede ocultar reseñas abusivas o inapropiadas, pero no reescribe su contenido.</li>
+          <li>Laria revisa algunas reseñas de compradores antes de mostrarlas, por ejemplo las primeras de cada vendedor o las de cuentas recién creadas, y no muestra las que no corresponden a una compra real.</li>
         </ul>
       </LegalSection>
 

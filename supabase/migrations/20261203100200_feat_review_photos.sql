@@ -196,6 +196,7 @@ begin
         'id', photo.id, 'status', photo.status, 'created_at', photo.created_at, 'moderation_reason', photo.moderation_reason,
         'review_id', review.id, 'transaction_id', review.transaction_id, 'rating', review.rating, 'comment', review.comment,
         'review_hidden', review.admin_hidden_at is not null,
+        'review_held', review.held_at is not null,
         'reviewer_name', reviewer.full_name,
         'subject_name', coalesce(st.name, subject.full_name)
       ) item

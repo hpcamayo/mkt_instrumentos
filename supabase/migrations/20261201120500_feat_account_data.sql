@@ -56,12 +56,13 @@ begin
       join public.verified_transactions t on t.id = r.transaction_id
       join public.listings l on l.id = t.listing_id
       where r.reviewer_user_id = uid),
+    -- Reviews about the person, once they show on the transaction page: revealed and not held for Admin (A17).
     'reviews_received', (select coalesce(jsonb_agg(jsonb_build_object('listing', l.title, 'rating', r.rating,
         'comment', r.comment, 'submitted_at', r.submitted_at) order by r.submitted_at), '[]'::jsonb)
       from public.transaction_reviews r
       join public.verified_transactions t on t.id = r.transaction_id
       join public.listings l on l.id = t.listing_id
-      where r.subject_user_id = uid
+      where r.subject_user_id = uid and r.held_at is null
         and (t.review_deadline <= now() or (select count(*) from public.transaction_reviews both_sides where both_sides.transaction_id = t.id) = 2)),
     'purchases_and_sales', (select coalesce(jsonb_agg(jsonb_build_object('listing', l.title,
         'role', case when t.buyer_user_id = uid then 'compra' else 'venta' end, 'sold_at', t.sold_at, 'confirmed_at', t.verified_at)

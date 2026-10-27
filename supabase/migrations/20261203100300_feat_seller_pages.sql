@@ -120,10 +120,9 @@ stable
 security definer
 set search_path = public
 as $$
+  -- Launch audit A17: buyers, not sales (laria_private.counted_buyers); the key stays verified_sales.
   with sales as (
-    select count(*) n from public.verified_transactions t
-    where (p_store_id is not null and t.store_id = p_store_id)
-       or (p_store_id is null and t.seller_user_id = p_user_id and t.store_id is null)
+    select laria_private.counted_buyers(case when p_store_id is null then p_user_id end, p_store_id) n
   ),
   reviews as (
     select count(*) n, avg(r.rating)::numeric(3, 2) average
@@ -328,7 +327,8 @@ begin
       where l.owner_user_id = page.user_id and l.seller_type = 'individual' and l.store_id is null and l.status in ('approved', 'sold')
       order by coalesce(l.published_at, l.created_at) desc limit 1)),
     'member_since', profile.created_at,
-    'verified_sales', (select count(*) from public.verified_transactions t where t.seller_user_id = page.user_id and t.store_id is null),
+    -- Launch audit A17: buyers, not sales, as on the seller card (get_public_seller_facts).
+    'verified_sales', laria_private.counted_buyers(page.user_id, null),
     'active_listings', (select count(*) from public.listings l where l.owner_user_id = page.user_id and l.seller_type = 'individual'
       and l.store_id is null and public.listing_is_public(l.id)),
     'level', laria_private.seller_level_json(page.user_id, null)

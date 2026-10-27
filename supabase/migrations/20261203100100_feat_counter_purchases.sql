@@ -471,7 +471,12 @@ begin
         'comment', r.comment, 'submitted_at', r.submitted_at, 'reviewer_name',
         case when r.direction = 'seller_to_buyer' then store_row.name else p.full_name end) order by r.direction)
       from public.transaction_reviews r join public.profiles p on p.id = r.reviewer_user_id
-      where r.transaction_id = transaction_record.id and laria_private.review_is_visible(r.id)), '[]'::jsonb)
+      where r.transaction_id = transaction_record.id and laria_private.review_is_visible(r.id)), '[]'::jsonb),
+    -- Launch audit A17, as get_transaction_detail: the other side's review waits for Laria, once reviews would show.
+    'counterpart_review_held', (transaction_record.review_deadline <= now()
+      or (select count(*) from public.transaction_reviews pair where pair.transaction_id = transaction_record.id) = 2)
+      and exists (select 1 from public.transaction_reviews r where r.transaction_id = transaction_record.id
+        and r.reviewer_user_id <> me and r.held_at is not null and r.admin_hidden_at is null)
   );
 end;
 $$;

@@ -25,6 +25,7 @@ instrument or guarantees a deal, and every new screen says so where it matters.
 | `20261203110300_feat_trust_patch_get_admin_domain_page.sql` | Admin > Reseñas shows counter-purchase reviews | patches `public.get_admin_domain_page` |
 | `20261203110400_feat_trust_patch_get_admin_moderation_queue.sql` | Reported counter-purchase reviews reach the queue | patches `public.get_admin_moderation_queue` |
 | `20261203110500_feat_trust_patch_get_account_pendientes.sql` | Pending counter-purchase reviews on the account home | patches `public.get_account_pendientes` |
+| `20261203110600_feat_trust_patch_publish_held_review.sql` | A held counter-purchase review that Admin publishes notifies `store_counter_review_revealed` (launch audit A17) | patches `public.publish_held_review` |
 
 - **FD-deal-trust-1.** Shared functions are patched, not copied. `laria_private.patch_function_text(fn, old[], new[])`
   reads the live definition (`pg_get_functiondef`), replaces each exact piece and raises unless every piece occurs
@@ -106,7 +107,7 @@ amplifier review already has an approved photo (`/vendedores/<Lucía's page>`).
 ## sell-09: the seller page
 
 **What changed.** Every Particular who has published gets `/vendedores/<first-name>-<6 random characters>`: first name,
-city, member since, verified sales, the level mark, reviews (with photos) and active publications. The listing page's
+city, member since, buyers who confirmed a purchase (launch audit A17), the level mark, reviews (with photos) and active publications. The listing page's
 seller card and "Más de este vendedor" link to it ("Ver perfil"). Compras y ventas > "Tu perfil en Laria" shows the
 link, copy and WhatsApp buttons and "Ocultar mi página".
 
@@ -127,9 +128,11 @@ either way. Compras y ventas shows the seller's progress on each criterion.
 **Files.** `…100300_feat_seller_pages.sql` (`seller_levels`, `refresh_seller_levels`), `components/trust/seller-level-mark.tsx`,
 `components/trust/account-trust.tsx`, `app/api/internal/jobs/deal-trust/route.ts`, `lib/notifications.ts`.
 
-- **FD-deal-trust-9.** Criteria: at least 5 verified sales, at least 3 visible reviews from buyers averaging 4.5 or
-  more, no report upheld in the last 90 days, no public question left unanswered for more than 7 days (questions up to
-  90 days old), and for a store, the store is active. They live only in `seller_level_facts` and `seller_level_meets`.
+- **FD-deal-trust-9.** Criteria: at least 5 buyers who confirmed a purchase (launch audit A17: each buyer once, only once
+  their account is a week old with a confirmed e-mail, `laria_private.counted_buyers`), at least 3 visible reviews from
+  buyers averaging 4.5 or more, no report upheld in the last 90 days, no public question left unanswered for more than 7
+  days (questions up to 90 days old), and for a store, the store is active. They live only in `seller_level_facts` and
+  `seller_level_meets`.
 - **FD-deal-trust-10.** Stores get the same mark as «Tienda destacada», counting both listing purchases confirmed
   through WhatsApp and counter purchases (reach-11), which are how most of a store's sales can become verified.
 

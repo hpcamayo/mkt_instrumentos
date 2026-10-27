@@ -78,6 +78,8 @@ async function PhotoQueue({ db, status, page }: { db: SupabaseClient; status: "p
                   <p><span className="font-semibold">{text(row.reviewer_name) ?? "Comprador"}</span> reseñó a {text(row.subject_name) ?? "un vendedor"} · {String(row.rating)} de 5</p>
                   {text(row.comment) ? <p className="mt-1 whitespace-pre-line text-ink-2">{text(row.comment)}</p> : null}
                   {row.review_hidden === true ? <p className="mt-1 t-meta font-semibold">La reseña está oculta.</p> : null}
+                  {/* Launch audit A17: the photo shows only once the review is published from Reseñas. */}
+                  {row.review_held === true ? <p className="mt-1 t-meta font-semibold">La reseña está retenida y espera revisión en Reseñas.</p> : null}
                   {text(row.moderation_reason) ? <p className="mt-1 t-meta">Motivo: {text(row.moderation_reason)}</p> : null}
                 </div>
                 <ReviewPhotoModeration photoId={photoId} status={status} />

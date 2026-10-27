@@ -274,6 +274,8 @@ test("Admin moderation clients use only canonical RPCs and expose no generic use
     "link_legacy_listing_owner",
     "moderate_report",
     "moderate_review",
+    // Launch audit A17: a held review, published by Admin with the second sign-in step.
+    "publish_held_review",
     "review_listing",
     "review_listing_revision",
     "review_store_application",

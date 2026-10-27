@@ -109,6 +109,8 @@ export type MyReviewPhoto = { id: string; status: "pending" | "approved" | "hidd
 // ------------------------------------------------------------------ the mark (sell-08)
 
 // The criteria the nightly job checks (laria_private.seller_level_meets), in the words of the "¿Por qué?" dialog.
+// Launch audit A17: the sales criterion counts buyers, each once, after their account is a week old with a confirmed
+// e-mail (laria_private.counted_buyers); facts keep the name verifiedSales.
 export const LEVEL_MIN_SALES = 5;
 export const LEVEL_MIN_REVIEWS = 3;
 export const LEVEL_MIN_AVERAGE = 4.5;
@@ -120,7 +122,7 @@ export function levelName(kind: SellerLevel["kind"]) {
 }
 
 export const LEVEL_CRITERIA = [
-  `${LEVEL_MIN_SALES} o más ventas confirmadas en Laria por quien vendió y quien compró.`,
+  `${LEVEL_MIN_SALES} o más compradores distintos que confirmaron su compra en Laria.`,
   `Una nota promedio de ${formatAverage(LEVEL_MIN_AVERAGE)} o más, con al menos ${LEVEL_MIN_REVIEWS} reseñas.`,
   `Ningún reporte confirmado por Laria en los últimos ${LEVEL_REPORT_DAYS} días.`,
   `Responde las preguntas de sus publicaciones en menos de ${LEVEL_ANSWER_DAYS} días.`,
@@ -129,7 +131,7 @@ export const LEVEL_CRITERIA = [
 // For the seller's own card: each criterion, met or not, with their number.
 export function levelProgress(facts: LevelFacts) {
   return [
-    { label: "Ventas confirmadas", value: `${facts.verifiedSales} de ${LEVEL_MIN_SALES}`, met: facts.verifiedSales >= LEVEL_MIN_SALES },
+    { label: "Compradores que confirmaron", value: `${facts.verifiedSales} de ${LEVEL_MIN_SALES}`, met: facts.verifiedSales >= LEVEL_MIN_SALES },
     {
       label: "Reseñas y nota",
       value: facts.reviewCount === 0 || facts.averageRating === null

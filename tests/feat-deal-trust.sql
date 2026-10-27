@@ -38,14 +38,20 @@ create function pg_temp.put(p_name text, p_value text) returns void language sql
 $$;
 create function pg_temp.get(p_name text) returns text language sql as $$ select value from qa_values where name = p_name $$;
 
--- People: S sells as a Particular, B and C buy, O owns the store, X is anyone else.
-insert into auth.users(id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data) values
- ('d7100000-0000-4000-8000-000000000001','authenticated','authenticated','trust-s@example.invalid',now(),'{}','{"account_type":"individual","full_name":"María Pérez","phone":"51999997001","city":"Lima","region":"Lima"}'),
- ('d7100000-0000-4000-8000-000000000002','authenticated','authenticated','trust-b@example.invalid',now(),'{}','{"account_type":"individual","full_name":"Bruno Díaz","phone":"51999997002","city":"Lima","region":"Lima"}'),
- ('d7100000-0000-4000-8000-000000000003','authenticated','authenticated','trust-c@example.invalid',now(),'{}','{"account_type":"individual","full_name":"Carla Ruiz","phone":"51999997003","city":"Lima","region":"Lima"}'),
- ('d7100000-0000-4000-8000-000000000004','authenticated','authenticated','trust-o@example.invalid',now(),'{}','{"account_type":"store_owner","full_name":"Olga Tienda","phone":"51999997004","city":"Lima","region":"Lima"}'),
- ('d7100000-0000-4000-8000-000000000005','authenticated','authenticated','trust-x@example.invalid',now(),'{}','{"account_type":"individual","full_name":"Xavier Otro","phone":"51999997005","city":"Lima","region":"Lima"}'),
- ('d7100000-0000-4000-8000-000000000099','authenticated','authenticated','trust-admin@example.invalid',now(),'{"role":"admin"}','{"account_type":"individual","full_name":"Admin Confianza","phone":"51999997099","city":"Lima","region":"Lima"}');
+-- People: S sells as a Particular, B and C buy, O owns the store, X is anyone else. D, E and F bought from S too, and G
+-- did with an account two days old. Accounts are a month old unless said otherwise: launch audit A17 counts a buyer
+-- (laria_private.counted_buyers) and holds their review by the account's age.
+insert into auth.users(id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at) values
+ ('d7100000-0000-4000-8000-000000000001','authenticated','authenticated','trust-s@example.invalid',now(),'{}','{"account_type":"individual","full_name":"María Pérez","phone":"51999997001","city":"Lima","region":"Lima"}',now() - interval '30 days'),
+ ('d7100000-0000-4000-8000-000000000002','authenticated','authenticated','trust-b@example.invalid',now(),'{}','{"account_type":"individual","full_name":"Bruno Díaz","phone":"51999997002","city":"Lima","region":"Lima"}',now() - interval '30 days'),
+ ('d7100000-0000-4000-8000-000000000003','authenticated','authenticated','trust-c@example.invalid',now(),'{}','{"account_type":"individual","full_name":"Carla Ruiz","phone":"51999997003","city":"Lima","region":"Lima"}',now() - interval '30 days'),
+ ('d7100000-0000-4000-8000-000000000004','authenticated','authenticated','trust-o@example.invalid',now(),'{}','{"account_type":"store_owner","full_name":"Olga Tienda","phone":"51999997004","city":"Lima","region":"Lima"}',now() - interval '30 days'),
+ ('d7100000-0000-4000-8000-000000000005','authenticated','authenticated','trust-x@example.invalid',now(),'{}','{"account_type":"individual","full_name":"Xavier Otro","phone":"51999997005","city":"Lima","region":"Lima"}',now() - interval '30 days'),
+ ('d7100000-0000-4000-8000-000000000099','authenticated','authenticated','trust-admin@example.invalid',now(),'{"role":"admin"}','{"account_type":"individual","full_name":"Admin Confianza","phone":"51999997099","city":"Lima","region":"Lima"}',now() - interval '30 days'),
+ ('d7100000-0000-4000-8000-000000000006','authenticated','authenticated','trust-d@example.invalid',now(),'{}','{"account_type":"individual","full_name":"Diana Soto","phone":"51999997006","city":"Lima","region":"Lima"}',now() - interval '30 days'),
+ ('d7100000-0000-4000-8000-000000000007','authenticated','authenticated','trust-e@example.invalid',now(),'{}','{"account_type":"individual","full_name":"Elena Quispe","phone":"51999997007","city":"Lima","region":"Lima"}',now() - interval '30 days'),
+ ('d7100000-0000-4000-8000-000000000008','authenticated','authenticated','trust-f@example.invalid',now(),'{}','{"account_type":"individual","full_name":"Fabio Rojas","phone":"51999997008","city":"Lima","region":"Lima"}',now() - interval '30 days'),
+ ('d7100000-0000-4000-8000-000000000009','authenticated','authenticated','trust-g@example.invalid',now(),'{}','{"account_type":"individual","full_name":"Gina Nueva","phone":"51999997009","city":"Lima","region":"Lima"}',now() - interval '2 days');
 
 insert into public.stores (id,slug,name,razon_social,ruc,email,contact_person,contact_name,whatsapp_phone,city,region,district,address,show_address,owner_user_id,status,listing_plan,is_verified) values
  ('d7200000-0000-4000-8000-000000000001','trust-tienda','Tienda Confianza','Tienda Confianza SAC','20999997101','trust-store@example.invalid','Olga','Olga','51999997004','Lima','Lima','Miraflores','Av. Larco 100',true,'d7100000-0000-4000-8000-000000000004','active','free',true);
@@ -92,6 +98,23 @@ from generate_series(2, 4) n;
 insert into public.transaction_reviews(transaction_id, direction, reviewer_user_id, subject_user_id, rating, comment, submitted_at)
 values ('d7500000-0000-4000-8000-000000000003', 'seller_to_buyer', 'd7100000-0000-4000-8000-000000000001',
   'd7100000-0000-4000-8000-000000000002', 5, 'Comprador puntual, comentario privado', now() - interval '5 days');
+
+-- Those five went to B and C. Four more sales of S, to D, E, F and G, closed their window without reviews: S has sold
+-- to six people and five of them count (launch audit A17: not G, whose account is two days old), which the seller page
+-- and the level read.
+insert into public.listings (id,slug,title,seller_type,status,category,instrument_type,brand,model,condition,price_pen,city,region,contact_name,whatsapp_phone,description,owner_user_id,created_by_source,marketplace_rules_accepted_at,sold_at)
+select ('d7300000-0000-4000-8000-00000000003' || n)::uuid, 'trust-sold-more-' || n, 'Otro equipo vendido ' || n, 'individual', 'sold', 'pedals', 'pedals', 'Boss', 'TU-3', 'Bueno', 300, 'Lima', 'Lima',
+  'María', '51999997001', 'Descripción de prueba con más de cuarenta caracteres para el equipo.', 'd7100000-0000-4000-8000-000000000001', 'self_service', now(), now() - interval '12 days'
+from generate_series(1, 4) n;
+insert into public.transaction_claims(id, listing_id, seller_user_id, buyer_user_id, attribution_type, status, created_at, responded_at, ended_at)
+select ('d7400000-0000-4000-8000-00000000003' || n)::uuid, ('d7300000-0000-4000-8000-00000000003' || n)::uuid, 'd7100000-0000-4000-8000-000000000001',
+  ('d7100000-0000-4000-8000-00000000000' || (n + 5))::uuid, 'laria', 'confirmed', now() - interval '12 days', now() - interval '11 days', now() - interval '11 days'
+from generate_series(1, 4) n;
+insert into public.verified_transactions(id, claim_id, listing_id, seller_user_id, buyer_user_id, seller_identity_type, sold_at, verified_at, review_deadline)
+select ('d7500000-0000-4000-8000-00000000003' || n)::uuid, ('d7400000-0000-4000-8000-00000000003' || n)::uuid, ('d7300000-0000-4000-8000-00000000003' || n)::uuid,
+  'd7100000-0000-4000-8000-000000000001', ('d7100000-0000-4000-8000-00000000000' || (n + 5))::uuid, 'particular',
+  now() - interval '12 days', now() - interval '11 days', now() - interval '1 day'
+from generate_series(1, 4) n;
 
 set local role authenticated;
 select pg_temp.as_admin();
@@ -276,14 +299,32 @@ do $$ declare center jsonb; begin
   perform pg_temp.check(jsonb_array_length(center) = 2 and bool_and(item->>'role' = 'seller') and bool_or(item->>'buyer_name' = 'Bruno D.'), 'the store lists its counter purchases')
   from jsonb_array_elements(center) item;
   perform public.submit_transaction_review(pg_temp.get('counter_tx')::uuid, 4, 'Cliente amable');
+  -- Launch audit A17: the buyer's review is the store's first, so it waits for Admin; the store is told so.
+  perform pg_temp.check((public.get_counter_transaction_detail(pg_temp.get('counter_tx')::uuid)->>'counterpart_review_held')::boolean,
+    'the store learns the buyer''s review waits for Laria');
 end $$;
+select pg_temp.as_user('d7100000-0000-4000-8000-000000000002');
+do $$ declare detail jsonb := public.get_counter_transaction_detail(pg_temp.get('counter_tx')::uuid); begin
+  perform pg_temp.check(detail->'own_review'->>'held_at' is not null and not (detail->>'counterpart_review_held')::boolean
+    and jsonb_array_length(detail->'visible_reviews') = 1, 'the buyer sees their review held and the store''s review: ' || detail::text);
+end $$;
+reset role;
+do $$ begin
+  perform pg_temp.check((select reasons from laria_private.review_holds where review_id = pg_temp.get('counter_review_b')::uuid) = array['first_reviews'],
+    'held as the store''s first review');
+  perform pg_temp.check(not exists (select 1 from public.notifications where transaction_id = pg_temp.get('counter_tx')::uuid
+    and event_type = 'store_counter_review_revealed'), 'no "Ambas reseñas" while one is held');
+end $$;
+set local role authenticated;
+select pg_temp.as_admin();
+select public.publish_held_review(pg_temp.get('counter_review_b')::uuid);
 reset role;
 
 do $$ declare review public.transaction_reviews; begin
   select * into review from public.transaction_reviews where id = pg_temp.get('counter_review_b')::uuid;
   perform pg_temp.check(review.subject_store_id = 'd7200000-0000-4000-8000-000000000001' and review.subject_user_id is null, 'the buyer reviews the store');
   perform pg_temp.check((select count(*) from public.notifications where transaction_id = pg_temp.get('counter_tx')::uuid and event_type = 'store_counter_review_revealed') = 2,
-    'both reviews in: revealed with the counter type');
+    'both reviews in and published: revealed with the counter type');
   perform pg_temp.check(laria_private.review_is_visible(review.id), 'and visible');
 end $$;
 
@@ -383,6 +424,8 @@ select pg_temp.as_admin();
 do $$ declare queue jsonb; begin
   queue := public.get_admin_review_photo_queue('pending', 1, 24);
   perform pg_temp.check((queue->>'total')::integer = 2, 'Admin sees both photos waiting');
+  perform pg_temp.check(bool_and((item->>'review_held')::boolean), 'of a review held for Admin (B already reviewed S): ' || queue::text)
+  from jsonb_array_elements(queue->'items') item;
   perform pg_temp.check(public.moderate_review_photo(pg_temp.get('photo1')::uuid, 'approved') = 'approved', 'Admin approves one');
   perform pg_temp.expect_error(format('select public.moderate_review_photo(%L, %L)', pg_temp.get('photo2'), 'hidden'), 'REVIEW_PHOTO_REASON_REQUIRED');
   perform public.moderate_review_photo(pg_temp.get('photo2')::uuid, 'hidden', 'Se ve un número de teléfono');
@@ -402,6 +445,24 @@ set local role authenticated;
 select pg_temp.as_user('d7100000-0000-4000-8000-000000000001');
 select public.submit_transaction_review('d7500000-0000-4000-8000-000000000001', 5, 'Buen comprador');
 reset role;
+set local role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+do $$ begin
+  perform pg_temp.check(public.get_review_photo_object(pg_temp.get('photo1')::uuid) is null, 'both reviews in, but the buyer''s is held: no photo yet');
+end $$;
+reset role;
+do $$ begin
+  perform pg_temp.check((select reasons from laria_private.review_holds where review_id = pg_temp.get('review_b1')::uuid) = array['repeat_buyer'],
+    'B''s second review of S is held');
+end $$;
+set local role authenticated;
+select pg_temp.as_admin();
+select public.publish_held_review(pg_temp.get('review_b1')::uuid);
+reset role;
+do $$ begin
+  perform pg_temp.check((select count(*) from public.notifications where transaction_id = 'd7500000-0000-4000-8000-000000000001' and event_type = 'review_revealed') = 2,
+    'published: both sides are told, as for any sale with a publication');
+end $$;
 set local role anon;
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
 do $$ declare reputation jsonb; review_page jsonb; begin
