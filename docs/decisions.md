@@ -582,3 +582,185 @@ Detail: [docs/ux-effortless/speed.md](ux-effortless/speed.md).
 - UXD-speed-11: Shared photos wait on the device, up to 10 and for one day, and reach Laria only when the form uploads them (big-12).
 - UXD-speed-12: The push worker is started by hand until a scheduler exists, and without VAPID keys it only logs (big-12).
 - UXD-speed-13: Every bar fixed to the bottom of the screen carries `data-bottom-bar` and measures itself, so focus scrolls clear of it, and the phone contact bar pads the listing page by its height (fast-04).
+
+## Feature ideas: proposed decisions (2026-10-26)
+
+These are the decisions taken while building the feature ideas Henri approved on 2026-10-26 (marking page https://claude.ai/artifact/7iWMJuxxKLaxsdibsWEZQd). They remain proposals until Henri reviews the combined build. Each line gives the decision's first sentence; the batch write-up in `docs/feature-ideas/` has the full text, the reasoning, the files and the limits. The plan and its rules are in [docs/feature-ideas/build-plan.md](feature-ideas/build-plan.md), and what was left for later is in [docs/feature-ideas/deferred.md](feature-ideas/deferred.md).
+
+### Accounts, help and safety (accounts)
+
+Detail: [docs/feature-ideas/accounts.md](feature-ideas/accounts.md).
+
+- FD-accounts-1: The code is asked only on a new device or after signing out, and a session keeps its second-factor level for its whole life (Henri's requirement).
+- FD-accounts-2: Two-step is optional for everyone, and required only for store owners with an approved payment method (Mi tienda, store contact details and payment methods) and for Admin.
+- FD-accounts-3: Authenticator apps only, no SMS codes (cost per message, and SIM-swap fraud).
+- FD-accounts-4: One new-device e-mail per new browser, the first browser excluded, ten a day at most.
+- FD-accounts-5: Supabase project settings must keep sessions alive: Sessions › "Time-box user sessions" and "Inactivity timeout" off, or at least 30 days; MFA › TOTP enabled (Supabase's default).
+- FD-accounts-6: E-mail change lives in Seguridad (how you sign in), not in Perfil.
+- FD-accounts-7: The export is one JSON file downloaded on the spot.
+- FD-accounts-8: Self-service deletion anonymises instead of erasing rows that other people rely on: verified transactions and their reviews stay under «Cuenta eliminada»; unsold listings are archived, sold ones kept as history.
+- FD-accounts-9: The A20 stand-in is created only when A20's `laria_private.anonymize_account(uuid, text)` does not exist; the integrator removes `20261201120100_feat_anonymize_standin.sql` once A20 is merged.
+- FD-accounts-10: The buttons stay hidden until Henri turns each provider on: `NEXT_PUBLIC_AUTH_GOOGLE=1` and `NEXT_PUBLIC_AUTH_APPLE=1`, after setting up the provider in Supabase Auth (client IDs and secrets live in Supabase, not in Laria's environment).
+- FD-accounts-11: Articles live in code (`lib/help/articles.ts`), reviewed like any copy; no CMS.
+- FD-accounts-12: Laria sends e-mail only to addresses that belong to an account.
+- FD-accounts-13: A match is a lead for Admin, never a public mark.
+- FD-accounts-14: A police report number is required to file a report, to keep the registry for real thefts.
+- FD-accounts-15: `laria_private.flag_serial_against_stolen_reports(serial, source, ref, owner default null)` is the one entry point for serials held elsewhere; selling-tools' "Mi equipo" calls it with source `gear`.
+- FD-accounts-16: Photos are hashed off the upload path (daily, and when Admin opens the listing) rather than in `app/api/listing-images`, so uploads stay as fast as today and the upload route is unchanged; review is where the flag is needed.
+- FD-accounts-17: A flag goes on the newer listing and never blocks it; a catalog photo used by two stores is legitimate, so Admin decides.
+
+### Listing details, filters and map (listing-details)
+
+Detail: [docs/feature-ideas/listing-details.md](feature-ideas/listing-details.md).
+
+- FD-listing-details-1: Old values map to one step each: "Usado - buen estado" → Muy bueno, "Usado - con detalles" → Bueno.
+- FD-listing-details-2: "Exhibición o caja abierta" is for store listings only (the database refuses it for a Particular), and it is sold as used in structured data.
+- FD-listing-details-3: Nothing is chosen for the seller: the price mode starts empty and stays optional.
+- FD-listing-details-4: Delivery and trade terms are not moderated, like the price: they go live when saved.
+- FD-listing-details-5: The pickup or try-out place is a district or zone, never an address.
+- FD-listing-details-6: The yes/no filters are "all of" and are derived by the database from the listing's own columns; nobody can set a flag directly.
+- FD-listing-details-7: Trade categories are the catalog's own (a category added later, like Andinos, is accepted without changes here), at most 12.
+- FD-listing-details-8: The last published terms are remembered on the device only and applied only when the seller presses the button; the price mode is never copied.
+- FD-listing-details-9: The combo list lives on the device only: no account, no server copy.
+- FD-listing-details-10: The discount is the seller's declared offer.
+- FD-listing-details-11: The combo is not offered on sold or out-of-stock listings, nor while a listing is in the assisted-purchase pilot ("Solicitar compra"), so a listing never shows two ways to buy.
+- FD-listing-details-12: Companions are for stores only (a Particular's few listings rarely go together), up to six, from the same store, and only ones still for sale.
+- FD-listing-details-13: A store is a pin only while it shows its address (the same consent as list-12); otherwise it is an area around its district.
+- FD-listing-details-14: Laria gives no directions: a store pin opens the point in Google Maps or Waze, and the buyer's app does the rest.
+- FD-listing-details-15: The list stays the default view; the map shows the 300 newest results that match and says when there are more.
+- FD-listing-details-16: No address search for the pin: it would need a geocoding service.
+- FD-listing-details-17: The map library and its worker load only when the map is opened; the recovery switch (`LARIA_CATALOG_ENRICHMENT_DISABLED`) also turns the map's data off.
+- FD-listing-details-18: A duplicate or relisted copy keeps "Hecho a mano" and "a pedido" while the store still shows its maker profile; the artist's note, about one physical instrument, is not copied.
+
+### Seller pages and trusted deals (deal-trust)
+
+Detail: [docs/feature-ideas/deal-trust.md](feature-ideas/deal-trust.md).
+
+- FD-deal-trust-1: Shared functions are patched, not copied.
+- FD-deal-trust-2: This changes two earlier rules on purpose, as the idea asked: V1's "only a WhatsApp contact becomes a verified buyer" (a customer who confirms a counter code is one too) and store operations D-12 "stock sales never unlock reviews" (a stock movement still creates nothing; only the customer's confirmation does).
+- FD-deal-trust-3: A code belongs to one Mostrador sale, works once and expires 24 hours after the sale.
+- FD-deal-trust-4: Limits against a store confirming its own sales: never at one's own store, one counter purchase per store per customer a day, five a day in all.
+- FD-deal-trust-5: The QR is drawn with store-floor's encoder (`lib/labels/qr.ts`, byte mode, level M, versions 1 to 10), with no library.
+- FD-deal-trust-6: Photos only on the buyer's review of the seller, pre-moderated, never public by default.
+- FD-deal-trust-7: The image is served by `/api/review-photos/<id>`, which asks `get_review_photo_object` with the visitor's session who may see it; public photos are cached five minutes, others never; responses carry `nosniff`, a sandboxing CSP and `no-referrer`.
+- FD-deal-trust-8: A person's page is `noindex` and stays out of the sitemap: it is for the people they send it to.
+- FD-deal-trust-9: Criteria: at least 5 verified sales, at least 3 visible reviews from buyers averaging 4.5 or more, no report upheld in the last 90 days, no public question left unanswered for more than 7 days (questions up to 90 days old), and for a store, the store is active.
+- FD-deal-trust-10: Stores get the same mark as «Tienda destacada», counting both listing purchases confirmed through WhatsApp and counter purchases (reach-11), which are how most of a store's sales can become verified.
+- FD-deal-trust-11: Turning it on is consent shown in a sheet ("Nunca muestra tu teléfono, tu correo ni qué compraste…").
+- FD-deal-trust-12: The card shows the average of the ratings sellers gave the buyer, which V1 kept private.
+- FD-deal-trust-13: Once on, the line is included by default in every WhatsApp message to a seller or store (the first contact and "Solicitar compra" alike) and can be removed per listing with the chip.
+- FD-deal-trust-14: Only the new owner links, which is their consent; the purchase and the publication must both be theirs, one publication per purchase.
+- FD-deal-trust-15: Previous owners are counted by following earlier links, at most ten.
+- FD-deal-trust-16: Only on Particulars' publications that are not sold; a store's own address is already on its page.
+- FD-deal-trust-17: The public places are a hand-picked list per city in `lib/safe-meetup-places.ts` (Lima, Callao, Arequipa, Trujillo, Chiclayo, Piura, Cusco, Huancayo), opened as map searches, never fixed addresses.
+- FD-deal-trust-18: A store can be a spot only while active, verified and showing its street address; the check runs again on every read, so a store that hides its address drops out at once.
+
+### Selling tools (selling-tools)
+
+Detail: [docs/feature-ideas/selling-tools.md](feature-ideas/selling-tools.md).
+
+- FD-selling-tools-1: No estimated value (deferred: it needs typical prices).
+- FD-selling-tools-2: Mi equipo is for Particular accounts.
+- FD-selling-tools-3: Up to 200 items per person.
+- FD-selling-tools-4: The store sees no name or phone until it is chosen; then only that store gets the person's WhatsApp, which they confirm on the accept screen.
+- FD-selling-tools-5: Photos go to a private bucket under `<person>/<request>/<n>.jpg`, uploaded before the request is sent (the request id is made in the browser).
+- FD-selling-tools-6: Limits: 5 open requests per person, 10 a day, descriptions without phone numbers or links.
+- FD-selling-tools-7: Which stores receive it: active, verified, same region, the category in their list.
+- FD-selling-tools-8: The commission and the payment are agreed between the store and the owner; Laria shows neither.
+- FD-selling-tools-9: The setting is `listings.accepts_part_payment` (null follows the store).
+- FD-selling-tools-10: A Particular's "Acepto cambios por…" (sell-06, listing-details) is a different thing and stays as it is.
+- FD-selling-tools-11: Not for a listing whose price Inventario controls (a store changes it there).
+- FD-selling-tools-12: Buyers see nothing new: no "the price will drop" banner, no countdown.
+- FD-selling-tools-13: The e-mail follows the price-drop choice and its one-click link is "No más bajas de precio": it is the same kind of news for the same people.
+- FD-selling-tools-14: The owner and the listing's store owner are never recipients.
+- FD-selling-tools-15: Stores are listed by region and city only, never paid placement.
+
+### Store reach (store-reach)
+
+Detail: [docs/feature-ideas/store-reach.md](feature-ideas/store-reach.md).
+
+- FD-store-reach-2: Floor of 5 distinct people for every figure, stored aggregated, 13 months kept.
+- FD-store-reach-3: Active stores (and Admin) only; Particulares do not see it.
+- FD-store-reach-4: "Búsquedas sin resultados" counts only searches without price, condition, seller or attribute filters, so a narrowed search that found nothing is not read as missing supply.
+- FD-store-reach-5: The store's feed is for Meta; Google is one Laria-wide feed under Laria's account, off until the account exists.
+- FD-store-reach-6: Feeds are not served on previews, read only public data with the anonymous key, and stop at 20,000 items.
+- FD-store-reach-7: The mark shows on new instruments only ("Nuevo"); a used one is not covered by a dealer's warranty.
+- FD-store-reach-8: One open request per brand and store; a document cannot be replaced, only withdrawn and sent again.
+- FD-store-reach-9: An authorization past its end date stops showing the next day (Lima) without Admin action.
+- FD-store-reach-10: Reference = lowest price of the 30 days before, and the current price must equal it.
+- FD-store-reach-11: At most 30 days per campaign, so a card's "Antes" (list-05 shows drops of 30 days) holds throughout.
+- FD-store-reach-12: The after-campaign choice is required, with no default.
+- FD-store-reach-13: Any price change by the store ends its entry; the publication keeps the store's new price.
+- FD-store-reach-14: Public marks are cached for 10 minutes and shown only while the publication's price still equals the campaign price.
+- FD-store-reach-15: Only Admin creates campaigns.
+- FD-store-reach-16: Up to 100 publications per import, picked by hand.
+- FD-store-reach-17: USD prices and used conditions are left empty for the store to fill in the review; prices are rounded to whole soles.
+- FD-store-reach-18: Photos are copied when the store presses the button in the wizard, not in the background.
+- FD-store-reach-19: Disconnecting deletes the tokens in Laria; the store removes the app in Mercado Libre itself.
+
+### Store floor (store-floor)
+
+Detail: [docs/feature-ideas/store-floor.md](feature-ideas/store-floor.md).
+
+- FD-store-floor-1: "Por llegar" is the listing's `out_of_stock` state plus a date, not a new stock state.
+- FD-store-floor-2: Dates go from today to a year ahead, in Lima's calendar.
+- FD-store-floor-3: The bulk action works on ticked rows (up to 200), like "Ajustar stock", not on "todos los que coinciden".
+- FD-store-floor-4: Three condition groups, matching the condition scale: Nuevo; Exhibición o caja abierta (stores only); every other value is Usados.
+- FD-store-floor-5: Terms apply at once and are not moderated, like the price.
+- FD-store-floor-6: "Con garantía" means more than 0 months, from the store or the brand.
+- FD-store-floor-7: The store's returns terms win over its gift-exchange policy on the store page and `/regalos` (integrator's decision), as described above.
+- FD-store-floor-8: Labels are drawn in the browser, not as a server PDF: no new dependency, works offline once the page is open, and nothing about the store's stock leaves it.
+- FD-store-floor-9: Limits: 200 SKUs per print, 50 copies per SKU and 1,000 labels.
+- FD-store-floor-10: The poster's QR goes to the store page (`/tiendas/<slug>`), where buyers follow and browse.
+- FD-store-floor-11: A try-out holds a time, never the instrument: stock, listings and purchase requests are untouched (talk-06 "Reservado" is still a Maybe).
+- FD-store-floor-12: Try-out hours are their own weekly schedule, because the store profile's opening hours are free text.
+- FD-store-floor-13: "Both get the details by WhatsApp" is done with prefilled WhatsApp links on both screens plus Laria's notices and transactional e-mails.
+- FD-store-floor-14: Booking needs an account (so the store knows who is coming and the buyer can be told).
+- FD-store-floor-15: One reminder, sent by the daily job for confirmed try-outs of today and tomorrow, skipped when the try-out starts within the hour.
+- FD-store-floor-16: A try-out, with the buyer's name and number, is deleted 90 days after its date.
+- FD-store-floor-17: Buyers reach their try-outs from Compras y ventas (and every notice), with no new buyer menu entry.
+- FD-store-floor-18: listing-details' "Se puede probar" flag (a seller's yes/no) stays separate from booking.
+
+### Discovery (discovery)
+
+Detail: [docs/feature-ideas/discovery.md](feature-ideas/discovery.md).
+
+- FD-discovery-1: The eleventh category is "Andinos y tradicionales" with one type and an `andean_type` attribute (the thirteen values above), instead of one type per instrument.
+- FD-discovery-2: The cajón stays in Percusión, and "charango" searches open the new category.
+- FD-discovery-3: Maker status is self-declared, shown with whose word it is, and Admin can hide it.
+- FD-discovery-4: Made to order is a listing of a concrete instrument with its price and photos plus a lead time.
+- FD-discovery-5: Particulars cannot be makers; only stores (a luthier opens a store, which is free).
+- FD-discovery-6: The marks live in their own table, set from the edit page through `set_listing_maker_details`, not through the submission functions.
+- FD-discovery-7: "Verificado" means only that Laria checked the identity.
+- FD-discovery-8: Artists apply by e-mail for now; there is no self-service form (it would need identity documents, which this batch does not collect).
+- FD-discovery-9: Guides are code, not Admin content: they change rarely and need review. deal-trust's safe meetup sheet can link `/guias/<slug>` through `guidesForListing` in `lib/discovery/buying-guides.ts`.
+- FD-discovery-10: The finder uses the catalog filters only; it does not rank or recommend beyond them.
+- FD-discovery-11: The gift exchange is a store-level setting owned by this batch.
+- FD-discovery-12: A collection is saved catalog filters, never a hand-picked list of listings, so it never shows a sold or hidden listing and needs no upkeep.
+- FD-discovery-13: The home row has no feed and no "trending": up to three collections and the gift finder.
+
+### Services for musicians (services)
+
+Detail: [docs/feature-ideas/services.md](feature-ideas/services.md).
+
+- FD-services-1: Five kinds, fixed vocabularies. Kinds, units, places and skills are fixed lists, kept in step between `lib/services.ts` and the migration (a unit test compares them).
+- FD-services-2: One service per kind per account. A studio that rents rooms and records has two services.
+- FD-services-3: Stores offer services as the store. A store owner needs a store request first; the service shows the store's name, logo and verification and links to it.
+- FD-services-4: Moderation before publication; post-moderation of edits. New services wait for Admin.
+- FD-services-5: "Desde" price in whole soles, 1 to 100,000, with a unit. It is a reference, said so on the page; the parties agree the final price.
+- FD-services-6: Contact through WhatsApp only, recorded like listing contacts. A view counts once per person or session per 30 minutes; every press is a contact, at most 20 per person and service a day.
+- FD-services-7: Confirmed booking from either side, 180-day contact window, 30-day answer, 30-day review. Mirrors the listing transaction flow (Sprint 6).
+- FD-services-8: Reviews are permanent; deletion is not. A service with confirmed clients or reviews cannot be deleted, only paused.
+- FD-services-9: Separate section, never mixed. Services have their own tables and pages and never appear in instrument search, listing counts, alerts, favorites or the store's listing allowance (Henri's note).
+- FD-services-10: Entry points. Footer, account menu, Admin menu and sitemap; then (follow-up PR, agreed with the integrator) the home header's Categorías menu, which is also the phone menu, a home teaser and one repair line on worn gear.
+- FD-services-11: Photos. Public bucket `service-photos`, 5 MB, JPEG/PNG/WebP, uploaded into the owner's folder; the owner can remove only photos no service uses, so a photo still on a service (even a hidden one) stays.
+
+### Integration (integrator)
+
+Detail: [docs/feature-ideas/build-plan.md](feature-ideas/build-plan.md) and the integration section of [docs/database.md](database.md).
+
+- FD-integration-1: A new or redefined shared function goes alone in its own migration, and a batch that needs another batch's function changes it through a registry (listing flags, listing detail writers) instead of redefining it.
+- FD-integration-2: An old condition value in a link reads as its part of the new scale (sell-10), so catalog links carry the new values from then on.
+- FD-integration-3: Mi equipo serials take part in the stolen-gear matching both ways, and Admin sees the item and the listing it became, never its owner.
+- FD-integration-4: Deal-trust's counter-sale QR uses store-floor's encoder (`lib/labels/qr.ts`), and its own encoder is removed.
+- FD-integration-5: The Terms and Privacy lines for the batches that listed points without writing them are drafted in one component (`components/legal/feature-ideas-legal.tsx`) and reviewed together with the others ([docs/feature-ideas/legal-review.md](feature-ideas/legal-review.md)).
