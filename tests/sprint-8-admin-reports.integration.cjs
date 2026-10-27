@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const { loadEnvFile } = require("node:process");
 const { createClient } = require("@supabase/supabase-js");
+const { enrollTwoStep } = require("./support/two-step.cjs");
 
 loadEnvFile(".env.local");
 
@@ -45,6 +46,7 @@ async function account(label, { admin = false } = {}) {
 
   const client = createClient(url, anonKey, { auth: { persistSession: false } });
   await ok(await client.auth.signInWithPassword({ email, password }));
+  if (admin) await enrollTwoStep(client);
   return { id: created.user.id, client };
 }
 

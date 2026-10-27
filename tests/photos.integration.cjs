@@ -5,6 +5,7 @@
 const assert = require("node:assert/strict");
 const { loadEnvFile } = require("node:process");
 const { createClient } = require("@supabase/supabase-js");
+const { enrollTwoStep, twoStepCookie } = require("./support/two-step.cjs");
 const { spawnSync } = require("node:child_process");
 
 loadEnvFile(process.env.LARIA_TEST_ENV_FILE ?? ".env.local");
@@ -376,12 +377,18 @@ async function createUser(label, type, appMetadata = {}) {
   const created = await service.auth.admin.createUser({ email: user.email, password: user.password, email_confirm: true, app_metadata: appMetadata, user_metadata: { account_type: type, full_name: "QA Sprint 4 Fotos", phone: "51999999301", city: "Lima", region: "Lima" } });
   assert.equal(created.error, null);
   user.id = created.data.user.id;
+  user.admin = appMetadata.role === "admin";
   users.push(user);
   return user;
 }
 async function signIn(user) {
   const client = createClient(url, anonKey, { auth: { persistSession: false } });
   assert.equal((await client.auth.signInWithPassword({ email: user.email, password: user.password })).error, null);
+  // Admin's pages, photos and functions need the authenticator code (aal2).
+  if (user.admin) {
+    const factor = await enrollTwoStep(client);
+    return { user, client, cookie: await twoStepCookie(url, anonKey, user.email, user.password, factor) };
+  }
   const response = await fetch(`${base}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email, password: user.password }) });
   assert.equal(response.status, 200);
   return { user, client, cookie: response.headers.getSetCookie().map((value) => value.split(";", 1)[0]).join("; ") };

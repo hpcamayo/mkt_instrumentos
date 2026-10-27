@@ -1,0 +1,50 @@
+# Launch audit A14: the release-gate cases of acceptance/cases.tsv, end to end, on every pull request into main, every
+# push to main and by hand. scripts/acceptance/full-stack.sh starts a full local Supabase on the runner (Postgres 17,
+# Auth, PostgREST, Storage), builds and starts the app, and runs the end-to-end tests with throwaway accounts. Nothing
+# here reads a secret, hosted Supabase or production. docs/acceptance/full-stack.md has the details.
+name: Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: acceptance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-stack:
+    name: Release-gate cases on a full local stack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.98.2
+      - name: Install dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+      - name: Acceptance run
+        run: bash scripts/acceptance/full-stack.sh "$RUNNER_TEMP/acceptance"
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      # Each test's output, the build and the app's log, kept for two weeks.
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-logs
+          path: ${{ runner.temp }}/acceptance
+          retention-days: 14

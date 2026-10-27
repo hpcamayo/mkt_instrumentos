@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const { loadEnvFile } = require("node:process");
 const { createClient } = require("@supabase/supabase-js");
+const { enrollTwoStep } = require("./support/two-step.cjs");
 
 loadEnvFile(".env.local");
 const base = process.argv[2];
@@ -27,6 +28,7 @@ const storeIds = [];
     const ownerClient = await signIn(owner.email, owner.password);
     const otherClient = await signIn(other.email, other.password);
     const adminClient = await signIn(admin.email, admin.password);
+    await enrollTwoStep(adminClient);
     const storeClient = await signIn(storeOwner.email, storeOwner.password);
 
     const liveId = crypto.randomUUID();
