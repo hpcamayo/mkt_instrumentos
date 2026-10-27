@@ -110,8 +110,9 @@ reset_limits() {
 
 # acceptance-release-gate and public-pages print one "PASS <case id>" line per release-gate case, and "NOTE <case id>"
 # where only the owner can settle the case; the older suites prove the flows they were written for
-# (docs/acceptance/full-stack.md maps them to cases). Checks that read laria_private go through the database container.
-export ACCEPTANCE_DB_CONTAINER="$DB_CONTAINER"
+# (docs/acceptance/full-stack.md maps them to cases). Checks that read laria_private go through the database container,
+# which tests/photos.integration.cjs takes from LARIA_TEST_DB_CONTAINER.
+export ACCEPTANCE_DB_CONTAINER="$DB_CONTAINER" LARIA_TEST_DB_CONTAINER="$DB_CONTAINER"
 TESTS=(
   "tests/acceptance-release-gate.integration.cjs"
   "scripts/acceptance/public-pages.cjs"
