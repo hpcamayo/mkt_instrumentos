@@ -17,9 +17,10 @@
 --    reminders, then alerts and digests (laria_private.email_priority), oldest first within each.
 -- 3. A daily limit (laria_private.email_settings, 80 by default, so sign-up and password e-mails keep 20 of Resend's
 --    free 100): the claim hands out at most the limit minus what was sent since midnight UTC, when Resend's daily
---    quota resets, and what is being sent now. What doesn't fit waits for the next run, and expires by its kind's age
---    like the rest. An operator changes the limit with laria_private.set_email_daily_limit (SQL editor only).
---    Claims take a transaction advisory lock, so two runs at once can't both spend the same allowance.
+--    quota resets, what is being sent now, and what was tried since midnight and may have reached Resend without being
+--    marked sent (point 4): Resend may have counted it. What doesn't fit waits for the next run, and expires by its
+--    kind's age like the rest. An operator changes the limit with laria_private.set_email_daily_limit (SQL editor
+--    only). Claims take a transaction advisory lock, so two runs at once can't both spend the same allowance.
 -- 4. An attempt that may have reached Resend (a transport or provider failure, or a worker that stopped while
 --    sending) is remembered (marketplace_email_deliveries.uncertain_since, set by fail_marketplace_email_delivery and by
 --    the claim's stale-lock recovery). Every attempt sends the delivery's id as Resend's Idempotency-Key, which Resend
@@ -27,18 +28,26 @@
 --    else, and 23 hours after the first uncertain attempt marks one still waiting failed (failure_code
 --    retry_window_closed) instead of risking a second copy. An e-mail the old worker had already tried, and not yet
 --    sent, counts as uncertain from when it was queued: its earlier failures can't be told apart.
+--    Only the claim hands an e-mail out: a trigger refuses any other change into processing
+--    (laria_private.marketplace_email_claim_fence). A claim that began with the old function before this migration
+--    committed, and waited for the queue's lock, goes on with the old function's body after the commit, without the
+--    rules above; its hand-out now fails instead, and the next run uses the new claim.
 -- 5. A digest's day is read only when it is a real calendar date (laria_private.calendar_date); anything else ages from
 --    when the e-mail was queued, so one malformed row can't stop the claim.
 --
 -- Compatibility: the claim and fail_marketplace_email_delivery keep their signatures, checks and payload; a kind added
--- later gets a week and the first priority unless it is added to the two functions. Nothing else changes.
--- Locks: adding the nullable column takes a brief ACCESS EXCLUSIVE lock on the queue (a few hundred rows), held while
--- the e-mails already tried are marked; otherwise none beyond creating the table, the functions and an index on the
--- queue.
--- Rollback: recreate claim_marketplace_email_deliveries from 20261029120200_review_fixes_alerts_and_import.sql and
+-- later gets a week and the first priority unless it is added to the two functions. A later migration that replaces
+-- the claim changes the fence's value in both places, so a claim running across it is stopped the same way. Nothing
+-- else changes.
+-- Locks: the queue is small (a few hundred rows). Its sent index takes a SHARE lock, then adding the nullable column an
+-- ACCESS EXCLUSIVE lock, held to the commit while the e-mails already tried are marked and the second index and the
+-- fence's trigger are created; otherwise none beyond creating the table and the functions.
+-- Rollback: drop the trigger marketplace_email_deliveries_claim_fence and laria_private.marketplace_email_claim_fence,
+-- recreate claim_marketplace_email_deliveries from 20261029120200_review_fixes_alerts_and_import.sql and
 -- fail_marketplace_email_delivery from 20260921120000_sprint_7_marketplace_email_alerts.sql, then drop
 -- set_email_daily_limit, email_settings, email_priority, email_content_time, calendar_date, email_max_age,
--- marketplace_email_sent_idx and the uncertain_since column. Cancelled e-mails stay cancelled.
+-- marketplace_email_sent_idx, marketplace_email_uncertain_idx and the uncertain_since column. Cancelled e-mails stay
+-- cancelled.
 
 set lock_timeout = '10s';
 
@@ -168,6 +177,35 @@ update laria_private.marketplace_email_deliveries
 set uncertain_since = created_at
 where uncertain_since is null and attempt_count > 0 and status in ('pending', 'retry', 'processing');
 
+-- Tried today and may have reached Resend, without being marked sent, for the limit (Codex's third review).
+create index if not exists marketplace_email_uncertain_idx on laria_private.marketplace_email_deliveries (last_attempt_at)
+  where uncertain_since is not null and status not in ('sent', 'processing');
+
+-- Codex's third review: a claim that began with the old function before this migration committed, and waited for the
+-- queue's lock (the column above holds it until the commit), goes on with the old function's body: without the 23-hour
+-- window, the expiry or the limit. Replacing the function doesn't change a call already running. Only a claim that sets
+-- this fence may move an e-mail into processing, so the old body's hand-out fails and the next run uses the new one.
+create or replace function laria_private.marketplace_email_claim_fence()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if current_setting('laria.email_claim', true) is distinct from 'a25' then
+    raise exception using errcode = '55000', message = 'EMAIL_CLAIM_OUTDATED',
+      hint = 'Only public.claim_marketplace_email_deliveries hands out e-mails.';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function laria_private.marketplace_email_claim_fence() from public, anon, authenticated;
+
+drop trigger if exists marketplace_email_deliveries_claim_fence on laria_private.marketplace_email_deliveries;
+create trigger marketplace_email_deliveries_claim_fence
+before update of status on laria_private.marketplace_email_deliveries
+for each row when (new.status = 'processing' and old.status is distinct from 'processing')
+execute function laria_private.marketplace_email_claim_fence();
+
 -- From 20260921120000_sprint_7_marketplace_email_alerts.sql, with uncertain_since: a transport or provider failure
 -- (timeouts, lost connections, 408, 409, 5xx, a reply without an id) may have been accepted; a rate limit, a refusal
 -- or a failure before sending was not.
@@ -228,12 +266,16 @@ as $$
 declare
   result jsonb;
   allowance integer;
+  -- Resend's day starts at midnight UTC.
+  day_start timestamptz := date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC';
 begin
   if auth.role() is distinct from 'service_role' or p_worker_id is null or p_limit not between 1 and 100 then
     raise exception using errcode = '42501', message = 'EMAIL_SERVICE_REQUIRED';
   end if;
   -- A25: one claim at a time, so two runs can't both spend the same part of the daily limit.
   perform pg_advisory_xact_lock(hashtextextended('laria.claim_marketplace_email_deliveries', 0));
+  -- A25: this claim may hand out (laria_private.marketplace_email_claim_fence), for this transaction only.
+  perform set_config('laria.email_claim', 'a25', true);
 
   update laria_private.marketplace_email_deliveries
   set status = case when attempt_count >= 5 then 'failed' else 'retry' end,
@@ -273,11 +315,15 @@ begin
       or (delivery.event_type = 'search_alert_daily'
           and not exists (select 1 from laria_private.search_alert_matches match where match.delivery_id = delivery.id)));
 
-  -- A25: what is left of today's limit (Resend's day starts at midnight UTC), less what is being sent now.
+  -- A25: what is left of today's limit, less what is being sent now, and less what was tried today and may have reached
+  -- Resend without being marked sent (Codex's third review): Resend may have counted it, so its place stays taken.
   select greatest(0, least(p_limit, settings.daily_limit
       - (select count(*) from laria_private.marketplace_email_deliveries sent
-         where sent.status = 'sent' and sent.sent_at >= date_trunc('day', clock_timestamp() at time zone 'UTC') at time zone 'UTC')
-      - (select count(*) from laria_private.marketplace_email_deliveries busy where busy.status = 'processing')))
+         where sent.status = 'sent' and sent.sent_at >= day_start)
+      - (select count(*) from laria_private.marketplace_email_deliveries busy where busy.status = 'processing')
+      - (select count(*) from laria_private.marketplace_email_deliveries maybe
+         where maybe.uncertain_since is not null and maybe.status not in ('sent', 'processing')
+           and maybe.last_attempt_at >= day_start)))
   into allowance
   from laria_private.email_settings settings
   where settings.id;

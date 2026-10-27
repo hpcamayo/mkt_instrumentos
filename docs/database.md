@@ -1532,7 +1532,9 @@ so it can be applied before the deploy that schedules the worker (`vercel.json`,
   `listing_back_in_stock`, `follow_weekly`); oldest first within each. The payload array follows the same order.
 - Daily limit: `laria_private.email_settings` (one row; `daily_limit` 80, `changed_at`, `changed_by`, `reason`; no API
   access). A claim hands out at most `p_limit` and at most the limit minus the e-mails sent since midnight UTC
-  (Resend's daily reset; index `marketplace_email_sent_idx`) and those being sent. Claims take
+  (Resend's daily reset; index `marketplace_email_sent_idx`), those being sent, and those tried since midnight that may
+  have reached Resend without being marked sent (`uncertain_since` set, any other status; index
+  `marketplace_email_uncertain_idx`): Resend may have counted them, so their places stay taken. Claims take
   `pg_advisory_xact_lock` so two at once can't spend the same allowance. `laria_private.set_email_daily_limit(limit,
   reason)` is for an operator in the SQL editor (no API role may call it); 0 pauses marketplace e-mails.
 - Uncertain sends: every attempt sends the delivery's id as Resend's `Idempotency-Key`, which Resend keeps for 24
@@ -1541,7 +1543,15 @@ so it can be applied before the deploy that schedules the worker (`vercel.json`,
   lost connections, 408, 409, 5xx, a reply without an id), and the claim's stale-lock recovery for a worker that
   stopped while sending; a rate limit, a refusal or a failure before sending leaves it empty. The claim hands these
   retries out before everything else, and marks one still waiting 23 hours after it `failed` with `failure_code =
-  'retry_window_closed'` rather than risk a second copy.
+  'retry_window_closed'` rather than risk a second copy. E-mails the old worker had tried and not sent count as
+  uncertain from `created_at`.
+- Only the claim hands out: the trigger `marketplace_email_deliveries_claim_fence`
+  (`laria_private.marketplace_email_claim_fence()`) refuses any change into `processing` (`EMAIL_CLAIM_OUTDATED`)
+  unless the transaction set `laria.email_claim` to `a25`, which the claim does for its own transaction. A call that
+  began with an earlier claim before a migration replacing it committed, and waited for the queue's lock, runs that
+  earlier body after the commit; its hand-out fails instead and the next run uses the new claim
+  (`tests/launch-audit-email-backlog.integration.cjs` replays it). A migration that replaces the claim again changes
+  the value in both places.
 - Kinds the `features/marketplace` branch adds (account security, offers, trades, services) get 7 days and priority
   0 unless it adds them to both functions.
 <!-- /launch-audit:email -->

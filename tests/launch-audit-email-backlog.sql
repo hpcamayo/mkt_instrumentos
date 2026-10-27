@@ -81,6 +81,23 @@ do $$ begin
     and not has_table_privilege('authenticated', 'laria_private.email_settings', 'select'), 'no API role reads the settings');
 end $$;
 
+-- ------------------------------------------------------------------ the fence
+
+-- Codex's third review: only the claim hands an e-mail out. A hand-out by anything else, such as an earlier claim's body
+-- that was still running when the migration committed, fails and changes nothing
+-- (tests/launch-audit-email-backlog.integration.cjs replays that one).
+select pg_temp.queue(30, 'store_approved', interval '1 hour');
+select pg_temp.expect_error($sql$update laria_private.marketplace_email_deliveries set status = 'processing',
+  attempt_count = attempt_count + 1, last_attempt_at = now(), locked_at = now(), locked_by = gen_random_uuid()
+  where id = pg_temp.id(30)$sql$, 'EMAIL_CLAIM_OUTDATED');
+do $$ begin
+  perform pg_temp.check((select status = 'pending' and attempt_count = 0 and locked_by is null
+    from laria_private.marketplace_email_deliveries where id = pg_temp.id(30)), 'the e-mail still waits');
+  perform pg_temp.check(not has_function_privilege('authenticated', 'laria_private.marketplace_email_claim_fence()', 'execute')
+    and not has_function_privilege('anon', 'laria_private.marketplace_email_claim_fence()', 'execute'), 'no API role calls the fence');
+end $$;
+delete from laria_private.marketplace_email_deliveries where id = pg_temp.id(30);
+
 -- ------------------------------------------------------------------ expiry and order
 
 select pg_temp.queue(1, 'search_alert_immediate', interval '25 hours');      -- past its day
@@ -270,5 +287,43 @@ do $$ begin
   perform pg_temp.check((select uncertain_since = now() - interval '20 minutes' and status = 'processing' and attempt_count = 2
     from laria_private.marketplace_email_deliveries where id = pg_temp.id(24)), 'a stopped worker''s send may have gone out, from its attempt');
 end $$;
+
+-- ------------------------------------------------------------------ the limit and uncertain sends
+
+-- Codex's third review: a send Resend may have accepted keeps its place in today's limit after it fails, until it is
+-- sent or the day ends; a refused one gives its place back. A fresh day: none of this suite's e-mails count.
+delete from laria_private.marketplace_email_deliveries where recipient_user_id = 'a2500000-0000-4000-8000-000000000001';
+select laria_private.set_email_daily_limit(3, 'Prueba de envíos inciertos');
+select pg_temp.queue(31, 'store_approved', interval '3 hours');
+select pg_temp.queue(32, 'store_approved', interval '2 hours');
+select pg_temp.queue(33, 'store_approved', interval '1 hour');
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ declare claim jsonb; begin
+  claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000008', 10);
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(31), pg_temp.id(32), pg_temp.id(33)], 'three fit: ' || claim::text);
+  -- 31's answer is lost (Resend may have sent it), Resend's rate limit refuses 32, and 33 is sent.
+  perform public.fail_marketplace_email_delivery(pg_temp.id(31), 'a2520000-0000-4000-8000-000000000008', true, 'transport', 'transport_error');
+  perform public.fail_marketplace_email_delivery(pg_temp.id(32), 'a2520000-0000-4000-8000-000000000008', true, 'rate_limit', 'http_429');
+  perform public.complete_marketplace_email_delivery(pg_temp.id(33), 'a2520000-0000-4000-8000-000000000008', 'qa-33');
+end $$;
+reset role;
+update laria_private.marketplace_email_deliveries set next_attempt_at = now() - interval '1 minute'
+where id = any(array[pg_temp.id(31), pg_temp.id(32)]);
+
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ declare claim jsonb; begin
+  -- 3 a day: 33 sent and 31 maybe sent leave room for 1, and 31's retry goes first (the old count gave room for 2).
+  claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000009', 10);
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(31)], 'the maybe-sent e-mail keeps its place: ' || claim::text);
+  -- Its retry carries the same Idempotency-Key, so the two attempts make one e-mail at most: 32 still fits.
+  claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000010', 10);
+  perform pg_temp.check(pg_temp.claimed(claim) = array[pg_temp.id(32)], 'a refused send gave its place back: ' || claim::text);
+  claim := public.claim_marketplace_email_deliveries('a2520000-0000-4000-8000-000000000011', 10);
+  perform pg_temp.check(claim = '[]'::jsonb, 'nothing more today: ' || claim::text);
+end $$;
+reset role;
 
 rollback;

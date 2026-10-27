@@ -108,3 +108,18 @@ test("A25: e-mails the old worker already tried count as uncertain from when the
   assert.ok(at > migration.indexOf("add column if not exists uncertain_since timestamptz;"), "after the column exists");
   assert.ok(at < migration.indexOf("create or replace function public.claim_marketplace_email_deliveries"), "before the new claim");
 });
+
+test("A25: only the claim hands an e-mail out, and a send Resend may have accepted keeps its place in the day's limit", () => {
+  const migration = read(migrationFile);
+  // Codex's third review: a claim that runs the old body across the migration's commit must hand nothing out.
+  assert.match(migration, /create trigger marketplace_email_deliveries_claim_fence\nbefore update of status on laria_private\.marketplace_email_deliveries\nfor each row when \(new\.status = 'processing' and old\.status is distinct from 'processing'\)\nexecute function laria_private\.marketplace_email_claim_fence\(\);/);
+  assert.match(migration, /if current_setting\('laria\.email_claim', true\) is distinct from 'a25' then\n\s+raise exception using errcode = '55000', message = 'EMAIL_CLAIM_OUTDATED'/);
+  assert.ok(migration.indexOf("create trigger marketplace_email_deliveries_claim_fence") > migration.indexOf("add column if not exists uncertain_since timestamptz;"),
+    "created while the column's lock is held");
+  const claim = migration.slice(migration.indexOf("create or replace function public.claim_marketplace_email_deliveries"));
+  const fence = claim.indexOf("perform set_config('laria.email_claim', 'a25', true);");
+  assert.ok(fence > 0 && fence < claim.indexOf("set status = 'processing'"), "the claim sets the fence, for its transaction, before its hand-out");
+  assert.match(claim, /where maybe\.uncertain_since is not null and maybe\.status not in \('sent', 'processing'\)\n\s+and maybe\.last_attempt_at >= day_start\)\)\)/,
+    "the allowance keeps the places of sends Resend may have accepted today");
+  assert.match(migration, /create index if not exists marketplace_email_uncertain_idx on laria_private\.marketplace_email_deliveries \(last_attempt_at\)\n  where uncertain_since is not null and status not in \('sent', 'processing'\);/);
+});

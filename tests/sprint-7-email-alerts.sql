@@ -147,7 +147,9 @@ do $$ begin
 end $$;
 
 -- A pause racing a claimed alert job cancels the claim and prevents a stale
--- worker from committing it as sent or retrying it.
+-- worker from committing it as sent or retrying it. The suite hands the job out
+-- itself, as the claim would (launch audit A25's fence lets only the claim).
+select set_config('laria.email_claim','a25',true);
 update laria_private.marketplace_email_deliveries
 set status='processing', attempt_count=attempt_count+1, last_attempt_at=now(), locked_at=now(), locked_by='73000000-0000-4000-8000-000000000003'
 where event_type='search_alert_immediate' and listing_id='72000000-0000-4000-8000-000000000004';
