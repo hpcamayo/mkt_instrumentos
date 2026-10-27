@@ -70,7 +70,8 @@ import {
   type PurchaseRequest,
 } from "@/lib/payment-methods";
 import { fetchCatalogPage } from "@/lib/catalog";
-import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
+import { getCatalogBrandsByCategory, getListingCounts } from "@/lib/catalog-brands";
+import { getCatalogFacets } from "@/lib/catalog-data";
 import {
   categoryLandingPath,
   categoryTypePath,
@@ -372,7 +373,12 @@ async function renderCategoryLanding(
 
   const page = parsePage(searchParams.page);
   const filters = parseListingFilters({ category: landing.category });
-  const [result, catalogBrands] = await Promise.all([loadCategoryPage(landing.category, page), getCatalogBrandsByCategory(optionalReadSignal(getRequestReads().deadline))]);
+  const { supabase, deadline } = getRequestReads();
+  if (!supabase) return <SupabaseSetupMessage />;
+  // Each aggregate has its existing cache and deadline; none depends on inventory or another aggregate.
+  const facets = getCatalogFacets(filters);
+  const counts = getListingCounts(optionalReadSignal(deadline));
+  const [result, catalogBrands] = await Promise.all([loadCategoryPage(landing.category, page), getCatalogBrandsByCategory(optionalReadSignal(deadline))]);
   if (!result.configured) return <SupabaseSetupMessage />;
 
   const redirectPage = getPageRedirect(page, result.count, result.error);
@@ -386,6 +392,8 @@ async function renderCategoryLanding(
       landing={landing}
       brands={catalogBrands[landing.category] ?? []}
       filters={filters}
+      facets={facets}
+      counts={counts}
       listings={(result.data ?? []) as ListingCardData[]}
       totalCount={result.count ?? 0}
       page={page}

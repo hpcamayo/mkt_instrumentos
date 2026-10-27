@@ -6,8 +6,8 @@ import { SearchTelemetry } from "@/components/marketplace-telemetry";
 import { Button } from "@/components/ui/button";
 import { ChipLink } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { getListingCounts } from "@/lib/catalog-brands";
-import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
+import type { getListingCounts } from "@/lib/catalog-brands";
+import type { getCatalogFacets } from "@/lib/catalog-data";
 import { brandsAlphabetical, type CategoryBrand } from "@/lib/catalog-brands-aggregate";
 import { formatNumber } from "@/lib/catalog-filters";
 import { catalogRefinementRel } from "@/lib/catalog-links";
@@ -26,6 +26,8 @@ export async function CategoryLanding({
   landing,
   brands = [],
   filters,
+  facets,
+  counts: countsRead,
   listings,
   totalCount,
   page,
@@ -37,6 +39,8 @@ export async function CategoryLanding({
   // The category's brands in the instrument catalog (lib/catalog-brands.ts); none when the catalog is unavailable.
   brands?: readonly CategoryBrand[];
   filters: ListingFiltersType;
+  facets: ReturnType<typeof getCatalogFacets>;
+  counts: ReturnType<typeof getListingCounts>;
   listings: ListingCardData[];
   totalCount: number;
   page: number;
@@ -47,7 +51,7 @@ export async function CategoryLanding({
   const path = `/instrumentos/${landing.slug}`;
   // FIND 06 (Effortless Laria): the type chips say how many listings each has, and types without listings are left
   // out (all of them show when the counts are unavailable).
-  const counts = await getListingCounts(optionalReadSignal(getRequestReads().deadline));
+  const counts = await countsRead;
   const typeCount = (type: string) => counts?.types[`${landing.category}:${type}`];
   const types = getInstrumentTypeOptions(landing.category).filter((type) => type.value !== "other" && (!counts || (typeCount(type.value) ?? 0) > 0));
   const otherCategories = categoryLandingPages.filter((item) => item.slug !== landing.slug && (!counts || (counts.categories[item.category] ?? 0) > 0));
@@ -101,6 +105,7 @@ export async function CategoryLanding({
           ) : null
         }
         filters={filters}
+        facets={facets}
         scope={landingScope(landing.category)}
         listings={listings}
         totalCount={totalCount}
