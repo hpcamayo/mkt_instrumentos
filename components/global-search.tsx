@@ -4,7 +4,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from "react";
 import { IconButton } from "@/components/ui/button";
 import { getCategoryLandingBySlug } from "@/lib/category-pages";
-import { CATALOG_PATH } from "@/lib/catalog-filters";
+import { CATALOG_PATH, catalogSearchParams } from "@/lib/catalog-filters";
+import { searchParamsRecord } from "@/lib/catalog-request";
+import { parseListingFilters } from "@/lib/listings";
 import type { Suggestion } from "@/lib/catalog-suggest";
 import { SEARCH_LABEL, SEARCH_PLACEHOLDER } from "@/lib/shell";
 import { cn } from "@/lib/utils";
@@ -15,10 +17,12 @@ import { cn } from "@/lib/utils";
 // list suggests categories, types, brands and models that have listings, with their counts. Without JavaScript the form
 // still submits a plain GET.
 
-// The filters a search from this page keeps: everything on /listados but the old text and the page; the category on a
-// category page.
+// Keep normalized filter state, never tracking, framework or unknown parameters from the incoming URL.
 export function keptSearchFields(pathname: string, params: URLSearchParams): [string, string][] {
-  if (pathname === CATALOG_PATH) return [...params.entries()].filter(([key]) => key !== "q" && key !== "page");
+  if (pathname === CATALOG_PATH) {
+    const filters = parseListingFilters(searchParamsRecord(params));
+    return [...catalogSearchParams({ ...filters, q: undefined }).entries()];
+  }
   const landing = /^\/instrumentos\/([^/]+)\/?$/.exec(pathname);
   const page = landing ? getCategoryLandingBySlug(landing[1]) : null;
   return page ? [["category", page.category]] : [];

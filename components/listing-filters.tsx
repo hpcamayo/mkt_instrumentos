@@ -71,7 +71,7 @@ function FacetOptions({ facet, filters, scope }: { facet: ChoiceFacet; filters: 
       <ul className="mt-2 flex flex-wrap gap-2">
         {facet.options.map((option) => (
           <li key={option.value}>
-            <ChipLink href={href(option.value)} selected={chosen(option.value)} className="h-9" id={filterOptionId(facet.key, option.value)}>
+            <ChipLink href={href(option.value)} rel="nofollow" selected={chosen(option.value)} className="h-9" id={filterOptionId(facet.key, option.value)}>
               {option.label}
               {option.count !== undefined ? <span className="ml-1.5 font-normal text-ink-2">{formatNumber(option.count)}</span> : null}
             </ChipLink>
@@ -169,7 +169,7 @@ function PriceShortcuts({ filters, scope, spread }: { filters: ListingFiltersTyp
             const selected = filters.minPrice === shortcut.min && filters.maxPrice === shortcut.max;
             return (
               <li key={shortcut.label}>
-                <ChipLink href={catalogHref(selected ? withPrice(filters, undefined, undefined) : withPrice(filters, shortcut.min, shortcut.max), scope)} selected={selected} className="h-9" id={filterOptionId("precio", shortcut.label)}>
+                <ChipLink href={catalogHref(selected ? withPrice(filters, undefined, undefined) : withPrice(filters, shortcut.min, shortcut.max), scope)} rel="nofollow" selected={selected} className="h-9" id={filterOptionId("precio", shortcut.label)}>
                   {shortcut.label}
                 </ChipLink>
               </li>

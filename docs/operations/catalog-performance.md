@@ -93,6 +93,7 @@ Only public, anonymous data is shared. Nothing here reads cookies or a session; 
 | Type and category counts (home, landings, suggestions) | Next data cache + memory | 120 s | last good up to 1 h; 30 s cool-down |
 | Facets per canonical filter set | memory per instance (500 keys) + CDN | 60 s; CDN 60 s, then up to 300 s stale while refreshing | last good up to 1 h; unavailable answers are shared 10 s |
 | Empty-search rescue per filter set | memory per instance (300 keys) | 60 s | omitted |
+| Individual removal counts reused by related empty searches | memory per instance (500 keys, including in-flight deduplication) | 60 s | no last-good answer beyond 60 s |
 | Brand and model suggestions per query | memory per instance (500 keys) + CDN | 120 s | omitted; categories still suggested |
 
 So a newly approved listing can take up to two minutes to appear in counts and menus (about seven at the CDN's stale
@@ -163,6 +164,94 @@ is a scenario, not a measured production forecast. The available request metrics
 the affected share cannot be established from them. There is no defensible percentage reduction in total bot
 requests yet. Local Node CPU and uncompressed HTML are not Vercel billing measurements; memory, compressed origin
 transfer, instance concurrency and crawler behavior require post-deployment observation.
+
+### Catalog traffic optimization (26 Oct 2026)
+
+The early routing guard in `middleware.ts` covers `/listados` and `/api/catalog/:path*`. Public requests leave this
+branch before session-client construction, cookie handling or auth calls. Existing account/Admin middleware remains
+in place. `lib/catalog-request.ts` shares the malformed-value cleanup with both catalog page exports; a known
+malformed URL returns a small 308 response before rendering the root layout. The page and metadata keep their own
+check as defense in depth. Valid free text, repeated filters, page numbers and legacy category links retain their
+existing behavior. Unknown or tracking-only parameters do not trigger a new incoming redirect.
+
+`lib/catalog-crawlers.ts` restricts **Amazonbot, Reflectionbot and MJ12bot**, by their advertised user-agent token,
+to prevent bulk crawling of filter combinations and catalog data APIs. They receive a small 403 with
+`Cache-Control: private, no-store` and `Vary: User-Agent`; it must never be shared with ordinary visitors. This is
+resource containment for those declared crawler identities, not an authentication or DDoS control: agents can change
+their identity. No broad "bot" substring, shared-IP limit or challenge is added to application code.
+
+SEO safeguards:
+
+- Every agent can still fetch clean category, product, store, sitemap and robots URLs. Googlebot, Bingbot, social
+  preview agents (`facebookexternalhit`, WhatsApp), user-triggered AI fetchers and other agents retain catalog access.
+- The production robots file adds only a specific group for the three selected crawlers, disallowing `/listados`.
+  Their group also retains **all** private-route restrictions from the wildcard group, because a specific group
+  replaces that group. The wildcard does not disallow catalog pagination. Preview deployments still disallow `/`.
+- Clean catalog/category pagination remains followable; canonical tags and valid filtered searches'
+  `noindex, follow` metadata are unchanged. Refined `/listados?...` links now consistently use `nofollow` in result
+  navigation, price/attribute chips, category exploration and public menus. Clean category/product links remain
+  followable. `nofollow` is a crawl hint, not a request cap.
+- Internal search fields, pagination, retry and return-to-results links now serialize only normalized supported
+  filters. Unknown keys such as `µphone_type`, framework keys such as `_rsc`, and `utm_*` attribution keys do not
+  multiply into the next URL. The incoming URL is left available for attribution. Repeated conditions, cities and
+  supported multi-select attributes survive serialization.
+
+The empty-search rescue still shows the same removal choices and fallback listings. Related searches share their
+optional "without this filter" counts for a minute in a bounded, non-persistent cache; sort does not change a count.
+Concurrent requests asking the same question share one in-flight read. Duplicate fallback states are tried once
+rather than repeating the same category query. No shared cache was added to the primary catalog result, and there
+is no migration, visibility-policy change, session change or new environment variable.
+
+Validation:
+
+```sh
+pnpm test
+pnpm lint
+pnpm exec tsc --noEmit --incremental false
+pnpm build
+# Against a running production build with at least two catalog pages and the default canonical site origin:
+node tests/catalog-routing-http.cjs http://127.0.0.1:3000
+```
+
+The suite passes 712 tests. The HTTP smoke exercises 33 cases: selected crawler denials, preserved clean discovery,
+early malformed redirects, allowed search/social/user agents, normalized generated URLs, canonical metadata and
+filtered `noindex, follow`. Its local fixture replay checked 25 refinement links. The mobile browser smoke applied
+one condition and two locations, then changed to lowest price; all filters survived and unknown/tracking parameters
+did not propagate. A fixture-only `/vender` auth prefetch warning was unrelated to this flow.
+
+A deterministic three-search rescue replay (two locations and a changed sort, all empty) makes **five rather than
+nine count calls**, and **six rather than nine fallback calls**: 11 optional listing reads instead of 18, about 39%
+less for that case. A separate concurrency test confirms a shared in-flight count. These are fixture results, not
+a prediction for every empty search; new unique filter combinations can still miss the bounded cache.
+
+Against merged main (`139d413`), a warmed local Next.js 15.5.18 production replay with an isolated read-only API
+fixture and 30 requests per case measured:
+
+| Request | Local CPU ms, before → after | Raw response bytes, before → after | API reads, before → after |
+| --- | --- | --- | --- |
+| Amazonbot catalog | 33.39 → 1.10 | 228,356 → 20 | 1 → 0 |
+| Reflectionbot catalog | 29.50 → 1.26 | 228,356 → 20 | 1 → 0 |
+| MJ12bot catalog | 30.78 → 4.62 | 228,356 → 20 | 1 → 0 |
+| Malformed-condition redirect | 6.04 → 0.90 | 23,056 → 52 | 0 → 0 |
+
+These are local process CPU and uncompressed bytes, not billed Vercel resources. The redirect comparison excludes
+following the destination. Normal valid pages still render and read the catalog. Four additional alternating
+40-request control batches showed 21.8–26.6 ms CPU/request on main and 22.3–32.4 ms after the change as the processes
+warmed; the final matched batches were 21.8 and 22.3 ms. The guard adds routing work to valid requests, and this
+replay does not establish a normal-user CPU or latency improvement. The middleware build grows from 89.3 to 93.7 KB.
+
+Deployment and measurement limits:
+
+- The PR deploys application routing protection. It does **not** publish account-level Vercel Firewall or billing
+  settings. Existing firewall rules stay in force. For the lowest platform cost, an equivalent reviewed WAF deny can
+  stop the selected crawler requests before application middleware. Log/review exact path and identity matches
+  before publishing that separate operational change; preserve search engines and social previews.
+- An application middleware 403 still consumes middleware/CDN resources. It is **not** the free WAF mitigation
+  category, so do not claim that HTTP request counts or CDN tier usage disappear when only this code is deployed.
+- Measure production function CPU, origin transfer, Supabase calls, middleware cost, allowed CDN requests and
+  Google/Bing/social success separately over comparable windows. Do not add overlapping code and bot-policy savings.
+- The source rollback is a revert/redeploy; it does not alter existing WAF rules. No automatic pause or broad robots
+  exclusion is introduced.
 
 ## Functionality contract
 
