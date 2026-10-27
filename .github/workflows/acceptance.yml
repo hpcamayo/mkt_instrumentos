@@ -1,7 +1,7 @@
 # Launch audit A14: the release-gate cases of acceptance/cases.tsv, end to end, on every pull request into main, every
 # push to main and by hand. scripts/acceptance/full-stack.sh starts a full local Supabase on the runner (Postgres 17,
 # Auth, PostgREST, Storage), builds and starts the app, and runs the end-to-end tests with throwaway accounts. Nothing
-# here reads a secret, hosted Supabase or production. docs/acceptance/full-stack.md has the details.
+# here reads a repository secret, hosted Supabase or production. docs/acceptance/full-stack.md has the details.
 name: Acceptance
 
 on:
@@ -13,6 +13,8 @@ on:
 
 permissions:
   contents: read
+  # Only to download the Supabase images from ghcr.io signed in (below).
+  packages: read
 
 concurrency:
   group: acceptance-${{ github.event.pull_request.number || github.ref }}
@@ -36,6 +38,13 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.28.0 --activate
           pnpm install --frozen-lockfile
+      # ghcr.io limits anonymous downloads from the shared runner addresses, and refused every try of the Supabase images
+      # (toomanyrequests). Signed in with the run's own token, which can only read, the downloads count as this
+      # repository's instead.
+      - name: Sign in to the image registry
+        run: printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
       - name: Acceptance run
         run: bash scripts/acceptance/full-stack.sh "$RUNNER_TEMP/acceptance"
         env:

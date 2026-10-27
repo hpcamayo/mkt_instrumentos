@@ -2,7 +2,8 @@
 
 Launch audit A14 found that 68 release-gate cases of `acceptance/cases.tsv` had never been run. This run checks them
 end to end, on every pull request into `main`, every push to `main` and by hand (GitHub > Actions > Acceptance > Run
-workflow). It never reads a secret, hosted Supabase or production.
+workflow). It never reads a repository secret, hosted Supabase or production: it only signs in to ghcr.io with the
+run's own read-only token, to download the Supabase images.
 
 ## What runs
 
