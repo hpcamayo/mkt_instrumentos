@@ -48,6 +48,14 @@ sessions".
   when the person closes the browser, comes back the next day or opens Mi cuenta. Pages under `/mi-cuenta`, `/vender`,
   `/mis-publicaciones` and `/admin` send a session that still owes its code to the code step (Seguridad and sign-out
   stay open); the code step returns to the page the person was going to.
+- **The code guards the data, not only the pages** (integration, `20261210120700_feat_two_step_requests.sql`). Until
+  the code is entered, the session's token is refused by the API itself (`TWO_STEP_REQUIRED`): every PostgREST request
+  (PostgREST's pre-request check, `public.check_two_step_request`) and every Storage request (a restrictive policy),
+  except the four calls of signing in and the code step (`my_two_step_owed`, `my_two_step_requirement`,
+  `record_sign_in_device`, `use_my_recovery_code`). Routes that use the service role ask `public.my_two_step_owed()`
+  first (`lib/auth/complete-session.ts`; `tests/feat-two-step-requests.test.cjs` lists every use of the service role
+  and why it is safe). Without this, someone with the password alone could skip the code step and use the account
+  through the API. Public pages still open; the header shows the session as signed out until the code.
 - **"Mantener sesión iniciada".** A checkbox on the sign-in page, ticked by default, with "Desmárcalo en una
   computadora compartida: la sesión se cerrará al cerrar el navegador." Ticked, the session cookies last 400 days and
   refresh themselves (Supabase's default). Unticked, a `laria_recordar=0` marker makes the middleware, the server

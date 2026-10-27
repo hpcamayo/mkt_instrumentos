@@ -41,7 +41,10 @@ alter table auth.users add column email_change varchar(255) default '', add colu
 create table auth.identities (id uuid primary key default gen_random_uuid(), user_id uuid not null, identity_data jsonb);
 create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid not null);
 create table auth.refresh_tokens (id bigserial primary key, user_id varchar(255), token varchar(255));
-create table auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid not null);
+-- status as Supabase Auth has it: features/marketplace's second-step check (20261210120700) reads it on every Storage
+-- request. Unverified, so no fixture session here owes an authenticator code.
+create table auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid not null,
+  status text not null default 'unverified');
 create table auth.one_time_tokens (id uuid primary key default gen_random_uuid(), user_id uuid not null);
 create table auth.flow_state (id uuid primary key default gen_random_uuid(), user_id uuid);
 create table auth.audit_log_entries (id uuid primary key default gen_random_uuid(), payload json);

@@ -30,6 +30,12 @@ so on its page.
 | Auth › Multi-factor › TOTP | accounts | Enabled (Supabase's default) |
 | Auth › Email › Secure email change | accounts | On (Supabase's default) |
 
+Nothing to set for the API's second-step check: `20261210120700_feat_two_step_requests.sql` sets PostgREST's
+pre-request function on the `authenticator` role itself and tells PostgREST to reload. After the migrations, a request
+with the anon key should still answer (for example the catalog), and an account with the authenticator app on should
+get "Escribe tu código" after its password, then everything after the code. To undo it in an emergency:
+`alter role authenticator reset pgrst.db_pre_request; notify pgrst, 'reload config';`.
+
 ## Scheduled jobs
 
 Each route is `GET` with `Authorization: Bearer $CRON_SECRET`. All of them can safely run twice. The account is on

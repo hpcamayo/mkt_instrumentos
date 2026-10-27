@@ -1732,7 +1732,7 @@ writes to every table below are revoked and go through definer functions. Errors
 <!-- /feature-ideas:selling-tools -->
 
 <!-- feature-ideas:integration -->
-## Feature ideas: integration (migrations `20261210120000`–`20261210120600`)
+## Feature ideas: integration (migrations `20261210120000`–`20261210120700`)
 
 Wiring between batches, written by the integrator (not applied to any hosted database).
 
@@ -1804,9 +1804,21 @@ Wiring between batches, written by the integrator (not applied to any hosted dat
   with the alerts' priority (2, optional like a price drop); the Mi equipo reminder after three days, with the
   reminders' priority (1), as is the try-out reminder. The branch's other e-mails are an account's own business (help
   answers, consignments, trades, offers, services, a stolen-gear match) and keep the default: a week, priority 0.
-- Tests: `tests/feat-integration.sql` (also the e-mail rules), `tests/feat-page-refresh.sql`,
-  `tests/feat-account-privacy.sql`, `tests/feat-deal-trust.sql` (held reviews, Admin publishing, counted buyers);
-  `tests/feat-integration.test.cjs` checks the grant, the view's order and the cards' columns.
+- **The second sign-in step guards the API (`20261210120700`, safe-08).** A signed-in session at `aal1` whose account
+  has a verified authenticator factor owes its code (`laria_private.two_step_owed()`, one lookup of
+  `auth.mfa_factors`, only for `aal1`). Such a session gets `TWO_STEP_REQUIRED` (42501) from every PostgREST request,
+  through PostgREST's pre-request function `public.check_two_step_request()` (set with `alter role authenticator set
+  pgrst.db_pre_request`; anon and authenticated may execute it, since it runs as the request's role), except
+  `/rpc/my_two_step_owed`, `/rpc/my_two_step_requirement`, `/rpc/record_sign_in_device` and
+  `/rpc/use_my_recovery_code`; and from Storage, through the restrictive policy "Second sign-in step" on
+  `storage.objects` (every action, `authenticated`). `public.my_two_step_owed()` (authenticated) answers it for the
+  routes that act with the service role. Visitors, the service role, accounts without a factor and `aal2` sessions are
+  untouched. Rollback: `alter role authenticator reset pgrst.db_pre_request; notify pgrst, 'reload config';`, then
+  drop the policy and the three functions.
+- Tests: `tests/feat-integration.sql` (also the e-mail rules), `tests/feat-two-step-requests.sql`,
+  `tests/feat-page-refresh.sql`, `tests/feat-account-privacy.sql`, `tests/feat-deal-trust.sql` (held reviews, Admin
+  publishing, counted buyers); `tests/feat-integration.test.cjs` checks the grant, the view's order and the cards'
+  columns; `tests/feat-two-step-requests.test.cjs` the allowed calls and every use of the service role.
 <!-- /feature-ideas:integration -->
 
 <!-- feature-ideas:store-locations -->

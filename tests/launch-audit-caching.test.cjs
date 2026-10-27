@@ -518,11 +518,16 @@ test("A19: the browser's refresh call drops only the pages of listings its calle
   };
   let signedIn = owner;
   let adminChecks = 0;
+  // features/marketplace (safe-08): a session that still owes its authenticator code is refused before any read.
+  let owesCode = false;
   const refreshed = [];
   const admin = { from: (table) => ({ select: () => ({ in: async (_column, ids) => ({ data: ids.map((id) => rows[table][id]).filter(Boolean), error: null }) }) }) };
   const server = {
     auth: { getUser: async () => ({ data: { user: signedIn ? { id: signedIn } : null }, error: null }) },
-    rpc: async (name) => { assert.equal(name, "is_admin"); adminChecks += 1; return { data: signedIn === adminUser, error: null }; },
+    rpc: async (name) => {
+      if (name === "my_two_step_owed") return { data: owesCode, error: null };
+      assert.equal(name, "is_admin"); adminChecks += 1; return { data: signedIn === adminUser, error: null };
+    },
   };
   const route = loadModule("app/api/listings/refresh/route.ts", {
     "next/server": nextServer,
@@ -554,6 +559,9 @@ test("A19: the browser's refresh call drops only the pages of listings its calle
   signedIn = null;
   assert.equal((await post({ listings: [mine] })).status, 401);
   signedIn = owner;
+  owesCode = true;
+  assert.equal((await post({ listings: [mine] })).status, 403);
+  owesCode = false;
   for (const body of [{}, { listings: [] }, { listings: "x" }, { listings: ["not-an-id"] }, { listings: [mine], revisions: [1] }, { listings: Array.from({ length: 101 }, () => crypto.randomUUID()) }]) {
     assert.equal((await post(body)).status, 400, JSON.stringify(body).slice(0, 60));
   }

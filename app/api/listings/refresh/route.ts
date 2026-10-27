@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { sessionOwesTwoStep, TWO_STEP_OWED_MESSAGE } from "@/lib/auth/complete-session";
 import { dropListingPages } from "@/lib/listing-cache";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
@@ -27,6 +28,8 @@ export async function POST(request: Request) {
   if (!supabase || !admin) return failure("No se pudo actualizar la publicación.", 503);
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return failure("Ingresa a tu cuenta.", 401);
+  // safe-08: the reads below use the service role, so a session that still owes its code stops here.
+  if (await sessionOwesTwoStep(supabase)) return failure(TWO_STEP_OWED_MESSAGE, 403);
 
   const ids = new Set(listingIds);
   if (revisionIds.length) {

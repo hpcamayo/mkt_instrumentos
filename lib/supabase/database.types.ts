@@ -8215,6 +8215,7 @@ export type Database = {
         }
         Returns: Json
       }
+      check_two_step_request: { Args: never; Returns: undefined }
       claim_counter_purchase: { Args: { p_token: string }; Returns: Json }
       claim_listing_photo_cleanup: {
         Args: {
@@ -9429,6 +9430,7 @@ export type Database = {
       my_account_deletion_check: { Args: never; Returns: Json }
       my_help_tickets: { Args: never; Returns: Json }
       my_stolen_reports: { Args: never; Returns: Json }
+      my_two_step_owed: { Args: never; Returns: boolean }
       my_two_step_requirement: { Args: never; Returns: Json }
       my_upload_allowance: { Args: { p_bucket: string }; Returns: Json }
       order_store_import_photos: {

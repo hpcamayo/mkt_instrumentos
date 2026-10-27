@@ -1,6 +1,7 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
+import { sessionOwesTwoStep, TWO_STEP_OWED_MESSAGE } from "@/lib/auth/complete-session";
 import { sameOriginEventRequest } from "@/lib/marketplace-events-server";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -34,6 +35,9 @@ export async function mlOwner(request: Request, write: boolean): Promise<
   const client = await getSupabaseServerClient();
   const { data } = client ? await client.auth.getUser() : { data: null };
   if (!client || !data?.user) return { response: mlJson({ ok: false, message: "Ingresa con tu cuenta de tienda." }, 401) };
+  // safe-08: the connection's callback and the import use the service role, so a session that still owes its code
+  // stops here.
+  if (await sessionOwesTwoStep(client)) return { response: mlJson({ ok: false, code: "TWO_STEP_REQUIRED", message: TWO_STEP_OWED_MESSAGE }, 403) };
   return { config, db: client as unknown as SupabaseClient, userId: data.user.id };
 }
 
