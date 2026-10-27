@@ -51,12 +51,13 @@ do $$ begin
     and not has_function_privilege('authenticated', 'public.get_app_health()', 'execute'), 'only the service role reads the health');
   perform pg_temp.check(has_function_privilege('authenticated', 'public.get_admin_app_errors(integer, text)', 'execute')
     and not has_function_privilege('anon', 'public.get_admin_app_errors(integer, text)', 'execute'), 'signed-in calls reach the Admin check');
-  perform pg_temp.check(not has_function_privilege('authenticated', 'laria_private.scrub_error_text(text)', 'execute')
-    and not has_function_privilege('authenticated', 'laria_private.app_error_route(text, text)', 'execute')
+  perform pg_temp.check(not has_function_privilege('authenticated', 'laria_private.app_error_route(text, text)', 'execute')
     and not has_function_privilege('authenticated', 'laria_private.app_error_name(text, text)', 'execute')
     and not has_function_privilege('authenticated', 'laria_private.app_error_route_patterns()', 'execute')
-    and not has_function_privilege('authenticated', 'laria_private.app_error_browser_messages()', 'execute')
-    and not has_function_privilege('anon', 'laria_private.app_error_browser_message(text)', 'execute')
+    and not has_function_privilege('authenticated', 'laria_private.app_error_messages()', 'execute')
+    and not has_function_privilege('anon', 'laria_private.app_error_own_messages()', 'execute')
+    and not has_function_privilege('authenticated', 'laria_private.app_error_known_message(text)', 'execute')
+    and not has_function_privilege('anon', 'laria_private.app_error_message(text)', 'execute')
     and not has_function_privilege('authenticated', 'laria_private.run_app_error_retention()', 'execute')
     and not has_function_privilege('anon', 'laria_private.run_app_error_retention()', 'execute'), 'the helpers stay private');
   perform pg_temp.check(not has_table_privilege('anon', 'laria_private.app_errors', 'select')
@@ -76,75 +77,37 @@ reset role;
 
 -- ------------------------------------------------------------------ what is kept
 
-do $$ declare scrubbed text; begin
-  scrubbed := laria_private.scrub_error_text('No account for ana.perez+ventas@gmail.com on listing 3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b');
-  perform pg_temp.check(scrubbed = 'No account for <email> on listing <id>', 'addresses and ids are replaced: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r_wW1gFWFOEjXk failed');
-  perform pg_temp.check(scrubbed !~ 'eyJ|dBjft' and scrubbed ~ '<token>', 'tokens are replaced: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('WhatsApp +51 987 654 321, DNI 45678912, RUC 20123456789 from 190.42.17.3');
-  perform pg_temp.check(scrubbed = 'WhatsApp <n>, DNI <n>, RUC <n> from <n>', 'phone, DNI, RUC and IP numbers are replaced: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('GET /listados?q=juan%20perez&page=2 failed; https://laria.audio/vender#access_token=abc.def-123 too');
-  perform pg_temp.check(scrubbed = 'GET /listados?… failed; https://laria.audio/… too', 'query strings and fragments go: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('Cannot read properties of undefined (reading ''getBoundingClientRect''), status 500 at line 42');
-  perform pg_temp.check(scrubbed = 'Cannot read properties of undefined (reading ''…''), status 500 at line 42',
-    'ordinary words and short numbers stay, quoted text goes: ' || scrubbed);
-  perform pg_temp.check(laria_private.scrub_error_text(null) = '', 'nothing is an empty text');
-  -- Numbers written with no-break spaces, thin spaces or Unicode dashes are still numbers.
-  scrubbed := laria_private.scrub_error_text('Llamar al +51' || chr(160) || '987' || chr(160) || '654' || chr(160) || '321, al 987'
-    || chr(8209) || '654' || chr(8209) || '321 o al 987' || chr(8239) || '654' || chr(8239) || '321');
-  perform pg_temp.check(scrubbed = 'Llamar al <n>, al <n> o al <n>', 'unusual spaces and dashes: ' || scrubbed);
-  -- A web address keeps its scheme, and its host only when that is one of the services Laria uses: no user, password,
-  -- path or query.
-  scrubbed := laria_private.scrub_error_text('fetch https://ana:secreto@api.example.com:8443/v1/users/ana-perez?id=5 failed, see https://laria.audio');
-  perform pg_temp.check(scrubbed = 'fetch https://<host>/… failed, see https://laria.audio', 'addresses lose credentials and paths: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('see https://ana-perez.example.com/path and https://hswk.supabase.co/rest/v1/listings?id=eq.5');
-  perform pg_temp.check(scrubbed = 'see https://<host>/… and https://hswk.supabase.co/…', 'only the services'' hosts stay: ' || scrubbed);
-  -- A JSON web token with no digit in it, and any long run of letters.
-  scrubbed := laria_private.scrub_error_text('token eyJhbGciOiJFUyJ.eyJzdWIiOiJhbmEifQ.SigNaTuReOnLy rejected; session abcdefghijklmnopqrstuvwxyzABCDEFGH expired');
-  perform pg_temp.check(scrubbed = 'token <token> rejected; session <token> expired', 'tokens without digits: ' || scrubbed);
-  -- Names: after a colon, in a path, in quotes.
-  scrubbed := laria_private.scrub_error_text('Invalid name: Ana Perez');
-  perform pg_temp.check(scrubbed = 'Invalid name: …', 'what follows a colon goes: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('No store at /tiendas/ana-perez (or /api/stores/ana-perez/photos) for now');
-  perform pg_temp.check(scrubbed = 'No store at /tiendas/… (or /api/…) for now', 'paths keep their first segment: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('Unexpected token ''A'', "Ana Perez" is not valid JSON, nor «Ana Pérez», “Ana”, ‘Ana’ or `Ana`');
-  perform pg_temp.check(scrubbed = 'Unexpected token ''…'', "…" is not valid JSON, nor «…», “…”, ‘…’ or `…`', 'quoted text goes: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('Can''t load the seller''s page');
-  perform pg_temp.check(scrubbed = 'Can''t load the seller''s page', 'apostrophes stay: ' || scrubbed);
-  -- The second review's examples: numbers split by tabs or line breaks or written in fullwidth digits, e-mail
-  -- addresses percent-encoded or in other scripts, credentials, IPv6 addresses and corner brackets.
-  scrubbed := laria_private.scrub_error_text('WhatsApp +51' || chr(9) || '987' || chr(9) || '654' || chr(9) || '321, +51 987'
-    || chr(10) || '654 321, DNI 1234' || chr(9) || '5678 o ４５６７８９１２');
-  perform pg_temp.check(scrubbed = 'WhatsApp <n>, <n>, DNI <n> o <n>', 'tabs, line breaks and fullwidth digits: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('Correo ana%40example%2Ecom o 阿娜@例子.公司, not @supabase/ssr');
-  perform pg_temp.check(scrubbed = 'Correo <email> o <email>, not @supabase/ssr', 'encoded and non-Latin e-mail addresses: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('Bearer QW5hIFBlcmV6 rejected, login password=huntertwo failed, connect abcd:ef::beef refused');
-  perform pg_temp.check(scrubbed = 'Bearer … rejected, login password=… failed, connect <ip> refused', 'credentials and IPv6: ' || scrubbed);
-  scrubbed := laria_private.scrub_error_text('「Ana Pérez」 not found');
-  perform pg_temp.check(scrubbed = '「…」 not found', 'corner brackets: ' || scrubbed);
-end $$;
-
--- A browser's message is kept only as one of laria_private.app_error_browser_messages(), never as written.
+-- A message, from the server or a browser, is kept only as one of the site's own messages
+-- (laria_private.app_error_own_messages()) or a known one (laria_private.app_error_messages()), never as written.
 do $$ declare
   sample record;
   kept text;
 begin
-  -- The second review's examples, and other made-up text, read as no known message.
+  -- Made-up text reads as no known message: the second and third reviews' examples among it, with numbers in any
+  -- script or spacing, e-mail addresses, tokens, credentials, addresses, names and hosts.
   for sample in select * from (values ('Ana Perez: invalid name'), ('WhatsApp +51' || chr(9) || '987' || chr(9) || '654' || chr(9) || '321'),
       ('DNI 1234' || chr(9) || '5678'), ('Correo ana%40example%2Ecom'), ('Correo 阿娜@例子.公司'), ('Bearer QW5hIFBlcmV6'),
       ('password=huntertwo'), ('Av. Arequipa 1234, Lima'), ('connect abcd:ef::beef'), ('「Ana Pérez」'),
-      ('https://ana-perez.example.com/path'), ('Invalid name: Ana Perez'), ('[object AnaPerez]'), ('Tu sesión venció')) as t(message)
+      ('https://ana-perez.example.com/path'), ('Invalid name: Ana Perez'), ('[object AnaPerez]'), ('Tu sesión venció'),
+      ('login password= huntertwo failed'), ('WhatsApp ٩٨٧ ٦٥٤ ٣٢١'), ('WhatsApp ９８７ ６５４ ３２１'), ('https://ana-perez.vercel.app'),
+      ('No account for ana.perez+ventas@gmail.com on listing 3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b'),
+      ('Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r_wW1gFWFOEjXk failed'),
+      ('GET /listados?q=juan%20perez&page=2 failed'), ('No store at /tiendas/ana-perez'), ('timeout after 3000 ms'),
+      ('ANA_PEREZ_987654321'), ('STOCK_INSUFFICIENT_ANA'), ('EMAIL_CLAIM_FAILEDX: Ana'), ('Ana (P0001)')) as t(message)
   loop
-    kept := laria_private.app_error_browser_message(sample.message);
+    kept := laria_private.app_error_message(sample.message);
     perform pg_temp.check(kept = 'Otro mensaje (no se guarda el texto)', 'made-up text is not kept: ' || sample.message || ' read ' || kept);
   end loop;
-  -- Known messages keep their wording and lose their values.
+  -- Known messages keep their wording and lose their values; the site's own keep theirs.
   for sample in select * from (values
       ('Cannot read properties of undefined (reading ''Ana Perez'')', 'Cannot read properties of undefined (reading ''…'')'),
       ('Uncaught TypeError: Cannot read properties of null (reading ''price'')', 'Cannot read properties of null (reading ''…'')'),
       ('Cannot read property ''price'' of null', 'Cannot read properties of null (reading ''…'')'),
       ('Loading chunk 4567 failed.' || chr(10) || '(error: https://laria.audio/_next/static/chunks/4567.js)', 'Loading chunk … failed.'),
       ('Minified React error #418; visit https://react.dev/errors/418?args[]=Ana%20Perez for the full message', 'Minified React error #418'),
+      ('Minified React error #31; visit https://react.dev/errors/31?args[]=object%20with%20keys', 'Minified React error #31'),
+      ('Minified React error #987654321; visit https://react.dev/errors/987654321', 'Minified React error #…'),
+      ('Minified React error #4180', 'Minified React error #…'),
       ('gtag is not defined', '… is not defined'),
       ('Can''t find variable: gtag', 'Can''t find variable: …'),
       ('undefined is not an object (evaluating ''window.ana.perez'')', 'undefined is not an object (evaluating ''…'')'),
@@ -162,20 +125,65 @@ begin
       ('[object Event]', '[object Event]'),
       ('Maximum call stack size exceeded', 'Maximum call stack size exceeded'),
       ('Unexpected identifier ''Ana''', 'Unexpected identifier'),
-      ('', '(sin mensaje)')) as t(message, expected)
+      ('', '(sin mensaje)'),
+      -- The server's: Postgres, PostgREST, Node, Next.js, Supabase Auth.
+      ('duplicate key value violates unique constraint "profiles_phone_key"', 'duplicate key value violates unique constraint "…"'),
+      ('new row violates row-level security policy for table "listings"', 'new row violates row-level security policy for table "…"'),
+      ('null value in column "title" of relation "listings" violates not-null constraint',
+        'null value in column "…" violates not-null constraint'),
+      ('insert or update on table "favorites" violates foreign key constraint "favorites_listing_id_fkey"',
+        'insert or update on table "…" violates foreign key constraint "…"'),
+      ('invalid input syntax for type uuid: "ana-perez"', 'invalid input syntax for type …'),
+      ('permission denied for table listings', 'permission denied for table …'),
+      ('relation "public.ana_perez" does not exist', 'relation … does not exist'),
+      ('Could not find the function public.get_listing(p_slug) in the schema cache', 'Could not find the function … in the schema cache'),
+      ('JSON object requested, multiple (or no) rows returned', 'JSON object requested, multiple (or no) rows returned'),
+      ('canceling statement due to statement timeout', 'canceling statement due to statement timeout'),
+      ('could not serialize access due to concurrent update', 'could not serialize access due to concurrent update'),
+      ('fetch failed', 'fetch failed'),
+      ('getaddrinfo ENOTFOUND hswkjandadscduodejig.supabase.co', 'getaddrinfo ENOTFOUND'),
+      ('Body exceeded 1 MB limit.', 'Body exceeded … limit.'),
+      ('Dynamic server usage: Route /listados couldn''t be rendered statically because it used `cookies`', 'Dynamic server usage: …'),
+      ('Invalid Refresh Token: Refresh Token Not Found', 'Invalid Refresh Token: …'),
+      ('AuthSessionMissingError: Auth session missing!', 'Auth session missing!'),
+      ('Password should be at least 8 characters.', 'Password should be at least … characters.'),
+      ('Received unexpected response code 410', 'Received unexpected response code …'),
+      ('"ana-perez" is not a category landing (lib/category-pages.ts).', '"…" is not a category landing (lib/category-pages.ts).'),
+      -- The site's own: its database's codes, alone or in front of a message, and its code's messages.
+      ('STOCK_INSUFFICIENT', 'STOCK_INSUFFICIENT'),
+      ('STOCK_INSUFFICIENT (P0001)', 'STOCK_INSUFFICIENT'),
+      ('AUTH_REQUIRED: Inicia sesión para continuar.', 'AUTH_REQUIRED: …'),
+      ('IMPORT_ROW_NOT_FOUND: La fila de Ana Pérez ya no existe.', 'IMPORT_ROW_NOT_FOUND: …'),
+      ('Listing not found.', 'Listing not found.'),
+      ('Supabase unavailable', 'Supabase unavailable'),
+      ('Usa fotos en JPG, PNG o WebP.', 'Usa fotos en JPG, PNG o WebP.'),
+      ('EMAIL_CLAIM_FAILED:JWT expired', 'EMAIL_CLAIM_FAILED: JWT expired'),
+      ('EMAIL_CLAIM_FAILED: Ana Perez 987654321', 'EMAIL_CLAIM_FAILED: …'),
+      ('The listing could not be read: STOCK_INSUFFICIENT', 'The listing could not be read: STOCK_INSUFFICIENT'),
+      ('The listing could not be read: permission denied for table listings', 'The listing could not be read: permission denied for table …'),
+      ('The sitemap''s stores could not be read: no rows', 'The sitemap''s stores could not be read: no rows'),
+      ('QR_TOO_LONG: up to 512 bytes', 'QR_TOO_LONG: …')) as t(message, expected)
   loop
-    kept := laria_private.app_error_browser_message(sample.message);
+    kept := laria_private.app_error_message(sample.message);
     perform pg_temp.check(kept = sample.expected, sample.message || ' read ' || kept);
-    perform pg_temp.check(laria_private.app_error_browser_message(kept) = kept, kept || ' reads back as itself');
+    perform pg_temp.check(laria_private.app_error_message(kept) = kept, kept || ' reads back as itself');
   end loop;
-  perform pg_temp.check(laria_private.app_error_browser_message(null) = '(sin mensaje)', 'no message');
-  -- Every message on the list reads back as itself, so the list is the whole of what can be kept.
-  for sample in select * from laria_private.app_error_browser_messages() where message !~ '\\[12]' loop
-    perform pg_temp.check(laria_private.app_error_browser_message(sample.message) = sample.message,
+  perform pg_temp.check(laria_private.app_error_message(null) = '(sin mensaje)', 'no message');
+  -- Every known and own message reads back as itself, so the two lists are the whole of what can be kept.
+  for sample in select * from laria_private.app_error_messages() where message !~ '\\[12]' loop
+    perform pg_temp.check(laria_private.app_error_message(sample.message) = sample.message,
       sample.ordinal || ' reads back as itself: ' || sample.message);
   end loop;
-  perform pg_temp.check((select count(*) > 80 and count(distinct ordinal) = count(*)
-    from laria_private.app_error_browser_messages()), 'the list');
+  for sample in select unnest(laria_private.app_error_own_messages()) as message loop
+    perform pg_temp.check(laria_private.app_error_message(sample.message) = sample.message, sample.message || ' reads back as itself');
+  end loop;
+  perform pg_temp.check((select count(*) > 130 and count(distinct ordinal) = count(*) and min(ordinal) = 1 and max(ordinal) = count(*)
+    from laria_private.app_error_messages()), 'the known messages, numbered in order');
+  perform pg_temp.check((select count(*) > 700 and count(distinct message) = count(*)
+    from unnest(laria_private.app_error_own_messages()) message), 'the site''s own, each once');
+  -- What a template brings back (\1) is only a word from its own list: none of its patterns' groups match free text.
+  perform pg_temp.check(not exists (select 1 from laria_private.app_error_messages()
+    where message ~ '\\[12]' and pattern ~ '\((\.|\[\^)'), 'a template brings back only listed words');
 end $$;
 
 -- Every route pattern reads as itself: a browser's address with values in its [params] and the server's route file.
@@ -201,10 +209,10 @@ begin
   first_print := public.record_app_error('server', 'render', '/instrumentos/[slug]/page', 'TypeError', 'Cannot read properties of null (reading ''price'') for la13-uno@example.invalid', '', '1234567890');
   second_print := public.record_app_error('server', 'render', '/instrumentos/[slug]/page', 'TypeError', 'Cannot read properties of null (reading ''price'') for la13-otra@example.invalid', '', '1234567890');
   perform pg_temp.check(first_print = second_print and first_print ~ '^[0-9a-f]{32}$', 'the same error counts under one fingerprint');
-  perform pg_temp.check(public.record_app_error('server', 'render', '/tiendas/[slug]', 'TypeError', 'Cannot read properties of null (reading ''price'') for <email>', '', null) <> first_print,
+  perform pg_temp.check(public.record_app_error('server', 'render', '/tiendas/[slug]', 'TypeError', 'Cannot read properties of null (reading ''price'')', '', null) <> first_print,
     'the same server error on another route is another kind');
-  perform pg_temp.check(public.record_app_error('server', 'route', '/api/contact', 'Error', 'timeout after 3000 ms', '', null)
-    = public.record_app_error('server', 'route', '/api/contact', 'Error', 'timeout after 5000 ms', '', null), 'numbers don''t split a kind');
+  perform pg_temp.check(public.record_app_error('server', 'route', '/api/contact', 'Error', 'Body exceeded 1 MB limit.', '', null)
+    = public.record_app_error('server', 'route', '/api/contact', 'Error', 'Body exceeded 4 MB limit.', '', null), 'values don''t split a kind');
   -- Browser errors: the page's pattern is kept but doesn't split a kind; the browser does.
   first_print := public.record_app_error('browser', 'error', '/instrumentos/guitarra-fender-a1b2c3', 'ReferenceError', 'gtag is not defined', 'Safari iOS', null);
   perform pg_temp.check(public.record_app_error('browser', 'error', '/tiendas/la-casa-del-musico', 'ReferenceError', 'gtag is not defined', 'Safari iOS', null) = first_print,
@@ -221,7 +229,7 @@ end $$;
 reset role;
 
 do $$ begin
-  perform pg_temp.check((select occurrences = 2 and message = 'Cannot read properties of null (reading ''…'') for <email>'
+  perform pg_temp.check((select occurrences = 2 and message = 'Cannot read properties of null (reading ''…'')'
       and route = '/instrumentos/[slug]' and digest = '1234567890' and source = 'server' and kind = 'render'
     from laria_private.app_errors where route = '/instrumentos/[slug]'), 'two of the same, with no address kept');
   perform pg_temp.check((select occurrences = 3 and route = '/tiendas/[slug]' and client = 'Safari iOS' and message = '… is not defined'
@@ -243,9 +251,10 @@ do $$ begin
   perform public.record_app_error('browser', 'unhandledrejection', '/mi-cuenta/publicaciones/3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b/editar', 'AuthApiError',
     'Cannot read properties of undefined (reading ''ana.perez@example.invalid'')', 'Chrome Android', null);
   perform public.record_app_error('browser', 'boundary', '/tiendas/taller', 'NotAllowedError', 'Av. Arequipa 1234, Lima', 'Otro', null);
-  perform public.record_app_error('server', 'render', '/(tienda)/tiendas/[slug]/page', 'AuthApiError', 'x4', 'Chrome', '2876543210');
-  perform public.record_app_error('server', 'route', '/tiendas/ana-perez', 'AnaPerez', 'x5', '', 'no digest!');
-  perform public.record_app_error('server', 'route', '/sitemap.xml/route', 'PostgrestException', 'x6', '', null);
+  perform public.record_app_error('server', 'render', '/(tienda)/tiendas/[slug]/page', 'AuthApiError', 'Supabase unavailable', 'Chrome', '2876543210');
+  perform public.record_app_error('server', 'route', '/tiendas/ana-perez', 'AnaPerez', 'Session unavailable.', '', 'no digest!');
+  perform public.record_app_error('server', 'route', '/sitemap.xml/route', 'PostgrestException', 'Events unavailable.', '', null);
+  perform public.record_app_error('server', 'action', '/vender', 'Error', 'Invalid name: Ana Perez, WhatsApp 987 654 321', '', null);
 end $$;
 reset role;
 do $$ begin
@@ -259,12 +268,14 @@ do $$ begin
       and message = 'Otro mensaje (no se guarda el texto)'
     from laria_private.app_errors where kind = 'boundary'), 'a store named like a folder still reads as a pattern');
   perform pg_temp.check((select route = '/tiendas/[slug]' and name = 'AuthApiError' and client = '' and digest = '2876543210'
-    from laria_private.app_errors where message = 'x4'), 'the server keeps its own error class and its digest, never a browser');
+    from laria_private.app_errors where message = 'Supabase unavailable'), 'the server keeps its own error class and its digest, never a browser');
   perform pg_temp.check((select route = '/tiendas/[slug]' and name = 'Error' and digest is null
-    from laria_private.app_errors where message = 'x5'), 'a server route that is no pattern loses its slug');
+    from laria_private.app_errors where message = 'Session unavailable.'), 'a server route that is no pattern loses its slug');
   perform pg_temp.check((select route = '/sitemap.xml' and name = 'PostgrestException'
-    from laria_private.app_errors where message = 'x6'), 'metadata routes and exceptions');
-  perform pg_temp.check(not exists (select 1 from laria_private.app_errors where message ~* 'ana|perez|arequipa|lima|@'
+    from laria_private.app_errors where message = 'Events unavailable.'), 'metadata routes and exceptions');
+  perform pg_temp.check((select message = 'Otro mensaje (no se guarda el texto)' from laria_private.app_errors
+    where source = 'server' and kind = 'action'), 'a server''s message that is neither the site''s own nor known is not kept');
+  perform pg_temp.check(not exists (select 1 from laria_private.app_errors where message ~* 'ana|perez|arequipa|lima|@|987'
       or route ~* 'ana|perez|taller'), 'nothing made up is kept');
   perform pg_temp.check(laria_private.app_error_route('browser', '') = '' and laria_private.app_error_route('browser', null) = ''
     and laria_private.app_error_route('browser', '/listados/') = '/listados'
@@ -287,7 +298,7 @@ rollback to savepoint made_up;
 -- ------------------------------------------------------------------ the cap
 
 -- 25 kinds per source in a bucket; the rest count under one overflow row, and a kind already seen keeps counting.
--- A browser's made-up messages are all one kind, so its kinds here differ by the error's name.
+-- Made-up messages are all one kind, so the kinds here differ by the error's name.
 set local role service_role;
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 do $$ declare

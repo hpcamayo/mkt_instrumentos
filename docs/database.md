@@ -1242,24 +1242,29 @@ New objects only, so it can be applied before the deploy.
     pattern reads as itself);
   - the name must be one of JavaScript's or the DOM's own, or on the server an app class ending in `Error` or
     `Exception` (`laria_private.app_error_name`); anything else is `Error`;
-  - a browser's message is kept only as one of `laria_private.app_error_browser_messages()`
-    (`laria_private.app_error_browser_message`): about 95 messages of browsers, JavaScript engines, React, Next.js and
-    Supabase, tried in order on the message as one line (without `Uncaught ` or an error name in front), each
-    replacing the whole line with its own wording and `…` for any value (`Cannot read properties of undefined
-    (reading '…')`); `\1` and `\2` bring back only a word from the pattern's own fixed list (`Minified React error
-    #418`). Any other message reads `Otro mensaje (no se guarda el texto)`, so nothing a visitor, an extension or a
-    made-up report writes is kept;
-  - the server's message goes through `laria_private.scrub_error_text`: compatibility forms read as plain ones (NFKC:
-    fullwidth digits and letters), every kind of space, tab, line break and dash as a plain one; web addresses lose
-    their user, password, path, query and fragment, and a host that isn't one of the services Laria uses reads
-    `<host>`; query strings, e-mail addresses (any word with `@` or `%40`), UUIDs, tokens (JSON web tokens, 16 or more
-    characters with a digit, any 32 or more), whatever follows `Bearer` or `Basic`, values given to a name
-    (`password=…`), IPv6 addresses, paths past their first segment, quoted text, whatever follows the first `: `, and
-    runs of 7 or more digits are replaced;
+  - the message, from the server or a browser, is kept only as one of a fixed set (`laria_private.app_error_message`),
+    read as one line (NFKC, so fullwidth digits and letters read as plain ones; any kind of space, tab or line break
+    as one space; without `Uncaught `, an error name in front, or a database code a browser added at the end, `…
+    (PGRST301)`):
+    - one of the site's own messages as written (`laria_private.app_error_own_messages()`, about 800: the codes and
+      messages its database functions raise and the messages its code throws, on main, the launch audit's branches
+      and features/marketplace at 7f88917);
+    - one of those followed by `:` (`EMAIL_CLAIM_FAILED: …`, `AUTH_REQUIRED: Inicia sesión…`), kept as that part,
+      then `: ` and the rest only when the rest is itself one of the site's own or a known message, otherwise `…`;
+    - a known message (`laria_private.app_error_known_message`, the list in `laria_private.app_error_messages()`:
+      about 140 messages of browsers, JavaScript engines, React, Next.js, Node, Postgres, PostgREST, Supabase and
+      Resend), tried in order, each replacing the whole line with its own wording and `…` for any value (`Cannot read
+      properties of undefined (reading '…')`, `duplicate key value violates unique constraint "…"`); `\1` and `\2`
+      bring back only a word from the pattern's own fixed list. A React error keeps its number only when it is one of
+      React's own codes (those of the builds Next.js 15.5 ships), otherwise `Minified React error #…`;
+    - anything else reads `Otro mensaje (no se guarda el texto)`, so nothing a visitor, a database value, an extension
+      or a made-up report writes is kept. A message the site adds later reads that way too until a migration adds it
+      to the list; the server's full message stays in Vercel's runtime logs, found by the route, the time and the
+      digest. The suite checks that every own and known message reads back as itself;
   - the client must be one of `browserFamily`'s labels or `Otro`, and only the server's digest is kept.
-  No account, IP address or stack is ever passed. A message the server's own code writes may still hold a name in
-  plain words, which is why only an aal2 Admin reads the counts and they go after 30 days. A browser error's route is
-  kept (the latest seen) but is not part of its fingerprint, and digits never split a server kind. At most 25 kinds per
+  No account, IP address or stack is ever passed. Only an aal2 Admin reads the counts, and they go after 30 days. A
+  browser error's route is kept (the latest seen) but is not part of its fingerprint, and since a message is one of a
+  fixed set, a value never splits a kind. At most 25 kinds per
   source in a bucket: a new kind takes a transaction advisory lock on its source and bucket before counting the kinds
   there, so kinds reported together are admitted one at a time; the rest are counted under `overflow-server` or
   `overflow-browser`.
@@ -1270,7 +1275,7 @@ New objects only, so it can be applied before the deploy.
   503 with `"reason":"errors"` from 20 errors, and otherwise 200 `{"status":"ok"}`; the uptime workflow
   (`.github/workflows/uptime.yml`) reads it every 10 minutes.
 
-Rollback: `select cron.unschedule('app-error-retention');`, then drop the ten functions and the table.
+Rollback: `select cron.unschedule('app-error-retention');`, then drop the eleven functions and the table.
 <!-- /launch-audit:monitoring -->
 
 <!-- launch-audit:security -->

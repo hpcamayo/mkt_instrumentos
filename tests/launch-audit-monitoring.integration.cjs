@@ -2,8 +2,8 @@
 // supabase/migrations/20261114170000_launch_audit_monitoring.sql). public.record_app_error keeps at most 25 kinds per
 // source in each 10 minutes and counts the rest in one overflow row. Two new kinds reported at the same moment, when
 // one place is left, must not both get it: the second waits for the first and goes to the overflow row. A kind already
-// counted, or the other source, must not wait. Two connections replay it with the server's errors, whose messages make
-// kinds; a browser's message is one of a fixed list, so made-up ones are all one kind.
+// counted, or the other source, must not wait. Two connections replay it with the server's errors, whose error names
+// make the kinds: a message is kept only from fixed lists, so made-up ones are all one kind.
 // Usage: node tests/launch-audit-monitoring.integration.cjs [postgresql://postgres:postgres@127.0.0.1:54322/postgres]
 // The URL may also come from LARIA_TEST_DATABASE_URL. Hosted databases are refused. The database needs every
 // migration applied (setup-local-db.sh reset); the counts it commits are removed at the end.
@@ -19,6 +19,8 @@ if (!["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname)) {
 }
 
 const MARK = "Carrera A13";
+// A server error's own class names a kind (CarreraAError, CarreraBError, ...).
+const kindName = (tag) => `Carrera${tag}Error`;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const settle = (promise) =>
   promise.then(
@@ -44,15 +46,15 @@ async function record(client, source, message, name = "Error") {
 
 const bucketNow = "date_bin(interval '10 minutes', clock_timestamp(), timestamptz '2001-01-01 00:00:00+00')";
 
-// The browser kinds the test made, by fingerprint: their message is no longer the one sent.
+// The browser kinds the test made, by fingerprint: neither their name nor their message is the one sent.
 const browserKinds = [];
 
 async function cleanup(control) {
   await control.query(
     `delete from laria_private.app_errors
-     where message like $1 or fingerprint = any($2::text[])
+     where name like $1 or fingerprint = any($2::text[])
        or (fingerprint like 'overflow-%' and bucket >= ${bucketNow} - interval '10 minutes')`,
-    [`${MARK}%`, browserKinds],
+    [kindName("%"), browserKinds],
   );
 }
 
@@ -73,15 +75,16 @@ async function main() {
     await control.query("begin");
     await control.query("set local role service_role");
     await control.query("select set_config('request.jwt.claims', '{\"role\":\"service_role\"}', true)");
+    const firstKind = String.fromCharCode(65 + existing[0].kinds);
     for (let n = existing[0].kinds + 1; n <= 24; n += 1) {
-      await control.query("select public.record_app_error('server', 'error', '/', 'Error', $1, '', null)", [`${MARK} ${String.fromCharCode(64 + n)}`]);
+      await control.query("select public.record_app_error('server', 'error', '/', $1, $2, '', null)", [kindName(String.fromCharCode(64 + n)), MARK]);
     }
     await control.query("commit");
 
     // 1. Two new kinds at once: the first takes the last place, the second waits for it and goes to the overflow row.
-    const taken = await record(first, "server", `${MARK} nueva uno`);
+    const taken = await record(first, "server", MARK, kindName("NuevaUno"));
     const started = Date.now();
-    const waiting = settle(record(second, "server", `${MARK} nueva dos`));
+    const waiting = settle(record(second, "server", MARK, kindName("NuevaDos")));
     assert.equal(await within(waiting, 500), null, "the second new kind waits for the first");
     await first.query("commit");
     const committedAt = Date.now();
@@ -100,9 +103,9 @@ async function main() {
     console.log(`PASS two new kinds at once with one place left: the second waited ${committedAt - started} ms, then went to the overflow row`);
 
     // 2. While a new kind is being counted, a kind already counted and the browsers' errors don't wait.
-    await record(first, "server", `${MARK} nueva tres`);
+    await record(first, "server", MARK, kindName("NuevaTres"));
     const again = Date.now();
-    const known = await settle(record(second, "server", `${MARK} A`));
+    const known = await settle(record(second, "server", MARK, kindName(firstKind)));
     const knownTook = known.at - again;
     await second.query("commit");
     const browser = await settle(record(second, "browser", `${MARK} navegador`, "EvalError"));

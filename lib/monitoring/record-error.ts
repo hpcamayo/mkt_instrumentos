@@ -1,6 +1,6 @@
 // Launch audit A13: counts an error in the database (public.record_app_error, supabase/migrations/
-// 20261114170000_launch_audit_monitoring.sql), which strips anything that could identify someone before keeping it,
-// for Admin > Errores. Server code only: it sends the service role key. It calls PostgREST with the platform's fetch
+// 20261114170000_launch_audit_monitoring.sql), which keeps its message only as one of a fixed set, so nothing that could
+// identify someone, for Admin > Errores. Server code only: it sends the service role key. It calls PostgREST with the platform's fetch
 // rather than the Supabase client, so instrumentation.ts can use it in either runtime, and rather than Next.js's
 // fetch, which would count the call as part of the page: an error during a background page refresh would then turn
 // the cached page dynamic. Best effort: it never throws, gives up after 2.5 seconds, and does nothing without the

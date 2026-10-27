@@ -353,6 +353,31 @@ test("A13: the migration keeps its place and lock step, and grants each function
   assert.match(migration, /select cron\.schedule\('app-error-retention', '50 9 \* \* \*', \$\$select laria_private\.run_app_error_retention\(\)\$\$\);/);
 });
 
+test("A13: a message is kept only as one of the site's own or a known message, from the server as from a browser", () => {
+  const migration = read(migrationFile);
+  // Codex's third review: replacing what may identify someone in a server's message left gaps, so nothing is kept as
+  // written any more; the suite checks the messages themselves (tests/launch-audit-monitoring.sql).
+  assert.doesNotMatch(migration, /scrub_error_text|app_error_browser_message/);
+  assert.match(migration, /\n  v_message text := laria_private\.app_error_message\(p_message\);\n/);
+  assert.match(migration, /v_fingerprint := md5\(concat_ws\(chr\(31\), p_source, v_kind, case when p_source = 'server' then v_route else '' end,\n    v_name, v_message, v_client\)\);/);
+  const start = migration.indexOf("select array[", migration.indexOf("create or replace function laria_private.app_error_own_messages()"));
+  const body = migration.slice(start + "select array[".length, migration.indexOf("]::text[]", start));
+  const own = [...body.matchAll(/'((?:[^']|'')*)'/g)].map((match) => match[1].replaceAll("''", "'"));
+  assert.ok(own.length > 700, `the site's own messages (${own.length})`);
+  assert.equal(new Set(own).size, own.length, "each once");
+  for (const message of own) {
+    assert.ok(message === message.trim() && !/\s\s|[\u0000-\u001f]/.test(message) && message.length <= 300, message);
+  }
+  for (const message of ["STOCK_INSUFFICIENT", "EMAIL_CLAIM_OUTDATED", "APP_ERROR_INVALID", "Supabase unavailable", "EMAIL_CLAIM_FAILED"]) {
+    assert.ok(own.includes(message), message);
+  }
+  // React keeps a number only when it is one of its own codes, whole.
+  const react = migration.match(/\(\d+, '\^Minified React error #\(([0-9|]+)\)\(\?!\[0-9\]\)',\n\s+'Minified React error #\\1'\),\n\s+\(\d+, '\^Minified React error #',\n\s+'Minified React error #…'\)/);
+  assert.ok(react, "the React codes, then the rest as #…");
+  const codes = react[1].split("|");
+  assert.ok(codes.length > 100 && codes.every((code) => /^[1-9][0-9]{0,2}$/.test(code)) && codes.includes("418"), "React's codes");
+});
+
 test("A13: every page and route of the site is in the database's list of route patterns, and every browser family in its client list", () => {
   const migration = read(migrationFile);
   const start = migration.indexOf("select array[", migration.indexOf("create or replace function laria_private.app_error_route_patterns()"));
