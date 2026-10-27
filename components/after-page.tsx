@@ -1,13 +1,20 @@
 "use client";
 
 import { Component, lazy, Suspense, useState, useSyncExternalStore, type ComponentType, type ReactNode } from "react";
+import { reportClientError } from "@/lib/monitoring/client-errors";
 
-// Shows `failed` in place of its children when they throw, which here means their code didn't download.
+// Shows `failed` in place of its children when they throw: mostly their code didn't download, but an error the part
+// raised once loaded lands here too. Either is counted in Admin > Errores, as the pages' own error boundaries count
+// theirs (launch audit A13).
 class LoadFailure extends Component<{ failed: () => ReactNode; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
 
   static getDerivedStateFromError() {
     return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    reportClientError("boundary", error);
   }
 
   render() {

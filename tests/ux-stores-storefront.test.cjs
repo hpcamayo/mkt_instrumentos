@@ -230,9 +230,13 @@ test("shop-04: only the owner sees a store that is not active, as a noindex prev
   assert.equal(storefront.ownerNotice("active").preview, false);
   assert.equal(storefront.ownerNotice("rejected").preview, true);
   assert.equal(storefront.ownerNotice("hidden").preview, true);
-  assert.equal(storefront.hasSupabaseAuthCookie(["sb-abc-auth-token"]), true);
-  assert.equal(storefront.hasSupabaseAuthCookie(["sb-127-auth-token.0", "theme"]), true);
-  assert.equal(storefront.hasSupabaseAuthCookie(["laria_session", "sb-abc-auth-token-code-verifier"]), false);
+  const project = "https://abc.supabase.co";
+  assert.equal(storefront.hasSupabaseAuthCookie(["sb-abc-auth-token"], project), true);
+  assert.equal(storefront.hasSupabaseAuthCookie(["sb-127-auth-token.0", "theme"], "http://127.0.0.1:54321"), true);
+  assert.equal(storefront.hasSupabaseAuthCookie(["laria_session", "sb-abc-auth-token-code-verifier"], project), false);
+  // Only this project's cookie: not another project's, nor one with a name that merely starts the same way.
+  assert.equal(storefront.hasSupabaseAuthCookie(["sb-old-auth-token", "sb-abc-auth-token.x"], project), false);
+  assert.equal(storefront.hasSupabaseAuthCookie(["sb-abc-auth-token"], undefined), false);
 
   const { StoreOwnerNotice } = load("components/store/store-owner-notice.tsx", mocks);
   const notice = html(React.createElement(StoreOwnerNotice, { status: "pending" }));

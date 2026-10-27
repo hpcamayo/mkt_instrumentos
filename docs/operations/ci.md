@@ -17,10 +17,11 @@ Both run on Ubuntu 24.04 with Node 22 and pnpm 10.28 (`pnpm install --frozen-loc
 `// Usage: node tests/<its own name> [postgresql://...]`, so a new database test runs with no other change. The ones it
 leaves out are listed in the script, each with why: those that need the running app and the Supabase API, which the
 Acceptance workflow runs (below), and the store concurrency suite, which the step before runs. The step fails, before
-running anything, on a file that is neither, on a listed file that is gone, on an app test whose usage line turns to a
-`postgresql://` URL, when it finds no database test at all, or when neither safeupdate nor the stand-in loads. It also
-fails a test that prints a line starting with `SKIP`: a test may skip a check where something it needs is missing, but
-here nothing is.
+running anything, on a file that is neither, on a listed file that is gone, on an app test that names a database URL
+(`postgresql://` or `postgres://`, anywhere in the file), when it finds no database test at all, or when neither
+safeupdate nor the stand-in loads. It also fails a test that prints a line starting with `SKIP` (a test may skip a
+check where something it needs is missing, but here nothing is) and one that exits without printing a line starting
+with `PASS`, which checked nothing.
 
 ## The Acceptance workflow
 
@@ -34,10 +35,15 @@ that need both
 ## What it doesn't cover
 
 - Browser checks still run by hand against a local stack (`scripts/prototype/README.md`).
-- Time limits. Supabase cancels an API request that runs longer than its role's limit (by default 3 s for `anon` and
-  8 s for `authenticated`, which PostgREST applies to each request). The shim sets none, and the tests connect directly,
-  so a query too slow for the API still passes here. Query speed has its own checks (`tests/catalog-performance.sql`,
-  `tests/marketplace-performance.sql`, `docs/performance.md`).
+- Time limits. API requests log in as `authenticator`, which production gives an 8 s `statement_timeout` and an 8 s
+  `lock_timeout` (read on 27 Oct 2026), and PostgREST applies the request role's own statement limit on top
+  (Supabase's defaults: 3 s for `anon`, 8 s for `authenticated`). So production cancels an API request that runs past
+  its limit or waits more than 8 s for a lock. The shim sets none of these, and the tests connect directly, so a query
+  too slow for the API, or one stuck behind a lock, still passes here. Query speed has its own checks
+  (`tests/catalog-performance.sql`, `tests/marketplace-performance.sql`, `docs/performance.md`).
+- Postgres 17. The database job runs Postgres 16, Ubuntu 24.04's own; production runs 17. The Acceptance workflow
+  replays every migration on Supabase's Postgres 17 image, so a migration that fails on 17 still fails a pull request,
+  but the SQL suites run on 16 only.
 - A merge to `main` deploys to production through Vercel whether or not CI passed. Making the checks required
   (GitHub > Settings > Branches > `main` > Require status checks: CI's two jobs above and Acceptance's
   `Release-gate cases on a full local stack`) is what stops a red pull request from being merged.
