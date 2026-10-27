@@ -101,9 +101,10 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
 do $$
-declare listing_record public.listings; denied boolean := false;
+declare listing_record record; denied boolean := false;
 begin
-  select * into listing_record from public.listings where id = '20000000-0000-4000-8000-000000000001';
+  -- The columns an owner reads (since 20261114140000 the browser roles have column grants on listings, not select *).
+  select owner_user_id, instrument_type, attributes into listing_record from public.listings where id = '20000000-0000-4000-8000-000000000001';
   if listing_record.owner_user_id <> '10000000-0000-4000-8000-000000000001' then raise exception 'Owned listing lost owner_user_id'; end if;
   if listing_record.instrument_type <> 'electric_guitar' or listing_record.attributes->>'body_type' <> 'solid_body' or listing_record.attributes->'pickups'->>0 <> 'humbucker' then raise exception 'Instrument type or attributes did not persist'; end if;
   if (select count(*) from public.listings where id = '20000000-0000-4000-8000-000000000002') <> 1 then raise exception 'Owner cannot read own rejected listing'; end if;
@@ -238,9 +239,14 @@ do $$
 declare visible_count integer; denied boolean := false;
 begin
   select count(*) into visible_count from public.listings
-  where id = '20000000-0000-4000-8000-000000000000'
-    and owner_user_id is null and contact_name = 'Contacto heredado' and whatsapp_phone = '51988888888';
+  where id = '20000000-0000-4000-8000-000000000000' and owner_user_id is null;
   if visible_count <> 1 then raise exception 'Legacy unowned listing is no longer public'; end if;
+  -- Its contact is read on the server (launch audit A27, 20261114140000), never through the public API key.
+  begin
+    perform contact_name, whatsapp_phone from public.listings where id = '20000000-0000-4000-8000-000000000000';
+    raise exception 'Anonymous user read a legacy listing''s contact';
+  exception when insufficient_privilege then null;
+  end;
   select count(*) into visible_count from public.listings where id = '20000000-0000-4000-8000-000000000001';
   if visible_count <> 0 then raise exception 'Anonymous user read a pending owned listing'; end if;
   select count(*) into visible_count from public.listing_photos where listing_id = '20000000-0000-4000-8000-000000000000';
@@ -276,9 +282,9 @@ begin
 end;
 $$;
 
--- Approved owned listings expose the current profile, not the old snapshot.
-set local role anon;
-select set_config('request.jwt.claims', '{"role":"anon"}', true);
+-- Approved owned listings resolve the current profile, not the old snapshot. The server reads both with the service
+-- role (app/api/contact, app/instrumentos/[slug]); visitors read no profile at all (launch audit A27, 20261114140000).
+reset role;
 do $$
 declare visible_count integer;
 begin
@@ -292,10 +298,18 @@ begin
     and p.region = 'Cusco'
     and l.contact_name = 'Snapshot original';
   if visible_count <> 1 then raise exception 'Dynamic owned-listing profile resolution failed'; end if;
+end;
+$$;
 
-  select count(*) into visible_count from public.profiles
-  where id = '10000000-0000-4000-8000-000000000002';
-  if visible_count <> 0 then raise exception 'Unrelated profile was exposed publicly'; end if;
+set local role anon;
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+do $$
+begin
+  begin
+    perform 1 from public.profiles where id = '10000000-0000-4000-8000-000000000001';
+    raise exception 'A visitor read the profile of a seller with an approved listing';
+  exception when insufficient_privilege then null;
+  end;
 end;
 $$;
 

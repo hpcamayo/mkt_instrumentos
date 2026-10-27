@@ -59,10 +59,11 @@ select pg_temp.check(exists(select 1 from public.catalog_suggest('zzqxmar', 6) w
 select pg_temp.check(exists(select 1 from public.catalog_brand_counts() where brand = 'Zzqxmarca' and category = 'percussion'), 'brand counts per category');
 select pg_temp.check(exists(select 1 from public.catalog_type_counts() where category = 'basses' and instrument_type = 'bass' and listings >= 1), 'type counts');
 
--- FIND 10: the price-drop and verified-first orders and the "Antes" price.
-select pg_temp.check((select l.previous_price_pen = 2300 and public.recent_price_drop_at(l) = l.price_dropped_at from public.listings l where id = '7f100000-0000-4000-8000-000000000003'), 'price before the drop, and its date for the order');
-select pg_temp.check((select public.recent_price_drop_at(l) from public.listings l where id = '7f100000-0000-4000-8000-000000000001') is null, 'no drop, no date');
-select pg_temp.check((select public.seller_verified_rank(l) from public.listings l where id = '7f100000-0000-4000-8000-000000000001') = 0, 'individual sellers rank after verified stores');
+-- FIND 10: the price-drop and verified-first orders and the "Antes" price. Visitors read them on public_listings rows,
+-- as the catalog does (launch audit A27: a whole listings row is not theirs to read).
+select pg_temp.check((select l.previous_price_pen = 2300 and public.recent_price_drop_at(l) = l.price_dropped_at from public.public_listings l where id = '7f100000-0000-4000-8000-000000000003'), 'price before the drop, and its date for the order');
+select pg_temp.check((select public.recent_price_drop_at(l) from public.public_listings l where id = '7f100000-0000-4000-8000-000000000001') is null, 'no drop, no date');
+select pg_temp.check((select public.seller_verified_rank(l) from public.public_listings l where id = '7f100000-0000-4000-8000-000000000001') = 0, 'individual sellers rank after verified stores');
 
 -- FIND 16: a listing that was public and no longer is gives only its category and type; others give nothing.
 select pg_temp.check((select row(category, instrument_type)::text from public.listing_gone_hint('find-hidden')) = '(guitars,electric_guitar)', 'gone hint');

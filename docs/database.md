@@ -367,10 +367,16 @@ The `laria_private` schema is revoked from `public`, `anon`, and `authenticated`
 
 Public read policies:
 - Active stores are readable by `anon` and `authenticated`, but only through column grants (migration `20261022130000_store_public_columns.sql`): `id`, `name`, `slug`, `description`, `status`, `city`, `district`, `region`, `whatsapp_phone`, `logo_url`, `banner_url`, `is_verified`, `created_at`, `updated_at` and the four social/web URLs; `authenticated` also reads `owner_user_id`. RUC, razón social, e-mail, contact person, legacy contact name, street address, rejection reason and plan are private: the owner reads them with `get_own_store()`, Admin with `admin_get_store(p_store_id)`. A column added to `stores` later is private until a migration grants it.
-- Individual approved listings are public; store listings additionally require an active parent store. Public pages
-  that use a computed field (`photo_count:listing_photo_count`, `recent_price_drop_at`, `seller_verified_rank`) read
-  them on `public.public_listings`, a security invoker view of a listing's public columns, and the catalog's free-text
-  search returns its rows (launch audit A27, below).
+- Individual approved listings are public; store listings additionally require an active parent store. `anon` and
+  `authenticated` read only a listing's public columns, through column grants (`20261114140000`): the columns of
+  `public.public_listings`, plus `rejection_reason`, `rejection_codes`, `hidden_source` and `hidden_reason` for
+  `authenticated` (owners). The contact (`contact_name`, `whatsapp_phone`) and the internal fields are read on the
+  server, and by Admin with `admin_get_listing(p_listing_id)`. Public pages that use a computed field
+  (`photo_count:listing_photo_count`, `recent_price_drop_at`, `seller_verified_rank`) read them on `public_listings`,
+  and the catalog's free-text search returns its rows (launch audit A27, below). A column added to `listings` later is
+  private until a migration grants it.
+- Profiles: a signed-in user reads their own, Admin every profile; visitors none (`20261114140000` dropped "Public can
+  read profiles for approved listings"). A seller's name on a public page is read on the server.
 - Listing photos follow the same combined listing/store eligibility predicate. Store photos require an active store.
 
 Public insert policies:
@@ -1275,7 +1281,8 @@ nothing the site reads, so it is applied before its application deploys:
   through `admin_get_listing`. `tests/launch-audit-contacts.test.cjs` checks that no read through the public key
   names a private column, a computed field on `listings` or another user's profile.
 
-Step 2, `20261114140000_launch_audit_contact_columns.sql`, is applied once step 1's application is live: it revokes
+Step 2, `20261114140000_launch_audit_contact_columns.sql` (suite `tests/launch-audit-contact-columns.sql`; three
+older suites now read a visitor's view the same way), is applied once step 1's application is live: it revokes
 the table-wide SELECT on `listings` from `anon` and `authenticated`, grants them the columns of `public_listings`,
 grants `authenticated` also `rejection_reason`, `rejection_codes`, `hidden_source` and `hidden_reason` (owners see
 them on their own listings; approval and showing a listing again clear them), drops the public profile policy and
