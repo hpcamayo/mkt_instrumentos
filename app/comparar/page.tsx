@@ -24,7 +24,7 @@ export default async function ComparePage({ searchParams }: CompareProps) {
   const slugs = compareSlugs((await searchParams).p);
   const { supabase } = getRequestReads();
   const { data } = supabase && slugs.length
-    ? await supabase.from("listings").select(catalogCardSelect()).in("slug", slugs).eq("status", "approved").order("sort_order", { foreignTable: "listing_photos", ascending: true }).limit(1, { foreignTable: "listing_photos" }).returns<ListingCardData[]>()
+    ? await supabase.from("public_listings").select(catalogCardSelect()).in("slug", slugs).eq("status", "approved").order("sort_order", { foreignTable: "listing_photos", ascending: true }).limit(1, { foreignTable: "listing_photos" }).returns<ListingCardData[]>()
     : { data: [] as ListingCardData[] };
   const listings = slugs.map((slug) => (data ?? []).find((listing) => listing.slug === slug)).filter((listing): listing is ListingCardData => Boolean(listing));
 

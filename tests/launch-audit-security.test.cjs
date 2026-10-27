@@ -186,7 +186,7 @@ test("A35: a draft kept on a device renews its token for the same submission, an
 
 test("A35: the selling form renews a restored draft's token, and retries a publish refused for an expired one", () => {
   const form = fs.readFileSync("components/sell-listing-form.tsx", "utf8");
-  assert.match(form, /apply\(restore\);\n[\s\S]*?void renew\(restore\.submission\)/);
+  assert.match(form, /const draft = restore;\n\s+apply\(draft\);\n[\s\S]*?void renew\(draft\.submission\)/);
   assert.match(form, /if \(!\(error instanceof SubmissionExpired\)\) throw error;\n\s+return send\(\(await renew\(capability\)\)\.token\);/);
   const helper = fs.readFileSync("lib/public-submission.ts", "utf8");
   assert.match(helper, /submissionRequest\(\{ action: "renew", token: current\.token \}\)/);

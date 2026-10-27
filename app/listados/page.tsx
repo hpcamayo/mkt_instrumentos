@@ -16,7 +16,7 @@ import { getRequestReads } from "@/lib/supabase/public-read-client";
 import { SearchTelemetry } from "@/components/marketplace-telemetry";
 import { createSearchReceipt } from "@/lib/marketplace-events-server";
 import { searchEventMetadata } from "@/lib/marketplace-event-payload";
-import { getCatalogPage } from "@/lib/catalog-data";
+import { getCatalogFacets, getCatalogPage } from "@/lib/catalog-data";
 import { applySearchPhrase } from "@/lib/catalog-query";
 import { catalogHref, catalogTabTitle, catalogTitle } from "@/lib/catalog-filters";
 import { buildCatalogMetadata } from "@/lib/seo";
@@ -65,6 +65,8 @@ export default async function ListingsPage({
   const phrase = applySearchPhrase(filters);
   if (phrase.changed) redirect(catalogHref(phrase.filters));
 
+  // Counts are independent of inventory. Start their bounded, shared read after URL validation, before awaiting core data.
+  const facets = getCatalogFacets(filters);
   const { count, data, error } = (await getCatalogPage(filters, page)) ?? { count: null, data: null, error: null };
   const redirectPage = getPageRedirect(page, count, error);
   if (redirectPage !== null)
@@ -80,6 +82,7 @@ export default async function ListingsPage({
       title={catalogTitle(filters)}
       breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Instrumentos" }]}
       filters={filters}
+      facets={facets}
       scope={{}}
       listings={listings}
       totalCount={count ?? 0}

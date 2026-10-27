@@ -262,11 +262,8 @@ export function AdminListingEditor({
     setExpanded(true);
     setBusy(true);
     setError("");
-    const { data, error: loadError } = await supabase
-      .from("listings")
-      .select(listingSelect)
-      .eq("id", listingId)
-      .single();
+    // A listing's contact is not readable on listings from the browser (launch audit A27), like a store's private fields.
+    const { data, error: loadError } = await supabase.rpc("admin_get_listing", { p_listing_id: listingId }).select(listingSelect).single();
     setBusy(false);
     if (loadError || !data) {
       setError("No pudimos cargar los datos editables de la publicación.");

@@ -21,6 +21,7 @@ const TARGET_TYPES = [
   "report",
   "review",
   "legacy_link",
+  "account",
 ] as const;
 
 type AuditTargetType = (typeof TARGET_TYPES)[number];
