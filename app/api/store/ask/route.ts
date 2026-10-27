@@ -64,6 +64,7 @@ export async function POST(request: Request) {
     effort: "low",
     maxTokens: 2000,
     timeoutMs: 15_000,
+    retries: 1,
   }, "store_question");
   const answer = result.status === "ok" ? parseStoreAnswer(result.data) : null;
   const href = answer ? storeAnswerHref(answer) : null;

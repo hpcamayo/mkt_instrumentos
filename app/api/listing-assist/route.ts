@@ -19,8 +19,9 @@ import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 // to JPEGs of at most 1024 pixels, sent only when the seller taps the button. Nothing is stored: the photos go to the
 // model and the suggestion comes back, checked against the site's registries (lib/ai/listing-assist.ts).
 
-// Two attempts of up to 40 seconds each at most.
-export const maxDuration = 90;
+// One attempt of up to 50 seconds: two would not fit in the 60 seconds the site's longest routes take. On Opus the
+// API's own fallback (lib/ai/claude.ts) covers an overloaded model within that one request.
+export const maxDuration = 60;
 
 const LIMIT_RESET = "Se renueva a las 7 p. m., hora de Lima.";
 
@@ -76,7 +77,8 @@ export async function POST(request: Request) {
     schema: listingAssistSchema(),
     effort: "medium",
     maxTokens: 8000,
-    timeoutMs: 40_000,
+    timeoutMs: 50_000,
+    retries: 0,
   }, "listing_assist");
   const suggestion = result.status === "ok" ? parseListingSuggestion(result.data) : null;
   const outcome: AiOutcome = result.status !== "ok" ? result.status : !suggestion ? "invalid" : suggestion.recognized ? "answered" : "no_match";

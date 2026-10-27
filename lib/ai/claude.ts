@@ -39,6 +39,8 @@ export type StructuredCall = {
   // Thinking counts toward it, so it leaves room for that as well as the answer.
   maxTokens: number;
   timeoutMs: number;
+  // The SDK's retries after a timeout, a dropped connection, 429 or 5xx; the route's maxDuration covers every attempt.
+  retries: 0 | 1;
 };
 
 export function structuredRequest(model: string, call: StructuredCall): CreateParams {
@@ -77,7 +79,7 @@ function tokensOf(usage: AiResponse["usage"]) {
 export async function callStructured(ai: AiClient, model: string, call: StructuredCall, label: string): Promise<StructuredResult> {
   let response: AiResponse;
   try {
-    response = await ai.beta.messages.create(structuredRequest(model, call), { timeout: call.timeoutMs, maxRetries: 1 });
+    response = await ai.beta.messages.create(structuredRequest(model, call), { timeout: call.timeoutMs, maxRetries: call.retries });
   } catch (error) {
     // Never the request or the answer: only what kind of failure it was.
     console.warn("ai-call-failed", label, error instanceof Anthropic.APIError ? `status ${error.status ?? "none"}` : error instanceof Error ? error.name : "unknown");

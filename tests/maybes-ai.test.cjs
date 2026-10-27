@@ -145,7 +145,7 @@ test("maybes AI: off unless the key and LARIA_AI_HELPERS=1 are both set; Opus 5.
 
 test("maybes AI: a request is structured output with an effort, no thinking or sampling fields, and fallbacks only where they exist", () => {
   const { structuredRequest } = claude();
-  const call = { system: "Sistema", content: [{ type: "text", text: "¿Qué guitarras tengo agotadas?" }], schema: storeQuestion.storeQuestionSchema(), effort: "low", maxTokens: 2000, timeoutMs: 15000 };
+  const call = { system: "Sistema", content: [{ type: "text", text: "¿Qué guitarras tengo agotadas?" }], schema: storeQuestion.storeQuestionSchema(), effort: "low", maxTokens: 2000, timeoutMs: 15000, retries: 1 };
   const opus = structuredRequest("claude-opus-5-5", call);
   assert.deepEqual(opus, {
     model: "claude-opus-5-5",
@@ -175,7 +175,7 @@ test("maybes AI: a request is structured output with an effort, no thinking or s
 
 test("maybes AI: the answer is read after checking for a refusal, from the last text block, with every attempt's tokens", async () => {
   const { callStructured } = claude();
-  const call = { system: "s", content: [{ type: "text", text: "q" }], schema: {}, effort: "low", maxTokens: 2000, timeoutMs: 15000 };
+  const call = { system: "s", content: [{ type: "text", text: "q" }], schema: {}, effort: "low", maxTokens: 2000, timeoutMs: 15000, retries: 1 };
   await quietly(async (warnings) => {
     const ok = fakeClient([reply({ answer: STORE_ANSWER })]);
     assert.deepEqual(await callStructured(ok, "claude-opus-5-5", call, "store_question"),
@@ -236,14 +236,14 @@ test("maybes AI: the fake client answers only under next dev with LARIA_AI_FAKE=
   const { fakeAiClient } = loadModule("lib/ai/fake-client.ts");
   const { callStructured } = claude();
   const ask = async (question) => {
-    const result = await callStructured(fakeAiClient, "claude-opus-5-5", { system: "", content: [{ type: "text", text: question }], schema: storeQuestion.storeQuestionSchema(), effort: "low", maxTokens: 2000, timeoutMs: 1 }, "t");
+    const result = await callStructured(fakeAiClient, "claude-opus-5-5", { system: "", content: [{ type: "text", text: question }], schema: storeQuestion.storeQuestionSchema(), effort: "low", maxTokens: 2000, timeoutMs: 1, retries: 0 }, "t");
     return storeQuestion.storeAnswerHref(storeQuestion.parseStoreAnswer(result.data));
   };
   assert.equal(await ask("¿Qué guitarras tengo agotadas?"), "/mi-cuenta/tienda/inventario?stock=out&categoria=guitars&asi=1");
   assert.equal(await ask("¿Qué pedales tengo con menos de 2 unidades?"), "/mi-cuenta/tienda/inventario?stock=low&categoria=pedals&orden=available_asc&asi=1&falta=quantity");
   assert.equal(await ask("¿Qué vendí más este mes?"), "/mi-cuenta/tienda/inventario/reponer?asi=1&falta=sales%2Cdates");
   assert.equal(await ask("Lo más visto esta semana"), "/mi-cuenta/tienda/estadisticas?periodo=7&enfoque=views&asi=1");
-  const assist = await callStructured(fakeAiClient, "claude-opus-5-5", { system: "", content: [], schema: listingAssist.listingAssistSchema(), effort: "medium", maxTokens: 8000, timeoutMs: 1 }, "t");
+  const assist = await callStructured(fakeAiClient, "claude-opus-5-5", { system: "", content: [], schema: listingAssist.listingAssistSchema(), effort: "medium", maxTokens: 8000, timeoutMs: 1, retries: 0 }, "t");
   assert.equal(listingAssist.parseListingSuggestion(assist.data).brand, "Boss");
 });
 
@@ -360,6 +360,7 @@ test("stock-24: /api/store/ask answers a store owner with Inventario with a link
     const { params } = client.calls[0];
     assert.deepEqual(params.messages, [{ role: "user", content: [{ type: "text", text: "¿Qué guitarras tengo agotadas?" }] }]);
     assert.equal(params.output_config.effort, "low");
+    assert.deepEqual(client.calls[0].options, { timeout: 15000, maxRetries: 1 });
     assert.equal(params.system, storeQuestion.storeQuestionSystemPrompt());
     assert.deepEqual(records, [{ feature: "store_question", userId: "u-1", storeId: "s-1", model: "claude-opus-5-5", inputTokens: 1200, outputTokens: 300, outcome: "answered" }]);
 
@@ -464,6 +465,7 @@ test("big-07: /api/listing-assist sends up to four small JPEGs and returns a sug
     assert.deepEqual(params.messages[0].content.slice(0, 2), photos.map((data) => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data } })));
     assert.equal(params.messages[0].content.at(-1).type, "text");
     assert.equal(params.output_config.effort, "medium");
+    assert.deepEqual(client.calls[0].options, { timeout: 50000, maxRetries: 0 });
     assert.equal(params.fallbacks, undefined, "Haiku: no server-side fallback");
     assert.deepEqual(records, [{ feature: "listing_assist", userId: "u-2", storeId: null, model: "claude-haiku-5-5", inputTokens: 1200, outputTokens: 300, outcome: "answered" }]);
 
@@ -649,6 +651,9 @@ test("maybes AI: the pages show the helpers only with the server's flag, and the
     assert.match(read(file), /aiAssist=\{aiHelpersEnabled\(\)\}/, file);
   }
   assert.match(read("app/mi-cuenta/tienda/inventario/page.tsx"), /ask=\{aiHelpersEnabled\(\)\}/);
+  // Every attempt fits in the route's time, and no route takes longer than the site's longest (60 seconds).
+  assert.match(read("app/api/store/ask/route.ts"), /export const maxDuration = 40;[\s\S]+timeoutMs: 15_000,\n\s+retries: 1,/);
+  assert.match(read("app/api/listing-assist/route.ts"), /export const maxDuration = 60;[\s\S]+timeoutMs: 50_000,\n\s+retries: 0,/);
   assert.match(read("app/mi-cuenta/tienda/inventario/page.tsx"), /\{ask \? <StoreAskBox \/> : null\}/);
   assert.match(read("app/mi-cuenta/tienda/page.tsx"), /store && inventoryEnabled && aiHelpersEnabled\(\) \? <StoreAskBox/);
   assert.match(read("components/sell-listing-form.tsx"), /\{aiAssist \? \(\n\s+<ListingAssist/);
