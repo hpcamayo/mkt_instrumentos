@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { LocationFields } from "@/components/location-fields";
 import { profileFieldErrors } from "@/lib/form-validation";
+import { checkEmailAvailability } from "@/lib/auth/email-check";
 import { SIGN_UP_PAUSED, TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
 import {
@@ -73,27 +74,19 @@ export function StoreOwnerSignupForm() {
       setMessage(`Ingresa un correo y una contraseña de al menos ${PASSWORD_MIN_LENGTH} caracteres.`);
       return;
     }
-    const emailCheck = await fetch("/api/auth/check-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    }).then(async (response) => {
-      const result = await response.json().catch(() => null);
-      // Launch audit A28: each visitor can check a limited number of addresses.
-      if (response.status === 429) return "limited";
-      return response.ok && result?.ok && result.available ? "available" : "unavailable";
-    });
+    const emailCheck = await checkEmailAvailability(email);
     if (emailCheck === "limited") {
       setState("error");
       setMessage(TOO_MANY_ATTEMPTS);
       return;
     }
-    if (emailCheck !== "available") {
+    if (emailCheck === "exists") {
       setState("error");
-      setMessage("Ese correo ya está registrado o no pudo verificarse. Usa un correo exclusivo para la Tienda.");
-      validation.setFieldError("email", "Usa un correo exclusivo para la Tienda que pueda verificarse.");
+      setMessage("Ese correo ya está registrado. Usa un correo exclusivo para la Tienda.");
+      validation.setFieldError("email", "Ese correo ya está registrado. Usa un correo exclusivo para la Tienda.");
       return;
     }
+    // A check that couldn't answer stops nothing: the sign-up below still finds an address that has an account.
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
       setState("error");

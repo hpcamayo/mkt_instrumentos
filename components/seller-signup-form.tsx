@@ -7,6 +7,7 @@ import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   upsertBasicSellerProfile,
 } from "@/lib/auth/profile";
+import { checkEmailAvailability } from "@/lib/auth/email-check";
 import { SIGN_UP_PAUSED, TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
@@ -126,12 +127,7 @@ export function SellerSignupForm() {
       return;
     }
 
-    if (emailCheck === "error") {
-      setState("error");
-      setMessage("No pudimos verificar el correo. Intenta nuevamente.");
-      return;
-    }
-
+    // A check that couldn't answer stops nothing: the sign-up below still finds an address that has an account.
     const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(confirmedPath)}`;
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -252,28 +248,4 @@ export function SellerSignupForm() {
       </p>
     </form>
   );
-}
-
-async function checkEmailAvailability(email: string) {
-  const response = await fetch("/api/auth/check-email", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email }),
-  });
-  const result = (await response.json().catch(() => null)) as
-    | { ok?: boolean; available?: boolean }
-    | null;
-
-  // Launch audit A28: each visitor can check a limited number of addresses.
-  if (response.status === 429) {
-    return "limited" as const;
-  }
-
-  if (!response.ok || !result?.ok) {
-    return "error" as const;
-  }
-
-  return result.available ? ("available" as const) : ("exists" as const);
 }

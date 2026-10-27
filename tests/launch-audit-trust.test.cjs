@@ -426,13 +426,167 @@ test("A16: the forms sign in from the browser and say when a limit was reached",
   assert.match(login, /isAuthRateLimited\(error\)[\s\S]{0,80}TOO_MANY_ATTEMPTS/);
 
   const seller = read("components/seller-signup-form.tsx");
-  assert.match(seller, /if \(response\.status === 429\) \{\s*return "limited" as const;/);
-  assert.match(seller, /if \(emailCheck === "limited"\) \{\s*setState\("error"\);\s*setMessage\(TOO_MANY_ATTEMPTS\);/);
   assert.match(seller, /setMessage\(isAuthRateLimited\(error\) \? SIGN_UP_PAUSED :/);
-
   const store = read("components/store-owner-signup-form.tsx");
-  assert.match(store, /if \(response\.status === 429\) return "limited";/);
   assert.match(store, /if \(isAuthRateLimited\(error\)\) \{\s*setState\("error"\);\s*setMessage\(SIGN_UP_PAUSED\);/);
 
   assert.match(read("components/password-form.tsx"), /isAuthRateLimited\(error\)\s*\? TOO_MANY_EMAILS/);
+});
+
+// The answers the e-mail check gives, for a mocked fetch.
+function mockCheckEmail() {
+  const asked = [];
+  const mock = { asked, answer: { status: 200, body: { ok: true, available: true } } };
+  mock.fetch = async (url, init) => {
+    asked.push([url, init.method, JSON.parse(init.body)]);
+    if (mock.answer instanceof Error) throw mock.answer;
+    const body = typeof mock.answer.body === "string" ? mock.answer.body : JSON.stringify(mock.answer.body);
+    return new Response(body, { status: mock.answer.status, headers: { "Content-Type": "application/json" } });
+  };
+  return mock;
+}
+
+test("A28: the sign-up check says whether an address has an account, or that it can't say", async () => {
+  const { checkEmailAvailability } = require("@/lib/auth/email-check");
+  const check = mockCheckEmail();
+  const fetchBefore = globalThis.fetch;
+  globalThis.fetch = check.fetch;
+  try {
+    const cases = [
+      [{ status: 200, body: { ok: true, available: true } }, "available"],
+      [{ status: 200, body: { ok: true, available: false } }, "exists"],
+      [{ status: 429, body: { ok: false, available: false } }, "limited"],
+      [{ status: 503, body: { ok: false, available: false, message: "No se pudo verificar el correo en este momento." } }, "unknown"],
+      [{ status: 500, body: { ok: false, available: false } }, "unknown"],
+      [{ status: 200, body: "<html>" }, "unknown"],
+      [{ status: 200, body: { ok: true } }, "unknown"],
+      [new TypeError("fetch failed"), "unknown"],
+    ];
+    for (const [answer, expected] of cases) {
+      check.answer = answer;
+      assert.equal(await checkEmailAvailability("ana@example.com"), expected, answer instanceof Error ? answer.message : JSON.stringify(answer));
+    }
+    assert.deepEqual(check.asked[0], ["/api/auth/check-email", "POST", { email: "ana@example.com" }]);
+  } finally {
+    globalThis.fetch = fetchBefore;
+  }
+});
+
+// A sign-up form, rendered with its hooks recorded, submitted with the given address.
+function signupHarness(file, name) {
+  const state = [];
+  let hookIndex = 0;
+  const calls = { signUps: [], fieldErrors: {} };
+  let signUpAnswer = { data: { user: { id: "u-1", identities: [{ id: "i-1" }] }, session: null }, error: null };
+  const Notice = function Notice() { return null; };
+  const component = loadModule(file, {
+    react: {
+      useState(initial) {
+        const index = hookIndex++;
+        if (!(index in state)) state[index] = initial;
+        return [state[index], (value) => { state[index] = typeof value === "function" ? value(state[index]) : value; }];
+      },
+      useEffect() {},
+    },
+    "next/link": { __esModule: true, default: () => null },
+    "next/navigation": { useRouter: () => ({ push() {}, replace() {}, refresh() {} }), useSearchParams: () => new URLSearchParams("") },
+    "@/components/use-form-errors": {
+      useFormErrors: () => [{ validate: () => true, setFieldError: (field, message) => { calls.fieldErrors[field] = message; }, formRef: {}, onChange() {}, errorFor: () => undefined }, null],
+    },
+    "@/lib/supabase/browser-client": {
+      getSupabaseBrowserClient: () => ({ auth: {
+        getUser: async () => ({ data: { user: null } }),
+        signUp: async (input) => { calls.signUps.push(input.email); return signUpAnswer; },
+      } }),
+    },
+    "@/lib/auth/profile": {
+      INDIVIDUAL_SELLER_ACCOUNT_TYPE: "seller", STORE_OWNER_ACCOUNT_TYPE: "store_owner",
+      upsertBasicSellerProfile: async () => ({ ok: true }), upsertStoreOwnerProfile: async () => ({ ok: true }),
+      validateSellerProfileInput: (profile) => ({ ok: true, profile }),
+    },
+    "@/components/ui/button": { Button: () => null },
+    "@/components/ui/field": { Field: () => null, Input: () => null },
+    "@/components/ui/notice": { Notice },
+    "@/components/ui/password-input": { PasswordInput: () => null },
+    "@/components/ui/phone-input": { PhoneInput: () => null },
+    "@/components/location-fields": { LocationFields: () => null },
+    "@/components/auth/resend-confirmation": { ResendConfirmation: () => null },
+  })[name];
+  const render = () => { hookIndex = 0; return component(); };
+  const find = (node) => {
+    if (!node || typeof node !== "object") return null;
+    if (Array.isArray(node)) { for (const child of node) { const found = find(child); if (found) return found; } return null; }
+    return node.type === Notice ? node : find(node.props?.children);
+  };
+  return {
+    calls,
+    signUpAnswers(answer) { signUpAnswer = answer; },
+    async submit(email) {
+      const fields = { fullName: "Ana Pérez", email, password: "clave-segura-2026", acceptedRules: "on", phone: "987654321", city: "Lima", region: "Lima" };
+      await render().props.onSubmit({ preventDefault() {}, currentTarget: { fields } });
+    },
+    // The form's notice, as it reads.
+    message() {
+      const notice = find(render());
+      const first = notice ? [notice.props.children].flat()[0] : null;
+      return typeof first === "string" ? first : first?.props?.children ?? null;
+    },
+  };
+}
+
+test("A28: a sign-up goes on to Supabase when the e-mail check can't answer, and stops when it's limited or the address has an account", async () => {
+  const { TOO_MANY_ATTEMPTS } = require("@/lib/auth/limits");
+  const check = mockCheckEmail();
+  const before = { fetch: globalThis.fetch, FormData: globalThis.FormData, window: globalThis.window };
+  globalThis.fetch = check.fetch;
+  globalThis.FormData = class { constructor(form) { this.fields = form.fields; } get(field) { return field in this.fields ? this.fields[field] : null; } };
+  globalThis.window = { location: { origin: "https://laria.audio" } };
+  const forms = [
+    { file: "components/seller-signup-form.tsx", name: "SellerSignupForm", sent: /^Revisa tu correo para confirmar tu cuenta\./,
+      exists: "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo." },
+    { file: "components/store-owner-signup-form.tsx", name: "StoreOwnerSignupForm", sent: /^Revisa tu correo para confirmar la cuenta de Tienda\./,
+      exists: "Ese correo ya está registrado. Usa un correo exclusivo para la Tienda.",
+      refused: "No se pudo crear la cuenta. Usa un correo exclusivo para la Tienda e intenta nuevamente." },
+  ];
+  try {
+    for (const form of forms) {
+      // Codex's third review of #55: while the check can't count it answers 503, and the sign-up still goes on.
+      for (const answer of [{ status: 503, body: { ok: false, available: false, message: "No se pudo verificar el correo en este momento." } }, { status: 500, body: { ok: false } }, new TypeError("fetch failed")]) {
+        const signup = signupHarness(form.file, form.name);
+        check.answer = answer;
+        await signup.submit("nueva@example.com");
+        assert.deepEqual(signup.calls.signUps, ["nueva@example.com"], `${form.name} ${answer.status ?? answer.message}`);
+        assert.match(signup.message(), form.sent, form.name);
+      }
+      // Supabase's sign-up still finds an address that has an account.
+      const duplicate = signupHarness(form.file, form.name);
+      duplicate.signUpAnswers({ data: { user: { id: "u-2", identities: [] }, session: null }, error: null });
+      check.answer = { status: 503, body: { ok: false, available: false } };
+      await duplicate.submit("ana@example.com");
+      assert.deepEqual(duplicate.calls.signUps, ["ana@example.com"]);
+      assert.equal(duplicate.message(), form.refused ?? form.exists, form.name);
+      // Over the visitor's limit, or an address with an account: no sign-up.
+      const limited = signupHarness(form.file, form.name);
+      check.answer = { status: 429, body: { ok: false, available: false } };
+      await limited.submit("otra@example.com");
+      assert.deepEqual(limited.calls.signUps, [], form.name);
+      assert.equal(limited.message(), TOO_MANY_ATTEMPTS, form.name);
+      const exists = signupHarness(form.file, form.name);
+      check.answer = { status: 200, body: { ok: true, available: false } };
+      await exists.submit("ana@example.com");
+      assert.deepEqual(exists.calls.signUps, [], form.name);
+      assert.equal(exists.message(), form.exists, form.name);
+      assert.equal(exists.calls.fieldErrors.email, form.exists, form.name);
+      // A free address signs up.
+      const free = signupHarness(form.file, form.name);
+      check.answer = { status: 200, body: { ok: true, available: true } };
+      await free.submit("libre@example.com");
+      assert.deepEqual(free.calls.signUps, ["libre@example.com"], form.name);
+    }
+  } finally {
+    for (const [key, value] of Object.entries(before)) {
+      if (value === undefined) delete globalThis[key];
+      else globalThis[key] = value;
+    }
+  }
 });
