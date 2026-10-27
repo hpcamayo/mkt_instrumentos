@@ -596,24 +596,28 @@ async function getSimilarListings(
 }
 
 // A Particular listing without an account (an old one) finds its seller's other listings by WhatsApp number, which
-// the public API key may not read (launch audit A27). The ids come from the server with the service role, from the
-// rows the public policy shows of a Particular (approved, no store); the cards themselves are read as usual. Null
-// when the lookup fails, like a failed query below.
-async function sameNumberListingIds(listing: ListingDetailData) {
+// the public API key may not read (launch audit A27). The server looks them up with the service role among the rows
+// the public policy shows of a Particular (approved, no store) and the cards show (in stock or without stock): the
+// four newest ids, whose cards are read as usual, and how many there are, for the seller's count however many that
+// is. Null when the lookup fails, like a failed query below.
+async function sameNumberListings(listing: ListingDetailData) {
   const admin = getSupabaseAdminClient();
   if (!admin) return null;
-  if (!listing.whatsapp_phone) return [];
-  const { data, error } = await admin
+  if (!listing.whatsapp_phone) return { ids: [] as string[], count: 0 };
+  const { data, count, error } = await admin
     .from("listings")
-    .select("id")
+    .select("id", { count: "exact" })
     .eq("seller_type", "individual")
     .is("store_id", null)
     .eq("status", "approved")
+    .or(DISCOVERABLE_STOCK_FILTER)
     .eq("whatsapp_phone", listing.whatsapp_phone)
     .neq("id", listing.id)
-    .limit(200)
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .limit(4)
     .abortSignal(budgetSignal(getRequestReads().deadline, READ_BUDGETS.coreMs));
-  return error ? null : (data ?? []).map((row) => row.id);
+  return error || count === null ? null : { ids: (data ?? []).map((row) => row.id), count };
 }
 
 const getMoreFromSellerListings = cache(
@@ -622,7 +626,7 @@ const getMoreFromSellerListings = cache(
     listing: ListingDetailData,
   ) {
     const storeId = listing.seller_type === "store" ? listing.store_id : null;
-    const sameNumber = storeId || listing.owner_user_id ? [] : await sameNumberListingIds(listing);
+    const sameNumber = storeId || listing.owner_user_id ? { ids: [] as string[], count: null } : await sameNumberListings(listing);
     if (!sameNumber) return { listings: [] as ListingCardData[], publishedCount: null };
 
     const baseQuery = supabase
@@ -639,7 +643,7 @@ const getMoreFromSellerListings = cache(
           ? baseQuery.eq("owner_user_id", listing.owner_user_id)
           : baseQuery
               .eq("seller_type", "individual")
-              .in("id", sameNumber);
+              .in("id", sameNumber.ids);
 
     const { count, data } = await query
       .order("published_at", { ascending: false, nullsFirst: false })
@@ -652,11 +656,13 @@ const getMoreFromSellerListings = cache(
       .limit(4)
       .returns<ListingCardData[]>();
     const listings = (data ?? []) as ListingCardData[];
+    // Found by number, the seller's count is the lookup's: the cards' query reads only its four ids.
+    const others = sameNumber.count ?? count;
 
     return {
       listings,
       publishedCount:
-        count === null ? null : count + (listing.status === "approved" ? 1 : 0),
+        others === null ? null : others + (listing.status === "approved" ? 1 : 0),
     };
   },
 );

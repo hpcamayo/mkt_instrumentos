@@ -11,7 +11,10 @@
 // What it can't read: SQL taken from a variable it didn't see built in one expression (built over several
 // assignments, say), a table or another function (concat(), replace(), string_agg()), which reads as x, so a WHERE
 // that only such a part adds reads as missing (write the WHERE in the string itself); format() arguments passed as a
-// VARIADIC array other than ARRAY[...]; U&'' strings; functions in other schemas or languages.
+// VARIADIC array other than ARRAY[...]; U&'' strings; functions in other schemas or languages. A sql function written
+// BEGIN ATOMIC is read through pg_get_function_sqlbody(), since it keeps no source text. Text that reads like an
+// UPDATE or DELETE without being run (a message, say) is reported too. Its time grows with the cube of a chain of ||
+// (500 pieces take a second, 2,000 about a minute), which no function here comes near.
 // Usage: node tests/api-safeupdate.integration.cjs [postgresql://postgres:postgres@127.0.0.1:54322/postgres]
 // The URL may also come from LARIA_TEST_DATABASE_URL. Hosted databases are refused. The database needs every
 // migration applied (setup-local-db.sh reset); the second part leaves it as it was (each case is rolled back).
@@ -60,11 +63,12 @@ function splitLiterals(source) {
       i += 1;
       while (i < source.length) {
         if (escapes && source[i] === "\\") {
-          // \b \f \n \r \t, \ooo in octal, \xhh in hex, \uxxxx and \Uxxxxxxxx, and any other character as itself.
+          // \b \f \n \r \t, \ooo in octal (one byte, so \565 is u, as PostgreSQL keeps its low 8 bits), \xhh in hex,
+          // \uxxxx and \Uxxxxxxxx, and any other character as itself.
           const sequence = source
             .slice(i + 1, i + 10)
             .match(/^(?:[0-7]{1,3}|x[0-9A-Fa-f]{1,2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8}|[\s\S])?/)[0];
-          if (/^[0-7]/.test(sequence)) text += String.fromCharCode(parseInt(sequence, 8));
+          if (/^[0-7]/.test(sequence)) text += String.fromCharCode(parseInt(sequence, 8) & 0xff);
           else if (sequence.length > 1) text += String.fromCodePoint(parseInt(sequence.slice(1), 16));
           else text += { b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" }[sequence] ?? sequence;
           i += 1 + sequence.length;
@@ -117,11 +121,12 @@ const quoteLiteral = (value) =>
     : `'${value.replaceAll("'", "''")}'`;
 
 // format() as PostgreSQL fills it in (text_format()): %s, %I and %L, in turn or by position (%2$s), with a width
-// written out (%-10s), taken from the next argument (%*s) or from one by position (%*2$s). A width taken from an
-// argument moves the turn to that argument, so the value is the one after it.
+// written out (%-10s, any number of minus signs), taken from the next argument (%*s) or from one by position (%*2$s).
+// A width taken from an argument moves the turn to that argument, so the value is the one after it. Padding stops at
+// 1,000 spaces, which read the same as more.
 function formatted(template, args) {
   let arg = 0;
-  return template.replace(/%(?:(\d+)\$)?(-)?(?:(\d+)|(\*)(?:(\d+)\$)?)?([sIL%])/g, (_, position, minus, digits, star, widthAt, type) => {
+  return template.replace(/%(?:(\d+)\$)?(-*)(?:(\d+)|(\*)(?:(\d+)\$)?)?([sIL%])/g, (_, position, minus, digits, star, widthAt, type) => {
     if (type === "%") return "%";
     let width = Number(digits ?? 0);
     if (star) {
@@ -131,7 +136,7 @@ function formatted(template, args) {
     arg = position ? Number(position) : arg + 1;
     const value = args[arg - 1] ?? "x";
     const text = type === "I" ? quoteIdent(value) : type === "L" ? quoteLiteral(value) : value;
-    const padding = " ".repeat(Math.max(0, Math.abs(width) - text.length));
+    const padding = " ".repeat(Math.min(1000, Math.max(0, Math.abs(width) - text.length)));
     return minus || width < 0 ? text + padding : padding + text;
   });
 }
@@ -141,15 +146,16 @@ function formatted(template, args) {
 // function's result).
 function evaluate(tokens, strings, at) {
   let pos = at;
+  // One token, or a whole group in parentheses or brackets (an ARRAY[...] or a subscript is one argument).
   const skip = () => {
-    if (tokens[pos] !== "(") {
+    if (tokens[pos] !== "(" && tokens[pos] !== "[") {
       pos += 1;
       return;
     }
     let depth = 0;
     do {
-      if (tokens[pos] === "(") depth += 1;
-      else if (tokens[pos] === ")") depth -= 1;
+      if (tokens[pos] === "(" || tokens[pos] === "[") depth += 1;
+      else if (tokens[pos] === ")" || tokens[pos] === "]") depth -= 1;
       pos += 1;
     } while (depth > 0 && pos < tokens.length);
   };
@@ -220,8 +226,9 @@ const notAStatement = new Set(["for", "key", "do", "or", "on", "before", "after"
 const levels = 4;
 
 // Each UPDATE or DELETE in `source` without a WHERE of its own: one at its own depth, before its statement ends with a
-// semicolon or with the parenthesis that closes its WITH query. Then the same for the SQL its strings build, down to
-// `levels`; deeper SQL is a finding of its own. `outer` holds the texts already being read around this one.
+// semicolon or with the parenthesis that closes its WITH query, and not a name (`returning a as where`, `t.where`).
+// Then the same for the SQL its strings build, down to `levels`; deeper SQL is a finding of its own. `outer` holds the
+// texts already being read around this one.
 function unfiltered(source, outer = []) {
   const { code, strings } = splitLiterals(source);
   const tokens = tokenize(code);
@@ -237,7 +244,7 @@ function unfiltered(source, outer = []) {
       else if (next === ")" && depth === 0) break;
       else if (next === ")") depth -= 1;
       else if (next === ";" && depth === 0) break;
-      else if (next === "where" && depth === 0) where = true;
+      else if (next === "where" && depth === 0 && tokens[end - 1] !== "as" && tokens[end - 1] !== ".") where = true;
     }
     if (!where) found.push(tokens.slice(start, Math.min(end, start + 14)).map((word) => (literalMarker.test(word) ? "'…'" : word)).join(" "));
   });
@@ -295,8 +302,9 @@ async function runRefreshJob(client, claimFunction) {
 }
 
 // Expressions whose text the scanner must build exactly as PostgreSQL does: names format() quotes or leaves as they
-// are, widths written out or taken from an argument, in turn or by position, %L with a quote or a backslash, escapes
-// in E'' strings, numbers, || and VARIADIC ARRAY[...].
+// are, widths written out (with one minus sign or more) or taken from an argument, in turn or by position, %L with a
+// quote or a backslash, escapes in E'' strings (an octal one past \377 among them), numbers, || and VARIADIC
+// ARRAY[...].
 const builds = [
   String.raw`format('UPDATE t SET %I=1', 'where')`,
   String.raw`format('%I t set a = 1', 'update')`,
@@ -307,6 +315,8 @@ const builds = [
   String.raw`format('%L %L', 'a\b', E'c\\d')`,
   String.raw`E'\x75pdate t set a = 1 \\ \'' || 'x' || E'\101B\t\q'`,
   String.raw`format('%s %s', variadic array['delete from', 't'])`,
+  String.raw`format('[%--4s][%s]', 'a', 'b')`,
+  String.raw`E'\565pdate t set a = 1'`,
   String.raw`'a' || format('%s', 'b') || ('c' || 'd') || 1 || $q$e'f$q$`,
 ];
 
@@ -370,17 +380,43 @@ async function main() {
     assert.deepEqual(unfiltered("execute format('update %I set a = %L -- all rows\n where true', 't', 'it''s');"), []);
     // A WHERE that only a variable adds can't be seen, and reads as missing.
     assert.deepEqual(unfiltered("execute format('delete from t %s', v_where);"), ["EXECUTE: delete from t x"]);
+    // The six the second review of #64 found: WHERE as a name, which is no WHERE; an octal escape past \377; a
+    // repeated minus sign in format(); a plain ARRAY[...] argument, which is one argument; a width too wide to pad in
+    // full; and (below) a sql function written BEGIN ATOMIC.
+    assert.deepEqual(unfiltered("update t set a = 1 returning a as where; delete from t returning t.where;"), [
+      "update t set a = 1 returning a as where",
+      "delete from t returning t . where",
+    ]);
+    assert.deepEqual(unfiltered(String.raw`execute E'\565pdate t set a = 1';`), ["EXECUTE: update t set a = 1"]);
+    assert.deepEqual(unfiltered("execute format('%--4s %s t set a = 1', 'x', 'update');"), ["EXECUTE: update t set a = 1"]);
+    assert.deepEqual(unfiltered("execute format('%s %s t set a = 1', array['a', 'b'], 'update');"), ["EXECUTE: update t set a = 1"]);
+    assert.deepEqual(unfiltered("execute format('%999999999s update t set a = 1', 'x');"), ["EXECUTE: update t set a = 1"]);
 
-    const functions = (
-      await client.query(`
-        select n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as name, p.prosrc
-        from pg_proc p
-        join pg_namespace n on n.oid = p.pronamespace
-        join pg_language l on l.oid = p.prolang
-        where n.nspname in ('public', 'laria_private') and l.lanname in ('plpgsql', 'sql')
-          and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
-        order by 1`)
-    ).rows;
+    // Every plpgsql and sql function of public and laria_private with its code. One written BEGIN ATOMIC keeps no
+    // source text (PostgreSQL stores its body parsed), so its body is read back through pg_get_function_sqlbody().
+    const readFunctions = async (only = "") =>
+      (
+        await client.query(`
+          select n.nspname || '.' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as name,
+            coalesce(pg_get_function_sqlbody(p.oid), p.prosrc) as prosrc
+          from pg_proc p
+          join pg_namespace n on n.oid = p.pronamespace
+          join pg_language l on l.oid = p.prolang
+          where n.nspname in ('public', 'laria_private') and l.lanname in ('plpgsql', 'sql')
+            and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e') ${only}
+          order by 1`)
+      ).rows;
+    await client.query("begin");
+    try {
+      await client.query(`create function laria_private.safeupdate_atomic_check() returns void language sql
+        begin atomic update laria_private.public_page_clock set checked_at = now(); end`);
+      const atomic = await readFunctions("and p.proname = 'safeupdate_atomic_check'");
+      assert.deepEqual(atomic.flatMap((fn) => unfiltered(fn.prosrc)), ["update laria_private . public_page_clock set checked_at = now ( )"]);
+    } finally {
+      await client.query("rollback");
+    }
+
+    const functions = await readFunctions();
     assert.ok(
       functions.some((fn) => fn.name === "public.claim_public_page_changes(p_deployment text)"),
       "apply every migration first (setup-local-db.sh reset)",
