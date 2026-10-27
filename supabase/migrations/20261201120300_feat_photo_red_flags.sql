@@ -47,6 +47,9 @@ create table public.listing_red_flags (
   unique (listing_id, kind, matched_listing_id),
   constraint listing_red_flags_review_check check ((status = 'open') = (reviewed_at is null))
 );
+create index if not exists listing_red_flags_matched_listing_idx on public.listing_red_flags (matched_listing_id);
+create index if not exists listing_red_flags_reviewed_by_idx on public.listing_red_flags (reviewed_by)
+  where reviewed_by is not null;
 create index listing_red_flags_open_idx on public.listing_red_flags (status, created_at desc);
 alter table public.listing_red_flags enable row level security;
 revoke all on table public.listing_red_flags from public, anon, authenticated;

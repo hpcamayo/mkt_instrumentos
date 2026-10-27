@@ -29,6 +29,8 @@ create table public.gear_items (
   constraint gear_items_taxonomy_check check (public.listing_taxonomy_is_valid(category, instrument_type)),
   constraint gear_items_warranty_check check (warranty_until is null or purchased_on is null or warranty_until >= purchased_on)
 );
+create index if not exists gear_items_source_listing_idx on public.gear_items (source_listing_id)
+  where source_listing_id is not null;
 
 create index gear_items_user_idx on public.gear_items(user_id, created_at desc);
 create index gear_items_serial_key_idx on public.gear_items(serial_key) where serial_key is not null;
@@ -41,7 +43,7 @@ alter table public.gear_items enable row level security;
 
 create policy "Owners read own gear"
 on public.gear_items for select to authenticated
-using (user_id = auth.uid());
+using (user_id = (select auth.uid()));
 
 revoke all on public.gear_items from anon;
 revoke insert, update, delete, truncate, references, trigger on public.gear_items from authenticated;
@@ -297,7 +299,7 @@ alter table public.gear_reminders enable row level security;
 
 create policy "Owners read own gear reminders"
 on public.gear_reminders for select to authenticated
-using (user_id = auth.uid());
+using (user_id = (select auth.uid()));
 
 revoke all on public.gear_reminders from anon;
 revoke insert, update, delete, truncate, references, trigger on public.gear_reminders from authenticated;

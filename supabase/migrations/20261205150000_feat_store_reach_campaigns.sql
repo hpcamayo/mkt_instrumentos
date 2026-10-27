@@ -97,6 +97,8 @@ create table public.laria_campaigns (
   -- At most 30 days, so a card's "Antes" (list-05 shows drops of the past 30 days) lasts the whole campaign.
   constraint laria_campaigns_period check (ends_at > starts_at and ends_at - starts_at <= interval '30 days')
 );
+create index if not exists laria_campaigns_created_by_idx on public.laria_campaigns (created_by)
+  where created_by is not null;
 
 comment on table public.laria_campaigns is 'reach-05: Laria''s campaign pages. Written only by Admin functions.';
 
@@ -123,6 +125,7 @@ create table public.laria_campaign_entries (
   constraint laria_campaign_entries_discount check (campaign_price_pen < reference_price_pen),
   constraint laria_campaign_entries_live check (status <> 'live' or applied_at is not null)
 );
+create index if not exists laria_campaign_entries_created_by_idx on public.laria_campaign_entries (created_by);
 
 comment on table public.laria_campaign_entries is
   'reach-05: a store''s publication in a campaign, with its checked reference price. Written only by functions.';

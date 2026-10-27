@@ -97,6 +97,12 @@ create table public.stolen_report_matches (
   unique (report_id, source, ref_id),
   constraint stolen_report_matches_review_check check ((status = 'pending') = (reviewed_at is null))
 );
+create index if not exists stolen_report_matches_inventory_item_idx on public.stolen_report_matches (inventory_item_id)
+  where inventory_item_id is not null;
+create index if not exists stolen_report_matches_listing_idx on public.stolen_report_matches (listing_id)
+  where listing_id is not null;
+create index if not exists stolen_report_matches_reviewed_by_idx on public.stolen_report_matches (reviewed_by)
+  where reviewed_by is not null;
 create index stolen_report_matches_status_idx on public.stolen_report_matches (status, created_at desc);
 alter table public.stolen_report_matches enable row level security;
 revoke all on table public.stolen_report_matches from public, anon, authenticated;
@@ -108,14 +114,14 @@ on conflict (id) do nothing;
 create policy "Reporters upload stolen-gear photos under own folder"
 on storage.objects for insert to authenticated
 with check (bucket_id = 'stolen-gear-photos'
-  and (storage.foldername(name))[1] = auth.uid()::text
+  and (storage.foldername(name))[1] = (select auth.uid())::text
   and (storage.foldername(name))[2] ~ '^[0-9a-f-]{36}$');
 create policy "Reporters read own stolen-gear photos"
 on storage.objects for select to authenticated
-using (bucket_id = 'stolen-gear-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+using (bucket_id = 'stolen-gear-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
 create policy "Reporters delete own stolen-gear photos"
 on storage.objects for delete to authenticated
-using (bucket_id = 'stolen-gear-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+using (bucket_id = 'stolen-gear-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- ------------------------------------------------------------------ matching
 

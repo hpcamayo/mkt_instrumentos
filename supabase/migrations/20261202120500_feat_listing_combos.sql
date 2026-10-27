@@ -126,7 +126,7 @@ create policy "Store owners read their companions" on public.listing_companions
   for select to authenticated
   using (exists (
     select 1 from public.listings l join public.stores s on s.id = l.store_id
-    where l.id = listing_companions.listing_id and s.owner_user_id = auth.uid()
+    where l.id = listing_companions.listing_id and s.owner_user_id = (select auth.uid())
   ));
 
 revoke all on table public.listing_companions from anon, authenticated;

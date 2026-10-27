@@ -71,6 +71,8 @@ create table public.store_tryouts (
   constraint store_tryouts_cancelled_by check ((status = 'cancelled') = (cancelled_by is not null)),
   constraint store_tryouts_request_key unique (buyer_user_id, request_key)
 );
+create index if not exists store_tryouts_listing_idx on public.store_tryouts (listing_id)
+  where listing_id is not null;
 
 comment on table public.store_tryouts is
   'buy-07: a buyer''s request to try a listing at the store at a given time. Holds a time, never the instrument.';
@@ -87,7 +89,7 @@ revoke all on public.store_tryouts from anon, authenticated;
 grant select on public.store_tryouts to authenticated;
 
 create policy store_tryouts_buyer_read on public.store_tryouts
-for select to authenticated using (buyer_user_id = auth.uid());
+for select to authenticated using (buyer_user_id = (select auth.uid()));
 
 create policy store_tryouts_store_read on public.store_tryouts
 for select to authenticated using (public.is_store_owner(store_id));

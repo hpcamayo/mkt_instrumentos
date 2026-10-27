@@ -21,6 +21,8 @@ create table public.store_safe_spots (
   ),
   constraint store_safe_spots_admin_off check (admin_disabled_at is null or not enabled)
 );
+create index if not exists store_safe_spots_admin_disabled_by_idx on public.store_safe_spots (admin_disabled_by)
+  where admin_disabled_by is not null;
 
 alter table public.store_safe_spots enable row level security;
 revoke all on public.store_safe_spots from anon, authenticated;

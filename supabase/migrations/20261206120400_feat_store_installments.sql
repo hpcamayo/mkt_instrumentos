@@ -104,11 +104,11 @@ grant select on public.store_installment_offers, public.store_installment_offer_
 create policy "Store owners can read own installment offer" on public.store_installment_offers
   for select to authenticated using (public.is_store_owner(store_id));
 create policy "Admins can read installment offers" on public.store_installment_offers
-  for select to authenticated using (public.is_admin());
+  for select to authenticated using ((select public.is_admin()));
 create policy "Store owners can read own installment offer history" on public.store_installment_offer_changes
   for select to authenticated using (public.is_store_owner(store_id));
 create policy "Admins can read installment offer history" on public.store_installment_offer_changes
-  for select to authenticated using (public.is_admin());
+  for select to authenticated using ((select public.is_admin()));
 
 -- ------------------------------------------------------------------ helpers
 

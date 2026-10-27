@@ -58,6 +58,8 @@ create table public.transaction_review_photos (
   constraint transaction_review_photos_order unique (review_id, sort_order),
   constraint transaction_review_photos_moderation check ((status = 'pending') = (moderated_at is null and moderated_by is null))
 );
+create index if not exists transaction_review_photos_moderated_by_idx on public.transaction_review_photos (moderated_by)
+  where moderated_by is not null;
 
 create index transaction_review_photos_queue_idx on public.transaction_review_photos(status, created_at);
 

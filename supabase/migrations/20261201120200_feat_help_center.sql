@@ -28,6 +28,8 @@ create table public.help_tickets (
   updated_at timestamptz not null default clock_timestamp(),
   constraint help_tickets_answered_check check ((answer is null) = (answered_at is null))
 );
+create index if not exists help_tickets_answered_by_idx on public.help_tickets (answered_by)
+  where answered_by is not null;
 create index help_tickets_status_idx on public.help_tickets (status, created_at desc);
 create index help_tickets_email_idx on public.help_tickets (lower(email), created_at desc);
 create index help_tickets_user_idx on public.help_tickets (user_id, created_at desc) where user_id is not null;

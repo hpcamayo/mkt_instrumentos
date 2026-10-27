@@ -84,6 +84,8 @@ create table public.store_receipts (
   constraint store_receipts_factura_ruc check (kind <> 'factura' or (customer_doc_type = 'ruc' and customer_name is not null)),
   constraint store_receipts_doc check ((customer_doc_type = 'none') = (customer_doc_number is null))
 );
+create index if not exists store_receipts_location_idx on public.store_receipts (location_id)
+  where location_id is not null;
 
 create unique index store_receipts_number_idx on public.store_receipts(store_id, series, number);
 create unique index store_receipts_sale_idx on public.store_receipts(store_id, sale_key);
@@ -107,7 +109,7 @@ grant select, update on public.store_receipts to service_role;
 create policy "Store owners can read own receipts" on public.store_receipts
   for select to authenticated using (public.is_store_owner(store_id));
 create policy "Admins can read receipts" on public.store_receipts
-  for select to authenticated using (public.is_admin());
+  for select to authenticated using ((select public.is_admin()));
 
 -- ------------------------------------------------------------------ helpers
 

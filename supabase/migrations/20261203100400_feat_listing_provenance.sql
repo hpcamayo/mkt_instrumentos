@@ -12,6 +12,7 @@ create table public.listing_provenance (
   linked_by uuid not null references public.profiles(id) on delete restrict,
   linked_at timestamptz not null default now()
 );
+create index if not exists listing_provenance_linked_by_idx on public.listing_provenance (linked_by);
 
 alter table public.listing_provenance enable row level security;
 revoke all on public.listing_provenance from anon, authenticated;

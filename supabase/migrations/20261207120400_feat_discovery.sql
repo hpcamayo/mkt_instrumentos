@@ -44,7 +44,7 @@ revoke all on public.store_maker_profiles from public, anon, authenticated;
 grant select on public.store_maker_profiles to authenticated;
 create policy store_maker_profiles_owner_or_admin_read on public.store_maker_profiles
 for select to authenticated
-using (exists (select 1 from public.stores s where s.id = store_id and s.owner_user_id = auth.uid()) or public.is_admin());
+using (exists (select 1 from public.stores s where s.id = store_id and s.owner_user_id = (select auth.uid())) or (select public.is_admin()));
 
 create table public.listing_maker_details (
   listing_id          uuid primary key references public.listings(id) on delete cascade,
@@ -184,7 +184,7 @@ for select to anon, authenticated
 using (exists (select 1 from public.stores s where s.id = store_id and s.status = 'active'));
 create policy store_gift_policies_owner_or_admin_read on public.store_gift_policies
 for select to authenticated
-using (public.is_store_owner(store_id) or public.is_admin());
+using (public.is_store_owner(store_id) or (select public.is_admin()));
 
 -- p_days null turns gift exchanges off.
 create or replace function public.set_store_gift_policy(p_days integer, p_note text default null)
@@ -237,7 +237,7 @@ revoke all on public.artist_profiles from public, anon, authenticated;
 grant select on public.artist_profiles to authenticated;
 create policy artist_profiles_self_or_admin_read on public.artist_profiles
 for select to authenticated
-using (user_id = auth.uid() or public.is_admin());
+using (user_id = (select auth.uid()) or (select public.is_admin()));
 
 -- The listing's seller account: the particular, or the store's owner.
 create or replace function laria_private.listing_seller_user(p_listing public.listings)
@@ -683,7 +683,7 @@ using (
   (published
     and (starts_on is null or starts_on <= (now() at time zone 'America/Lima')::date)
     and (ends_on is null or ends_on >= (now() at time zone 'America/Lima')::date))
-  or public.is_admin()
+  or (select public.is_admin())
 );
 
 create or replace function public.admin_save_collection(

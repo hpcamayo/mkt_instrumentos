@@ -45,7 +45,7 @@ using (exists (select 1 from public.stores s where s.id = store_id and s.status 
 
 create policy "Store owners read own trade settings"
 on public.store_trade_settings for select to authenticated
-using (exists (select 1 from public.stores s where s.id = store_id and s.owner_user_id = auth.uid()));
+using (exists (select 1 from public.stores s where s.id = store_id and s.owner_user_id = (select auth.uid())));
 
 revoke insert, update, delete, truncate, references, trigger on public.store_trade_settings from anon, authenticated;
 grant select on public.store_trade_settings to anon, authenticated;
@@ -212,6 +212,10 @@ create table public.trade_requests (
     (status in ('accepted', 'completed', 'not_completed')) = (accepted_offer_id is not null and accepted_at is not null and drop_off_by is not null)
   )
 );
+create index if not exists trade_requests_accepted_offer_idx on public.trade_requests (accepted_offer_id)
+  where accepted_offer_id is not null;
+create index if not exists trade_requests_gear_item_idx on public.trade_requests (gear_item_id)
+  where gear_item_id is not null;
 
 create index trade_requests_requester_idx on public.trade_requests(requester_user_id, created_at desc);
 create index trade_requests_open_idx on public.trade_requests(category, region, offers_until) where status = 'open';
@@ -895,8 +899,8 @@ create policy "People upload their trade photos" on storage.objects
 for insert to authenticated
 with check (
   bucket_id = 'trade-photos'
-  and (storage.foldername(name))[1] = auth.uid()::text
-  and name ~ ('^' || auth.uid()::text || '/[0-9a-f-]{36}/[1-6]\.jpg$')
+  and (storage.foldername(name))[1] = (select auth.uid())::text
+  and name ~ ('^' || (select auth.uid())::text || '/[0-9a-f-]{36}/[1-6]\.jpg$')
   and public.trade_photo_folder_is_free((storage.foldername(name))[2])
 );
 

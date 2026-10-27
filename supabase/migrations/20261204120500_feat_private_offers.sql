@@ -18,6 +18,7 @@ create table public.listing_private_offers (
   constraint listing_private_offers_price_check check (price_pen < public_price_pen),
   constraint listing_private_offers_valid_check check (valid_until > created_at)
 );
+create index if not exists listing_private_offers_owner_user_idx on public.listing_private_offers (owner_user_id);
 
 create index listing_private_offers_listing_idx on public.listing_private_offers(listing_id, created_at desc);
 

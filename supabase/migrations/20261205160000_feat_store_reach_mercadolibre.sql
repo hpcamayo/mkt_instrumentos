@@ -28,6 +28,7 @@ create table public.store_mercadolibre_connections (
   connected_at       timestamptz not null default now(),
   updated_at         timestamptz not null default now()
 );
+create index if not exists store_mercadolibre_connections_connected_by_idx on public.store_mercadolibre_connections (connected_by);
 
 comment on table public.store_mercadolibre_connections is
   'reach-01: a store''s Mercado Libre connection. Tokens are encrypted by the server; only service-role functions touch them.';
@@ -51,6 +52,7 @@ create table public.store_mercadolibre_import_photos (
   updated_at   timestamptz not null default now(),
   unique (session_id, sku, sort_order)
 );
+create index if not exists store_mercadolibre_import_photos_store_idx on public.store_mercadolibre_import_photos (store_id);
 
 comment on table public.store_mercadolibre_import_photos is
   'reach-01: photos of Mercado Libre publications brought into an import, copied once the import accepts photos.';

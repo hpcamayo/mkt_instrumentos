@@ -29,6 +29,7 @@ create table public.store_counter_sales (
   constraint store_counter_sales_cancel_shape check ((status = 'cancelled') = (cancelled_at is not null)),
   constraint store_counter_sales_expiry check (expires_at <= created_at + interval '24 hours')
 );
+create index if not exists store_counter_sales_created_by_idx on public.store_counter_sales (created_by);
 
 create index store_counter_sales_store_idx on public.store_counter_sales(store_id, created_at desc);
 create index store_counter_sales_claimer_idx on public.store_counter_sales(claimed_by, claimed_at desc) where claimed_by is not null;

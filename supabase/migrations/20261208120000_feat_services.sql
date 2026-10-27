@@ -201,6 +201,8 @@ create table public.service_events (
   created_at timestamptz not null default clock_timestamp(),
   constraint service_events_kind_check check (kind in ('view', 'contact'))
 );
+create index if not exists service_events_actor_user_idx on public.service_events (actor_user_id)
+  where actor_user_id is not null;
 
 comment on table public.service_events is
   'bet-02: service page views and WhatsApp contacts. Recorded by record_service_event (service role) only; never the message.';
@@ -268,6 +270,7 @@ create table public.service_reviews (
   -- One review per client and service, ever: a repeat client cannot stack reviews.
   constraint service_reviews_one_per_client unique (service_id, client_user_id)
 );
+create index if not exists service_reviews_client_user_idx on public.service_reviews (client_user_id);
 
 comment on table public.service_reviews is
   'bet-02: a confirmed client''s review of a service. Published at once, never edited by its author; Admin may hide it with a reason.';
@@ -304,6 +307,9 @@ create table public.service_reports (
     or (status <> 'open' and resolved_at is not null and char_length(btrim(coalesce(resolution_note, ''))) between 3 and 500)
   )
 );
+create index if not exists service_reports_review_idx on public.service_reports (review_id)
+  where review_id is not null;
+create index if not exists service_reports_service_idx on public.service_reports (service_id);
 
 create unique index service_reports_open_service_idx on public.service_reports(reporter_user_id, service_id)
   where status = 'open' and target_type = 'service';
@@ -327,13 +333,13 @@ create policy "Owners upload service photos into their folder"
 on storage.objects for insert to authenticated
 with check (
   bucket_id = 'service-photos'
-  and (storage.foldername(name))[1] = auth.uid()::text
+  and (storage.foldername(name))[1] = (select auth.uid())::text
   and name ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.(jpg|png|webp)$'
 );
 
 create policy "Owners read their service photo folder"
 on storage.objects for select to authenticated
-using (bucket_id = 'service-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+using (bucket_id = 'service-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- An owner removes their photos that no service uses any more (left over after an edit or a deletion). A photo still
 -- on a service, including one Moderation hid, stays.
@@ -354,7 +360,7 @@ create policy "Owners delete their unused service photos"
 on storage.objects for delete to authenticated
 using (
   bucket_id = 'service-photos'
-  and (storage.foldername(name))[1] = auth.uid()::text
+  and (storage.foldername(name))[1] = (select auth.uid())::text
   and public.service_photo_is_unused(name)
 );
 

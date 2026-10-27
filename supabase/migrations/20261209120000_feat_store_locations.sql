@@ -104,6 +104,8 @@ create table public.store_stock_transfers (
   created_at           timestamptz not null default now(),
   constraint store_stock_transfers_distinct check (from_location_id <> to_location_id)
 );
+create index if not exists store_stock_transfers_from_location_idx on public.store_stock_transfers (from_location_id);
+create index if not exists store_stock_transfers_to_location_idx on public.store_stock_transfers (to_location_id);
 
 create unique index store_stock_transfers_idem_idx on public.store_stock_transfers(store_id, idempotency_key);
 create index store_stock_transfers_item_idx on public.store_stock_transfers(item_id, created_at desc);
@@ -139,15 +141,15 @@ grant select on public.store_locations, public.store_location_stock, public.stor
 create policy "Store owners can read own locations" on public.store_locations
   for select to authenticated using (public.is_store_owner(store_id));
 create policy "Admins can read locations" on public.store_locations
-  for select to authenticated using (public.is_admin());
+  for select to authenticated using ((select public.is_admin()));
 create policy "Store owners can read own location stock" on public.store_location_stock
   for select to authenticated using (public.is_store_owner(store_id));
 create policy "Admins can read location stock" on public.store_location_stock
-  for select to authenticated using (public.is_admin());
+  for select to authenticated using ((select public.is_admin()));
 create policy "Store owners can read own stock transfers" on public.store_stock_transfers
   for select to authenticated using (public.is_store_owner(store_id));
 create policy "Admins can read stock transfers" on public.store_stock_transfers
-  for select to authenticated using (public.is_admin());
+  for select to authenticated using ((select public.is_admin()));
 
 -- ------------------------------------------------------------------ helpers
 

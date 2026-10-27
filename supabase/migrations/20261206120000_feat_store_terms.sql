@@ -52,6 +52,8 @@ create table public.store_warranty_policies (
   -- A policy that says nothing is deleted instead.
   constraint store_warranty_says_something check (warranty_months is not null or returns_days is not null)
 );
+create index if not exists store_warranty_policies_updated_by_idx on public.store_warranty_policies (updated_by)
+  where updated_by is not null;
 
 comment on table public.store_warranty_policies is
   'reach-09: a store''s warranty and returns per condition group. Written only by set_store_warranty_policy.';

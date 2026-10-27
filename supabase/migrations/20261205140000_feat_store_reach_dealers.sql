@@ -51,6 +51,9 @@ create table public.store_dealer_authorizations (
     status not in ('approved', 'rejected', 'revoked') or (reviewed_at is not null and reviewed_by is not null)),
   constraint store_dealer_authorizations_reason check (status not in ('rejected', 'revoked') or review_reason is not null)
 );
+create index if not exists store_dealer_authorizations_created_by_idx on public.store_dealer_authorizations (created_by);
+create index if not exists store_dealer_authorizations_reviewed_by_idx on public.store_dealer_authorizations (reviewed_by)
+  where reviewed_by is not null;
 
 comment on table public.store_dealer_authorizations is
   'reach-04: a store''s authorization to sell a brand as an official dealer, checked by Admin. Written only by functions.';
@@ -98,7 +101,7 @@ create policy "Store owners upload their dealer documents" on storage.objects
 for insert to authenticated
 with check (
   bucket_id = 'store-dealer-documents'
-  and (storage.foldername(name))[1] = auth.uid()::text
+  and (storage.foldername(name))[1] = (select auth.uid())::text
   and public.dealer_document_upload_allowed(name)
 );
 

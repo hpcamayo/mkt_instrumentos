@@ -36,7 +36,7 @@ alter table public.listing_price_steps enable row level security;
 
 create policy "Owners read own price steps"
 on public.listing_price_steps for select to authenticated
-using (owner_user_id = auth.uid());
+using (owner_user_id = (select auth.uid()));
 
 revoke all on public.listing_price_steps from anon;
 revoke insert, update, delete, truncate, references, trigger on public.listing_price_steps from authenticated;

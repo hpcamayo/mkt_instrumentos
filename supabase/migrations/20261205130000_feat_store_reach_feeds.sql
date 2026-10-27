@@ -18,6 +18,8 @@ create table public.store_feed_settings (
   updated_by  uuid references auth.users(id) on delete set null,
   constraint store_feed_settings_enabled_check check (not enabled or enabled_at is not null)
 );
+create index if not exists store_feed_settings_updated_by_idx on public.store_feed_settings (updated_by)
+  where updated_by is not null;
 
 comment on table public.store_feed_settings is
   'reach-02: whether a store publishes its feed for Meta and Google. Written only by set_store_feed_enabled().';
