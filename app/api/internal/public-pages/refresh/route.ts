@@ -6,51 +6,41 @@ import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 export const dynamic = "force-dynamic";
 
 const NO_STORE = { "Cache-Control": "no-store" };
-// Two runs of the schedule, so a late run still sees a change; each change drops the pages once or twice.
-const WINDOW_MS = 2 * 60 * 1000;
 
-// Launch audit A19: runs every minute (vercel.json), CRON_SECRET-protected like the e-mail worker. When a listing or a
-// store left public view in the last two minutes (a listing hidden, sold, archived, rejected or out of stock; a store
-// hidden, rejected or no longer verified), whichever path changed it (its owner, Admin, Inventario, an import, a
-// database function), every cached listing page and the home are dropped (lib/listing-cache.ts), so its card stops
-// showing on other pages even when their rebuild fails. A quiet minute drops nothing. Other changes, such as a new
-// price, show when each page rebuilds within the minute.
+// Launch audit A19: runs every minute (vercel.json), CRON_SECRET-protected like the e-mail worker. Every change to
+// something a public page shows (a public listing, its photos, an active store), whichever path made it, is recorded
+// in the database (supabase/migrations/20261112130000_launch_audit_page_refresh.sql). While changes wait, each run
+// claims them, drops every cached listing page and the home (lib/listing-cache.ts), so a listing's card goes from
+// other pages even when their rebuild fails, and reports back. A change is done after its second drop; a run that
+// fails before reporting back leaves it to the next run. A quiet minute drops nothing.
 export async function GET(request: Request) {
   if (!isAuthorized(request)) return NextResponse.json({ message: "No autorizado." }, { status: 401, headers: NO_STORE });
   const client = getSupabaseAdminClient();
   if (!client) return NextResponse.json({ message: "Configuración incompleta." }, { status: 503, headers: NO_STORE });
+  const db = client as unknown as import("@supabase/supabase-js").SupabaseClient;
 
-  const since = new Date(Date.now() - WINDOW_MS).toISOString();
-  const [listings, stores] = await Promise.all([
-    client.from("listings").select("id")
-      .or("status.in.(hidden,sold,archived,rejected),stock_state.eq.out_of_stock")
-      .gte("updated_at", since)
-      .limit(1),
-    client.from("stores").select("id")
-      .or("status.in.(hidden,rejected),and(status.eq.active,is_verified.is.false)")
-      .gte("updated_at", since)
-      .limit(1),
-  ]);
-  const error = listings.error ?? stores.error;
-  if (error) {
-    // Without an answer nothing is dropped: the cached copies keep serving while the database recovers.
-    console.error("public_pages_refresh_failure", error.message.slice(0, 200));
-    return NextResponse.json({ message: "No se pudieron revisar los cambios." }, { status: 503, headers: NO_STORE });
-  }
+  const claim = await db.rpc("claim_public_page_changes");
+  if (claim.error) return failure("claim", claim.error.message);
+  if (!claim.data) return NextResponse.json({ refreshed: false }, { headers: NO_STORE });
 
-  const changed = { listings: listings.data?.length ?? 0, stores: stores.data?.length ?? 0 };
-  const refreshed = changed.listings + changed.stores > 0;
-  if (refreshed) {
-    dropCachedListingPages();
-    console.info("public_pages_refreshed", JSON.stringify(changed));
-  }
-  return NextResponse.json({ refreshed }, { headers: NO_STORE });
+  if (!dropCachedListingPages()) return failure("drop", "revalidatePath failed");
+  const done = await db.rpc("complete_public_page_changes", { p_claim: claim.data });
+  // The pages were dropped; the changes stay claimed and the next run drops them again.
+  if (done.error) return failure("complete", done.error.message);
+  console.info("public_pages_refreshed", JSON.stringify({ done: Number(done.data ?? 0) }));
+  return NextResponse.json({ refreshed: true }, { headers: NO_STORE });
+}
+
+function failure(step: string, message: string) {
+  console.error("public_pages_refresh_failure", JSON.stringify({ step, message: message.slice(0, 200) }));
+  return NextResponse.json({ message: "No se pudieron actualizar las páginas." }, { status: 503, headers: NO_STORE });
 }
 
 function isAuthorized(request: Request) {
   const secret = process.env.CRON_SECRET;
-  const authorization = request.headers.get("authorization") ?? "";
-  const expected = secret ? `Bearer ${secret}` : "";
-  if (!expected || authorization.length !== expected.length) return false;
-  return timingSafeEqual(Buffer.from(authorization), Buffer.from(expected));
+  if (!secret) return false;
+  // Compared as bytes: a header of the same length in characters can still differ in bytes.
+  const given = Buffer.from(request.headers.get("authorization") ?? "");
+  const expected = Buffer.from(`Bearer ${secret}`);
+  return given.length === expected.length && timingSafeEqual(given, expected);
 }

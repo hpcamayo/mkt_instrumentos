@@ -1233,3 +1233,26 @@ be applied before the deploy.
 - Locks: nothing scans a table (the `notifications` check is re-added `NOT VALID`), and the migration sets
   `lock_timeout = '10s'`, so behind a long-running query it fails and can be run again instead of queueing traffic.
 <!-- /launch-audit:security -->
+
+<!-- launch-audit:page-refresh -->
+## Launch audit: public page refresh
+
+Migration `20261112130000_launch_audit_page_refresh.sql` (finding A19 of the 26 Oct 2026 launch audit). Suite:
+`tests/launch-audit-page-refresh.sql`. Nothing before it reads the new table, so it can be applied before the deploy.
+
+- `laria_private.public_page_changes` (`id` identity, `changed_at`, `claim_id`, `first_dropped_at`; no API access):
+  one row per statement that changes what the cached home and listing pages show. Statement-level triggers with
+  transition tables (`<table>_public_page_changes_insert|update|delete` on `listings`, `stores` and `listing_photos`)
+  write it: a listing public before or after the statement (`laria_private.listing_row_is_public`, the rule of
+  `listing_is_public` for a row's own values) added, removed or changed in any column but `view_count`,
+  `availability_checkin_at` and `updated_at`; an active store added, removed or changed in any column but `updated_at`,
+  or a store entering or leaving `active`; a photo of a public listing added, removed or changed. Writers only insert,
+  so they never wait on each other or on the job.
+- `claim_public_page_changes()` (service role only) puts a new claim on every row and returns it, or null when none
+  wait. `complete_public_page_changes(p_claim uuid)` (service role only), called after the job dropped the pages,
+  deletes the claim's rows first dropped at least 30 seconds earlier, records a first drop on the others and returns
+  the rows deleted. A claim another run took over since does nothing. The job is
+  `app/api/internal/public-pages/refresh/route.ts`, every minute from `vercel.json`.
+- Columns added later count as shown on a page. One that a job updates on public listings without any page showing it
+  belongs in the trigger's exclusion list, or the job clears the cache each time it runs.
+<!-- /launch-audit:page-refresh -->

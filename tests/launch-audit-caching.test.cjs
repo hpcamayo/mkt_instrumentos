@@ -1,8 +1,8 @@
 // Launch audit A19: public pages come from the cache. The home and the listing pages are rebuilt in the background at
 // most once a minute and the sitemap once an hour; the category landings, which read ?page, render on every request
-// from their own folders; when a listing's owner or Admin changes it, its own page is dropped at once; when listings
-// leave public view, every cached listing page and the home are dropped within the minute; a failed read is never
-// cached.
+// from their own folders; when a listing's owner or Admin changes it, its own page is dropped at once; every change to
+// a public listing, its photos or an active store is recorded, and every cached listing page and the home are dropped
+// within the minute; a failed read is never cached.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
@@ -72,92 +72,94 @@ function query(result) {
 
 test("A19: a listing's own page, or every listing page and the home, are dropped, and a failed drop breaks nothing", () => {
   const calls = [];
-  let failing = false;
+  let failing = null;
   const warnings = [];
   const { dropListingPages, dropCachedListingPages } = loadModule("lib/listing-cache.ts", {
     "server-only": {},
-    "next/cache": { revalidatePath: (...args) => { if (failing) throw new Error("cache unavailable"); calls.push(args.filter(Boolean)); } },
+    "next/cache": { revalidatePath: (...args) => { if (failing === args[0]) throw new Error("cache unavailable"); calls.push(args.filter(Boolean)); } },
   });
   const warn = console.warn;
   console.warn = (...args) => warnings.push(args.join(" "));
   try {
     dropListingPages(["fender-stratocaster-1b2c", null, "fender-stratocaster-1b2c", "", "yamaha-c40"]);
     // Every listing page (its own, and the "Similares" and "Más del vendedor" rows of the others) and the home.
-    dropCachedListingPages();
-    failing = true;
-    assert.doesNotThrow(() => dropCachedListingPages());
+    assert.equal(dropCachedListingPages(), true);
+    // A failed drop is reported, and the other one is still tried.
+    failing = "/instrumentos/[slug]";
+    assert.equal(dropCachedListingPages(), false);
+    failing = "/";
+    assert.equal(dropCachedListingPages(), false);
   } finally {
     console.warn = warn;
   }
-  assert.deepEqual(calls, [["/instrumentos/fender-stratocaster-1b2c"], ["/instrumentos/yamaha-c40"], ["/instrumentos/[slug]", "page"], ["/"]]);
+  assert.deepEqual(calls, [
+    ["/instrumentos/fender-stratocaster-1b2c"], ["/instrumentos/yamaha-c40"], ["/instrumentos/[slug]", "page"], ["/"],
+    ["/"], ["/instrumentos/[slug]", "page"],
+  ]);
   assert.equal(warnings.length, 2);
   assert.match(warnings[0], /listing-page-refresh-failed cache unavailable/);
 });
 
-test("A19: every minute, listings or stores that left public view drop every cached listing page and the home", async () => {
+test("A19: every minute, recorded changes to public pages drop every cached listing page and the home, then are reported", async () => {
   const before = process.env.CRON_SECRET;
   process.env.CRON_SECRET = "local-scheduler-secret";
-  const dropped = [];
-  const asked = [];
-  let answers = { listings: [], stores: [] };
+  const steps = [];
+  let claim = null;
   let failing = null;
+  let dropWorks = true;
   const admin = {
-    from: (table) => {
-      const filters = [];
-      const builder = {
-        select: () => builder,
-        or: (value) => { filters.push(["or", value]); return builder; },
-        gte: (column, value) => { filters.push(["gte", column, value]); return builder; },
-        limit: async (count) => {
-          asked.push({ table, filters, count });
-          return failing === table ? { data: null, error: { message: "timeout" } } : { data: answers[table], error: null };
-        },
-      };
-      return builder;
+    from: () => { throw new Error("the job reads only the record"); },
+    rpc: async (name, args) => {
+      steps.push(args ? [name, args] : [name]);
+      if (failing === name) return { data: null, error: { message: "timeout" } };
+      return { data: name === "claim_public_page_changes" ? claim : 2, error: null };
     },
   };
   const route = loadModule("app/api/internal/public-pages/refresh/route.ts", {
     "next/server": nextServer,
     "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => admin },
-    "@/lib/listing-cache": { dropCachedListingPages: () => dropped.push("all") },
+    "@/lib/listing-cache": { dropCachedListingPages: () => { steps.push(["drop"]); return dropWorks; } },
   });
   const get = async (authorization) => {
     const response = await route.GET(new Request("http://localhost/api/internal/public-pages/refresh", authorization ? { headers: { Authorization: authorization } } : {}));
     return { status: response.status, body: await response.json(), cache: response.headers.get("cache-control") };
   };
+  const logs = [];
   const info = console.info;
   const error = console.error;
-  console.info = () => {};
-  console.error = () => {};
+  console.info = (...args) => logs.push(args.join(" "));
+  console.error = (...args) => logs.push(args.join(" "));
   try {
     assert.equal((await get()).status, 401);
     assert.equal((await get("Bearer ordinary-user-token")).status, 401);
-    assert.equal(asked.length, 0);
+    // Same length in characters, longer in bytes: refused, not an error.
+    assert.equal((await get(`Bearer local-scheduler-secre\u00e9`)).status, 401);
+    assert.deepEqual(steps, []);
 
     // A quiet minute drops nothing.
     assert.deepEqual(await get("Bearer local-scheduler-secret"), { status: 200, body: { refreshed: false }, cache: "no-store" });
-    const [listings, stores] = asked;
-    assert.deepEqual(listings.filters[0], ["or", "status.in.(hidden,sold,archived,rejected),stock_state.eq.out_of_stock"]);
-    assert.deepEqual(stores.filters[0], ["or", "status.in.(hidden,rejected),and(status.eq.active,is_verified.is.false)"]);
-    for (const query of asked) {
-      assert.equal(query.filters[1][1], "updated_at");
-      const age = Date.now() - Date.parse(query.filters[1][2]);
-      assert.ok(age >= 119_000 && age <= 121_000, `two minutes back, got ${age} ms`);
-      assert.equal(query.count, 1);
-    }
-    assert.deepEqual(dropped, []);
+    assert.deepEqual(steps.splice(0), [["claim_public_page_changes"]]);
 
-    // A listing hidden from Inventario, or a store Admin hid: one drop for everything.
-    answers = { listings: [{ id: "l1" }], stores: [] };
-    assert.deepEqual((await get("Bearer local-scheduler-secret")).body, { refreshed: true });
-    answers = { listings: [], stores: [{ id: "s1" }] };
-    assert.deepEqual((await get("Bearer local-scheduler-secret")).body, { refreshed: true });
-    assert.deepEqual(dropped, ["all", "all"]);
+    // Waiting changes: claimed, every page dropped, then reported with the claim.
+    claim = "7d420173-2925-4e4d-a5a0-405f12a61c59";
+    assert.deepEqual(await get("Bearer local-scheduler-secret"), { status: 200, body: { refreshed: true }, cache: "no-store" });
+    assert.deepEqual(steps.splice(0), [["claim_public_page_changes"], ["drop"], ["complete_public_page_changes", { p_claim: claim }]]);
+    assert.match(logs.at(-1), /public_pages_refreshed \{"done":2\}/);
 
-    // Without an answer nothing is dropped, so the cached copies keep serving.
-    failing = "stores";
+    // A failed drop is not reported, so the changes wait for the next run.
+    dropWorks = false;
     assert.equal((await get("Bearer local-scheduler-secret")).status, 503);
-    assert.deepEqual(dropped, ["all", "all"]);
+    assert.deepEqual(steps.splice(0), [["claim_public_page_changes"], ["drop"]]);
+    dropWorks = true;
+
+    // Without the record nothing is dropped, so the cached copies keep serving; a failed report is an error too.
+    failing = "claim_public_page_changes";
+    assert.equal((await get("Bearer local-scheduler-secret")).status, 503);
+    assert.deepEqual(steps.splice(0), [["claim_public_page_changes"]]);
+    failing = "complete_public_page_changes";
+    assert.equal((await get("Bearer local-scheduler-secret")).status, 503);
+    assert.deepEqual(steps.splice(0), [["claim_public_page_changes"], ["drop"], ["complete_public_page_changes", { p_claim: claim }]]);
+    assert.match(logs.at(-1), /public_pages_refresh_failure \{"step":"complete","message":"timeout"\}/);
   } finally {
     console.info = info;
     console.error = error;
@@ -168,6 +170,20 @@ test("A19: every minute, listings or stores that left public view drop every cac
   // Scheduled every minute.
   const crons = JSON.parse(read("vercel.json")).crons;
   assert.deepEqual(crons.find((cron) => cron.path === "/api/internal/public-pages/refresh"), { path: "/api/internal/public-pages/refresh", schedule: "* * * * *" });
+});
+
+test("A19: the database records changes to public listings, photos and active stores for the job", () => {
+  const migration = read("supabase/migrations/20261112130000_launch_audit_page_refresh.sql");
+  for (const table of ["listings", "stores", "listing_photos"]) {
+    for (const event of ["insert", "update", "delete"]) {
+      assert.match(migration, new RegExp(`create trigger ${table}_public_page_changes_${event}\\nafter ${event} on public\\.${table}\\nreferencing [^\\n]+\\nfor each statement`), `${table} ${event}`);
+    }
+  }
+  // View counts and the check-in reminder's time change no page.
+  assert.match(migration, /array\['view_count', 'availability_checkin_at', 'updated_at'\]/);
+  // The claim and the report are the service role's alone (tests/launch-audit-page-refresh.sql runs them).
+  assert.match(migration, /grant execute on function public\.claim_public_page_changes\(\), public\.complete_public_page_changes\(uuid\)\nto service_role;/);
+  assert.match(read("tests/launch-audit-page-refresh.sql"), /the third review's case/);
 });
 
 test("A19: a failed read is never cached; during the deploy the page is rendered per request instead", async () => {
