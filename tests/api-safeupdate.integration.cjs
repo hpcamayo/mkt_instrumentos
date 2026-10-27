@@ -2,10 +2,13 @@
 // authenticator role), and that covers the statements the functions and triggers of the call run too. Local Postgres
 // and the migration connection don't load it, so a function can pass every suite and still fail in production, as
 // the page refresh job's claim did on 27 Oct 2026. This test reads every function of public and laria_private from
-// the database, with the SQL inside its strings (run by EXECUTE), and fails on any UPDATE or DELETE without a WHERE
-// clause of its own (`where true` when every row is meant). When the session can load a library with the same check
-// (safeupdate, or the local stand-in laria_safeupdate), it also runs the page refresh job's two functions with the
-// check on, and checks itself on the claim as it was before the fix.
+// the database, with the SQL it builds for EXECUTE (each string, the strings joined with ||, and format() filled in),
+// and fails on any UPDATE or DELETE without a WHERE clause of its own (`where true` when every row is meant). When the
+// session can load a library with the same check (safeupdate, or the local stand-in laria_safeupdate), it also runs
+// the page refresh job's two functions with the check on, and checks itself on the claim as it was before the fix.
+// What it can't read: SQL taken from a variable it didn't see built, a table or another function (concat(),
+// replace(), string_agg()), which reads as x, so a WHERE that only such a part adds reads as missing (write the WHERE
+// in the string itself); functions in other schemas or languages.
 // Usage: node tests/api-safeupdate.integration.cjs [postgresql://postgres:postgres@127.0.0.1:54322/postgres]
 // The URL may also come from LARIA_TEST_DATABASE_URL. Hosted databases are refused. The database needs every
 // migration applied (setup-local-db.sh reset); the second part leaves it as it was (each case is rolled back).
@@ -22,7 +25,8 @@ if (!["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname)) {
   throw new Error("Local database URL required.");
 }
 
-// The function's code with comments dropped and every literal blanked, and the text of each string literal.
+// The function's code with comments dropped and each literal replaced by a marker (__lit0__, __lit1__...), and the
+// text of each string literal, by marker number.
 function splitLiterals(source) {
   let code = "";
   const strings = [];
@@ -48,6 +52,7 @@ function splitLiterals(source) {
       code += " ";
     } else if (source[i] === "'") {
       const escapes = /(^|[^A-Za-z0-9_$])[eE]$/.test(code);
+      if (escapes) code = code.slice(0, -1);
       let text = "";
       i += 1;
       while (i < source.length) {
@@ -65,8 +70,8 @@ function splitLiterals(source) {
           i += 1;
         }
       }
+      code += ` __lit${strings.length}__ `;
       strings.push(text);
-      code += "''";
     } else if (source[i] === '"') {
       const end = source.indexOf('"', i + 1);
       i = end < 0 ? source.length : end + 1;
@@ -74,9 +79,9 @@ function splitLiterals(source) {
     } else if (source[i] === "$" && !/[A-Za-z0-9_$]$/.test(code) && /^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/.test(source.slice(i))) {
       const tag = source.slice(i).match(/^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/)[0];
       const end = source.indexOf(tag, i + tag.length);
+      code += ` __lit${strings.length}__ `;
       strings.push(source.slice(i + tag.length, end < 0 ? source.length : end));
       i = end < 0 ? source.length : end + tag.length;
-      code += "''";
     } else {
       code += source[i];
       i += 1;
@@ -85,15 +90,93 @@ function splitLiterals(source) {
   return { code, strings };
 }
 
+const tokenize = (code) => code.toLowerCase().match(/[a-z_][a-z0-9_$]*|\d+|\S/g) || [];
+const literalMarker = /^__lit(\d+)__$/;
+
+// format() as PostgreSQL fills it in: %s, %I and %L, by position (%2$s) or in turn, with a width (%-10s, %*s).
+function formatted(template, args) {
+  let next = 0;
+  return template.replace(/%(?:(\d+)\$)?-?(\d+|\*(?:\d+\$)?)?([sIL%])/g, (_, position, width, type) => {
+    if (type === "%") return "%";
+    if (width === "*") next += 1;
+    const index = position ? Number(position) - 1 : next;
+    next = index + 1;
+    const value = args[index] ?? "x";
+    return type === "L" ? `'${value.replaceAll("'", "''")}'` : value;
+  });
+}
+
+// The text the expression at tokens[at] builds: string literals joined with ||, format() filled in, and x for anything
+// else (a variable, a parameter, another function's result).
+function evaluate(tokens, strings, at) {
+  let pos = at;
+  const skip = () => {
+    if (tokens[pos] !== "(") {
+      pos += 1;
+      return;
+    }
+    let depth = 0;
+    do {
+      if (tokens[pos] === "(") depth += 1;
+      else if (tokens[pos] === ")") depth -= 1;
+      pos += 1;
+    } while (depth > 0 && pos < tokens.length);
+  };
+  const primary = () => {
+    const token = tokens[pos];
+    const literal = literalMarker.exec(token ?? "");
+    let value = null;
+    if (literal) {
+      value = strings[Number(literal[1])];
+      pos += 1;
+    } else if (token === "format" && tokens[pos + 1] === "(") {
+      pos += 2;
+      const args = [];
+      while (pos < tokens.length && tokens[pos] !== ")") {
+        args.push(concatenation());
+        while (pos < tokens.length && tokens[pos] !== "," && tokens[pos] !== ")") skip();
+        if (tokens[pos] === ",") pos += 1;
+      }
+      pos += 1;
+      value = args.length ? formatted(args[0], args.slice(1)) : null;
+    } else if (token === "(") {
+      pos += 1;
+      value = concatenation();
+      while (pos < tokens.length && tokens[pos] !== ")") skip();
+      pos += 1;
+    } else if (/^[a-z_]/.test(token ?? "")) {
+      pos += 1;
+      while (tokens[pos] === "." && /^[a-z_]/.test(tokens[pos + 1] ?? "")) pos += 2;
+      if (tokens[pos] === "(") skip();
+    } else {
+      pos += token === "$" && /^\d+$/.test(tokens[pos + 1] ?? "") ? 2 : 1;
+    }
+    while (tokens[pos] === ":" && tokens[pos + 1] === ":") {
+      pos += 3;
+      while (tokens[pos] === "[" && tokens[pos + 1] === "]") pos += 2;
+    }
+    return value ?? "x";
+  };
+  const concatenation = () => {
+    let text = primary();
+    while (tokens[pos] === "|" && tokens[pos + 1] === "|") {
+      pos += 2;
+      text += primary();
+    }
+    return text;
+  };
+  return concatenation();
+}
+
 // Words that, right before UPDATE or DELETE, make it something else: FOR [NO KEY] UPDATE, ON CONFLICT DO UPDATE,
 // trigger events, foreign key actions, privileges.
 const notAStatement = new Set(["for", "key", "do", "or", "on", "before", "after", "of", "instead", "grant", "revoke", ","]);
 
 // Each UPDATE or DELETE in `source` without a WHERE of its own: one at its own depth, before its statement ends with a
-// semicolon or with the parenthesis that closes its WITH query.
+// semicolon or with the parenthesis that closes its WITH query. Then the same for the SQL its strings build.
 function unfiltered(source) {
   const { code, strings } = splitLiterals(source);
-  const tokens = code.toLowerCase().match(/[a-z_][a-z0-9_$]*|\d+|\S/g) || [];
+  const tokens = tokenize(code);
   const found = [];
   tokens.forEach((token, start) => {
     if ((token !== "update" && token !== "delete") || notAStatement.has(tokens[start - 1])) return;
@@ -108,15 +191,20 @@ function unfiltered(source) {
       else if (next === ";" && depth === 0) break;
       else if (next === "where" && depth === 0) where = true;
     }
-    if (!where) found.push(tokens.slice(start, Math.min(end, start + 14)).join(" "));
+    if (!where) found.push(tokens.slice(start, Math.min(end, start + 14)).map((word) => (literalMarker.test(word) ? "'…'" : word)).join(" "));
   });
-  // A string is SQL run by EXECUTE when it reads like a statement; 'UPDATE' alone is a trigger's tg_op.
-  for (const text of strings) {
-    if (/\bdelete\s+from\b|\bupdate\b[\s\S]*\bset\b/i.test(text)) {
-      found.push(...unfiltered(text).map((statement) => `EXECUTE: ${statement}`));
-    }
-  }
-  return found;
+  // The SQL built from each string (and what follows it with ||) and each format() call. A string that is format()'s
+  // template is read through format(). The text is SQL run by EXECUTE when it reads like a statement, comments aside;
+  // 'UPDATE' alone is a trigger's tg_op.
+  tokens.forEach((token, at) => {
+    const template = tokens[at - 1] === "(" && tokens[at - 2] === "format";
+    if (!(literalMarker.test(token) && !template) && !(token === "format" && tokens[at + 1] === "(")) return;
+    const text = evaluate(tokens, strings, at);
+    const words = tokenize(splitLiterals(text).code);
+    const readsLikeSql = words.some((word, n) => (word === "delete" && words[n + 1] === "from") || (word === "update" && words.includes("set", n + 1)));
+    if (readsLikeSql) found.push(...unfiltered(text).map((statement) => `EXECUTE: ${statement}`));
+  });
+  return [...new Set(found)];
 }
 
 const settle = (promise) =>
@@ -162,10 +250,21 @@ async function main() {
   assert.deepEqual(unfiltered("with x as (delete from t returning id) select count(*) from x"), ["delete from t returning id"]);
   assert.deepEqual(unfiltered("select 1 from t for update; insert into t values (1) on conflict (id) do update set a = 2;"), []);
   assert.deepEqual(unfiltered("execute format('update %I set a = 1', 't'); -- update t set a = 1\nupdate t set a = 1 where true;"), [
-    "EXECUTE: update % i set a = 1",
+    "EXECUTE: update t set a = 1",
   ]);
   assert.deepEqual(unfiltered("perform 1; /* delete from t */ execute $q$delete from t where id = $1$q$ using 1;"), []);
   assert.deepEqual(unfiltered("if tg_op = 'UPDATE' or tg_op = 'DELETE' then return old; end if;"), []);
+  // The two Codex found in #56's review: a comment inside the SQL, and format() putting the statement together.
+  assert.deepEqual(unfiltered("execute $q$DELETE /* comment */ FROM t$q$;"), ["EXECUTE: delete from t"]);
+  assert.deepEqual(unfiltered("execute format('%s %I SET a=1', 'UPDATE', 't');"), ["EXECUTE: update t set a = 1"]);
+  // Pieces joined with ||, also through a variable, with x for what isn't a string; format() by position and %L.
+  assert.deepEqual(unfiltered("execute 'delete from ' || quote_ident(p_table) || ';';"), ["EXECUTE: delete from x"]);
+  assert.deepEqual(unfiltered("v_sql := 'update ' || p_table::regclass || ' set a = 1'; execute v_sql;"), ["EXECUTE: update x set a = 1"]);
+  assert.deepEqual(unfiltered("execute 'update ' || p_table::regclass || ' set a = 1 where id = ' || quote_literal(v_id);"), []);
+  assert.deepEqual(unfiltered("execute format('delete from %2$I where id = %1$L', v_id, 't') using 1;"), []);
+  assert.deepEqual(unfiltered("execute format('update %I set a = %L -- all rows\n where true', 't', 'it''s');"), []);
+  // A WHERE that only a variable adds can't be seen, and reads as missing.
+  assert.deepEqual(unfiltered("execute format('delete from t %s', v_where);"), ["EXECUTE: delete from t x"]);
 
   const client = new Client({ connectionString: url, statement_timeout: 60_000 });
   await client.connect();
