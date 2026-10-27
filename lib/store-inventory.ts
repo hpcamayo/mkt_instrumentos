@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/supabase/database";
 
 // Store inventory (docs/store-operations/design.md §3–§5, §13). The database functions are the only writers; this file
 // holds the read helpers, the labels and the shared shapes used by the Inventario screens and the API routes.
@@ -377,19 +377,10 @@ export const CONFLICT_CODES = new Set(["INVENTORY_VERSION_CONFLICT", "IDEMPOTENC
 
 // ------------------------------------------------------------------ reads
 
-// The inventory tables and functions are not in the generated Database type yet (the combined prototype regenerates
-// it), so inventory reads use an untyped view of the same authenticated client. RLS and the functions still decide
-// what the caller sees.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function inventoryDb(supabase: SupabaseClient<any, any, any>): SupabaseClient {
-  return supabase as unknown as SupabaseClient;
-}
+// Every read runs as the caller's own client, so RLS and the functions decide what the caller sees.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyClient = SupabaseClient<any, any, any>;
-
-export async function getInventorySummary(supabase: AnyClient): Promise<InventorySummary | null> {
-  const { data, error } = await inventoryDb(supabase).rpc("get_inventory_summary");
+export async function getInventorySummary(supabase: DatabaseClient): Promise<InventorySummary | null> {
+  const { data, error } = await supabase.rpc("get_inventory_summary");
   if (error || !data) return null;
   return data as InventorySummary;
 }
@@ -397,8 +388,8 @@ export async function getInventorySummary(supabase: AnyClient): Promise<Inventor
 // "Errores de importación" tile: rows of the latest committed import that did not apply (validation errors, conflicts
 // and failures; rows the owner excluded are not errors). RLS limits
 // the read to the owner's own store. Null when the store has never finished an import, so the tile is not shown.
-export async function getLastImportErrors(supabase: AnyClient): Promise<{ errors: number; href: string } | null> {
-  const { data, error } = await (supabase as unknown as SupabaseClient)
+export async function getLastImportErrors(supabase: DatabaseClient): Promise<{ errors: number; href: string } | null> {
+  const { data, error } = await supabase
     .from("store_import_sessions")
     .select("id,result_summary")
     .in("status", ["committed", "partially_committed"])
@@ -417,19 +408,19 @@ export async function getLastImportErrors(supabase: AnyClient): Promise<{ errors
 // Category chips above the inventory table (review fix B4): active SKUs per category, "none" for SKUs without one.
 export const INVENTORY_NO_CATEGORY = "none";
 
-export async function getInventoryCategoryCounts(supabase: AnyClient): Promise<Record<string, number> | null> {
-  const { data, error } = await inventoryDb(supabase).rpc("get_inventory_category_counts");
+export async function getInventoryCategoryCounts(supabase: DatabaseClient): Promise<Record<string, number> | null> {
+  const { data, error } = await supabase.rpc("get_inventory_category_counts");
   if (error || !data || typeof data !== "object" || Array.isArray(data)) return null;
   return data as Record<string, number>;
 }
 
 export async function getInventoryPage(
-  supabase: AnyClient,
+  supabase: DatabaseClient,
   filters: InventoryFilters,
   cursor: InventoryCursor | null,
   limit = 50,
 ): Promise<InventoryPage | null> {
-  const { data, error } = await inventoryDb(supabase).rpc("get_inventory_page", {
+  const { data, error } = await supabase.rpc("get_inventory_page", {
     p_filters: filtersForRpc(filters),
     p_cursor: cursor,
     p_limit: limit,
@@ -468,8 +459,8 @@ export function pageRange(page: Pick<InventoryPage, "items" | "total" | "offset"
 // stock-19: the SKU before and after this one in the list the owner came from.
 export type InventoryNeighbors = { position: number | null; total: number; previous_id: string | null; next_id: string | null };
 
-export async function getInventoryNeighbors(supabase: AnyClient, itemId: string, filters: InventoryFilters): Promise<InventoryNeighbors | null> {
-  const { data, error } = await inventoryDb(supabase).rpc("get_inventory_neighbors", { p_item_id: itemId, p_filters: filtersForRpc(filters) });
+export async function getInventoryNeighbors(supabase: DatabaseClient, itemId: string, filters: InventoryFilters): Promise<InventoryNeighbors | null> {
+  const { data, error } = await supabase.rpc("get_inventory_neighbors", { p_item_id: itemId, p_filters: filtersForRpc(filters) });
   if (error || !data) return null;
   return data as InventoryNeighbors;
 }
@@ -477,8 +468,8 @@ export async function getInventoryNeighbors(supabase: AnyClient, itemId: string,
 // stock-17: the store's own saved views.
 export type InventoryView = { id: string; name: string; filters: Record<string, unknown> };
 
-export async function getInventoryViews(supabase: AnyClient): Promise<InventoryView[]> {
-  const { data } = await inventoryDb(supabase).from("store_inventory_views").select("id,name,filters").order("created_at");
+export async function getInventoryViews(supabase: DatabaseClient): Promise<InventoryView[]> {
+  const { data } = await supabase.from("store_inventory_views").select("id,name,filters").order("created_at");
   return (data ?? []) as InventoryView[];
 }
 
@@ -488,8 +479,8 @@ export type DemandRow = {
   version: number; favorites: number; contacts_90d: number;
 };
 
-export async function getOutOfStockDemand(supabase: AnyClient, limit = 5): Promise<DemandRow[]> {
-  const { data, error } = await inventoryDb(supabase).rpc("get_out_of_stock_demand", { p_limit: limit });
+export async function getOutOfStockDemand(supabase: DatabaseClient, limit = 5): Promise<DemandRow[]> {
+  const { data, error } = await supabase.rpc("get_out_of_stock_demand", { p_limit: limit });
   if (error || !Array.isArray(data)) return [];
   return data as DemandRow[];
 }
@@ -500,8 +491,8 @@ export type ReorderRow = {
   quantity_available: number; low_stock_threshold: number | null; sales_30d: number; suggested: number; unit_price_pen: number | null;
 };
 
-export async function getReorderList(supabase: AnyClient): Promise<ReorderRow[] | null> {
-  const { data, error } = await inventoryDb(supabase).rpc("get_reorder_list");
+export async function getReorderList(supabase: DatabaseClient): Promise<ReorderRow[] | null> {
+  const { data, error } = await supabase.rpc("get_reorder_list");
   if (error || !data) return null;
   return ((data as { items?: ReorderRow[] }).items ?? []) as ReorderRow[];
 }
@@ -512,8 +503,8 @@ export type PriceCampaign = {
   created_at: string; reverted_at: string | null; revert_result: { restored?: unknown[]; kept?: unknown[] } | null;
 };
 
-export async function getPriceCampaigns(supabase: AnyClient, limit = 10): Promise<PriceCampaign[]> {
-  const { data } = await inventoryDb(supabase)
+export async function getPriceCampaigns(supabase: DatabaseClient, limit = 10): Promise<PriceCampaign[]> {
+  const { data } = await supabase
     .from("store_price_campaigns")
     .select("id,name,mode,value,rounding,item_count,created_at,reverted_at,revert_result")
     .order("created_at", { ascending: false })
@@ -526,15 +517,15 @@ const ITEM_COLUMNS =
 
 // One SKU with its linked publication, read through RLS (owner or Admin only).
 // STOCK 09 (selling batch): what a SKU remembers for its next publication (store_inventory_items.listing_details).
-export async function getSkuListingDetails<T extends object = Record<string, unknown>>(supabase: AnyClient, itemId: string): Promise<T | undefined> {
-  const { data } = await inventoryDb(supabase).from("store_inventory_items").select("listing_details").eq("id", itemId).maybeSingle();
+export async function getSkuListingDetails<T extends object = Record<string, unknown>>(supabase: DatabaseClient, itemId: string): Promise<T | undefined> {
+  const { data } = await supabase.from("store_inventory_items").select("listing_details").eq("id", itemId).maybeSingle();
   const details = (data as { listing_details?: unknown } | null)?.listing_details;
   return details && typeof details === "object" && !Array.isArray(details) ? details as T : undefined;
 }
 
-export async function getInventoryItem(supabase: AnyClient, itemId: string): Promise<InventoryItem | null> {
+export async function getInventoryItem(supabase: DatabaseClient, itemId: string): Promise<InventoryItem | null> {
   if (!UUID.test(itemId)) return null;
-  const db = inventoryDb(supabase);
+  const db = supabase;
   const { data, error } = await db.from("store_inventory_items").select(ITEM_COLUMNS).eq("id", itemId).maybeSingle();
   if (error || !data) return null;
   const row = data as unknown as Omit<InventoryItem, "stock_level" | "listing">;
@@ -560,12 +551,12 @@ export type MovementCursor = { createdAt: string; id: string };
 
 // Newest first, keyset paged on (created_at, id) like the store_stock_movements_item_idx index.
 export async function getItemMovements(
-  supabase: AnyClient,
+  supabase: DatabaseClient,
   itemId: string,
   before: MovementCursor | null,
   limit = 25,
 ): Promise<{ movements: StockMovement[]; next: MovementCursor | null }> {
-  let query = inventoryDb(supabase)
+  let query = supabase
     .from("store_stock_movements")
     .select("id,item_id,movement_type,channel,on_hand_delta,on_hand_before,on_hand_after,actor_kind,reference,reason,import_session_id,import_row_number,created_at,corrects_movement_id")
     .eq("item_id", itemId)
@@ -604,8 +595,8 @@ export function decodeMovementCursor(value: string | undefined): MovementCursor 
   return null;
 }
 
-export async function getItemChanges(supabase: AnyClient, itemId: string, limit = 20): Promise<InventoryChange[]> {
-  const { data } = await inventoryDb(supabase)
+export async function getItemChanges(supabase: DatabaseClient, itemId: string, limit = 20): Promise<InventoryChange[]> {
+  const { data } = await supabase
     .from("store_inventory_changes")
     .select("id,change_type,before,after,actor_kind,reason,created_at")
     .eq("item_id", itemId)
@@ -616,9 +607,9 @@ export async function getItemChanges(supabase: AnyClient, itemId: string, limit 
 }
 
 // Item ids linked to the given listings, for the Publicaciones table (hides "Marcar vendida", D-15).
-export async function getLinkedItemsByListing(supabase: AnyClient, listingIds: string[]): Promise<Map<string, string>> {
+export async function getLinkedItemsByListing(supabase: DatabaseClient, listingIds: string[]): Promise<Map<string, string>> {
   if (!listingIds.length) return new Map();
-  const { data, error } = await inventoryDb(supabase).from("store_inventory_items").select("id,listing_id").in("listing_id", listingIds);
+  const { data, error } = await supabase.from("store_inventory_items").select("id,listing_id").in("listing_id", listingIds);
   if (error) return new Map();
   return new Map(((data ?? []) as { id: string; listing_id: string }[]).map((row) => [row.listing_id, row.id]));
 }

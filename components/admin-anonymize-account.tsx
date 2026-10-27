@@ -7,8 +7,6 @@ import { Notice } from "@/components/ui/notice";
 import { Textarea } from "@/components/ui/textarea";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
-type Rpc = { rpc: (fn: string, args: object) => Promise<{ data: unknown; error: { message?: string } | null }> };
-
 // Launch audit A20 (Ley 29733, cancelación): Admin anonymises an account when its owner asks for it in writing
 // (docs/privacy/arco.md). public.admin_anonymize_account clears the person's data, keeps sales, reviews, reports and
 // Libro de Reclamaciones entries without it, and writes the reason to the Admin audit
@@ -34,7 +32,7 @@ export function AdminAnonymizeAccount({ userId, onComplete }: { userId: string; 
     }
     setBusy(true);
     setError("");
-    const { data, error: runError } = await (supabase as unknown as Rpc)
+    const { data, error: runError } = await supabase
       .rpc("admin_anonymize_account", { p_user_id: userId, p_reason: reason.trim() });
     setBusy(false);
     if (runError || !data) {

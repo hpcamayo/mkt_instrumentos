@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { StoreAllowanceMeter } from "@/components/store-allowance-meter";
 import { StoreInventoryAccess } from "@/components/store-inventory-access";
 import { StoreRegistrationForm, type StoreApplication } from "@/components/store-registration-form";
@@ -19,14 +18,13 @@ export const metadata = { title: "Mi tienda" };
 export default async function StoreAccountPage() {
   const { user, profile, store, supabase } = await getAccountContext();
   if (profile?.account_type !== "store_owner") redirect("/mi-cuenta");
-  const db = supabase as unknown as SupabaseClient | null;
-  const [{ data: photos }, paymentMethods, allowance, summary, inventoryRequest] = store && db
+  const [{ data: photos }, paymentMethods, allowance, summary, inventoryRequest] = store && supabase
     ? await Promise.all([
-        db.from("store_photos").select("id,image_url,alt_text").eq("store_id", store.id).order("sort_order"),
-        db.from("store_payment_methods").select("method", { count: "exact", head: true }).eq("store_id", store.id).in("status", ["approved", "pending_review"]),
-        getStoreAllowanceDetail(db),
-        getInventorySummary(db),
-        getOpenStoreRequest(db, "inventory_access"),
+        supabase.from("store_photos").select("id,image_url,alt_text").eq("store_id", store.id).order("sort_order"),
+        supabase.from("store_payment_methods").select("method", { count: "exact", head: true }).eq("store_id", store.id).in("status", ["approved", "pending_review"]),
+        getStoreAllowanceDetail(supabase),
+        getInventorySummary(supabase),
+        getOpenStoreRequest(supabase, "inventory_access"),
       ])
     : [{ data: [] }, { count: 0 }, null, null, null];
   const inventoryEnabled = Boolean(summary?.inventory_enabled);

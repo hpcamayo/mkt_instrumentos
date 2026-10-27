@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { ImportFileGuide, ImportTemplatePanel } from "@/components/store-import/import-guide";
 import { ImportDiscardButton } from "@/components/store-import/import-discard";
 import { ImportStartForm } from "@/components/store-import/import-start";
@@ -23,17 +22,16 @@ export default async function StoreImportStartPage() {
   const { profile, store, supabase } = await getAccountContext();
   if (profile?.account_type !== "store_owner") redirect("/mi-cuenta/publicaciones");
   if (!store) redirect("/mi-cuenta/tienda");
-  const db = supabase as unknown as SupabaseClient | null;
-  const [{ data: summary }, { data: sessions }] = db
+  const [{ data: summary }, { data: sessions }] = supabase
     ? await Promise.all([
-        db.rpc("get_inventory_summary"),
-        db.from("store_import_sessions").select("id,status,file_name,created_at,updated_at,counts,result_summary").eq("store_id", store.id).is("options->>source", null).order("created_at", { ascending: false }).limit(6),
+        supabase.rpc("get_inventory_summary"),
+        supabase.from("store_import_sessions").select("id,status,file_name,created_at,updated_at,counts,result_summary").eq("store_id", store.id).is("options->>source", null).order("created_at", { ascending: false }).limit(6),
       ])
     : [{ data: null }, { data: [] }];
   const canWrite = Boolean((summary as { can_write?: boolean } | null)?.can_write);
   const inventoryEnabled = Boolean((summary as { inventory_enabled?: boolean } | null)?.inventory_enabled);
   // stock-21: a store without inventory can ask for it here.
-  const inventoryRequest = inventoryEnabled ? null : await getOpenStoreRequest(db, "inventory_access");
+  const inventoryRequest = inventoryEnabled ? null : await getOpenStoreRequest(supabase, "inventory_access");
   const rows = (sessions ?? []) as SessionRow[];
   const open = rows.find((session) => OPEN_IMPORT_STATUSES.includes(session.status));
   const history = rows.filter((session) => session !== open).slice(0, 5);

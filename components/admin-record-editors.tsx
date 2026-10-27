@@ -10,7 +10,7 @@ import {
 import { normalizePeruRegion } from "@/lib/location";
 import { categoryOptions, conditionOptions } from "@/lib/listings";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 import { buttonClasses } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
 import { NoticeIcon, noticeClassName } from "@/components/ui/notice";

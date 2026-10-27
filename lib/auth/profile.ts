@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizePeruRegion } from "@/lib/location";
 import { isValidWhatsAppPhone, normalizePeruPhone } from "@/lib/phone";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 
 export const INDIVIDUAL_SELLER_ACCOUNT_TYPE = "seller";
 export const STORE_OWNER_ACCOUNT_TYPE = "store_owner";

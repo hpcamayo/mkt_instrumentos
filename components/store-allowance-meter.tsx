@@ -11,8 +11,6 @@ import { ALLOWANCE_NAME, allowanceLevel, type StoreAllowanceDetail } from "@/lib
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { cn } from "@/lib/utils";
 
-type Rpc = { rpc: (fn: string, args: object) => Promise<{ data: unknown; error: { message?: string } | null }> };
-
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 const databaseMessage = (message: string | undefined, fallback: string) => /^[A-Z_]+: (.+)$/.exec(message ?? "")?.[1] ?? fallback;
 
@@ -20,7 +18,7 @@ const databaseMessage = (message: string | undefined, fallback: string) => /^[A-
 // the two ways out: hide published listings that are out of stock (they hold a slot and sell nothing), or ask Admin
 // for more. Hiding is an owner hide, so each listing comes back from Mis publicaciones or with its next restock.
 export function StoreAllowanceMeter({ detail, inventoryEnabled }: { detail: StoreAllowanceDetail; inventoryEnabled: boolean }) {
-  const supabase = useMemo(() => getSupabaseBrowserClient() as unknown as Rpc | null, []);
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const router = useRouter();
   const [confirm, dialog] = useConfirm();
   const [asking, setAsking] = useState(false);

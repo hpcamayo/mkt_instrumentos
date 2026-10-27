@@ -42,7 +42,7 @@ Older Laria business docs describe the intended model in product language. The c
 
 Migration files and the live Supabase schema are the source of truth for current implementation only. The functional specification wins for required V1 behavior. Product names should become schema names only through an explicit migration and app update.
 
-`lib/supabase/database.types.ts` includes the Phase 2 account tables, ownership fields, enums, and helper RPCs. Keep it aligned with later migrations. The PostgREST computed photo-count field uses explicit query result types because the SDK select parser does not infer computed columns.
+`lib/supabase/database.types.ts` is generated from production's schema with `pnpm db:types` (the Supabase CLI, signed in to the project) and is never edited by hand: generate it again once a migration is applied to production, and commit it with the code that uses the change. A branch whose migrations aren't in production yet can generate it from a local stack that has them (`supabase gen types typescript --local --schema public,graphql_public`). Every client is typed with `lib/supabase/database.ts`, which takes the generated types and lets the function arguments the app passes null to accept it, since PostgreSQL doesn't record which arguments do: a list of arguments by function, and every argument of the Inventario actions (`lib/inventory-actions.ts`), whose functions answer a missing value with their own message. A call to a function or table that isn't in the generated types fails the typecheck. The PostgREST computed photo-count field uses explicit query result types because the SDK select parser does not infer computed columns.
 
 ### `public.profiles`
 

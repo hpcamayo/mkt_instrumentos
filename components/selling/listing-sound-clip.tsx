@@ -1,4 +1,3 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { Volume2 } from "lucide-react";
 import { getRequestReads } from "@/lib/supabase/public-read-client";
 
@@ -7,9 +6,7 @@ import { getRequestReads } from "@/lib/supabase/public-read-client";
 export async function ListingSoundClip({ listingId }: { listingId: string }) {
   const { supabase } = getRequestReads();
   if (!supabase) return null;
-  // listing_sound_clips is newer than the generated database types.
-  const { data } = await (supabase as unknown as SupabaseClient).from("listing_sound_clips").select("clip_url,duration_seconds").eq("listing_id", listingId).maybeSingle();
-  const clip = data as { clip_url: string; duration_seconds: number } | null;
+  const { data: clip } = await supabase.from("listing_sound_clips").select("clip_url,duration_seconds").eq("listing_id", listingId).maybeSingle();
   if (!clip?.clip_url) return null;
   return (
     <section aria-labelledby="sonido" className="order-8 min-w-0">

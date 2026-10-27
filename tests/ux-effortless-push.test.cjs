@@ -52,7 +52,14 @@ function browserKeys() {
 function vapidEnv() {
   const ecdh = crypto.createECDH("prime256v1");
   ecdh.generateKeys();
-  return { NEXT_PUBLIC_VAPID_PUBLIC_KEY: b64(ecdh.getPublicKey()), VAPID_PRIVATE_KEY: b64(ecdh.getPrivateKey()), VAPID_SUBJECT: "mailto:soporte@laria.audio" };
+  // getPrivateKey leaves out leading zero bytes (about one key in 256), and a VAPID private key is always 32 bytes, as
+  // scripts/generate-vapid-keys.mjs prints it.
+  const privateKey = ecdh.getPrivateKey();
+  return {
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: b64(ecdh.getPublicKey()),
+    VAPID_PRIVATE_KEY: b64(Buffer.concat([Buffer.alloc(32 - privateKey.length), privateKey])),
+    VAPID_SUBJECT: "mailto:soporte@laria.audio",
+  };
 }
 
 // What the browser does with a message body (RFC 8291 section 3.4 and RFC 8188).

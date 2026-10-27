@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import type { FunctionCall } from "@/lib/supabase/database";
 
-type Rpc = { rpc: (fn: string, args: object) => Promise<{ data: unknown; error: { message?: string } | null }> };
 type Request = {
   id: string;
   kind: "listing_allowance" | "inventory_access";
@@ -23,7 +23,7 @@ const databaseMessage = (message: string | undefined, fallback: string) => /^[A-
 // acceso"). Inventory is turned on here with an audited reason; a new allowance is set with "Cupo de publicaciones"
 // below. Closing a request only records the decision; the store sees the request disappear.
 export function AdminStoreRequests({ storeId, onComplete }: { storeId: string; onComplete: (message: string) => void }) {
-  const supabase = useMemo(() => getSupabaseBrowserClient() as unknown as Rpc | null, []);
+  const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [requests, setRequests] = useState<Request[]>([]);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -36,7 +36,7 @@ export function AdminStoreRequests({ storeId, onComplete }: { storeId: string; o
 
   useEffect(() => { void load(); }, [load]);
 
-  async function run(id: string, steps: Array<[string, object]>, done: string) {
+  async function run(id: string, steps: FunctionCall[], done: string) {
     if (!supabase || busy) return;
     setBusy(id);
     setError("");

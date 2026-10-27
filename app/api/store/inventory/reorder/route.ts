@@ -3,7 +3,7 @@ import { parseReorderFile, reorderCsv, reorderFilename, reorderXlsxSheet } from 
 import { readSpreadsheet } from "@/lib/store-import/sheet";
 import { ImportFileError } from "@/lib/store-import/types";
 import { writeXlsx, XLSX_CONTENT_TYPE } from "@/lib/spreadsheet/xlsx-write";
-import { getReorderList, inventoryDb } from "@/lib/store-inventory";
+import { getReorderList } from "@/lib/store-inventory";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 // Effortless Laria, inventory batch, stock-07 (docs/ux-effortless/inventory.md).
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   const items = new Map<string, Item>();
   const skus = [...new Set(parsed.lines.map((line) => line.sku.toUpperCase()))];
   for (let start = 0; start < skus.length; start += 200) {
-    const { data, error } = await inventoryDb(context.supabase)
+    const { data, error } = await context.supabase
       .from("store_inventory_items")
       .select("id,merchant_sku,product_name,quantity_available,inventory_status,version,sku_normalized")
       .eq("store_id", context.store.id)
