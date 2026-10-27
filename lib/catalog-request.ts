@@ -18,10 +18,16 @@ export function parseCatalogRequest(params: CatalogRequestParams) {
   const filters = parseListingFilters(params);
   const page = parsePage(params.page);
   let redirectHref: string | null = null;
-  if (hasRejectedFilterValues(params)) {
+  if (hasRejectedFilterValues(params) || !isCleanPage(params.page, page)) {
     const cleaned = catalogSearchParams(filters);
     if (page > 1) cleaned.set("page", String(page));
     redirectHref = cleaned.size ? `/listados?${cleaned}` : catalogHref(filters);
   }
   return { filters, page, redirectHref };
+}
+
+// "page=abc", "page=0" or "page=02" render page 1 or 2 under a new address; send them to the one our links use.
+function isCleanPage(raw: CatalogRequestParams[string], page: number) {
+  const first = Array.isArray(raw) ? raw[0] : raw;
+  return first === undefined || first === "" || first === String(page);
 }
