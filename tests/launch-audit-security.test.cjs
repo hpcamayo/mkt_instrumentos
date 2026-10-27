@@ -16,8 +16,9 @@ test("A11: production CSP keeps scripts and data on Laria and its Supabase proje
   assert.equal(directive(policy, "default-src"), "default-src 'self'");
   // 'unsafe-eval' only for libheif in heic2any (lib/security-headers.ts).
   assert.equal(directive(policy, "script-src"), "script-src 'self' 'unsafe-inline' 'unsafe-eval'");
-  assert.equal(directive(policy, "connect-src"), `connect-src 'self' ${SUPABASE} wss://hswkjandadscduodejig.supabase.co`);
-  assert.match(directive(policy, "img-src"), new RegExp(`'self' data: blob: ${SUPABASE}$`));
+  // Feature ideas, listing-details (buy-08): the map's tiles are the one outside host (EXTRA_SOURCES).
+  assert.equal(directive(policy, "connect-src"), `connect-src 'self' ${SUPABASE} wss://hswkjandadscduodejig.supabase.co https://tiles.openfreemap.org`);
+  assert.match(directive(policy, "img-src"), new RegExp(`'self' data: blob: ${SUPABASE} https://tiles\\.openfreemap\\.org$`));
   assert.equal(directive(policy, "frame-ancestors"), "frame-ancestors 'none'");
   assert.equal(directive(policy, "object-src"), "object-src 'none'");
   assert.equal(directive(policy, "form-action"), "form-action 'self'");

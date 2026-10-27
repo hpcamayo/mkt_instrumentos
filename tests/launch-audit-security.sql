@@ -73,7 +73,7 @@ select pg_temp.expect_error($sql$
   insert into public.listings (seller_type, status, title, slug, description, category, instrument_type, brand, model,
     condition, price_pen, city, region, contact_name, whatsapp_phone, owner_user_id, published_at, view_count)
   values ('individual', 'pending', 'Guitarra directa', 'lasec-direct', repeat('Descripción ', 5), 'guitars',
-    'electric_guitar', 'Fender', 'Strat', 'used_good', 1500, 'Lima', 'Lima', 'Ana', '51999995001',
+    'electric_guitar', 'Fender', 'Strat', 'Muy bueno', 1500, 'Lima', 'Lima', 'Ana', '51999995001',
     'e1200000-0000-4000-8000-000000000001', now() - interval '3 years', 9999)
 $sql$, '42501');
 select set_config('request.jwt.claims', '{"sub":"e1200000-0000-4000-8000-000000000002","role":"authenticated"}', true);
@@ -166,7 +166,7 @@ insert into public.listings (id, seller_type, status, title, slug, description, 
   model, condition, price_pen, city, region, contact_name, whatsapp_phone, created_by_source,
   marketplace_rules_accepted_at, rejection_reason)
 values ('e1220000-0000-4000-8000-000000000001', 'individual', 'rejected', 'Guitarra legacy', 'lasec-legacy',
-  repeat('Descripción larga de prueba ', 3), 'guitars', 'electric_guitar', 'Fender', 'Strat', 'used_good', 1500,
+  repeat('Descripción larga de prueba ', 3), 'guitars', 'electric_guitar', 'Fender', 'Strat', 'Muy bueno', 1500,
   'Lima', 'Lima', 'Ana', '51987654321', 'legacy', now(), 'Fotos borrosas');
 insert into public.listing_photos (listing_id, image_url, sort_order) values
  ('e1220000-0000-4000-8000-000000000001', 'https://example.invalid/lasec-1.jpg', 0),
