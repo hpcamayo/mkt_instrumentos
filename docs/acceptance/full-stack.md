@@ -3,10 +3,12 @@
 Launch audit A14 found that 68 release-gate cases of `acceptance/cases.tsv` had never been run. This run checks them
 end to end, on every pull request into `main`, every push to `main` and by hand (GitHub > Actions > Acceptance > Run
 workflow). It never reads a repository secret, hosted Supabase or production: it only signs in to ghcr.io with the
-run's own read-only token, to download the Supabase images. ghcr.io still refuses them on some runs (toomanyrequests),
-so every other try of the stack's start takes them from Supabase's other registry, public.ecr.aws, with up to four
-tries. Each action the workflow uses is pinned to a commit, the one its tag pointed to on 27 Oct 2026; to update one,
-check the new version's diff and change its commit and comment together.
+run's own read-only token, to download the Supabase images. The same images are on Docker Hub, ghcr.io and
+public.ecr.aws. The last two refused them from GitHub's shared runners on most runs (toomanyrequests, or ECR's data
+limit for the address), so the workflow takes them from Docker Hub, which doesn't limit GitHub's own runners, and each
+further try of the stack's start, up to six, from the next registry in turn. Each action the workflow uses is pinned to
+a commit, the one its tag pointed to on 27 Oct 2026; to update one, check the new version's diff and change its commit
+and comment together.
 
 ## What runs
 
@@ -91,4 +93,6 @@ pnpm install --frozen-lockfile
 bash scripts/acceptance/full-stack.sh /tmp/laria-acceptance
 ```
 
-Its stack uses the CLI's default ports (54321 and 54322), so stop another local Supabase first.
+Its stack uses the CLI's default ports (54321 and 54322), so stop another local Supabase first. It takes the images
+from the registry `SUPABASE_INTERNAL_IMAGE_REGISTRY` names, or from the CLI's default, public.ecr.aws, and tries the
+other two in turn if that one refuses them.

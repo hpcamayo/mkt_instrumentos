@@ -41,9 +41,8 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.28.0 --activate
           pnpm install --frozen-lockfile
-      # ghcr.io limits anonymous downloads from the shared runner addresses, and refused every try of the Supabase images
-      # (toomanyrequests). Signed in with the run's own token, which can only read, the downloads count as this
-      # repository's instead. If it still refuses them, full-stack.sh takes them from public.ecr.aws on the next try.
+      # ghcr.io limits anonymous downloads from the shared runner addresses. If full-stack.sh gets to it, the downloads are
+      # signed in with the run's own token, which can only read.
       - name: Sign in to the image registry
         run: printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
         env:
@@ -52,6 +51,10 @@ jobs:
         run: bash scripts/acceptance/full-stack.sh "$RUNNER_TEMP/acceptance"
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+          # ghcr.io and public.ecr.aws refused the Supabase images on most runs (toomanyrequests, and ECR's data limit
+          # for the runner's address). Docker Hub doesn't limit GitHub's own runners, under an agreement between GitHub
+          # and Docker, so the images come from there first, and from the other two in turn if it refuses them too.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: docker.io
       # The stack's start, each test's output, the build and the app's log, kept for two weeks.
       - name: Keep the logs
         if: always()

@@ -32,27 +32,31 @@ cleanup() {
 trap cleanup EXIT
 
 cp scripts/acceptance/supabase-config.toml supabase/config.toml
-echo "== Starting Supabase (every migration, then supabase/seed.sql)"
-# The CLI pulls its images in parallel, and the registry sometimes refuses such a burst (toomanyrequests), on some runs
-# every try. The layers already pulled stay, so another try finishes the pull, and every other try takes the images
-# from Supabase's other registry (they are the same images). Each try starts from an empty database.
-first_registry="${SUPABASE_INTERNAL_IMAGE_REGISTRY:-ghcr.io}"
-if [ "$first_registry" = public.ecr.aws ]; then other_registry=ghcr.io; else other_registry=public.ecr.aws; fi
+# The CLI pulls its images in parallel, and a registry sometimes refuses them (toomanyrequests, or public.ecr.aws's data
+# limit for the address), on some runs every try. The same images are on Docker Hub, ghcr.io and public.ecr.aws, so
+# each try takes them from the next of these in turn, starting with the one SUPABASE_INTERNAL_IMAGE_REGISTRY names (the
+# CLI's own default is public.ecr.aws). Each try starts from an empty database.
+registries=()
+for registry in "${SUPABASE_INTERNAL_IMAGE_REGISTRY:-public.ecr.aws}" docker.io ghcr.io public.ecr.aws; do
+  case " ${registries[*]} " in *" $registry "*) ;; *) registries+=("$registry") ;; esac
+done
+tries=6
 started=""
-for attempt in 1 2 3 4; do
-  if [ $((attempt % 2)) = 1 ]; then registry="$first_registry"; else registry="$other_registry"; fi
+for attempt in $(seq 1 "$tries"); do
+  registry="${registries[(attempt - 1) % ${#registries[@]}]}"
   export SUPABASE_INTERNAL_IMAGE_REGISTRY="$registry"
+  echo "== Starting Supabase from $registry, try $attempt of $tries (every migration, then supabase/seed.sql)"
   if supabase start 2>&1 | tee -a "$RESULTS/supabase-start.log"; then
     started=1
     break
   fi
   supabase stop --no-backup >/dev/null 2>&1 || true
-  if [ "$attempt" -lt 4 ]; then
-    echo "Supabase did not start from $registry (try $attempt of 4); trying again in $((attempt * 30)) seconds." >&2
-    sleep $((attempt * 30))
+  if [ "$attempt" -lt "$tries" ]; then
+    echo "Supabase did not start from $registry; trying again in $((attempt * 20)) seconds." >&2
+    sleep $((attempt * 20))
   fi
 done
-[ -n "$started" ] || { echo "Supabase did not start." >&2; exit 1; }
+[ -n "$started" ] || { echo "Supabase did not start from any registry." >&2; exit 1; }
 
 # The local stack's keys are the CLI's fixed development keys; the cron secret is new on every run.
 CRON_SECRET="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(24).toString("hex"))')"
