@@ -1654,3 +1654,40 @@ Wiring between batches, written by the integrator (not applied to any hosted dat
   the owner. `null` once the owner removed the item.
 - Tests: `tests/feat-integration.sql`.
 <!-- /feature-ideas:integration -->
+
+<!-- feature-ideas:store-locations -->
+## Feature ideas: store locations and receipts
+
+Migrations `20261209120000`–`20261209120100` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/store-locations.md`. Suites: `tests/store-locations.sql`, `tests/store-receipts.sql`. No shared
+function is redefined.
+
+- `public.store_locations` (store, name, region, city, district, address, show_address, generated public_address,
+  opening_hours, pickup_enabled, is_primary (one per store), position, archived_at; names unique among active): owner
+  reads directly; public data only through `get_public_store_locations(uuid)` and `get_listing_locations(uuid)` (names,
+  only with two or more active sedes). Written through `save_store_location(uuid, jsonb)` (the first sede becomes main
+  and receives all units; limit 20), `set_primary_store_location(uuid)` and `archive_store_location(uuid, uuid, text)`.
+- `public.store_location_stock` (pk location_id, item_id; store_id; quantity_on_hand ≥ 0): the split of
+  `store_inventory_items.quantity_on_hand`, which stays the total. Owner read only.
+- `public.store_stock_movements` gains `location_id` (when one sede changed) and `location_split` (jsonb). The BEFORE
+  INSERT trigger `laria_private.allocate_stock_movement` fills them: the sede in the transaction setting
+  `laria.stock_location`, else the reverse of the corrected movement, else main for increases and main-then-position
+  for decreases (`laria_private.add_location_stock` raises `STORE_LOCATION_STOCK_SHORT`).
+- Deferred constraint triggers (`laria_private.check_location_stock_total`) on items and sede stock check at commit
+  that the split adds up to the total.
+- `public.store_stock_transfers` (append-only; store, item, from, to, quantity, reason, idempotency key and
+  fingerprint): `transfer_location_stock(uuid, uuid, uuid, integer, text, text)`.
+- `record_location_stock_movement(…)`, `apply_location_bulk_stock_operations(uuid, jsonb, text)` (batch key bound to
+  the sede in `laria_private.store_location_batch_keys`) and `set_location_stock_counts(uuid, jsonb, text)` (≤ 200
+  counts) set `laria.stock_location` and call the existing stock functions.
+- `public.store_einvoice_settings` (pk store; provider nubefact, api_url `https://api.nubefact.com/api/v1/…`,
+  token_ciphertext `v1.<iv>.<tag>.<data>` (AES-256-GCM, service role only), token_hint, boleta/factura series and next
+  numbers, igv_affectation, email_customer, checked_at): `get_einvoice_settings()` (never the token),
+  `save_einvoice_settings(jsonb)` (verified stores; numbers never go back), `disconnect_einvoice()`.
+- `public.store_receipts` (store, kind boleta|factura, series, number unique per series, status
+  pending|accepted|rejected|error|void_pending|voided, sale_key unique per store, location, customer fields, lines
+  jsonb, igv_affectation, total_cents, issue_date, attempts, https links, SUNAT result, error, void fields): owner and
+  Admin read. `prepare_store_receipt(jsonb)` (validates the sale and the customer, takes the number under the settings
+  row lock, replays per sale), `request_store_receipt_void(uuid, text)` (7 days),
+  `record_store_receipt_result(uuid, jsonb)` (service_role only; never downgrades accepted or voided).
+<!-- /feature-ideas:store-locations -->
