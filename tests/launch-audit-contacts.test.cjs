@@ -121,6 +121,20 @@ test("A27: card queries read public_listings, and the free-text search returns i
   assert.match(sql, /revoke all on function public\.admin_get_listing\(uuid\) from public, anon;/);
 });
 
+test("A27 step 2: the public reads on listings exactly the columns of public_listings, and visitors no profile", () => {
+  const view = read("supabase/migrations/20261114130000_launch_audit_contact_reads.sql")
+    .match(/create view public\.public_listings\s+with \(security_invoker = true\)\s+as\s+select([\s\S]*?)from public\.listings l;/);
+  const sql = read("supabase/migrations/20261114140000_launch_audit_contact_columns.sql");
+  const grant = sql.match(/grant select \(([^)]*)\) on public\.listings to anon, authenticated;/);
+  assert.ok(view && grant, "the view and the grant");
+  const columns = (list) => list.split(",").map((column) => column.trim().replace(/^l\./, ""));
+  assert.deepEqual(columns(grant[1]), columns(view[1]));
+  assert.match(sql, /revoke select on public\.listings from anon, authenticated;/);
+  assert.match(sql, /grant select \(rejection_reason, rejection_codes, hidden_source, hidden_reason\) on public\.listings to authenticated;/);
+  assert.match(sql, /drop policy if exists "Public can read profiles for approved listings" on public\.profiles;/);
+  assert.match(sql, /revoke select on public\.profiles from anon;/);
+});
+
 test("A27: Admin's listing editor loads the contact through admin_get_listing", () => {
   const editor = read("components/admin-record-editors.tsx");
   assert.match(editor, /\.rpc\("admin_get_listing", \{ p_listing_id: listingId \}\)\.select\(listingSelect\)\.single\(\)/);
