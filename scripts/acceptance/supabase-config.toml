@@ -1,8 +1,8 @@
 # Launch audit A14: the local Supabase that scripts/acceptance/full-stack.sh starts for the end-to-end acceptance run
 # (in CI, .github/workflows/acceptance.yml). It copies this file to supabase/config.toml, which the repository doesn't
 # track, so a developer's own config is never replaced. Auth is set like production where the release-gate cases
-# depend on it: e-mail confirmation on, passwords of at least 8 characters, authenticator codes (Admin needs aal2).
-# The limits are raised because the tests sign in many throwaway accounts from one address.
+# depend on it: e-mail and phone confirmation on, passwords of at least 8 characters, authenticator codes (Admin needs
+# aal2). The limits are raised because the tests sign in many throwaway accounts from one address.
 project_id = "mkt_instrumentos"
 
 [api]
@@ -62,6 +62,13 @@ secure_password_change = false
 max_frequency = "1s"
 otp_length = 6
 otp_expiry = 3600
+
+# Production confirms neither addresses nor phone numbers on its own (mailer_autoconfirm and sms_autoconfirm are off,
+# read on 27 Oct 2026), and Supabase answers a repeated sign-up according to both. Without this, the CLI would confirm
+# phone numbers on its own.
+[auth.sms]
+enable_signup = false
+enable_confirmations = true
 
 [auth.mfa]
 max_enrolled_factors = 10

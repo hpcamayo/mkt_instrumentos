@@ -36,7 +36,7 @@ app's own pages make: the same route, database function or table call, signed in
 
 | Cases | What is checked |
 |---|---|
-| AUTH-002 | A second sign-up with a registered address creates no account and the form recognises it. Supabase answers it with an account that has no identities, or with the error `user_already_exists` when Auth confirms new addresses or phone numbers without a message (the local stack does so for phone numbers); both forms read either answer as an existing account (`signUpFoundExistingAccount`, `signUpErrorFoundExistingAccount`). |
+| AUTH-002 | A second sign-up with a registered address creates no account and the form recognises it. The stack confirms neither addresses nor phone numbers on its own, like production (read on 27 Oct 2026), so Supabase answers with an account that has no identities; where Auth confirms either on its own, it answers with the error `user_already_exists` instead. Both forms read either answer as an existing account (`signUpFoundExistingAccount`, `signUpErrorFoundExistingAccount`). |
 | AUTH-004, AUTH-013 | A used or invalid sign-up or reset link goes to `/login` with its message, sets no cookie, keeps an open session and leaves the password as it was. |
 | AUTH-005, AUTH-006 | Password sign-in reaches `/mi-cuenta`; a wrong password and an unknown address get the same 401 and no cookie. |
 | AUTH-008, AUTH-011 | A sign-in link or a reset for an unknown address creates no account; the reset answers alike for any address. |

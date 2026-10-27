@@ -15,7 +15,7 @@ const { createClient } = require("@supabase/supabase-js");
 const { enrollTwoStep } = require("./support/two-step.cjs");
 const { refreshPublicPages } = require("./support/page-refresh.cjs");
 const { visibleText, sentencesWith, GUARANTEE, CHECKOUT, PAID_PROMOTION, SHIPPING_WORKFLOW, CHAT_FEATURE, CHAT_LINK } = require("./support/page-text.cjs");
-const { signUpErrorFoundExistingAccount, signUpFoundExistingAccount } = require("@/lib/auth/email-check");
+const { signUpFoundExistingAccount } = require("@/lib/auth/email-check");
 const { getInstrumentTypeOptions } = require("@/lib/listing-submission");
 
 loadEnvFile(".env.local");
@@ -359,22 +359,23 @@ function digits(value) {
     const answer = await post("/api/auth/check-email", { email: seller.email.toUpperCase() }, { ip });
     assert.equal(answer.status, 200);
     assert.deepEqual(answer.body, { ok: true, available: false });
-    // The address check can be unavailable (A28); the form's sign-up then still recognises the account. Supabase answers
-    // with the account without identities, or, when Auth confirms addresses or phone numbers on its own, with the error
-    // user_already_exists; the form reads both as the duplicate.
+    // The address check can be unavailable (A28); the form's sign-up then still recognises the account. This Auth, like
+    // production's, confirms neither addresses nor phone numbers on its own, so Supabase answers with the account without
+    // identities. Where Auth confirms either on its own, it answers with the error user_already_exists instead, which the
+    // forms also read as the duplicate (tests/launch-audit-trust.test.cjs).
     const anon = createClient(url, anonKey, { auth: { persistSession: false } });
     const { data, error } = await anon.auth.signUp({
       email: seller.email,
       password: `Qa-${randomUUID()}`,
       options: { emailRedirectTo: `${base}/auth/callback?next=%2Fmi-cuenta`, data: { account_type: "seller", full_name: "QA Duplicado", marketplace_rules_accepted: true } },
     });
-    const recognised = error ? signUpErrorFoundExistingAccount(error) : signUpFoundExistingAccount(data.user, "seller");
-    assert.ok(recognised, `the form would not recognise the duplicate (${error ? `${error.code}: ${error.message}` : "a new account"})`);
+    assert.equal(error, null, `Supabase answered ${error?.code}, not as production does: this Auth confirms addresses or phone numbers on its own (scripts/acceptance/supabase-config.toml)`);
+    assert.ok(signUpFoundExistingAccount(data.user, "seller"), "the form would not recognise the duplicate");
     assert.equal(data.session, null, "the second sign-up opened a session");
     assert.equal((await usersWithEmail(seller.email)).length, 1);
     assert.equal((await service.from("profiles").select("full_name").eq("id", seller.id).single()).data.full_name, seller.name);
     assert.equal((await post("/api/auth/login", { email: seller.email, password: seller.password }, { ip })).status, 200, "the original password stopped working");
-    return `Supabase answered ${error ? error.code : "the account without identities"}; one account, name and password unchanged; the form says "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo."`;
+    return `Supabase answered with the account without identities, as production does; one account, name and password unchanged; the form says "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo."`;
   });
 
   await check("AUTH-004", "a used or invalid sign-up link goes to sign-in with a message, sets no session and leaves an open one alone", async () => {
