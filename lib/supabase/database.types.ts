@@ -1855,6 +1855,10 @@ export type Database = {
         Args: { p_since?: string }
         Returns: Json
       }
+      get_admin_app_errors: {
+        Args: { p_days?: number; p_source?: string }
+        Returns: Json
+      }
       get_admin_complaints_book_page: {
         Args: { p_page?: number; p_page_size?: number; p_status?: string }
         Returns: Json
@@ -1914,6 +1918,7 @@ export type Database = {
         Returns: Json
       }
       get_admin_review_queue: { Args: never; Returns: Json }
+      get_app_health: { Args: never; Returns: Json }
       get_eligible_transaction_buyers: {
         Args: { p_listing_id: string }
         Returns: Json
@@ -2207,6 +2212,18 @@ export type Database = {
       }
       publish_held_review: { Args: { p_review_id: string }; Returns: boolean }
       record_external_sale: { Args: { p_listing_id: string }; Returns: string }
+      record_app_error: {
+        Args: {
+          p_client?: string
+          p_digest?: string
+          p_kind: string
+          p_message: string
+          p_name: string
+          p_route: string
+          p_source: string
+        }
+        Returns: string
+      }
       record_marketplace_event: {
         Args: {
           p_actor_user_id?: string

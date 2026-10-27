@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteShell } from "@/components/site-shell";
 import "./globals.css";
+import { ErrorReporter } from "@/components/error-reporter";
 import { MarketplaceAccountProvider } from "@/components/marketplace-account-provider";
 import { NavigationFeedback } from "@/components/navigation-feedback";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
@@ -90,6 +91,8 @@ export default async function RootLayout({
           <NavigationFeedback />
         </Suspense>
         <ServiceWorkerRegistration />
+        {/* A13: browser errors no error page catches, counted for Admin > Errores. */}
+        <ErrorReporter />
       </body>
     </html>
   );

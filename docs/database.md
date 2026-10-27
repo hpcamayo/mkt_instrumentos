@@ -1222,6 +1222,67 @@ Migration `20261109120000_ux_effortless_integration.sql` (not applied to any hos
   one database session, as the Supabase CLI runs them.
 <!-- /ux-effortless:integration -->
 
+<!-- launch-audit:monitoring -->
+## Launch audit: error counts and health
+
+Migration `20261114170000_launch_audit_monitoring.sql` (launch audit A13; suite `tests/launch-audit-monitoring.sql`).
+New objects only, so it can be applied before the deploy.
+
+- `laria_private.app_errors`: one row per kind of error (`fingerprint`) and 10-minute `bucket`, with its `source`
+  (`server` or `browser`), `kind` (for the server the route type: `render`, `route`, `action` or `middleware`; for a
+  browser `error`, `unhandledrejection` or `boundary`), `route`, `name`, `message`, `client` (browser family),
+  `digest` (Next.js), `occurrences`, `first_at` and `last_at`. RLS on, no API access. The pg_cron job
+  `app-error-retention` (daily 09:50 UTC, `laria_private.run_app_error_retention()`) deletes buckets older than 30 days.
+- `public.record_app_error(source, kind, route, name, message, client, digest)`, service role only, called by
+  `instrumentation.ts` (server errors, under the route's file pattern) and `/api/client-errors` (browser errors, 30 per
+  visitor every 10 minutes). Before anything is stored:
+  - the route becomes one of the site's own patterns (`laria_private.app_error_route`, the list in
+    `laria_private.app_error_route_patterns()`: every page and route under `app/` on main and features/marketplace,
+    the metadata files and Next.js's own). A browser page's path is matched the way Next.js matches it, a fixed
+    segment before a `[param]` and a `[param]` before a `[...catch-all]`, so a store's or a listing's slug reads
+    `[slug]` or `[id]` even when it is spelled like a folder (`/tiendas/taller` reads `/tiendas/[slug]`). The server's
+    route file pattern is matched the same way without `(group)`, `@slot`, the final `page` or `route` and a metadata
+    image's suffix. A path no pattern matches keeps its first segment when that begins one of the patterns, then `/…`;
+    anything else reads `/…`. A new page or route goes in the list (a unit test checks it, and the suite checks every
+    pattern reads as itself);
+  - the name must be one of JavaScript's or the DOM's own, or on the server an app class ending in `Error` or
+    `Exception` (`laria_private.app_error_name`); anything else is `Error`;
+  - the message, from the server or a browser, is kept only as one of a fixed set (`laria_private.app_error_message`),
+    read as one line (NFKC, so fullwidth digits and letters read as plain ones; any kind of space, tab or line break
+    as one space; without `Uncaught `, an error name in front, or a database code a browser added at the end, `…
+    (PGRST301)`):
+    - one of the site's own messages as written (`laria_private.app_error_own_messages()`, about 800: the codes and
+      messages its database functions raise and the messages its code throws, on main, the launch audit's branches
+      and features/marketplace at 7f88917);
+    - one of those followed by `:` (`EMAIL_CLAIM_FAILED: …`, `AUTH_REQUIRED: Inicia sesión…`), kept as that part,
+      then `: ` and the rest only when the rest is itself one of the site's own or a known message, otherwise `…`;
+    - a known message (`laria_private.app_error_known_message`, the list in `laria_private.app_error_messages()`:
+      about 140 messages of browsers, JavaScript engines, React, Next.js, Node, Postgres, PostgREST, Supabase and
+      Resend), tried in order, each replacing the whole line with its own wording and `…` for any value (`Cannot read
+      properties of undefined (reading '…')`, `duplicate key value violates unique constraint "…"`); `\1` and `\2`
+      bring back only a word from the pattern's own fixed list. A React error keeps its number only when it is one of
+      React's own codes (those of the builds Next.js 15.5 ships), otherwise `Minified React error #…`;
+    - anything else reads `Otro mensaje (no se guarda el texto)`, so nothing a visitor, a database value, an extension
+      or a made-up report writes is kept. A message the site adds later reads that way too until a migration adds it
+      to the list; the server's full message stays in Vercel's runtime logs, found by the route, the time and the
+      digest. The suite checks that every own and known message reads back as itself;
+  - the client must be one of `browserFamily`'s labels or `Otro`, and only the server's digest is kept.
+  No account, IP address or stack is ever passed. Only an aal2 Admin reads the counts, and they go after 30 days. A
+  browser error's route is kept (the latest seen) but is not part of its fingerprint, and since a message is one of a
+  fixed set, a value never splits a kind. At most 25 kinds per
+  source in a bucket: a new kind takes a transaction advisory lock on its source and bucket before counting the kinds
+  there, so kinds reported together are admitted one at a time; the rest are counted under `overflow-server` or
+  `overflow-browser`.
+- `public.get_admin_app_errors(p_days 1..30, p_source)`: `assert_admin()` (aal2); the period's kinds grouped by
+  fingerprint, newest first, at most 200 (`/admin/errores`).
+- `public.get_app_health()`, service role only: `{"server_errors": n}` for this bucket and the one before.
+  `/api/health` answers 503 `{"status":"degraded","reason":"database"}` when the call fails or takes over 3 seconds,
+  503 with `"reason":"errors"` from 20 errors, and otherwise 200 `{"status":"ok"}`; the uptime workflow
+  (`.github/workflows/uptime.yml`) reads it every 10 minutes.
+
+Rollback: `select cron.unschedule('app-error-retention');`, then drop the eleven functions and the table.
+<!-- /launch-audit:monitoring -->
+
 <!-- launch-audit:security -->
 ## Launch audit: security fixes
 
