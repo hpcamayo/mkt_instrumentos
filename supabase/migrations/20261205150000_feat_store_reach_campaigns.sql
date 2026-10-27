@@ -134,6 +134,7 @@ comment on table public.laria_campaign_entries is
 create unique index laria_campaign_entries_active_idx on public.laria_campaign_entries (listing_id) where status in ('scheduled', 'live');
 create index laria_campaign_entries_campaign_idx on public.laria_campaign_entries (campaign_id, status, applied_at desc);
 create index laria_campaign_entries_store_idx on public.laria_campaign_entries (store_id, created_at desc);
+create index if not exists laria_campaign_entries_listing_id_idx on public.laria_campaign_entries (listing_id);
 
 alter table public.laria_campaigns enable row level security;
 alter table public.laria_campaign_entries enable row level security;

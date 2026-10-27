@@ -49,8 +49,8 @@ create unique index store_locations_primary_idx on public.store_locations(store_
   where is_primary and archived_at is null;
 create unique index store_locations_name_idx on public.store_locations(store_id, lower(btrim(name)))
   where archived_at is null;
-create index store_locations_store_idx on public.store_locations(store_id, position, created_at)
-  where archived_at is null;
+-- No condition, so that it also serves the key to stores (a store's archived sedes are few).
+create index store_locations_store_idx on public.store_locations(store_id, position, created_at);
 
 create trigger store_locations_set_updated_at
 before update on public.store_locations

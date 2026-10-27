@@ -62,6 +62,7 @@ comment on table public.store_dealer_authorizations is
 create unique index store_dealer_authorizations_open_idx on public.store_dealer_authorizations (store_id, brand_key)
   where status in ('awaiting_document', 'pending', 'approved');
 create index store_dealer_authorizations_review_idx on public.store_dealer_authorizations (status, submitted_at);
+create index if not exists store_dealer_authorizations_store_id_idx on public.store_dealer_authorizations (store_id);
 create index store_dealer_authorizations_brand_idx on public.store_dealer_authorizations (brand_key) where status = 'approved';
 
 alter table public.store_dealer_authorizations enable row level security;

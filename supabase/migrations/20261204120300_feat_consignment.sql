@@ -27,6 +27,7 @@ create table public.listing_consignments (
 create unique index listing_consignments_open_idx on public.listing_consignments(listing_id) where status in ('invited', 'active');
 create index listing_consignments_owner_idx on public.listing_consignments(owner_user_id, created_at desc) where owner_user_id is not null;
 create index listing_consignments_store_idx on public.listing_consignments(store_id, created_at desc);
+create index if not exists listing_consignments_listing_id_idx on public.listing_consignments (listing_id);
 
 create trigger listing_consignments_set_updated_at
 before update on public.listing_consignments

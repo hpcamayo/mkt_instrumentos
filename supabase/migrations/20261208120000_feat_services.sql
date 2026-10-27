@@ -244,6 +244,7 @@ create unique index service_bookings_open_idx on public.service_bookings(service
   where status in ('pending', 'confirmed');
 create index service_bookings_provider_idx on public.service_bookings(provider_user_id, created_at desc);
 create index service_bookings_client_idx on public.service_bookings(client_user_id, created_at desc);
+create index if not exists service_bookings_service_id_idx on public.service_bookings (service_id);
 
 alter table public.service_bookings enable row level security;
 revoke all on public.service_bookings from anon, authenticated;
@@ -316,6 +317,7 @@ create unique index service_reports_open_service_idx on public.service_reports(r
 create unique index service_reports_open_review_idx on public.service_reports(reporter_user_id, review_id)
   where status = 'open' and target_type = 'service_review';
 create index service_reports_status_idx on public.service_reports(status, created_at);
+create index if not exists service_reports_reporter_user_id_idx on public.service_reports (reporter_user_id);
 
 alter table public.service_reports enable row level security;
 revoke all on public.service_reports from anon, authenticated;
