@@ -47,6 +47,8 @@ export type TransactionReview = {
   comment: string | null;
   submitted_at: string;
   reviewer_name?: string | null;
+  // Launch audit A17: set while Laria's team reviews it before it shows (the viewer's own review only).
+  held_at?: string | null;
 };
 
 export type TransactionDetail = {
@@ -68,6 +70,8 @@ export type TransactionDetail = {
   review_window_open: boolean;
   own_review: TransactionReview | null;
   visible_reviews: TransactionReview[];
+  // The other side's review waits for Laria's team; true only once reviews would otherwise show (launch audit A17).
+  counterpart_review_held?: boolean;
   // The seller's count of verified sales (this one included); only for role "seller", null for buyers.
   seller_verified_sales?: number | null;
 };
@@ -110,6 +114,7 @@ export function parseTransactionDetail(value: unknown): TransactionDetail | null
     || !(value.own_review === null || isReview(value.own_review))
     || !Array.isArray(value.visible_reviews)
     || !value.visible_reviews.every(isReview)
+    || !(value.counterpart_review_held === undefined || typeof value.counterpart_review_held === "boolean")
     || !(value.seller_verified_sales === undefined || value.seller_verified_sales === null || isCount(value.seller_verified_sales))) return null;
   return value as unknown as TransactionDetail;
 }
@@ -227,7 +232,8 @@ function isReview(value: unknown): value is TransactionReview {
     && Number(value.rating) >= 1
     && Number(value.rating) <= 5
     && nullableString(value.comment)
-    && isDate(value.submitted_at);
+    && isDate(value.submitted_at)
+    && (value.held_at === undefined || nullableDate(value.held_at));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
