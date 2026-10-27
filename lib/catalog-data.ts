@@ -23,6 +23,9 @@ export const filtersFromKey = (value: string) => parseListingFilters(Object.from
 
 // One breaker for every optional per-filter read: three failures within ten seconds pause them all for thirty.
 const optionalBreaker = createBreaker({ failures: 3, windowMs: 10_000, openMs: 30_000 });
+// One empty search asks up to eight rescue counts at once; they get their own breaker so a single slow search cannot
+// count as three failures and pause every visitor's facets.
+const rescueCountBreaker = createBreaker({ failures: 3, windowMs: 10_000, openMs: 30_000 });
 
 const facets = sharedAggregate<[string], CatalogFacetData>({
   key: "catalog-facets-v2",
@@ -78,7 +81,7 @@ const rescueCounts = sharedAggregate<[string], number>({
   persist: false,
   maxEntries: 500,
   loadBudgetMs: READ_BUDGETS.optionalMs,
-  breaker: optionalBreaker,
+  breaker: rescueCountBreaker,
   async load(deadline: Deadline, value: string) {
     const supabase = createPublicReadClient(deadline, READ_BUDGETS.optionalMs);
     if (!supabase) throw new Error("Supabase is not configured");
@@ -149,5 +152,6 @@ export function resetCatalogDataForTests() {
   rescues.reset();
   rescueCounts.reset();
   optionalBreaker.reset();
+  rescueCountBreaker.reset();
 }
 

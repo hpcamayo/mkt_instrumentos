@@ -14,7 +14,12 @@ const NETWORK = "No pudimos conectar con Laria. Revisa tu conexión y vuelve a i
 export const PHOTO_BUCKET = "listing-photos";
 export const SOUND_BUCKET = "listing-sound-clips";
 
+// A refusal: nothing was written, so the seller may change the data and send again.
 export class SubmissionRejected extends Error {}
+// Launch audit A35: the submission's token expired, or predates expiring tokens; renewSubmission gets a fresh one.
+export class SubmissionExpired extends SubmissionRejected {}
+// The token can't be renewed either, so the photos in the submission's folder can't be confirmed: they go in again.
+export class SubmissionLost extends SubmissionRejected {}
 
 export async function submissionRequest<T = Record<string, unknown>>(payload: object): Promise<T> {
   let response: Response;
@@ -24,7 +29,10 @@ export async function submissionRequest<T = Record<string, unknown>>(payload: ob
     throw new Error(NETWORK);
   }
   const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new (result.rejected === true ? SubmissionRejected : Error)(result.message ?? "No se pudo completar el envío. Intenta nuevamente.");
+  if (!response.ok) {
+    const refusal = result.rejected !== true ? Error : result.renew === true ? SubmissionExpired : result.restart === true ? SubmissionLost : SubmissionRejected;
+    throw new refusal(result.message ?? "No se pudo completar el envío. Intenta nuevamente.");
+  }
   return result as T;
 }
 
@@ -34,6 +42,11 @@ export function startSubmission(kind: UploadKind) {
 
 export function resumeDraftSubmission(draftId: string) {
   return submissionRequest<Capability>({ action: "resume", draft_id: draftId });
+}
+
+// A fresh token for the same submission (same id and folder), for its owner only.
+export function renewSubmission(token: string) {
+  return submissionRequest<Capability>({ action: "renew", token });
 }
 
 export function publicUrl(bucket: string, path: string) {

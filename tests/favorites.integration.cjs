@@ -75,7 +75,7 @@ async function edit(actor,item,price,extra={}){return await ok(await actor.clien
  await ok(await owner.client.rpc('set_owned_listing_lifecycle',{p_listing_id:live.id,p_action:'restore'}));await ok(await owner.client.rpc('set_owned_listing_lifecycle',{p_listing_id:live.id,p_action:'sold'}));
  const sold=await ok(await buyer.client.rpc('get_account_favorites',{}));assert.equal(sold.items.find(row=>row.listing_id===live.id).availability,'sold');
  if(process.env.LARIA_FAVORITES_BROWSER==='1')await require('./favorites-browser-smoke.cjs').history({base,buyer,live,availability:'sold'});
- const copied=await ok(await owner.client.rpc('relist_sold_listing',{p_listing_id:live.id}));const copyId=typeof copied==='object'?copied.id:copied;listingIds.push(copyId);
+ const copied=await ok(await owner.client.rpc('copy_owned_listing',{p_listing_id:live.id,p_mode:'relist'}));const copyId=typeof copied==='object'?copied.id:copied;listingIds.push(copyId);
  assert.equal((await ok(await service.from('favorites').select('*').eq('listing_id',copyId))).length,0);
  console.log('PASS FAV-001–010; PDA-001–008 in-app only; RLS/current-state/actions/fan-out/retries/history/relist/destinations; no email claim.');
 }finally{

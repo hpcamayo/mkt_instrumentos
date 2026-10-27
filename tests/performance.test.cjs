@@ -91,6 +91,20 @@ test("authentication redirects reject external and protocol-relative targets", (
   assert.equal(getSafeAuthRedirect("https://evil.example"), "/mi-cuenta");
   assert.equal(getSafeAuthRedirect("//evil.example/path"), "/mi-cuenta");
   assert.equal(getSafeAuthRedirect("/vender"), "/vender");
+  // Launch audit A08: browsers drop tabs and newlines, so these would become //evil.example.
+  for (const value of ["/\t/evil.example", "/\n/evil.example", "/\r\n/evil.example", "/\u0000/evil.example", "/\\evil.example", "/\t\\evil.example"]) {
+    assert.equal(getSafeAuthRedirect(value), "/mi-cuenta", JSON.stringify(value));
+  }
+  // The decoded form of /%09/evil.example is refused above; the encoded form stays a path on Laria.
+  assert.equal(getSafeAuthRedirect(new URLSearchParams("next=/%09/evil.example").get("next")), "/mi-cuenta");
+  assert.equal(getSafeAuthRedirect("/%09/evil.example"), "/%09/evil.example");
+  // Dot segments that would resolve to a protocol-relative path.
+  assert.equal(getSafeAuthRedirect("/a/../..//evil.example"), "/mi-cuenta");
+  assert.equal(getSafeAuthRedirect("/./"), "/");
+  assert.equal(getSafeAuthRedirect("/listados?brand=Fender#fotos"), "/listados?brand=Fender#fotos");
+  assert.equal(getSafeAuthRedirect(""), "/mi-cuenta");
+  assert.equal(getSafeAuthRedirect(null), "/mi-cuenta");
+  assert.equal(getLoginPath("/\t/evil.example"), "/login?next=%2Fmi-cuenta");
 });
 
 test("auth callbacks support server-verifiable email flows and safe destinations", () => {

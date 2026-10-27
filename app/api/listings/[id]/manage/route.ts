@@ -13,7 +13,7 @@ import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import type { Json } from "@/lib/supabase/database.types";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
-import { createListingEditToken, readListingEditToken } from "@/lib/submission-token";
+import { createListingEditToken, readListingEditToken, submissionTokenSecret } from "@/lib/submission-token";
 import { cleanupListingEditUploads } from "@/lib/listing-photo-cleanup";
 import { listingLimitMessage } from "@/lib/store-allowance";
 
@@ -52,7 +52,7 @@ export async function POST(request: Request, { params }: RouteContext) {
 
   if (body.action === "start_edit") {
     if (["sold", "archived"].includes(listing.status)) return rpcFailure("SOLD_LISTING_IMMUTABLE");
-    const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const secret = submissionTokenSecret();
     if (!secret) return failure("No se pudieron preparar las fotos.", 503);
     const capability = createListingEditToken(id, userData.user.id, secret);
     return NextResponse.json({ ...capability, folder: `${userData.user.id}/listing-edits/${id}/${capability.attemptId}`, bucket: "listing-edit-photos" });
@@ -122,9 +122,10 @@ export async function POST(request: Request, { params }: RouteContext) {
   }
 
   if (body.action !== "edit") return failure("Acción no compatible.");
-  const attemptId = body.token === undefined ? undefined : typeof body.token === "string"
-    ? readListingEditToken(body.token, id, userData.user.id, process.env.SUPABASE_SERVICE_ROLE_KEY ?? "") : null;
-  if (attemptId === null) return failure("La autorización de edición no es válida.", 403);
+  const editSecret = submissionTokenSecret();
+  const attemptId = body.token === undefined ? undefined : typeof body.token === "string" && editSecret
+    ? readListingEditToken(body.token, id, userData.user.id, editSecret) : null;
+  if (attemptId === null) return failure("La edición venció o no es válida. Vuelve a abrir la publicación para editarla.", 403);
 
   const { data: pendingRevision, error: pendingRevisionError } = await supabase
     .from("listing_revisions")

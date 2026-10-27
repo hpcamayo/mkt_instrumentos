@@ -236,8 +236,8 @@ export function parseListingFilters(
   return readListingFilters(searchParams).filters;
 }
 
-// True when the address carries a filter value the catalog does not offer (an unknown option, category or type,
-// an overlong value, a free-text value with "="). Those values are dropped; /listados redirects to the cleaned
+// True when the address carries a filter value the catalog does not offer (an unknown option, category, type, sort or
+// seller type, a price that is not a number, an overlong value, a free-text value with "="). Those values are dropped; /listados redirects to the cleaned
 // address so a malformed link (some crawlers mangle "&microphone_type" into "µphone_type") cannot seed endless new URLs.
 export function hasRejectedFilterValues(searchParams: Record<string, string | string[] | undefined>) {
   return readListingFilters(searchParams).rejected;
@@ -269,16 +269,19 @@ function readListingFilters(
     return first;
   };
 
+  // A blank price is a form left empty. "1,500" or "S/ 1500" (typed into the no-JavaScript form) reads as 1500 and
+  // is reported, so the redirect writes it the way our links do; anything else is dropped and reported.
   const readNumber = (key: string) => {
-    const value = readString(key);
+    const value = readString(key)?.trim();
     if (!value) {
       return undefined;
     }
 
     const numberValue = Number(value);
-    return Number.isFinite(numberValue) && numberValue >= 0
-      ? numberValue
-      : undefined;
+    if (Number.isFinite(numberValue) && numberValue >= 0) return numberValue;
+    rejected = true;
+    const digits = value.replace(/^S\/\s*/i, "").replace(/[\s,]/g, "");
+    return /^\d+(\.\d+)?$/.test(digits) ? Number(digits) : undefined;
   };
 
   // Repeated parameters, in URL order, without blanks or repeats (capped: they become an `in` list).
@@ -290,8 +293,9 @@ function readListingFilters(
     return [...new Set(bounded)].slice(0, MAX_FILTER_VALUES);
   };
 
-  const sellerType = readString("seller_type");
-  const sort = readString("sort");
+  // Blank means "any" (the form's first option); a value we do not offer is dropped and reported.
+  const sellerType = accept(readString("seller_type"), (value) => sellerTypeOptions.some((option) => option.value === value));
+  const sort = accept(readString("sort"), (value) => sortOptions.some((option) => option.value === value));
   const freeTextList = (key: string) => {
     const items = readList(key);
     const kept = items.filter(isFreeTextValue);
@@ -323,18 +327,13 @@ function readListingFilters(
     // sell-10: an old condition in a link reads as its part of the new scale.
     conditions: expandConditionSearch(acceptedConditions),
     brand: brand || undefined,
-    sellerType:
-      sellerType === "individual" ||
-      sellerType === "store" ||
-      sellerType === "verified_store"
-        ? sellerType
-        : undefined,
+    sellerType: (sellerType || undefined) as ListingFilters["sellerType"],
     instrumentType: instrumentType || undefined,
     minPrice: readNumber("min_price"),
     maxPrice: readNumber("max_price"),
     advanced,
     options: parseListingOptions(optionValues),
-    sort: sortOptions.some((option) => option.value === sort) ? (sort as ListingSort) : "newest",
+    sort: (sort || "newest") as ListingSort,
   };
   return { filters, rejected };
 }

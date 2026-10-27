@@ -103,11 +103,13 @@ Actual columns represented in current code/types:
 - `tiktok_url text`
 - `website_url text`
 - `rejection_reason text`
+- `verification_lapsed_at timestamptz` and `verification_lapsed_from jsonb` (launch audit A09; private, no column grant)
 - `created_at timestamptz not null default now()`
 - `updated_at timestamptz not null default now()`
 
 Current behavior:
-- Store applications require an authenticated `profiles.account_type='store_owner'`, bind `owner_user_id` server-side, and insert `status='pending'` with `listing_plan='free'`.
+- Store applications require an authenticated `profiles.account_type='store_owner'`, bind `owner_user_id` server-side, and insert `status='pending'` with `listing_plan='free'`. Only `complete_public_submission` creates stores: `anon` and `authenticated` have no INSERT on `stores` (launch audit A06).
+- `created_at` and `slug` are read-only outside the controlled functions. When the owner of a verified Tienda changes its name, RUC or razón social (compared after trimming, collapsing spaces and ignoring case; RUC digits only), the store stays active but `is_verified` turns false, `verification_lapsed_at` records when and `verification_lapsed_from` the verified values, and the store waits in Admin's "Verificación" queue. `set_store_verification` clears both fields either way; Admin's own edits keep the badge (launch audit A09).
 - A partial unique index permits only one nonlegacy store per owner. Another unique index enforces normalized 11-digit RUC values.
 - Public store pages only read `status='active'`; public listing/photo RLS also requires an active parent store.
 - Basic approval produces `Tienda`. The admin-only verification RPC produces `Tienda Verificada` and atomically approves valid pending inventory.
@@ -375,10 +377,11 @@ Account policies:
 - Users can read and update their own profile; admins can read and update all profiles.
 - Authenticated users can insert their own profile with `account_type='seller'` or `account_type='store_owner'`.
 - Store owners/members can read their own stores and memberships.
-- Store Owner accounts can insert one pending owner-bound store application.
+- Store Owner accounts submit one pending owner-bound store application through `complete_public_submission`; there is no direct INSERT policy or grant on `stores` (A06).
 - Store owners can update allowed store profile/business/contact fields and optional store photos. Protected authority fields are writable only through controlled review RPCs.
 - Listing owners and store members can read their own manageable listings. Lifecycle and edit mutations use owner-scoped RPCs; triggers block direct changes to protected authority fields and make sold rows immutable.
-- The owner of a pending or active store can insert pending store inventory. Server publication logic distinguishes normal Tienda from Tienda Verificada.
+- Listings are created only by the submission, copy and import functions (security definer); `anon` and `authenticated` have no INSERT on `listings` (A12). Server publication logic distinguishes normal Tienda from Tienda Verificada.
+- Logo, banner and store photo addresses written through the API must point at the caller's own folder for that store in this project's `store-assets` bucket (`stores_guard_image_urls`, `store_photos_guard_image_url`, A32).
 - Authenticated owners cannot mutate listing or live-photo rows directly; validated owner-scoped RPCs apply nonpublic/verified-store edits or stage approved Particular/normal-Tienda photo changes on a revision.
 - Listing-photo objects are append-only from the browser beneath the authenticated owner folder; update/delete policies are removed so a historical object cannot be replaced or destroyed. Trusted server cleanup still removes failed-attempt uploads.
 - Public users may read a profile only when it belongs to an approved account-owned Particular listing; this supports dynamic seller display without exposing unrelated profiles.
@@ -398,7 +401,7 @@ Admin policies:
 - Used by RLS policies for admin reads/updates.
 
 `public.listing_has_status(listing_id, expected_status)`:
-- Security definer helper used by photo RLS; approved store inventory also requires an active parent store.
+- Security definer helper used by photo RLS; approved store inventory also requires an active parent store. Callers can't execute it directly (A31).
 
 `public.listing_is_public(listing_id)`:
 - Central public predicate: approved Particular inventory, or approved store inventory whose parent store is active.
@@ -413,7 +416,7 @@ Admin policies:
 - Authenticated owner reports default to `auth.uid()`; only an admin may request another owner's aggregate. Global reports require admin authority. Supported periods are all recorded history (`0`), `7`, and `30` days; raw event/buyer directories remain inaccessible.
 
 `public.is_store_member(store_id)`, `public.is_store_owner(store_id)`, and `public.is_approved_store_member(store_id)`:
-- Security-definer helpers for account and store membership RLS.
+- Security-definer helpers for account and store membership RLS. `is_approved_store_member` is no longer executable by callers (A31).
 
 `public.can_manage_listing(listing_id)`:
 - Security-definer helper that allows admins, listing owners, and store members to manage a listing.
@@ -428,6 +431,7 @@ Admin policies:
 - For `store_listing`, requires the owner-bound pending/active store, enforces 2–10 photos, and directly approves only when the store is active and verified.
 
 `public.submit_listing_for_publication(listing_id)`:
+- Requires a session: `anon` can't execute it, and a caller without `auth.uid()` is refused, so nobody can push an ownerless legacy listing back into review (A21).
 - A valid Particular draft/rejected submission can only move to or remain `pending`; the owner cannot self-approve through this RPC.
 - Store inventory remains pending for pending/normal stores and may become approved directly only for an active Tienda Verificada.
 - Status transitions into `approved` are guarded by the shared publication requirements.
@@ -458,6 +462,7 @@ Admin policies:
 
 `public.relist_sold_listing(listing_id)`:
 - Creates a new linked copy and copies the live photo references without mutating the sold source. Particular/normal-Tienda copies return to moderation; an eligible verified-store copy can publish directly.
+- Retired: callers lost EXECUTE in launch audit A31 (it appended "-republicado-xxxx" to slugs). The app relists with `copy_owned_listing(listing_id, 'relist')` followed by `submit_listing_for_publication`.
 
 `public.review_listing(listing_id, decision, reason)` and `public.review_listing_revision(revision_id, decision, expected_version, reason)`:
 - Admin-only, row-locked moderation. Listing reject/hide and revision reject require a reason. Revision approval applies only proposed fields and an optional staged photo set in one transaction, preserving unrelated immediate edits and any current owner-hidden state. The expected version must match the locked pending row, so a stale admin screen cannot resolve an owner-amended proposal.
@@ -468,7 +473,7 @@ Admin policies:
 - Public bucket.
 - Max file size: 5 MB.
 - Allowed MIME types: JPEG, PNG, WebP.
-- Public select policy for approved listing images; anonymous insert is removed.
+- No public select policy since launch audit A10: files are served by public URL without one, and listing the bucket is not possible. The signed-in owner can read objects in their own top-level folder; anonymous insert is removed.
 - Particular submissions upload through authenticated owner paths `{auth.uid()}/{submissionId}/{sortOrder}.{ext}`.
 - New edit staging in this public bucket is denied. Existing public/legacy edit URLs already attached to live/pending records remain compatible and are not relocated by the migration.
 - Signed completion and cleanup remain server-controlled and service-role credentials never reach the browser.
@@ -485,7 +490,7 @@ Admin policies:
 - Public bucket.
 - Max file size: 5 MB.
 - Allowed MIME types: JPEG, PNG, WebP.
-- Public select policy; anonymous insert is removed.
+- No public select policy since launch audit A10 (files are served by public URL); the signed-in owner can read their own top-level folder; anonymous insert is removed.
 - Store applications and profile edits upload optional logo, banner, and physical-store photos under `{auth.uid()}/{submissionOrStoreId}/...`.
 - Authenticated Store Owners can upload/update/delete only beneath their own top-level folder.
 
@@ -856,7 +861,8 @@ Local only; never applied to a hosted database. SQL suite: `tests/ux-my-listings
   listing's contact from the store (`lib/seller-contact.ts` `resolveContactPhone`). Suite: `tests/ux-listing-contact.sql`.
 - `20261102120500_ux_listing_registry.sql`: `laria_private.ux_extend_text_check(table, constraint, column, values[])`
   adds allowed values to an `= any (array[...])` check in place, idempotently and in any order with other batches (any
-  batch may reuse it). Adds notification types `listing_back_in_stock`, `listing_question_asked`,
+  batch may reuse it). Since `20261112120000_launch_audit_security.sql` it re-adds the check `NOT VALID`: the list only
+  grows, so validating would scan the table under an exclusive lock to find nothing, and new rows are checked anyway. Adds notification types `listing_back_in_stock`, `listing_question_asked`,
   `listing_question_answered` and e-mail types `listing_back_in_stock`, `listing_question_asked`.
 - `20261102140000_ux_listing_page.sql`:
   - `listings.content_changed_at`, `price_changed_at`, `previous_price_pen`, `price_dropped_at` (check
@@ -1707,3 +1713,36 @@ function is redefined.
   row lock, replays per sale), `request_store_receipt_void(uuid, text)` (7 days),
   `record_store_receipt_result(uuid, jsonb)` (service_role only; never downgrades accepted or voided).
 <!-- /feature-ideas:store-locations -->
+
+<!-- launch-audit:security -->
+## Launch audit: security fixes
+
+Migration `20261112120000_launch_audit_security.sql` (findings A06, A09, A10, A12, A21, A31, A32 of the 26 Oct 2026
+launch audit). Suite: `tests/launch-audit-security.sql`. The application before and after it works with it, so it can
+be applied before the deploy.
+
+- A06/A12: the direct INSERT policies on `stores` and `listings` are dropped and `anon`/`authenticated` lose INSERT on
+  both tables. Rows come only from `complete_public_submission`, `copy_owned_listing`, the import functions and
+  `laria_private.insert_store_listing`, all security definer.
+- A09: `protect_store_admin_fields` keeps `created_at` and `slug` and the two lapse fields; `protect_profile_admin_fields`
+  keeps `created_at`. An identity change on a verified store lifts the badge as described under `public.stores`;
+  `get_admin_moderation_counts` and `get_admin_moderation_queue('verificacion')` count and list active, unverified
+  stores with a lapse (`reason = 'store_identity_changed'`, `previous_identity` from `verification_lapsed_from`).
+  The trigger `launch_audit_store_verification_lapsed` (`laria_private.notify_store_verification_lapsed()`, security
+  definer, after update when `verification_lapsed_at` goes from null to a time) gives the owner an in-app notification
+  of the new type `store_verification_lapsed` (added with `ux_extend_text_check`; no e-mail). `set_store_verification
+  (..., false)` sends `store_verification_revoked` when the store was verified or waiting with a lapse.
+- A10: the public SELECT policies on `listing-photos` and `store-assets` give way to owner-folder SELECT policies for
+  `authenticated`.
+- A21: `submit_listing_for_publication` requires `auth.uid()` and is executable only by `authenticated`.
+- A31: EXECUTE revoked from callers on `relist_sold_listing`, `can_add_listing_photo`, `can_remove_listing_photo`,
+  `listing_has_status` and `is_approved_store_member`; `anon` also loses `get_admin_review_queue`.
+- A32: `laria_private.guard_store_image_urls()` checks API writes (`current_user` is `anon` or `authenticated`) of
+  `stores.logo_url`, `stores.banner_url` and `store_photos.image_url`: the address must be
+  `{project}/storage/v1/object/public/store-assets/{auth.uid()}/{store id}/{file}`, where `{project}` is the origin of
+  the session's issuer (`iss` is `{project}/auth/v1`) and the file name starts with a letter or digit. A session
+  without an issuer matches nothing. Unchanged values and the security definer functions are not checked. Error
+  `STORE_IMAGE_URL_INVALID`.
+- Locks: nothing scans a table (the `notifications` check is re-added `NOT VALID`), and the migration sets
+  `lock_timeout = '10s'`, so behind a long-running query it fails and can be run again instead of queueing traffic.
+<!-- /launch-audit:security -->

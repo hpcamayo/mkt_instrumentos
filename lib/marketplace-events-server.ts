@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import { isUuid, searchEventMetadata, type EventSource } from "@/lib/marketplace-event-payload";
+import { isSameOriginRequest } from "@/lib/same-origin";
 import type { ListingFilters } from "@/lib/listings";
 import type { Json } from "@/lib/supabase/database.types";
 
@@ -24,8 +25,7 @@ function readSigned(domain: string, token: string) {
   } catch { return null; }
 }
 export function sameOriginEventRequest(request: Request) {
-  const origin = request.headers.get("origin");
-  return request.headers.get("sec-fetch-site") !== "cross-site" && (!origin || origin === new URL(request.url).origin);
+  return isSameOriginRequest(request);
 }
 export async function getMarketplaceSession() {
   const jar = await cookies();

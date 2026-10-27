@@ -16,6 +16,8 @@ const path = require("node:path");
 const { Client } = require("pg");
 
 const PORT = Number(process.env.GATEWAY_PORT || 54321);
+// Like Supabase Auth, sessions name the project address as their issuer (store image checks read it, launch audit A32).
+const ISSUER = `${process.env.GATEWAY_PUBLIC_URL || `http://127.0.0.1:${PORT}`}/auth/v1`;
 const POSTGREST = new URL(process.env.POSTGREST_URL || "http://127.0.0.1:3001");
 const PGURL = process.env.PGURL || "postgres://postgres@127.0.0.1:54322/postgres";
 const SECRET = process.env.JWT_SECRET || "super-secret-jwt-token-with-at-least-32-characters-long";
@@ -83,7 +85,7 @@ async function factorsOf(userId) {
 async function session(u, sid = crypto.randomUUID(), aal = "aal1") {
   const now = Math.floor(Date.now() / 1000);
   const access = sign({
-    aud: "authenticated", exp: now + TTL, iat: now, sub: u.id, email: u.email, role: "authenticated",
+    iss: ISSUER, aud: "authenticated", exp: now + TTL, iat: now, sub: u.id, email: u.email, role: "authenticated",
     app_metadata: { provider: "email", ...(u.raw_app_meta_data || {}) }, user_metadata: u.raw_user_meta_data || {},
     session_id: sid, aal, amr: [{ method: "password", timestamp: now }, ...(aal === "aal2" ? [{ method: "totp", timestamp: now }] : [])],
   });

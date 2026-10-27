@@ -58,7 +58,8 @@ begin
     raise exception 'LIST-013 initial 1200 price was not exact';
   end if;
 
-  result := to_jsonb(public.relist_sold_listing('53000000-0000-4000-8000-000000000004'));
+  -- The app's relist (launch audit A31 retired relist_sold_listing).
+  result := to_jsonb(public.copy_owned_listing('53000000-0000-4000-8000-000000000004', 'relist'));
   if result->>'title' <> 'Título canónico para republicar' then
     raise exception 'Relist did not preserve the canonical title';
   end if;

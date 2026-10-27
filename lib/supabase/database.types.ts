@@ -1321,6 +1321,8 @@ export type Database = {
           status: Database["public"]["Enums"]["store_status"]
           tiktok_url: string | null
           updated_at: string
+          verification_lapsed_at: string | null
+          verification_lapsed_from: Json | null
           website_url: string | null
           whatsapp_phone: string
         }
@@ -1354,6 +1356,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["store_status"]
           tiktok_url?: string | null
           updated_at?: string
+          verification_lapsed_at?: string | null
+          verification_lapsed_from?: Json | null
           website_url?: string | null
           whatsapp_phone: string
         }
@@ -1387,6 +1391,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["store_status"]
           tiktok_url?: string | null
           updated_at?: string
+          verification_lapsed_at?: string | null
+          verification_lapsed_from?: Json | null
           website_url?: string | null
           whatsapp_phone?: string
         }

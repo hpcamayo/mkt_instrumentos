@@ -472,13 +472,22 @@ function QueueActions({
     );
   }
   if (queue === "verificacion") {
+    // A09: the owner changed what Laria had verified; Admin checks the new data or leaves the store unverified.
     return (
-      <AdminMutationControl
-        mutation={{ kind: "verification", id, verified: true }}
-        label="Verificar tienda"
-        confirmationText={verificationConfirmation(true)}
-        onComplete={onComplete}
-      />
+      <div className="flex flex-wrap gap-2">
+        <AdminMutationControl
+          mutation={{ kind: "verification", id, verified: true }}
+          label="Verificar tienda"
+          confirmationText={verificationConfirmation(true)}
+          onComplete={onComplete}
+        />
+        <AdminMutationControl
+          mutation={{ kind: "verification", id, verified: false }}
+          label="Dejar sin verificar"
+          confirmationText="La tienda sigue activa sin la marca de Tienda verificada y sus publicaciones nuevas siguen pasando por revisión."
+          onComplete={onComplete}
+        />
+      </div>
     );
   }
   if (queue === "reportes") {
@@ -656,6 +665,7 @@ function QueueItem({
         {adminNumber(item, "photo_count") ? <p><strong>Fotos:</strong> {adminNumber(item, "photo_count")}</p> : null}
         {adminNumber(item, "pending_inventory_count") ? <p><strong>Inventario pendiente:</strong> {adminNumber(item, "pending_inventory_count")}</p> : null}
         {adminString(item, "razon_social") ? <p><strong>Razón social:</strong> {adminString(item, "razon_social")}</p> : null}
+        <PreviousIdentity item={item} />
         {adminString(item, "email") ? <p><strong>Correo comercial:</strong> {adminString(item, "email")}</p> : null}
         {adminString(item, "whatsapp_phone") ? <p><strong>Teléfono:</strong> {adminString(item, "whatsapp_phone")}</p> : null}
         {adminString(item, "address") ? <p><strong>Dirección:</strong> {adminString(item, "address")}</p> : null}
@@ -678,6 +688,18 @@ function QueueItem({
         {navigation}
       </footer>
     </article>
+  );
+}
+
+// A09: what Laria had verified before the owner changed it, beside the new values above.
+function PreviousIdentity({ item }: { item: AdminJsonItem }) {
+  const previous = jsonRecord(item, "previous_identity");
+  if (!previous) return null;
+  const value = (key: string) => (typeof previous[key] === "string" ? previous[key] as string : "");
+  return (
+    <p className="sm:col-span-2">
+      <strong>Verificado antes:</strong> {[value("name"), value("razon_social"), value("ruc") ? `RUC ${value("ruc")}` : ""].filter(Boolean).join(" · ") || "Sin datos"}
+    </p>
   );
 }
 

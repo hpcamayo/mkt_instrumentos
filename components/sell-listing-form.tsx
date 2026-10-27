@@ -12,11 +12,14 @@ import { PriceModeField, SALE_TERMS_KEY } from "@/components/listing-details/sal
 import {
   PHOTO_BUCKET,
   SOUND_BUCKET,
+  SubmissionExpired,
+  SubmissionLost,
   SubmissionRejected,
   cleanupSubmission,
   completeSubmission,
   createQueue,
   publicUrl,
+  renewSubmission,
   resumeDraftSubmission,
   startSubmission,
   uploadObject,
@@ -265,7 +268,16 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
   }
 
   function acceptRestore() {
-    if (restore) apply(restore);
+    if (restore) {
+      apply(restore);
+      // The draft's token may have expired while it waited on this device; if renewing fails for another reason
+      // (offline, signed out), publishing tries again.
+      if (restore.submission) {
+        void renew(restore.submission).catch((error) => {
+          if (error instanceof SubmissionLost) setMessage({ kind: "error", text: error.message });
+        });
+      }
+    }
     setRestore(null);
     setReady(true);
   }
@@ -276,8 +288,35 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
     setReady(true);
     removeStorage(storageKey);
     if (old?.submission) {
-      if (old.onServer) await draftsTable()?.delete().eq("id", old.submission.id);
-      await cleanupSubmission(old.submission.token).catch(() => undefined);
+      const { id, token } = old.submission;
+      if (old.onServer) await draftsTable()?.delete().eq("id", id);
+      await cleanupSubmission(token)
+        .catch(async (error) => {
+          if (error instanceof SubmissionExpired) await cleanupSubmission((await renewSubmission(token)).token);
+        })
+        .catch(() => undefined);
+    }
+  }
+
+  // Launch audit A35: a submission's token lasts a week, and a draft kept on this device may hold an older one, or one
+  // from before tokens expired. A fresh token for the same submission keeps its folder, so the photos carry over; when
+  // even that is refused, the photos can't be confirmed, so they leave the form and the seller adds them again.
+  async function renew(old: Capability) {
+    try {
+      const renewed = await renewSubmission(old.token);
+      if (submission.current?.id === old.id) submission.current = renewed;
+      return renewed;
+    } catch (error) {
+      if (error instanceof SubmissionLost && submission.current?.id === old.id) {
+        submission.current = null;
+        nextSlot.current = 0;
+        prepared.current.clear();
+        originals.current.clear();
+        setPhotos([]);
+        setClip(null);
+        setStep(0);
+      }
+      throw error;
     }
   }
 
@@ -619,13 +658,19 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
         throw new Error("No supimos si el envío anterior llegó. Deja los datos como estaban y toca Publicar para confirmarlo.");
       }
       setProgress("Enviando la publicación…");
-      let result;
-      try {
-        result = await completeSubmission(capability.token, fields, paths, sound, details);
-      } catch (error) {
-        if (!(error instanceof SubmissionRejected)) uncertain.current = fingerprint;
-        throw error;
-      }
+      const send = async (token: string) => {
+        try {
+          return await completeSubmission(token, fields, paths, sound, details);
+        } catch (error) {
+          if (!(error instanceof SubmissionRejected)) uncertain.current = fingerprint;
+          throw error;
+        }
+      };
+      // An expired token is refused before anything is written: renew it and send once more.
+      const result = await send(capability.token).catch(async (error) => {
+        if (!(error instanceof SubmissionExpired)) throw error;
+        return send((await renew(capability)).token);
+      });
       uncertain.current = null;
       removeStorage(storageKey);
       if (details[SALE_TERMS_KEY]) {

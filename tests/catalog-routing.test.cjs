@@ -99,3 +99,20 @@ test("crawl hints distinguish infinite refinements from clean discovery and pagi
   for (const href of ["/", "/listados", "/listados?page=2", "/instrumentos/guitarras", "/instrumentos/guitarras?page=2", "/instrumentos/producto", "/tiendas/tienda"]) assert.equal(catalogRefinementRel(href), undefined, href);
   for (const href of ["/listados?max_price=350", "/listados?category=guitars&brand=Fender", "/listados?category=guitars&instrument_type=electric_guitar&page=2"]) assert.equal(catalogRefinementRel(href), "nofollow", href);
 });
+
+test("page numbers our links never write are redirected to the one they do", () => {
+  const redirect = (query) => parseCatalogRequest(searchParamsRecord(new URLSearchParams(query))).redirectHref;
+  assert.equal(redirect("category=guitars&page=abc"), "/listados?category=guitars");
+  assert.equal(redirect("category=guitars&page=02"), "/listados?category=guitars&page=2");
+  assert.equal(redirect("page=0"), "/listados");
+  assert.equal(redirect("page=999999"), "/listados");
+  assert.equal(redirect("category=guitars&page=2"), null);
+  assert.equal(redirect("page=1"), null);
+  assert.equal(redirect("page="), null);
+});
+
+test("middleware redirects a garbled sort or price before the page renders", async () => {
+  const response = await routing.middleware(request("/listados?category=guitars&sort=price_asc%C2%B5phone_type%3Ddynamic&min_price=1%2C500"));
+  assert.equal(response.status, 308);
+  assert.equal(new URL(response.headers.get("location")).search, "?category=guitars&min_price=1500");
+});

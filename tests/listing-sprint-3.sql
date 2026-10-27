@@ -268,7 +268,9 @@ begin
   if public.listing_is_public(sold.id) then raise exception 'LIFE-007 sold listing remained publicly browseable'; end if;
   begin perform public.update_owned_listing(sold.id,'{"price_pen":1}','{}',null); exception when others then denied := true; end;
   if not denied then raise exception 'LIFE-008 sold listing was editable'; end if;
-  copy := public.relist_sold_listing(sold.id);
+  -- The app relists through copy_owned_listing (a draft with the same photos) and the owner then sends it; the old
+  -- relist_sold_listing is no longer callable (launch audit A31).
+  copy := public.submit_listing_for_publication((public.copy_owned_listing(sold.id, 'relist')).id);
   if copy.id = sold.id or copy.slug = sold.slug or copy.status <> 'pending' or copy.relisted_from_listing_id <> sold.id then raise exception 'LIFE-009 Particular relist copy invalid'; end if;
   if (select image_url from public.listing_photos where listing_id=copy.id order by sort_order limit 1) <> original_photo then raise exception 'Relist did not preserve safe photo reference'; end if;
 end;
@@ -279,7 +281,7 @@ select set_config('request.jwt.claims','{"sub":"41000000-0000-4000-8000-00000000
 do $$ declare denied boolean := false; begin
   if (select count(*) from public.listings where id='43000000-0000-4000-8000-000000000001') <> 0 then raise exception 'Unrelated owner read sold listing'; end if;
   if (select count(*) from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000001') <> 0 then raise exception 'Unrelated owner read revision history'; end if;
-  begin perform public.relist_sold_listing('43000000-0000-4000-8000-000000000001'); exception when others then denied := true; end;
+  begin perform public.copy_owned_listing('43000000-0000-4000-8000-000000000001', 'relist'); exception when others then denied := true; end;
   if not denied then raise exception 'Unrelated owner relisted sold inventory'; end if;
 end $$;
 
@@ -290,12 +292,12 @@ update public.stores set is_verified=true where id='42000000-0000-4000-8000-0000
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"41000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 do $$ declare copy public.listings; begin
-  copy := public.relist_sold_listing('43000000-0000-4000-8000-000000000003');
+  copy := public.submit_listing_for_publication((public.copy_owned_listing('43000000-0000-4000-8000-000000000003', 'relist')).id);
   if copy.status <> 'pending' then raise exception 'LIFE-011 normal Tienda relist bypassed moderation'; end if;
 end $$;
 select set_config('request.jwt.claims','{"sub":"41000000-0000-4000-8000-000000000004","role":"authenticated"}',true);
 do $$ declare copy public.listings; begin
-  copy := public.relist_sold_listing('43000000-0000-4000-8000-000000000004');
+  copy := public.submit_listing_for_publication((public.copy_owned_listing('43000000-0000-4000-8000-000000000004', 'relist')).id);
   if copy.status <> 'approved' or copy.published_at is null then raise exception 'LIFE-012 verified Tienda relist did not publish'; end if;
 end $$;
 

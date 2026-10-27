@@ -22,6 +22,8 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   store_rejected: "Solicitud rechazada",
   store_verified: "Tienda verificada",
   store_verification_revoked: "Verificación revocada",
+  // Launch audit A09: the owner changed the name, RUC or razón social Admin had verified.
+  store_verification_lapsed: "Verificación en pausa",
   // Effortless Laria, inventory batch, stock-06.
   store_stock_summary: "Resumen de stock",
   transaction_confirmation_requested: "Confirma una compra",
