@@ -2,11 +2,13 @@ import type { MetadataRoute } from "next";
 import { categoryLandingPages } from "@/lib/category-pages";
 import { legalPages } from "@/lib/legal-pages";
 import { DISCOVERABLE_STOCK_FILTER } from "@/lib/listings";
+import { renderPerRequestIfBuilding } from "@/lib/cache-build";
 import { absoluteUrl, isIndexableDeployment } from "@/lib/site";
 import { READ_BUDGETS, createDeadline } from "@/lib/request-deadline";
 import { createPublicReadClient } from "@/lib/supabase/public-read-client";
 
-// Launch audit A19: built at most once an hour instead of on every crawler request.
+// Launch audit A19: built at most once an hour instead of on every crawler request. A failed read throws, so the cache
+// keeps the last full sitemap rather than an hour of a partial one (during the deploy, lib/cache-build.ts).
 export const revalidate = 3600;
 
 // Bounded: batches of 1000, well under the 50,000-URL sitemap limit.
@@ -32,7 +34,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
-  // Each batch gets the core budget, all of them 20 s together; a batch that fails ends the list there, as before.
+  // Each batch gets the core budget, all of them 20 s together.
   const supabase = createPublicReadClient(createDeadline(20_000), READ_BUDGETS.coreMs);
   if (!supabase) return entries;
 
@@ -43,7 +45,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .eq("status", "active")
       .order("id")
       .range(offset, offset + BATCH_SIZE - 1);
-    if (error || !data) break;
+    if (error || !data) return readFailed("stores", error);
     for (const store of data) {
       entries.push({ url: absoluteUrl(`/tiendas/${store.slug}`), lastModified: store.updated_at, changeFrequency: "weekly", priority: 0.6 });
     }
@@ -59,7 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .or(DISCOVERABLE_STOCK_FILTER)
       .order("id")
       .range(offset, offset + BATCH_SIZE - 1);
-    if (error || !data) break;
+    if (error || !data) return readFailed("listings", error);
     for (const listing of data) {
       entries.push({ url: absoluteUrl(`/instrumentos/${listing.slug}`), lastModified: listing.updated_at, changeFrequency: "weekly", priority: 0.7 });
     }
@@ -67,4 +69,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   return entries;
+}
+
+async function readFailed(what: string, error: { message: string } | null): Promise<never> {
+  await renderPerRequestIfBuilding("/sitemap.xml");
+  throw new Error(`The sitemap's ${what} could not be read: ${error?.message ?? "no rows"}`);
 }

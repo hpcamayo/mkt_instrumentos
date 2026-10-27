@@ -199,9 +199,10 @@ test("a failed query leaves its section's data null and is logged", async () => 
   }
 });
 
-async function renderHome(data, random = 0) {
+async function renderHome(data, random = 0, cacheBuild = { renderPerRequestIfBuilding: async () => {} }) {
   const preloads = [];
   const { default: HomePage } = load("app/page.tsx", {
+    "@/lib/cache-build": cacheBuild,
     "next/link": linkMock,
     "react-dom": { preload: (href) => preloads.push(href) },
     "@/components/listing-card": cardMock,
@@ -290,22 +291,14 @@ test("Cómo funciona Laria carries H4 promises 2–5 and the safety line, with n
 
 test("states: failed listing queries leave their sections out; an empty marketplace shows the empty feed; no stores hides them", async () => {
   const none = { pool: null, priceDrops: null, total: null, categoryCounts: {}, stores: null };
-  // Launch audit A19: a failed feed fails the rebuild, so visitors keep the last good cached page.
-  await assert.rejects(renderHome(none), /The home feed could not be read/);
-  // Only the copy built during the deploy says so, with a retry, instead of looking like an empty marketplace
-  // (docs/operations/catalog-performance.md).
-  const phase = process.env.NEXT_PHASE;
-  process.env.NEXT_PHASE = "phase-production-build";
-  let failed;
-  try {
-    failed = (await renderHome(none)).html;
-  } finally {
-    if (phase === undefined) delete process.env.NEXT_PHASE; else process.env.NEXT_PHASE = phase;
-  }
-  assert.deepEqual(headings(failed), ["Categorías", "Cómo funciona Laria", "¿Tienes equipo que ya no usas?"]);
-  assert.match(failed, /role="alert"[\s\S]*No pudimos cargar las publicaciones\. Vuelve a intentarlo en unos minutos\.[\s\S]*<a href="\/"[^>]*>Reintentar<\/a>/);
-  assert.doesNotMatch(failed, /Aún no hay publicaciones/);
-  assert.doesNotMatch(failed, / publicaciones<\/span>/, "no counts without the count query");
+  // Launch audit A19: a failed feed is never cached. The page throws, so visitors keep the last good copy; during the
+  // deploy it first gives up being prerendered (lib/cache-build.ts), so that deployment renders the home per request.
+  const asked = [];
+  await assert.rejects(renderHome(none, 0, { renderPerRequestIfBuilding: async (page) => { asked.push(page); } }), /The home feed could not be read/);
+  assert.deepEqual(asked, ["/"]);
+  const building = { renderPerRequestIfBuilding: async () => { throw new Error("Dynamic server usage: connection"); } };
+  await assert.rejects(renderHome(none, 0, building), /Dynamic server usage/);
+  assert.doesNotMatch(source("app/page.tsx"), /FeedUnavailable|role="alert"/, "no failure state that a cache could keep");
   const noCounts = (await renderHome({ ...FULL, total: null })).html;
   assert.match(noCounts, /<a href="\/listados" class="[^"]*">Ver todo el catálogo<\/a>/);
   const empty = (await renderHome({ pool: [], priceDrops: [], total: 0, categoryCounts: {}, stores: [] })).html;

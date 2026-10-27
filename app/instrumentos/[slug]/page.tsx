@@ -317,10 +317,12 @@ export default async function ListingDetailPage({
 async function findListingSlug(id: string) {
   const client = getSupabaseAdminClient();
   if (!client) return null;
-  const { data } = await client.from("listings").select("slug").eq("id", id).in("status", ["approved", "sold"])
+  const { data, error } = await client.from("listings").select("slug").eq("id", id).in("status", ["approved", "sold"])
     .retry(false)
     .abortSignal(budgetSignal(getRequestReads().deadline, READ_BUDGETS.coreMs))
     .maybeSingle();
+  // Like the main read: a failed lookup throws, since a cached 404 would outlive the failure.
+  if (error) throw new Error(`The listing's address could not be read: ${error.message}`);
   return data?.slug && data.slug !== id ? data.slug : null;
 }
 

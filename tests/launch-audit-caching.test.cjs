@@ -1,6 +1,7 @@
 // Launch audit A19: public pages come from the cache. The home and the listing pages are rebuilt in the background at
 // most once a minute and the sitemap once an hour; the category landings, which read ?page, render on every request
-// from their own folders; when a listing's owner or Admin changes it, its cached page is dropped at once.
+// from their own folders; when a listing's owner or Admin changes it, every cached page that can show it is dropped at
+// once; a failed read is never cached.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
@@ -68,31 +69,84 @@ function query(result) {
   return builder;
 }
 
-test("A19: dropping a listing's cached page never fails the change that asked for it", () => {
-  const paths = [];
+test("A19: a change drops every cached page that can show the listing, and never fails because of it", () => {
+  const calls = [];
   let failing = false;
   const warnings = [];
-  const { refreshListingPage } = loadModule("lib/listing-cache.ts", {
+  const { dropCachedListingPages } = loadModule("lib/listing-cache.ts", {
     "server-only": {},
-    "next/cache": { revalidatePath: (path) => { if (failing) throw new Error("cache unavailable"); paths.push(path); } },
+    "next/cache": { revalidatePath: (...args) => { if (failing) throw new Error("cache unavailable"); calls.push(args); } },
   });
   const warn = console.warn;
   console.warn = (...args) => warnings.push(args.join(" "));
   try {
-    refreshListingPage("fender-stratocaster-1b2c");
-    refreshListingPage(null);
-    refreshListingPage("");
+    dropCachedListingPages();
     failing = true;
-    assert.doesNotThrow(() => refreshListingPage("yamaha-p45-9f8e"));
+    assert.doesNotThrow(() => dropCachedListingPages());
   } finally {
     console.warn = warn;
   }
-  assert.deepEqual(paths, ["/instrumentos/fender-stratocaster-1b2c"]);
+  // Every listing page (its own, and the "Similares" and "Más del vendedor" rows of the others) and the home.
+  assert.deepEqual(calls, [["/instrumentos/[slug]", "page"], ["/"]]);
   assert.equal(warnings.length, 1);
   assert.match(warnings[0], /listing-page-refresh-failed cache unavailable/);
 });
 
-test("A19: an owner's change to price, status or details drops the listing's cached page; a refused one doesn't", async () => {
+test("A19: a failed read is never cached; during the deploy the page is rendered per request instead", async () => {
+  const warnings = [];
+  let asked = 0;
+  const { renderPerRequestIfBuilding } = loadModule("lib/cache-build.ts", {
+    "server-only": {},
+    "next/server": { connection: async () => { asked += 1; throw new Error("Dynamic server usage: connection"); } },
+  });
+  const phase = process.env.NEXT_PHASE;
+  const warn = console.warn;
+  console.warn = (...args) => warnings.push(args.join(" "));
+  try {
+    delete process.env.NEXT_PHASE;
+    await renderPerRequestIfBuilding("/sitemap.xml");
+    assert.equal(asked, 0, "at run time the page just throws and the cache keeps its last good copy");
+    process.env.NEXT_PHASE = "phase-production-build";
+    await assert.rejects(renderPerRequestIfBuilding("/sitemap.xml"), /Dynamic server usage/);
+    assert.equal(asked, 1);
+    assert.deepEqual(warnings, ["cached-page-read-failed-during-build /sitemap.xml"]);
+  } finally {
+    console.warn = warn;
+    if (phase === undefined) delete process.env.NEXT_PHASE; else process.env.NEXT_PHASE = phase;
+  }
+
+  // The sitemap: a failed batch throws instead of caching a partial list for an hour.
+  const building = [];
+  const batches = { stores: [{ data: [{ id: "s1", slug: "casa-grau", updated_at: "2026-10-01" }], error: null }], listings: [] };
+  const client = {
+    from: (table) => {
+      const builder = { select: () => builder, eq: () => builder, or: () => builder, order: () => builder, range: async () => batches[table].shift() };
+      return builder;
+    },
+  };
+  const { default: sitemap } = loadModule("app/sitemap.ts", {
+    "@/lib/cache-build": { renderPerRequestIfBuilding: async (page) => { building.push(page); } },
+    "@/lib/category-pages": { categoryLandingPages: [] },
+    "@/lib/legal-pages": { legalPages: [] },
+    "@/lib/listings": { DISCOVERABLE_STOCK_FILTER: "stock_state.is.null" },
+    "@/lib/site": { absoluteUrl: (path) => `https://laria.audio${path}`, isIndexableDeployment: () => true },
+    "@/lib/request-deadline": { READ_BUDGETS: { coreMs: 1 }, createDeadline: () => ({}) },
+    "@/lib/supabase/public-read-client": { createPublicReadClient: () => client },
+  });
+  batches.listings.push({ data: null, error: { message: "canceling statement due to statement timeout" } });
+  await assert.rejects(sitemap(), /The sitemap's listings could not be read: canceling statement/);
+  assert.deepEqual(building, ["/sitemap.xml"]);
+  batches.stores.push({ data: [], error: null });
+  batches.listings.push({ data: [{ id: "l1", slug: "fender-1", updated_at: "2026-10-02" }], error: null });
+  const entries = await sitemap();
+  assert.ok(entries.some((entry) => entry.url === "https://laria.audio/instrumentos/fender-1"));
+
+  // A listing-id address whose lookup fails throws too, instead of caching a 404 (the main read already does).
+  assert.match(read("app/instrumentos/[slug]/page.tsx"),
+    /const \{ data, error \} = await client\.from\("listings"\)\.select\("slug"\)[\s\S]*?if \(error\) throw new Error\(`The listing's address could not be read: \$\{error\.message\}`\);/);
+});
+
+test("A19: an owner's change to price, status or details drops the cached pages; a refused one doesn't", async () => {
   const owner = crypto.randomUUID();
   const id = crypto.randomUUID();
   const refreshed = [];
@@ -113,7 +167,7 @@ test("A19: an owner's change to price, status or details drops the listing's cac
     "@/lib/supabase/server-client": { getSupabaseServerClient: async () => server },
     "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => null },
     "@/lib/listing-photo-cleanup": { cleanupListingEditUploads: async () => undefined },
-    "@/lib/listing-cache": { refreshListingPage: (slug) => refreshed.push(slug) },
+    "@/lib/listing-cache": { dropCachedListingPages: () => refreshed.push("dropped") },
   });
   const post = (body) => route.POST(
     new Request(`http://localhost:3000/api/listings/${id}/manage`, { method: "POST", body: JSON.stringify(body) }),
@@ -128,7 +182,7 @@ test("A19: an owner's change to price, status or details drops the listing's cac
     assert.equal(response.status, 200, `${body.action}: ${await response.clone().text()}`);
   }
   assert.deepEqual(rpcs, ["set_owned_listing_lifecycle", "set_owned_listing_lifecycle", "set_owned_listing_lifecycle", "set_owned_listing_price", "submit_listing_for_publication", "update_owned_listing"]);
-  assert.deepEqual(refreshed, Array(6).fill("fender-stratocaster-1b2c"));
+  assert.deepEqual(refreshed, Array(6).fill("dropped"));
 
   // A copy is a new draft, not a change to this page.
   assert.equal((await post({ action: "duplicate" })).status, 200);
@@ -138,7 +192,7 @@ test("A19: an owner's change to price, status or details drops the listing's cac
   assert.equal(refreshed.length, 6);
 });
 
-test("A19: the browser's refresh call drops only the pages of listings its caller owns, or any page for Admin", async () => {
+test("A19: the browser's refresh call drops the cached pages only for listings its caller owns, or any for Admin", async () => {
   const owner = crypto.randomUUID();
   const other = crypto.randomUUID();
   const adminUser = crypto.randomUUID();
@@ -146,7 +200,7 @@ test("A19: the browser's refresh call drops only the pages of listings its calle
   const theirs = crypto.randomUUID();
   const revision = crypto.randomUUID();
   const rows = {
-    listings: { [mine]: { slug: "mi-bajo", owner_user_id: owner }, [theirs]: { slug: "su-teclado", owner_user_id: other } },
+    listings: { [mine]: { owner_user_id: owner }, [theirs]: { owner_user_id: other } },
     listing_revisions: { [revision]: { listing_id: theirs } },
   };
   let signedIn = owner;
@@ -161,7 +215,7 @@ test("A19: the browser's refresh call drops only the pages of listings its calle
     "next/server": nextServer,
     "@/lib/supabase/server-client": { getSupabaseServerClient: async () => server },
     "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => admin },
-    "@/lib/listing-cache": { refreshListingPage: (slug) => refreshed.push(slug) },
+    "@/lib/listing-cache": { dropCachedListingPages: () => refreshed.push("dropped") },
   });
   const post = async (body) => {
     const response = await route.POST(new Request("http://localhost:3000/api/listings/refresh", { method: "POST", body: JSON.stringify(body) }));
@@ -174,11 +228,12 @@ test("A19: the browser's refresh call drops only the pages of listings its calle
   // Someone else's listing, directly or through its revision, is skipped.
   assert.deepEqual(await post({ listings: [mine, theirs] }), { status: 200, body: { refreshed: 1 } });
   assert.deepEqual(await post({ revisions: [revision] }), { status: 200, body: { refreshed: 0 } });
-  assert.deepEqual(refreshed, ["mi-bajo", "mi-bajo"]);
-  // Admin, after deciding a revision: the page of the listing it belongs to.
+  // One drop per call that changed something, whatever the number of listings.
+  assert.deepEqual(refreshed, ["dropped", "dropped"]);
+  // Admin, after deciding a revision: the listing it belongs to counts.
   signedIn = adminUser;
   assert.deepEqual(await post({ revisions: [revision], listings: [mine] }), { status: 200, body: { refreshed: 2 } });
-  assert.deepEqual(refreshed.slice(2).sort(), ["mi-bajo", "su-teclado"]);
+  assert.equal(refreshed.length, 3);
   // An id nobody has is nothing to refresh.
   assert.deepEqual(await post({ listings: [crypto.randomUUID()] }), { status: 200, body: { refreshed: 0 } });
 
@@ -188,7 +243,7 @@ test("A19: the browser's refresh call drops only the pages of listings its calle
   for (const body of [{}, { listings: [] }, { listings: "x" }, { listings: ["not-an-id"] }, { listings: [mine], revisions: [1] }, { listings: Array.from({ length: 101 }, () => crypto.randomUUID()) }]) {
     assert.equal((await post(body)).status, 400, JSON.stringify(body).slice(0, 60));
   }
-  assert.equal(refreshed.length, 4);
+  assert.equal(refreshed.length, 3);
 });
 
 test("A19: the browser asks for the refresh after changing a listing directly, and a failed call breaks nothing", async () => {
