@@ -371,7 +371,7 @@ V1 until merged.
 <!-- feature-ideas:store-floor -->
 ## Store floor: arrivals, warranty, labels and try-outs (feature ideas, store-floor batch)
 
-Proposed with the store-floor batch (`docs/feature-ideas/store-floor.md`, FD-store-floor-1 to FD-store-floor-18); not
+Proposed with the store-floor batch (`docs/feature-ideas/store-floor.md`, FD-store-floor-1 to FD-store-floor-25); not
 part of V1 until merged. Every promise here is the store's; Laria handles no money and sends no WhatsApp.
 
 - **Por llegar.** A SKU without units can carry the date the store expects more (today to a year ahead). Its listing
@@ -391,6 +391,13 @@ part of V1 until merged. Every promise here is the store's; Laria handles no mon
   requests expire at their time; try-outs are deleted 90 days after their date. A try-out holds a time, never the
   instrument. Stores see the day's try-outs on Mi tienda and the agenda in Pruebas; buyers see theirs in Mis pruebas.
 - **Daily job.** `/api/internal/jobs/store-floor` (CRON_SECRET), once a day.
+- **Cuotas sin intereses (buy-09).** Part of PAY-1 Pilot A and off with it. A verified store with a card method (POS
+  al recoger or enlace de pago) states in Pagos how many interest-free installments it offers (2 to 36), optionally
+  with which credit cards (fixed list) and from what price, confirming each time that the buyer pays no interest or
+  surcharge. Laria reviews each change as it does a method. While the offer is approved and a card method of the store
+  is approved, its listings at or above the minimum price with units show "o N cuotas sin intereses de S/ X" (the
+  price split evenly) on the listing and its cards, the methods box adds the store's sentence, and "Acepta cuotas" is a
+  filter and saved-alert option (shown only when results carry it). Installments with interest are never shown.
 <!-- /feature-ideas:store-floor -->
 
 ## Store reach: Mercado Libre import, social catalog, dealers, campaigns and demand (feature ideas, store-reach batch)

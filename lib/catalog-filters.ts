@@ -230,7 +230,9 @@ export function catalogFacets(filters: ListingFilters, scope: CatalogScope = {},
   choice({ key: "condition", title: "Condición", multiple: true, options: data ? conditions.filter((option) => option.count || filters.conditions.includes(option.value)) : conditions, selected: filters.conditions });
   facets.push({ kind: "price", title: "Precio", ...(data ? { spread: data.price } : {}) });
   choice({ key: "location", title: "Ubicación", multiple: true, ...locationOptions(filters, data), selected: filters.cities });
-  choice({ key: OPTIONS_KEY, title: OPTIONS_TITLE, multiple: true, options: counted(data?.options, listingFlagFilters.map(({ flag, label }) => ({ value: flag, label }))), selected: filters.options ?? [] });
+  // store-floor: a flag marked onlyWhenListed ("Acepta cuotas") is offered only when results carry it, or it is chosen.
+  const flagOptions = listingFlagFilters.filter(({ flag, onlyWhenListed }) => !onlyWhenListed || (filters.options ?? []).includes(flag) || (data?.options?.[flag] ?? 0) > 0);
+  choice({ key: OPTIONS_KEY, title: OPTIONS_TITLE, multiple: true, options: counted(data?.options, flagOptions.map(({ flag, label }) => ({ value: flag, label }))), selected: filters.options ?? [] });
   choice({ key: "seller_type", title: "Vendedor", multiple: false, allLabel: "Todos", options: counted(data?.seller_type, sellerTypeOptions.map(({ value, label }) => ({ value, label }))), selected: filters.sellerType ? [filters.sellerType] : [] });
   facets.push({ kind: "brand", title: "Marca", ...(data ? { brands: data.brands } : {}) });
   for (const filter of attributeGroup(filters)?.filters ?? []) {

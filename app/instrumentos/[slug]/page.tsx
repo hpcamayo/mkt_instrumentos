@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { ListingLocationsSection } from "@/components/store-locations/listing-locations-section";
 import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
@@ -84,7 +85,10 @@ import { readPublicReputation, type PublicReputation } from "@/lib/transactions"
 import {
   assistedCommerceEnabled,
   buildPurchaseWhatsAppUrl,
+  installmentLine,
+  readInstallmentOffer,
   readPurchaseRequest,
+  type InstallmentOffer,
   type PurchaseRequest,
 } from "@/lib/payment-methods";
 import { fetchCatalogPage } from "@/lib/catalog";
@@ -184,6 +188,7 @@ const loadPublicListing = cache(async (slug: string) => {
         warranty_provider,
         returns_days,
         returns_note,
+        installments_max,
         paused_until,
         availability_confirmed_at,
         sold_at,
@@ -342,7 +347,7 @@ export default async function ListingDetailPage({
       : null;
   // fast-01: every call the page waits for runs at once. A failed reputation call leaves the reviews (and the rating
   // figure) out instead of claiming there are none; failed facts or breakdown leave only those parts out.
-  const [reputationResult, reviewPageResult, factsResult, purchase, combo] = await Promise.all([
+  const [reputationResult, reviewPageResult, factsResult, purchase, combo, installments] = await Promise.all([
     reputationTarget ? supabase.rpc("get_public_reputation", reputationTarget) : null,
     reviewSubject
       ? supabase.rpc("get_public_review_page", { p_subject_user_id: reviewSubject.user, p_subject_store_id: reviewSubject.store, p_offset: 0, p_limit: 1 })
@@ -350,6 +355,7 @@ export default async function ListingDetailPage({
     supabase.rpc("get_public_seller_facts", { p_listing_id: listing.id }),
     loadPurchaseRequest(supabase, listing),
     loadListingCombo(supabase, listing),
+    loadInstallments(supabase, listing),
   ]);
   const reputation = reputationResult && !reputationResult.error ? readPublicReputation(reputationResult.data) : null;
   const reviewPage = reviewPageResult && !reviewPageResult.error ? readReviewPage(reviewPageResult.data) : null;
@@ -366,6 +372,7 @@ export default async function ListingDetailPage({
         facts={facts}
         purchase={purchase}
         combo={combo}
+        installments={purchase ? installments : null}
       />
     </>
   );
@@ -419,6 +426,18 @@ async function loadPurchaseRequest(supabase: PublicSupabaseClient, listing: List
   }
   const { data, error } = await supabase.rpc("get_listing_purchase_request", { p_listing_id: listing.id });
   return error ? null : readPurchaseRequest(data);
+}
+
+// store-floor, buy-09: the store's interest-free installments, read live (the listing's installments_max only says
+// whether to ask). Shown with "Solicitar compra", so under the same conditions; a failed call shows none.
+async function loadInstallments(supabase: PublicSupabaseClient, listing: ListingDetailData): Promise<InstallmentOffer | null> {
+  if (!assistedCommerceEnabled() || !listing.installments_max || !listing.store_id || listing.status !== "approved"
+    || listing.seller_type !== "store" || isOutOfStock(listing)) {
+    return null;
+  }
+  const { data, error } = await (supabase as unknown as SupabaseClient).rpc("get_store_installment_offer", { p_store_id: listing.store_id });
+  const offer = error ? null : readInstallmentOffer(data);
+  return offer && (!offer.minPricePen || (listing.price_pen ?? 0) >= offer.minPricePen) ? offer : null;
 }
 
 const loadCategoryPage = cache(async (category: string, page: number) => {
@@ -482,6 +501,7 @@ function ListingDetail({
   facts,
   purchase,
   combo,
+  installments,
 }: {
   listing: ListingDetailData;
   supabase: PublicSupabaseClient;
@@ -491,6 +511,7 @@ function ListingDetail({
   facts: SellerFacts | null;
   purchase: PurchaseRequest | null;
   combo: { offer: BundleOffer | null; companions: Companion[] };
+  installments: InstallmentOffer | null;
 }) {
   const now = Date.now();
   const store = normalizeStore(listing);
@@ -578,6 +599,8 @@ function ListingDetail({
                 {priceMode && listing.price_pen !== null ? <Tag tone="line">{PRICE_MODE_LABELS[priceMode]}</Tag> : null}
                 {outOfStock ? <StatusTag domain="stock" status={listing.restock_expected_on ? "restock_expected" : "out_of_stock"} /> : null}
               </p>
+              {/* store-floor, buy-09: the store's interest-free installments on this price. */}
+              {installments ? <p className="mt-1 t-ui font-semibold text-ink">{installmentLine(listing.price_pen, installments.maxInstallments)}</p> : null}
               {outOfStock ? (
                 <p className="mt-2 t-ui text-ink-2">
                   {/* store-floor, reach-08: "Por llegar" with the store's estimated date. */}
@@ -684,7 +707,7 @@ function ListingDetail({
               {seller.rating ? <span className="t-meta"><RatingFigure rating={seller.rating} /></span> : null}
             </a>
 
-            {purchase ? <AcceptedPaymentMethods methods={purchase.methods} className="order-6 lg:order-4" /> : null}
+            {purchase ? <AcceptedPaymentMethods methods={purchase.methods} installments={installments} className="order-6 lg:order-4" /> : null}
 
             <SellerCard
               seller={seller}

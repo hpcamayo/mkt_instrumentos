@@ -1,6 +1,7 @@
 import { MAP_LISTING_LIMIT, type MapListing } from "@/lib/catalog-map";
 import { LISTINGS_PAGE_SIZE } from "@/lib/pagination";
 import { DISCOVERABLE_STOCK_FILTER, type ListingCardData, type ListingFilters } from "@/lib/listings";
+import { assistedCommerceEnabled } from "@/lib/payment-methods";
 import type { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 // The plain public client and the deadline-bound read client (lib/supabase/public-read-client.ts) are the same type.
@@ -52,8 +53,10 @@ const STORE_AND_PHOTO_COLUMNS = ` (
         )
       `;
 
+// store-floor, buy-09: installments_max gives the card's "o 12 cuotas sin intereses de S/ …", asked for only while the
+// payments pilot is on in this deployment (the database keeps it null while its own switch is off).
 export function catalogCardSelect(storeRelation: "stores" | "stores!inner" = "stores") {
-  return CARD_COLUMNS + storeRelation + STORE_AND_PHOTO_COLUMNS;
+  return CARD_COLUMNS + (assistedCommerceEnabled() ? "installments_max,\n" : "") + storeRelation + STORE_AND_PHOTO_COLUMNS;
 }
 
 // The listings a search starts from: every listing, or those matching the free-text query (BIG 03).

@@ -61,6 +61,8 @@ PAGES.visitor.push("/listados?opciones=con-garantia", "/instrumentos/demo-fender
 PAGES.buyer.push("/mi-cuenta/pruebas", "/instrumentos/demo-fender-player-strat-3ts", "/instrumentos/demo-boss-tu-3");
 PAGES.store.push("/mi-cuenta/tienda/garantia", "/mi-cuenta/tienda/pruebas", "/mi-cuenta/tienda/pruebas/horario",
   "/mi-cuenta/tienda/etiquetas", "/mi-cuenta/tienda/etiquetas/cartel", "/mi-cuenta/tienda/inventario?stock=out");
+// store-floor, buy-09 "Cuotas": the filter (the listing page, the store page and Pagos are above).
+PAGES.visitor.push("/listados?opciones=acepta-cuotas");
 const ACCOUNTS = { buyer: "comprador@laria.test", seller: "particular@laria.test", store: "demo-tienda@laria.test" };
 const WIDTHS = [[390, 844, true], [1366, 900, false]];
 

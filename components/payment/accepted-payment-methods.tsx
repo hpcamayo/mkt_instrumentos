@@ -1,5 +1,5 @@
 import { Wallet } from "lucide-react";
-import { paymentMethodText, type PublicPaymentMethod } from "@/lib/payment-methods";
+import { installmentOfferText, paymentMethodText, type InstallmentOffer, type PublicPaymentMethod } from "@/lib/payment-methods";
 import { cn } from "@/lib/utils";
 
 // PAY-1 (design §11.1): the methods an Admin approved for a verified store, as plain facts, with the statement that the
@@ -9,10 +9,13 @@ export const PAYMENT_DISCLAIMER =
 
 export function AcceptedPaymentMethods({
   methods,
+  installments = null,
   headingLevel = 2,
   className,
 }: {
   methods: PublicPaymentMethod[];
+  // store-floor, buy-09: the store's interest-free installments, when it shows them.
+  installments?: InstallmentOffer | null;
   headingLevel?: 2 | 3;
   className?: string;
 }) {
@@ -29,6 +32,7 @@ export function AcceptedPaymentMethods({
           <li key={item.method}>{paymentMethodText(item)}</li>
         ))}
       </ul>
+      {installments ? <p className="t-ui text-ink">{installmentOfferText(installments)} Las cobra el proveedor de tarjetas de la tienda.</p> : null}
       <p className="t-meta">{PAYMENT_DISCLAIMER}</p>
     </section>
   );

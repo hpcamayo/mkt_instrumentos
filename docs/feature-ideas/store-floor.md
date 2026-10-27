@@ -2,12 +2,12 @@
 
 Ideas reach-08 ("Por llegar"), reach-09 ("Garantía y cambios" and the "Con garantía" filter), reach-10 (price labels
 and the "Encuéntranos en Laria" poster) and buy-07 ("Reservar una prueba"). Henri marked all four Yes on 2026-10-26.
-buy-09 ("Cuotas") was marked "next wave" and ships as this batch's second PR, after wave 1 merges. Branch
-`claude/project-thread-ajrihw`, PR into `features/marketplace`.
+buy-09 ("Cuotas") was marked "next wave" and ships as this batch's second PR, after wave 1 (PR #43) merged. Branch
+`claude/project-thread-ajrihw`, PRs into `features/marketplace`.
 
 Nothing here is applied to a hosted database, no e-mail or WhatsApp is sent, and Laria still handles no money. Proposed
 decisions are numbered FD-store-floor-n. Acceptance proposals are in `store-floor-acceptance.tsv` (GROW-500 to
-GROW-531, Not Run).
+GROW-541, Not Run).
 
 ## Migrations (slot 20261206)
 
@@ -17,14 +17,20 @@ GROW-531, Not Run).
 | `20261206120100_feat_stock_arrivals.sql` | `store_inventory_items.expected_arrival_on`, `listings.restock_expected_on`, the triggers that keep both honest, `set_inventory_arrival`, the daily expiry | none |
 | `20261206120200_feat_store_tryouts.sql` | `store_tryout_settings`, `store_tryouts`, slots, booking, answers, settings, the daily try-out job, notice and e-mail types | none |
 | `20261206120300_feat_warranty_flag.sql` | The `con_garantia` row in `laria_private.listing_flag_filters` and its `listings_flags_store_floor` trigger | none |
+| `20261206120400_feat_store_installments.sql` | buy-09: `store_installment_offers` and its history, `listings.installments_max`, the `acepta_cuotas` flag and its own trigger, the refresh triggers, owner, Admin and public functions | none |
 
 No shared function is redefined. The build plan expected store-floor to add `with_warranty` to the saved-search
 functions; that is no longer needed, because listing-details' `options` key takes every registered listing flag, so
 saved searches and alerts accept `con_garantia` as they are (checked in `tests/store-floor.sql`).
 
-Trigger order on `listings` (Postgres fires BEFORE triggers by name): `listings_a_store_terms` fills the terms,
-`listings_flags_a_reset` empties `listing_flags`, the `listings_flags_*` triggers append theirs (this batch's adds
-`con_garantia`), `listings_restock_estimate` keeps the arrival date, and `listings_track_content_change` runs last.
+Trigger order on `listings` (Postgres fires BEFORE triggers by name): `listings_a_store_installments` sets the
+installments, `listings_a_store_terms` fills the terms, `listings_flags_a_reset` empties `listing_flags`, the
+`listings_flags_*` triggers append theirs (this batch's add `con_garantia` and `acepta_cuotas`),
+`listings_restock_estimate` keeps the arrival date, and `listings_track_content_change` runs last.
+
+The installments migration sorts in this batch's slot, before discovery's and services' (20261207, 20261208), which
+were merged earlier. No hosted database has any of them, so the order only matters for a local database that already
+ran those: replay it (`setup-local-db.sh reset`).
 
 The daily job is `GET /api/internal/jobs/store-floor` (`CRON_SECRET`, like the other internal jobs). It calls
 `public.run_store_floor_daily()`, which clears arrival dates that passed and then runs the try-out day (expire,
@@ -176,6 +182,49 @@ Pruebas. Run the job: `curl -H "Authorization: Bearer $CRON_SECRET" http://local
 - **FD-store-floor-18.** listing-details' "Se puede probar" flag (a seller's yes/no) stays separate from booking. A store
   listing can show both; the flag says trying is possible, the button books a time.
 
+## buy-09: "Cuotas"
+
+A verified store that takes credit cards says it offers interest-free installments, and its listings show what each
+installment would be. Laria still processes no payment: the store's card provider runs the installments.
+
+- **Store (Mi tienda > Pagos).** Under the payment methods, "Cuotas sin intereses": "Ofrecer cuotas" opens a sheet with
+  how many (2 to 12, 18, 24 or 36), the credit cards (optional, from a fixed list), from what price (optional), a note
+  for Laria and a box the owner must tick: "Confirmo que el comprador no paga intereses ni recargos por pagar en
+  cuotas". The sheet shows the line a S/ 3,000 listing would get. Every save goes to Laria's review; "Dejar de
+  ofrecerlas" stops them at once. The button appears only once the store has a card method (POS al recoger or enlace
+  de pago) proposed or approved.
+- **Admin (Medios de pago).** A "Cuotas sin intereses" section under the methods, in the same state filter: the
+  sentence buyers will read, the store's card methods and their state, the note, and Aprobar / Rechazar / Desactivar
+  with a reason, on the revision shown. Every decision is audited (`store_installments_<state>`).
+- **Buyers.** Under the price on the listing page and on cards: "o 12 cuotas sin intereses de S/ 358.25". In the
+  "Medios de pago que acepta la tienda" box (listing and store page): "Hasta 12 cuotas sin intereses con tarjetas de
+  crédito BCP, BBVA o Interbank, en compras desde S/ 500. Las cobra el proveedor de tarjetas de la tienda." The
+  filters get "Acepta cuotas", offered only when results carry it; saved alerts accept it through the `options` key.
+- **When it shows.** Only while the pilot is on (both switches), the offer is approved, the store is active and
+  verified, it has an approved card method, the listing is a store listing at or above the minimum price, and it has
+  units. `listings.installments_max` holds the number; triggers recompute it when the offer, a card method, the
+  store's verification or status, or the pilot switch changes, and a written value never sticks.
+
+Decisions:
+
+- **FD-store-floor-19.** Only interest-free offers exist. With interest, the TCEA would have to be shown, which Laria
+  does not do; the owner confirms "sin intereses" on every save (the box starts unticked and the database refuses a
+  save without it), and the confirmation is kept in the offer's history.
+- **FD-store-floor-20.** One offer per store, not per listing or card: the most common shape ("hasta 12 cuotas sin
+  intereses con …"), and what the Admin can check against the provider. A minimum price covers "desde S/ 500".
+- **FD-store-floor-21.** The amount is the price divided evenly, rounded to the cent, written without Intl so the
+  server and the browser print the same text. Cents show only when there are any ("S/ 250", "S/ 358.25").
+- **FD-store-floor-22.** The offer follows PAY-1 Pilot A: same review states, revision check, error style, both pilot
+  switches, and safe-08's second step for owners once a method is approved. It needs a card method: proposing
+  requires one proposed or approved, and buyers see nothing until one is approved.
+- **FD-store-floor-23.** The card list is fixed (BCP, BBVA, Interbank, Scotiabank, BanBif, Banco Pichincha, Diners
+  Club, American Express, Banco Falabella, Banco Ripley, Tarjeta Oh), so no free text reaches buyers. "Tarjeta Oh"
+  drops the brand's "!" because the interface has no exclamations.
+- **FD-store-floor-24.** "Acepta cuotas" is hidden from the filters while no result carries it (a new `onlyWhenListed`
+  mark in `lib/listing-flags.ts`), so the filter does not sit at zero for as long as the pilot is off.
+- **FD-store-floor-25.** Sold listings keep the value they had (a sold listing cannot change), and nothing shows them:
+  the line needs an approved, in-stock listing.
+
 ## Changes to other batches' and shared files
 
 Marked with a `store-floor` comment in each file.
@@ -192,16 +241,25 @@ Marked with a `store-floor` comment in each file.
 - Others: `app/tiendas/[slug]/page.tsx` (one selected column), `app/mi-cuenta/transacciones/page.tsx` (a link to Mis
   pruebas), `lib/ui/status.ts` (the "Por llegar" tag), `tests/account-shell.test.cjs`, `tests/sprint-9.test.cjs` and `tests/store-ops-review-ux.test.cjs` (menus now list
   "Pruebas"), `scripts/prototype/a11y-audit.cjs` (this batch's pages).
+- buy-09 (second PR): `lib/listing-flags.ts` (the `acepta_cuotas` entry and the `onlyWhenListed` mark),
+  `lib/catalog-filters.ts` (one line: such a flag is offered only with results), `lib/catalog.ts` and
+  `app/tiendas/[slug]/page.tsx` (`installments_max` in the card columns while the pilot is on),
+  `components/listing-card.tsx` (the line), `lib/listings.ts` (one type), `app/instrumentos/[slug]/page.tsx` (the
+  line and the offer read, next to listing-details' combo read), `app/admin/medios-de-pago/page.tsx` (the section).
+  Owned by this batch: `lib/payment-methods.ts`, `components/payment/*`, `app/mi-cuenta/tienda/pagos`.
 
 ## How to test
 
-- `pnpm typecheck`, `pnpm lint`, `pnpm test` (`tests/store-floor.test.cjs`), `pnpm build`.
+- `pnpm typecheck`, `pnpm lint`, `pnpm test` (`tests/store-floor.test.cjs`, `tests/store-installments.test.cjs`), `pnpm build`.
 - `bash /mnt/project-files/store-operations/local-db-setup/setup-local-db.sh reset` then `… test`
   (`tests/store-floor.sql`: policies, terms, the flag and alerts, arrival dates and expiry, try-out slots, booking
-  limits, answers, RLS, the daily job).
+  limits, answers, RLS, the daily job; `tests/store-installments.sql`: proposals, review, every condition of the
+  public offer, the listing column and flag, alerts, history, second step).
 - Local prototype: `bash scripts/prototype/start-docker-free.sh seed`, then
   `psql "$PGURL" -f scripts/prototype/store-floor-seed.sql`, `pnpm build && pnpm start`.
-- `node scripts/prototype/a11y-audit.cjs` covers this batch's pages (138 page checks, no violations).
+- The seed also gives Laria Demo Música 12 interest-free installments with BCP, BBVA or Interbank from S/ 500.
+- `node scripts/prototype/a11y-audit.cjs` covers this batch's pages (140 page checks with "Acepta cuotas", no
+  violations).
 - Screenshots at 390 and 1366 px: `/mnt/project-files/feature-ideas/screens/store-floor/`.
 
 ## Limitations
@@ -211,6 +269,8 @@ Marked with a `store-floor` comment in each file.
 - The try-out agenda shows 30 days back; older try-outs remain until the 90-day purge.
 - A store that refuses exchanges in its terms but offers gift exchanges keeps showing the gift line (FD-store-floor-7).
 - Printing depends on the browser's dialog (scale 100 %, no margins); the page says so, but it cannot set them.
+- Cuotas: the related-listing strips on a listing page have their own columns and show no installments line; the
+  Admin section lists the 50 oldest offers in a state; owners are not notified of Admin decisions (as with methods).
 - Seen while testing, not caused by this batch: at 390 px a listing page whose "Publicaciones similares" has three or
   more cards with a long spec line is wider than the screen (the sections need `min-width: 0`), and Inventario logs a
   hydration warning from the date format of "Último movimiento". Both are reported to the integrator.
@@ -222,5 +282,8 @@ Marked with a `store-floor` comment in each file.
   checked.
 - "Lo ofrece {tienda}, no Laria. Confirma las condiciones y pide tu boleta al comprar." under every warranty line.
 - "Cambios hasta N días después de la compra: {nota}" as the store's exchange promise.
+- Cuotas: "o N cuotas sin intereses de S/ X" without a TCEA (only interest-free offers exist), the store's line "Las
+  cobra el proveedor de tarjetas de la tienda", and the owner's confirmation "Confirmo que el comprador no paga
+  intereses ni recargos por pagar en cuotas".
 - The buyer's WhatsApp number shared with the store for a try-out ("Solo lo ve la tienda, para coordinar la prueba")
   and kept for 90 days after the date.

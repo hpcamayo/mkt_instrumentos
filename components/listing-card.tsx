@@ -11,6 +11,7 @@ import { useListingImpression } from "@/components/marketplace-telemetry";
 import type { EventSource } from "@/lib/marketplace-event-payload";
 import { addTaste, EMPTY_TASTE, readStore, rememberable, TASTE_KEY, writeStore, type Taste } from "@/lib/catalog-device";
 import { getCardSpecLine } from "@/lib/listing-specs";
+import { installmentLine } from "@/lib/payment-methods";
 import { formatPrice } from "@/lib/price";
 import { Price } from "@/components/ui/price";
 import { PriceModeMark } from "@/components/listing-details/price-mode-mark";
@@ -69,6 +70,7 @@ export function ListingCard({ listing, variant = "grid", source = "catalog", hea
   const photoCount = listing.photo_count ?? listing.listing_photos.length;
   const displayTitle = getListingDisplayTitle(listing);
   const specLine = getCardSpecLine(listing);
+  const installments = isOutOfStock(listing) ? null : installmentLine(listing.price_pen, listing.installments_max);
   const Heading = headingLevel === 3 ? "h3" : "h2";
   const href = `/instrumentos/${listing.slug}`;
   const reducedData = useReducedData();
@@ -126,6 +128,8 @@ export function ListingCard({ listing, variant = "grid", source = "catalog", hea
           {listing.price_pen !== null ? <PriceModeMark mode={listing.price_mode} /> : null}
           {isOutOfStock(listing) ? <StatusTag domain="stock" status={listing.restock_expected_on ? "restock_expected" : "out_of_stock"} /> : null}
         </p>
+        {/* store-floor, buy-09: the store's interest-free installments, worked out on this price. */}
+        {installments ? <p className="t-meta text-ink">{installments}</p> : null}
         {specLine ? <p className="truncate t-meta">{specLine}</p> : null}
         <SellerLine listing={listing} />
         {compare ? <CompareToggle listing={listing} /> : null}
