@@ -23,14 +23,13 @@ function loadModule(filename, mocks) {
 
 const nextServer = { NextResponse: { json: (body, init = {}) => new Response(JSON.stringify(body), { ...init, headers: { "Content-Type": "application/json", ...init.headers } }) } };
 
-test("A15: Admin pages send an Admin without the code to the two-step section, and back only to Admin", () => {
-  const { twoStepPath, twoStepNext, readTwoStepCode, twoStepErrorMessage } = require("@/lib/auth/two-step");
-  assert.equal(twoStepPath("/admin/publicaciones?buscar=x"), "/mi-cuenta/seguridad?verificar=admin&next=%2Fadmin%2Fpublicaciones%3Fbuscar%3Dx#dos-pasos");
-  assert.equal(twoStepPath("//evil.example"), "/mi-cuenta/seguridad?verificar=admin&next=%2Fadmin#dos-pasos");
-  for (const next of ["/admin", "/admin/tiendas", "/admin?x=1", ["/admin/reportes"]]) assert.equal(twoStepNext(next), Array.isArray(next) ? next[0] : next);
-  for (const next of ["/mi-cuenta", "/administrar", "//evil.example/admin", "/\t/evil.example", "https://evil.example/admin", undefined, null, ""]) {
-    assert.equal(twoStepNext(next), null, String(next));
-  }
+test("A15: the code step and the setup share the two-step addresses, and the code is read as the app shows it", () => {
+  const { twoStepPath } = require("@/lib/auth/two-step");
+  const { readTwoStepCode, twoStepErrorMessage } = require("@/lib/auth/two-step-input");
+  assert.equal(twoStepPath("codigo", "/admin/publicaciones?buscar=x"), "/mi-cuenta/seguridad?paso=codigo&next=%2Fadmin%2Fpublicaciones%3Fbuscar%3Dx");
+  assert.equal(twoStepPath("activar", "/admin", "admin"), "/mi-cuenta/seguridad?paso=activar&next=%2Fadmin&motivo=admin");
+  // Only addresses on this site come back.
+  assert.equal(twoStepPath("codigo", "//evil.example"), "/mi-cuenta/seguridad?paso=codigo&next=%2Fmi-cuenta");
   assert.equal(readTwoStepCode("123 456"), "123456");
   assert.equal(readTwoStepCode(" 654321 "), "654321");
   for (const code of ["12345", "1234567", "abcdef", 123456, null]) assert.equal(readTwoStepCode(code), null, String(code));
@@ -43,23 +42,29 @@ test("A15: Admin pages send an Admin without the code to the two-step section, a
 test("A15: requireAdmin lets in only an Admin session with the code, and sends an Admin without it to enter it", async () => {
   let user = null;
   let isAdmin = false;
+  let needsCode = false;
   const redirect = (destination) => { throw new Error(`redirect:${destination}`); };
   const supabase = {
     rpc: async (name) => { assert.equal(name, "is_admin"); return { data: isAdmin, error: null }; },
     from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { full_name: "Henri" } }) }) }) }),
   };
+  const { twoStepPath } = require("@/lib/auth/two-step");
   const load = () => loadModule("lib/admin-server.ts", {
     react: { cache: (fn) => fn },
     "next/navigation": { redirect },
     "@/lib/auth/session": { getCurrentUser: async () => user },
+    "@/lib/auth/mfa": { getAssurance: async (client) => { assert.equal(client, supabase); return { needsCode }; }, twoStepPath },
     "@/lib/supabase/server-client": { getSupabaseServerClient: async () => supabase },
   });
   const { requireAdmin } = load();
   await assert.rejects(requireAdmin("/admin/tiendas"), /redirect:\/login\?next=%2Fadmin%2Ftiendas/);
   user = { id: "u1", app_metadata: {} };
   await assert.rejects(requireAdmin("/admin"), /redirect:\/mi-cuenta\?admin=denied/);
+  // An Admin without an authenticator app sets it up; with one, enters its code. Both come back to the same page.
   user = { id: "u1", app_metadata: { role: "admin" } };
-  await assert.rejects(requireAdmin("/admin/tiendas"), /redirect:\/mi-cuenta\/seguridad\?verificar=admin&next=%2Fadmin%2Ftiendas#dos-pasos/);
+  await assert.rejects(requireAdmin("/admin/tiendas"), /redirect:\/mi-cuenta\/seguridad\?paso=activar&next=%2Fadmin%2Ftiendas&motivo=admin$/);
+  needsCode = true;
+  await assert.rejects(requireAdmin("/admin/tiendas"), /redirect:\/mi-cuenta\/seguridad\?paso=codigo&next=%2Fadmin%2Ftiendas&motivo=admin$/);
   isAdmin = true;
   const result = await requireAdmin("/admin");
   assert.equal(result.user, user);
@@ -90,16 +95,23 @@ test("A15: the header keeps the Admin link before the code, and private photos o
   assert.doesNotMatch(images, /const isAdmin = data\.user\.app_metadata\.role === "admin";/);
 });
 
-test("A15: the security page shows the two-step section to Admin accounts only, first when Admin sent them", () => {
+test("A15: the security page shows the two-step section to Admin accounts only: alone for the code, first for the setup", () => {
   const page = read("app/mi-cuenta/seguridad/page.tsx");
   assert.match(page, /const admin = user\?\.app_metadata\?\.role === "admin";/);
-  assert.match(page, /admin \? <TwoStepVerification next=\{twoStepNext\(query\.next\)\} \/> : null/);
-  assert.match(page, /\{sentFromAdmin \? twoStep : null\}/);
+  assert.match(page, /if \(assurance\?\.needsCode\) \{[\s\S]*?<TwoStepVerification next=\{next\} framed=\{false\} \/>/);
+  assert.match(page, /const twoStep = admin \? <TwoStepVerification next=\{next\} \/> : null;/);
+  assert.match(page, /const setupFirst = admin && params\.paso === "activar";/);
+  // Only addresses on this site come back.
+  assert.match(page, /const next = params\.next \? getSafeAuthRedirect\(params\.next, ""\) \|\| null : null;/);
   const section = read("components/auth/two-step-verification.tsx");
   // A setup left halfway is replaced, so the QR code always matches the factor being verified.
   assert.match(section, /if \(factor\.factor_type === "totp" && factor\.status !== "verified"\) await supabase\.auth\.mfa\.unenroll\(\{ factorId: factor\.id \}\);/);
   assert.match(section, /supabase\.auth\.mfa\.challengeAndVerify\(\{ factorId, code \}\)/);
   assert.match(section, /level\.data\.currentLevel === "aal2"/);
+  // A full load afterwards, so the page that asked for the code reads the new session.
+  assert.match(section, /if \(next\) \{\n[^\n]*\n\s*window\.location\.assign\(next\);/);
+  // Signing in with the password goes to the code step when the account has an app.
+  assert.match(read("components/login-form.tsx"), /level\?\.currentLevel === "aal1" && level\.nextLevel === "aal2" \? twoStepPath\("codigo", nextPath\) : nextPath/);
 });
 
 const AUTH_ENV = { NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co", NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key-for-tests" };

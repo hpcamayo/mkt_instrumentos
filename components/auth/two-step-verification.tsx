@@ -6,12 +6,13 @@ import { PageNotice } from "@/components/page-notice";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
-import { TWO_STEP_SECTION_ID, readTwoStepCode, twoStepErrorMessage } from "@/lib/auth/two-step";
+import { readTwoStepCode, twoStepErrorMessage } from "@/lib/auth/two-step-input";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
-// Launch audit A15: Admin's second factor (lib/auth/two-step.ts). Shown to Admin accounts only. The first time it sets
-// up an authenticator app with a QR code; after that it asks for the app's code whenever the session was opened with
-// the password alone, then goes back to the Admin page that sent the person here.
+// Launch audit A15: Admin's second factor (lib/auth/mfa.ts). Shown to Admin accounts only. The first time it sets up
+// an authenticator app with a QR code; after that it asks for the app's code whenever the session was opened with the
+// password alone, then opens the page that sent the person here (?next=). Framed, it is a section of the security
+// page; unframed, the body of the code step, which the page shows alone.
 type BrowserClient = NonNullable<ReturnType<typeof getSupabaseBrowserClient>>;
 type Enrollment = { factorId: string; qrCode: string; secret: string };
 type State =
@@ -21,7 +22,9 @@ type State =
   | { step: "verify"; factorId: string }
   | { step: "active" };
 
-export function TwoStepVerification({ next }: { next: string | null }) {
+const SECTION_ID = "dos-pasos";
+
+export function TwoStepVerification({ next, framed = true }: { next: string | null; framed?: boolean }) {
   const router = useRouter();
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [state, setState] = useState<State>({ step: "checking" });
@@ -68,8 +71,8 @@ export function TwoStepVerification({ next }: { next: string | null }) {
       return setCodeError(twoStepErrorMessage(verifyError));
     }
     if (next) {
-      router.push(next);
-      router.refresh();
+      // A full load, so the page that asked for the code reads the new session's cookies.
+      window.location.assign(next);
       return;
     }
     setBusy(false);
@@ -79,12 +82,8 @@ export function TwoStepVerification({ next }: { next: string | null }) {
 
   if (state.step === "checking") return null;
 
-  return (
-    <section id={TWO_STEP_SECTION_ID} aria-labelledby="dos-pasos-titulo" className="max-w-md scroll-mt-24 rounded-panel border border-subtle bg-white p-6">
-      <h2 id="dos-pasos-titulo" className="t-section text-ink">Verificación en dos pasos</h2>
-      <p className="mt-1 t-meta text-ink-2">
-        Para entrar a Administración, además de tu contraseña, Laria te pide un código de 6 dígitos de una app de autenticación.
-      </p>
+  const body = (
+    <>
       {error ? <div className="mt-4"><PageNotice kind="error" message={error} /></div> : null}
       {state.step === "unavailable" ? (
         <div className="mt-4"><PageNotice kind="error" message="No pudimos revisar tu verificación en dos pasos. Recarga la página para volver a intentarlo." /></div>
@@ -127,6 +126,17 @@ export function TwoStepVerification({ next }: { next: string | null }) {
           <CodeForm busy={busy} error={codeError} submitLabel="Verificar" onSubmit={(event) => void submitCode(event, state.factorId)} />
         </div>
       ) : null}
+    </>
+  );
+  if (!framed) return <div id={SECTION_ID}>{body}</div>;
+
+  return (
+    <section id={SECTION_ID} aria-labelledby="dos-pasos-titulo" className="max-w-md scroll-mt-24 rounded-panel border border-subtle bg-white p-6">
+      <h2 id="dos-pasos-titulo" className="t-section text-ink">Verificación en dos pasos</h2>
+      <p className="mt-1 t-meta text-ink-2">
+        Para entrar a Administración, además de tu contraseña, Laria te pide un código de 6 dígitos de una app de autenticación.
+      </p>
+      {body}
     </section>
   );
 }

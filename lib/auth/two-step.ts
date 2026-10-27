@@ -1,35 +1,37 @@
-import { TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
+import type { Database } from "@/lib/supabase/database.types";
 
-// Launch audit A15: Admin works only in a session that also passed an authenticator app's code (an aal2 session,
-// Supabase MFA with TOTP); public.is_admin() checks it in the database. The two-step section is on the security
-// page, and Admin pages send an Admin there with the page to come back to.
-export const TWO_STEP_PAGE = "/mi-cuenta/seguridad";
-export const TWO_STEP_SECTION_ID = "dos-pasos";
+// safe-08 (accounts batch): the parts of lib/auth/mfa.ts that also run in middleware and in the browser.
+//   aal1: the password, e-mail link or Google/Apple step only;  aal2: the authenticator code too.
 
-export function twoStepPath(next = "/admin") {
-  const query = new URLSearchParams({ verificar: "admin", next: getSafeAuthRedirect(next, "/admin") });
-  return `${TWO_STEP_PAGE}?${query}#${TWO_STEP_SECTION_ID}`;
+export const SECURITY_PATH = "/mi-cuenta/seguridad";
+
+export type Assurance = {
+  currentLevel: "aal1" | "aal2" | null;
+  nextLevel: "aal1" | "aal2" | null;
+  // A verified factor exists but this session has not used it yet.
+  needsCode: boolean;
+  hasFactor: boolean;
+};
+
+// Reads the levels from the session itself (no network call), so middleware can use it on every request.
+export async function getAssurance(supabase: SupabaseClient<Database>): Promise<Assurance> {
+  const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const currentLevel = data?.currentLevel === "aal2" ? "aal2" : data?.currentLevel === "aal1" ? "aal1" : null;
+  const nextLevel = data?.nextLevel === "aal2" ? "aal2" : data?.nextLevel === "aal1" ? "aal1" : null;
+  return {
+    currentLevel,
+    nextLevel,
+    needsCode: currentLevel === "aal1" && nextLevel === "aal2",
+    hasFactor: nextLevel === "aal2",
+  };
 }
 
-// The page to open once the code is accepted: only an Admin page, so the security page can't be used to send
-// someone elsewhere.
-export function twoStepNext(value: string | string[] | undefined | null) {
-  const next = getSafeAuthRedirect(Array.isArray(value) ? value[0] : value, "");
-  return next === "/admin" || next.startsWith("/admin/") || next.startsWith("/admin?") ? next : null;
-}
+export type TwoStepStep = "codigo" | "activar";
 
-// Six digits, spaces allowed (apps show "123 456").
-export function readTwoStepCode(value: unknown) {
-  const code = typeof value === "string" ? value.replace(/\s+/g, "") : "";
-  return /^\d{6}$/.test(code) ? code : null;
-}
-
-export function twoStepErrorMessage(error: { code?: string; status?: number } | null | undefined) {
-  if (!error) return "";
-  if (isAuthRateLimited(error)) return TOO_MANY_ATTEMPTS;
-  if (error.code === "mfa_verification_failed" || error.code === "mfa_challenge_expired" || error.code === "mfa_verification_rejected") {
-    return "El código no es correcto o ya cambió. Escribe el que muestra tu app en este momento.";
-  }
-  return "No pudimos completar la verificación. Vuelve a intentarlo.";
+export function twoStepPath(step: TwoStepStep, next: string, reason?: "tienda" | "admin") {
+  const params = new URLSearchParams({ paso: step, next: getSafeAuthRedirect(next) });
+  if (reason) params.set("motivo", reason);
+  return `${SECURITY_PATH}?${params.toString()}`;
 }

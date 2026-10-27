@@ -13,6 +13,7 @@ import { Notice } from "@/components/ui/notice";
 import { ResendConfirmation } from "@/components/auth/resend-confirmation";
 import { isEmailNotConfirmedError } from "@/lib/auth/confirmation";
 import { TOO_MANY_ATTEMPTS, TOO_MANY_EMAILS, isAuthRateLimited } from "@/lib/auth/limits";
+import { twoStepPath } from "@/lib/auth/two-step";
 
 type FormState = "idle" | "submitting" | "sent" | "error";
 type LoginMode = "password" | "magic-link";
@@ -88,7 +89,9 @@ export function LoginForm() {
         return;
       }
 
-      window.location.assign(nextPath);
+      // Launch audit A15: an account with an authenticator app finishes signing in with its code.
+      const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      window.location.assign(level?.currentLevel === "aal1" && level.nextLevel === "aal2" ? twoStepPath("codigo", nextPath) : nextPath);
       return;
     }
 
