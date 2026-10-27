@@ -27,8 +27,12 @@
 --   seller from their events, unlinks them from these counts too (a trigger on laria_private.account_anonymizations).
 -- Concurrency: each step is one short transaction. It first takes the row A18's retention job
 --   (marketplace-event-retention) locks first, laria_private.marketplace_event_scrub_clock, so the two jobs take turns
---   and never hold the same events at once. It skips impressions another transaction holds (an account anonymization,
---   a listing being deleted) instead of waiting for them, and leaves their day for the next step.
+--   and never hold the same events at once. After that it never waits: it skips impressions another transaction holds,
+--   then holds the listing, seller and store of each impression it took for key share, again skipping any another
+--   transaction holds (an account anonymization holds its profile, and a deletion its row, before they reach the
+--   events). An impression whose listing, seller or store it couldn't hold stays for a later step, with its day. The
+--   daily counts' foreign keys then find their rows already held, so the step never waits for an anonymization or a
+--   deletion while it holds events they need, and they can't deadlock.
 -- Locks: the first statement takes SHARE ROW EXCLUSIVE locks on listings, profiles, stores (the daily counts' foreign
 --   keys) and laria_private.account_anonymizations (the trigger) at once without waiting: while one is held it lets go
 --   of the others and tries again a moment later, and after 30 seconds it fails and can be run again. Writes to those
@@ -145,7 +149,7 @@ revoke all on laria_private.listing_impression_rollup_clock from public, anon, a
 -- Moves up to p_limit card impressions of the Lima days that ended 90 days ago or more into
 -- laria_private.listing_impression_days, oldest day first, deleting them in the same statement, and answers how many it
 -- moved. A day goes on in the next call where it stopped: when it reached p_limit, or when another transaction held
--- some of the day's impressions, which it skips rather than waits for.
+-- some of the day's impressions, or the listing, seller or store of some, which it skips rather than waits for.
 create or replace function laria_private.roll_up_listing_impressions(p_limit integer default 10000)
 returns integer
 language plpgsql
@@ -156,6 +160,13 @@ declare
   -- The newest day to move: it ended at today's midnight in Lima 90 days ago, or earlier.
   last_day constant date := (now() at time zone 'America/Lima')::date - 91;
   current_day date;
+  batch uuid[];
+  listings_wanted uuid[];
+  sellers_wanted uuid[];
+  stores_wanted uuid[];
+  listings_held uuid[];
+  sellers_held uuid[];
+  stores_held uuid[];
   moved integer;
   total integer := 0;
 begin
@@ -174,15 +185,35 @@ begin
   select c.next_day into current_day from laria_private.listing_impression_rollup_clock c where c.id for update;
 
   while current_day <= last_day loop
-    with batch as (
-      select e.id from public.marketplace_events e
+    -- The day's impressions no other transaction holds, at most what is left of p_limit, and what they point to.
+    select coalesce(array_agg(e.id), '{}'),
+      coalesce(array_agg(distinct e.listing_id) filter (where e.listing_id is not null), '{}'),
+      coalesce(array_agg(distinct e.seller_user_id) filter (where e.seller_user_id is not null), '{}'),
+      coalesce(array_agg(distinct e.store_id) filter (where e.store_id is not null), '{}')
+    into batch, listings_wanted, sellers_wanted, stores_wanted
+    from (
+      select e.id, e.listing_id, e.seller_user_id, e.store_id from public.marketplace_events e
       where e.event_type = 'listing_impression'
         and e.created_at >= current_day::timestamp at time zone 'America/Lima'
         and e.created_at < (current_day + 1)::timestamp at time zone 'America/Lima'
       limit p_limit - total
       for update skip locked
-    ), removed as (
-      delete from public.marketplace_events e using batch b where e.id = b.id
+    ) e;
+    -- Their listings, sellers and stores, held for key share (what the daily counts' foreign keys take) without
+    -- waiting: one another transaction holds is left out, and so are its impressions.
+    select coalesce(array_agg(l.id), '{}') into listings_held
+    from (select l.id from public.listings l where l.id = any (listings_wanted) order by l.id for key share skip locked) l;
+    select coalesce(array_agg(p.id), '{}') into sellers_held
+    from (select p.id from public.profiles p where p.id = any (sellers_wanted) order by p.id for key share skip locked) p;
+    select coalesce(array_agg(s.id), '{}') into stores_held
+    from (select s.id from public.stores s where s.id = any (stores_wanted) order by s.id for key share skip locked) s;
+
+    with removed as (
+      delete from public.marketplace_events e
+      where e.id = any (batch)
+        and (e.listing_id is null or e.listing_id = any (listings_held))
+        and (e.seller_user_id is null or e.seller_user_id = any (sellers_held))
+        and (e.store_id is null or e.store_id = any (stores_held))
       returning e.listing_id, e.seller_user_id, e.store_id
     ), counted as (
       insert into laria_private.listing_impression_days (listing_id, day, seller_user_id, store_id, impressions)
@@ -194,7 +225,8 @@ begin
     total := total + moved;
     -- The day may have more: the next call looks at it again.
     exit when total >= p_limit;
-    -- Impressions it skipped because another transaction held them: the day waits for the next call.
+    -- Impressions it skipped because another transaction held them, or their listing, seller or store: the day waits
+    -- for the next call.
     exit when exists (
       select 1 from public.marketplace_events e
       where e.event_type = 'listing_impression'

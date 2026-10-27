@@ -268,7 +268,8 @@ Event rows contain UUID `id`, `event_type`, `created_at`, nullable listing/store
 ### Launch audit: lighter event writes
 
 Migration `20261114180000_launch_audit_analytics.sql` (finding A33 of the 26 Oct 2026 launch audit). Suites:
-`tests/launch-audit-analytics.sql` and `tests/launch-audit-analytics.test.cjs`. The application before it keeps working
+`tests/launch-audit-analytics.sql`, `tests/launch-audit-analytics.test.cjs` and, with several connections,
+`tests/launch-audit-analytics.integration.cjs`. The application before it keeps working
 with it, so it can be applied before the deploy.
 
 - `public.record_marketplace_events(p_session_id, p_events, p_actor_user_id)` (service role only): `/api/events`
@@ -290,9 +291,13 @@ with it, so it can be applied before the deploy.
   `laria_private.roll_up_listing_impressions(10000)`: card impressions of every Lima day that ended 90 days ago or more
   move into the daily rows and are deleted, up to 10,000 per step, so each step is a short transaction. It first locks
   the row A18's retention locks first (`laria_private.marketplace_event_scrub_clock`), so the rollup and
-  `marketplace-event-retention` (09:45 UTC) take turns. It skips impressions another transaction holds instead of
-  waiting for them and leaves their day for the next step. Views, contacts and every other event stay as they are, and
-  the retention still clears the visitor of those.
+  `marketplace-event-retention` (09:45 UTC) take turns. After that it never waits: it skips impressions another
+  transaction holds, then holds the listing, seller and store of the impressions it took (for key share, as the daily
+  rows' foreign keys do) and leaves out those another transaction holds: an account anonymization holds the profile,
+  and a deletion its row, before they reach the events. What it leaves waits, with its day, for the next step. An
+  anonymization or a deletion may wait for a step, never the other way round, so they can't deadlock
+  (`tests/launch-audit-analytics.integration.cjs` replays both with the real deletion and anonymization). Views,
+  contacts and every other event stay as they are, and the retention still clears the visitor of those.
 - All-time numbers (`p_days = 0`) add the daily rows, read the way the events are read: impressions and the
   click-through denominator of `get_account_analytics_before_favorites` (Mis estadísticas, the rows recorded for that
   seller) and `get_marketplace_admin_analytics_before_favorites` (Admin, all rows). The 7- and 30-day periods, and the
