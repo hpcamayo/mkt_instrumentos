@@ -7,6 +7,8 @@ import { flushSync } from "react-dom";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ListingCardPreview, ListingPagePreview, type PreviewListing } from "@/components/selling/listing-preview";
 import { ConditionCards, FormSection, TypeChips } from "@/components/selling/choice-fields";
+import { ListingDetailFields } from "@/components/listing-details/detail-fields";
+import { PriceModeField, SALE_TERMS_KEY } from "@/components/listing-details/sale-terms-fields";
 import {
   PHOTO_BUCKET,
   SOUND_BUCKET,
@@ -33,9 +35,12 @@ import { Notice } from "@/components/ui/notice";
 import { Textarea } from "@/components/ui/textarea";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { MAX_LISTING_PHOTOS, getInstrumentTypeOptions } from "@/lib/listing-submission";
-import { categoryOptions, conditionOptions } from "@/lib/listings";
+import type { ListingDetailAccess } from "@/lib/listing-detail-access";
+import { checkListingDetails, detailFieldId } from "@/lib/listing-details";
+import { categoryOptions, conditionOptions, particularConditionOptions } from "@/lib/listings";
 import { citySuggestions, normalizePeruRegion, peruRegions } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
+import { lastSaleTermsKey, readSaleTerms, saleTermsColumns } from "@/lib/sale-terms";
 import {
   emptyValues,
   draftFromServer,
@@ -98,6 +103,8 @@ type Props = {
   storeDefaults?: { condition: string | null; descriptionFooter: string };
   serverDraft?: ServerDraft;
   reviewWaitMinutes?: number | null;
+  // listing-details: the optional fields this seller may fill (lib/listing-detail-access.ts).
+  detailAccess?: ListingDetailAccess;
 };
 
 type Clip = NonNullable<ClipState> & { path?: string; slot: number; type: EncodedClip["type"]; blob?: Blob };
@@ -116,20 +123,21 @@ const FIELD_IDS: Record<SellField, string> = {
   city: `${ID}-city`,
   region: `${ID}-region`,
   description: `${ID}-description`,
+  details: `${ID}-details`,
   marketplace_rules: `${ID}-marketplace_rules`,
 };
 
 export const SELL_STEPS: { title: string; fields: SellField[] }[] = [
   { title: "Fotos", fields: ["photos"] },
   { title: "Qué es", fields: ["category", "instrument_type", "brand", "model", "title"] },
-  { title: "Estado y precio", fields: ["condition", "price_pen", "city", "region", "description"] },
+  { title: "Estado y precio", fields: ["condition", "price_pen", "city", "region", "description", "details"] },
   { title: "Revisar y publicar", fields: ["marketplace_rules"] },
 ];
 
 // Photo paths allow slots 0–99 (app/api/submissions); a replaced photo never reuses its slot.
 const MAX_SLOT = 99;
 
-export function SellListingForm({ ownerId, profile, store, inventorySku: initialSku, brandsByCategory = {}, storeDefaults, serverDraft, reviewWaitMinutes = null }: Props) {
+export function SellListingForm({ ownerId, profile, store, inventorySku: initialSku, brandsByCategory = {}, storeDefaults, serverDraft, reviewWaitMinutes = null, detailAccess }: Props) {
   const kind = store ? "store_listing" : "listing";
   const direct = store?.status === "active" && store.isVerified;
   // FIX 05: the SKU being published. Starting another listing clears it, so the next one is never sent for a linked SKU.
@@ -154,6 +162,8 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
   const [onServer, setOnServer] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [success, setSuccess] = useState<Success | null>(null);
+  // listing-details: the sale terms of the seller's last listing on this device, offered back with a button.
+  const [previousDetails, setPreviousDetails] = useState<Record<string, unknown> | null>(null);
 
   const submission = useRef<Capability | null>(null);
   const starting = useRef<Promise<Capability> | null>(null);
@@ -177,6 +187,16 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
   const uploading = photos.some((photo) => photo.status === "preparing" || photo.status === "uploading") || clip?.status === "uploading";
 
   // ------------------------------------------------------------------ restoring (POST 01, POST 02)
+
+  useEffect(() => {
+    const saved = readStorage(lastSaleTermsKey(ownerId, kind));
+    if (!saved) return;
+    try {
+      setPreviousDetails({ [SALE_TERMS_KEY]: readSaleTerms(JSON.parse(saved)) });
+    } catch {
+      // Unreadable: nothing to offer.
+    }
+  }, [ownerId, kind]);
 
   useEffect(() => {
     let cancelled = false;
@@ -502,6 +522,11 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
     });
   }
 
+  function setDetail(key: string, value: unknown) {
+    setValues((current) => ({ ...current, details: { ...current.details, [key]: value } }));
+    clearError("details");
+  }
+
   function clearError(field: SellField) {
     setErrors((current) => (current.some((error) => error.field === field) ? current.filter((error) => error.field !== field) : current));
   }
@@ -527,6 +552,8 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
       // The 40-character minimum applies to the seller's own words, not to the store's standard text (SHOP 06).
       description: withoutFooter(values.description, store ? storeDefaults?.descriptionFooter.trim() ?? "" : ""),
       acceptedRules,
+      details: values.details,
+      isStore: Boolean(store),
     };
   }
 
@@ -578,26 +605,33 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
       const currentClip = await currentClipState();
       if (currentClip && currentClip.status !== "done") throw new Error("El sonido no se subió. Reintenta o quítalo.");
       const capability = await ensureSubmission();
+      const checkedDetails = checkListingDetails(values.details, { isStore: Boolean(store) });
+      if (!checkedDetails.ok) throw new Error(checkedDetails.message);
+      const details = checkedDetails.details;
       const fields = {
         ...submissionFields({ ...values, city: checks.city, region: checks.region }, priceValue, checks.regionValue, cleanAttributes(values.instrumentType, values.attributes)),
         ...(store && inventorySku ? { inventory_item_id: inventorySku.id } : {}),
       };
       const paths = latest.map((photo) => photo.path!);
       const sound = currentClip?.path ? { path: currentClip.path, duration: currentClip.duration } : null;
-      const fingerprint = JSON.stringify([fields, paths, sound]);
+      const fingerprint = JSON.stringify([fields, paths, sound, details]);
       if (uncertain.current && uncertain.current !== fingerprint) {
         throw new Error("No supimos si el envío anterior llegó. Deja los datos como estaban y toca Publicar para confirmarlo.");
       }
       setProgress("Enviando la publicación…");
       let result;
       try {
-        result = await completeSubmission(capability.token, fields, paths, sound);
+        result = await completeSubmission(capability.token, fields, paths, sound, details);
       } catch (error) {
         if (!(error instanceof SubmissionRejected)) uncertain.current = fingerprint;
         throw error;
       }
       uncertain.current = null;
       removeStorage(storageKey);
+      if (details[SALE_TERMS_KEY]) {
+        writeStorage(lastSaleTermsKey(ownerId, kind), JSON.stringify(details[SALE_TERMS_KEY]));
+        setPreviousDetails({ [SALE_TERMS_KEY]: readSaleTerms(details[SALE_TERMS_KEY]) });
+      }
       submission.current = null;
       setSuccess({ slug: result.slug, status: result.status, sku: inventorySku, values });
     } catch (error) {
@@ -654,6 +688,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
     photos: photos.map((photo) => photo.url),
     seller: { name: store ? store.name : profile.fullName, label: !store ? "Particular" : direct ? "Tienda verificada" : "Tienda" },
     hasSound: Boolean(clip),
+    saleTerms: saleTermsColumns(readSaleTerms(values.details[SALE_TERMS_KEY])),
   };
 
   if (success) {
@@ -683,7 +718,8 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
     );
   }
 
-  const stepErrors = errors.map((error) => ({ id: FIELD_IDS[error.field], message: error.message }));
+  const stepErrors = errors.map((error) => ({ id: error.key ? detailFieldId(ID, error.key, error.target) : FIELD_IDS[error.field], message: error.message }));
+  const detailError = errors.find((error) => error.field === "details");
   const last = step === SELL_STEPS.length - 1;
 
   return (
@@ -775,11 +811,12 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
 
           {step === 2 ? (
             <FormSection id={`${ID}-paso`} step={3} title="Estado y precio">
-              <ConditionCards id={FIELD_IDS.condition} name="condition" legend="Condición" options={conditionChoices(conditionOptions)} value={values.condition} onChange={(value) => set("condition", value)} error={errorFor("condition")} />
+              <ConditionCards id={FIELD_IDS.condition} name="condition" legend="Condición" options={conditionChoices(store ? conditionOptions : particularConditionOptions)} value={values.condition} onChange={(value) => set("condition", value)} error={errorFor("condition")} />
               <Field id={FIELD_IDS.price_pen} label="Precio en soles" hint="Solo números, sin decimales." error={errorFor("price_pen")} className="sm:max-w-xs">
                 <PriceInput name="price_pen" value={values.price} onValueChange={(text) => set("price", text)} />
               </Field>
               {hintFor("price_pen").map((hint) => <HintLine key={hint.message} text={hint.message} />)}
+              <PriceModeField idPrefix={ID} value={readSaleTerms(values.details[SALE_TERMS_KEY]).price_mode} onChange={(mode) => setDetail(SALE_TERMS_KEY, { ...readSaleTerms(values.details[SALE_TERMS_KEY]), price_mode: mode })} />
               {store ? (
                 <p className="t-ui text-ink-2">Ubicación: <strong className="text-ink">{[profile.city, profile.region].filter(Boolean).join(", ")}</strong>, la de tu tienda.</p>
               ) : (
@@ -810,6 +847,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
                 onRemove={() => setClip(null)}
                 onRetry={() => { if (clip) void uploadClip(clip); }}
               />
+              <ListingDetailFields idPrefix={ID} details={values.details} onChange={setDetail} error={detailError} previous={previousDetails} isStore={Boolean(store)} access={detailAccess} />
             </FormSection>
           ) : null}
 

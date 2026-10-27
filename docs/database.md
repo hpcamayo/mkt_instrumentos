@@ -1238,7 +1238,7 @@ Migrations `20261206120000`–`20261206120300` (not applied to any hosted databa
 <!-- feature-ideas:listing-details -->
 ## Feature ideas: listing details (conditions, sale terms, combos, map)
 
-Migrations `20261202120000`–`20261202120600` (not applied to any hosted database). Write-up:
+Migrations `20261202120000`–`20261202120800` (not applied to any hosted database). Write-up:
 `docs/feature-ideas/listing-details.md`. Suite: `tests/feat-listing-details.sql`.
 
 ### The condition scale (sell-10, `20261202120000`)
@@ -1266,7 +1266,8 @@ Migrations `20261202120000`–`20261202120600` (not applied to any hosted databa
 - `laria_private.listing_flag_filters(flag, label, sort_order)` lists the flags a search may ask for. Saved searches
   take an `options` key (registered flags, "all of"); `catalog_facets` reads `options` from its filters and returns an
   `options` object with each flag's count. The site's copy is `lib/listing-flags.ts`; its URL parameter is `opciones`.
-- Flags today: `envia_provincia`, `se_puede_probar`, `acepta_cambios` (listing-details).
+- Flags today: `envia_provincia`, `se_puede_probar`, `acepta_cambios` (listing-details); `con_garantia` (store-floor,
+  `20261206120300`).
 - **Adding a flag:** insert its row into `laria_private.listing_flag_filters`; add a `listings_flags_<batch>` trigger
   function that does `new.listing_flags := array_append(new.listing_flags, '<flag>')` when the batch's column says so;
   add one entry in the marked block of `lib/listing-flags.ts`. No shared function changes.
@@ -1298,9 +1299,24 @@ Migrations `20261202120000`–`20261202120600` (not applied to any hosted databa
   `shipping_carriers` (shalom, olva, other), `shipping_payment` (origin | destination), `accepts_trades`, `trade_wants`
   (≤ 200 characters) and `trade_categories`. Checks keep dependent values with their switch;
   `listings_check_sale_terms` refuses contact details in the two free-text fields.
+- `trade_categories` are the catalog's own (`20261202120800`): `laria_private.trade_categories_are_valid(text[])` accepts
+  a category when `public.listing_taxonomy_is_valid(category, 'other')` does, so a category added later (discovery's
+  `andean`) needs no change here; at most 12. The constraint `listings_trade_categories_check` calls it as whoever
+  writes the row, so `anon`, `authenticated` and `service_role` hold EXECUTE on it (it reads nothing, and
+  `laria_private` is not an API schema). The writer's own check was patched to the same rule.
 - Writer `laria_private.write_listing_sale_terms` (key `sale_terms`): a key that is absent keeps its value.
   `listings_ux_sale_terms_changed` (named after `listings_track_content_change`, which resets the date) moves
   `content_changed_at`, so a change shows as "Actualizado".
+
+### Maker marks in the sell form (`20261202120700`)
+
+- Writer key `maker` (owner batch discovery): `laria_private.write_listing_maker_details(uuid, jsonb)` takes
+  `handmade`, `made_to_order_weeks` and `artist_note` and stores them in discovery's `listing_maker_details`
+  (`20261207120400`). It checks the listing's own seller (`laria_private.listing_seller_user`), since it runs inside
+  `complete_listing_submission` with no `auth.uid()`, and raises discovery's errors for the cases
+  `set_listing_maker_details` refuses. Discovery's table, rules and RPC are unchanged; its edit form still uses the RPC.
+- Copier `laria_private.copy_listing_maker_details`: a duplicate or relisted copy keeps "Hecho a mano" and "a pedido"
+  while the store still shows its maker profile; the artist note is not copied.
 
 ### Shared functions changed (`20261202120300`, `20261202120400`)
 

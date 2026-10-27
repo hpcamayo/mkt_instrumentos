@@ -10,6 +10,7 @@ import { FollowButton } from "@/components/following/follow-button";
 import { FilterSheetButton } from "@/components/filter-sheet";
 import { ListingCard } from "@/components/listing-card";
 import { ListingFilters } from "@/components/listing-filters";
+import { CatalogMapSwitch } from "@/components/map/catalog-map-switch";
 import { PageContainer } from "@/components/page-container";
 import { Pagination } from "@/components/pagination";
 import { SortMenu, SortSheetButton } from "@/components/sort-control";
@@ -22,6 +23,7 @@ import {
   RESULTS_STATUS_ID,
   appliedFilters,
   catalogHref,
+  catalogSearchParams,
   catalogTitle,
   clearedFilters,
   formatNumber,
@@ -219,6 +221,7 @@ export async function CatalogView({
                   emptyState
                 )
               ) : (
+                <CatalogMapSwitch query={catalogSearchParams(filters).toString()}>
                 <CatalogTrail href={trailHref} label={title}>
                   <div className={LISTING_GRID}>
                     {listings.map((listing, index) => (
@@ -235,6 +238,7 @@ export async function CatalogView({
                   <CatalogLoadMore filters={filters} page={page} total={totalCount} />
                   <Pagination page={page} total={totalCount} path={path} params={params} phoneLoadMore />
                 </CatalogTrail>
+                </CatalogMapSwitch>
               )}
             </CatalogResults>
           </div>

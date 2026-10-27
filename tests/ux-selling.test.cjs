@@ -207,7 +207,8 @@ test("attribute labels read in Spanish where musicians say it in Spanish; values
 
 test("the edit page shows the condition cards and keeps its save flow", () => {
   const edit = source("components/listing-edit-form.tsx");
-  assert.match(edit, /<ConditionCards id="editar-condition" name="condition"[^>]*defaultValue=\{listing\.condition \?\? ""\}/);
+  // sell-10: the scale (stores also see open box), with an old value shown on today's scale.
+  assert.match(edit, /<ConditionCards id="editar-condition" name="condition"[^>]*options=\{conditionChoices\(isStore \? conditionOptions : particularConditionOptions\)\}[^>]*defaultValue=\{currentCondition\(listing\.condition\) \?\? ""\}/);
   assert.match(edit, /changedValues\(values, listing, \["title", "category", "instrument_type", "brand", "model", "condition"\]\)/);
   assert.match(edit, /Guardar cambios/);
 });

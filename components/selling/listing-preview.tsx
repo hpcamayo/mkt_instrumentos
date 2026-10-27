@@ -6,6 +6,9 @@ import { Price } from "@/components/ui/price";
 import { VerifiedIcon } from "@/components/ui/verified-mark";
 import { getCardSpecLine, getSpecStrip, getSpecTable } from "@/lib/listing-specs";
 import { getCategoryLabel } from "@/lib/listings";
+import { PriceModeMark } from "@/components/listing-details/price-mode-mark";
+import { SaleTermsSummary } from "@/components/listing-details/sale-terms-summary";
+import type { ListingSaleTerms } from "@/lib/sale-terms";
 
 // POST 10: what buyers will see, before sending. The card copies the catalog card's grid variant (ListingCard) and the
 // page a simplified listing page, without links, favourites or telemetry: nothing here exists yet. The trust line is
@@ -26,6 +29,8 @@ export type PreviewListing = {
   photos: string[];
   seller: { name: string; label: "Particular" | "Tienda" | "Tienda verificada" };
   hasSound: boolean;
+  // listing-details: sell-07's price mode and buy-02/sell-06's terms, as the listing will show them.
+  saleTerms?: ListingSaleTerms;
 };
 
 export function ListingCardPreview({ listing }: { listing: PreviewListing }) {
@@ -47,7 +52,7 @@ export function ListingCardPreview({ listing }: { listing: PreviewListing }) {
       </div>
       <figcaption className="flex min-w-0 flex-col gap-1">
         <p className="line-clamp-2 min-h-[38px] t-card-title text-ink">{listing.title || "Tu título aparecerá aquí"}</p>
-        <p>{listing.price === null ? <span className="t-ui text-ink-2">Tu precio</span> : <Price value={listing.price} />}</p>
+        <p className="flex flex-wrap items-center gap-x-2">{listing.price === null ? <span className="t-ui text-ink-2">Tu precio</span> : <><Price value={listing.price} /><PriceModeMark mode={listing.saleTerms?.price_mode} /></>}</p>
         {spec ? <p className="truncate t-meta">{spec}</p> : null}
         <p className="flex min-w-0 items-center gap-1 t-meta">
           <span className="min-w-0 truncate">{listing.city || "Tu ciudad"}</span>
@@ -81,9 +86,10 @@ export function ListingPagePreview({ listing }: { listing: PreviewListing }) {
       <div className="grid gap-1">
         <p className="t-micro text-ink-2">{listing.category ? getCategoryLabel(listing.category) : "Categoría"}</p>
         <p className="t-section text-ink">{listing.title || "Tu título aparecerá aquí"}</p>
-        <Price value={listing.price} size="detail" />
+        <p className="flex flex-wrap items-center gap-x-3"><Price value={listing.price} size="detail" /><PriceModeMark mode={listing.saleTerms?.price_mode} /></p>
         <p className="t-meta">{[listing.city, listing.region].filter(Boolean).join(", ")} · Publicado hoy</p>
       </div>
+      {listing.saleTerms ? <SaleTermsSummary terms={listing.saleTerms} /> : null}
       {strip.length ? (
         <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {strip.map((spec) => (

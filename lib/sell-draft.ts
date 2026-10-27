@@ -1,6 +1,9 @@
 // The sell form's state as it is saved (Effortless Laria, selling batch): on the device as the seller types (POST 01)
 // and, on "Guardar borrador", in listing_drafts so it follows them to another device (POST 02). Pure, so the form and
 // the tests share it. Nothing here is trusted by the server: publishing validates everything again.
+import { currentCondition } from "@/lib/listing-condition";
+import { readMakerForm } from "@/lib/maker-details";
+import { deliveryTermsOnly, readSaleTerms } from "@/lib/sale-terms";
 
 export type SellValues = {
   category: string;
@@ -16,6 +19,8 @@ export type SellValues = {
   region: string;
   description: string;
   attributes: Record<string, string | string[]>;
+  // listing-details: each batch's extra fields by key ("sale_terms": lib/sale-terms.ts), as the form holds them.
+  details: Record<string, unknown>;
 };
 
 export type SavedPhoto = { path: string; slot: number; shot?: string; dark?: boolean };
@@ -48,6 +53,7 @@ export function emptyValues(defaults: Partial<SellValues> = {}): SellValues {
     region: "",
     description: "",
     attributes: {},
+    details: {},
     ...defaults,
   };
 }
@@ -63,6 +69,14 @@ export function similarValues(values: SellValues): SellValues {
     region: values.region,
     description: values.description,
     attributes: values.attributes,
+    // How it is delivered and what trades the seller takes usually hold for the next one too; the price mode, like
+    // the price, does not.
+    // An artist's note is about one instrument, so it is not carried over either.
+    details: {
+      ...values.details,
+      ...(values.details.sale_terms ? { sale_terms: deliveryTermsOnly(readSaleTerms(values.details.sale_terms)) } : {}),
+      ...(values.details.maker ? { maker: { ...readMakerForm(values.details.maker), artist_note: "" } } : {}),
+    },
   });
 }
 
@@ -83,10 +97,18 @@ export function parseLocalDraft(raw: string | null): LocalDraft | null {
   try {
     const value = JSON.parse(raw);
     if (value?.version !== 1 || typeof value.values !== "object" || !Array.isArray(value.photos)) return null;
-    return { ...value, values: { ...emptyValues(), ...value.values } } as LocalDraft;
+    return { ...value, values: savedValues(value.values) } as LocalDraft;
   } catch {
     return null;
   }
+}
+
+// Saved values on today's shape: missing keys filled, an old condition ("Usado - buen estado") on today's scale.
+function savedValues(input: unknown): SellValues {
+  const values = { ...emptyValues(), ...(input && typeof input === "object" && !Array.isArray(input) ? input as Partial<SellValues> : {}) };
+  if (!values.details || typeof values.details !== "object" || Array.isArray(values.details)) values.details = {};
+  values.condition = typeof values.condition === "string" ? currentCondition(values.condition) : "";
+  return values;
 }
 
 // "guardado hace 3 min".
@@ -131,7 +153,7 @@ export function draftFromServer(
     savedAt: row.updated_at,
     submission,
     nextSlot: Math.max(-1, clipSlot, ...slots) + 1,
-    values: { ...emptyValues(), ...(row.form && typeof row.form === "object" ? row.form as Partial<SellValues> : {}) },
+    values: savedValues(row.form),
     photos: photos.map((photo, index) => ({ path: photo.path, slot: slots[index], ...(photo.shot ? { shot: photo.shot } : {}) })),
     soundClip: clip,
     onServer: true,
