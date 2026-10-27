@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useState } from "react";
+import { TOO_MANY_EMAILS, isAuthRateLimited } from "@/lib/auth/limits";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { PageNotice } from "@/components/page-notice";
 import { useFormErrors } from "@/components/use-form-errors";
@@ -28,7 +29,14 @@ export function ForgotPasswordForm() {
     const redirectTo = window.location.origin + "/auth/callback?next=/restablecer-contrasena";
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
     setBusy(false);
-    setMessage(error ? "No se pudo enviar el enlace. Intenta nuevamente." : "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.");
+    // Launch audit A16: a limit reached is said as such, not as a failure to retry right away.
+    setMessage(
+      isAuthRateLimited(error)
+        ? TOO_MANY_EMAILS
+        : error
+          ? "No se pudo enviar el enlace. Intenta nuevamente."
+          : "Si el correo está registrado, recibirás un enlace para restablecer tu contraseña.",
+    );
   }
 
   return (

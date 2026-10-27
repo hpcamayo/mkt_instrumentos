@@ -7,6 +7,7 @@ import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   upsertBasicSellerProfile,
 } from "@/lib/auth/profile";
+import { SIGN_UP_PAUSED, TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -119,6 +120,12 @@ export function SellerSignupForm() {
       return;
     }
 
+    if (emailCheck === "limited") {
+      setState("error");
+      setMessage(TOO_MANY_ATTEMPTS);
+      return;
+    }
+
     if (emailCheck === "error") {
       setState("error");
       setMessage("No pudimos verificar el correo. Intenta nuevamente.");
@@ -141,7 +148,7 @@ export function SellerSignupForm() {
 
     if (error) {
       setState("error");
-      setMessage("No se pudo crear la cuenta. Revisa los datos e intenta nuevamente.");
+      setMessage(isAuthRateLimited(error) ? SIGN_UP_PAUSED : "No se pudo crear la cuenta. Revisa los datos e intenta nuevamente.");
       return;
     }
 
@@ -258,6 +265,11 @@ async function checkEmailAvailability(email: string) {
   const result = (await response.json().catch(() => null)) as
     | { ok?: boolean; available?: boolean }
     | null;
+
+  // Launch audit A28: each visitor can check a limited number of addresses.
+  if (response.status === 429) {
+    return "limited" as const;
+  }
 
   if (!response.ok || !result?.ok) {
     return "error" as const;

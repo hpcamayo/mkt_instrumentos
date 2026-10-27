@@ -2,7 +2,8 @@
 // Docker-free stand-in for the Supabase API, for viewing the Store Operations prototype locally.
 // It serves the subset of the Supabase HTTP API the Laria app uses:
 //   /rest/v1/*      proxied to a local PostgREST
-//   /auth/v1/*      password sign-in, refresh, getUser and logout, against auth.users in local Postgres
+//   /auth/v1/*      password sign-in, refresh, getUser and logout, against auth.users in local Postgres, plus TOTP
+//                   factors (enroll, challenge, verify, unenroll) for Admin's two-step check (launch audit A15)
 //   /storage/v1/*   upload, download, list, remove and public URLs, on the local disk
 // Local development only. It never talks to hosted Supabase; there is no email, OTP or OAuth.
 //
@@ -46,6 +47,34 @@ if (process.argv[2] === "keys") {
   process.exit(0);
 }
 
+const BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+function base32(buf) {
+  let bits = "", out = "";
+  for (const byte of buf) bits += byte.toString(2).padStart(8, "0");
+  for (let i = 0; i + 5 <= bits.length; i += 5) out += BASE32[parseInt(bits.slice(i, i + 5), 2)];
+  return out;
+}
+function fromBase32(text) {
+  let bits = "";
+  for (const char of text.replace(/=+$/, "")) bits += BASE32.indexOf(char).toString(2).padStart(5, "0");
+  const bytes = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  return Buffer.from(bytes);
+}
+function totpCode(secret, step) {
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(step));
+  const hmac = crypto.createHmac("sha1", fromBase32(secret)).update(counter).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  return String((hmac.readUInt32BE(offset) & 0x7fffffff) % 1e6).padStart(6, "0");
+}
+const totpMatches = (secret, code) => [-1, 0, 1].some((drift) => totpCode(secret, Math.floor(Date.now() / 30000) + drift) === String(code));
+if (process.argv[2] === "totp") {
+  // `node local-gateway.cjs totp <secret>` prints the current code, for scripted checks.
+  console.log(totpCode(process.argv[3], Math.floor(Date.now() / 30000)));
+  process.exit(0);
+}
+
 db = new Client({ connectionString: PGURL });
 ready = db.connect();
 
@@ -54,24 +83,39 @@ function bearer(req) {
   return h.startsWith("Bearer ") ? h.slice(7) : req.headers.apikey;
 }
 
+// TOTP factors as Supabase Auth keeps them, in STORAGE_DIR/mfa-factors.json: { [userId]: [{ id, friendly_name,
+// factor_type, status, secret, created_at, updated_at }] }. Codes follow RFC 6238 (SHA-1, 30 s, 6 digits, one step
+// of drift either way). The secret never leaves the gateway after enrollment.
+const FACTORS_FILE = path.join(STORAGE_DIR, "mfa-factors.json");
+const challenges = new Map();
+function readFactors() {
+  try { return JSON.parse(fs.readFileSync(FACTORS_FILE, "utf8")); } catch { return {}; }
+}
+function writeFactors(all) {
+  fs.mkdirSync(STORAGE_DIR, { recursive: true });
+  fs.writeFileSync(FACTORS_FILE, JSON.stringify(all, null, 2));
+}
+const publicFactor = ({ secret, ...factor }) => factor;
 function userJson(u) {
   return {
     id: u.id, aud: "authenticated", role: "authenticated", email: u.email,
     email_confirmed_at: u.email_confirmed_at, confirmed_at: u.email_confirmed_at, phone: "",
     last_sign_in_at: u.last_sign_in_at, app_metadata: { provider: "email", providers: ["email"], ...(u.raw_app_meta_data || {}) },
     user_metadata: u.raw_user_meta_data || {}, identities: [], created_at: u.created_at, updated_at: u.updated_at,
-    is_anonymous: false,
+    is_anonymous: false, factors: (readFactors()[u.id] || []).map(publicFactor),
   };
 }
-async function session(u) {
+// aal and amr as Supabase Auth sets them: aal1 after the password, aal2 once a factor's code is verified; a refresh
+// keeps the session's level.
+async function session(u, aal = "aal1", amr = [{ method: "password", timestamp: Math.floor(Date.now() / 1000) }]) {
   const now = Math.floor(Date.now() / 1000);
   const access = sign({
     aud: "authenticated", exp: now + TTL, iat: now, sub: u.id, email: u.email, role: "authenticated",
     app_metadata: { provider: "email", ...(u.raw_app_meta_data || {}) }, user_metadata: u.raw_user_meta_data || {},
-    session_id: crypto.randomUUID(),
+    session_id: crypto.randomUUID(), aal, amr,
   });
-  const refresh = b64url(JSON.stringify({ sub: u.id, n: crypto.randomUUID() })) + "." +
-    crypto.createHmac("sha256", SECRET).update(u.id).digest("base64url");
+  const payload = b64url(JSON.stringify({ sub: u.id, n: crypto.randomUUID(), aal, amr }));
+  const refresh = payload + "." + crypto.createHmac("sha256", SECRET).update(payload).digest("base64url");
   return { access_token: access, token_type: "bearer", expires_in: TTL, expires_at: now + TTL, refresh_token: refresh, user: userJson(u) };
 }
 async function findUser(where, args) {
@@ -109,11 +153,11 @@ async function handleAuth(req, res, url) {
     if (grant === "refresh_token") {
       const [payload, sig] = String(body.refresh_token || "").split(".");
       try {
-        const { sub } = JSON.parse(Buffer.from(payload, "base64url").toString());
-        if (crypto.createHmac("sha256", SECRET).update(sub).digest("base64url") !== sig) throw new Error();
+        if (crypto.createHmac("sha256", SECRET).update(payload).digest("base64url") !== sig) throw new Error();
+        const { sub, aal, amr } = JSON.parse(Buffer.from(payload, "base64url").toString());
         const u = await findUser("id = $1", [sub]);
         if (!u) throw new Error();
-        return send(res, 200, await session(u));
+        return send(res, 200, await session(u, aal, amr));
       } catch { return authErr(res, "Invalid Refresh Token", "refresh_token_not_found"); }
     }
     return authErr(res, "Unsupported grant", "validation_failed");
@@ -131,12 +175,69 @@ async function handleAuth(req, res, url) {
     }
     return send(res, 200, userJson(u));
   }
+  if (route === "/factors" || route.startsWith("/factors/")) return handleFactors(req, res, route);
   if (route === "/logout") return send(res, 204);
   if (route === "/settings") return send(res, 200, { external: { email: true }, disable_signup: true, mailer_autoconfirm: true });
   // OTP, sign-up, recovery and invite need email; the prototype seeds its users instead.
   // Resending the confirmation e-mail: nothing is sent locally (accounts batch, fix-08).
   if (route === "/resend") return send(res, 200, {});
   return send(res, 400, { code: 400, error_code: "not_supported_locally", msg: "Not available in the local prototype gateway" });
+}
+
+const mfaErr = (res, status, code, msg) => send(res, status, { code: status, error_code: code, msg });
+async function handleFactors(req, res, route) {
+  const claims = verify(bearer(req));
+  if (!claims || !claims.sub) return send(res, 401, { code: 401, error_code: "bad_jwt", msg: "invalid JWT" });
+  const u = await findUser("id = $1", [claims.sub]);
+  if (!u) return send(res, 403, { code: 403, error_code: "user_not_found", msg: "User not found" });
+  const all = readFactors();
+  const mine = all[u.id] || [];
+  const now = new Date().toISOString();
+  const [, , factorId, action] = route.split("/");
+  const body = req.method === "DELETE" ? {} : JSON.parse((await readBody(req)).toString() || "{}");
+  if (!factorId && req.method === "POST") {
+    if (body.factor_type !== "totp") return mfaErr(res, 422, "mfa_factor_type_not_supported", "Only TOTP locally");
+    // Like Supabase Auth: a second factor can only be added from a session that already passed the first one.
+    if (mine.some((factor) => factor.status === "verified") && claims.aal !== "aal2") return mfaErr(res, 422, "insufficient_aal", "AAL2 required to enroll a new factor");
+    const friendly = body.friendly_name || "";
+    if (friendly && mine.some((factor) => factor.friendly_name === friendly)) return mfaErr(res, 422, "mfa_factor_name_conflict", "A factor with this friendly name already exists");
+    const factor = { id: crypto.randomUUID(), friendly_name: friendly, factor_type: "totp", status: "unverified", secret: base32(crypto.randomBytes(20)), created_at: now, updated_at: now };
+    all[u.id] = [...mine, factor];
+    writeFactors(all);
+    const uri = `otpauth://totp/${encodeURIComponent(body.issuer || "Laria")}:${encodeURIComponent(u.email)}?secret=${factor.secret}&issuer=${encodeURIComponent(body.issuer || "Laria")}`;
+    // Not a scannable code: the local stand-in shows a placeholder; the secret below is what local checks use.
+    const qr = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160"><rect width="160" height="160" fill="#fff"/><rect x="10" y="10" width="40" height="40"/><rect x="110" y="10" width="40" height="40"/><rect x="10" y="110" width="40" height="40"/><text x="80" y="88" font-size="14" text-anchor="middle">QR local</text></svg>`;
+    return send(res, 200, { id: factor.id, type: "totp", friendly_name: friendly, totp: { qr_code: qr, secret: factor.secret, uri } });
+  }
+  const factor = mine.find((item) => item.id === factorId);
+  if (!factor) return mfaErr(res, 404, "mfa_factor_not_found", "Factor not found");
+  if (req.method === "DELETE") {
+    if (factor.status === "verified" && claims.aal !== "aal2") return mfaErr(res, 422, "insufficient_aal", "AAL2 required to unenroll verified factor");
+    all[u.id] = mine.filter((item) => item.id !== factorId);
+    writeFactors(all);
+    return send(res, 200, { id: factorId });
+  }
+  if (action === "challenge") {
+    const id = crypto.randomUUID();
+    const expiresAt = Math.floor(Date.now() / 1000) + 300;
+    challenges.set(id, { factorId, userId: u.id, expiresAt });
+    return send(res, 200, { id, type: "totp", expires_at: expiresAt });
+  }
+  if (action === "verify") {
+    const challenge = challenges.get(body.challenge_id);
+    if (!challenge || challenge.factorId !== factorId || challenge.userId !== u.id) return mfaErr(res, 422, "mfa_challenge_expired", "Challenge not found");
+    if (challenge.expiresAt < Date.now() / 1000) return mfaErr(res, 422, "mfa_challenge_expired", "Challenge expired");
+    if (!totpMatches(factor.secret, body.code)) return mfaErr(res, 422, "mfa_verification_failed", "Invalid TOTP code entered");
+    challenges.delete(body.challenge_id);
+    if (factor.status !== "verified") {
+      factor.status = "verified";
+      factor.updated_at = now;
+      writeFactors(all);
+    }
+    const stamp = Math.floor(Date.now() / 1000);
+    return send(res, 200, await session(u, "aal2", [{ method: "totp", timestamp: stamp }, ...(claims.amr || [{ method: "password", timestamp: stamp }])]));
+  }
+  return mfaErr(res, 404, "not_found", "Unknown factor route");
 }
 
 const MIME = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".csv": "text/csv",

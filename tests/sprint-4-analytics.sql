@@ -147,7 +147,7 @@ do $$ declare report jsonb; begin
  report := public.get_account_analytics(0);
  if (report#>>'{summary,active}')::integer <> 0 then raise exception 'Pending parent store inventory counted as public active inventory'; end if;
 end $$;
-select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000004","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 select public.review_store_application('72000000-0000-4000-8000-000000000001','hide','QA hidden parent visibility');
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
 do $$ declare report jsonb; begin
@@ -155,7 +155,7 @@ do $$ declare report jsonb; begin
  if (report#>>'{summary,active}')::integer <> 0 then raise exception 'Hidden parent store inventory counted as public active inventory'; end if;
  if (report#>>'{summary,views}')::integer <> 5 or (report#>>'{summary,recorded_views}')::integer <> 1 then raise exception 'Parent visibility removed owner historical metrics'; end if;
 end $$;
-select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000004","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 select public.review_store_application('72000000-0000-4000-8000-000000000001','approve');
 
 -- A rolling window, not a clock-bucket boundary, determines new opens.
@@ -182,7 +182,7 @@ end $$;
 -- event-ID retry protection, and filter events are not new searches.
 create temporary table s4_admin_baseline(report jsonb);
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000004","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 reset role;
 insert into s4_admin_baseline values(public.get_marketplace_admin_analytics(0));
 set local role service_role;
@@ -215,7 +215,7 @@ do $$ declare result jsonb; denied boolean := false; begin
  if not denied then raise exception 'Telemetry recorder accepted forged lifecycle state'; end if;
 end $$;
 reset role;
-select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000004","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$ declare before_report jsonb; report jsonb; begin
  select * into before_report from s4_admin_baseline;
  report := public.get_marketplace_admin_analytics(0);
@@ -232,7 +232,7 @@ do $$ begin
 end $$;
 select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select public.submit_listing_for_publication('73000000-0000-4000-8000-000000000002');
-select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000004","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000004","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 select public.review_listing('73000000-0000-4000-8000-000000000002','approve',null);
 select public.review_store_application('72000000-0000-4000-8000-000000000002','approve',null);
 select public.set_store_verification('72000000-0000-4000-8000-000000000002',true);

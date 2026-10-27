@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { LocationFields } from "@/components/location-fields";
 import { profileFieldErrors } from "@/lib/form-validation";
+import { SIGN_UP_PAUSED, TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
 import {
   STORE_OWNER_ACCOUNT_TYPE,
@@ -72,15 +73,22 @@ export function StoreOwnerSignupForm() {
       setMessage(`Ingresa un correo y una contraseña de al menos ${PASSWORD_MIN_LENGTH} caracteres.`);
       return;
     }
-    const available = await fetch("/api/auth/check-email", {
+    const emailCheck = await fetch("/api/auth/check-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     }).then(async (response) => {
       const result = await response.json().catch(() => null);
-      return response.ok && result?.ok && result.available;
+      // Launch audit A28: each visitor can check a limited number of addresses.
+      if (response.status === 429) return "limited";
+      return response.ok && result?.ok && result.available ? "available" : "unavailable";
     });
-    if (!available) {
+    if (emailCheck === "limited") {
+      setState("error");
+      setMessage(TOO_MANY_ATTEMPTS);
+      return;
+    }
+    if (emailCheck !== "available") {
       setState("error");
       setMessage("Ese correo ya está registrado o no pudo verificarse. Usa un correo exclusivo para la Tienda.");
       validation.setFieldError("email", "Usa un correo exclusivo para la Tienda que pueda verificarse.");
@@ -108,6 +116,11 @@ export function StoreOwnerSignupForm() {
         },
       },
     });
+    if (isAuthRateLimited(error)) {
+      setState("error");
+      setMessage(SIGN_UP_PAUSED);
+      return;
+    }
     if (error || data.user?.identities?.length === 0) {
       setState("error");
       setMessage("No se pudo crear la cuenta. Usa un correo exclusivo para la Tienda e intenta nuevamente.");

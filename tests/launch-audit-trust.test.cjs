@@ -1,0 +1,362 @@
+// Launch audit trust fixes in the application (the database side is tests/launch-audit-trust.sql).
+const { test } = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+const read = (file) => fs.readFileSync(file, "utf8");
+
+function loadModule(filename, mocks) {
+  const Module = require("node:module");
+  const ts = require("typescript");
+  const source = require("node:path").resolve(filename);
+  const compiled = ts.transpileModule(read(source), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText;
+  const mod = new Module(source, module);
+  mod.filename = source;
+  mod.paths = module.paths;
+  const original = mod.require.bind(mod);
+  mod.require = (name) => (Object.hasOwn(mocks, name) ? mocks[name] : original(name));
+  mod._compile(compiled, source);
+  return mod.exports;
+}
+
+const nextServer = { NextResponse: { json: (body, init = {}) => new Response(JSON.stringify(body), { ...init, headers: { "Content-Type": "application/json", ...init.headers } }) } };
+
+test("A15: Admin pages send an Admin without the code to the two-step section, and back only to Admin", () => {
+  const { twoStepPath, twoStepNext, readTwoStepCode, twoStepErrorMessage } = require("@/lib/auth/two-step");
+  assert.equal(twoStepPath("/admin/publicaciones?buscar=x"), "/mi-cuenta/seguridad?verificar=admin&next=%2Fadmin%2Fpublicaciones%3Fbuscar%3Dx#dos-pasos");
+  assert.equal(twoStepPath("//evil.example"), "/mi-cuenta/seguridad?verificar=admin&next=%2Fadmin#dos-pasos");
+  for (const next of ["/admin", "/admin/tiendas", "/admin?x=1", ["/admin/reportes"]]) assert.equal(twoStepNext(next), Array.isArray(next) ? next[0] : next);
+  for (const next of ["/mi-cuenta", "/administrar", "//evil.example/admin", "/\t/evil.example", "https://evil.example/admin", undefined, null, ""]) {
+    assert.equal(twoStepNext(next), null, String(next));
+  }
+  assert.equal(readTwoStepCode("123 456"), "123456");
+  assert.equal(readTwoStepCode(" 654321 "), "654321");
+  for (const code of ["12345", "1234567", "abcdef", 123456, null]) assert.equal(readTwoStepCode(code), null, String(code));
+  assert.match(twoStepErrorMessage({ status: 429 }), /muchos intentos/);
+  assert.match(twoStepErrorMessage({ code: "mfa_verification_failed", status: 422 }), /no es correcto/);
+  assert.match(twoStepErrorMessage({ code: "mfa_challenge_expired" }), /no es correcto/);
+  assert.match(twoStepErrorMessage({ code: "unexpected_failure" }), /No pudimos completar/);
+});
+
+test("A15: requireAdmin lets in only an Admin session with the code, and sends an Admin without it to enter it", async () => {
+  let user = null;
+  let isAdmin = false;
+  const redirect = (destination) => { throw new Error(`redirect:${destination}`); };
+  const supabase = {
+    rpc: async (name) => { assert.equal(name, "is_admin"); return { data: isAdmin, error: null }; },
+    from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { full_name: "Henri" } }) }) }) }),
+  };
+  const load = () => loadModule("lib/admin-server.ts", {
+    react: { cache: (fn) => fn },
+    "next/navigation": { redirect },
+    "@/lib/auth/session": { getCurrentUser: async () => user },
+    "@/lib/supabase/server-client": { getSupabaseServerClient: async () => supabase },
+  });
+  const { requireAdmin } = load();
+  await assert.rejects(requireAdmin("/admin/tiendas"), /redirect:\/login\?next=%2Fadmin%2Ftiendas/);
+  user = { id: "u1", app_metadata: {} };
+  await assert.rejects(requireAdmin("/admin"), /redirect:\/mi-cuenta\?admin=denied/);
+  user = { id: "u1", app_metadata: { role: "admin" } };
+  await assert.rejects(requireAdmin("/admin/tiendas"), /redirect:\/mi-cuenta\/seguridad\?verificar=admin&next=%2Fadmin%2Ftiendas#dos-pasos/);
+  isAdmin = true;
+  const result = await requireAdmin("/admin");
+  assert.equal(result.user, user);
+  assert.equal(result.profile.full_name, "Henri");
+});
+
+test("A15: the header keeps the Admin link before the code, and private photos open for Admin only after it", async () => {
+  const route = loadModule("app/api/account-navigation/route.ts", {
+    "next/server": nextServer,
+    "@/lib/payment-methods": { assistedCommerceEnabled: () => false },
+    "@/lib/supabase/server-client": {
+      getSupabaseServerClient: async () => ({
+        auth: { getUser: async () => ({ data: { user: { id: "u1", app_metadata: { role: "admin" } } } }) },
+        from: (table) => {
+          const result = table === "profiles" ? { data: { account_type: "seller", full_name: "Henri" }, error: null } : { data: null, error: null, count: 0 };
+          const builder = { select: () => builder, eq: () => builder, is: () => Promise.resolve(result), maybeSingle: async () => result };
+          return builder;
+        },
+        rpc: async (name) => ({ data: name === "is_admin" ? false : 0, error: null }),
+      }),
+    },
+  });
+  const body = await (await route.GET()).json();
+  assert.equal(body.admin, true);
+
+  const images = read("app/api/listing-images/[...path]/route.ts");
+  assert.match(images, /const isAdmin = data\.user\.app_metadata\?\.role === "admin" && \(await supabase!\.rpc\("is_admin"\)\)\.data === true;/);
+  assert.doesNotMatch(images, /const isAdmin = data\.user\.app_metadata\.role === "admin";/);
+});
+
+test("A15: the security page shows the two-step section to Admin accounts only, first when Admin sent them", () => {
+  const page = read("app/mi-cuenta/seguridad/page.tsx");
+  assert.match(page, /const admin = user\?\.app_metadata\?\.role === "admin";/);
+  assert.match(page, /admin \? <TwoStepVerification next=\{twoStepNext\(query\.next\)\} \/> : null/);
+  assert.match(page, /\{sentFromAdmin \? twoStep : null\}/);
+  const section = read("components/auth/two-step-verification.tsx");
+  // A setup left halfway is replaced, so the QR code always matches the factor being verified.
+  assert.match(section, /if \(factor\.factor_type === "totp" && factor\.status !== "verified"\) await supabase\.auth\.mfa\.unenroll\(\{ factorId: factor\.id \}\);/);
+  assert.match(section, /supabase\.auth\.mfa\.challengeAndVerify\(\{ factorId, code \}\)/);
+  assert.match(section, /level\.data\.currentLevel === "aal2"/);
+});
+
+const AUTH_ENV = { NEXT_PUBLIC_SUPABASE_URL: "https://example.supabase.co", NEXT_PUBLIC_SUPABASE_ANON_KEY: "anon-key-for-tests" };
+
+async function withEnv(values, run) {
+  const saved = Object.fromEntries(Object.keys(values).map((name) => [name, process.env[name]]));
+  for (const [name, value] of Object.entries(values)) {
+    if (value === undefined) delete process.env[name]; else process.env[name] = value;
+  }
+  try {
+    return await run();
+  } finally {
+    for (const [name, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[name]; else process.env[name] = value;
+    }
+  }
+}
+
+async function captureWarnings(run) {
+  const warnings = [];
+  const original = console.warn;
+  console.warn = (...args) => warnings.push(args);
+  try {
+    await run(warnings);
+  } finally {
+    console.warn = original;
+  }
+}
+
+// A stand-in for @supabase/ssr that records every client the route makes.
+function fakeSsr(behaviour) {
+  const created = [];
+  return {
+    created,
+    module: {
+      createServerClient: (url, key, options) => {
+        const client = { key, options, calls: [] };
+        client.auth = {
+          verifyOtp: async (args) => {
+            client.calls.push(["verifyOtp", args]);
+            if (!behaviour.error) options.cookies.setAll([{ name: "sb-example-auth-token", value: "new-session", options: {} }]);
+            return { error: behaviour.error ?? null };
+          },
+          exchangeCodeForSession: async (code) => { client.calls.push(["exchangeCodeForSession", code]); return { error: behaviour.error ?? null }; },
+          getUser: async () => { client.calls.push(["getUser"]); return { data: { user: { id: "u1", user_metadata: {} } } }; },
+          resend: async (args) => { client.calls.push(["resend", args]); return { error: behaviour.error ?? null }; },
+          signInWithPassword: async (args) => { client.calls.push(["signInWithPassword", args]); return { error: behaviour.error ?? null }; },
+        };
+        created.push(client);
+        return client;
+      },
+    },
+  };
+}
+
+function withCookies(response) {
+  response.cookies = { set: (name, value) => { response.cookieJar = { ...response.cookieJar, [name]: value }; } };
+  return response;
+}
+
+const nextServerWithRedirects = {
+  NextResponse: {
+    json: (body, init = {}) => withCookies(nextServer.NextResponse.json(body, init)),
+    redirect: (url) => withCookies(new Response(null, { status: 307, headers: { location: String(url) } })),
+  },
+};
+
+function fakeNextRequest(url, { headers = {}, body } = {}) {
+  const jar = new Map();
+  return {
+    nextUrl: new URL(url),
+    headers: new Headers(headers),
+    cookies: { getAll: () => [...jar].map(([name, value]) => ({ name, value })), set: (name, value) => jar.set(name, value) },
+    json: async () => body,
+  };
+}
+
+const forwardedKey = { key: "sb_secret_for_tests", headers: { "Sb-Forwarded-For": "203.0.113.7" } };
+
+test("A16, A28: each visitor is counted under an HMAC of their address, and a database failure lets them through", async () => {
+  const { createHash, createHmac } = require("node:crypto");
+  await withEnv({ SUPABASE_SERVICE_ROLE_KEY: "service-role-key-for-tests" }, () => captureWarnings(async (warnings) => {
+    const calls = [];
+    let reply = { data: true, error: null };
+    const { clientAddress, allowRequest, RATE_LIMITS } = loadModule("lib/rate-limit.ts", {
+      "server-only": {},
+      "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => ({ rpc: async (name, args) => { calls.push({ name, args }); return reply; } }) },
+    });
+    const request = (headers) => new Request("https://laria.audio/api/auth/check-email", { method: "POST", headers });
+    assert.equal(clientAddress(request({ "x-real-ip": "203.0.113.7", "x-forwarded-for": "198.51.100.1, 10.0.0.1" })), "203.0.113.7");
+    assert.equal(clientAddress(request({ "x-forwarded-for": "198.51.100.1, 10.0.0.1" })), "198.51.100.1");
+    assert.equal(clientAddress(request({})), "unknown");
+
+    assert.equal(await allowRequest(RATE_LIMITS.checkEmail, request({ "x-real-ip": "203.0.113.7" })), true);
+    await allowRequest(RATE_LIMITS.checkEmail, request({ "x-real-ip": "203.0.113.7" }));
+    await allowRequest(RATE_LIMITS.checkEmail, request({ "x-real-ip": "203.0.113.8" }));
+    const expectedKey = createHmac("sha256", createHash("sha256").update("laria-rate-limit:service-role-key-for-tests").digest())
+      .update("203.0.113.7").digest("hex");
+    assert.deepEqual(calls[0], { name: "consume_rate_limit", args: { p_bucket: "auth.check_email", p_key: expectedKey, p_limit: 20, p_window_seconds: 600 } });
+    assert.equal(calls[1].args.p_key, expectedKey);
+    assert.notEqual(calls[2].args.p_key, expectedKey);
+
+    reply = { data: false, error: null };
+    assert.equal(await allowRequest(RATE_LIMITS.login, request({ "x-real-ip": "203.0.113.7" })), false);
+    reply = { data: null, error: { code: "PGRST202", message: "function not found" } };
+    assert.equal(await allowRequest(RATE_LIMITS.login, request({ "x-real-ip": "203.0.113.7" })), true);
+    assert.deepEqual(warnings.at(-1), ["rate-limit-unavailable", "auth.login", "PGRST202"]);
+  }));
+  // Without the service role there is nothing to count with, and nobody is refused.
+  await withEnv({ SUPABASE_SERVICE_ROLE_KEY: undefined }, async () => {
+    const { allowRequest, RATE_LIMITS } = loadModule("lib/rate-limit.ts", {
+      "server-only": {},
+      "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => null },
+    });
+    assert.equal(await allowRequest(RATE_LIMITS.login, new Request("https://laria.audio/")), true);
+  });
+});
+
+test("A16: Auth calls from the server name the visitor's address only with a secret key", async () => {
+  const { visitorAuthKey } = loadModule("lib/supabase/visitor-auth.ts", {
+    "server-only": {},
+    "@/lib/rate-limit": { clientAddress: (request) => request.headers.get("x-real-ip") || "unknown" },
+  });
+  const visitor = new Request("https://laria.audio/auth/callback", { headers: { "x-real-ip": "203.0.113.7" } });
+  await withEnv({ SUPABASE_SECRET_KEY: undefined }, () => assert.equal(visitorAuthKey(visitor), null));
+  // A legacy service_role JWT can't forward addresses, so it is never sent for this.
+  await withEnv({ SUPABASE_SECRET_KEY: "eyJhbGciOiJIUzI1NiJ9.legacy" }, () => assert.equal(visitorAuthKey(visitor), null));
+  await withEnv({ SUPABASE_SECRET_KEY: "sb_secret_for_tests" }, () => {
+    assert.deepEqual(visitorAuthKey(visitor), forwardedKey);
+    assert.equal(visitorAuthKey(new Request("https://laria.audio/auth/callback")), null);
+  });
+});
+
+test("A16: the e-mail link callback limits each visitor, checks links under their address and says when to retry", async () => {
+  const { TOO_MANY_LINK_OPENS } = require("@/lib/auth/limits");
+  const run = async ({ allowed = true, forwarded = null, error = null, query = "token_hash=abc123&type=signup&next=%2Fvender" } = {}) => {
+    const ssr = fakeSsr({ error });
+    const route = loadModule("app/auth/callback/route.ts", {
+      "@supabase/ssr": ssr.module,
+      "next/server": nextServerWithRedirects,
+      "@/lib/rate-limit": { RATE_LIMITS: { callback: { bucket: "auth.callback", limit: 10, windowSeconds: 600 } }, allowRequest: async () => allowed },
+      "@/lib/supabase/visitor-auth": { visitorAuthKey: () => forwarded },
+    });
+    const response = await withEnv(AUTH_ENV, () => route.GET(fakeNextRequest(`https://laria.audio/auth/callback?${query}`)));
+    const location = new URL(response.headers.get("location"));
+    return { ssr, response, location, error: location.searchParams.get("error") };
+  };
+
+  const refused = await run({ allowed: false });
+  assert.equal(refused.location.pathname, "/login");
+  assert.equal(refused.error, TOO_MANY_LINK_OPENS);
+  assert.equal(refused.ssr.created.length, 0, "a refused visitor never reaches Supabase");
+
+  await captureWarnings(async (warnings) => {
+    const limited = await run({ error: { status: 429, code: "over_request_rate_limit" } });
+    assert.equal(limited.error, TOO_MANY_LINK_OPENS);
+    assert.deepEqual(warnings, [["auth-callback-rate-limited", "over_request_rate_limit"]]);
+  });
+  assert.equal((await run({ error: { status: 403, code: "otp_expired" } })).error, "No se pudo confirmar la sesión.");
+  assert.equal((await run({ error: { status: 403, code: "otp_expired" }, query: "token_hash=abc123&type=recovery" })).error,
+    "El enlace de recuperación no es válido o ya venció.");
+
+  // Without a secret key: one client with the anon key, as before.
+  const plain = await run();
+  assert.equal(plain.location.pathname + plain.location.search, "/vender");
+  assert.equal(plain.ssr.created.length, 1);
+  assert.equal(plain.ssr.created[0].key, "anon-key-for-tests");
+  assert.equal(plain.ssr.created[0].options.global, undefined);
+  assert.deepEqual(plain.ssr.created[0].calls.map(([name]) => name), ["verifyOtp", "getUser"]);
+  assert.equal(plain.response.cookieJar["sb-example-auth-token"], "new-session");
+
+  // With one: the link is checked with the secret key and the visitor's address; the profile work keeps the anon key.
+  const forwarded = await run({ forwarded: forwardedKey });
+  assert.equal(forwarded.location.pathname + forwarded.location.search, "/vender");
+  const [verifier, reader] = forwarded.ssr.created;
+  assert.equal(verifier.key, "sb_secret_for_tests");
+  assert.deepEqual(verifier.options.global, { headers: { "Sb-Forwarded-For": "203.0.113.7" } });
+  assert.deepEqual(verifier.calls, [["verifyOtp", { token_hash: "abc123", type: "signup" }]]);
+  assert.equal(reader.key, "anon-key-for-tests");
+  assert.equal(reader.options.global, undefined);
+  assert.deepEqual(reader.calls.map(([name]) => name), ["getUser"]);
+  assert.equal(forwarded.response.cookieJar["sb-example-auth-token"], "new-session", "the session lands in the visitor's cookies");
+});
+
+test("A16, A28: the e-mail check, the resend and the sign-in route answer 429 with an honest message", async () => {
+  const { TOO_MANY_ATTEMPTS, TOO_MANY_EMAILS } = require("@/lib/auth/limits");
+  const rateLimit = (allowed) => ({ RATE_LIMITS: { login: {}, checkEmail: {}, resendConfirmation: {} }, allowRequest: async () => allowed });
+
+  let rpcCalls = 0;
+  const checkEmail = (allowed) => loadModule("app/api/auth/check-email/route.ts", {
+    "next/server": nextServer,
+    "@/lib/rate-limit": rateLimit(allowed),
+    "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => ({ rpc: async () => { rpcCalls += 1; return { data: false, error: null }; } }) },
+  });
+  const ask = (route) => route.POST(new Request("https://laria.audio/api/auth/check-email", { method: "POST", body: JSON.stringify({ email: "ana@example.com" }) }));
+  const refusedCheck = await ask(checkEmail(false));
+  assert.equal(refusedCheck.status, 429);
+  assert.deepEqual(await refusedCheck.json(), { ok: false, available: false, message: TOO_MANY_ATTEMPTS });
+  assert.equal(rpcCalls, 0);
+  assert.deepEqual(await (await ask(checkEmail(true))).json(), { ok: true, available: true });
+
+  const resend = async ({ allowed = true, forwarded = null, error = null } = {}) => {
+    const ssr = fakeSsr({ error });
+    const route = loadModule("app/api/auth/resend-confirmation/route.ts", {
+      "@supabase/ssr": ssr.module,
+      "next/server": nextServerWithRedirects,
+      "@/lib/rate-limit": rateLimit(allowed),
+      "@/lib/supabase/visitor-auth": { visitorAuthKey: () => forwarded },
+    });
+    const request = fakeNextRequest("https://laria.audio/api/auth/resend-confirmation", { body: { email: "ana@example.com", next: "/vender" } });
+    const response = await withEnv(AUTH_ENV, () => route.POST(request));
+    return { ssr, status: response.status, body: await response.json() };
+  };
+  const refusedResend = await resend({ allowed: false });
+  assert.deepEqual([refusedResend.status, refusedResend.body.message, refusedResend.ssr.created.length], [429, TOO_MANY_EMAILS, 0]);
+  const limitedResend = await resend({ error: { status: 429, code: "over_email_send_rate_limit" } });
+  assert.deepEqual([limitedResend.status, limitedResend.body.message], [429, TOO_MANY_EMAILS]);
+  const forwardedResend = await resend({ forwarded: forwardedKey });
+  assert.equal(forwardedResend.status, 200);
+  assert.equal(forwardedResend.ssr.created[0].key, "sb_secret_for_tests");
+  assert.deepEqual(forwardedResend.ssr.created[0].options.global, { headers: { "Sb-Forwarded-For": "203.0.113.7" } });
+  assert.equal(forwardedResend.ssr.created[0].calls[0][1].options.emailRedirectTo, "https://laria.audio/auth/callback?next=%2Fvender");
+
+  const login = async ({ allowed = true, error = null } = {}) => {
+    const ssr = fakeSsr({ error });
+    const route = loadModule("app/api/auth/login/route.ts", {
+      "@supabase/ssr": ssr.module,
+      "next/server": nextServerWithRedirects,
+      "@/lib/rate-limit": rateLimit(allowed),
+      "@/lib/supabase/visitor-auth": { visitorAuthKey: () => null },
+    });
+    const request = fakeNextRequest("https://laria.audio/api/auth/login", { body: { email: "ana@example.com", password: "una-clave-larga" } });
+    const response = await withEnv(AUTH_ENV, () => route.POST(request));
+    return { ssr, status: response.status, body: await response.json() };
+  };
+  const refusedLogin = await login({ allowed: false });
+  assert.deepEqual([refusedLogin.status, refusedLogin.body.message, refusedLogin.ssr.created.length], [429, TOO_MANY_ATTEMPTS, 0]);
+  const limitedLogin = await login({ error: { status: 429, code: "over_request_rate_limit" } });
+  assert.deepEqual([limitedLogin.status, limitedLogin.body.message], [429, TOO_MANY_ATTEMPTS]);
+  const wrongPassword = await login({ error: { status: 400, code: "invalid_credentials" } });
+  assert.deepEqual([wrongPassword.status, wrongPassword.body.message], [401, "No se pudo iniciar sesión. Revisa tu correo y contraseña."]);
+});
+
+test("A16: the forms sign in from the browser and say when a limit was reached", () => {
+  const login = read("components/login-form.tsx");
+  assert.match(login, /getSupabaseBrowserClient\(\)[\s\S]*auth\.signInWithPassword\(\{ email, password \}\)/);
+  assert.doesNotMatch(login, /fetch\("\/api\/auth\/login"/);
+  assert.match(login, /isAuthRateLimited\(error\)[\s\S]{0,80}TOO_MANY_ATTEMPTS/);
+
+  const seller = read("components/seller-signup-form.tsx");
+  assert.match(seller, /if \(response\.status === 429\) \{\s*return "limited" as const;/);
+  assert.match(seller, /if \(emailCheck === "limited"\) \{\s*setState\("error"\);\s*setMessage\(TOO_MANY_ATTEMPTS\);/);
+  assert.match(seller, /setMessage\(isAuthRateLimited\(error\) \? SIGN_UP_PAUSED :/);
+
+  const store = read("components/store-owner-signup-form.tsx");
+  assert.match(store, /if \(response\.status === 429\) return "limited";/);
+  assert.match(store, /if \(isAuthRateLimited\(error\)\) \{\s*setState\("error"\);\s*setMessage\(SIGN_UP_PAUSED\);/);
+
+  assert.match(read("components/password-form.tsx"), /isAuthRateLimited\(error\)\s*\? TOO_MANY_EMAILS/);
+});

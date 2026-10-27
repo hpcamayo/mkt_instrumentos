@@ -120,7 +120,7 @@ select pg_temp.check((select count(*) = count(distinct sheet_sequence) and max(s
 -- ------------------------------------------------------------------ admin reads pages and answers once
 
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"c5000000-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+select set_config('request.jwt.claims', '{"sub":"c5000000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 do $$
 declare page jsonb; entry uuid; answered jsonb;
 begin
