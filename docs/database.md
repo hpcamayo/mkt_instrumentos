@@ -1514,3 +1514,60 @@ application before it calls none of the new functions, so it can be applied befo
   EXCLUSIVE lock on its table. The first statement takes all of them at once with `nowait`, retrying for 30 seconds
   (`PRIVACY_TABLES_BUSY`); every other lock wait is capped at 10 seconds.
 <!-- /launch-audit:privacy -->
+
+<!-- launch-audit:email -->
+## Launch audit: e-mail backlog
+
+Migration `20261114160000_launch_audit_email_backlog.sql` (finding A25 of the 26 Oct 2026 launch audit). Suite:
+`tests/launch-audit-email-backlog.sql`. It changes only how `public.claim_marketplace_email_deliveries` picks e-mails,
+so it can be applied before the deploy that schedules the worker (`vercel.json`, every 5 minutes).
+
+- Maximum age (`laria_private.email_max_age(event_type)`): `search_alert_immediate` and `search_alert_daily` 1 day;
+  `listing_price_drop` and `listing_back_in_stock` 2 days; `follow_weekly`, `listing_availability_checkin`,
+  `listing_purchase_check`, `listing_purchase_confirmation_reminder` and `listing_review_reminder` 3 days; every other
+  kind, including any added later, 7 days. Age runs from `laria_private.email_content_time(event_type, context,
+  created_at)`: the end of a daily digest's `digest_date` in Lima, 00:00 in Lima of a weekly digest's `week_start`,
+  otherwise `created_at` (the worker's catch-up queues the digests of the seven days before it in one run). A date is
+  read only when it is a real calendar date (`laria_private.calendar_date(text)`, null for `2026-02-30` or any other
+  text), so a malformed one ages from `created_at` instead of stopping the claim. Each claim
+  first cancels pending and retry e-mails past that (`status = 'cancelled'`, `failure_code = 'expired'`), after giving
+  back stale worker locks and before the out-of-stock check of review fix A7. Notifications are untouched.
+- Order (`laria_private.email_priority(event_type)`): 0 an account's own business (every kind not listed below), 1 the
+  four reminders above, 2 alerts and digests (`search_alert_immediate`, `search_alert_daily`, `listing_price_drop`,
+  `listing_back_in_stock`, `follow_weekly`); oldest first within each. The payload array follows the same order.
+- Daily limit: `laria_private.email_settings` (one row; `daily_limit` 80, `changed_at`, `changed_by`, `reason`; no API
+  access). A claim hands out at most `p_limit`, and new e-mails only up to the limit minus what Resend may have
+  counted since midnight UTC (its daily reset): the e-mails sent since then (index `marketplace_email_sent_idx`),
+  those being sent, those tried from 15 minutes before midnight on that may have reached Resend without being marked
+  sent (`uncertain_since` set, any other status; index `marketplace_email_uncertain_idx`; the worker sends within its
+  60 seconds, and the stale-lock recovery already treats 15 minutes as stopped), and holds left by deleted e-mails
+  (below). A retry of one of those uncertain e-mails already has its place and carries the same `Idempotency-Key`, so
+  it goes out first even when nothing is left. Claims take `pg_advisory_xact_lock` so two at once can't spend the
+  same allowance. `laria_private.set_email_daily_limit(limit, reason)` is for an operator in the SQL editor (no API
+  role may call it); 0 stops every hand-out, retries included.
+- Places that stay taken: an e-mail cancelled while it was being sent (pausing or deleting its alert) can't record
+  its completion, so the trigger `marketplace_email_deliveries_keep_attempt`
+  (`laria_private.marketplace_email_keep_attempt()`) marks any move from `processing` to `pending` or `cancelled` as
+  uncertain. Deleting e-mails (an account's deletion, `laria_private.anonymize_account`, or the cascade from its
+  profile) leaves a row in `laria_private.email_limit_holds` (`sent_at` or `attempted_at` only; no API access) for
+  each one sent in the last day, being sent, or uncertain and tried in the last day, through the trigger
+  `marketplace_email_deliveries_hold_count` (`laria_private.marketplace_email_hold_count()`); the claim counts them
+  like the rest and deletes holds older than two days.
+- Uncertain sends: every attempt sends the delivery's id as Resend's `Idempotency-Key`, which Resend keeps for 24
+  hours. `marketplace_email_deliveries.uncertain_since` is when the first attempt that may have reached Resend began:
+  `fail_marketplace_email_delivery` sets it (from `last_attempt_at`) for a `transport` or `provider` failure (timeouts,
+  lost connections, 408, 409, 5xx, a reply without an id), and the claim's stale-lock recovery for a worker that
+  stopped while sending; a rate limit, a refusal or a failure before sending leaves it empty. The claim hands these
+  retries out before everything else, and marks one still waiting 23 hours after it `failed` with `failure_code =
+  'retry_window_closed'` rather than risk a second copy. E-mails the old worker had tried and not sent count as
+  uncertain from `created_at`.
+- Only the claim hands out: the trigger `marketplace_email_deliveries_claim_fence`
+  (`laria_private.marketplace_email_claim_fence()`) refuses any change into `processing` (`EMAIL_CLAIM_OUTDATED`)
+  unless the transaction set `laria.email_claim` to `a25`, which the claim does for its own transaction. A call that
+  began with an earlier claim before a migration replacing it committed, and waited for the queue's lock, runs that
+  earlier body after the commit; its hand-out fails instead and the next run uses the new claim
+  (`tests/launch-audit-email-backlog.integration.cjs` replays it). A migration that replaces the claim again changes
+  the value in both places.
+- Kinds the `features/marketplace` branch adds (account security, offers, trades, services) get 7 days and priority
+  0 unless it adds them to both functions.
+<!-- /launch-audit:email -->

@@ -8,8 +8,7 @@ export const maxDuration = 60;
 // Daily import retention (design §7.9): runs the database retention (expire idle sessions, drop staged rows 30 days
 // after close) and deletes the queued source files through the Storage API. CRON_SECRET-protected like the email
 // worker; it never applies anything to inventory. It also deletes import photos nothing uses (STORE-3a).
-// Not scheduled yet (no vercel.json before go-live): the scheduler
-// that calls the email worker calls this too.
+// Vercel Cron runs it daily at 08:15 UTC (vercel.json, launch audit A25).
 export async function GET(request: Request) {
   if (!isAuthorized(request)) return NextResponse.json({ message: "No autorizado." }, { status: 401 });
   const client = getSupabaseAdminClient();

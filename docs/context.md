@@ -49,7 +49,7 @@ Important current routes:
 - `/mi-cuenta/transacciones` and `/mi-cuenta/transacciones/[id]`: production Sprint 6 participant-scoped purchase/sale confirmation, history and immutable review flow.
 - `/mi-cuenta/alertas`: production Sprint 7 owner-scoped exact saved searches with Immediate/Daily frequency and pause/resume/delete.
 - `/api/alerts`: same-origin, session-bound saved-search mutations.
-- `/api/internal/email/process`: `CRON_SECRET`-protected bounded marketplace-email worker; manual during pre-go-live Hobby QA, with frequent scheduling mandatory before launch.
+- `/api/internal/email/process`: `CRON_SECRET`-protected bounded marketplace-email worker, run by Vercel Cron every 5 minutes since launch audit A25 (expiry by kind, an account's own e-mails first, 80 a day).
 - `/api/account-navigation` and `/api/favorites`: Sprint 5 production trusted hydrated header state and bounded own-favorite state/mutations.
 - `/tiendas/[slug]`: public store page plus approved store listings.
 - `/vender`: authenticated, account-owned Particular listing submission form.

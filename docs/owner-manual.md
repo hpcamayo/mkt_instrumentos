@@ -4,7 +4,7 @@ This is the practical owner guide for Laria.
 
 `docs/functional-spec.md` is canonical for the frozen V1 product contract. This manual describes operations and current implementation; it must not be used to override that contract.
 
-Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 is production-deployed and operational; exercised owner inbox/link cases passed on 2026-09-25, while `ALERT-005` and `TX-018` remain blocked for their exact checks. Sprint 8 is implemented and verified locally only; do not use its Admin/report/legacy workflows in production until the dedicated release gate. Automatic marketplace-email scheduling remains a mandatory pre-go-live dependency while Laria is on Vercel Hobby.
+Release boundary: Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 is production-deployed and operational; exercised owner inbox/link cases passed on 2026-09-25, while `ALERT-005` and `TX-018` remain blocked for their exact checks. Sprint 8 is implemented and verified locally only; do not use its Admin/report/legacy workflows in production until the dedicated release gate. Since launch audit A25 (Laria is on Vercel Pro), Vercel Cron runs the marketplace-email worker every 5 minutes.
 
 ## What Laria Is
 
@@ -358,6 +358,15 @@ Cleanup is a trusted, owner-bound operation, not a manual browser Storage delete
 - Every day at 09:30 UTC, `/api/internal/uploads/sweep` (Vercel cron, `CRON_SECRET`) deletes uploaded files nothing has used for 48 hours, such as the photos of a draft kept only on a phone. The logs show `uploads_sweep` with the count, or `uploads_sweep_failure` with the step; a failed run leaves its files for the next one.
 - Every day at 09:45 UTC, the database job `marketplace-event-retention` removes the account, session and identity from browsing events older than 90 days and from other events older than 365 days. To check it: `select status, return_message, start_time from cron.job_run_details where jobid = (select jobid from cron.job where jobname = 'marketplace-event-retention') order by start_time desc limit 5;`
 
+### E-mail, push and import jobs (launch audit A25)
+
+- Vercel Cron (`vercel.json`, `CRON_SECRET`) runs `/api/internal/email/process` and `/api/internal/push/process` every 5 minutes, and `/api/internal/store-imports/cleanup` every day at 08:15 UTC. The logs show `marketplace_email_batch`, `push_batch` and `store_import_cleanup`, or the same names with `_failure`. Without `RESEND_API_KEY`, `MARKETPLACE_EMAIL_FROM` and `MARKETPLACE_EMAIL_BASE_URL` the e-mail worker answers 503 and claims nothing; without the VAPID keys the push worker only logs, and nobody can turn push notices on.
+- A queued e-mail is sent only while it is worth it: an instant search alert, or a daily digest the day after its day; a price drop or a back-in-stock notice for two days; reminders and the weekly follow digest for three days; everything else for a week. Older ones are cancelled with `failure_code = 'expired'`; the in-app notices stay.
+- An account's own e-mails (moderation, sales, reviews, questions, stores) go before reminders, and reminders before alerts and digests.
+- When a send may have reached Resend but the answer was lost, the retry goes first, while Resend still recognises it and won't send a second copy. After 23 hours it is given up as `failed` with `failure_code = 'retry_window_closed'`; the person may or may not have received it, and the in-app notice stays.
+- At most 80 marketplace e-mails a day (since midnight UTC, when Resend's daily quota resets), so that sign-up and password e-mails keep room in Resend's free 100 a day. What doesn't fit waits for the next day. After a change of Resend plan, raise it in the SQL editor: `select laria_private.set_email_daily_limit(1000, 'Plan Pro de Resend');` (0 pauses marketplace e-mails).
+- What the queue holds: `select event_type, status, count(*), min(created_at) from laria_private.marketplace_email_deliveries where status in ('pending', 'retry', 'processing') group by 1, 2 order by 4;`
+
 ### Contact and event semantics — production Sprint 4
 
 Only visible real browser activity records ordinary views/impressions; SSR, HEAD, and prefetch do not count. A card needs at least 50% viewport intersection. Views/impressions are deduplicated over a rolling 30-minute actor/session-and-target window, distinct from the random anonymous cookie's 24-hour lifetime. Owner/admin commercial activity is excluded.
@@ -564,7 +573,7 @@ After release, use `https://laria.audio/`, `/listados`, `/mi-cuenta/transaccione
 
 Sprint 7 is deployed and the verified sender plus protected-worker secret are configured. Owner inbox/link acceptance passed on 2026-09-25 for `PDA-009`, `ALERT-003`, `ALERT-015`, and `MAIL-001`–`MAIL-007`. Do not repeat those or the SQL/RLS, spoofing, worker-concurrency and replay checks.
 
-PRE-GO-LIVE note: while Laria remains on Vercel Hobby, no automatic marketplace-email cron is registered. QA invokes the protected worker manually, so Immediate alert email has no automatic latency promise. Before real users enter the marketplace, complete the mandatory worker-scheduling steps in `docs/go-live-checklist.md`.
+Since launch audit A25, Vercel Cron runs the protected worker every 5 minutes (see "E-mail, push and import jobs" above), so an Immediate alert e-mail goes out within about 5 minutes, inside the day's limit.
 
 - `TX-018`: on desktop and mobile as both account types, verify `Compras` remains visible, a real pending buyer confirmation shows an actionable count/state and `¿Compraste este artículo?`, then the count clears after yes/no.
 - `ALERT-005`: allow a natural completed Lima daily window with multiple new matches, invoke the normal protected worker once, and confirm one useful digest reaches the inbox with the eligible new matches and no empty/duplicate message.
