@@ -98,6 +98,10 @@ select pg_temp.check(laria_private.upload_daily_limit('listing-sound-clips', 'e1
   'sound clips 20, store images 40, edit photos 120');
 select pg_temp.check(laria_private.upload_daily_limit('store-imports', 'e1500000-0000-4000-8000-000000000001') is null,
   'other buckets have no allowance');
+-- Someone else's clip, for the check below that the allowance never tells whether another account's file exists.
+insert into storage.objects (bucket_id, name, owner)
+values ('listing-sound-clips', 'e1500000-0000-4000-8000-000000000004/e1530000-0000-4000-8000-000000000044/sonido-1.webm',
+  'e1500000-0000-4000-8000-000000000004');
 
 set local role authenticated;
 select pg_temp.claims('e1500000-0000-4000-8000-000000000001');
@@ -115,7 +119,12 @@ select pg_temp.check(not pg_temp.upload('listing-sound-clips',
   'e1500000-0000-4000-8000-000000000001/e1530000-0000-4000-8000-000000000001/sonido-21.webm'), 'the 21st clip of the day is refused');
 select pg_temp.check(public.storage_upload_allowed('listing-sound-clips',
   'e1500000-0000-4000-8000-000000000001/e1530000-0000-4000-8000-000000000001/sonido-3.webm'),
-  'a path that exists passes, so a repeated upload still fails as a duplicate');
+  'a path of the caller''s folder that exists passes, so a repeated upload still fails as a duplicate');
+select pg_temp.check(not public.storage_upload_allowed('listing-sound-clips',
+    'e1500000-0000-4000-8000-000000000004/e1530000-0000-4000-8000-000000000044/sonido-1.webm')
+  and not public.storage_upload_allowed('listing-sound-clips',
+    'e1500000-0000-4000-8000-000000000004/e1530000-0000-4000-8000-000000000044/sonido-2.webm'),
+  'another account''s file and a missing one get the same answer, so the check never tells whether it exists');
 select pg_temp.check((public.my_upload_allowance('listing-sound-clips') ->> 'used')::int = 20
   and (public.my_upload_allowance('listing-sound-clips') ->> 'next_at')::timestamptz between now() + interval '23 hours 59 minutes'
     and now() + interval '24 hours 1 minute', 'all 20 used; the first frees up in 24 hours');
@@ -383,6 +392,11 @@ select pg_temp.expect_error('select public.admin_anonymize_account(''e1500000-00
 select pg_temp.expect_error('select public.admin_anonymize_account(''e1500000-0000-4000-8000-0000000000ff'', ''Pedido del titular'')', 'ANONYMIZE_ACCOUNT_NOT_FOUND');
 reset role;
 select pg_temp.expect_error('select laria_private.anonymize_account(''e1500000-0000-4000-8000-000000000001'')', 'ANONYMIZE_SERVICE_REQUIRED');
+-- The service role reaches it only through a security definer function (features/marketplace's
+-- public.service_delete_account), as this suite does from here on: it has no access to laria_private.
+select pg_temp.check(not has_function_privilege('service_role', 'laria_private.anonymize_account(uuid, text)', 'execute')
+  and not has_schema_privilege('service_role', 'laria_private', 'usage')
+  and not has_schema_privilege('authenticated', 'laria_private', 'usage'), 'no API role calls the anonymisation directly');
 select set_config('request.jwt.claims', '{"role":"service_role"}', true);
 select pg_temp.expect_error('select laria_private.anonymize_account(''e1500000-0000-4000-8000-000000000005'')', 'ANONYMIZE_ADMIN');
 select pg_temp.check((select full_name from public.profiles where id = 'e1500000-0000-4000-8000-000000000001') = 'Persona Uno',

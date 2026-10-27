@@ -3,7 +3,8 @@
 // at it, and every place that points at a file takes the same per-file lock first. Two connections replay both orders:
 // a listing taking a file while the sweep claims (the claim skips the file, then finds it in use), and the sweep
 // claiming a file while a listing takes it (the listing waits for the claim, then is told the file is gone). Neither
-// may deadlock, and the claim never waits.
+// may deadlock, and the claim never waits. A third connection has two listings take the same two files in opposite
+// orders at once, as two copies of listings that share photos do: neither may wait for the other.
 // Usage: node tests/launch-audit-privacy.integration.cjs [postgresql://postgres:postgres@127.0.0.1:54322/postgres]
 // The URL may also come from LARIA_TEST_DATABASE_URL. Hosted databases are refused. The database needs every
 // migration applied (setup-local-db.sh reset); the fixtures it commits are removed at the end.
@@ -20,8 +21,11 @@ if (!["127.0.0.1", "localhost", "[::1]"].includes(new URL(url).hostname)) {
 
 const owner = "e1600000-0000-4000-8000-000000000001";
 const listing = "e1620000-0000-4000-8000-000000000001";
+const listingTwo = "e1620000-0000-4000-8000-000000000002";
 const folder = `${owner}/e1630000-0000-4000-8000-000000000001`;
 const paths = { attachedFirst: `${folder}/0.jpg`, claimedFirst: `${folder}/1.jpg` };
+// Files two listings share; the sweep never sees them (no stored object).
+const shared = { first: `${folder}/2.jpg`, second: `${folder}/3.jpg` };
 const address = (path) => `http://127.0.0.1:54321/storage/v1/object/public/listing-photos/${path}`;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,14 +50,14 @@ async function claim(client) {
   return { paths: rows.map((row) => row.path), took: Date.now() - started };
 }
 
-const attach = (client, path, order) =>
-  client.query("insert into public.listing_photos (listing_id, image_url, sort_order) values ($1, $2, $3)", [listing, address(path), order]);
+const attach = (client, path, order, to = listing) =>
+  client.query("insert into public.listing_photos (listing_id, image_url, sort_order) values ($1, $2, $3)", [to, address(path), order]);
 
 async function cleanup(control) {
   await control.query("begin");
   await control.query("select set_config('app.allow_listing_admin_fields', 'true', true)");
-  await control.query("delete from public.listing_photos where listing_id = $1", [listing]);
-  await control.query("delete from public.listings where id = $1", [listing]);
+  await control.query("delete from public.listing_photos where listing_id = any ($1::uuid[])", [[listing, listingTwo]]);
+  await control.query("delete from public.listings where id = any ($1::uuid[])", [[listing, listingTwo]]);
   await control.query("delete from laria_private.upload_removals where path like $1", [`${owner}/%`]);
   await control.query("delete from storage.objects where name like $1", [`${owner}/%`]);
   await control.query("delete from auth.users where id = $1", [owner]);
@@ -64,6 +68,7 @@ async function main() {
   const control = await connect();
   const sweep = await connect();
   const seller = await connect();
+  const copier = await connect();
   try {
     await cleanup(control);
     await control.query("begin");
@@ -77,8 +82,10 @@ async function main() {
       `insert into public.listings (id, seller_type, status, title, slug, description, category, instrument_type, brand, model,
         condition, price_pen, city, region, contact_name, whatsapp_phone, owner_user_id, marketplace_rules_accepted_at)
        values ($1, 'individual', 'pending', 'Guitarra del barrido', 'lapvi-barrido', repeat('Descripción de prueba ', 3),
+        'guitars', 'electric_guitar', 'Fender', 'Strat', 'Muy bueno', 1500, 'Lima', 'Lima', 'Barrido', '51999998001', $2, now()),
+        ($3, 'individual', 'pending', 'Guitarra copiada', 'lapvi-copia', repeat('Descripción de prueba ', 3),
         'guitars', 'electric_guitar', 'Fender', 'Strat', 'Muy bueno', 1500, 'Lima', 'Lima', 'Barrido', '51999998001', $2, now())`,
-      [listing, owner],
+      [listing, owner, listingTwo],
     );
     await control.query(
       `insert into storage.objects (bucket_id, name, owner, created_at)
@@ -122,10 +129,36 @@ async function main() {
     const { rows } = await control.query("select count(*)::int as n from public.listing_photos where image_url = $1", [address(paths.claimedFirst)]);
     assert.equal(rows[0].n, 0);
     console.log("PASS the sweep claiming a file while a listing takes it: the listing waits, then gets UPLOAD_REMOVED");
+
+    // Two listings take the same two files in opposite orders at once: each holds the file it took first while it
+    // takes the other. The places that point at a file share its lock, so neither waits and nothing deadlocks.
+    await seller.query("begin");
+    await copier.query("begin");
+    await attach(seller, shared.first, 2);
+    await attach(copier, shared.second, 0, listingTwo);
+    const started = Date.now();
+    const crossed = await Promise.all([
+      settle(attach(seller, shared.second, 3)),
+      settle(attach(copier, shared.first, 1, listingTwo)),
+    ]);
+    const took = Math.max(...crossed.map((result) => result.at)) - started;
+    assert.ok(crossed.every((result) => result.ok), `a listing was stopped: ${crossed.map((result) => result.code ?? "ok").join(", ")}`);
+    assert.ok(took < 500, `a listing waited ${took} ms for the other`);
+    await Promise.all([seller.query("commit"), copier.query("commit")]);
+    const { rows: both } = await control.query(
+      "select count(*)::int as n from public.listing_photos where listing_id = any ($1::uuid[]) and image_url = any ($2::text[])",
+      [[listing, listingTwo], [address(shared.first), address(shared.second)]],
+    );
+    assert.equal(both[0].n, 4);
+    console.log(`PASS two listings taking the same files in opposite orders: neither waits (${took} ms), no deadlock`);
   } finally {
-    await Promise.all([sweep.query("rollback").catch(() => {}), seller.query("rollback").catch(() => {})]);
+    await Promise.all([
+      sweep.query("rollback").catch(() => {}),
+      seller.query("rollback").catch(() => {}),
+      copier.query("rollback").catch(() => {}),
+    ]);
     await cleanup(control);
-    await Promise.all([control.end(), sweep.end(), seller.end()]);
+    await Promise.all([control.end(), sweep.end(), seller.end(), copier.end()]);
   }
 }
 

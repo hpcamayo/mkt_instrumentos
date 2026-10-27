@@ -1334,8 +1334,9 @@ application before it calls none of the new functions, so it can be applied befo
   `authenticated`) calls `public.storage_upload_allowed(bucket, name)`. Per account and 24 hours: 120 files in
   `listing-photos` (600 for the owner of an active store), 120 in `listing-edit-photos`, 20 in `listing-sound-clips`
   and 40 in `store-assets` (`laria_private.upload_daily_limit`); other buckets have none. It counts the account's own
-  files of the bucket (its folder) created in the last 24 hours, so removing one frees its place; a path that exists
-  already always passes, so a repeated upload still fails as a duplicate. Parallel uploads can each see the last free
+  files of the bucket (its folder) created in the last 24 hours, so removing one frees its place; a path of its own
+  folder that exists already always passes, so a repeated upload still fails as a duplicate (only there, so the answer
+  never tells whether someone else's file exists). Parallel uploads can each see the last free
   place. `public.my_upload_allowance(bucket) → {bucket, limit, used, next_at}` (`authenticated`) lets a form whose
   upload failed say so and when the next place frees up (`lib/upload-allowance.ts`).
 - Sweep of files nothing uses (A18): `laria_private.upload_removals` (bucket, path, `queued_at`, `removed_at`; no API
@@ -1350,14 +1351,16 @@ application before it calls none of the new functions, so it can be applied befo
   - A file is never queued while something points at it: the claim takes a per-file transaction lock
     (`pg_try_advisory_xact_lock`, skipping a file whose lock is held, so it never waits) and checks again in its own
     statement; the triggers `*_guard_upload` on `listing_photos`, `listing_revision_photos`, `listing_sound_clips`,
-    `store_photos`, `stores` (logo, banner) and `listing_drafts` (photos, clip) take the same locks in (bucket, path)
-    order for every address they add and refuse a queued or removed one with `UPLOAD_REMOVED` (P0001).
+    `store_photos`, `stores` (logo, banner) and `listing_drafts` (photos, clip) take the same locks, shared
+    (`pg_advisory_xact_lock_shared`, so two of them never wait for each other, in whatever order their rows come), for
+    every address they add and refuse a queued or removed one with `UPLOAD_REMOVED` (P0001).
   - A new place that keeps a file of these buckets belongs in `laria_private.upload_references` and gets the guard;
     a new file name the forms give belongs in `laria_private.upload_is_sweepable`, or the sweep leaves such files.
   - A draft kept only on the device points at nothing, so its files go after 48 hours: `/api/submissions` "renew"
     returns `present` (the files still in the folder, by bucket) and the sell form drops the missing ones.
 - Anonymising an account (A20): `laria_private.anonymize_account(p_user_id, p_reason default null)` (service role only,
-  `ANONYMIZE_SERVICE_REQUIRED`; the self-service deletion of `features/marketplace` calls it) and
+  `ANONYMIZE_SERVICE_REQUIRED`, through a security definer function: the self-service deletion of
+  `features/marketplace` calls it from `public.service_delete_account`; no API role can call it directly) and
   `public.admin_anonymize_account(p_user_id, p_reason)` (Admin with the authenticator code; a reason of 3–500
   characters, `ANONYMIZE_REASON_REQUIRED`; writes `admin_audit_actions` with `action = 'anonymize_account'`,
   `target_type = 'account'`) run `laria_private.anonymize_account_core`:
