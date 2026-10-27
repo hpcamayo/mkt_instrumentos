@@ -1264,8 +1264,9 @@ Migration `20261113120000_launch_audit_trust.sql` (findings A15, A16 and A28 of 
 <!-- launch-audit:reviews -->
 ## Launch audit: confirmed buyers and held reviews
 
-Migration `20261114150000_launch_audit_review_trust.sql` (finding A17 of the 26 Oct 2026 launch audit: with a second
-free account a seller could confirm their own sales and leave five stars, once per listing). Suite:
+Migrations `20261114145000_launch_audit_review_events_index.sql` (the events index) and
+`20261114150000_launch_audit_review_trust.sql` (finding A17 of the 26 Oct 2026 launch audit: with a second free
+account a seller could confirm their own sales and leave five stars, once per listing). Suite:
 `tests/launch-audit-review-trust.sql`. It only adds and redefines, so the site before its deploy keeps working; the
 deploy brings the buyers' wording, the notes on the transaction page and Admin's "Publicar reseña".
 
@@ -1297,10 +1298,12 @@ deploy brings the buyers' wording, the notes on the transaction page and Admin's
   any other; a hidden one can't be published (`REVIEW_HIDDEN`).
 - `get_transaction_detail` adds `own_review.held_at` and `counterpart_review_held`: the other side's review waits, said
   only once reviews would otherwise show, so a seller never learns before reviewing that the buyer did.
-- Locks: the events index is built first and blocks event writes from then until the commit (it covers only events
-  with an account and a session; about a second per million rows). Adding the column then takes an ACCESS EXCLUSIVE
-  lock on `transaction_reviews` until the commit, while only functions are redefined, so reviews never wait for the
-  index. Every lock wait is capped at 10 seconds.
+- Locks: the events index has a migration of its own, applied first. It blocks event writes only while it builds and
+  commits (it covers only events with an account and a session; about a second per million rows). The second
+  migration then takes an ACCESS EXCLUSIVE lock on `transaction_reviews` first, by adding the column, and holds it
+  until the commit while only a new table and functions are created, so reviews wait for milliseconds. In one
+  transaction, the two locks could deadlock with a review being sent: the review holds `transaction_reviews` and
+  waits to write its event. Every lock wait is capped at 10 seconds.
 - A new public read of reviews goes through `laria_private.review_is_visible`, and a new public count of a seller's
   sales through `laria_private.counted_buyers`.
 <!-- /launch-audit:reviews -->

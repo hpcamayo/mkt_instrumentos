@@ -30,22 +30,20 @@
 -- Compatibility: every function keeps its signature and its result's keys; get_transaction_detail and the Reseñas
 -- queue items gain keys. The site before the deploy keeps working: it shows the count under its old label, and a held
 -- review in the queue with only "Ocultar reseña".
--- Locks: the index on marketplace_events comes first. It covers signed-in visitors' events only, and blocks writes to
--- the events while it builds and until the commit (about a second per million rows); reads go on. Adding the nullable
--- column then takes an ACCESS EXCLUSIVE lock on transaction_reviews, held until the commit, which only redefines
--- functions after it, so reviews wait for milliseconds, not for the index. Every lock wait is capped at 10 seconds.
+-- Locks: same_browser's index on marketplace_events is built by the migration before this one
+-- (20261114145000_launch_audit_review_events_index.sql), in its own transaction, so its lock on the events is gone
+-- before this one starts. Here, adding the nullable column is the first lock taken: ACCESS EXCLUSIVE on
+-- transaction_reviews, held until the commit, while only a new table and functions are created after it, so reviews
+-- wait for milliseconds. Every lock wait is capped at 10 seconds.
 -- Rollback: recreate the six functions from the migrations named next to each, then drop publish_held_review,
--- review_hold_reasons, counted_buyers, laria_private.review_holds, the index and the column. Reviews still held
+-- review_hold_reasons, counted_buyers, laria_private.review_holds and the column, then the index. Reviews still held
 -- then show at once.
 
 set lock_timeout = '10s';
 
 -- ----------------------------------------------------------------------------------------------- 1. what is kept
 
--- same_browser looks up a person's sessions, then whether someone else used one of them. Built before the column, so
--- the lock on transaction_reviews below isn't held while it builds.
-create index if not exists marketplace_events_actor_session_idx on public.marketplace_events(actor_user_id, session_id)
-  where actor_user_id is not null and session_id is not null;
+-- same_browser reads marketplace_events_actor_session_idx, built by 20261114145000_launch_audit_review_events_index.sql.
 
 alter table public.transaction_reviews add column if not exists held_at timestamptz;
 comment on column public.transaction_reviews.held_at is

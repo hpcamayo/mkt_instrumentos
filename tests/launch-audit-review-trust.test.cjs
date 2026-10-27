@@ -1,4 +1,5 @@
-// Launch audit A17 (supabase/migrations/20261114150000_launch_audit_review_trust.sql): the seller card counts buyers,
+// Launch audit A17 (supabase/migrations/20261114150000_launch_audit_review_trust.sql, after its events index in
+// 20261114145000_launch_audit_review_events_index.sql): the seller card counts buyers,
 // held reviews say they wait for Laria, and Admin's Reseñas queue shows why a review waits and publishes it. The rules
 // themselves are checked on the database (tests/launch-audit-review-trust.sql).
 const { test } = require("node:test");
@@ -12,6 +13,7 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const root = path.resolve(__dirname, "..");
 const source = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const migrationFile = "supabase/migrations/20261114150000_launch_audit_review_trust.sql";
+const indexFile = "supabase/migrations/20261114145000_launch_audit_review_events_index.sql";
 
 function loadWorkbench() {
   const load = Module._load;
@@ -117,4 +119,26 @@ test("A17: the migration keeps the lines features/marketplace patches in place, 
   assert.ok(path.basename(migrationFile) < "20261201000000", "below the features/marketplace migrations");
   assert.match(migration, /^set lock_timeout = '10s';$/m);
   assert.match(migration, /^reset lock_timeout;$/m);
+});
+
+test("A17: the events index commits before the column takes its lock on transaction_reviews", () => {
+  // A review being sent holds transaction_reviews and then writes its event, so one transaction holding the index
+  // build's lock on marketplace_events while it waits for transaction_reviews could deadlock with it.
+  const statements = (file) =>
+    source(file)
+      .replace(/--[^\n]*/g, "")
+      .split(";")
+      .map((statement) => statement.trim().replace(/\s+/g, " "))
+      .filter(Boolean);
+  const index = statements(indexFile);
+  assert.ok(path.basename(indexFile) < path.basename(migrationFile), "applied first");
+  assert.deepEqual(index, [
+    "set lock_timeout = '10s'",
+    "create index if not exists marketplace_events_actor_session_idx on public.marketplace_events(actor_user_id, session_id) where actor_user_id is not null and session_id is not null",
+    "reset lock_timeout",
+  ]);
+  const migration = statements(migrationFile);
+  assert.equal(migration[0], "set lock_timeout = '10s'");
+  assert.match(migration[1], /^alter table public\.transaction_reviews add column if not exists held_at timestamptz$/);
+  assert.ok(!migration.some((statement) => /^create (unique )?index/i.test(statement)), "no index built in the review migration");
 });
