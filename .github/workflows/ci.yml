@@ -1,7 +1,8 @@
 # Launch audit A30: every pull request, and every push to main, runs the checks that used to run only when someone
 # remembered to: the unit tests, types, lint and the production build; and, on a clean Postgres 16 with pg_cron and a
 # small Supabase stand-in (scripts/local-db), a replay of every migration, every SQL suite and the database
-# integration tests. Nothing here reads hosted Supabase, Vercel or any secret. docs/operations/ci.md has the details.
+# integration tests. Nothing here reads hosted Supabase, Vercel or any secret. Each action is pinned to a commit, the
+# one its v5 tag pointed to on 27 Oct 2026. docs/operations/ci.md has the details and how to update them.
 name: CI
 
 on:
@@ -23,8 +24,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
       - name: Install dependencies
@@ -48,8 +51,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
       - name: Install dependencies

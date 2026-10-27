@@ -26,7 +26,10 @@ bash scripts/local-db/setup-local-db.sh start     # after the container restarts
   deletes and rebuilds the cluster in `/var/lib/postgresql/laria` (override with `LARIA_PGDATA`; port with
   `LARIA_PGPORT`).
 - A database integration test is one whose usage line reads `// Usage: node tests/<name> [postgresql://...]`;
-  `run-db-integration.sh` picks those up by that line, so a new one runs in CI with no other change.
+  `run-db-integration.sh` picks those up by that line, so a new one runs in CI with no other change. Every other
+  `tests/*.integration.cjs` must be listed in that script as left out, with why. It fails on a file that is neither,
+  on a listed one that is gone, when it finds no database test, when neither safeupdate nor the stand-in loads, and on
+  a test that prints a line starting with `SKIP`.
 - The same files are in the project's shared folder (`/mnt/project-files/store-operations/local-db-setup/`) for
   sessions that work on an older branch; this copy is the one CI uses.
 
@@ -60,4 +63,6 @@ select set_config('request.jwt.claims', '{"sub":"<uuid>","role":"authenticated"}
   the API keys cannot run here.
 - Tables owned by Supabase internals that the migrations do not reference are absent. If a new migration needs one
   (for example another `auth` or `storage` column), add the smallest stand-in to the shim and note it here.
+- No time limits. Supabase cancels an API request that runs longer than its role's limit (by default 3 s for `anon`
+  and 8 s for `authenticated`); the shim sets none, so a query too slow for the API still passes here.
 - `fsync` is off: fine for tests, never for data you want to keep.
