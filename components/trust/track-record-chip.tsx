@@ -9,7 +9,7 @@ import { Chip } from "@/components/ui/chip";
 import { Sheet } from "@/components/ui/sheet";
 import { trackRecordLine } from "@/lib/contact-message";
 import { formatAverage, readTrackRecord, trustErrorMessage, type TrackRecord } from "@/lib/deal-trust";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { loadSupabaseBrowserClient } from "@/lib/supabase/load-browser-client";
 import { cn } from "@/lib/utils";
 
 // «Comprador con historial» (safe-07) beside the quick questions: for a signed-in buyer with at least one purchase
@@ -58,7 +58,7 @@ export function TrackRecordConsent({ record, onDone }: { record: TrackRecord; on
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function enable() {
-    const supabase = getSupabaseBrowserClient();
+    const supabase = await loadSupabaseBrowserClient();
     if (!supabase) return;
     setBusy(true);
     setError("");

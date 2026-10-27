@@ -127,3 +127,15 @@ test("A20 for the branch: deleting an account runs the audit's anonymiser, which
   assert.doesNotMatch(route, /stolen-gear-photos|stolen_photo_paths/);
   assert.match(route, /const \{ error \} = await admin\.rpc\("service_delete_account", \{ p_user_id: user\.id \}\);/);
 });
+
+test("A29 for the branch: the listing page's parts that talk to Supabase load its client on use", () => {
+  // The audit keeps supabase-js out of the listing page's first load (tests/launch-audit-listing-bundle.test.cjs once
+  // #66 is merged); these are the branch's client parts of that page.
+  for (const file of ["components/store-floor/tryout-booking.tsx", "components/trust/safe-meetup.tsx", "components/trust/track-record-chip.tsx",
+    "components/trust/track-record-state.ts", "components/offers/listing-selling-extras.tsx"]) {
+    const code = source(file);
+    assert.doesNotMatch(code, /from "@\/lib\/supabase\/browser-client"/, file);
+    assert.match(code, /import \{ loadSupabaseBrowserClient \} from "@\/lib\/supabase\/load-browser-client";/, file);
+  }
+  assert.match(source("lib/supabase/load-browser-client.ts"), /await import\("@\/lib\/supabase\/browser-client"\)/);
+});

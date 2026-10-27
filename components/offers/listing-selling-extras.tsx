@@ -8,7 +8,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
 import { formatPrice } from "@/lib/price";
 import { formatLimaDateTime, privateOfferMessage, sellingDb, withWhatsAppMessage, type ListingSellingPublic } from "@/lib/selling-tools";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { loadSupabaseBrowserClient } from "@/lib/supabase/load-browser-client";
 import { cn } from "@/lib/utils";
 
 // What the selling tools add to a listing page, read after it loads (the page itself stays the same for everyone):
@@ -20,12 +20,12 @@ export function ListingSellingExtras({ listingId, title, contactHref, className 
 
   useEffect(() => {
     if (!account.ready) return;
-    const client = getSupabaseBrowserClient();
-    if (!client) return;
     let active = true;
-    void sellingDb(client).rpc("get_listing_selling_public", { p_listing_id: listingId }).then(({ data }) => {
-      if (active && data) setExtras(data as ListingSellingPublic);
-    }, () => undefined);
+    void loadSupabaseBrowserClient()
+      .then((client) => (client && active ? sellingDb(client).rpc("get_listing_selling_public", { p_listing_id: listingId }) : null))
+      .then((result) => {
+        if (active && result?.data) setExtras(result.data as ListingSellingPublic);
+      }, () => undefined);
     return () => { active = false; };
   }, [account.ready, account.authenticated, listingId]);
 

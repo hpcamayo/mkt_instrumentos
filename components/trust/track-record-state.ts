@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
 import { trackRecordLine } from "@/lib/contact-message";
 import { readTrackRecord, type TrackRecord } from "@/lib/deal-trust";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { loadSupabaseBrowserClient } from "@/lib/supabase/load-browser-client";
 
 // «Comprador con historial» (safe-07): the signed-in buyer's own track record, read once per page load, and the
 // listings where they took it out of the message. The chip (beside the quick questions) and the WhatsApp button live
@@ -27,21 +27,25 @@ function subscribe(listener: () => void) {
 
 const IDLE: State = { status: "idle", record: null };
 
+// Only a signed-in buyer calls it; the Supabase client loads then, not with the listing page (launch audit A29).
 export function loadTrackRecord() {
   if (state.status !== "idle") return;
-  const supabase = getSupabaseBrowserClient();
-  if (!supabase) return;
   state = { status: "loading", record: null };
-  void (supabase as unknown as SupabaseClient).rpc("get_my_track_record").then(
-    ({ data, error }) => {
-      state = { status: "ready", record: error ? null : readTrackRecord(data) };
-      emit();
-    },
-    () => {
+  void loadSupabaseBrowserClient()
+    .then((supabase) => {
+      if (!supabase) {
+        state = IDLE;
+        return;
+      }
+      return (supabase as unknown as SupabaseClient).rpc("get_my_track_record").then(({ data, error }) => {
+        state = { status: "ready", record: error ? null : readTrackRecord(data) };
+        emit();
+      });
+    })
+    .catch(() => {
       state = { status: "ready", record: null };
       emit();
-    },
-  );
+    });
 }
 
 export function setTrackRecord(record: TrackRecord | null) {

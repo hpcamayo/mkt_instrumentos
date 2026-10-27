@@ -11,7 +11,7 @@ import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
 import { meetupNoticeMessage, meetupWhen, shareTextUrl } from "@/lib/contact-message";
 import { readMeetupSpots, type MeetupSpot } from "@/lib/deal-trust";
 import { mapSearchUrl, meetupPlacesFor, placeQuery, policeStationQuery } from "@/lib/safe-meetup-places";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { loadSupabaseBrowserClient } from "@/lib/supabase/load-browser-client";
 import { cn } from "@/lib/utils";
 
 // Where "Qué revisar al probarlo" goes when the publication's type has no try-out checklist (the discovery batch's
@@ -101,16 +101,13 @@ function MeetupSheet({
   const formId = useId();
 
   useEffect(() => {
-    const supabase = getSupabaseBrowserClient();
-    if (!supabase) {
-      setSpots([]);
-      return;
-    }
     let active = true;
-    void (supabase as unknown as SupabaseClient)
-      .rpc("get_safe_meetup_spots", { p_city: city, p_region: region })
-      .then(({ data, error }) => {
-        if (active) setSpots(error ? [] : readMeetupSpots(data));
+    void loadSupabaseBrowserClient()
+      .then((supabase) => supabase
+        ? (supabase as unknown as SupabaseClient).rpc("get_safe_meetup_spots", { p_city: city, p_region: region })
+        : null)
+      .then((result) => {
+        if (active) setSpots(!result || result.error ? [] : readMeetupSpots(result.data));
       }, () => {
         if (active) setSpots([]);
       });

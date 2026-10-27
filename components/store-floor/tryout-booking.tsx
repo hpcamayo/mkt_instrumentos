@@ -14,7 +14,7 @@ import { PhoneInput } from "@/components/ui/phone-input";
 import { Sheet } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { isValidWhatsAppPhone, normalizePeruPhone } from "@/lib/phone";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { loadSupabaseBrowserClient } from "@/lib/supabase/load-browser-client";
 import { whenLabel } from "@/lib/store-floor/dates";
 import {
   BUYER_NOTE_MAX, buyerWhatsAppHref, groupSlots, newTryoutKey, tryoutErrorCode, tryoutErrorMessage,
@@ -33,8 +33,8 @@ type State =
   | { kind: "ready"; data: TryoutSlots }
   | { kind: "done"; tryout: Tryout };
 
-function client() {
-  return getSupabaseBrowserClient() as unknown as SupabaseClient | null;
+async function client() {
+  return (await loadSupabaseBrowserClient()) as unknown as SupabaseClient | null;
 }
 
 export function TryoutBooking({ listingId, storeName, className }: { listingId: string; storeName: string; className?: string }) {
@@ -50,7 +50,7 @@ export function TryoutBooking({ listingId, storeName, className }: { listingId: 
   const requestKey = useRef<string | null>(null);
 
   async function loadSlots(keepMessage?: string) {
-    const supabase = client();
+    const supabase = await client();
     if (!supabase) return setState({ kind: "error", message: "No pudimos conectar. Intenta nuevamente." });
     const { data, error } = await supabase.rpc("get_listing_tryout_slots", { p_listing_id: listingId });
     if (error || !data) return setState({ kind: "error", message: "No pudimos cargar los horarios. Intenta nuevamente." });
@@ -68,7 +68,7 @@ export function TryoutBooking({ listingId, storeName, className }: { listingId: 
     requestKey.current = newTryoutKey();
     void loadSlots();
     if (account.authenticated && !buyer) {
-      const supabase = client();
+      const supabase = await client();
       const { data: auth } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
       if (supabase && auth.user) {
         const { data } = await supabase.from("profiles").select("full_name,phone").eq("id", auth.user.id).maybeSingle();
@@ -96,7 +96,7 @@ export function TryoutBooking({ listingId, storeName, className }: { listingId: 
     if (note.length > BUYER_NOTE_MAX) next.note = `Hasta ${BUYER_NOTE_MAX} caracteres.`;
     setErrors(next);
     if (Object.keys(next).length) return;
-    const supabase = client();
+    const supabase = await client();
     if (!supabase) return setErrors({ form: "No pudimos conectar. Intenta nuevamente." });
     setBusy(true);
     const { data, error } = await supabase.rpc("request_store_tryout", {
