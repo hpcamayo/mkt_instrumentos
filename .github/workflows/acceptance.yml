@@ -40,7 +40,7 @@ jobs:
         run: bash scripts/acceptance/full-stack.sh "$RUNNER_TEMP/acceptance"
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-      # Each test's output, the build and the app's log, kept for two weeks.
+      # The stack's start, each test's output, the build and the app's log, kept for two weeks.
       - name: Keep the logs
         if: always()
         uses: actions/upload-artifact@v4

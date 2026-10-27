@@ -33,7 +33,21 @@ trap cleanup EXIT
 
 cp scripts/acceptance/supabase-config.toml supabase/config.toml
 echo "== Starting Supabase (every migration, then supabase/seed.sql)"
-supabase start
+# The CLI pulls its images in parallel, and the registry sometimes refuses such a burst (toomanyrequests). The layers
+# already pulled stay, so another try finishes the pull; each try starts from an empty database.
+started=""
+for attempt in 1 2 3; do
+  if supabase start 2>&1 | tee -a "$RESULTS/supabase-start.log"; then
+    started=1
+    break
+  fi
+  supabase stop --no-backup >/dev/null 2>&1 || true
+  if [ "$attempt" -lt 3 ]; then
+    echo "Supabase did not start (try $attempt of 3); trying again in $((attempt * 30)) seconds." >&2
+    sleep $((attempt * 30))
+  fi
+done
+[ -n "$started" ] || { echo "Supabase did not start." >&2; exit 1; }
 
 # The local stack's keys are the CLI's fixed development keys; the cron secret is new on every run.
 CRON_SECRET="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(24).toString("hex"))')"

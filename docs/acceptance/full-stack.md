@@ -17,8 +17,8 @@ which:
    build on `http://localhost:3100`.
 3. Runs the tests below one after another. The app's per-visitor limits start from zero for each file.
 4. Lists every `PASS <case>` line in `cases.txt` and every `NOTE <case>` line (a case only the owner can settle) in
-   `notes.txt`, both shown in the run's summary. The logs (each test, the build, the app) are kept as the
-   `acceptance-logs` artifact for two weeks.
+   `notes.txt`, both shown in the run's summary. The logs (the stack's start, each test, the build, the
+   app) are kept as the `acceptance-logs` artifact for two weeks.
 
 Every account, listing, store and upload a test makes is throwaway (`@example.invalid` addresses) and removed at the
 end; the whole stack is discarded after the run anyway.
