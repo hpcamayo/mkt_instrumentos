@@ -6,7 +6,7 @@ import {
   sanitizeListingAttributes,
 } from "@/lib/listing-submission";
 import { categoryOptions } from "@/lib/listings";
-import { isValidCondition } from "@/lib/listing-condition";
+import { currentCondition, isValidCondition } from "@/lib/listing-condition";
 import { checkListingDetails, detailWriterError, type ListingDetails } from "@/lib/listing-details";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
@@ -189,6 +189,8 @@ export async function POST(request: Request) {
         ? await getListingAccount()
         : await getStoreOwnerAccount(true);
     if (!account.ok) return failure(account.message, account.status);
+    // sell-10: an old value (a form opened before the scale, an old app) maps to its step, as the database does.
+    fields.condition = currentCondition(String(fields.condition));
     if (
       !categoryOptions.some((option) => option.value === fields.category) ||
       // sell-10: the scale; "Exhibición o caja abierta" only for a store.

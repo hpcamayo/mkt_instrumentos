@@ -23,7 +23,7 @@ export function TermsFeatureToolsSection() {
           <li>En una campaña de Laria, Laria comprueba con su propio historial de precios que el precio «Antes» fue el más bajo de esa publicación en los 30 días anteriores a la campaña. El descuento y la disponibilidad son de la tienda.</li>
           <li>La marca «Distribuidor oficial» indica que Laria revisó un documento de autorización de la marca. No verifica cada instrumento ni su garantía.</li>
           <li>Una tienda puede importar sus publicaciones de Mercado Libre. Laria solo lee esa cuenta, no publica ni cambia nada en ella, y su uso se rige también por los términos de Mercado Libre.</li>
-          <li>Una tienda puede emitir boletas y facturas desde su Mostrador con su propia cuenta de Nubefact. La tienda es quien emite el comprobante y responde por él ante SUNAT; Laria solo envía a esa cuenta las ventas que la tienda registra. La disponibilidad por sede la informa la tienda.</li>
+          <li>Una tienda puede emitir boletas y facturas desde su Mostrador con su propia cuenta de Nubefact. La tienda es quien emite el comprobante y responde por él ante SUNAT; Laria no emite comprobantes ni los revisa: solo envía a esa cuenta las ventas que la tienda registra. La disponibilidad por sede la informa la tienda.</li>
         </ul>
       </LegalSection>
     </div>

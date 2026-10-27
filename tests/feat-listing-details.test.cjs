@@ -30,6 +30,14 @@ test("sell-10: old conditions map to one step, open box is for stores only", () 
   assert.ok(condition.PARTICULAR_CONDITION_VALUES.every((value) => condition.conditionDefinition(value)));
 });
 
+test("sell-10: the publishing and editing routes take an old condition as its step, as the database does", () => {
+  const submissions = read("app/api/submissions/route.ts");
+  const mapped = submissions.indexOf("fields.condition = currentCondition(String(fields.condition));");
+  assert.ok(mapped > 0 && mapped < submissions.indexOf("!isValidCondition(String(fields.condition)"), "submissions map before the check");
+  const manage = read("app/api/listings/[id]/manage/route.ts");
+  assert.match(manage, /const value = key === "condition" \? currentCondition\(text\) : text;\n\s+if \(key === "condition" && !isValidCondition\(value,/);
+});
+
 test("buy-02 and sell-06: terms drop what a switch turned off and refuse contact details", () => {
   const clean = saleTerms.cleanSaleTerms({
     price_mode: "negotiable", pickup: false, can_try: false, pickup_area: "Surco", ships_provinces: false, carriers: ["olva"],

@@ -5,7 +5,7 @@ import {
   isInstrumentTypeValid,
   sanitizeListingAttributes,
 } from "@/lib/listing-submission";
-import { isValidCondition } from "@/lib/listing-condition";
+import { currentCondition, isValidCondition } from "@/lib/listing-condition";
 import { checkListingDetails, detailWriterError } from "@/lib/listing-details";
 import { categoryOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
@@ -250,9 +250,11 @@ function validateEdit(
 
   for (const key of ["title", "category", "instrument_type", "brand", "model", "condition"] as const) {
     if (moderatedSource[key] === undefined) continue;
-    const value = readText(moderatedSource[key]);
-    if (!value) return { ok: false as const, message: "Completa los campos principales." };
-    // sell-10: the scale, with "Exhibición o caja abierta" for stores only.
+    const text = readText(moderatedSource[key]);
+    if (!text) return { ok: false as const, message: "Completa los campos principales." };
+    // sell-10: the scale, with "Exhibición o caja abierta" for stores only; an old value maps to its step, as the
+    // database does.
+    const value = key === "condition" ? currentCondition(text) : text;
     if (key === "condition" && !isValidCondition(value, Boolean(listing.store_id))) {
       return { ok: false as const, message: "Selecciona una condición válida." };
     }

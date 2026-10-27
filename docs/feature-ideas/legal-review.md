@@ -173,6 +173,10 @@ From `docs/feature-ideas/store-locations.md`.
   should say stores keep it for their tax records and Laria processes it on their behalf.
 - Listing: "Lo agregamos a tu mensaje de WhatsApp. La tienda confirma la disponibilidad."
 - Anular: "La anulación se comunica a SUNAT por Nubefact. No cambia el stock."
+- Terms (`components/legal/feature-ideas-legal.tsx`): "La tienda es quien emite el comprobante y responde por él ante
+  SUNAT; Laria no emite comprobantes ni los revisa: solo envía a esa cuenta las ventas que la tienda registra."
+  Reworded on 2026-10-27 to say plainly that Laria issues and checks none; main's public-page check (SCOPE-008) asks
+  every sentence that names SUNAT to deny an automatic check.
 
 ### Integration
 
