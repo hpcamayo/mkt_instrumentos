@@ -1323,6 +1323,53 @@ Migration `20261113120000_launch_audit_trust.sql` (findings A15, A16 and A28 of 
   sign-up forms can't check an address until the migration is in, so it goes in as soon as the deploy is ready.
 <!-- /launch-audit:trust -->
 
+<!-- launch-audit:reviews -->
+## Launch audit: confirmed buyers and held reviews
+
+Migrations `20261114145000_launch_audit_review_events_index.sql` (the events index) and
+`20261114150000_launch_audit_review_trust.sql` (finding A17 of the 26 Oct 2026 launch audit: with a second free
+account a seller could confirm their own sales and leave five stars, once per listing). Suite:
+`tests/launch-audit-review-trust.sql`. It only adds and redefines, so the site before its deploy keeps working; the
+deploy brings the buyers' wording, the notes on the transaction page and Admin's "Publicar reseña".
+
+- `get_public_seller_facts` counts buyers in `verified_sales` (`laria_private.counted_buyers(p_seller_user_id,
+  p_store_id)`): each buyer once, and only once their account is 7 days old with a confirmed e-mail. A store counts its
+  own sales, a Particular their sales outside any store. The seller card reads "N compradores confirmaron su compra en
+  Laria". The seller's own count on the transaction page (`seller_verified_sales`, for "Tu primera venta verificada")
+  still counts sales.
+- `transaction_reviews.held_at`: a buyer's review waits for Admin when `laria_private.review_hold_reasons(transaction
+  id)` gives a reason. The reasons stay in `laria_private.review_holds (review_id, reasons, created_at)` (no API
+  access):
+  - `first_reviews`: the seller (the store, for a store's sale) has fewer than three published reviews from buyers;
+  - `new_account`: the buyer's account is less than 7 days old;
+  - `email_unconfirmed`: the buyer has not confirmed their e-mail;
+  - `repeat_buyer`: the buyer already reviewed this seller for another sale;
+  - `same_browser`: the buyer and the seller, or a member of the store, carry the same first-party session in
+    `marketplace_events` (the signed 24-hour cookie, kept across sign-out; index `marketplace_events_actor_session_idx`).
+  `submit_transaction_review` takes a transaction advisory lock on the buyer and the seller (the store, for a store's
+  sale) before the rules run, so two reviews of one seller by one buyer sent at once go one after the other and the
+  second is `repeat_buyer`. Phone numbers are no reason: both sides type theirs and can change them at will, so a
+  seller could copy a buyer's number to hold that buyer's review. A seller's review of the buyer is never held. A held review shows nowhere: `laria_private.review_is_visible` is false
+  for it, so reputation, the review pages, the store directory, the transaction page and reports leave it out. "Ambas
+  reseñas" waits until neither review of the sale is held.
+- Admin: the Reseñas queue (`get_admin_moderation_queue('resenas')`, counted by `get_admin_moderation_counts`) lists
+  held reviews oldest first, revealed or not, with `held_at`, `hold_reasons`, `reviewer_name`, `reviewer_since`,
+  `reviewer_email_confirmed` and `reviewed_name`, beside the reported ones as before. `publish_held_review(p_review_id)`
+  (Admin with the second sign-in step) clears the hold, deletes its reasons, records `review_published` with them in
+  `admin_audit_actions`, and sends "Ambas reseñas" when both reviews are in. `moderate_review` hides a held review like
+  any other; a hidden one can't be published (`REVIEW_HIDDEN`).
+- `get_transaction_detail` adds `own_review.held_at` and `counterpart_review_held`: the other side's review waits, said
+  only once reviews would otherwise show, so a seller never learns before reviewing that the buyer did.
+- Locks: the events index has a migration of its own, applied first. It blocks event writes only while it builds and
+  commits (it covers only events with an account and a session; about a second per million rows). The second
+  migration then takes an ACCESS EXCLUSIVE lock on `transaction_reviews` first, by adding the column, and holds it
+  until the commit while only a new table and functions are created, so reviews wait for milliseconds. In one
+  transaction, the two locks could deadlock with a review being sent: the review holds `transaction_reviews` and
+  waits to write its event. Every lock wait is capped at 10 seconds.
+- A new public read of reviews goes through `laria_private.review_is_visible`, and a new public count of a seller's
+  sales through `laria_private.counted_buyers`.
+<!-- /launch-audit:reviews -->
+
 <!-- launch-audit:page-refresh -->
 ## Launch audit: public page refresh
 
