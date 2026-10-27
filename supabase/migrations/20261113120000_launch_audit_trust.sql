@@ -1,4 +1,5 @@
--- Launch audit trust fixes (docs/launch-audit/trust.md).
+-- Launch audit trust fixes, part 1 (26 Oct 2026 audit, findings A15, A16, A28; docs/database.md, "Launch audit: trust
+-- fixes").
 --
 -- A15  Admin needs a second factor: is_admin() and assert_admin() require an aal2 session (Supabase MFA, TOTP), and
 --      the catalog tables that checked the role inline use is_admin() too.

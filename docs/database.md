@@ -1233,3 +1233,24 @@ be applied before the deploy.
 - Locks: nothing scans a table (the `notifications` check is re-added `NOT VALID`), and the migration sets
   `lock_timeout = '10s'`, so behind a long-running query it fails and can be run again instead of queueing traffic.
 <!-- /launch-audit:security -->
+
+<!-- launch-audit:trust -->
+## Launch audit: trust fixes
+
+Migration `20261113120000_launch_audit_trust.sql` (findings A15, A16 and A28 of the 26 Oct 2026 launch audit). Suite:
+`tests/launch-audit-trust.sql`.
+
+- A15: `public.is_admin()` is true only for `app_metadata.role = 'admin'` in a session that passed the authenticator
+  code (`aal = 'aal2'`, Supabase MFA with TOTP), and `laria_private.assert_admin()` raises `ADMIN_REQUIRED` for anyone
+  else or `ADMIN_MFA_REQUIRED` for an Admin whose session used the password alone. Every Admin policy and function goes
+  through one of the two; the catalog policies that read the role inline now call `is_admin()`. The service role is
+  not affected. The app sends an Admin without the code to `/mi-cuenta/seguridad` to set up the app or type the code
+  (`lib/admin-server.ts`, `lib/auth/two-step.ts`).
+- A16, A28: `laria_private.rate_limit_hits` (bucket, HMAC of the visitor's address, fixed window, count; no API access)
+  and `public.consume_rate_limit(p_bucket, p_key, p_limit, p_window_seconds)` (service role only, true while within
+  the limit; rows older than a day are removed as new ones arrive). `lib/rate-limit.ts` uses it for `/api/auth/login`,
+  `/auth/callback`, `/api/auth/check-email` and `/api/auth/resend-confirmation`; a database failure lets the request
+  through and is logged.
+- Order: deploy first, then apply. The application before this change has no code step, so with the migration alone
+  Admin would be locked out until the deploy; the new application works with the old function too.
+<!-- /launch-audit:trust -->
