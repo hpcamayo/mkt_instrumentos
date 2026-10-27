@@ -18,6 +18,7 @@ import { AppliedChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { getCatalogRescue, type getCatalogFacets } from "@/lib/catalog-data";
+import { reservedCardIds } from "@/lib/listing-reservations-server";
 import {
   RESULTS_STATUS_ID,
   appliedFilters,
@@ -35,6 +36,7 @@ import type { ListingCardData, ListingFilters as ListingFiltersType } from "@/li
 import { LISTINGS_PAGE_SIZE, pageHref } from "@/lib/pagination";
 import { listingFiltersToSearchAlert } from "@/lib/search-alerts";
 import type { Crumb } from "@/lib/shell";
+import { getRequestReads } from "@/lib/supabase/public-read-client";
 import { LISTING_GRID, LISTING_GRID_SIZES } from "@/lib/ui/listing-grid";
 import { cn } from "@/lib/utils";
 
@@ -85,9 +87,14 @@ export async function CatalogView({
   after?: ReactNode;
 }) {
   // Optional reads, together (lib/catalog-data.ts): each gives up at the optional budget and the page renders without it.
-  const [facets, rescue] = error
-    ? [null, null]
-    : await Promise.all([facetsRead, listings.length === 0 && appliedFilters(filters, scope).length > 0 ? getCatalogRescue(filters, scope) : null]);
+  // talk-06: which cards say "Reservado" is one of them.
+  const [facets, rescue, reserved] = error
+    ? [null, null, new Set<string>()]
+    : await Promise.all([
+      facetsRead,
+      listings.length === 0 && appliedFilters(filters, scope).length > 0 ? getCatalogRescue(filters, scope) : null,
+      reservedCardIds(listings, getRequestReads().deadline),
+    ]);
   const applied = appliedFilters(filters, scope);
   // FIND 01: a text search inside other filters says so, with the escape to the whole catalog.
   const scoped = filters.q && applied.some((chip) => chip.key !== "q") ? catalogTitle(withQuery({ ...filters, brand: undefined }, undefined)) : null;
@@ -223,7 +230,7 @@ export async function CatalogView({
                 <CatalogTrail href={trailHref} label={title}>
                   <div className={LISTING_GRID}>
                     {listings.map((listing, index) => (
-                      <ListingCard key={listing.id} listing={listing} eager={index < 4} sizes={LISTING_GRID_SIZES} compare />
+                      <ListingCard key={listing.id} listing={listing} eager={index < 4} sizes={LISTING_GRID_SIZES} compare reserved={reserved.has(listing.id)} />
                     ))}
                     {narrowed && alertFilters && lastPage ? (
                       <div className="col-span-2 flex flex-col items-start justify-center gap-3 rounded-panel bg-canvas p-6">
