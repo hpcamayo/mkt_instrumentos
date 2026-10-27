@@ -132,6 +132,10 @@ async function verified(owner, buyer, label) {
     ]);
     assert.equal(sellerRace.filter((result) => !result.error).length, 1, "seller review direction is also unique");
     assert.equal((await ok(await service.from("transaction_reviews").select("id").eq("transaction_id", reviewRace.transactionId))).length, 2);
+    // Launch audit A17: a seller's first reviews from buyers wait for Admin. Released here, as Admin's publish does.
+    const held = await ok(await service.from("transaction_reviews").select("id, held_at").eq("transaction_id", reviewRace.transactionId).eq("direction", "buyer_to_seller").single());
+    assert.ok(held.held_at, "the seller's first review from a buyer waits for Admin");
+    await ok(await service.from("transaction_reviews").update({ held_at: null }).eq("id", held.id));
     const publicReputation = await ok(await service.rpc("get_public_reputation", { p_subject_user_id: owner.id, p_limit: 5 }));
     assert.equal(publicReputation.review_count, 1, "paired reviews reveal to public aggregate");
 
@@ -142,6 +146,7 @@ async function verified(owner, buyer, label) {
     ]);
     assert.ok(both.every((result) => !result.error), both.map((result) => result.error?.message));
     assert.equal((await ok(await service.from("transaction_reviews").select("id").eq("transaction_id", simultaneous.transactionId))).length, 2);
+    await ok(await service.from("transaction_reviews").update({ held_at: null }).eq("transaction_id", simultaneous.transactionId).eq("direction", "buyer_to_seller"));
     const detail = await ok(await buyerB.client.rpc("get_transaction_detail", { p_reference_id: simultaneous.transactionId }));
     assert.equal(detail.visible_reviews.length, 2, "simultaneous opposite directions reveal together");
 
