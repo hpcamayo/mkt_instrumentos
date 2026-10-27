@@ -4,9 +4,9 @@
 -- A18, the allowance: a restrictive policy on storage.objects lets an account add, in 24 hours, at most 120 listing
 -- photos (600 for the owner of an active store), 120 photos for listing edits, 20 sound clips and 40 store images
 -- (laria_private.upload_daily_limit). It counts the account's own files in that bucket created in the last 24 hours,
--- so a file removed meanwhile frees its place. A path that already exists always passes, so a repeated upload still
--- fails as a duplicate, as before. Uploads that run in parallel can each see the last free place, so an account can
--- end a few files over. public.my_upload_allowance tells the forms the limit and when the next place frees up.
+-- so a file removed meanwhile frees its place. A path of the account's own folder that already exists always passes,
+-- so a repeated upload still fails as a duplicate, as before. Uploads that run in parallel can each see the last free
+-- place, so an account can end a few files over. public.my_upload_allowance tells the forms the limit and when the next place frees up.
 --
 -- A18, the removal: every day app/api/internal/uploads/sweep takes files of these four buckets that are more than 48
 -- hours old, have one of the names the forms give them, and nothing points at
@@ -14,15 +14,16 @@
 -- photos and sound clips of saved drafts). It queues them in laria_private.upload_removals
 -- (public.claim_upload_removals), deletes them through the Storage API and reports them done
 -- (public.complete_upload_removals). A file a page points at is never queued: the claim checks each candidate again
--- under a lock on its path, and every place that can point at a file takes the same lock before it does and refuses
--- a queued or removed path (laria_private.guard_upload_attachment, with UPLOAD_REMOVED), so a listing published while
--- the sweep runs either keeps its file or is told to upload it again. A draft kept only on the device has no row, so
+-- under a lock on its path, and every place that can point at a file takes the same lock (shared, so two of them
+-- never wait for each other) before it does and refuses a queued or removed path
+-- (laria_private.guard_upload_attachment, with UPLOAD_REMOVED), so a listing published while the sweep runs either
+-- keeps its file or is told to upload it again. A draft kept only on the device has no row, so
 -- its photos go after 48 hours, and the sell form drops the missing ones when the draft is restored
 -- (app/api/submissions, "renew").
 --
--- A20: laria_private.anonymize_account (service role, the self-service deletion of features/marketplace) and
--- public.admin_anonymize_account (Admin with the authenticator code, with a reason written to the Admin audit) run
--- laria_private.anonymize_account_core: the profile becomes "Cuenta eliminada" without phone or city; the Auth user
+-- A20: laria_private.anonymize_account (the self-service deletion of features/marketplace, through its security
+-- definer public.service_delete_account for the service role) and public.admin_anonymize_account (Admin with the
+-- authenticator code, with a reason written to the Admin audit) run laria_private.anonymize_account_core: the profile becomes "Cuenta eliminada" without phone or city; the Auth user
 -- loses e-mail, phone, password, metadata, identities, sessions and factors, and is banned; listings that are not
 -- sold are archived and every listing of the account loses its contact name and WhatsApp; the account's stores,
 -- never an active one, lose their contact data; favorites, shared lists, follows, alerts, stock watches, drafts,
@@ -104,7 +105,9 @@ as $$
   where o.bucket_id = p_bucket and o.name like p_user_id::text || '/%' and o.created_at > now() - interval '24 hours';
 $$;
 
--- The restrictive upload policy's check. A path that exists already passes: the upload then fails as a duplicate.
+-- The restrictive upload policy's check. A path of the caller's own folder that exists already passes: the upload then
+-- fails as a duplicate. Only there: anywhere else the answer would tell whether someone else's file exists, and the
+-- upload policies refuse another account's folder anyway.
 create or replace function public.storage_upload_allowed(p_bucket text, p_name text)
 returns boolean
 language plpgsql
@@ -119,7 +122,10 @@ begin
   if uid is null then return true; end if;
   upload_limit := laria_private.upload_daily_limit(p_bucket, uid);
   if upload_limit is null then return true; end if;
-  if exists (select 1 from storage.objects o where o.bucket_id = p_bucket and o.name = p_name) then return true; end if;
+  if p_name like uid::text || '/%'
+    and exists (select 1 from storage.objects o where o.bucket_id = p_bucket and o.name = p_name) then
+    return true;
+  end if;
   return (select w.used from laria_private.upload_window(p_bucket, uid) w) < upload_limit;
 end;
 $$;
@@ -239,17 +245,18 @@ as $$
   end, false);
 $$;
 
--- One lock per file, taken by the claim and by every place that points at a file, in (bucket, path) order.
+-- One lock per file. Every place that points at a file takes it shared, so two of them never wait for each other,
+-- whatever order their rows come in (a copy of a listing adds its photos in display order); the claim takes it alone.
 create or replace function laria_private.lock_upload_path(p_bucket text, p_path text)
 returns void
 language sql
 volatile
 set search_path = ''
 as $$
-  select pg_advisory_xact_lock(hashtextextended('laria-upload:' || p_bucket || '/' || p_path, 0));
+  select pg_advisory_xact_lock_shared(hashtextextended('laria-upload:' || p_bucket || '/' || p_path, 0));
 $$;
 
--- The same lock without waiting: false while another transaction holds it.
+-- The claim's lock, alone and without waiting: false while another transaction holds it, shared or not.
 create or replace function laria_private.try_lock_upload_path(p_bucket text, p_path text)
 returns boolean
 language sql
@@ -640,8 +647,9 @@ begin
 end;
 $$;
 
--- Service role only: the self-service deletion (features/marketplace, app/api/account/delete) calls this exact
--- signature, then Supabase's soft delete of the Auth user.
+-- For the service role, through a security definer function of the server's: the self-service deletion
+-- (features/marketplace's public.service_delete_account, for app/api/account/delete) calls this exact signature, then
+-- Supabase's soft delete of the Auth user. No API role can call it directly: none has access to laria_private.
 create or replace function laria_private.anonymize_account(p_user_id uuid, p_reason text default null)
 returns jsonb
 language plpgsql
@@ -683,8 +691,7 @@ $$;
 
 revoke all on function laria_private.anonymize_auth_user(uuid), laria_private.anonymize_account_core(uuid, text, uuid)
 from public, anon, authenticated, service_role;
-revoke all on function laria_private.anonymize_account(uuid, text) from public, anon, authenticated;
-grant execute on function laria_private.anonymize_account(uuid, text) to service_role;
+revoke all on function laria_private.anonymize_account(uuid, text) from public, anon, authenticated, service_role;
 revoke all on function public.admin_anonymize_account(uuid, text) from public, anon;
 grant execute on function public.admin_anonymize_account(uuid, text) to authenticated;
 

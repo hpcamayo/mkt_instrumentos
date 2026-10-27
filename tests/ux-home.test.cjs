@@ -161,7 +161,8 @@ test("home data: the newest 48 for Para ti with hashed sellers, the price drops,
   // docs/operations/catalog-performance.md: the counts come from the shared type counts, not eleven exact counts.
   const shared = { categories: { guitars: 10, percussion: 2 }, types: {}, total: 12 };
   const data = await home.fetchHomeData(client, Promise.resolve(shared));
-  const listingQueries = client.queries.filter((query) => query.table === "listings");
+  // The cards' computed fields read public_listings rows (launch audit A27).
+  const listingQueries = client.queries.filter((query) => query.table === "public_listings");
   assert.equal(listingQueries.filter((query) => called(query, "select", "id", { count: "exact", head: true })).length, 0, "no per-category counts");
   assert.equal(listingQueries.length, 2);
   const pool = listingQueries.find((query) => called(query, "limit", 48));

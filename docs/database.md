@@ -367,7 +367,16 @@ The `laria_private` schema is revoked from `public`, `anon`, and `authenticated`
 
 Public read policies:
 - Active stores are readable by `anon` and `authenticated`, but only through column grants (migration `20261022130000_store_public_columns.sql`): `id`, `name`, `slug`, `description`, `status`, `city`, `district`, `region`, `whatsapp_phone`, `logo_url`, `banner_url`, `is_verified`, `created_at`, `updated_at` and the four social/web URLs; `authenticated` also reads `owner_user_id`. RUC, razón social, e-mail, contact person, legacy contact name, street address, rejection reason and plan are private: the owner reads them with `get_own_store()`, Admin with `admin_get_store(p_store_id)`. A column added to `stores` later is private until a migration grants it.
-- Individual approved listings are public; store listings additionally require an active parent store.
+- Individual approved listings are public; store listings additionally require an active parent store. `anon` and
+  `authenticated` read only a listing's public columns, through column grants (`20261114140000`): the columns of
+  `public.public_listings`, plus `rejection_reason`, `rejection_codes`, `hidden_source` and `hidden_reason` for
+  `authenticated` (owners). The contact (`contact_name`, `whatsapp_phone`) and the internal fields are read on the
+  server, and by Admin with `admin_get_listing(p_listing_id)`. Public pages that use a computed field
+  (`photo_count:listing_photo_count`, `recent_price_drop_at`, `seller_verified_rank`) read them on `public_listings`,
+  and the catalog's free-text search returns its rows (launch audit A27, below). A column added to `listings` later is
+  private until a migration grants it.
+- Profiles: a signed-in user reads their own, Admin every profile; visitors none (`20261114140000` dropped "Public can
+  read profiles for approved listings"). A seller's name on a public page is read on the server.
 - Listing photos follow the same combined listing/store eligibility predicate. Store photos require an active store.
 
 Public insert policies:
@@ -395,6 +404,9 @@ Admin policies:
 
 `public.get_own_store()` / `public.admin_get_store(p_store_id)`:
 - Return every column of the signed-in owner's store, or of any store for Admin (raises `ADMIN_REQUIRED` otherwise). SECURITY DEFINER; not callable by `anon`.
+
+`public.admin_get_listing(p_listing_id)`:
+- Returns every column of one listing for Admin (raises `ADMIN_REQUIRED` otherwise; `is_admin()` asks for the second sign-in step). SECURITY DEFINER; not callable by `anon`. Admin's listing editor reads the contact name and WhatsApp through it.
 
 `public.is_admin()`:
 - Used by the admin panel to verify access.
@@ -570,6 +582,10 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 3. Prefer `supabase migration list` and `supabase db push` when the CLI is logged in and linked.
 4. If using SQL Editor manually, verify migration history/state afterward so old migrations are not replayed later.
 5. Deploy code only after production Supabase has the required schema.
+6. Give every UPDATE and DELETE in a function or trigger a WHERE clause (`where true` when every row is meant).
+   Supabase loads pg_safeupdate for API connections, which refuses one without, the statements of the functions and
+   triggers an API call runs included; local Postgres and the migration connection don't load it, so only production
+   fails. `tests/api-safeupdate.integration.cjs` scans every function of `public` and `laria_private` after a reset.
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
@@ -1234,6 +1250,50 @@ be applied before the deploy.
   `lock_timeout = '10s'`, so behind a long-running query it fails and can be run again instead of queueing traffic.
 <!-- /launch-audit:security -->
 
+<!-- launch-audit:contacts -->
+## Launch audit: phone numbers and contacts
+
+Finding A27 of the 26 Oct 2026 launch audit: through the public API key anyone could read every column of a public
+listing, `contact_name` and `whatsapp_phone` included, and the name, phone, city and region of every Particular with
+an approved listing (the policy "Public can read profiles for approved listings"). A listing page shows its seller's
+name and number by design; the API handed out all of them in one paginated request, past the firewall and its rate
+limits. The fix is column grants on `listings`, as `stores` has, and no access to other users' profiles, in two steps
+so the running site never reads what it may no longer read.
+
+Step 1, `20261114130000_launch_audit_contact_reads.sql` (suite `tests/launch-audit-contact-reads.sql`), changes
+nothing the site reads, so it is applied before its application deploys:
+- `public.public_listings`: a listing's public columns (`id`, `store_id`, `owner_user_id`, `seller_type`, `status`,
+  `title`, `slug`, `description`, `category`, `instrument_type`, `brand`, `model`, `condition`, `attributes`,
+  `price_pen`, `previous_price_pen`, `price_dropped_at`, `city`, `region`, `view_count`, `stock_state`, `published_at`,
+  `created_at`, `updated_at`, `content_changed_at`, `availability_confirmed_at`, `paused_until`, `sold_at`), a
+  security invoker view, so the policies on `listings` decide which rows a caller sees. Select only for `anon` and
+  `authenticated`. PostgREST embeds `stores` and `listing_photos` through it from the base table's foreign keys.
+- `listing_photo_count`, `recent_price_drop_at` and `seller_verified_rank` also take a `public_listings` row, with the
+  bodies and rights of the `listings` ones. A computed field reads the whole row, and a whole `listings` row needs
+  SELECT on every column, so under column grants only the view's rows can carry them.
+- `catalog_search(p_q)` returns `setof public_listings` (same rows and rule as `20261111120000`).
+- `admin_get_listing(p_listing_id)` (RPC Functions above).
+- The application: the catalog, the home, the store page, the compare page and the listing page's similar and seller
+  rows read `public_listings`. The contact button (`app/api/contact`) reads the listing with the public key, so the
+  policies still decide it is public, and its contact (`contact_name`, `whatsapp_phone`, the owner's profile) with the
+  service role. "Más de este vendedor" for an old Particular listing without an account matches the seller by
+  WhatsApp number on the server with the service role, then reads the cards as usual. Admin's listing editor loads
+  through `admin_get_listing`. `tests/launch-audit-contacts.test.cjs` checks that no read through the public key
+  names a private column, a computed field on `listings` or another user's profile.
+
+Step 2, `20261114140000_launch_audit_contact_columns.sql` (suite `tests/launch-audit-contact-columns.sql`; three
+older suites now read a visitor's view the same way), is applied once step 1's application is live: it revokes
+the table-wide SELECT on `listings` from `anon` and `authenticated`, grants them the columns of `public_listings`,
+grants `authenticated` also `rejection_reason`, `rejection_codes`, `hidden_source` and `hidden_reason` (owners see
+them on their own listings; approval and showing a listing again clear them), drops the public profile policy and
+revokes `anon`'s SELECT on `profiles`. A signed-in user still reads their own profile, Admin every profile.
+
+From step 2 on, a column added to `listings` is private by default: a public one needs its column grant to `anon`
+and `authenticated` and, when a public page reads it next to a computed field, its place at the end of
+`public_listings` (`create or replace view` keeps the existing columns in order and adds new ones last). A public read
+of another user's profile goes through the server or a security definer function.
+<!-- /launch-audit:contacts -->
+
 <!-- launch-audit:trust -->
 ## Launch audit: trust fixes
 
@@ -1261,6 +1321,53 @@ Migration `20261113120000_launch_audit_trust.sql` (findings A15, A16 and A28 of 
   sign-up forms can't check an address until the migration is in, so it goes in as soon as the deploy is ready.
 <!-- /launch-audit:trust -->
 
+<!-- launch-audit:reviews -->
+## Launch audit: confirmed buyers and held reviews
+
+Migrations `20261114145000_launch_audit_review_events_index.sql` (the events index) and
+`20261114150000_launch_audit_review_trust.sql` (finding A17 of the 26 Oct 2026 launch audit: with a second free
+account a seller could confirm their own sales and leave five stars, once per listing). Suite:
+`tests/launch-audit-review-trust.sql`. It only adds and redefines, so the site before its deploy keeps working; the
+deploy brings the buyers' wording, the notes on the transaction page and Admin's "Publicar reseña".
+
+- `get_public_seller_facts` counts buyers in `verified_sales` (`laria_private.counted_buyers(p_seller_user_id,
+  p_store_id)`): each buyer once, and only once their account is 7 days old with a confirmed e-mail. A store counts its
+  own sales, a Particular their sales outside any store. The seller card reads "N compradores confirmaron su compra en
+  Laria". The seller's own count on the transaction page (`seller_verified_sales`, for "Tu primera venta verificada")
+  still counts sales.
+- `transaction_reviews.held_at`: a buyer's review waits for Admin when `laria_private.review_hold_reasons(transaction
+  id)` gives a reason. The reasons stay in `laria_private.review_holds (review_id, reasons, created_at)` (no API
+  access):
+  - `first_reviews`: the seller (the store, for a store's sale) has fewer than three published reviews from buyers;
+  - `new_account`: the buyer's account is less than 7 days old;
+  - `email_unconfirmed`: the buyer has not confirmed their e-mail;
+  - `repeat_buyer`: the buyer already reviewed this seller for another sale;
+  - `same_browser`: the buyer and the seller, or a member of the store, carry the same first-party session in
+    `marketplace_events` (the signed 24-hour cookie, kept across sign-out; index `marketplace_events_actor_session_idx`).
+  `submit_transaction_review` takes a transaction advisory lock on the buyer and the seller (the store, for a store's
+  sale) before the rules run, so two reviews of one seller by one buyer sent at once go one after the other and the
+  second is `repeat_buyer`. Phone numbers are no reason: both sides type theirs and can change them at will, so a
+  seller could copy a buyer's number to hold that buyer's review. A seller's review of the buyer is never held. A held review shows nowhere: `laria_private.review_is_visible` is false
+  for it, so reputation, the review pages, the store directory, the transaction page and reports leave it out. "Ambas
+  reseñas" waits until neither review of the sale is held.
+- Admin: the Reseñas queue (`get_admin_moderation_queue('resenas')`, counted by `get_admin_moderation_counts`) lists
+  held reviews oldest first, revealed or not, with `held_at`, `hold_reasons`, `reviewer_name`, `reviewer_since`,
+  `reviewer_email_confirmed` and `reviewed_name`, beside the reported ones as before. `publish_held_review(p_review_id)`
+  (Admin with the second sign-in step) clears the hold, deletes its reasons, records `review_published` with them in
+  `admin_audit_actions`, and sends "Ambas reseñas" when both reviews are in. `moderate_review` hides a held review like
+  any other; a hidden one can't be published (`REVIEW_HIDDEN`).
+- `get_transaction_detail` adds `own_review.held_at` and `counterpart_review_held`: the other side's review waits, said
+  only once reviews would otherwise show, so a seller never learns before reviewing that the buyer did.
+- Locks: the events index has a migration of its own, applied first. It blocks event writes only while it builds and
+  commits (it covers only events with an account and a session; about a second per million rows). The second
+  migration then takes an ACCESS EXCLUSIVE lock on `transaction_reviews` first, by adding the column, and holds it
+  until the commit while only a new table and functions are created, so reviews wait for milliseconds. In one
+  transaction, the two locks could deadlock with a review being sent: the review holds `transaction_reviews` and
+  waits to write its event. Every lock wait is capped at 10 seconds.
+- A new public read of reviews goes through `laria_private.review_is_visible`, and a new public count of a seller's
+  sales through `laria_private.counted_buyers`.
+<!-- /launch-audit:reviews -->
+
 <!-- launch-audit:page-refresh -->
 ## Launch audit: public page refresh
 
@@ -1276,6 +1383,11 @@ holds its own table's lock while its trigger inserts into the record, so locking
 `tests/launch-audit-page-refresh-locks.integration.cjs` (local database, `pg` from `node_modules`) replays a writer
 holding each of the nine tables and then taking the other eight and the record while a second run applies, and checks
 itself by running the migration without its first statement, where a listing price edit deadlocks with it.
+Follow-up `20261113140000_launch_audit_page_refresh_safeupdate.sql`: the claim's update of every waiting row had no
+WHERE clause, which Supabase refuses on API calls (pg_safeupdate), so every run of the job failed after the deploy of
+27 Oct 2026 until it was applied; it is the same function with `where true`. `tests/api-safeupdate.integration.cjs`
+runs both functions with that check loaded when the database has it (`safeupdate`, or a local build of the same check
+named `laria_safeupdate`), and checks itself on the claim as first applied.
 
 - `laria_private.public_page_changes` (`id` identity, `changed_at`, `claim_id`, `claimed_at`, `first_claimed_at`,
   `armed_nonce`, `armed_deployment`; no API access): one row per statement that changes what the cached home and
@@ -1334,8 +1446,9 @@ application before it calls none of the new functions, so it can be applied befo
   `authenticated`) calls `public.storage_upload_allowed(bucket, name)`. Per account and 24 hours: 120 files in
   `listing-photos` (600 for the owner of an active store), 120 in `listing-edit-photos`, 20 in `listing-sound-clips`
   and 40 in `store-assets` (`laria_private.upload_daily_limit`); other buckets have none. It counts the account's own
-  files of the bucket (its folder) created in the last 24 hours, so removing one frees its place; a path that exists
-  already always passes, so a repeated upload still fails as a duplicate. Parallel uploads can each see the last free
+  files of the bucket (its folder) created in the last 24 hours, so removing one frees its place; a path of its own
+  folder that exists already always passes, so a repeated upload still fails as a duplicate (only there, so the answer
+  never tells whether someone else's file exists). Parallel uploads can each see the last free
   place. `public.my_upload_allowance(bucket) → {bucket, limit, used, next_at}` (`authenticated`) lets a form whose
   upload failed say so and when the next place frees up (`lib/upload-allowance.ts`).
 - Sweep of files nothing uses (A18): `laria_private.upload_removals` (bucket, path, `queued_at`, `removed_at`; no API
@@ -1350,14 +1463,16 @@ application before it calls none of the new functions, so it can be applied befo
   - A file is never queued while something points at it: the claim takes a per-file transaction lock
     (`pg_try_advisory_xact_lock`, skipping a file whose lock is held, so it never waits) and checks again in its own
     statement; the triggers `*_guard_upload` on `listing_photos`, `listing_revision_photos`, `listing_sound_clips`,
-    `store_photos`, `stores` (logo, banner) and `listing_drafts` (photos, clip) take the same locks in (bucket, path)
-    order for every address they add and refuse a queued or removed one with `UPLOAD_REMOVED` (P0001).
+    `store_photos`, `stores` (logo, banner) and `listing_drafts` (photos, clip) take the same locks, shared
+    (`pg_advisory_xact_lock_shared`, so two of them never wait for each other, in whatever order their rows come), for
+    every address they add and refuse a queued or removed one with `UPLOAD_REMOVED` (P0001).
   - A new place that keeps a file of these buckets belongs in `laria_private.upload_references` and gets the guard;
     a new file name the forms give belongs in `laria_private.upload_is_sweepable`, or the sweep leaves such files.
   - A draft kept only on the device points at nothing, so its files go after 48 hours: `/api/submissions` "renew"
     returns `present` (the files still in the folder, by bucket) and the sell form drops the missing ones.
 - Anonymising an account (A20): `laria_private.anonymize_account(p_user_id, p_reason default null)` (service role only,
-  `ANONYMIZE_SERVICE_REQUIRED`; the self-service deletion of `features/marketplace` calls it) and
+  `ANONYMIZE_SERVICE_REQUIRED`, through a security definer function: the self-service deletion of
+  `features/marketplace` calls it from `public.service_delete_account`; no API role can call it directly) and
   `public.admin_anonymize_account(p_user_id, p_reason)` (Admin with the authenticator code; a reason of 3–500
   characters, `ANONYMIZE_REASON_REQUIRED`; writes `admin_audit_actions` with `action = 'anonymize_account'`,
   `target_type = 'account'`) run `laria_private.anonymize_account_core`:
