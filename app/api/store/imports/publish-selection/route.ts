@@ -12,7 +12,7 @@ export async function POST(request: Request) {
   if ("response" in auth) return auth.response;
   const body = await request.json().catch(() => null);
   const ids = Array.isArray(body?.itemIds) ? [...new Set(body.itemIds as unknown[])] : [];
-  if (!ids.length || ids.length > 200 || !ids.every((id) => typeof id === "string" && UUID.test(id))) {
+  if (!ids.length || ids.length > 200 || !ids.every((id): id is string => typeof id === "string" && UUID.test(id))) {
     return importJson({ code: "INVENTORY_BULK_INVALID", message: "Elige entre 1 y 200 SKU." }, 400);
   }
   const { data, error } = await auth.db.rpc("create_inventory_publish_selection", { p_item_ids: ids });

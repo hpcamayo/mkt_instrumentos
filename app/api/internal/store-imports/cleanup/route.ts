@@ -14,17 +14,16 @@ export async function GET(request: Request) {
   if (!isAuthorized(request)) return NextResponse.json({ message: "No autorizado." }, { status: 401 });
   const client = getSupabaseAdminClient();
   if (!client) return NextResponse.json({ message: "Configuración incompleta." }, { status: 503 });
-  const db = client as unknown as import("@supabase/supabase-js").SupabaseClient;
   let deleted = 0;
   try {
     for (let batch = 0; batch < 5; batch += 1) {
-      const { data, error } = await db.rpc("claim_store_import_file_deletions", { p_limit: 100 });
+      const { data, error } = await client.rpc("claim_store_import_file_deletions", { p_limit: 100 });
       if (error) throw new Error(error.message);
       const paths = ((data ?? []) as { bucket: string; path: string }[]).filter((row) => row.bucket === "store-imports").map((row) => row.path);
       if (!paths.length) break;
-      const { error: removeError } = await db.storage.from("store-imports").remove(paths);
+      const { error: removeError } = await client.storage.from("store-imports").remove(paths);
       if (removeError) throw new Error(removeError.message);
-      const { data: done, error: completeError } = await db.rpc("complete_store_import_file_deletions", { p_paths: paths });
+      const { data: done, error: completeError } = await client.rpc("complete_store_import_file_deletions", { p_paths: paths });
       if (completeError) throw new Error(completeError.message);
       deleted += Number(done ?? 0);
       if (paths.length < 100) break;
@@ -32,13 +31,13 @@ export async function GET(request: Request) {
     // STORE-3a: rejected photos and photos of closed imports that no listing uses (design §8.5).
     let photos = 0;
     for (let batch = 0; batch < 10; batch += 1) {
-      const { data, error } = await db.rpc("claim_store_import_photo_deletions", { p_limit: 100 });
+      const { data, error } = await client.rpc("claim_store_import_photo_deletions", { p_limit: 100 });
       if (error) throw new Error(error.message);
       const paths = ((data ?? []) as { bucket: string; path: string }[]).filter((row) => row.bucket === "store-import-photos").map((row) => row.path);
       if (!paths.length) break;
-      const { error: removeError } = await db.storage.from("store-import-photos").remove(paths);
+      const { error: removeError } = await client.storage.from("store-import-photos").remove(paths);
       if (removeError) throw new Error(removeError.message);
-      const { data: done, error: completeError } = await db.rpc("complete_store_import_photo_deletions", { p_paths: paths });
+      const { data: done, error: completeError } = await client.rpc("complete_store_import_photo_deletions", { p_paths: paths });
       if (completeError) throw new Error(completeError.message);
       photos += Number(done ?? 0);
       if (paths.length < 100) break;

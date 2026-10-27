@@ -5,11 +5,10 @@ import { createMarketplaceEmailProvider, MarketplaceEmailProviderError, type Mar
 import { createEmailLinkToken, EMAIL_LINK_LABELS, type EmailLinkAction } from "@/lib/email/links";
 import { parseMarketplaceEmailPayload, renderMarketplaceEmail, type MarketplaceEmailPayload } from "@/lib/email/templates";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
+import type { DatabaseClient } from "@/lib/supabase/database";
 
-type RpcError = { message: string; code?: string };
-export type MarketplaceEmailQueueClient = {
-  rpc(name: string, args?: Record<string, unknown>): PromiseLike<{ data: unknown; error: RpcError | null }>;
-};
+// The service role client, or a stand-in with the same calls in tests.
+export type MarketplaceEmailQueueClient = Pick<DatabaseClient, "rpc">;
 
 export type MarketplaceEmailBatchResult = { claimed: number; sent: number; retried: number; failed: number; invalid: number };
 
@@ -65,7 +64,7 @@ export function emailLinks(payload: MarketplaceEmailPayload, baseUrl: string) {
 }
 
 export async function processMarketplaceEmailBatch({
-  client = getSupabaseAdminClient() as unknown as MarketplaceEmailQueueClient | null,
+  client = getSupabaseAdminClient(),
   provider = createMarketplaceEmailProvider(),
   baseUrl = process.env.MARKETPLACE_EMAIL_BASE_URL,
   workerId = randomUUID(),

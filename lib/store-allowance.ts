@@ -1,16 +1,16 @@
 // A store's listing allowance (docs/store-operations/design.md §10, decision D-1): 50 concurrent pending or published
 // listings unless Admin set another value. The database enforces it (enforce_store_inventory_cap); this module only
 // reads it for the screens and turns the database message into the screens' wording.
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/supabase/database";
 
 export const DEFAULT_LISTING_ALLOWANCE = 50;
 
 export type StoreListingQuota = { allowance: number; used: number; remaining: number };
 
 // The signed-in owner's quota, or the default when it cannot be read (the database still enforces the real value).
-export async function getStoreListingQuota(supabase: SupabaseClient | null, used: number): Promise<StoreListingQuota> {
+export async function getStoreListingQuota(supabase: DatabaseClient | null, used: number): Promise<StoreListingQuota> {
   if (supabase) {
-    const { data, error } = await supabase.rpc("get_store_listing_quota", {});
+    const { data, error } = await supabase.rpc("get_store_listing_quota");
     const quota = data as { allowance?: unknown } | null;
     if (!error && typeof quota?.allowance === "number") {
       return { allowance: quota.allowance, used, remaining: Math.max(quota.allowance - used, 0) };
@@ -45,9 +45,9 @@ export type StoreAllowanceDetail = StoreListingQuota & {
   openRequest: StoreAdminRequest | null;
 };
 
-export async function getStoreAllowanceDetail(supabase: SupabaseClient | null): Promise<StoreAllowanceDetail | null> {
+export async function getStoreAllowanceDetail(supabase: DatabaseClient | null): Promise<StoreAllowanceDetail | null> {
   if (!supabase) return null;
-  const { data, error } = await supabase.rpc("get_store_listing_allowance_detail", {});
+  const { data, error } = await supabase.rpc("get_store_listing_allowance_detail");
   const detail = data as Record<string, unknown> | null;
   if (error || typeof detail?.allowance !== "number") return null;
   const number = (key: string) => (typeof detail[key] === "number" ? (detail[key] as number) : 0);
@@ -69,7 +69,7 @@ export function allowanceLevel(used: number, allowance: number): "ok" | "near" |
 }
 
 // stock-21 and shop-05: the store's open request of a kind, if any (RLS limits the read to the owner's own store).
-export async function getOpenStoreRequest(supabase: SupabaseClient | null, kind: StoreAdminRequest["kind"]): Promise<StoreAdminRequest | null> {
+export async function getOpenStoreRequest(supabase: DatabaseClient | null, kind: StoreAdminRequest["kind"]): Promise<StoreAdminRequest | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from("store_admin_requests")

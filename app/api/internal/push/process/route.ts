@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { processPushBatch, type PushQueueClient } from "@/lib/push/push-worker";
+import { processPushBatch } from "@/lib/push/push-worker";
 import { createPushSender, type PushSender } from "@/lib/push/web-push";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
   try {
     const totals = { quiet: false, people: 0, sent: 0, retried: 0, failed: 0, skipped: 0 };
     for (let index = 0; index < 4; index += 1) {
-      const batch = await processPushBatch({ client: client as unknown as PushQueueClient, sender });
+      const batch = await processPushBatch({ client, sender });
       totals.quiet = batch.quiet;
       totals.people += batch.people;
       totals.sent += batch.sent;

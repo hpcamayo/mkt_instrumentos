@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { TOO_MANY_EMAILS, isAuthRateLimited } from "@/lib/auth/limits";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { RATE_LIMITS, allowRequest } from "@/lib/rate-limit";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 import { visitorAuthKey } from "@/lib/supabase/visitor-auth";
 
 // fix-08: sends the sign-up confirmation e-mail again. The answer is the same whether or not the address has an

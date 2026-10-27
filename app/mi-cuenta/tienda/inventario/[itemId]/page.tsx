@@ -37,7 +37,6 @@ import {
   getItemMovements,
   getLinkedItemsByListing,
   getSkuListingDetails,
-  inventoryDb,
   inventoryHref,
   inventoryStatusKey,
   numbers,
@@ -80,7 +79,7 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
   // stock-03: which movements on this page a later correction cancelled.
   const movementIds = history.movements.map((movement) => movement.id);
   const { data: corrections } = movementIds.length
-    ? await inventoryDb(supabase).from("store_stock_movements").select("corrects_movement_id").in("corrects_movement_id", movementIds)
+    ? await supabase.from("store_stock_movements").select("corrects_movement_id").in("corrects_movement_id", movementIds)
     : { data: [] };
   const undone = new Set(((corrections ?? []) as { corrects_movement_id: string }[]).map((row) => row.corrects_movement_id));
   const now = Date.now();

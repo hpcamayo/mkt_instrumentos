@@ -40,8 +40,7 @@ const IMPORT_PHOTO_PATH = /^([0-9a-f-]{36})\/import-photos\/([0-9a-f-]{36})\/([0
 // path the database generated, and the type is the one the server check found.
 async function serveImportPhoto(admin: NonNullable<ReturnType<typeof getSupabaseAdminClient>>, match: RegExpExecArray) {
   const [, ownerId, sessionId, assetId, extension] = match;
-  const db = admin as unknown as import("@supabase/supabase-js").SupabaseClient;
-  const { data: asset } = await db
+  const { data: asset } = await admin
     .from("store_import_photo_assets")
     .select("object_path,mime_type,status,created_by,session_id,file_ext")
     .eq("id", assetId)

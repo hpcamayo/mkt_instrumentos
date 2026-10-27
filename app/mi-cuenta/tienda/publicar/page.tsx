@@ -6,8 +6,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 import { listSellDrafts, loadSellBrands, loadSellPageData } from "@/lib/sell-page-data";
 import { getStoreListingQuota } from "@/lib/store-allowance";
-import { getInventoryItem, getSkuListingDetails, inventoryDb } from "@/lib/store-inventory";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { getInventoryItem, getSkuListingDetails } from "@/lib/store-inventory";
+import type { DatabaseClient } from "@/lib/supabase/database";
 
 export const metadata = { title: "Publicar" };
 
@@ -64,9 +64,8 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
 }
 
 // The first active SKU of the store with no listing yet, in SKU order (FIX 05).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function nextUnpublishedSku(supabase: SupabaseClient<any, any, any>, storeId: string) {
-  const { data } = await inventoryDb(supabase)
+async function nextUnpublishedSku(supabase: DatabaseClient, storeId: string) {
+  const { data } = await supabase
     .from("store_inventory_items")
     .select("id")
     .eq("store_id", storeId)
@@ -75,15 +74,12 @@ async function nextUnpublishedSku(supabase: SupabaseClient<any, any, any>, store
     .order("merchant_sku", { ascending: true })
     .limit(1)
     .maybeSingle();
-  return (data as { id: string } | null)?.id;
+  return data?.id;
 }
 
-// SHOP 06: the store's default condition and standard text. listing_details and store_listing_defaults are newer than
-// the generated database types.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function loadStoreDefaults(supabase: SupabaseClient<any, any, any>, storeId: string) {
-  const { data } = await (supabase as SupabaseClient).from("store_listing_defaults").select("condition,description_footer").eq("store_id", storeId).maybeSingle();
-  const row = data as { condition: string | null; description_footer: string | null } | null;
-  return row ? { condition: row.condition, descriptionFooter: row.description_footer ?? "" } : undefined;
+// SHOP 06: the store's default condition and standard text.
+async function loadStoreDefaults(supabase: DatabaseClient, storeId: string) {
+  const { data } = await supabase.from("store_listing_defaults").select("condition,description_footer").eq("store_id", storeId).maybeSingle();
+  return data ? { condition: data.condition, descriptionFooter: data.description_footer } : undefined;
 }
 

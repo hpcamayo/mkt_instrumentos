@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { exportFilename, exportHeaders, exportRows, listingColumns, toCsv, toXlsxSheet, type ExportItem } from "@/lib/inventory-export";
 import { INVENTORY_BULK_LIMIT } from "@/lib/inventory-actions";
 import { writeXlsx } from "@/lib/spreadsheet/xlsx-write";
-import { UUID, inventoryDb } from "@/lib/store-inventory";
+import { UUID } from "@/lib/store-inventory";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 // GET /api/store/inventory/export?format=csv|xlsx[&ids=…|&vista=…][&publicacion=1] (design §7.8). Reads the caller's
@@ -57,9 +57,8 @@ export async function GET(request: Request) {
   if (storeError) return exportFailed("store", storeError);
   if (!store) return NextResponse.json({ message: "Necesitas una tienda para exportar inventario." }, { status: 404 });
 
-  const db = inventoryDb(supabase);
   if (view) {
-    const { data, error } = await db.rpc("get_inventory_item_ids", { p_filters: view });
+    const { data, error } = await supabase.rpc("get_inventory_item_ids", { p_filters: view });
     if (error) return exportFailed("view", error);
     ids = ((data as { ids?: string[] } | null)?.ids ?? []);
   }
@@ -67,7 +66,7 @@ export async function GET(request: Request) {
   if (ids) {
     // Chunks keep each request URL short; the view's own order is kept below.
     for (let start = 0; start < ids.length; start += 200) {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from("store_inventory_items")
         .select("id,merchant_sku,product_name,variant_label,quantity_on_hand,quantity_available,unit_price_pen,low_stock_threshold,external_reference,inventory_status,listing_id")
         .eq("store_id", store.id)
@@ -79,7 +78,7 @@ export async function GET(request: Request) {
     items.sort((a, b) => (view ? (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0) : a.merchant_sku.toUpperCase().localeCompare(b.merchant_sku.toUpperCase())));
   }
   for (let from = 0; !ids && from < MAX_ROWS; from += PAGE) {
-    let query = db
+    let query = supabase
       .from("store_inventory_items")
       .select("id,merchant_sku,product_name,variant_label,quantity_on_hand,quantity_available,unit_price_pen,low_stock_threshold,external_reference,inventory_status,listing_id")
       .eq("store_id", store.id)

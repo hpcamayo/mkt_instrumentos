@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { PageNotice } from "@/components/page-notice";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
@@ -10,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getInstrumentTypeOptions } from "@/lib/listing-submission";
 import { conditionOptions } from "@/lib/listings";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import type { Json } from "@/lib/supabase/database.types";
 
 // STOCK 09 (Effortless Laria, selling batch): what a SKU remembers for its next publication. Publishing the SKU, or an
 // import that carries these columns, fills it in; the store can correct it here; "Publicar este SKU" starts with it.
@@ -18,7 +18,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 // change. The category is the SKU's own, edited once in "Categoría del SKU" (stock-20) on the same page; here it only
 // decides the instrument types offered.
 
-export type SkuListingDetails = { brand?: string; model?: string; instrument_type?: string; condition?: string; description?: string; attributes?: Record<string, unknown> };
+export type SkuListingDetails = { brand?: string; model?: string; instrument_type?: string; condition?: string; description?: string; attributes?: { [key: string]: Json | undefined } };
 
 export function SkuListingDetailsPanel({ itemId, category, details, canWrite }: {
   itemId: string;
@@ -48,10 +48,9 @@ export function SkuListingDetailsPanel({ itemId, category, details, canWrite }: 
     if (!supabase) return setMessage({ kind: "error", text: "No pudimos conectar. Intenta nuevamente." });
     setSaving(true);
     setMessage(null);
-    const payload: Record<string, unknown> = Object.fromEntries(Object.entries({ ...values, instrument_type: instrumentType }).map(([key, value]) => [key, value.trim()]).filter(([, value]) => value));
+    const payload: { [key: string]: Json | undefined } = Object.fromEntries(Object.entries({ ...values, instrument_type: instrumentType }).map(([key, value]) => [key, value.trim()]).filter(([, value]) => value));
     if (details?.attributes && instrumentType === (details.instrument_type ?? "")) payload.attributes = details.attributes;
-    // The function is newer than the generated database types.
-    const { error } = await (supabase as unknown as SupabaseClient).rpc("update_inventory_listing_details", { p_item_id: itemId, p_details: payload });
+    const { error } = await supabase.rpc("update_inventory_listing_details", { p_item_id: itemId, p_details: payload });
     setSaving(false);
     if (error) return setMessage({ kind: "error", text: error.message.includes("NOT_OWNED") ? "No puedes administrar este inventario." : "No pudimos guardar los datos. Intenta nuevamente." });
     setMessage({ kind: "success", text: "Guardado. Se usarán la próxima vez que publiques este SKU." });

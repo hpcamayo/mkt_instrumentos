@@ -12,10 +12,10 @@ export async function GET(request: Request) {
   if (!client) return NextResponse.json({ message: "Configuración incompleta." }, { status: 503 });
   const requestId = crypto.randomUUID();
   try {
-    const prepared = await prepareDueLimaDayDigests(client as never) + await prepareDueWeeklyFollowEmails(client as never);
+    const prepared = await prepareDueLimaDayDigests(client) + await prepareDueWeeklyFollowEmails(client);
     const batches = [];
     for (let index = 0; index < 4; index += 1) {
-      const result = await processMarketplaceEmailBatch({ client: client as never, limit: 25 });
+      const result = await processMarketplaceEmailBatch({ client, limit: 25 });
       batches.push(result);
       if (result.claimed < 25) break;
     }
