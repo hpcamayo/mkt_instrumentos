@@ -34,7 +34,7 @@ export default async function AdminErrorsPage({ searchParams }: { searchParams: 
     <div className="space-y-5">
       <PageHeader
         title="Errores"
-        meta={<p className="max-w-[68ch]">Los errores del servidor y de los navegadores de los visitantes, agrupados por tipo. Se guardan 30 días, sin cuentas, direcciones IP ni datos personales. Además, una revisión externa abre el sitio cada 10 minutos y GitHub te avisa por correo cuando falla.</p>}
+        meta={<p className="max-w-[68ch]">Los errores del servidor y de los navegadores de los visitantes, agrupados por tipo. Se guardan 30 días, sin cuentas ni direcciones IP: las páginas se ven como patrones, y los correos, números, enlaces y textos entre comillas se quitan antes de guardarlos. Además, una revisión externa abre el sitio cada 10 minutos y GitHub te avisa por correo cuando falla.</p>}
       />
       <div className="flex flex-wrap gap-x-6 gap-y-3">
         <nav aria-label="Origen del error" className="flex flex-wrap gap-2">

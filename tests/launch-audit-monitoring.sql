@@ -52,6 +52,9 @@ do $$ begin
   perform pg_temp.check(has_function_privilege('authenticated', 'public.get_admin_app_errors(integer, text)', 'execute')
     and not has_function_privilege('anon', 'public.get_admin_app_errors(integer, text)', 'execute'), 'signed-in calls reach the Admin check');
   perform pg_temp.check(not has_function_privilege('authenticated', 'laria_private.scrub_error_text(text)', 'execute')
+    and not has_function_privilege('authenticated', 'laria_private.app_error_route(text, text)', 'execute')
+    and not has_function_privilege('authenticated', 'laria_private.app_error_name(text, text)', 'execute')
+    and not has_function_privilege('authenticated', 'laria_private.app_error_route_segments()', 'execute')
     and not has_function_privilege('authenticated', 'laria_private.run_app_error_retention()', 'execute')
     and not has_function_privilege('anon', 'laria_private.run_app_error_retention()', 'execute'), 'the helpers stay private');
   perform pg_temp.check(not has_table_privilege('anon', 'laria_private.app_errors', 'select')
@@ -79,11 +82,30 @@ do $$ declare scrubbed text; begin
   scrubbed := laria_private.scrub_error_text('WhatsApp +51 987 654 321, DNI 45678912, RUC 20123456789 from 190.42.17.3');
   perform pg_temp.check(scrubbed = 'WhatsApp <n>, DNI <n>, RUC <n> from <n>', 'phone, DNI, RUC and IP numbers are replaced: ' || scrubbed);
   scrubbed := laria_private.scrub_error_text('GET /listados?q=juan%20perez&page=2 failed; https://laria.audio/vender#access_token=abc.def-123 too');
-  perform pg_temp.check(scrubbed = 'GET /listados?… failed; https://laria.audio/vender#… too', 'query strings and fragments go: ' || scrubbed);
+  perform pg_temp.check(scrubbed = 'GET /listados?… failed; https://laria.audio/… too', 'query strings and fragments go: ' || scrubbed);
   scrubbed := laria_private.scrub_error_text('Cannot read properties of undefined (reading ''getBoundingClientRect''), status 500 at line 42');
-  perform pg_temp.check(scrubbed = 'Cannot read properties of undefined (reading ''getBoundingClientRect''), status 500 at line 42',
-    'ordinary words and short numbers stay: ' || scrubbed);
+  perform pg_temp.check(scrubbed = 'Cannot read properties of undefined (reading ''…''), status 500 at line 42',
+    'ordinary words and short numbers stay, quoted text goes: ' || scrubbed);
   perform pg_temp.check(laria_private.scrub_error_text(null) = '', 'nothing is an empty text');
+  -- Numbers written with no-break spaces, thin spaces or Unicode dashes are still numbers.
+  scrubbed := laria_private.scrub_error_text('Llamar al +51' || chr(160) || '987' || chr(160) || '654' || chr(160) || '321, al 987'
+    || chr(8209) || '654' || chr(8209) || '321 o al 987' || chr(8239) || '654' || chr(8239) || '321');
+  perform pg_temp.check(scrubbed = 'Llamar al <n>, al <n> o al <n>', 'unusual spaces and dashes: ' || scrubbed);
+  -- A web address keeps its scheme and host only: no user, password, path or query.
+  scrubbed := laria_private.scrub_error_text('fetch https://ana:secreto@api.example.com:8443/v1/users/ana-perez?id=5 failed, see https://laria.audio');
+  perform pg_temp.check(scrubbed = 'fetch https://api.example.com:8443/… failed, see https://laria.audio', 'addresses lose credentials and paths: ' || scrubbed);
+  -- A JSON web token with no digit in it, and any long run of letters.
+  scrubbed := laria_private.scrub_error_text('token eyJhbGciOiJFUyJ.eyJzdWIiOiJhbmEifQ.SigNaTuReOnLy rejected; session abcdefghijklmnopqrstuvwxyzABCDEFGH expired');
+  perform pg_temp.check(scrubbed = 'token <token> rejected; session <token> expired', 'tokens without digits: ' || scrubbed);
+  -- Names: after a colon, in a path, in quotes.
+  scrubbed := laria_private.scrub_error_text('Invalid name: Ana Perez');
+  perform pg_temp.check(scrubbed = 'Invalid name: …', 'what follows a colon goes: ' || scrubbed);
+  scrubbed := laria_private.scrub_error_text('No store at /tiendas/ana-perez (or /api/stores/ana-perez/photos) for now');
+  perform pg_temp.check(scrubbed = 'No store at /tiendas/… (or /api/…) for now', 'paths keep their first segment: ' || scrubbed);
+  scrubbed := laria_private.scrub_error_text('Unexpected token ''A'', "Ana Perez" is not valid JSON, nor «Ana Pérez», “Ana”, ‘Ana’ or `Ana`');
+  perform pg_temp.check(scrubbed = 'Unexpected token ''…'', "…" is not valid JSON, nor «…», “…”, ‘…’ or `…`', 'quoted text goes: ' || scrubbed);
+  scrubbed := laria_private.scrub_error_text('Can''t load the seller''s page');
+  perform pg_temp.check(scrubbed = 'Can''t load the seller''s page', 'apostrophes stay: ' || scrubbed);
 end $$;
 
 set local role service_role;
@@ -113,16 +135,52 @@ end $$;
 reset role;
 
 do $$ begin
-  perform pg_temp.check((select occurrences = 2 and message = 'Cannot read properties of null (reading ''price'') for <email>'
+  perform pg_temp.check((select occurrences = 2 and message = 'Cannot read properties of null (reading ''…'') for <email>'
       and route = '/listados/[id]' and digest = '1234567890' and source = 'server' and kind = 'render'
     from laria_private.app_errors where route = '/listados/[id]'), 'two of the same, with no address kept');
-  perform pg_temp.check((select occurrences = 2 and route = '/tiendas/la-casa-del-musico' and client = 'Safari iOS'
-    from laria_private.app_errors where name = 'ReferenceError' and client = 'Safari iOS'), 'the latest page is the one kept');
+  perform pg_temp.check((select occurrences = 2 and route = '/tiendas/[…]' and client = 'Safari iOS'
+    from laria_private.app_errors where name = 'ReferenceError' and client = 'Safari iOS'), 'the latest page is the one kept, as a pattern');
   perform pg_temp.check((select kind = 'error' and name = 'Error' and client = '' and digest is null
     from laria_private.app_errors where route = '/vender'), 'malformed values are replaced');
   perform pg_temp.check((select count(*) from laria_private.app_errors) = 6, 'six kinds so far');
   perform pg_temp.check(not exists (select 1 from laria_private.app_errors where message ~ '@|la13-'), 'no address is kept anywhere');
+  perform pg_temp.check(not exists (select 1 from laria_private.app_errors where route ~ 'guitarra|casa'), 'nor any listing''s or store''s slug');
 end $$;
+
+-- What a made-up report can carry: names, browsers, digests and pages are kept only from fixed lists.
+savepoint made_up;
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+do $$ begin
+  perform public.record_app_error('browser', 'error', '/tiendas/ana-perez?ref=whatsapp#fotos', 'AnaPerez', 'x1', 'Ana Perez', 'ana_perez');
+  perform public.record_app_error('browser', 'error', '/mi-cuenta/publicaciones/3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b/editar', 'AuthApiError', 'x2', 'Chrome Android', null);
+  perform public.record_app_error('browser', 'error', '/', 'NotAllowedError', 'x3', 'Otro', null);
+  perform public.record_app_error('server', 'render', '/(tienda)/tiendas/[slug]/page', 'AuthApiError', 'x4', 'Chrome', '2876543210');
+  perform public.record_app_error('server', 'route', '/tiendas/ana-perez', 'AnaPerez', 'x5', '', 'no digest!');
+  perform public.record_app_error('server', 'route', '/sitemap.xml/route', 'PostgrestException', 'x6', '', null);
+end $$;
+reset role;
+do $$ begin
+  perform pg_temp.check((select route = '/tiendas/[…]' and name = 'Error' and client = '' and digest is null
+    from laria_private.app_errors where message = 'x1'), 'a browser''s made-up name, browser, digest and slug are not kept');
+  perform pg_temp.check((select route = '/mi-cuenta/publicaciones/[…]/editar' and name = 'Error' and client = 'Chrome Android'
+    from laria_private.app_errors where message = 'x2'), 'a browser''s name must be JavaScript''s or the DOM''s own');
+  perform pg_temp.check((select route = '/' and name = 'NotAllowedError' and client = 'Otro'
+    from laria_private.app_errors where message = 'x3'), 'a DOM error from an unknown browser');
+  perform pg_temp.check((select route = '/(tienda)/tiendas/[slug]/page' and name = 'AuthApiError' and client = '' and digest = '2876543210'
+    from laria_private.app_errors where message = 'x4'), 'the server keeps its route pattern, its own error class and its digest, never a browser');
+  perform pg_temp.check((select route = '/tiendas/[…]' and name = 'Error' and digest is null
+    from laria_private.app_errors where message = 'x5'), 'a server route that is no pattern loses its slug');
+  perform pg_temp.check((select route = '/sitemap.xml/route' and name = 'PostgrestException'
+    from laria_private.app_errors where message = 'x6'), 'metadata routes and exceptions');
+  perform pg_temp.check(laria_private.app_error_route('browser', '') = '' and laria_private.app_error_route('browser', null) = ''
+    and laria_private.app_error_route('browser', '/listados/') = '/listados/'
+    and laria_private.app_error_route('browser', '/listados/[id]') = '/listados/[…]'
+    and laria_private.app_error_route('server', '/app/@modal/(.)listados/[...slug]/page') = '/app/@modal/[…]/[...slug]/page'
+    and laria_private.app_error_route('browser', '/app/@modal') = '/[…]/[…]'
+    and length(laria_private.app_error_route('server', repeat('/[id]', 300))) = 200, 'empty, trailing, bracketed and long routes');
+end $$;
+rollback to savepoint made_up;
 
 -- ------------------------------------------------------------------ the cap
 

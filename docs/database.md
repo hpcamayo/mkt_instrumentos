@@ -1230,10 +1230,25 @@ New objects only, so it can be applied before the deploy.
   `app-error-retention` (daily 09:50 UTC, `laria_private.run_app_error_retention()`) deletes buckets older than 30 days.
 - `public.record_app_error(source, kind, route, name, message, client, digest)`, service role only, called by
   `instrumentation.ts` (server errors, under the route's file pattern) and `/api/client-errors` (browser errors, 30 per
-  visitor every 10 minutes). `laria_private.scrub_error_text` replaces query strings with values, e-mail addresses,
-  UUIDs, tokens and runs of 7 or more digits before anything is stored, and no account, IP address or stack is ever
-  passed. A browser error's route is kept (the latest seen) but is not part of its fingerprint, and digits never split
-  a kind. At most 25 kinds per source in a bucket; the rest are counted under `overflow-server` or `overflow-browser`.
+  visitor every 10 minutes). Before anything is stored:
+  - the route becomes a pattern (`laria_private.app_error_route`): a browser page's address keeps only the segments
+    in `laria_private.app_error_route_segments()` (the folders under `app/` on main and features/marketplace, and the
+    metadata files) and any other, such as a store's or a listing's slug, reads `[…]`; the server's route file pattern
+    also keeps `[param]`, `(group)`, `@slot`, `app`, `page`, `route` and metadata routes. A new folder under `app/`
+    goes in that list (a unit test checks it);
+  - the name must be one of JavaScript's or the DOM's own, or on the server an app class ending in `Error` or
+    `Exception` (`laria_private.app_error_name`); anything else is `Error`;
+  - `laria_private.scrub_error_text` reads every kind of space and dash as a plain one, cuts web addresses to their
+    scheme and host, and replaces query strings, e-mail addresses, UUIDs, tokens (JSON web tokens, 16 or more
+    characters with a digit, any 32 or more), paths past their first segment, quoted text, whatever follows the first
+    `: `, and runs of 7 or more digits;
+  - the client must be one of `browserFamily`'s labels or `Otro`, and only the server's digest is kept.
+  No account, IP address or stack is ever passed. A message our own code writes may still hold a name in plain words,
+  which is why only an aal2 Admin reads the counts and they go after 30 days. A browser error's route is kept (the
+  latest seen) but is not part of its fingerprint, and digits never split a kind. At most 25 kinds per source in a
+  bucket: a new kind takes a transaction advisory lock on its source and bucket before counting the kinds there, so
+  kinds reported together are admitted one at a time; the rest are counted under `overflow-server` or
+  `overflow-browser`.
 - `public.get_admin_app_errors(p_days 1..30, p_source)`: `assert_admin()` (aal2); the period's kinds grouped by
   fingerprint, newest first, at most 200 (`/admin/errores`).
 - `public.get_app_health()`, service role only: `{"server_errors": n}` for this bucket and the one before.
@@ -1241,7 +1256,7 @@ New objects only, so it can be applied before the deploy.
   503 with `"reason":"errors"` from 20 errors, and otherwise 200 `{"status":"ok"}`; the uptime workflow
   (`.github/workflows/uptime.yml`) reads it every 10 minutes.
 
-Rollback: `select cron.unschedule('app-error-retention');`, then drop the five functions and the table.
+Rollback: `select cron.unschedule('app-error-retention');`, then drop the eight functions and the table.
 <!-- /launch-audit:monitoring -->
 
 <!-- launch-audit:security -->

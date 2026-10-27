@@ -352,3 +352,46 @@ test("A13: the migration keeps its place and lock step, and grants each function
   assert.match(migration, /perform laria_private\.assert_admin\(\);/);
   assert.match(migration, /select cron\.schedule\('app-error-retention', '50 9 \* \* \*', \$\$select laria_private\.run_app_error_retention\(\)\$\$\);/);
 });
+
+test("A13: every fixed segment of Laria's addresses is in the database's route list, and every browser family in its client list", () => {
+  const migration = read(migrationFile);
+  const start = migration.indexOf("select array[", migration.indexOf("create or replace function laria_private.app_error_route_segments()"));
+  const listed = new Set([...migration.slice(start, migration.indexOf("]::text[]", start)).matchAll(/'([^']+)'/g)].map((match) => match[1]));
+  assert.ok(listed.size > 200 && listed.has("listados"), "the database's route list");
+  // The folders under app/ (not [param], (group), @slot or _private ones, nor what is inside a private one) and the
+  // metadata files at its root, as their addresses read.
+  const segments = new Set();
+  const metadata = { robots: "robots.txt", sitemap: "sitemap.xml", manifest: "manifest.webmanifest", "opengraph-image": "opengraph-image", "twitter-image": "twitter-image" };
+  const walk = (dir, top) => {
+    for (const entry of fs.readdirSync(path.join(root, dir), { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        if (entry.name.startsWith("_")) continue;
+        if (!/^[[(@]/.test(entry.name)) segments.add(entry.name);
+        walk(path.join(dir, entry.name), false);
+      } else if (top) {
+        const name = metadata[entry.name.replace(/\.(tsx?|jsx?)$/, "")];
+        if (name) segments.add(name);
+        else if (/^(icon|apple-icon)\.(svg|png|ico|jpg)$/.test(entry.name)) segments.add(entry.name);
+      }
+    }
+  };
+  walk("app", true);
+  assert.ok(segments.has("listados") && segments.has("robots.txt") && segments.size > 50);
+  assert.deepEqual([...segments].filter((segment) => !listed.has(segment)).sort(), [], "add these to laria_private.app_error_route_segments()");
+
+  // The browser families lib/monitoring/record-error.ts gives, with and without a platform, all pass the database's list.
+  const client = migration.match(/p_client ~ '(\^\([^']+\)\( iOS\| Android\)\?\$)' or p_client = 'Otro'/);
+  assert.ok(client, "the database's list of browser families");
+  const recorder = read("lib/monitoring/record-error.ts");
+  const chain = recorder.slice(recorder.indexOf("const name = /Instagram/"), recorder.indexOf(': "";', recorder.indexOf("const name = /Instagram/")));
+  const families = [...chain.matchAll(/\? "([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(families.length, 9);
+  for (const family of families) {
+    for (const label of [family, `${family} iOS`, `${family} Android`]) assert.match(label, new RegExp(client[1]), label);
+  }
+  const { browserFamily } = loadModule("lib/monitoring/record-error.ts");
+  for (const agent of [...Object.values(UA), "curl/8.4.0", null]) {
+    const label = browserFamily(agent);
+    assert.ok(new RegExp(client[1]).test(label) || label === "Otro", `${label} is kept`);
+  }
+});
