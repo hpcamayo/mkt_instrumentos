@@ -544,7 +544,7 @@ test("big-07: the suggestion's schema and checks: the registries, the form's siz
   }
 });
 
-test("big-07: \"Usar\" fills one field, and \"Usar todo\" fills only what is empty, never what the seller wrote", () => {
+test("big-07: \"Usar\" fills one field, and \"Usar todo\" fills only what is empty, never what the seller wrote or another instrument's name", () => {
   const { assistRows, applyAssistField, applyAllAssist, parseListingSuggestion } = listingAssist;
   const suggestion = parseListingSuggestion(SUGGESTION);
   const empty = { category: "", instrumentType: "", brand: "", model: "", title: "", titleEdited: false, condition: "", price: "", city: "Lima", region: "Lima", description: "", attributes: {} };
@@ -552,6 +552,10 @@ test("big-07: \"Usar\" fills one field, and \"Usar todo\" fills only what is emp
     [["type", "empty"], ["brand", "empty"], ["model", "empty"], ["title", "empty"], ["details", "empty"], ["description", "empty"]]);
   const all = applyAllAssist(empty, suggestion, "");
   assert.deepEqual(all.kept, []);
+  assert.deepEqual(all.used, ["Categoría", "Marca", "Modelo", "Título", "Detalles", "Descripción"]);
+  assert.equal(all.note, "Completamos los campos. Revísalos antes de seguir.");
+  assert.equal(assistRows(suggestion, all.values, "")[0].value, "Pedales", "not Pedales · Pedales");
+  assert.deepEqual(applyAllAssist(all.values, suggestion, "").used, [], "nothing left: the button is off");
   assert.equal(all.values.category, "pedals");
   assert.equal(all.values.instrumentType, "pedals");
   assert.equal(all.values.title, "Pedal Boss DS-1 Distortion");
@@ -566,13 +570,26 @@ test("big-07: \"Usar\" fills one field, and \"Usar todo\" fills only what is emp
   assert.deepEqual(kept.kept, ["Categoría", "Marca", "Título", "Descripción", "Detalles"]);
   assert.equal(kept.values.brand, "Behringer");
   assert.equal(kept.values.category, "guitars");
-  assert.equal(kept.values.model, "DS-1");
+  // A brand of their own: the model of another brand waits for its button, and the button has nothing to do.
+  assert.equal(kept.values.model, "");
+  assert.deepEqual([kept.held, kept.used], [["Modelo"], []]);
   assert.equal(kept.values.title, "Mi pedal");
   assert.equal(kept.values.description, "Lo uso en casa, funciona perfecto.");
   assert.deepEqual(assistRows(suggestion, typed, "").filter((row) => row.state === "different").map((row) => [row.field, row.current]),
     [["type", "Guitarras · Guitarras eléctricas"], ["brand", "Behringer"], ["title", "Mi pedal"], ["description", "Lo uso en casa, funciona perfecto."]]);
   const replaced = applyAssistField(typed, suggestion, "type", "");
   assert.deepEqual([replaced.category, replaced.instrumentType, replaced.attributes], ["pedals", "pedals", {}]);
+  // Only the brand typed: the category and the details are used; what says which instrument it is is held, so the
+  // listing never says Behringer in the brand and Boss in the title. The same brand in other letters is no clash.
+  const clash = applyAllAssist({ ...empty, brand: "Behringer", title: "Behringer" }, suggestion, "");
+  assert.deepEqual([clash.used, clash.held, clash.kept], [["Categoría", "Detalles"], ["Modelo", "Título", "Descripción"], ["Marca"]]);
+  assert.deepEqual([clash.values.category, clash.values.brand, clash.values.model, clash.values.title], ["pedals", "Behringer", "", "Behringer"]);
+  assert.equal(clash.values.description, "Detalles:\n- Carcasa naranja\n- Tres perillas");
+  assert.equal(clash.note, "Completamos lo que estaba vacío, menos lo que dice qué equipo es (Modelo, Título, Descripción): sugerimos Boss DS-1 y tú escribiste Behringer. Usa el botón de cada sugerencia si corresponde.");
+  const sameBrand = applyAllAssist({ ...empty, brand: "boss", title: "boss" }, suggestion, "");
+  assert.deepEqual([sameBrand.held, sameBrand.values.title], [[], "Pedal Boss DS-1 Distortion"]);
+  assert.equal(applyAllAssist({ ...empty, title: "Mi pedal", titleEdited: true }, suggestion, "").note,
+    "Completamos lo que estaba vacío. No cambiamos lo que ya escribiste (Título): usa su botón si prefieres la sugerencia.");
   // A title the form wrote from brand and model is not the seller's: it follows the suggestion.
   const auto = { ...empty, brand: "Boss", model: "DS1", title: "Boss DS1" };
   assert.equal(assistRows(suggestion, auto, "").find((row) => row.field === "title").state, "empty");

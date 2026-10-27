@@ -79,15 +79,17 @@ Both helpers are **off by default**. They show only when the server has `ANTHROP
   up to six details seen in the photos and an honest Spanish description of two to four sentences. Each comes back as a
   row with its own button: "Usar" for an empty field, "Reemplazar" (with "Ahora: …") for one the seller filled, "Ya está"
   when they match, and "Agregar a la descripción" for the details. "Usar todo" fills only what is empty and names what
-  it left alone. Brand and model rewrite the title only while the form still writes it from them; the details go below
-  the seller's text and above a store's standard text. Photos that show no instrument get "No reconocimos un
+  it left alone; when the seller's own brand or model differs from the suggestion's, it also holds what says which
+  instrument it is (brand, model, title, description) for their own buttons, so a listing never says Behringer in the
+  brand and Boss in the title. Brand and model rewrite the title only while the form still writes it from them; the
+  details go below the seller's text and above a store's standard text. Photos that show no instrument get "No reconocimos un
   instrumento ni un equipo de audio en tus fotos", and an unsure answer says "No estamos seguros de qué es".
 - **Files.** `lib/ai/listing-assist.ts` (schema, prompt, checks, how a row is used), `app/api/listing-assist/route.ts`,
   `components/ai/listing-assist.tsx`, `components/ai/assist-photos.ts`, `components/sell-listing-form.tsx`,
   `app/mi-cuenta/publicar/page.tsx`, `app/mi-cuenta/tienda/publicar/page.tsx`.
 - **How to test.** With the fake client, as `particular@laria.test`: Publicar, add a photo, go to "Qué es", tap
-  "Completar con IA" (the fake proposes a Boss DS-1 Distortion), use one row, then "Usar todo"; type a brand first and
-  see "Reemplazar" with "Ahora: …".
+  "Completar con IA" (the fake proposes a Boss DS-1 Distortion), use one row, then "Usar todo"; type another brand first
+  and see "Reemplazar" with "Ahora: …", and "Usar todo" fill only the category and the details.
 - **Defaults.** No condition, price or specifications: condition and price are the seller's call, and filling specs is
   the catalog autofill's job (Jev, PR #3), which this does not touch or copy; once that reaches main, the brand and model
   confirmed here are what it starts from. Moderation is unchanged. Nothing is stored: not the photos sent, not the
@@ -169,7 +171,8 @@ the subject. The table's and function's types live in `lib/ai/usage.ts` until th
 - UXD-maybes-ai-3: "Así lo entendí" shows each filter as a removable chip and says plainly what no filter covers, next
   to the closest filters; no new filters or reports were added for it.
 - UXD-maybes-ai-4: "Completar con IA" proposes identity and text only (category, type, brand, model, title, details,
-  description), never condition, price or specifications; "Usar todo" never overwrites what the seller wrote.
+  description), never condition, price or specifications; "Usar todo" never overwrites what the seller wrote, nor
+  writes another instrument's name next to the brand or model they wrote.
 - UXD-maybes-ai-5: Photos are reduced in the browser to JPEGs of at most 1024 px without metadata and sent only on tap;
   nothing sent or answered is stored.
 - UXD-maybes-ai-6: Daily limits of 50 questions per store, 20 photo assists per account and a site-wide cap; a counter

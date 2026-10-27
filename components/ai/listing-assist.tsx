@@ -19,8 +19,9 @@ import type { SellValues } from "@/lib/sell-draft";
 
 // big-07, "Completar con IA" (docs/ux-effortless/maybes-ai.md): at the top of "Qué es", once there is a photo. Only when
 // tapped, up to four photos, shrunk in the browser, go to the server and on to the AI service; what comes back is a
-// list of suggestions, each with its own button. "Usar todo" fills only what is empty: replacing what the seller wrote
-// takes that row's own button. Nothing about condition or price.
+// list of suggestions, each with its own button. "Usar todo" fills only what is empty, and nothing that names another
+// instrument than the brand or model the seller wrote: replacing what they wrote takes that row's own button. Nothing
+// about condition or price.
 
 type State =
   | { kind: "idle" }
@@ -74,20 +75,15 @@ export function ListingAssist({ photos, source, values, footer, onApply }: {
     onApply(applyAssistField(values, state.suggestion, field, footer));
   }
 
-  function useAll() {
-    if (state.kind !== "ready") return;
-    const { values: next, kept } = applyAllAssist(values, state.suggestion, footer);
-    onApply(next);
-    setState({
-      ...state,
-      note: kept.length
-        ? `Completamos lo que estaba vacío. No cambiamos lo que ya escribiste (${kept.join(", ")}): usa su botón si prefieres la sugerencia.`
-        : "Completamos los campos. Revísalos antes de seguir.",
-    });
-  }
-
   const working = state.kind === "working";
   const rows = state.kind === "ready" ? assistRows(state.suggestion, values, footer) : [];
+  const all = state.kind === "ready" ? applyAllAssist(values, state.suggestion, footer) : null;
+
+  function useAll() {
+    if (state.kind !== "ready" || !all?.used.length) return;
+    onApply(all.values);
+    setState({ ...state, note: all.note });
+  }
   return (
     <div className="grid gap-3 rounded-panel border border-subtle bg-canvas p-4">
       <div className="grid gap-1.5">
@@ -111,7 +107,7 @@ export function ListingAssist({ photos, source, values, footer, onApply }: {
             {rows.map((row) => <SuggestionRow key={row.field} row={row} details={state.suggestion.details} onUse={() => use(row.field)} />)}
           </ul>
           <div className="flex flex-wrap items-center gap-3 border-t border-subtle pt-3">
-            <Button type="button" variant="secondary" size="sm" disabled={!rows.some((row) => row.state === "empty")} onClick={useAll}>Usar todo</Button>
+            <Button type="button" variant="secondary" size="sm" disabled={!all?.used.length} onClick={useAll}>Usar todo</Button>
             <Button type="button" variant="quiet" size="sm" onClick={() => setState({ kind: "idle" })}>Descartar sugerencias</Button>
           </div>
           {state.note ? <p role="status" className="t-meta text-ink">{state.note}</p> : null}

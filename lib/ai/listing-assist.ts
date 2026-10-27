@@ -159,7 +159,8 @@ export function categoryTypeLabel(category: string, instrumentType: string) {
   const categoryLabel = categoryOptions.find((option) => option.value === category)?.label ?? "";
   const types = getInstrumentTypeOptions(category);
   const typeLabel = types.length > 1 ? types.find((option) => option.value === instrumentType)?.label ?? "" : "";
-  return [categoryLabel, typeLabel].filter(Boolean).join(" · ");
+  // "Pedales", not "Pedales · Pedales".
+  return [categoryLabel, typeLabel.toLowerCase() === categoryLabel.toLowerCase() ? "" : typeLabel].filter(Boolean).join(" · ");
 }
 
 // The seller's own description: without the store's standard text at the end (SHOP 06).
@@ -246,21 +247,37 @@ export function applyAssistField(values: SellValues, suggestion: ListingSuggesti
 
 // "Usar todo": every row whose field is empty, in the form's order; rows that would replace what the seller wrote are
 // kept as they are and named, so the seller can use them one by one. The details join a description only when it
-// was empty too.
+// was empty too. When the seller's brand or model differs from the suggestion's, the rows that say which instrument
+// it is (brand, model, title, description) are held for their own buttons as well, so "Usar todo" never leaves a
+// listing that says Behringer in the brand and Boss in the title. `used` empty: the button has nothing to do.
 export function applyAllAssist(values: SellValues, suggestion: ListingSuggestion, footer: string) {
   const rows = assistRows(suggestion, values, footer);
   const kept = rows.filter((item) => item.state === "different").map((item) => item.label);
+  const otherInstrument = rows.some((item) => (item.field === "brand" || item.field === "model") && item.state === "different");
   const descriptionWasEmpty = !splitDetails(ownDescription(values.description, footer)).text;
+  const used: AssistField[] = [];
+  const held: AssistField[] = [];
   let next = values;
   // The title last, so the suggested one wins over the one the form writes from brand and model.
   for (const field of ["type", "brand", "model", "description", "details", "title"] as const) {
     const item = rows.find((candidate) => candidate.field === field);
     if (item?.state !== "empty") continue;
+    if (otherInstrument && field !== "type" && field !== "details") {
+      held.push(field);
+      continue;
+    }
     if (field === "details" && !descriptionWasEmpty) {
       kept.push(item.label);
       continue;
     }
     next = applyAssistField(next, suggestion, field, footer);
+    used.push(field);
   }
-  return { values: next, kept };
+  const labels = (fields: AssistField[]) => rows.filter((item) => fields.includes(item.field)).map((item) => item.label);
+  const note = held.length
+    ? `Completamos lo que estaba vacío, menos lo que dice qué equipo es (${labels(held).join(", ")}): sugerimos ${titleFromBrandModel(suggestion.brand, suggestion.model)} y tú escribiste ${titleFromBrandModel(values.brand, values.model)}. Usa el botón de cada sugerencia si corresponde.`
+    : kept.length
+      ? `Completamos lo que estaba vacío. No cambiamos lo que ya escribiste (${kept.join(", ")}): usa su botón si prefieres la sugerencia.`
+      : "Completamos los campos. Revísalos antes de seguir.";
+  return { values: next, kept, held: labels(held), used: labels(used), note };
 }
