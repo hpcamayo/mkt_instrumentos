@@ -1,7 +1,8 @@
 // Launch audit A19: public pages come from the cache. The home and the listing pages are rebuilt in the background at
 // most once a minute and the sitemap once an hour; the category landings, which read ?page, render on every request
-// from their own folders; when a listing's owner or Admin changes it, every cached page that can show it is dropped at
-// once; a failed read is never cached.
+// from their own folders; when a listing's owner or Admin changes it, its own page is dropped at once; when listings
+// leave public view, every cached listing page and the home are dropped within the minute; a failed read is never
+// cached.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
@@ -61,7 +62,7 @@ function loadModule(filename, mocks) {
   return mod.exports;
 }
 
-const nextServer = { NextResponse: { json: (body, init = {}) => new Response(JSON.stringify(body), { ...init, headers: { "Content-Type": "application/json" } }) } };
+const nextServer = { NextResponse: { json: (body, init = {}) => new Response(JSON.stringify(body), { ...init, headers: { "Content-Type": "application/json", ...init.headers } }) } };
 
 // A query builder that answers every chain with one result.
 function query(result) {
@@ -69,27 +70,104 @@ function query(result) {
   return builder;
 }
 
-test("A19: a change drops every cached page that can show the listing, and never fails because of it", () => {
+test("A19: a listing's own page, or every listing page and the home, are dropped, and a failed drop breaks nothing", () => {
   const calls = [];
   let failing = false;
   const warnings = [];
-  const { dropCachedListingPages } = loadModule("lib/listing-cache.ts", {
+  const { dropListingPages, dropCachedListingPages } = loadModule("lib/listing-cache.ts", {
     "server-only": {},
-    "next/cache": { revalidatePath: (...args) => { if (failing) throw new Error("cache unavailable"); calls.push(args); } },
+    "next/cache": { revalidatePath: (...args) => { if (failing) throw new Error("cache unavailable"); calls.push(args.filter(Boolean)); } },
   });
   const warn = console.warn;
   console.warn = (...args) => warnings.push(args.join(" "));
   try {
+    dropListingPages(["fender-stratocaster-1b2c", null, "fender-stratocaster-1b2c", "", "yamaha-c40"]);
+    // Every listing page (its own, and the "Similares" and "Más del vendedor" rows of the others) and the home.
     dropCachedListingPages();
     failing = true;
     assert.doesNotThrow(() => dropCachedListingPages());
   } finally {
     console.warn = warn;
   }
-  // Every listing page (its own, and the "Similares" and "Más del vendedor" rows of the others) and the home.
-  assert.deepEqual(calls, [["/instrumentos/[slug]", "page"], ["/"]]);
-  assert.equal(warnings.length, 1);
+  assert.deepEqual(calls, [["/instrumentos/fender-stratocaster-1b2c"], ["/instrumentos/yamaha-c40"], ["/instrumentos/[slug]", "page"], ["/"]]);
+  assert.equal(warnings.length, 2);
   assert.match(warnings[0], /listing-page-refresh-failed cache unavailable/);
+});
+
+test("A19: every minute, listings or stores that left public view drop every cached listing page and the home", async () => {
+  const before = process.env.CRON_SECRET;
+  process.env.CRON_SECRET = "local-scheduler-secret";
+  const dropped = [];
+  const asked = [];
+  let answers = { listings: [], stores: [] };
+  let failing = null;
+  const admin = {
+    from: (table) => {
+      const filters = [];
+      const builder = {
+        select: () => builder,
+        or: (value) => { filters.push(["or", value]); return builder; },
+        gte: (column, value) => { filters.push(["gte", column, value]); return builder; },
+        limit: async (count) => {
+          asked.push({ table, filters, count });
+          return failing === table ? { data: null, error: { message: "timeout" } } : { data: answers[table], error: null };
+        },
+      };
+      return builder;
+    },
+  };
+  const route = loadModule("app/api/internal/public-pages/refresh/route.ts", {
+    "next/server": nextServer,
+    "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => admin },
+    "@/lib/listing-cache": { dropCachedListingPages: () => dropped.push("all") },
+  });
+  const get = async (authorization) => {
+    const response = await route.GET(new Request("http://localhost/api/internal/public-pages/refresh", authorization ? { headers: { Authorization: authorization } } : {}));
+    return { status: response.status, body: await response.json(), cache: response.headers.get("cache-control") };
+  };
+  const info = console.info;
+  const error = console.error;
+  console.info = () => {};
+  console.error = () => {};
+  try {
+    assert.equal((await get()).status, 401);
+    assert.equal((await get("Bearer ordinary-user-token")).status, 401);
+    assert.equal(asked.length, 0);
+
+    // A quiet minute drops nothing.
+    assert.deepEqual(await get("Bearer local-scheduler-secret"), { status: 200, body: { refreshed: false }, cache: "no-store" });
+    const [listings, stores] = asked;
+    assert.deepEqual(listings.filters[0], ["or", "status.in.(hidden,sold,archived,rejected),stock_state.eq.out_of_stock"]);
+    assert.deepEqual(stores.filters[0], ["or", "status.in.(hidden,rejected),and(status.eq.active,is_verified.is.false)"]);
+    for (const query of asked) {
+      assert.equal(query.filters[1][1], "updated_at");
+      const age = Date.now() - Date.parse(query.filters[1][2]);
+      assert.ok(age >= 119_000 && age <= 121_000, `two minutes back, got ${age} ms`);
+      assert.equal(query.count, 1);
+    }
+    assert.deepEqual(dropped, []);
+
+    // A listing hidden from Inventario, or a store Admin hid: one drop for everything.
+    answers = { listings: [{ id: "l1" }], stores: [] };
+    assert.deepEqual((await get("Bearer local-scheduler-secret")).body, { refreshed: true });
+    answers = { listings: [], stores: [{ id: "s1" }] };
+    assert.deepEqual((await get("Bearer local-scheduler-secret")).body, { refreshed: true });
+    assert.deepEqual(dropped, ["all", "all"]);
+
+    // Without an answer nothing is dropped, so the cached copies keep serving.
+    failing = "stores";
+    assert.equal((await get("Bearer local-scheduler-secret")).status, 503);
+    assert.deepEqual(dropped, ["all", "all"]);
+  } finally {
+    console.info = info;
+    console.error = error;
+    if (before === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = before;
+  }
+
+  // Scheduled every minute.
+  const crons = JSON.parse(read("vercel.json")).crons;
+  assert.deepEqual(crons.find((cron) => cron.path === "/api/internal/public-pages/refresh"), { path: "/api/internal/public-pages/refresh", schedule: "* * * * *" });
 });
 
 test("A19: a failed read is never cached; during the deploy the page is rendered per request instead", async () => {
@@ -146,7 +224,7 @@ test("A19: a failed read is never cached; during the deploy the page is rendered
     /const \{ data, error \} = await client\.from\("listings"\)\.select\("slug"\)[\s\S]*?if \(error\) throw new Error\(`The listing's address could not be read: \$\{error\.message\}`\);/);
 });
 
-test("A19: an owner's change to price, status or details drops the cached pages; a refused one doesn't", async () => {
+test("A19: an owner's change to price, status or details drops the listing's page; a refused one doesn't", async () => {
   const owner = crypto.randomUUID();
   const id = crypto.randomUUID();
   const refreshed = [];
@@ -167,7 +245,7 @@ test("A19: an owner's change to price, status or details drops the cached pages;
     "@/lib/supabase/server-client": { getSupabaseServerClient: async () => server },
     "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => null },
     "@/lib/listing-photo-cleanup": { cleanupListingEditUploads: async () => undefined },
-    "@/lib/listing-cache": { dropCachedListingPages: () => refreshed.push("dropped") },
+    "@/lib/listing-cache": { dropListingPages: (slugs) => refreshed.push(...slugs) },
   });
   const post = (body) => route.POST(
     new Request(`http://localhost:3000/api/listings/${id}/manage`, { method: "POST", body: JSON.stringify(body) }),
@@ -182,7 +260,7 @@ test("A19: an owner's change to price, status or details drops the cached pages;
     assert.equal(response.status, 200, `${body.action}: ${await response.clone().text()}`);
   }
   assert.deepEqual(rpcs, ["set_owned_listing_lifecycle", "set_owned_listing_lifecycle", "set_owned_listing_lifecycle", "set_owned_listing_price", "submit_listing_for_publication", "update_owned_listing"]);
-  assert.deepEqual(refreshed, Array(6).fill("dropped"));
+  assert.deepEqual(refreshed, Array(6).fill("fender-stratocaster-1b2c"));
 
   // A copy is a new draft, not a change to this page.
   assert.equal((await post({ action: "duplicate" })).status, 200);
@@ -192,15 +270,22 @@ test("A19: an owner's change to price, status or details drops the cached pages;
   assert.equal(refreshed.length, 6);
 });
 
-test("A19: the browser's refresh call drops the cached pages only for listings its caller owns, or any for Admin", async () => {
+test("A19: the browser's refresh call drops only the pages of listings its caller owns, or any for Admin, that just changed", async () => {
   const owner = crypto.randomUUID();
   const other = crypto.randomUUID();
   const adminUser = crypto.randomUUID();
   const mine = crypto.randomUUID();
   const theirs = crypto.randomUUID();
+  const untouched = crypto.randomUUID();
   const revision = crypto.randomUUID();
+  const now = new Date().toISOString();
   const rows = {
-    listings: { [mine]: { owner_user_id: owner }, [theirs]: { owner_user_id: other } },
+    listings: {
+      [mine]: { slug: "mine-1", owner_user_id: owner, updated_at: now },
+      [theirs]: { slug: "theirs-1", owner_user_id: other, updated_at: now },
+      // Last changed eleven minutes ago: asking again and again rebuilds nothing.
+      [untouched]: { slug: "untouched-1", owner_user_id: owner, updated_at: new Date(Date.now() - 11 * 60 * 1000).toISOString() },
+    },
     listing_revisions: { [revision]: { listing_id: theirs } },
   };
   let signedIn = owner;
@@ -215,7 +300,7 @@ test("A19: the browser's refresh call drops the cached pages only for listings i
     "next/server": nextServer,
     "@/lib/supabase/server-client": { getSupabaseServerClient: async () => server },
     "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => admin },
-    "@/lib/listing-cache": { dropCachedListingPages: () => refreshed.push("dropped") },
+    "@/lib/listing-cache": { dropListingPages: (slugs) => refreshed.push(...slugs) },
   });
   const post = async (body) => {
     const response = await route.POST(new Request("http://localhost:3000/api/listings/refresh", { method: "POST", body: JSON.stringify(body) }));
@@ -225,15 +310,16 @@ test("A19: the browser's refresh call drops the cached pages only for listings i
   // The owner, about their own listing: Admin isn't even asked.
   assert.deepEqual(await post({ listings: [mine, mine] }), { status: 200, body: { refreshed: 1 } });
   assert.equal(adminChecks, 0);
-  // Someone else's listing, directly or through its revision, is skipped.
+  // Someone else's listing, directly or through its revision, is skipped, and so is one that hasn't changed lately.
   assert.deepEqual(await post({ listings: [mine, theirs] }), { status: 200, body: { refreshed: 1 } });
   assert.deepEqual(await post({ revisions: [revision] }), { status: 200, body: { refreshed: 0 } });
-  // One drop per call that changed something, whatever the number of listings.
-  assert.deepEqual(refreshed, ["dropped", "dropped"]);
+  assert.deepEqual(await post({ listings: [untouched] }), { status: 200, body: { refreshed: 0 } });
+  // Only those listings' own pages, never every page.
+  assert.deepEqual(refreshed, ["mine-1", "mine-1"]);
   // Admin, after deciding a revision: the listing it belongs to counts.
   signedIn = adminUser;
   assert.deepEqual(await post({ revisions: [revision], listings: [mine] }), { status: 200, body: { refreshed: 2 } });
-  assert.equal(refreshed.length, 3);
+  assert.deepEqual(refreshed.slice(2).sort(), ["mine-1", "theirs-1"]);
   // An id nobody has is nothing to refresh.
   assert.deepEqual(await post({ listings: [crypto.randomUUID()] }), { status: 200, body: { refreshed: 0 } });
 
@@ -243,7 +329,7 @@ test("A19: the browser's refresh call drops the cached pages only for listings i
   for (const body of [{}, { listings: [] }, { listings: "x" }, { listings: ["not-an-id"] }, { listings: [mine], revisions: [1] }, { listings: Array.from({ length: 101 }, () => crypto.randomUUID()) }]) {
     assert.equal((await post(body)).status, 400, JSON.stringify(body).slice(0, 60));
   }
-  assert.equal(refreshed.length, 3);
+  assert.equal(refreshed.length, 4);
 });
 
 test("A19: the browser asks for the refresh after changing a listing directly, and a failed call breaks nothing", async () => {
