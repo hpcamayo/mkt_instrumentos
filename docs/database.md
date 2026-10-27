@@ -381,7 +381,7 @@ Account policies:
 - Store owners can update allowed store profile/business/contact fields and optional store photos. Protected authority fields are writable only through controlled review RPCs.
 - Listing owners and store members can read their own manageable listings. Lifecycle and edit mutations use owner-scoped RPCs; triggers block direct changes to protected authority fields and make sold rows immutable.
 - Listings are created only by the submission, copy and import functions (security definer); `anon` and `authenticated` have no INSERT on `listings` (A12). Server publication logic distinguishes normal Tienda from Tienda Verificada.
-- Logo, banner and store photo addresses written through the API must point at the caller's own folder for that store in `store-assets` (`stores_guard_image_urls`, `store_photos_guard_image_url`, A32).
+- Logo, banner and store photo addresses written through the API must point at the caller's own folder for that store in this project's `store-assets` bucket (`stores_guard_image_urls`, `store_photos_guard_image_url`, A32).
 - Authenticated owners cannot mutate listing or live-photo rows directly; validated owner-scoped RPCs apply nonpublic/verified-store edits or stage approved Particular/normal-Tienda photo changes on a revision.
 - Listing-photo objects are append-only from the browser beneath the authenticated owner folder; update/delete policies are removed so a historical object cannot be replaced or destroyed. Trusted server cleanup still removes failed-attempt uploads.
 - Public users may read a profile only when it belongs to an approved account-owned Particular listing; this supports dynamic seller display without exposing unrelated profiles.
@@ -861,7 +861,8 @@ Local only; never applied to a hosted database. SQL suite: `tests/ux-my-listings
   listing's contact from the store (`lib/seller-contact.ts` `resolveContactPhone`). Suite: `tests/ux-listing-contact.sql`.
 - `20261102120500_ux_listing_registry.sql`: `laria_private.ux_extend_text_check(table, constraint, column, values[])`
   adds allowed values to an `= any (array[...])` check in place, idempotently and in any order with other batches (any
-  batch may reuse it). Adds notification types `listing_back_in_stock`, `listing_question_asked`,
+  batch may reuse it). Since `20261112120000_launch_audit_security.sql` it re-adds the check `NOT VALID`: the list only
+  grows, so validating would scan the table under an exclusive lock to find nothing, and new rows are checked anyway. Adds notification types `listing_back_in_stock`, `listing_question_asked`,
   `listing_question_answered` and e-mail types `listing_back_in_stock`, `listing_question_asked`.
 - `20261102140000_ux_listing_page.sql`:
   - `listings.content_changed_at`, `price_changed_at`, `previous_price_pen`, `price_dropped_at` (check
@@ -1225,6 +1226,10 @@ be applied before the deploy.
   `listing_has_status` and `is_approved_store_member`; `anon` also loses `get_admin_review_queue`.
 - A32: `laria_private.guard_store_image_urls()` checks API writes (`current_user` is `anon` or `authenticated`) of
   `stores.logo_url`, `stores.banner_url` and `store_photos.image_url`: the address must be
-  `…/storage/v1/object/public/store-assets/{auth.uid()}/{store id}/{file}`. Unchanged values and the security definer
-  functions are not checked. Error `STORE_IMAGE_URL_INVALID`.
+  `{project}/storage/v1/object/public/store-assets/{auth.uid()}/{store id}/{file}`, where `{project}` is the origin of
+  the session's issuer (`iss` is `{project}/auth/v1`) and the file name starts with a letter or digit. A session
+  without an issuer matches nothing. Unchanged values and the security definer functions are not checked. Error
+  `STORE_IMAGE_URL_INVALID`.
+- Locks: nothing scans a table (the `notifications` check is re-added `NOT VALID`), and the migration sets
+  `lock_timeout = '10s'`, so behind a long-running query it fails and can be run again instead of queueing traffic.
 <!-- /launch-audit:security -->

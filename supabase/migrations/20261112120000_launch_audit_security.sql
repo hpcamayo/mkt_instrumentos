@@ -29,14 +29,18 @@
 --      get_admin_review_queue (it checks for Admin inside). increment_listing_view_count stays: it is the deliberate
 --      denial tombstone for old clients (tests/sprint-4-analytics.sql).
 -- A32. Logo, banner and store photo addresses written through the API must point at the caller's own folder for that
---      store in the store-assets bucket, as the store form writes them. Unchanged values and the controlled
---      functions are not checked.
+--      store in this project's store-assets bucket, as the store form writes them. The project's address comes from
+--      the session's issuer ("<project URL>/auth/v1"). Unchanged values and the controlled functions are not checked.
 --
 -- Compatibility: the application before and after this migration works with it (no route inserts stores or listings
 -- directly, and the store form already writes image addresses in that shape), so it can be applied before the deploy.
 -- Locks: the policy, grant, trigger and notifications check changes take brief ACCESS EXCLUSIVE locks on stores,
--- listings, notifications and storage.objects; the two new nullable columns on stores are metadata-only. The new check
--- on notifications only adds an allowed value, so its validation scan finds nothing to refuse.
+-- listings, notifications and storage.objects; the two new nullable columns on stores are metadata-only. Nothing scans
+-- a table: the notifications check gains one allowed value and is re-added NOT VALID (every row that passed the old
+-- list passes the new one, and new rows are checked as before). The shared helper laria_private.ux_extend_text_check
+-- now always re-adds its constraint that way, so later migrations that extend a list don't scan either. Every lock
+-- wait is capped at 10 seconds (lock_timeout): behind a long-running query the migration fails and can be run again,
+-- instead of holding up the traffic queued behind it.
 -- Rollback: recreate the dropped policies from 20260427203000_store_registration_fields.sql,
 -- 20260516180000_phase_2_accounts.sql and 20260910190000_store_sprint_2.sql, re-grant the revoked privileges, drop
 -- the three triggers and their functions (store_verification_lapsed notifications can stay: the type stays allowed),
@@ -44,7 +48,9 @@
 -- set_store_verification from 20261029120100_review_fixes_lock_order.sql, protect_store_admin_fields from
 -- 20260910190000_store_sprint_2.sql, protect_profile_admin_fields from 20260516180000_phase_2_accounts.sql,
 -- get_admin_moderation_counts from 20260923120000_sprint_8_admin_reports_legacy.sql and get_admin_moderation_queue
--- from 20261104120100_ux_selling_sound_clips.sql.
+-- from 20261104120100_ux_selling_sound_clips.sql. The NOT VALID helper can stay.
+
+set lock_timeout = '10s';
 
 -- A06 -------------------------------------------------------------------------------------------------------------
 drop policy if exists "Public can insert pending free stores" on public.stores;
@@ -184,6 +190,47 @@ begin
   return jsonb_build_object('store_id', p_store_id, 'is_verified', p_verified, 'approved_pending_count', approved_count);
 end;
 $$;
+
+-- Same as 20261102120500_ux_listing_registry.sql except that the constraint comes back NOT VALID: the list only
+-- grows, so validating it would scan the whole table under an exclusive lock to find nothing.
+create or replace function laria_private.ux_extend_text_check(
+  p_table regclass,
+  p_constraint text,
+  p_column text,
+  p_values text[]
+) returns void
+language plpgsql
+as $$
+declare
+  current_def text;
+  list_expr text;
+  allowed text[];
+begin
+  select pg_get_expr(conbin, conrelid) into current_def
+  from pg_constraint
+  where conrelid = p_table and conname = p_constraint and contype = 'c';
+
+  if current_def is null then
+    raise exception 'Constraint % on % not found', p_constraint, p_table;
+  end if;
+
+  -- "(column = ANY (<list>))". Postgres prints the list as ARRAY['a'::text, …] or, once rewritten from a text[]
+  -- literal, as '{a,…}'::text[]. Evaluating the list reads both the same way; a pattern over the text reads the second
+  -- form as one value and would drop every other type.
+  list_expr := substring(current_def from '^\(\w+ = ANY \((.*)\)\)$');
+  if list_expr is null then
+    raise exception 'Constraint % on % is not a list of values: %', p_constraint, p_table, current_def;
+  end if;
+  execute format('select (%s)::text[]', list_expr) into allowed;
+
+  select array_agg(distinct value order by value) into allowed from unnest(allowed || p_values) value;
+
+  execute format('alter table %s drop constraint %I', p_table, p_constraint);
+  execute format('alter table %s add constraint %I check (%I = any (%L::text[])) not valid', p_table, p_constraint, p_column, allowed);
+end;
+$$;
+
+revoke all on function laria_private.ux_extend_text_check(regclass, text, text, text[]) from public, anon, authenticated;
 
 -- When the badge comes off, the owner gets a notification saying why and what it changes, as the store form said
 -- before saving. In the app only (and push): the owner made the change, so no e-mail.
@@ -338,7 +385,9 @@ set search_path = ''
 as $$
 declare
   store_key uuid;
-  shape text;
+  folder text;
+  candidate text;
+  candidates text[] := '{}';
 begin
   -- Only writes made straight through the API are checked; the controlled functions run as their owner.
   if current_user not in ('anon', 'authenticated') then
@@ -346,20 +395,24 @@ begin
   end if;
   if tg_table_name = 'stores' then
     store_key := new.id;
+    if new.logo_url is distinct from old.logo_url and new.logo_url is not null then candidates := candidates || new.logo_url; end if;
+    if new.banner_url is distinct from old.banner_url and new.banner_url is not null then candidates := candidates || new.banner_url; end if;
   else
     store_key := new.store_id;
+    if tg_op = 'INSERT' or new.image_url is distinct from old.image_url then candidates := array[new.image_url]; end if;
   end if;
-  shape := '^https?://[^/?#]+/storage/v1/object/public/store-assets/'
-    || coalesce(auth.uid()::text, 'none') || '/' || store_key::text || '/[A-Za-z0-9._-]+$';
+  -- This project's public Storage address, from the session's issuer ("<project URL>/auth/v1"), then the caller's
+  -- folder for this store. Without an issuer or a user there is no folder, and no address matches.
+  folder := substring(coalesce(auth.jwt() ->> 'iss', '') from '^(https?://[^/?#]+)/auth/v1$')
+    || '/storage/v1/object/public/store-assets/' || auth.uid()::text || '/' || store_key::text || '/';
 
-  if tg_table_name = 'stores' then
-    if (new.logo_url is distinct from old.logo_url and new.logo_url is not null and new.logo_url !~ shape)
-      or (new.banner_url is distinct from old.banner_url and new.banner_url is not null and new.banner_url !~ shape) then
+  foreach candidate in array candidates loop
+    -- A file straight inside that folder; its name starts with a letter or digit, so "." and ".." never pass.
+    if not coalesce(starts_with(candidate, folder)
+        and substr(candidate, length(folder) + 1) ~ '^[A-Za-z0-9][A-Za-z0-9._-]*$', false) then
       raise exception 'STORE_IMAGE_URL_INVALID: Sube la imagen desde el formulario de tu tienda.';
     end if;
-  elsif (tg_op = 'INSERT' or new.image_url is distinct from old.image_url) and new.image_url !~ shape then
-    raise exception 'STORE_IMAGE_URL_INVALID: Sube la imagen desde el formulario de tu tienda.';
-  end if;
+  end loop;
   return new;
 end;
 $$;
@@ -625,3 +678,5 @@ begin
   );
 end;
 $function$;
+
+reset lock_timeout;
