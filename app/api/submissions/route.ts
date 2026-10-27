@@ -89,7 +89,12 @@ export async function POST(request: Request) {
     }
   }
   if (renewing) {
-    return NextResponse.json({ ...createSubmissionToken(kind, secret, ownerUserId, id), folder: `${ownerUserId}/${id}` });
+    const folder = `${ownerUserId}/${id}`;
+    return NextResponse.json({
+      ...createSubmissionToken(kind, secret, ownerUserId, id),
+      folder,
+      present: await presentFiles(client, kind, folder),
+    });
   }
   const table = kind === "store" ? "stores" : "listings";
   const bucket = kind === "store" ? "store-assets" : "listing-photos";
@@ -314,6 +319,9 @@ export async function POST(request: Request) {
     return failure("Esta cuenta ya tiene una solicitud de tienda.", 409);
   if (error?.message.includes("STORE_INVENTORY_LIMIT_REACHED"))
     return failure(listingLimitMessage(error.message), 409);
+  // Launch audit A18: a photo the daily sweep removed meanwhile (laria_private.guard_upload_attachment).
+  if (error?.message.includes("UPLOAD_REMOVED"))
+    return failure("Una de las fotos ya no está guardada en Laria. Quítala y vuelve a subirla.", 409);
   if (error)
     return failure(
       "No se pudo guardar el envío. Reintenta sin cerrar esta página.",
@@ -359,6 +367,23 @@ async function recordSoundClip(client: AdminClient, id: string, folder: string, 
     }
   }
   await removeObjects(client, SOUND_BUCKET, folder, (path) => !(match && path === clip!.path));
+}
+
+// Launch audit A18: files nothing points at are removed after 48 hours, those of a draft kept only on the device
+// included, so a draft restored there learns which of its files are still in its folder, by bucket. Null when Storage
+// can't say: the form then keeps them, and publishing checks again. A listing's folder holds at most 100 files (the
+// selling form's slots 0 to 99) and a store's a few, so one page of 100 lists either whole.
+async function presentFiles(client: AdminClient, kind: string, folder: string) {
+  const buckets = kind === "store" ? ["store-assets"] : ["listing-photos", SOUND_BUCKET];
+  try {
+    const listed = await Promise.all(buckets.map((bucket) => client.storage.from(bucket).list(folder, { limit: 100 })));
+    if (listed.some((result) => result.error)) return null;
+    return Object.fromEntries(
+      buckets.map((bucket, index) => [bucket, (listed[index].data ?? []).map((object) => `${folder}/${object.name}`)]),
+    );
+  } catch {
+    return null;
+  }
 }
 
 async function removeObjects(client: AdminClient, bucket: string, folder: string, unused: (path: string) => boolean) {

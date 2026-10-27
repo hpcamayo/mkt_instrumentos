@@ -64,6 +64,48 @@ unchanged for their other callers (single-listing checks, saved-search alerts).
 - **Recovery switch** now also covers suggestions, home counts and type counts; the sell form's brand suggestions come
   from the reference catalog and no longer depend on it.
 
+### Remove the catalog rendering waterfall
+
+The catalog route starts the shared facet read after URL and search-phrase validation, alongside its fresh inventory
+read. It passes that promise to `CatalogView`, which consumes it once. Category routes start facets and type counts
+alongside inventory and brands in `app/instrumentos/_category/landing.tsx`, then pass those reads through
+`CategoryLanding`. Product pages retain their separate cached route. Previously the catalog waited for
+inventory before starting facets; categories waited for inventory/brands, then type counts, then facets.
+
+This changes scheduling only: the existing optional budgets, cache keys, cache bounds, breakers, recovery switch,
+anonymous clients and request-scoped inventory deduplication still apply. Inventory failures remain errors. Listing
+cards, counts, category JSON-LD and pagination still render on the server. The middleware crawler guard, malformed
+URL redirects, robots rules, canonical metadata and `nofollow` refinements are unchanged.
+
+An inventory error or overflow-page redirect can now start one bounded facet load that the old catalog skipped
+(categories can also start their shared type-count load). These reads use the existing caches and deadlines; redirects
+do not wait for them. Malformed URLs, interpreted-phrase redirects, forwarded category filters and blocked crawlers
+still start no catalog enrichment reads. Empty-search rescue still starts only after inventory confirms no results.
+
+Controlled local `next build` / `next start` comparison against the merged crawler optimization, with 350 ms inventory,
+450 ms facets and 300 ms type-count delays; totals include SSR and transfer on loopback, with the shared menu warmed:
+
+| Scenario | Before | After | Upstream reads before / after |
+| --- | ---: | ---: | --- |
+| Cold filter key, median of 5 | 845 ms | 487 ms | 1 inventory + 1 facet / same |
+| Warm filter key | 385 ms | 384 ms | 1 fresh inventory / same |
+| Inventory delayed to 1,200 ms | 1,692 ms | 1,235 ms | 1 inventory + 1 facet / same |
+| Facets delayed beyond optional budget | 1,881 ms | 1,536 ms | 1 inventory + 1 facet / same |
+| Cold category | 1,140 ms | 494 ms | 1 inventory + 1 type-count + 1 facet / same |
+| Each restricted crawler / malformed URL | 403 / 308 | 403 / 308 | 0 / 0 |
+
+The trace shows facets starting 356 ms after inventory before, versus 1 ms after it with parallel reads. These are
+controlled measurements, not a prediction of production p95: database latency, query mix, cache reuse and instance
+startup still affect production. No production load test or schema change is needed for this scheduling fix.
+
+Reproduce with `scripts/perf/catalog-latency.cjs` (local targets only): start its `fixture` mode, build and start each
+revision in a separate directory with the dummy API variables documented at the top of that script, then run
+`node scripts/perf/catalog-latency.cjs measure http://127.0.0.1:PORT` once per fresh server process. It prints per-request
+timings and upstream traces and asserts fresh inventory, one facet load per cold key, SSR cards, and zero upstream
+reads for blocked or malformed requests. Deferred-read regressions in `tests/catalog-latency.test.cjs` verify overlap,
+validation before reads, unavailable optional counts, core errors and prompt overflow redirects. Run the existing
+`tests/catalog-routing-http.cjs` against that fixture-backed build for the full SEO and pagination smoke checks.
+
 ## Budgets
 
 | Budget | Value | Covers |

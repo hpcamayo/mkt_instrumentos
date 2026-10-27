@@ -59,9 +59,10 @@ function logFailure(part: string, error: { message: string } | null) {
   if (error) console.error(`Home: the ${part} query failed: ${error.message}`);
 }
 
+// public_listings: the cards' computed fields need a row of public columns (lib/catalog.ts).
 function approvedListings(supabase: PublicSupabaseClient, select: string) {
   return supabase
-    .from("listings")
+    .from("public_listings")
     .select(select)
     .eq("status", "approved")
     .or(DISCOVERABLE_STOCK_FILTER);

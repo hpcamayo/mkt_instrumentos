@@ -1,4 +1,4 @@
-export const LEGAL_LAST_UPDATED = "27 de septiembre de 2026";
+export const LEGAL_LAST_UPDATED = "27 de octubre de 2026";
 
 export const legalPages = [
   { href: "/terminos", label: "Términos y reglas" },
