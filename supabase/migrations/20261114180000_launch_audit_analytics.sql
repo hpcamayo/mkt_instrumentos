@@ -11,22 +11,54 @@
 --    transaction, through the same laria_private.record_marketplace_event_service as before, so every rule stays as it
 --    was (public listings and active stores only, owners and Admins not counted, one per visitor every 30 minutes,
 --    signed search metadata). Service role only.
--- 2. laria_private.listing_impression_days keeps one count per listing and Lima day. pg_cron listing-impression-rollup
---    (daily at 09:40 UTC) moves there the card impressions of every day that ended 90 days ago or more, and deletes
---    them. The all-time numbers of Mis estadísticas (get_account_analytics) and of Admin's analytics
---    (get_marketplace_admin_analytics) add those counts, so they don't change. Their 7- and 30-day periods, and the 7-,
---    30- and 90-day periods of get_listing_statistics, only ever read events younger than 90 days, which stay.
+-- 2. laria_private.listing_impression_days keeps the counts of card impressions per listing and Lima day, with the
+--    seller and the store each impression was recorded for, as its event had them. pg_cron listing-impression-rollup
+--    (every 5 minutes, one step of up to 10,000 impressions) moves there the card impressions of every day that ended
+--    90 days ago or more, and deletes them. The all-time numbers of Mis estadísticas (get_account_analytics) and of
+--    Admin's analytics (get_marketplace_admin_analytics) add those counts, read the way they read the events (a seller's
+--    by the seller the impression was recorded for, never by who owns the listing now), so they don't change. Their
+--    7- and 30-day periods, and the 7-, 30- and 90-day periods of get_listing_statistics, only ever read events younger
+--    than 90 days, which stay.
 --
 -- Compatibility: public.record_marketplace_event stays for the routes that record one event (contacts, submissions).
 --   The two base analytics functions keep their names, arguments and grants; only their all-time impressions change
 --   source. Other event types are untouched, and launch audit A18's laria_private.scrub_marketplace_events
---   (20261114120000) still clears the visitor of the events that stay.
--- Locks: none beyond creating the new objects and replacing three functions.
--- Rollback: select cron.unschedule('listing-impression-rollup'); then drop public.record_marketplace_events and the two
---   rollup functions. Keep laria_private.listing_impression_days and the two analytics functions while it has rows:
---   it is the only record of the impressions it counts.
+--   (20261114120000) still clears the visitor of the events that stay. A18's account anonymization, which unlinks the
+--   seller from their events, unlinks them from these counts too (a trigger on laria_private.account_anonymizations).
+-- Concurrency: each step is one short transaction. It first takes the row A18's retention job
+--   (marketplace-event-retention) locks first, laria_private.marketplace_event_scrub_clock, so the two jobs take turns
+--   and never hold the same events at once. It skips impressions another transaction holds (an account anonymization,
+--   a listing being deleted) instead of waiting for them, and leaves their day for the next step.
+-- Locks: the first statement takes SHARE ROW EXCLUSIVE locks on listings, profiles, stores (the daily counts' foreign
+--   keys) and laria_private.account_anonymizations (the trigger) at once without waiting: while one is held it lets go
+--   of the others and tries again a moment later, and after 30 seconds it fails and can be run again. Writes to those
+--   tables then wait for the rest of the migration (milliseconds: it only creates objects and replaces functions).
+-- Rollback: select cron.unschedule('listing-impression-rollup'); then drop the trigger
+--   account_anonymizations_unlink_impression_days, public.record_marketplace_events and the rollup function. Keep
+--   laria_private.listing_impression_days and the two analytics functions while it has rows: it is the only record of
+--   the impressions it counts.
 
 set lock_timeout = '10s';
+
+do $$
+declare
+  give_up timestamptz := clock_timestamp() + interval '30 seconds';
+begin
+  loop
+    begin
+      lock table public.listings, public.profiles, public.stores, laria_private.account_anonymizations
+      in share row exclusive mode nowait;
+      exit;
+    exception when lock_not_available then
+      if clock_timestamp() > give_up then
+        raise exception using errcode = 'lock_not_available',
+          message = 'ANALYTICS_TABLES_BUSY: the tables this migration references stayed busy for 30 seconds; run it again.';
+      end if;
+      perform pg_sleep(0.02 + random() * 0.08);
+    end;
+  end loop;
+end;
+$$;
 
 -- ------------------------------------------------------------------------------------- 1. one call per batch
 
@@ -83,13 +115,23 @@ grant execute on function public.record_marketplace_events(uuid, jsonb, uuid) to
 -- ------------------------------------------------------------------- 2. daily counts of old card impressions
 
 -- Card impressions per listing and Lima day, for the days whose events laria_private.roll_up_listing_impressions has
--- deleted. Nothing here leads to a person.
+-- deleted. Each row keeps the seller and the store its impressions were recorded for, as their events had them
+-- (marketplace_events.seller_user_id and store_id), with the same rules when one is deleted, so the numbers read it the
+-- way they read the events. No visitor, session or identity. A step adds rows; a listing, day, seller and store may
+-- have more than one, and the readers add them up.
 create table if not exists laria_private.listing_impression_days (
+  id bigint generated always as identity primary key,
   listing_id uuid not null references public.listings(id) on delete cascade,
   day date not null,
-  impressions integer not null check (impressions > 0),
-  primary key (listing_id, day)
+  seller_user_id uuid references public.profiles(id) on delete set null,
+  store_id uuid references public.stores(id) on delete cascade,
+  impressions integer not null check (impressions > 0)
 );
+create index if not exists listing_impression_days_listing_idx on laria_private.listing_impression_days(listing_id, day);
+create index if not exists listing_impression_days_seller_idx on laria_private.listing_impression_days(seller_user_id)
+  where seller_user_id is not null;
+create index if not exists listing_impression_days_store_idx on laria_private.listing_impression_days(store_id)
+  where store_id is not null;
 alter table laria_private.listing_impression_days enable row level security;
 revoke all on laria_private.listing_impression_days from public, anon, authenticated;
 
@@ -102,8 +144,8 @@ revoke all on laria_private.listing_impression_rollup_clock from public, anon, a
 
 -- Moves up to p_limit card impressions of the Lima days that ended 90 days ago or more into
 -- laria_private.listing_impression_days, oldest day first, deleting them in the same statement, and answers how many it
--- moved; call again while it answers p_limit. A day stopped halfway goes on where it stopped, since every statement
--- adds its counts to the day's.
+-- moved. A day goes on in the next call where it stopped: when it reached p_limit, or when another transaction held
+-- some of the day's impressions, which it skips rather than waits for.
 create or replace function laria_private.roll_up_listing_impressions(p_limit integer default 10000)
 returns integer
 language plpgsql
@@ -120,6 +162,12 @@ begin
   if p_limit is null or p_limit not between 1 and 50000 then
     raise exception using errcode = '22023', message = 'Invalid limit.';
   end if;
+  -- Before any event: launch audit A18's retention (laria_private.scrub_marketplace_events) clears the visitor of these
+  -- same events and takes this row first as well, so the two jobs take turns instead of holding the same events in
+  -- different orders.
+  insert into laria_private.marketplace_event_scrub_clock (id) values (true) on conflict do nothing;
+  perform 1 from laria_private.marketplace_event_scrub_clock c where c.id for update;
+
   insert into laria_private.listing_impression_rollup_clock (next_day)
   select coalesce((min(e.created_at) at time zone 'America/Lima')::date, last_day + 1) from public.marketplace_events e
   on conflict (id) do nothing;
@@ -132,55 +180,64 @@ begin
         and e.created_at >= current_day::timestamp at time zone 'America/Lima'
         and e.created_at < (current_day + 1)::timestamp at time zone 'America/Lima'
       limit p_limit - total
+      for update skip locked
     ), removed as (
       delete from public.marketplace_events e using batch b where e.id = b.id
-      returning e.listing_id
+      returning e.listing_id, e.seller_user_id, e.store_id
     ), counted as (
-      insert into laria_private.listing_impression_days as d (listing_id, day, impressions)
-      select r.listing_id, current_day, count(*) from removed r where r.listing_id is not null group by r.listing_id
-      on conflict (listing_id, day) do update set impressions = d.impressions + excluded.impressions
+      insert into laria_private.listing_impression_days (listing_id, day, seller_user_id, store_id, impressions)
+      select r.listing_id, current_day, r.seller_user_id, r.store_id, count(*) from removed r
+      where r.listing_id is not null
+      group by r.listing_id, r.seller_user_id, r.store_id
     )
     select count(*)::integer into moved from removed;
     total := total + moved;
     -- The day may have more: the next call looks at it again.
     exit when total >= p_limit;
+    -- Impressions it skipped because another transaction held them: the day waits for the next call.
+    exit when exists (
+      select 1 from public.marketplace_events e
+      where e.event_type = 'listing_impression'
+        and e.created_at >= current_day::timestamp at time zone 'America/Lima'
+        and e.created_at < (current_day + 1)::timestamp at time zone 'America/Lima'
+    );
     current_day := current_day + 1;
     update laria_private.listing_impression_rollup_clock set next_day = current_day where id;
   end loop;
   return total;
 end;
 $$;
+revoke all on function laria_private.roll_up_listing_impressions(integer) from public, anon, authenticated;
 
--- The daily run: batches until one comes back short, at most 50 of them (500,000 impressions) a day.
-create or replace function laria_private.run_listing_impression_rollup()
-returns integer
+-- Every 5 minutes, one step: each run is a short transaction, and a backlog of up to 2,880,000 impressions a day
+-- clears. When nothing is due it reads one row. cron.schedule() with a job name replaces the job of that name.
+select cron.schedule('listing-impression-rollup', '*/5 * * * *', $$select laria_private.roll_up_listing_impressions(10000)$$);
+
+-- Launch audit A18's account anonymization (laria_private.anonymize_account_core, 20261114120000) unlinks the person
+-- from their analytics events, as their seller among others, then records the run in
+-- laria_private.account_anonymizations. Their old card impressions' daily counts lose the seller the same way.
+create or replace function laria_private.unlink_anonymized_impression_days()
+returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
-declare
-  batch integer;
-  total integer := 0;
 begin
-  for i in 1 .. 50 loop
-    batch := laria_private.roll_up_listing_impressions(10000);
-    total := total + batch;
-    exit when batch < 10000;
-  end loop;
-  return total;
+  update laria_private.listing_impression_days set seller_user_id = null where seller_user_id = new.user_id;
+  return null;
 end;
 $$;
-revoke all on function laria_private.roll_up_listing_impressions(integer), laria_private.run_listing_impression_rollup()
-from public, anon, authenticated;
-
--- Daily at 09:40 UTC (04:40 Lima), before marketplace-event-retention. cron.schedule() with a job name replaces the job
--- of that name.
-select cron.schedule('listing-impression-rollup', '40 9 * * *', $$select laria_private.run_listing_impression_rollup()$$);
+revoke all on function laria_private.unlink_anonymized_impression_days() from public, anon, authenticated;
+drop trigger if exists account_anonymizations_unlink_impression_days on laria_private.account_anonymizations;
+create trigger account_anonymizations_unlink_impression_days
+after insert or update on laria_private.account_anonymizations
+for each row execute function laria_private.unlink_anonymized_impression_days();
 
 -- --------------------------------------------------------- 3. all-time numbers count the moved impressions
 
 -- As in 20260916200000_sprint_4_events.sql (renamed in 20260917120000_sprint_5_favorites.sql), with one change: for
--- all time (p_days 0), each listing's impressions add its daily counts in laria_private.listing_impression_days.
+-- all time (p_days 0), each listing's impressions add its daily counts in laria_private.listing_impression_days that
+-- were recorded for this account, as its events are counted (event.seller_user_id), whoever owns the listing now.
 create or replace function public.get_account_analytics_before_favorites(p_days integer default 0,p_owner_id uuid default null)
 returns jsonb language plpgsql stable security definer set search_path=public as $$
 declare target uuid := coalesce(p_owner_id,auth.uid()); account_kind text; result jsonb;
@@ -204,7 +261,7 @@ begin
     and (p_days=0 or event.created_at>=now()-make_interval(days=>p_days)) group by event.listing_id
    union all
    select moved.listing_id,sum(moved.impressions),0,0 from laria_private.listing_impression_days moved
-   where p_days=0 and moved.listing_id in (select owned.id from owned) group by moved.listing_id
+   where p_days=0 and moved.seller_user_id=target group by moved.listing_id
   ) counted group by counted.listing_id
  ), items as (
   select owned.id,owned.title,owned.status,owned.published_at,owned.sold_at,owned.publicly_active,

@@ -279,20 +279,32 @@ with it, so it can be applied before the deploy.
   deadlock. It answers one receipt per event in the order sent, `{event_id, recorded, view_count}`. Any error rolls the
   whole batch back: the route answers 503 and the browser sends the batch once more with the same event ids, which
   can't count twice. `public.record_marketplace_event` stays for the routes that record a single event.
-- `laria_private.listing_impression_days` (`listing_id`, Lima `day`, `impressions`; removed with its listing) and
-  `laria_private.listing_impression_rollup_clock` (the first day not yet finished), with no API access. The pg_cron job
-  `listing-impression-rollup` (daily at 09:40 UTC) runs `laria_private.run_listing_impression_rollup()`: card
-  impressions of every Lima day that ended 90 days ago or more move into one row per listing and day and are deleted,
-  in steps of 10,000 (`laria_private.roll_up_listing_impressions(p_limit)`) and up to 500,000 per run; the rest waits
-  for the next run. Views, contacts and every other event stay as they are, and launch audit A18's
-  `marketplace-event-retention` (09:45 UTC) still clears the visitor of those.
-- All-time numbers (`p_days = 0`) add the daily rows: impressions and the click-through denominator of
-  `get_account_analytics_before_favorites` (Mis estadísticas) and `get_marketplace_admin_analytics_before_favorites`
-  (Admin). The 7- and 30-day periods, and the 7-, 30- and 90-day periods of `get_listing_statistics`, only read events
-  younger than 90 days, which stay, so no number changes when impressions move.
-- Rollback: `select cron.unschedule('listing-impression-rollup');`, then drop `public.record_marketplace_events` and
-  the two rollup functions. Keep the daily table and the two analytics functions while it has rows: it is the only
-  record of the impressions it counts.
+- `laria_private.listing_impression_days` (`listing_id`, Lima `day`, `seller_user_id`, `store_id`, `impressions`) and
+  `laria_private.listing_impression_rollup_clock` (the first day not yet finished), with no API access. Each row keeps
+  the seller and the store its impressions were recorded for, as their events had them, with the same rules on delete
+  (removed with its listing or store; the seller cleared when their profile goes). Launch audit A18's account
+  anonymization clears the seller here too, as it does on the events (trigger
+  `account_anonymizations_unlink_impression_days`). A listing, day, seller and store may have more than one row; the
+  readers add them up.
+- The pg_cron job `listing-impression-rollup` (every 5 minutes) runs one step,
+  `laria_private.roll_up_listing_impressions(10000)`: card impressions of every Lima day that ended 90 days ago or more
+  move into the daily rows and are deleted, up to 10,000 per step, so each step is a short transaction. It first locks
+  the row A18's retention locks first (`laria_private.marketplace_event_scrub_clock`), so the rollup and
+  `marketplace-event-retention` (09:45 UTC) take turns. It skips impressions another transaction holds instead of
+  waiting for them and leaves their day for the next step. Views, contacts and every other event stay as they are, and
+  the retention still clears the visitor of those.
+- All-time numbers (`p_days = 0`) add the daily rows, read the way the events are read: impressions and the
+  click-through denominator of `get_account_analytics_before_favorites` (Mis estadísticas, the rows recorded for that
+  seller) and `get_marketplace_admin_analytics_before_favorites` (Admin, all rows). The 7- and 30-day periods, and the
+  7-, 30- and 90-day periods of `get_listing_statistics`, only read events younger than 90 days, which stay, so no
+  number changes when impressions move. A new reader of card impressions older than 90 days must add the daily rows
+  the same way.
+- Locks: the migration first takes SHARE ROW EXCLUSIVE locks on `listings`, `profiles`, `stores` and
+  `laria_private.account_anonymizations` at once without waiting (retrying for up to 30 seconds), then only creates
+  objects and replaces functions.
+- Rollback: `select cron.unschedule('listing-impression-rollup');`, then drop the trigger
+  `account_anonymizations_unlink_impression_days`, `public.record_marketplace_events` and the rollup function. Keep the
+  daily table and the two analytics functions while it has rows: it is the only record of the impressions it counts.
 <!-- /launch-audit:analytics -->
 
 ### Sprint 6 transaction, review, and review-report records

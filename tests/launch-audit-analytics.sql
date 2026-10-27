@@ -1,7 +1,7 @@
 -- Launch audit A33 (supabase/migrations/20261114180000_launch_audit_analytics.sql): a visitor's batch of events is
 -- recorded in one call with the same rules as one at a time, and card impressions older than 90 days become daily
--- counts per listing without changing a number that Mis estadísticas or Admin show. Local/test database only. Every
--- fixture is rolled back.
+-- counts per listing, with the seller and store they were recorded for, without changing a number that Mis
+-- estadísticas or Admin show. Local/test database only. Every fixture is rolled back.
 begin;
 
 create function pg_temp.check(p_condition boolean, p_message text) returns void language plpgsql as $$
@@ -42,7 +42,10 @@ insert into public.listings(id,slug,title,seller_type,status,category,instrument
 values
  ('a3300000-0000-4000-8000-000000000021','la33-a','A33 guitarra A','individual','approved','guitars','electric_guitar','Yamaha','QA','Usado - buen estado',1200,'Lima','Lima','Vendedor A33','51999993301','Descripción temporal suficientemente larga para probar las métricas del lote.','a3300000-0000-4000-8000-000000000001',null,'self_service',now(),now(),5,null),
  ('a3300000-0000-4000-8000-000000000022','la33-b','A33 guitarra B','individual','approved','guitars','electric_guitar','Yamaha','QA','Usado - buen estado',1300,'Lima','Lima','Vendedor A33','51999993301','Descripción temporal suficientemente larga para probar las métricas del lote.','a3300000-0000-4000-8000-000000000001',null,'self_service',now(),now(),0,null),
- ('a3300000-0000-4000-8000-000000000023','la33-c','A33 guitarra en revisión','individual','pending','guitars','electric_guitar','Yamaha','QA','Usado - buen estado',1400,'Lima','Lima','Vendedor A33','51999993301','Descripción temporal suficientemente larga para probar las métricas del lote.','a3300000-0000-4000-8000-000000000001',null,'self_service',now(),null,0,null);
+ ('a3300000-0000-4000-8000-000000000023','la33-c','A33 guitarra en revisión','individual','pending','guitars','electric_guitar','Yamaha','QA','Usado - buen estado',1400,'Lima','Lima','Vendedor A33','51999993301','Descripción temporal suficientemente larga para probar las métricas del lote.','a3300000-0000-4000-8000-000000000001',null,'self_service',now(),null,0,null),
+ -- D: a legacy listing with no owner yet. E: the store's.
+ ('a3300000-0000-4000-8000-000000000024','la33-d','A33 guitarra antigua','individual','approved','guitars','electric_guitar','Yamaha','QA','Usado - buen estado',900,'Lima','Lima','Vendedor antiguo','51999993305','Descripción temporal suficientemente larga para probar las métricas del lote.',null,null,'legacy',null,now(),0,null),
+ ('a3300000-0000-4000-8000-000000000025','la33-e','A33 guitarra de tienda','store','approved','guitars','electric_guitar','Fender','QA','Usado - buen estado',2500,'Lima','Lima','Tienda A33','51999993302','Descripción temporal suficientemente larga para probar las métricas del lote.','a3300000-0000-4000-8000-000000000002','a3300000-0000-4000-8000-000000000010','self_service',now(),now(),0,null);
 
 insert into public.listing_photos(listing_id,image_url,sort_order)
 select id,'https://example.invalid/la33-'||id||'-'||n||'.jpg',n
@@ -56,9 +59,9 @@ do $$ begin
     and not has_function_privilege('anon', 'public.record_marketplace_events(uuid, jsonb, uuid)', 'execute')
     and not has_function_privilege('authenticated', 'public.record_marketplace_events(uuid, jsonb, uuid)', 'execute'),
     'only the service role records a batch');
-  perform pg_temp.check(not has_function_privilege('authenticated', 'laria_private.roll_up_listing_impressions(integer)', 'execute')
-    and not has_function_privilege('anon', 'laria_private.run_listing_impression_rollup()', 'execute')
-    and not has_function_privilege('authenticated', 'laria_private.run_listing_impression_rollup()', 'execute'),
+  perform pg_temp.check(not has_function_privilege('anon', 'laria_private.roll_up_listing_impressions(integer)', 'execute')
+    and not has_function_privilege('authenticated', 'laria_private.roll_up_listing_impressions(integer)', 'execute')
+    and not has_function_privilege('authenticated', 'laria_private.unlink_anonymized_impression_days()', 'execute'),
     'the rollup stays private');
   perform pg_temp.check(not has_table_privilege('anon', 'laria_private.listing_impression_days', 'select')
     and not has_table_privilege('authenticated', 'laria_private.listing_impression_days', 'select')
@@ -66,10 +69,19 @@ do $$ begin
     and not has_table_privilege('authenticated', 'laria_private.listing_impression_rollup_clock', 'update'),
     'no API role reads or writes the daily counts');
   perform pg_temp.check((select relrowsecurity from pg_class where oid = 'laria_private.listing_impression_days'::regclass), 'RLS is on');
-  perform pg_temp.check(exists (select 1 from cron.job where jobname = 'listing-impression-rollup' and schedule = '40 9 * * *'
-    and command like '%laria_private.run_listing_impression_rollup()%'), 'the daily job is scheduled');
-  perform pg_temp.check((select confdeltype = 'c' from pg_constraint
-    where conrelid = 'laria_private.listing_impression_days'::regclass and contype = 'f'), 'a deleted listing takes its counts');
+  perform pg_temp.check(exists (select 1 from cron.job where jobname = 'listing-impression-rollup' and schedule = '*/5 * * * *'
+    and command = 'select laria_private.roll_up_listing_impressions(10000)'), 'one step every 5 minutes');
+  -- The same rules on delete as the events' own foreign keys.
+  perform pg_temp.check((select jsonb_object_agg(a.attname, c.confdeltype) from pg_constraint c
+      join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+      where c.conrelid = 'laria_private.listing_impression_days'::regclass and c.contype = 'f')
+    = (select jsonb_object_agg(a.attname, c.confdeltype) from pg_constraint c
+      join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+      where c.conrelid = 'public.marketplace_events'::regclass and c.contype = 'f'
+        and a.attname in ('listing_id', 'seller_user_id', 'store_id')),
+    'removed with its listing or store, the seller cleared with their profile, as the events');
+  perform pg_temp.check(exists (select 1 from pg_trigger where tgname = 'account_anonymizations_unlink_impression_days'
+    and tgrelid = 'laria_private.account_anonymizations'::regclass and not tgisinternal), 'account anonymization reaches the counts');
 end $$;
 
 -- ------------------------------------------------------------------ one call per batch
@@ -174,35 +186,71 @@ from (values
   ('listing_impression', 100, '15:00', 'a3300000-0000-4000-8000-000000000022'),
   ('listing_view', 100, '15:01', 'a3300000-0000-4000-8000-000000000021')
 ) fixture(event_type, days_ago, at, listing_id);
+-- Card D, the legacy listing: 3 impressions 100 days ago while it had no owner, recorded for no seller, and one 95 days
+-- ago recorded for the seller it was linked to (below). Card E, the store's: 2 impressions 100 days ago, recorded for
+-- the store and its owner.
+insert into public.marketplace_events(event_type, created_at, listing_id, seller_user_id, store_id, session_id, source)
+select 'listing_impression', pg_temp.lima(days_ago, at::time), listing_id::uuid, seller::uuid, store::uuid, gen_random_uuid(), 'catalog'
+from (values
+  (100, '10:00', 'a3300000-0000-4000-8000-000000000024', null, null),
+  (100, '11:00', 'a3300000-0000-4000-8000-000000000024', null, null),
+  (100, '12:00', 'a3300000-0000-4000-8000-000000000024', null, null),
+  (95, '10:00', 'a3300000-0000-4000-8000-000000000024', 'a3300000-0000-4000-8000-000000000001', null),
+  (100, '10:00', 'a3300000-0000-4000-8000-000000000025', 'a3300000-0000-4000-8000-000000000002', 'a3300000-0000-4000-8000-000000000010'),
+  (100, '16:00', 'a3300000-0000-4000-8000-000000000025', 'a3300000-0000-4000-8000-000000000002', 'a3300000-0000-4000-8000-000000000010')
+) fixture(days_ago, at, listing_id, seller, store);
+-- Admin links card D to the seller: from now on it is theirs, but its impressions from before stay nobody's.
+set local role authenticated;
+select pg_temp.claims('a3300000-0000-4000-8000-000000000003', true);
+select public.link_legacy_listing_owner('a3300000-0000-4000-8000-000000000024', 'a3300000-0000-4000-8000-000000000001',
+  'Vinculada en la prueba A33');
+reset role;
 
-create temp table la33_numbers(label text primary key, seller jsonb, admin jsonb);
+create temp table la33_numbers(label text primary key, seller jsonb, store jsonb, admin jsonb);
 create function pg_temp.numbers(p_label text) returns void language plpgsql as $$
-declare seller jsonb; admin jsonb;
+declare seller jsonb; store jsonb; admin jsonb;
 begin
   perform pg_temp.claims('a3300000-0000-4000-8000-000000000001', false);
   seller := jsonb_build_object('all', public.get_account_analytics(0), 'week', public.get_account_analytics(7),
     'month', public.get_account_analytics(30), 'quarter', public.get_listing_statistics(90));
+  perform pg_temp.claims('a3300000-0000-4000-8000-000000000002', false);
+  store := jsonb_build_object('all', public.get_account_analytics(0), 'week', public.get_account_analytics(7),
+    'month', public.get_account_analytics(30), 'quarter', public.get_listing_statistics(90));
   perform pg_temp.claims('a3300000-0000-4000-8000-000000000003', true);
   admin := jsonb_build_object('all', public.get_marketplace_admin_analytics(0), 'week', public.get_marketplace_admin_analytics(7),
     'month', public.get_marketplace_admin_analytics(30));
-  insert into la33_numbers values (p_label, seller, admin);
+  insert into la33_numbers values (p_label, seller, store, admin);
 end $$;
+create function pg_temp.impressions(p_numbers jsonb, p_listing text) returns integer language sql as $$
+  select (item ->> 'impressions')::integer from jsonb_array_elements(p_numbers #> '{all,listings}') item where item ->> 'id' = p_listing
+$$;
 
 select pg_temp.numbers('before');
-do $$ declare seller jsonb := (select seller from la33_numbers where label = 'before'); begin
-  perform pg_temp.check((select (item ->> 'impressions')::integer from jsonb_array_elements(seller #> '{all,listings}') item
-    where item ->> 'id' = 'a3300000-0000-4000-8000-000000000021') = 9, 'all time, card A was seen 9 times: ' || (seller -> 'all')::text);
-  perform pg_temp.check((select (item ->> 'impressions')::integer from jsonb_array_elements(seller #> '{all,listings}') item
-    where item ->> 'id' = 'a3300000-0000-4000-8000-000000000022') = 3, 'and card B 3 times');
+do $$ declare numbers la33_numbers := (select n from la33_numbers n where label = 'before'); begin
+  perform pg_temp.check(pg_temp.impressions(numbers.seller, 'a3300000-0000-4000-8000-000000000021') = 9,
+    'all time, card A was seen 9 times: ' || (numbers.seller -> 'all')::text);
+  perform pg_temp.check(pg_temp.impressions(numbers.seller, 'a3300000-0000-4000-8000-000000000022') = 3, 'and card B 3 times');
+  perform pg_temp.check(pg_temp.impressions(numbers.seller, 'a3300000-0000-4000-8000-000000000024') = 1,
+    'card D counts only the impression recorded for the seller, not the 3 from before it was theirs');
+  perform pg_temp.check(pg_temp.impressions(numbers.store, 'a3300000-0000-4000-8000-000000000025') = 2, 'the store''s card E, 2 times');
 end $$;
 
 do $$ declare today date := (now() at time zone 'America/Lima')::date; begin
-  perform pg_temp.check(laria_private.run_listing_impression_rollup() = 7, 'the 7 impressions of days that ended 90 days ago move');
-  perform pg_temp.check((select jsonb_agg(jsonb_build_array(listing_id, today - day, impressions) order by listing_id, day)
-    from laria_private.listing_impression_days where listing_id::text like 'a3300000-%') = jsonb_build_array(
-      jsonb_build_array('a3300000-0000-4000-8000-000000000021', 100, 3), jsonb_build_array('a3300000-0000-4000-8000-000000000021', 95, 2),
-      jsonb_build_array('a3300000-0000-4000-8000-000000000021', 91, 1), jsonb_build_array('a3300000-0000-4000-8000-000000000022', 100, 1)),
-    'one count per listing and Lima day');
+  perform pg_temp.check(laria_private.roll_up_listing_impressions(10000) = 13, 'the 13 impressions of days that ended 90 days ago move');
+  perform pg_temp.check((select jsonb_agg(jsonb_build_array(listing_id, today - day, seller_user_id, store_id, impressions)
+      order by listing_id, day, seller_user_id nulls first)
+    from (select listing_id, day, seller_user_id, store_id, sum(impressions)::integer impressions
+      from laria_private.listing_impression_days where listing_id::text like 'a3300000-%' group by 1, 2, 3, 4) moved)
+    = jsonb_build_array(
+      jsonb_build_array('a3300000-0000-4000-8000-000000000021', 100, 'a3300000-0000-4000-8000-000000000001', null, 3),
+      jsonb_build_array('a3300000-0000-4000-8000-000000000021', 95, 'a3300000-0000-4000-8000-000000000001', null, 2),
+      jsonb_build_array('a3300000-0000-4000-8000-000000000021', 91, 'a3300000-0000-4000-8000-000000000001', null, 1),
+      jsonb_build_array('a3300000-0000-4000-8000-000000000022', 100, 'a3300000-0000-4000-8000-000000000001', null, 1),
+      jsonb_build_array('a3300000-0000-4000-8000-000000000024', 100, null, null, 3),
+      jsonb_build_array('a3300000-0000-4000-8000-000000000024', 95, 'a3300000-0000-4000-8000-000000000001', null, 1),
+      jsonb_build_array('a3300000-0000-4000-8000-000000000025', 100, 'a3300000-0000-4000-8000-000000000002',
+        'a3300000-0000-4000-8000-000000000010', 2)),
+    'counts per listing, Lima day, and the seller and store they were recorded for');
   perform pg_temp.check((select count(*) from public.marketplace_events where event_type = 'listing_impression'
     and listing_id::text like 'a3300000-%' and created_at < pg_temp.lima(90, '00:00')) = 0, 'their events are gone');
   perform pg_temp.check((select array_agg(today - (created_at at time zone 'America/Lima')::date order by created_at)
@@ -211,7 +259,7 @@ do $$ declare today date := (now() at time zone 'America/Lima')::date; begin
   perform pg_temp.check(exists (select 1 from public.marketplace_events where event_type = 'listing_view'
     and listing_id = 'a3300000-0000-4000-8000-000000000021' and created_at = pg_temp.lima(100, '15:01')), 'a view is never moved');
   perform pg_temp.check((select next_day from laria_private.listing_impression_rollup_clock) = today - 90, 'the clock waits for the next day');
-  perform pg_temp.check(laria_private.run_listing_impression_rollup() = 0, 'a second run moves nothing');
+  perform pg_temp.check(laria_private.roll_up_listing_impressions(10000) = 0, 'a second step moves nothing');
 end $$;
 
 select pg_temp.numbers('after');
@@ -221,9 +269,11 @@ do $$ declare
 begin
   perform pg_temp.check(after.seller = before.seller, 'Mis estadísticas show the same numbers in every period: '
     || (before.seller -> 'all')::text || ' / ' || (after.seller -> 'all')::text);
+  perform pg_temp.check(after.store = before.store, 'and the store''s: '
+    || (before.store -> 'all')::text || ' / ' || (after.store -> 'all')::text);
   perform pg_temp.check(after.admin = before.admin, 'Admin''s analytics show the same numbers in every period: '
     || (before.admin -> 'all')::text || ' / ' || (after.admin -> 'all')::text);
-  perform pg_temp.check((after.admin #>> '{all,impressions}')::integer >= 12, 'Admin''s all-time impressions include the moved ones');
+  perform pg_temp.check((after.admin #>> '{all,impressions}')::integer >= 18, 'Admin''s all-time impressions include the moved ones');
 end $$;
 
 -- A day stopped halfway goes on where it stopped: 5 impressions of card B 93 days ago, moved 2 at a time.
@@ -241,16 +291,46 @@ begin
   perform pg_temp.check((select next_day from laria_private.listing_impression_rollup_clock) = today - 93, 'the day is not finished');
   perform pg_temp.check(laria_private.roll_up_listing_impressions(2) = 2, 'two more');
   perform pg_temp.check(laria_private.roll_up_listing_impressions(2) = 1, 'the last one');
-  select impressions into moved_b from laria_private.listing_impression_days
-  where listing_id = 'a3300000-0000-4000-8000-000000000022' and day = today - 93;
+  select sum(impressions) into moved_b from laria_private.listing_impression_days
+  where listing_id = 'a3300000-0000-4000-8000-000000000022' and day = today - 93
+    and seller_user_id = 'a3300000-0000-4000-8000-000000000001';
   perform pg_temp.check(moved_b = 5, 'the day''s count adds up: ' || coalesce(moved_b::text, 'none'));
   perform pg_temp.check((select next_day from laria_private.listing_impression_rollup_clock) = today - 90, 'and the clock moves on');
 end $$;
 select pg_temp.numbers('five moved');
 do $$ begin
   perform pg_temp.check((select seller from la33_numbers where label = 'five moved') = (select seller from la33_numbers where label = 'five more')
+    and (select store from la33_numbers where label = 'five moved') = (select store from la33_numbers where label = 'five more')
     and (select admin from la33_numbers where label = 'five moved') = (select admin from la33_numbers where label = 'five more'),
     'the numbers stay the same');
+end $$;
+
+-- Launch audit A18's account anonymization unlinks the seller from their events, and from the daily counts alike.
+create temp table la33_counts as
+select listing_id, day, store_id, sum(impressions) impressions from laria_private.listing_impression_days
+where listing_id::text like 'a3300000-%' group by 1, 2, 3;
+select laria_private.anonymize_account_core('a3300000-0000-4000-8000-000000000001', 'Prueba A33', null);
+select pg_temp.numbers('anonymized');
+do $$ declare
+  before la33_numbers := (select n from la33_numbers n where label = 'five moved');
+  after la33_numbers := (select n from la33_numbers n where label = 'anonymized');
+begin
+  perform pg_temp.check(not exists (select 1 from laria_private.listing_impression_days
+    where seller_user_id = 'a3300000-0000-4000-8000-000000000001'), 'no daily count names the seller any more');
+  perform pg_temp.check(not exists (select 1 from public.marketplace_events
+    where seller_user_id = 'a3300000-0000-4000-8000-000000000001'), 'nor does any event');
+  perform pg_temp.check(not exists (
+      (select * from la33_counts except
+       select listing_id, day, store_id, sum(impressions) from laria_private.listing_impression_days
+       where listing_id::text like 'a3300000-%' group by 1, 2, 3)
+      union all
+      (select listing_id, day, store_id, sum(impressions) from laria_private.listing_impression_days
+       where listing_id::text like 'a3300000-%' group by 1, 2, 3
+       except select * from la33_counts)), 'the counts themselves stay');
+  perform pg_temp.check((after.seller #>> '{all,summary,impressions}')::integer = 0,
+    'the anonymized account''s all-time impressions are 0, moved or not: ' || (after.seller #> '{all,summary}')::text);
+  perform pg_temp.check(after.store = before.store and after.admin -> 'all' = before.admin -> 'all',
+    'the store''s numbers and Admin''s all-time numbers stay');
 end $$;
 
 select pg_temp.expect_error('select laria_private.roll_up_listing_impressions(0)', 'Invalid limit.');
