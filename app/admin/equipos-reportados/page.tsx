@@ -32,6 +32,8 @@ type Match = {
   admin_note: string | null; report: Report;
   listing: { id: string; title: string; slug: string; status: string; seller: string | null; photo: string | null } | null;
   inventory_item: { id: string; sku: string | null; name: string | null; store: string | null } | null;
+  // Feature ideas, integration: a Mi equipo item's title and the listing it became, never its owner.
+  gear_item?: { title: string; sale_listing_id: string | null } | null;
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -111,7 +113,17 @@ export default async function AdminReportedGearPage({ searchParams }: { searchPa
                     </>
                   ) : match.inventory_item ? (
                     <p className="t-body text-ink">{match.inventory_item.name ?? "Equipo sin nombre"} · SKU {match.inventory_item.sku ?? "?"} · {match.inventory_item.store ?? "Tienda"}</p>
-                  ) : <p className="t-body text-ink-2">Un equipo de «Mi equipo» (privado).</p>}
+                  ) : match.gear_item ? (
+                    <>
+                      <p className="t-ui font-semibold text-ink">{match.gear_item.title}</p>
+                      <p className="t-meta">En «Mi equipo» de una cuenta de Particular (privado).</p>
+                      {match.gear_item.sale_listing_id ? (
+                        <Link href={`/admin/publicaciones?buscar=${encodeURIComponent(match.gear_item.sale_listing_id)}`} className="link w-fit t-meta font-semibold">Está a la venta: abrir en gestión</Link>
+                      ) : null}
+                    </>
+                  ) : match.source === "gear" ? (
+                    <p className="t-body text-ink-2">Un equipo que su dueño ya quitó de «Mi equipo».</p>
+                  ) : <p className="t-body text-ink-2">Ya no está en Laria.</p>}
                 </div>
               </div>
               {match.status === "pending" ? (

@@ -1621,3 +1621,20 @@ writes to every table below are revoked and go through definer functions. Errors
   with `laria_private.write_listing_part_payment(uuid, jsonb)` (true, false or null; store listings only) and
   `laria_private.copy_listing_part_payment(uuid, uuid)`.
 <!-- /feature-ideas:selling-tools -->
+
+<!-- feature-ideas:integration -->
+## Feature ideas: integration (migrations `20261210120000`–`20261210120200`)
+
+Wiring between batches, written by the integrator (not applied to any hosted database).
+
+- **Mi equipo serials in the stolen-gear matching (`20261210120000`).** The trigger `gear_items_flag_stolen` (after insert
+  or update of `serial` on `public.gear_items`) calls `laria_private.flag_serial_against_stolen_reports(serial, 'gear',
+  id, user_id)` when `serial_key` is set or changes, so a reporter's own gear never matches. The item's owner is never
+  told; a match stays when the item or its serial changes later.
+- **New reports scan Mi equipo (`20261210120100`).** Redefines `laria_private.match_new_stolen_report` (accounts batch):
+  the same listing and SKU scans plus one over `gear_items.serial_key`.
+- **Admin's view (`20261210120200`).** Redefines `public.admin_stolen_matches` (accounts batch) with `gear_item`
+  (`title`, and `sale_listing_id` when the item became a pending, live or hidden listing through "Vender esto"); never
+  the owner. `null` once the owner removed the item.
+- Tests: `tests/feat-integration.sql`.
+<!-- /feature-ideas:integration -->
