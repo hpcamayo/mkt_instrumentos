@@ -1,5 +1,6 @@
 "use client";
 
+import { GalleryVerticalEnd } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ListingCard } from "@/components/listing-card";
@@ -18,6 +19,7 @@ import {
   writeStore,
   type Taste,
 } from "@/lib/catalog-device";
+import { DESCUBRIR_PATH } from "@/lib/descubrir";
 import { getViewed, previousVisit as readPreviousVisit } from "@/lib/device-saves";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import { categoryOptions, getCategoryLabel } from "@/lib/listings";
@@ -122,7 +124,15 @@ export function HomeForYou({ pool, total }: { pool: HomeListing[]; total: number
               {personal ? "Según lo que miraste en este dispositivo." : device?.plain ? "Sin personalizar: lo más reciente primero." : "Lo más reciente primero. Se ordena según lo que mires."}
             </p>
           </div>
-          {device ? <ForYouControls device={device} personal={personal} /> : null}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            {device ? <ForYouControls device={device} personal={personal} /> : null}
+            {/* Descubrir (big-02): the newest listings one per screen. A plain link, the same for everyone, so the
+                cached home stays one page for all. */}
+            <Link href={DESCUBRIR_PATH} prefetch={false} className={buttonClasses({ variant: "secondary" })}>
+              <GalleryVerticalEnd aria-hidden="true" />
+              Descubrir lo nuevo
+            </Link>
+          </div>
         </div>
         <ul className={HOME_FEED_GRID}>
           {shown.map((listing, index) => (
