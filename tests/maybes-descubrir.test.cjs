@@ -363,6 +363,13 @@ test("big-02: a listing's screen has its photos, the facts, and a plain button f
   assert.doesNotMatch(html, /autoplay|<video|<audio/, "nothing plays on its own");
 
   assert.match(render({ item: { ...item, reserved: true } }), /Reservado/, "the reservation batch's flag shows as a tag");
+  const [marked, plain] = d.markReserved([item, listing()], new Set([item.id]));
+  assert.equal(marked.reserved, true);
+  assert.equal(plain.reserved, undefined);
+  const page = [item];
+  assert.equal(d.markReserved(page, []), page, "no ids, the same items");
+  assert.equal(d.markReserved(page, undefined), page);
+  assert.match(source("components/descubrir/descubrir-feed.tsx"), /markReserved\(listings, reserved\)/, "the route's `reserved` list marks the later pages");
   assert.match(render({ current: false }), /inert=""/, "screens out of view are inert");
   const single = render({ item: { ...item, listing_photos: item.listing_photos.slice(0, 1) } });
   assert.doesNotMatch(single, /Foto siguiente/, "one photo, no arrows");

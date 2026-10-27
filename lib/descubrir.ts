@@ -16,6 +16,13 @@ export type DescubrirMode = "nuevo" | "resultados";
 // so the feed shows "Reservado" as soon as the catalog query returns it, and nothing until then.
 export type DescubrirItem = ListingCardData & { reserved?: boolean };
 
+// The reservation batch's reserved ids (a set from its server helper, or its page route's `reserved` list) on the
+// feed's items. No ids, no change.
+export function markReserved(items: DescubrirItem[], reserved: Iterable<string> | null | undefined): DescubrirItem[] {
+  const ids = new Set(reserved ?? []);
+  return ids.size === 0 ? items : items.map((item) => (ids.has(item.id) ? { ...item, reserved: true } : item));
+}
+
 export const DESCUBRIR_PHOTOS = MAX_LISTING_PHOTOS;
 export const DESCUBRIR_PAGE_SIZE = LISTINGS_PAGE_SIZE;
 // A pause every 48 listings in a long list: how far you are, and the way out.

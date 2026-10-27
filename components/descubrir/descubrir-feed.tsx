@@ -18,6 +18,7 @@ import {
   feedPageUrl,
   feedSlots,
   hiddenNote,
+  markReserved,
   slotAnnouncement,
   stopCopy,
   windowDays,
@@ -41,8 +42,11 @@ export type FeedPage = { listings: DescubrirItem[]; total: number | null };
 async function fetchFeedPage(filters: ListingFilters, since: string | null, page: number): Promise<FeedPage | null> {
   const response = await fetch(feedPageUrl({ filters, since, page }));
   if (!response.ok) return null;
-  const body = (await response.json()) as { listings?: unknown; total?: unknown };
-  return { listings: Array.isArray(body.listings) ? (body.listings as DescubrirItem[]) : [], total: typeof body.total === "number" ? body.total : null };
+  const body = (await response.json()) as { listings?: unknown; total?: unknown; reserved?: unknown };
+  const listings = Array.isArray(body.listings) ? (body.listings as DescubrirItem[]) : [];
+  // The reservation batch's route names the page's reserved listings in `reserved`; without it, none is.
+  const reserved = Array.isArray(body.reserved) ? body.reserved.filter((id): id is string => typeof id === "string") : [];
+  return { listings: markReserved(listings, reserved), total: typeof body.total === "number" ? body.total : null };
 }
 
 // A newer listing can push one already shown onto the next page; it is shown once.
