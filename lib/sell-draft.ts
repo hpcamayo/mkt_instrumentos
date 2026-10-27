@@ -100,6 +100,28 @@ export function savedAgo(savedAt: string, now = Date.now()) {
   return `guardado hace ${days} ${days === 1 ? "día" : "días"}`;
 }
 
+// Launch audit A18: files nothing points at are removed after 48 hours, and a draft kept only on the device points at
+// none, so it can come back without some of them. `present` lists by bucket the files still in its folder
+// (app/api/submissions, "renew"); the draft's photos and clip not among them are gone.
+export function removedDraftFiles(draft: Pick<LocalDraft, "photos" | "soundClip">, present: Record<string, string[]>) {
+  const photos = new Set(present["listing-photos"] ?? []);
+  const clips = new Set(present["listing-sound-clips"] ?? []);
+  return {
+    photos: draft.photos.map((photo) => photo.path).filter((path) => !photos.has(path)),
+    clip: Boolean(draft.soundClip && !clips.has(draft.soundClip.path)),
+  };
+}
+
+export function removedFilesMessage(photos: number, clip: boolean) {
+  const counted = photos === 1 ? "Una foto" : `${photos} fotos`;
+  const lost = photos && clip
+    ? `${counted} y el sonido de este borrador ya no estaban guardados. Agrégalos otra vez.`
+    : photos
+      ? `${counted} de este borrador ya no ${photos === 1 ? "estaba guardada. Agrégala" : "estaban guardadas. Agrégalas"} otra vez.`
+      : "El sonido de este borrador ya no estaba guardado. Grábalo otra vez.";
+  return `${lost} Un borrador que solo está en este dispositivo conserva sus archivos 48 horas; con Guardar borrador se quedan en tu cuenta.`;
+}
+
 // The listing_drafts row for a local draft (RLS sets and checks the owner).
 export function serverDraftRow(draft: LocalDraft, kind: "listing" | "store_listing", storeId: string | null) {
   if (!draft.submission) return null;
