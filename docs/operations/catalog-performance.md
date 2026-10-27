@@ -99,7 +99,8 @@ Only public, anonymous data is shared. Nothing here reads cookies or a session; 
 So a newly approved listing can take up to two minutes to appear in counts and menus (about seven at the CDN's stale
 edge). Its listing page, search results and the catalog itself are live. Facets and rescues stay in memory only, so a
 crawl of filter combinations does not write a data-cache entry per combination. After three optional failures within
-10 s, one breaker pauses facets and rescues for 30 s in that instance.
+10 s, one breaker pauses facets and rescues for 30 s in that instance. The rescue's removal counts have a breaker of
+their own: one empty search asks up to eight at once, so their failures alone must not pause every visitor's facets.
 
 ## Input limits
 
@@ -107,7 +108,10 @@ crawl of filter combinations does not write a data-cache entry per combination. 
 - Every other filter value: 80 characters; longer values are ignored.
 - Advanced attribute values: at most 20 per request.
 - Filter values the catalog does not offer are dropped: an unknown category or instrument type, a select or
-  multiselect value outside the filter's options, an unknown condition, and a brand or place containing "=".
+  multiselect value outside the filter's options, an unknown condition, sort or seller type, a price that is not a
+  number (a price typed as "1,500" or "S/ 1500" redirects to 1500), and a brand or place containing "=". A page
+  number our links never write ("page=abc", "page=0", "page=02") redirects to the one they do. Blank values from the
+  no-JavaScript forms are not reported.
   Values over the existing 80-character limit are also reported as rejected, including repeated locations and
   advanced attributes. `/listados` answers such an address with a permanent redirect to the cleaned one, keeping
   valid filters, their repeated values, sorting, prices and pagination. Both the page and `generateMetadata` check

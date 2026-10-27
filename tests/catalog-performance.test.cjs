@@ -447,3 +447,23 @@ test("no public server read uses the default client without a deadline", () => {
   const callers = files.filter((file) => /getPublicSupabaseClient\(\)/.test(source(file)) && file !== path.join("lib", "supabase", "public-client.ts"));
   assert.deepEqual(callers, [path.join("app", "api", "contact", "route.ts")]);
 });
+
+test("one empty search whose rescue counts all fail does not pause other visitors' facets", async () => {
+  const { parseListingFilters } = require("@/lib/listings");
+  let facetLoads = 0;
+  const data = loadServer("lib/catalog-data.ts", {
+    "@/lib/supabase/public-read-client": {
+      createPublicReadClient: () => ({}),
+      getRequestReads: () => ({ deadline: deadlines.createDeadline(8000), supabase: {} }),
+    },
+    "@/lib/catalog": {
+      countCatalog: async () => null,
+      fetchCatalogPage: async () => ({ data: [], error: null }),
+    },
+    "@/lib/catalog-facets": { requestCatalogFacets: async () => { facetLoads += 1; return { options: {} }; } },
+  });
+  await data.getCatalogRescue(parseListingFilters({ q: "zzz", category: "guitars", location: ["Lima", "Cusco"], condition: "Nuevo", brand: "Fender" }));
+  const facets = await data.getFacetsForKey("category=guitars", new AbortController().signal);
+  assert.equal(facetLoads, 1, "facets still load after three or more failed rescue counts");
+  assert.ok(facets);
+});
