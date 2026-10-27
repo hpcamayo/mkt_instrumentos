@@ -19,6 +19,7 @@ import {
   ADMIN_QUEUES,
   adminTargetStatusLabel,
   adminValueLabel,
+  reviewHoldReasonLabel,
   type AdminCounts,
   type AdminJsonItem,
   type AdminQueue,
@@ -50,7 +51,9 @@ export type AdminMutation =
   | { kind: "store"; id: string; decision: "approve" | "reject" | "hide" }
   | { kind: "verification"; id: string; verified: boolean }
   | { kind: "report"; id: string; status: "resolved" | "dismissed" }
-  | { kind: "review"; id: string; hidden: boolean };
+  | { kind: "review"; id: string; hidden: boolean }
+  // Launch audit A17: a held review shows by the usual rule once published.
+  | { kind: "publish_review"; id: string };
 
 export function adminString(item: AdminJsonItem, key: string, fallback = "") {
   const value = item[key];
@@ -75,6 +78,7 @@ export function isNegativeMutation(mutation: AdminMutation) {
   if (mutation.kind === "verification") return !mutation.verified;
   if (mutation.kind === "report") return mutation.status === "dismissed";
   if (mutation.kind === "review") return mutation.hidden;
+  if (mutation.kind === "publish_review") return false;
   return mutation.decision === "reject" || mutation.decision === "hide";
 }
 
@@ -273,6 +277,8 @@ export function AdminMutationControl({
         p_status: mutation.status,
         p_reason: reason ?? "",
       }));
+    } else if (mutation.kind === "publish_review") {
+      ({ error } = await supabase.rpc("publish_held_review", { p_review_id: mutation.id }));
     } else {
       ({ error } = await supabase.rpc("moderate_review", {
         p_review_id: mutation.id,
@@ -407,7 +413,7 @@ export function AdminMutationControl({
   );
 }
 
-function QueueActions({
+export function QueueActions({
   queue,
   item,
   onComplete,
@@ -510,7 +516,7 @@ function QueueActions({
       </div>
     );
   }
-  return (
+  const hide = (
     <AdminMutationControl
       mutation={{ kind: "review", id, hidden: true }}
       label="Ocultar reseña"
@@ -518,6 +524,21 @@ function QueueActions({
       onComplete={onComplete}
     />
   );
+  // A17: a held review waits for Admin to publish or hide it.
+  if (adminString(item, "held_at")) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        <AdminMutationControl
+          mutation={{ kind: "publish_review", id }}
+          label="Publicar reseña"
+          confirmationText="La reseña se mostrará como las demás: cuando ambas partes hayan reseñado o termine el plazo de 10 días."
+          onComplete={onComplete}
+        />
+        {hide}
+      </div>
+    );
+  }
+  return hide;
 }
 
 const REVIEW_CHECKS: Record<AdminQueue, readonly string[]> = {
@@ -526,7 +547,7 @@ const REVIEW_CHECKS: Record<AdminQueue, readonly string[]> = {
   tiendas: ["Revisé el RUC y la razón social.", "Comprobé el correo y el teléfono de contacto.", "Revisé la dirección y la ubicación.", "Identifiqué a la persona de contacto."],
   verificacion: ["Verifiqué el RUC y la identidad del negocio.", "Verifiqué el correo y el teléfono de contacto.", "Verifiqué la dirección y la ubicación.", "Revisé a la persona de contacto y las fotos disponibles."],
   reportes: ["Leí el motivo y el detalle del reporte.", "Revisé el contenido y su estado actual.", "Consulté los reportes y la auditoría relacionados.", "Preparé un motivo claro para la decisión."],
-  resenas: ["Leí la reseña y su contexto.", "Evalué si corresponde ocultarla según las reglas.", "Consulté el historial relacionado.", "Preparé un motivo claro para ocultarla."],
+  resenas: ["Leí la reseña y su contexto.", "Revisé por qué quedó retenida o qué dice el reporte.", "Revisé la cuenta del comprador y su historial con el vendedor.", "Decidí publicarla u ocultarla según las reglas, con un motivo claro si la oculto."],
 };
 
 export function ReviewChecklist({ queue }: { queue: AdminQueue }) {
@@ -626,6 +647,7 @@ function QueueItem({
             {adminNumber(item, "open_target_report_count")} reportes abiertos
           </Tag>
         ) : null}
+        {adminString(item, "held_at") ? <Tag tone="warning" className="w-fit">Retenida</Tag> : null}
       </div>
 
       {firstPhotoUrl || storePhotos.length || adminString(item, "logo_url") || adminString(item, "banner_url") ? (
@@ -670,6 +692,7 @@ function QueueItem({
         {adminString(item, "whatsapp_phone") ? <p><strong>Teléfono:</strong> {adminString(item, "whatsapp_phone")}</p> : null}
         {adminString(item, "address") ? <p><strong>Dirección:</strong> {adminString(item, "address")}</p> : null}
         {adminString(item, "contact_person") ? <p><strong>Contacto:</strong> {adminString(item, "contact_person")}</p> : null}
+        <HeldReview item={item} />
         {adminNumber(item, "rating") ? <p><strong>Calificación:</strong> {adminNumber(item, "rating")}/5</p> : null}
         {adminString(item, "comment") ? <p className="sm:col-span-2"><strong>Reseña:</strong> {adminString(item, "comment")}</p> : null}
       </div>
@@ -688,6 +711,27 @@ function QueueItem({
         {navigation}
       </footer>
     </article>
+  );
+}
+
+// A17: a held review comes with why it waits, who wrote it and who it is about.
+export function HeldReview({ item }: { item: AdminJsonItem }) {
+  if (!adminString(item, "held_at")) return null;
+  const reasons = stringList(item, "hold_reasons");
+  const since = adminString(item, "reviewer_since");
+  return (
+    <>
+      <div className="sm:col-span-2">
+        <p><strong>Retenida porque:</strong></p>
+        <ul className="ml-5 list-disc">
+          {reasons.length ? reasons.map((reason) => <li key={reason}>{reviewHoldReasonLabel(reason)}</li>) : <li>Sin motivo registrado</li>}
+        </ul>
+      </div>
+      {adminString(item, "reviewer_name") ? <p><strong>Comprador:</strong> {adminString(item, "reviewer_name")}</p> : null}
+      {adminString(item, "reviewed_name") ? <p><strong>Reseña a:</strong> {adminString(item, "reviewed_name")}</p> : null}
+      {since ? <p><strong>Cuenta del comprador desde:</strong> {adminDate(since)}</p> : null}
+      <p><strong>Correo del comprador:</strong> {item.reviewer_email_confirmed === true ? "Confirmado" : "Sin confirmar"}</p>
+    </>
   );
 }
 

@@ -107,6 +107,19 @@ export function adminValueLabel(value: string) {
   return ADMIN_VALUE_LABELS[value] ?? value.replaceAll("_", " ");
 }
 
+// Launch audit A17: why a buyer's review waits for Admin (laria_private.review_hold_reasons).
+export const REVIEW_HOLD_REASON_LABELS: Record<string, string> = {
+  first_reviews: "Una de las primeras 3 reseñas del vendedor",
+  new_account: "Cuenta del comprador con menos de 7 días",
+  email_unconfirmed: "Correo del comprador sin confirmar",
+  repeat_buyer: "El comprador ya reseñó a este vendedor",
+  same_browser: "Comprador y vendedor usaron el mismo navegador",
+};
+
+export function reviewHoldReasonLabel(reason: string) {
+  return REVIEW_HOLD_REASON_LABELS[reason] ?? adminValueLabel(reason);
+}
+
 // A status of a listing, revision, store, report or review reads from the one status dictionary
 // (lib/ui/status.ts), so Admin shows the same words as the rest of the product.
 export function adminTargetStatusLabel(targetType: string, status: string) {

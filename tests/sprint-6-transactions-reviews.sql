@@ -221,6 +221,9 @@ do $$ declare queue jsonb; review_uuid uuid; begin
  if exists(select 1 from jsonb_array_elements(queue->'reviews') item where item->>'id'=review_uuid::text) then
   raise exception 'Admin queue revealed an unpaired review before its deadline';
  end if;
+ -- Launch audit A17: a seller's first reviews from buyers wait for Admin. Published here, so the reveal below runs as
+ -- before (tests/launch-audit-review-trust.sql covers the hold itself).
+ perform public.publish_held_review(review_uuid);
 end $$;
 select set_config('request.jwt.claims','{"sub":"61000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 do $$ declare detail jsonb; transaction_uuid uuid; begin
@@ -304,6 +307,9 @@ reset role;
 do $$ declare transaction_uuid uuid; boundary timestamptz:=now(); begin
  select id into transaction_uuid from qa_s6_ids where name='deadline_transaction';
  update public.verified_transactions set verified_at=boundary-interval '10 days',review_deadline=boundary where id=transaction_uuid;
+ -- A17: held as well (one of the seller's first reviews, a repeat buyer); Admin publishes it.
+ perform set_config('request.jwt.claims','{"sub":"61999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
+ perform public.publish_held_review((select id from public.transaction_reviews where transaction_id=transaction_uuid));
  if not laria_private.review_is_visible((select id from public.transaction_reviews where transaction_id=transaction_uuid)) then raise exception 'Single review did not reveal at deadline'; end if;
 end $$;
 set local role authenticated;
@@ -325,6 +331,9 @@ do $$ declare result jsonb; begin
 end $$;
 select set_config('request.jwt.claims','{"sub":"61000000-0000-4000-8000-000000000005","role":"authenticated"}',true);
 select public.submit_transaction_review((select id from qa_s6_ids where name='store_transaction'),5,'Comprador responsable.');
+-- A17: the store's first review from a buyer waits for Admin; published before it is reported.
+select set_config('request.jwt.claims','{"sub":"61999999-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
+select public.publish_held_review((select id from qa_s6_ids where name='store_buyer_review'));
 select set_config('request.jwt.claims','{"sub":"61000000-0000-4000-8000-000000000004","role":"authenticated"}',true);
 select public.report_review((select id from qa_s6_ids where name='store_buyer_review'),'otro',null);
 reset role;
