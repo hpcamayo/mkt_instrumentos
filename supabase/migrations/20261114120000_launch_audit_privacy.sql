@@ -181,7 +181,8 @@ create table if not exists laria_private.upload_removals (
 revoke all on laria_private.upload_removals from public, anon, authenticated;
 
 -- The file a stored address points at: a public address of a bucket the sweep covers, or the route that serves private
--- edit photos. Nothing for any other address (another site, an import photo).
+-- edit photos. Nothing for any other address (another site, an import photo). The forms write no query or fragment,
+-- but one after the path still names the file, so the sweep keeps it.
 create or replace function laria_private.upload_ref(p_url text)
 returns table (bucket text, path text)
 language sql
@@ -190,11 +191,12 @@ set search_path = ''
 as $$
   select m[1], m[2]
   from regexp_match(coalesce(p_url, ''),
-    '/storage/v1/object/public/(listing-photos|listing-sound-clips|store-assets)/([^?#]+)$') m
+    '/storage/v1/object/public/(listing-photos|listing-sound-clips|store-assets)/([^?#]+)(?:[?#].*)?$') m
   where m is not null
   union all
-  select 'listing-edit-photos', substr(p_url, length('/api/listing-images/') + 1)
-  where p_url ~ '^/api/listing-images/[0-9a-f-]{36}/listing-edits/';
+  select 'listing-edit-photos', m[1]
+  from regexp_match(coalesce(p_url, ''), '^/api/listing-images/([0-9a-f-]{36}/listing-edits/[^?#]+)') m
+  where m is not null;
 $$;
 
 -- Every file something points at. A new place that keeps a file of these buckets belongs here, and gets

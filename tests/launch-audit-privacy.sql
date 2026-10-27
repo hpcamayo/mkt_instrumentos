@@ -159,7 +159,11 @@ reset role;
 select pg_temp.check((select array_agg(r.bucket || ' ' || r.path) from laria_private.upload_ref(pg_temp.url('listing-photos', 'a/b/0.jpg')) r)
   = array['listing-photos a/b/0.jpg'], 'a public address names its bucket and path');
 select pg_temp.check((select array_agg(r.bucket || ' ' || r.path) from laria_private.upload_ref(pg_temp.url('store-assets', 'a/b/logo.png?v=2')) r)
-  is null, 'an address with a query is not one the forms write');
+  = array['store-assets a/b/logo.png']
+  and (select array_agg(r.bucket || ' ' || r.path) from laria_private.upload_ref(
+    '/api/listing-images/e1500000-0000-4000-8000-000000000001/listing-edits/e1520000-0000-4000-8000-000000000001/e1530000-0000-4000-8000-00000000000a/1.jpg#x') r)
+  = array['listing-edit-photos e1500000-0000-4000-8000-000000000001/listing-edits/e1520000-0000-4000-8000-000000000001/e1530000-0000-4000-8000-00000000000a/1.jpg'],
+  'a query or fragment after the path still names the file, so the sweep keeps it');
 select pg_temp.check((select array_agg(r.bucket || ' ' || r.path) from laria_private.upload_ref(
   '/api/listing-images/e1500000-0000-4000-8000-000000000001/listing-edits/e1520000-0000-4000-8000-000000000001/e1530000-0000-4000-8000-00000000000a/0.jpg') r)
   = array['listing-edit-photos e1500000-0000-4000-8000-000000000001/listing-edits/e1520000-0000-4000-8000-000000000001/e1530000-0000-4000-8000-00000000000a/0.jpg'],
