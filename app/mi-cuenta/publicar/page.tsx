@@ -5,6 +5,7 @@ import { DraftList } from "@/components/selling/draft-list";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
+import { aiHelpersEnabled } from "@/lib/ai/config";
 import { normalizePeruRegion } from "@/lib/location";
 import { listSellDrafts, loadSellBrands, loadSellPageData } from "@/lib/sell-page-data";
 
@@ -40,6 +41,7 @@ export default async function PublishParticularPage({ searchParams }: { searchPa
           brandsByCategory={brandsByCategory}
           serverDraft={data.serverDraft}
           reviewWaitMinutes={data.reviewWaitMinutes}
+          aiAssist={aiHelpersEnabled()}
         />
         <DraftList drafts={otherDrafts} href="/mi-cuenta/publicar" title={data.serverDraft ? "Otros borradores" : "Borradores"} />
       </> : <Notice tone="warning" role="note"><h2 className="font-semibold">Completa tu perfil Particular</h2><p className="mt-2">Necesitamos tu nombre, WhatsApp y ubicación antes de publicar.</p><Link href="/mi-cuenta/perfil?next=/mi-cuenta/publicar" className="mt-4 inline-flex">Completar perfil</Link></Notice>}

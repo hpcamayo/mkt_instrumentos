@@ -3,19 +3,24 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { redirect } from "next/navigation";
 import { AccountAnalyticsMetrics } from "@/components/account-analytics";
+import { UnderstoodPanel } from "@/components/ai/understood-panel";
 import { ContactsWithoutSale, ListingRanking } from "@/components/statistics/listing-ranking";
 import { WeeklyTrend } from "@/components/statistics/weekly-trend";
 import { getAccountAnalytics, getListingStatistics, parseAnalyticsWindow, topListings, type StatisticsWindow } from "@/lib/account-analytics";
 import { getAccountContext } from "@/lib/account-context";
+import { statisticsFocusFromParams, statisticsUnderstood, understoodFromParams } from "@/lib/ai/store-question";
 import { assistedCommerceEnabled } from "@/lib/payment-methods";
 
 export const metadata = { title: "Estadísticas de tienda" };
 
-export default async function StoreStatisticsPage({ searchParams }: { searchParams: Promise<{ periodo?: string }> }) {
+export default async function StoreStatisticsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { profile, store } = await getAccountContext();
   if (profile?.account_type !== "store_owner") redirect("/mi-cuenta");
   if (!store) redirect("/mi-cuenta/tienda");
-  const days = parseAnalyticsWindow((await searchParams).periodo);
+  const params = await searchParams;
+  const days = parseAnalyticsWindow(params.periodo);
+  // stock-24: opened from "Pregúntale a tu tienda".
+  const understood = understoodFromParams(params);
   // The rankings use the chosen period; "Todo el historial" (0) has no event window in get_listing_statistics, so they
   // fall back to the last 30 days. The weekly trend is always 12 weeks and "Contactos sin venta" always 30 days.
   const rankingDays: StatisticsWindow = days === 0 ? 30 : days;
@@ -34,6 +39,10 @@ export default async function StoreStatisticsPage({ searchParams }: { searchPara
           {([0, 7, 30] as const).map((period) => <ChipLink key={period} href={`/mi-cuenta/tienda/estadisticas?periodo=${period}`} selected={days === period} current="page">{period === 0 ? "Todo el historial" : `${period} días`}</ChipLink>)}
         </nav>
       </section>
+
+      {understood ? (
+        <UnderstoodPanel understood={statisticsUnderstood(days, statisticsFocusFromParams(params), understood.gaps)} className="rounded-panel border border-subtle" />
+      ) : null}
 
       {statistics ? (
         <>
