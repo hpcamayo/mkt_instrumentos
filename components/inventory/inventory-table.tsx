@@ -34,7 +34,8 @@ type BulkKind = "price" | "threshold" | "stock" | "hide" | "category" | "archive
 // The stepper's sale is a counter sale; the sheet stays for any other channel, a count or a note.
 const STEPPER_CHANNEL = "tienda_fisica";
 
-export function InventoryTable({ items, canWrite, total, filters, listQuery = "" }: { items: InventoryItem[]; canWrite: boolean; total?: number; filters?: InventoryFilters; listQuery?: string }) {
+// store-locations (run-02): `locationLines` is "Miraflores 3 · Centro 1" per SKU id, for stores with sedes.
+export function InventoryTable({ items, canWrite, total, filters, listQuery = "", locationLines }: { items: InventoryItem[]; canWrite: boolean; total?: number; filters?: InventoryFilters; listQuery?: string; locationLines?: Record<string, string> }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   // stock-14: every id of the view (up to the bulk limit), when the owner asked for all that match.
@@ -187,6 +188,7 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
           <StatusTag domain="inventory" status={inventoryStatusKey(item)} />
           {item.expected_arrival_on ? <span className="whitespace-nowrap t-meta font-semibold text-ink">{arrivalTag(item.expected_arrival_on)}</span> : null}
           <span className="whitespace-nowrap t-meta tabular-nums">{stockLine(item)}</span>
+          {locationLines?.[item.id] ? <span className="t-meta tabular-nums">{locationLines[item.id]}</span> : null}
           {canWrite && item.inventory_status === "active" ? (
             <span className="flex items-center gap-2" role="group" aria-label={`Cambiar el stock de ${item.merchant_sku} en una unidad`}>
               <StepButton disabled={busyId === item.id || item.quantity_available < 1} label={`Registrar venta de 1 unidad de ${item.merchant_sku}`} onClick={() => step(item, "sale")}>−1</StepButton>

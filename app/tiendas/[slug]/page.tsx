@@ -1,3 +1,4 @@
+import { StoreLocationsSection } from "@/components/store-locations/store-locations-section";
 import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import type { Metadata } from "next";
@@ -450,6 +451,8 @@ function StoreView({
             <StoreAboutSection store={store} location={location} preview={preview} className="min-w-0" />
             {/* discovery batch (disc-04, buy-05): the maker's story and the gift exchange policy */}
             <StoreDiscoverySection storeId={store.id} />
+            {/* store-locations (run-02): the store's sedes */}
+            <StoreLocationsSection storeId={store.id} />
             <AcceptedPaymentMethods methods={paymentMethods} />
           </div>
         </div>

@@ -6,6 +6,7 @@ import { StoreAllowanceMeter } from "@/components/store-allowance-meter";
 import { StoreInventoryAccess } from "@/components/store-inventory-access";
 import { StoreRegistrationForm, type StoreApplication } from "@/components/store-registration-form";
 import { StoreFloorPanel } from "@/components/store-floor/store-floor-panel";
+import { StoreLocationsSummary } from "@/components/store-locations/store-locations-summary";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusEntryTag } from "@/components/ui/tag";
@@ -54,6 +55,8 @@ export default async function StoreAccountPage() {
       ) : null}
       {/* store-floor: today's try-outs, warranty, labels and poster. */}
       {store && db ? <StoreFloorPanel storeId={store.id} supabase={db} /> : null}
+      {/* store-locations: Sedes and Comprobantes */}
+      {store && db && inventoryEnabled ? <StoreLocationsSummary supabase={db} /> : null}
       {/* discovery batch (docs/feature-ideas/discovery.md): Fabricante o Taller, cambios de regalos */}
       {store && canWrite ? <StoreDiscoveryLink /> : null}
       <StoreRegistrationForm

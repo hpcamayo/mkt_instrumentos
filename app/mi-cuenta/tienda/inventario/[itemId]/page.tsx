@@ -15,6 +15,7 @@ import {
 } from "@/components/inventory/item-detail";
 import { SkuListingDetailsPanel, type SkuListingDetails } from "@/components/inventory/sku-listing-details";
 import { ArrivalForm } from "@/components/store-floor/arrival-control";
+import { LocationStockCard } from "@/components/store-locations/location-stock-card";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
@@ -46,6 +47,7 @@ import {
   parseInventoryFilters,
   signed,
 } from "@/lib/store-inventory";
+import { getLocationStock, getOwnLocations } from "@/lib/store-locations-server";
 
 // Matches laria_private.inventory_undo_window (stock-03).
 const UNDO_WINDOW_MS = 15 * 60 * 1000;
@@ -85,6 +87,15 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
     ? await inventoryDb(supabase).from("store_stock_movements").select("corrects_movement_id").in("corrects_movement_id", movementIds)
     : { data: [] };
   const undone = new Set(((corrections ?? []) as { corrects_movement_id: string }[]).map((row) => row.corrects_movement_id));
+  // store-locations, run-02: units per location and where each movement happened.
+  const locations = await getOwnLocations(supabase);
+  const locationStock = locations.length ? (await getLocationStock(supabase, store.id, [item.id])) ?? [] : [];
+  const { data: movementPlaces } = locations.length && movementIds.length
+    ? await inventoryDb(supabase).from("store_stock_movements").select("id,location_split").in("id", movementIds)
+    : { data: [] };
+  const locationNames = new Map(locations.map((location) => [location.id, location.name]));
+  const movementPlace = new Map(((movementPlaces ?? []) as { id: string; location_split: Record<string, number> | null }[])
+    .map((row) => [row.id, Object.keys(row.location_split ?? {}).map((locationId) => locationNames.get(locationId) ?? "Sede archivada").join(", ")]));
   const now = Date.now();
 
   async function linkCandidates(storeId: string): Promise<LinkCandidate[]> {
@@ -137,6 +148,16 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
         {canWrite && !archived && item.quantity_available <= 0 ? <ArrivalForm key={`llegada-${item.version}`} itemId={item.id} current={item.expected_arrival_on ?? null} /> : null}
         {!archived ? <p className="t-meta"><Link href={`/mi-cuenta/tienda/etiquetas?ids=${item.id}`} className="link font-semibold">Imprimir etiqueta</Link> con precio, código de barras y QR.</p> : null}
       </section>
+
+      {locations.length ? (
+        <LocationStockCard
+          key={`sedes-${item.version}`}
+          item={item}
+          locations={locations}
+          quantities={Object.fromEntries(locationStock.map((row) => [row.location_id, row.quantity_on_hand]))}
+          canWrite={canWrite && !archived}
+        />
+      ) : null}
 
       <section aria-labelledby="publicacion-titulo" className="grid gap-4 rounded-panel border border-subtle bg-white p-5">
         <h2 id="publicacion-titulo" className="t-section text-ink">Publicación</h2>
@@ -201,7 +222,7 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
                 </p>
                 <p className="t-meta tabular-nums sm:text-right">{numbers.format(movement.on_hand_before)} → {numbers.format(movement.on_hand_after)} en tienda</p>
                 <p className="t-meta sm:col-span-2">
-                  {[ACTOR_LABELS[movement.actor_kind] ?? movement.actor_kind, CHANNEL_LABELS[movement.channel] ?? movement.channel, movement.import_row_number ? `fila ${movement.import_row_number}` : null, formatDateTime(movement.created_at)].filter(Boolean).join(" · ")}
+                  {[ACTOR_LABELS[movement.actor_kind] ?? movement.actor_kind, CHANNEL_LABELS[movement.channel] ?? movement.channel, movementPlace.get(movement.id) || null, movement.import_row_number ? `fila ${movement.import_row_number}` : null, formatDateTime(movement.created_at)].filter(Boolean).join(" · ")}
                 </p>
                 {movement.reference || movement.reason ? (
                   <p className="t-meta sm:col-span-2">{[movement.reference ? `Referencia: ${movement.reference}` : null, movement.reason ? `Motivo: ${movement.reason}` : null].filter(Boolean).join(" · ")}</p>
