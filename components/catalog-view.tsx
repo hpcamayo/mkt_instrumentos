@@ -148,7 +148,7 @@ export async function CatalogView({
           {scoped ? (
             <p className="mt-3 t-meta">
               Buscando “{filters.q}” en {scoped}.{" "}
-              <CatalogLink href={catalogHref({ cities: [], conditions: [], advanced: {}, sort: filters.sort, q: filters.q })} focusId={RESULTS_STATUS_ID} className="link font-semibold">
+              <CatalogLink href={catalogHref({ cities: [], conditions: [], advanced: {}, sort: filters.sort, q: filters.q })} rel="nofollow" focusId={RESULTS_STATUS_ID} className="link font-semibold">
                 Buscar en todo el catálogo
               </CatalogLink>
             </p>
@@ -181,7 +181,7 @@ export async function CatalogView({
                             <ul className="mt-3 flex flex-wrap gap-2">
                               {rescue.ways.map((way) => (
                                 <li key={way.chip.key}>
-                                  <CatalogLink href={way.chip.href} focusId={RESULTS_STATUS_ID} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                                  <CatalogLink href={way.chip.href} rel="nofollow" focusId={RESULTS_STATUS_ID} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                                     Sin {way.chip.text.startsWith("“") ? way.chip.text : `“${way.chip.text}”`} hay {formatNumber(way.count)}
                                   </CatalogLink>
                                 </li>

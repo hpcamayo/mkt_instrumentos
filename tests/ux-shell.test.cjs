@@ -310,7 +310,8 @@ test("the home Categorías panel: Todos los instrumentos, every category with it
   assert.ok(html.indexOf('id="menu-categorias"') < html.indexOf('href="#como-funciona"'));
   assert.match(panel, /^<div id="menu-categorias" class="surface-light menu-fade absolute inset-x-0 top-full z-40 max-h-\[calc\(100dvh-56px\)\] overflow-y-auto[^"]*shadow-level-1[^"]*md:max-h-none md:overflow-visible">/);
   assert.match(panel, /<ul class="[^"]*md:grid-cols-4[^"]*">/);
-  const links = [...panel.matchAll(/<a href="([^"]+)" class="([^"]*)"[^>]*>([^<]+)<\/a>/g)].map((match) => ({ href: match[1].replace(/&amp;/g, "&"), className: match[2], label: match[3] }));
+  const links = [...panel.matchAll(/<a href="([^"]+)"(?: rel="([^"]+)")? class="([^"]*)"[^>]*>([^<]+)<\/a>/g)].map((match) => ({ href: match[1].replace(/&amp;/g, "&"), rel: match[2], className: match[3], label: match[4] }));
+  for (const link of links) assert.equal(link.rel, link.href.startsWith("/listados?") ? "nofollow" : undefined, link.href);
   const expected = [
     ["Todos los instrumentos", "/listados"],
     ...shell.categoryMenus.flatMap((menu) => [[menu.label, menu.href], ...menu.types.map((type) => [type.label, type.href])]),
