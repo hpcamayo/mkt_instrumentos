@@ -275,9 +275,13 @@ export function formatCampaignDateTime(value: string) {
   return Number.isNaN(time) ? "" : dateTimeFormat.format(new Date(time));
 }
 
-// "Del 20 de diciembre de 2026 al 2 de enero de 2027": the period as dates, never as a countdown.
+// "Del 20 de diciembre de 2026 al 2 de enero de 2027": the period as dates, never as a countdown. The year is said once
+// when both days share it.
 export function campaignPeriodLabel(campaign: Pick<Campaign, "startsAt" | "endsAt">) {
-  return `Del ${formatCampaignDate(campaign.startsAt)} al ${formatCampaignDate(lastMoment(campaign.endsAt))}`;
+  const start = formatCampaignDate(campaign.startsAt);
+  const end = formatCampaignDate(lastMoment(campaign.endsAt));
+  const year = / de \d{4}$/.exec(end)?.[0];
+  return `Del ${year && start.endsWith(year) ? start.slice(0, -year.length) : start} al ${end}`;
 }
 
 // A campaign that ends at 00:00 of a day was last open the day before.

@@ -1353,6 +1353,44 @@ Migrations `20261207120000`–`20261207120400` (not applied to any hosted databa
   artists: `get_listing_marks(uuid[])`, `get_public_makers(int)`, `get_store_maker_profile(uuid)`,
   `get_public_artists(int)`, `get_gift_exchange_stores(int)`.
 
+## Feature ideas: store-reach batch
+
+Migrations `20261205120000`–`20261205160000` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/store-reach.md`. Suites: `tests/store-reach-{demand,feeds,dealers,campaigns,mercadolibre}.sql`. No
+existing function is redefined; `laria_private.reach_caller_store(p_active)` is the batch's caller-store helper.
+
+- `public.demand_reports` (month pk, period, threshold ≥ 5, totals ≥ threshold or null) and
+  `public.demand_report_rows` (month, section brand|query|type|no_results|alert, position, filters, city, people ≥
+  threshold, active and store counts): no grants; read through `get_demand_report(p_month)` (active store owners and
+  Admin). Built by `laria_private.build_demand_report(month)` from `marketplace_events` `search` rows and active
+  `saved_search_alerts`; pg_cron `demand-report-monthly` (`30 10 * * *`) builds last month once and keeps 13 months.
+- `public.store_feed_settings` (store_id pk, enabled, enabled_at): read and written through `get_store_feed_settings` and
+  `set_store_feed_enabled`; feeds read
+  `get_store_feed_header(slug)` and `get_feed_items(slug, after, limit)` (anon), public publications only.
+- `public.store_dealer_authorizations` (store_id, brand, brand_key, status awaiting_document|pending|approved|rejected|
+  revoked|withdrawn, document_* in private bucket `store-dealer-documents`, valid_until, review fields, revision): no
+  grants. Owner RPCs `request_dealer_authorization_upload`, `withdraw_dealer_authorization`,
+  `get_store_dealer_authorizations`; service-role `complete_dealer_authorization_upload`; Admin
+  `admin_get_dealer_authorizations`, `admin_get_dealer_document`, `admin_review_dealer_authorization` (audited, target
+  type `dealer_authorization`); public `get_active_dealer_authorizations()`. Upload policy through `dealer_document_upload_allowed(name)`.
+- `public.listing_price_history` (listing_id, price_pen, valid_from, valid_to, source created|change|campaign; one open
+  row per listing): written by the trigger `laria_private.record_listing_price_history` on `listings` (change time,
+  never before the open row began). `public.laria_campaigns` (slug, name, dates ≤ 30 days, min_discount_pct 5–70,
+  status draft|published|cancelled, revision) and `public.laria_campaign_entries` (campaign, listing, store,
+  campaign/reference/before prices, after_campaign restore|keep, status scheduled|live|ended|withdrawn|ineligible|
+  removed): no grants; store RPCs `get_store_campaigns`, `get_campaign_listing_options`, `join_campaign`,
+  `withdraw_campaign_entry`; Admin `admin_get_campaigns`, `admin_get_campaign`, `admin_save_campaign`,
+  `admin_set_campaign_status`, `admin_remove_campaign_entry` (audited, target types `campaign`, `campaign_entry`);
+  public `get_public_campaigns`, `get_public_campaign`, `get_live_campaign_marks`. pg_cron `laria-campaigns`
+  (`*/10 * * * *`) runs `run_campaign_job` (lock order listing, then entry).
+- `public.store_mercadolibre_connections` (store_id pk, ml_user_id, nickname, encrypted tokens, expires_at, scope) and
+  `public.store_mercadolibre_import_photos` (session, store, sku, sort_order 1–10, mlstatic https source_url, status
+  pending|working|done|failed, asset_id): no grants. Owner RPCs `get_mercadolibre_connection`,
+  `disconnect_mercadolibre`, `record_mercadolibre_import_photos`, `claim_mercadolibre_import_photos`,
+  `finish_mercadolibre_import_photo`, `get_mercadolibre_import_photos`; service-role `save_mercadolibre_connection`,
+  `get_mercadolibre_tokens`, `update_mercadolibre_tokens` (compare-and-swap).
+- New values in text checks: notification event types `store_dealer_approved|rejected|revoked`,
+  `store_campaign_entry_ineligible|removed`.
 ## Feature ideas: services for musicians (migration `20261208120000_feat_services.sql`)
 
 Proposed with the services batch (`docs/feature-ideas/services.md`); not applied to any hosted database.

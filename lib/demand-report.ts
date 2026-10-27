@@ -157,7 +157,9 @@ export function demandRowsFor(rows: DemandRow[], section: DemandSection, city: s
 // The row's search in words ("Marca: Yamaha · Teclados") and the catalog search it describes, in the row's city.
 export function demandRowLabel(row: Pick<DemandRow, "section" | "filters">) {
   if (row.section === "brand" && row.filters.brand) return row.filters.brand;
-  return searchAlertSummary(row.filters);
+  // A type named like its category ("Bajos · Bajos") is said once.
+  const parts = searchAlertSummary(row.filters).split(" · ");
+  return parts.filter((part, index) => parts.findIndex((other) => other.toLowerCase() === part.toLowerCase()) === index).join(" · ");
 }
 
 export function demandRowPath(row: Pick<DemandRow, "filters" | "city">) {

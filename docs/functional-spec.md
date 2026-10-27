@@ -361,6 +361,28 @@ part of V1 until merged. Every promise here is the store's; Laria handles no mon
 - **Daily job.** `/api/internal/jobs/store-floor` (CRON_SECRET), once a day.
 <!-- /feature-ideas:store-floor -->
 
+## Store reach: Mercado Libre import, social catalog, dealers, campaigns and demand (feature ideas, store-reach batch)
+
+Proposed with the store-reach batch (`docs/feature-ideas/store-reach.md`, FD-store-reach-1 to FD-store-reach-19); not
+part of V1 until merged. Every page below is linked from Mi tienda → "Más alcance para tu tienda"; the account menu is
+unchanged.
+
+- **Importar desde Mercado Libre.** A store connects its Mercado Libre account (OAuth with PKCE), picks up to 100 active
+  publications and gets an ordinary inventory import; photos are copied from Mercado Libre through the import's photo
+  check. Laria only reads, never publishes or changes anything there. Off without the server's credentials.
+- **Catálogo para redes.** A store turns on its feed (off by default) and connects `/api/feeds/tiendas/<slug>` to its
+  Meta catalog once. Laria's own feed `/api/feeds/laria` is for Laria's Google Merchant Center account.
+- **Distribuidor oficial.** A store sends a brand's authorization; Admin approves, rejects or revokes it with a reason.
+  While in force, the store's new publications of that brand show the mark with what Laria checked (a document, not
+  the instruments or the warranty); the store page and the brand filter name the dealers.
+- **Campañas Laria.** Admin publishes dated campaigns of up to 30 days with a minimum discount. Stores add publications
+  whose current price is the lowest of the 30 days before (Laria's own price history), choose what happens at the end,
+  and Laria applies and restores prices. A store's own price change takes the publication out. Plain dates, never
+  countdowns.
+- **Lo que buscan en Laria.** Active stores see last month's searches and alerts as counts of distinct people by city,
+  with active publications next to them, never under 5 people, stored aggregated, and with the report's limits stated
+  above the tables. It gives no advice on what to stock.
+
 ## Services for musicians (feature ideas, services batch)
 
 Proposed with the services batch (`docs/feature-ideas/services.md`, FD-services-1 to FD-services-11); not part of V1

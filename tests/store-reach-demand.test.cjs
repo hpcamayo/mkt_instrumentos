@@ -91,6 +91,7 @@ test("reach-06: rows group by city, order by people only and link to the catalog
   assert.deepEqual(demandRowsFor(report.rows, "type", "Cusco").map((row) => row.filters.category), ["winds"]);
   assert.equal(demandRowLabel(report.rows[0]), "Yamaha");
   assert.equal(demandRowLabel(report.rows[2]), "“yamaha pacifica”");
+  assert.equal(demandRowLabel({ section: "type", filters: { category: "basses", instrument_type: "bass" } }), "Bajos", "a type named like its category is said once");
   assert.equal(demandRowPath(report.rows[1]), "/listados?location=Lima&brand=Yamaha");
   assert.equal(demandRowPath(report.rows[2]), "/listados?q=yamaha+pacifica");
   assert.equal(demandPagePath({ month: "2026-09-01", city: "Lima" }), "/mi-cuenta/tienda/demanda?mes=2026-09&ciudad=Lima");
