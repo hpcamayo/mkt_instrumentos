@@ -38,9 +38,10 @@ export function getAccountNavigationItems(
     return [
       { href: "/mi-cuenta", label: "Resumen", icon: "summary", exact: true },
       // store-floor: Garantía y cambios is a store setting; labels and the poster start from Inventario.
-      { href: "/mi-cuenta/tienda", label: hasStore ? "Mi tienda" : "Solicitud de tienda", icon: "store", exact: true, activePaths: ["/mi-cuenta/tienda/garantia"] },
+      // store-locations: Sedes is a store setting; Comprobantes starts from Mostrador, in Inventario.
+      { href: "/mi-cuenta/tienda", label: hasStore ? "Mi tienda" : "Solicitud de tienda", icon: "store", exact: true, activePaths: ["/mi-cuenta/tienda/garantia", "/mi-cuenta/tienda/sedes"] },
       ...(hasStore ? [
-        { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory", activePaths: ["/mi-cuenta/tienda/etiquetas"] } as const,
+        { href: "/mi-cuenta/tienda/inventario", label: "Inventario", icon: "inventory", activePaths: ["/mi-cuenta/tienda/etiquetas", "/mi-cuenta/tienda/comprobantes"] } as const,
         { href: "/mi-cuenta/tienda/publicar", label: "Publicar", icon: "publish" } as const,
         // store-floor (buy-07)
         { href: "/mi-cuenta/tienda/pruebas", label: "Pruebas", icon: "tryouts" } as const,

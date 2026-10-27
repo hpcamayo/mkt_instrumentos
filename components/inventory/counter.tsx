@@ -10,9 +10,13 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { Price } from "@/components/ui/price";
 import {
-  INDEX_KEY, QUEUE_KEY, addToCart, cartTotal, cartUnits, isConnectionFailure, matchCode, readJson, saleOperations, writeJson,
+  INDEX_KEY, QUEUE_KEY, addToCart, cartTotal, cartUnits, isConnectionFailure, matchCode, readJson, saleRequest, writeJson,
   type CartLine, type CounterItem, type QueuedSale,
 } from "@/lib/inventory-counter";
+import { EMPTY_RECEIPT, ReceiptFields, ReceiptOutcome, receiptRequest, receiptTotal, type ReceiptDraft } from "@/components/einvoice/counter-receipt";
+import { issueReceipt } from "@/lib/einvoice/client";
+import { receiptProblem, type ReceiptRecord } from "@/lib/einvoice/nubefact";
+import { COUNTER_LOCATION_KEY } from "@/lib/store-locations";
 import { inventoryAction, newRequestKey } from "@/lib/inventory-client";
 import { CHANNEL_LABELS, SALE_CHANNELS, numbers } from "@/lib/store-inventory";
 
@@ -36,7 +40,17 @@ function storage() {
   }
 }
 
-export function Counter({ storeId, storeName = "la tienda" }: { storeId: string; storeName?: string }) {
+// store-locations: `locations` (run-02) makes the sale come from the location chosen on this device, and `receipts`
+// (run-03) offers the boleta or factura with the sale when the store connected its Nubefact account.
+export type CounterLocation = { id: string; name: string; is_primary: boolean };
+
+export function Counter({ storeId, storeName = "la tienda", locations = [], locationStock = {}, receipts = null }: {
+  storeId: string;
+  storeName?: string;
+  locations?: CounterLocation[];
+  locationStock?: Record<string, Record<string, number>>;
+  receipts?: { storeName: string } | null;
+}) {
   const id = useId();
   const [items, setItems] = useState<CounterItem[]>([]);
   const [loaded, setLoaded] = useState<"loading" | "online" | "offline" | "failed">("loading");
@@ -50,6 +64,12 @@ export function Counter({ storeId, storeName = "la tienda" }: { storeId: string;
   const [queue, setQueue] = useState<QueuedSale[]>([]);
   const [notice, setNotice] = useState<InventoryNotice | null>(null);
   const [camera, setCamera] = useState(false);
+  // store-locations (run-02, run-03)
+  const [locationId, setLocationId] = useState(() => locations.find((location) => location.is_primary)?.id ?? locations[0]?.id ?? "");
+  const [atLocation, setAtLocation] = useState(locationStock);
+  const [receiptDraft, setReceiptDraft] = useState<ReceiptDraft>(EMPTY_RECEIPT);
+  const [lastReceipt, setLastReceipt] = useState<ReceiptRecord | null>(null);
+  const [receiptNote, setReceiptNote] = useState("");
   // deal-trust (reach-11): the last sale recorded online in the store, for its customer code.
   const [lastSale, setLastSale] = useState<string | null>(null);
   // The shared Input does not forward refs; the field's id finds it.
@@ -82,10 +102,16 @@ export function Counter({ storeId, storeName = "la tienda" }: { storeId: string;
     let sent = 0;
     for (const sale of waiting) {
       if (sale.error) continue;
-      const result = await inventoryAction({ action: "bulk_stock", key: sale.key, operations: saleOperations(sale) });
+      const result = await inventoryAction(saleRequest(sale));
       if (!result.ok && isConnectionFailure(result.code)) break;
       remaining = remaining.flatMap((entry) => (entry.key !== sale.key ? [entry] : result.ok ? [] : [{ ...entry, error: result.message }]));
       if (result.ok) sent += 1;
+      // run-03: the comprobante that waited with the sale. A failure stays in Comprobantes, ready to retry.
+      if (result.ok && sale.receipt) {
+        const issued = await issueReceipt(sale.key, sale.receipt);
+        if (issued.ok) setLastReceipt(issued.data.receipt);
+        else setReceiptNote(`La venta que esperaba conexión se registró, pero su comprobante no: ${issued.message}`);
+      }
     }
     saveQueue(remaining);
     if (sent) {
@@ -93,6 +119,13 @@ export function Counter({ storeId, storeName = "la tienda" }: { storeId: string;
       loadIndex();
     }
   }, [loadIndex, saveQueue, storeId]);
+
+  useEffect(() => {
+    const saved = readJson<string>(storage(), COUNTER_LOCATION_KEY(storeId), "");
+    if (saved && locations.some((location) => location.id === saved)) setLocationId(saved);
+    // Only on first load: the list of locations comes with the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId]);
 
   useEffect(() => {
     setQueue(readJson<QueuedSale[]>(storage(), QUEUE_KEY(storeId), []));
@@ -106,14 +139,29 @@ export function Counter({ storeId, storeName = "la tienda" }: { storeId: string;
   // Units already promised by waiting sales are not available again.
   const pending = new Map<string, number>();
   for (const sale of queue) if (!sale.error) for (const line of sale.lines) pending.set(line.item_id, (pending.get(line.item_id) ?? 0) + line.quantity);
-  const effective = (item: CounterItem): CounterItem => ({ ...item, quantity_available: Math.max(0, item.quantity_available - (pending.get(item.id) ?? 0)) });
+  // run-02: at a location, only its units count (minus what waiting sales there promised).
+  const pendingHere = new Map<string, number>();
+  for (const sale of queue) if (!sale.error && sale.location_id === locationId) for (const line of sale.lines) pendingHere.set(line.item_id, (pendingHere.get(line.item_id) ?? 0) + line.quantity);
+  const effective = (item: CounterItem): CounterItem => {
+    const total = Math.max(0, item.quantity_available - (pending.get(item.id) ?? 0));
+    if (!locationId) return { ...item, quantity_available: total };
+    const here = Math.max(0, (atLocation[locationId]?.[item.id] ?? 0) - (pendingHere.get(item.id) ?? 0));
+    return { ...item, quantity_available: Math.min(total, here) };
+  };
+  const locationName = locations.find((location) => location.id === locationId)?.name ?? null;
+
+  function chooseLocation(next: string) {
+    setLocationId(next);
+    setCart([]);
+    writeJson(storage(), COUNTER_LOCATION_KEY(storeId), next);
+  }
 
   function add(item: CounterItem, by = 1) {
     const result = addToCart(cart, effective(item), by);
     setCart(result.cart);
     setOptions([]);
     setHint(result.limited
-      ? effective(item).quantity_available === 0 ? `${item.merchant_sku} no tiene unidades disponibles. Si el stock real es distinto, registra un conteo en Inventario.` : `Solo hay ${numbers.format(effective(item).quantity_available)} disponibles de ${item.merchant_sku}.`
+      ? effective(item).quantity_available === 0 ? `${item.merchant_sku} no tiene unidades disponibles${locationName ? ` en ${locationName}` : ""}. Si el stock real es distinto, registra un conteo en Inventario.` : `Solo hay ${numbers.format(effective(item).quantity_available)} disponibles de ${item.merchant_sku}${locationName ? ` en ${locationName}` : ""}.`
       : by > 0 ? `${item.merchant_sku}: ${item.product_name}` : "");
   }
 
@@ -137,21 +185,30 @@ export function Counter({ storeId, storeName = "la tienda" }: { storeId: string;
 
   async function record() {
     if (!cart.length) return;
+    const receipt = receipts ? receiptRequest(receiptDraft, cart) : null;
+    const problem = receipt ? receiptProblem(receipt, receiptTotal(receiptDraft, cart)) : null;
+    if (problem) {
+      setNotice({ kind: "error", message: `Comprobante: ${problem}` });
+      return;
+    }
     const sale: QueuedSale = {
       key: saleKey,
       channel,
       lines: cart.map((line) => ({ item_id: line.item.id, merchant_sku: line.item.merchant_sku, quantity: line.quantity })),
       created_at: new Date().toISOString(),
+      ...(locationId ? { location_id: locationId } : {}),
+      ...(receipt ? { receipt } : {}),
     };
     setBusy(true);
-    const result = await inventoryAction<{ movements: { id: string }[]; items: { id: string; quantity_available: number }[] }>({
-      action: "bulk_stock", key: sale.key, operations: saleOperations(sale),
-    });
+    setLastReceipt(null);
+    setReceiptNote("");
+    const result = await inventoryAction<{ movements: { id: string }[]; items: { id: string; quantity_available: number }[] }>(saleRequest(sale));
     setBusy(false);
     const units = cartUnits(cart);
     if (!result.ok && isConnectionFailure(result.code)) {
       saveQueue([...queue, sale]);
       setCart([]);
+      setReceiptDraft(EMPTY_RECEIPT);
       setSaleKey(newRequestKey("mostrador"));
       setNotice({ kind: "success", message: `Sin conexión: la venta de ${numbers.format(units)} ${units === 1 ? "unidad" : "unidades"} quedó guardada en este equipo y se registrará sola al volver la conexión.` });
       codeInput.current?.focus();
@@ -163,15 +220,30 @@ export function Counter({ storeId, storeName = "la tienda" }: { storeId: string;
     }
     const available = new Map(result.data.items.map((item) => [item.id, item.quantity_available]));
     setItems((current) => current.map((item) => (available.has(item.id) ? { ...item, quantity_available: available.get(item.id)!, version: item.version + 1 } : item)));
+    if (locationId) {
+      setAtLocation((current) => {
+        const here = { ...(current[locationId] ?? {}) };
+        for (const line of sale.lines) here[line.item_id] = Math.max(0, (here[line.item_id] ?? 0) - line.quantity);
+        return { ...current, [locationId]: here };
+      });
+    }
     setCart([]);
+    setReceiptDraft(EMPTY_RECEIPT);
     setSaleKey(newRequestKey("mostrador"));
     setLastSale(sale.channel === "tienda_fisica" ? sale.key : null);
     setNotice({
       kind: "success",
-      message: `Venta registrada: ${numbers.format(units)} ${units === 1 ? "unidad" : "unidades"} (${CHANNEL_LABELS[channel]}).`,
-      undo: undoMovements(result.data.movements.map((movement) => movement.id), "Venta deshecha. El stock volvió a como estaba."),
+      message: `Venta registrada: ${numbers.format(units)} ${units === 1 ? "unidad" : "unidades"} (${CHANNEL_LABELS[channel]}${locationName ? `, ${locationName}` : ""}).`,
+      undo: undoMovements(result.data.movements.map((movement) => movement.id), receipt
+        ? "Venta deshecha. El stock volvió a como estaba. Si ya se emitió el comprobante, anúlalo en Comprobantes."
+        : "Venta deshecha. El stock volvió a como estaba."),
     });
     codeInput.current?.focus();
+    if (receipt) {
+      const issued = await issueReceipt(sale.key, receipt);
+      if (issued.ok) setLastReceipt(issued.data.receipt);
+      else setReceiptNote(`La venta se registró, pero el comprobante no: ${issued.message}`);
+    }
   }
 
   const total = cartTotal(cart);
@@ -183,6 +255,13 @@ export function Counter({ storeId, storeName = "la tienda" }: { storeId: string;
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
       <section aria-labelledby={`${id}-codigo`} className="grid gap-4 rounded-panel border border-subtle bg-white p-4 md:p-5">
         <h2 id={`${id}-codigo`} className="t-section text-ink">Agregar a la venta</h2>
+        {locations.length ? (
+          <Field id={`${id}-sede`} label="Sede" hint="Las unidades se descuentan de esta sede. Este equipo la recuerda.">
+            <Select value={locationId} onChange={(event) => chooseLocation(event.target.value)}>
+              {locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
+            </Select>
+          </Field>
+        ) : null}
         {loaded === "offline" ? <Notice tone="warning" role="status">Sin conexión. Usamos la lista de SKU guardada en este equipo; las ventas se registrarán al volver la conexión.</Notice> : null}
         {loaded === "failed" ? <Notice tone="danger" role="alert">No pudimos cargar tus SKU. Revisa tu conexión y vuelve a abrir el Mostrador.</Notice> : null}
         <form onSubmit={submitCode} className="flex items-end gap-2">
@@ -264,9 +343,12 @@ export function Counter({ storeId, storeName = "la tienda" }: { storeId: string;
           </Select>
         </Field>
         {total !== null && cart.length ? <p className="t-ui text-ink">Total de referencia: <Price value={total} size="inline" /></p> : null}
+        {receipts && cart.length ? <ReceiptFields draft={receiptDraft} onChange={setReceiptDraft} cart={cart} /> : null}
         <Button block loading={busy} loadingLabel="Registrando…" disabled={!cart.length} onClick={record}>
-          {cart.length ? `Registrar venta (${numbers.format(units)} ${units === 1 ? "unidad" : "unidades"})` : "Registrar venta"}
+          {cart.length ? `Registrar venta${receiptDraft.kind !== "none" && receipts ? ` y emitir ${receiptDraft.kind}` : ""} (${numbers.format(units)} ${units === 1 ? "unidad" : "unidades"})` : "Registrar venta"}
         </Button>
+        {receiptNote ? <Notice tone="warning" role="alert">{receiptNote}</Notice> : null}
+        {lastReceipt && receipts ? <ReceiptOutcome receipt={lastReceipt} storeName={receipts.storeName} onChange={setLastReceipt} /> : null}
         <p className="t-meta">Es una anotación de tu tienda: descuenta stock y no cobra nada. Para que cuente como compra verificada en Laria, muestra el código al cliente después de registrarla.</p>
         {waiting.length ? (
           <Notice tone="warning" role="status">

@@ -1,3 +1,4 @@
+import { ListingLocationsSection } from "@/components/store-locations/listing-locations-section";
 import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
@@ -624,6 +625,12 @@ function ListingDetail({
                   <TrackRecordChip listingId={listing.id} />
                   <SignInHint />
                 </div>
+                {/* store-locations (run-02): "Disponible en …" and where to collect, for stores with sedes. */}
+                {isStore && listing.store_id && !outOfStock ? (
+                  <Suspense fallback={null}>
+                    <ListingLocationsSection supabase={supabase} listingId={listing.id} className="order-3 lg:order-2" />
+                  </Suspense>
+                ) : null}
                 <ContactModule
                   listingId={listing.id}
                   href={contactHref}

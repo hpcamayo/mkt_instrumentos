@@ -890,3 +890,23 @@ Sprint 8 implementation clarification: Admin authorization is checked server-sid
 Sprint 9 implementation clarification: public discovery uses one canonical origin (`NEXT_PUBLIC_SITE_URL`, default `https://laria.audio`), per-page canonical/Open Graph metadata, `robots.txt`, a bounded dynamic sitemap of public pages, non-empty categories, approved listings and active stores, and Product/Store/Breadcrumb JSON-LD. Sold listings stay reachable at their direct URL but are `noindex` and excluded from the sitemap. Account, Admin, API, signup/onboarding (`/registro/vendedor`, `/registro/tienda`) and authentication utility routes are `noindex` through metadata and `X-Robots-Tag`, and Vercel preview deployments are never indexable. The account shell follows the frozen V1 order and groups profile and password under `Perfil y seguridad`. Sprint 9 adds no migration, scheduler, payment, escrow, shipping, chat or paid feature.
 
 Effortless Laria listing page clarification (batch "listing", proposed UXD-listing-3 to UXD-listing-10): the listing page shows up to five key specs in one line under the title; dates read as people say them ("Publicado hace 2 semanas", "Actualizado hace 3 días" only after a later content change), and a listing untouched for months invites checking availability. The seller card shows only facts Laria records (activity bucket, confirmed sales, account age, confirmed e-mail) and "Tienda verificada" opens to list what Laria checked by hand (RUC, razón social, address, a phone on file) and since when. The reviews section shows the count per star and loads every review on request. Similar listings are ranked by brand, a price within 30% and the city, in a scrollable row of up to eight. Photos can be zoomed in the lightbox by gesture, button or key. "Compartir" shares the link (or a story image) and links show a generated preview card for public listings. The owner of a listing sees shortcuts to edit, lower the price or mark it sold. `/instrumentos/<listing id>` redirects to the listing's slug.
+
+<!-- feature-ideas:store-locations -->
+## Feature ideas: store locations (sedes) and boleta electrónica
+
+Proposed with the store-locations batch (`docs/feature-ideas/store-locations.md`, FD-store-locations-1 to
+FD-store-locations-20); not part of V1 until merged.
+
+- **Sedes.** A store can add up to 20 sedes (name, place, hours, pickup, address shown only when the store agrees).
+  The store's total stock is split across its sedes; Inventario, the SKU page and the export show stock per sede, the
+  owner moves units between sedes and counts per sede, and a "Stock por sede" sheet counts many SKUs at once.
+  Movements that don't name a sede go to the main sede first.
+- **Mostrador per sede.** Mostrador sells from the sede chosen on that device; offline sales keep it.
+- **Listings and store page.** With two or more sedes, a listing with units says "Disponible en Miraflores y Centro"
+  and lets the buyer say where they'd pick it up (added to the WhatsApp message; not a reservation). The store page
+  lists the sedes. Quantities per sede are never public.
+- **Boleta electrónica.** A verified store connects its own Nubefact account. At Mostrador it can issue a boleta or
+  factura with the sale, with the customer's DNI or RUC, and send the PDF by e-mail (Nubefact) or WhatsApp. The store
+  is the issuer and pays Nubefact; Laria never charges or handles money. Comprobantes lists receipts, retries the ones
+  that did not reach Nubefact and voids accepted ones up to 7 days. Off until `LARIA_EINVOICE_KEY` is set.
+<!-- /feature-ideas:store-locations -->
