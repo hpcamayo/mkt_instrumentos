@@ -3,24 +3,27 @@ import { revalidatePath } from "next/cache";
 
 // Launch audit A19: listing pages and the home are cached and rebuilt in the background at most once a minute
 // (app/instrumentos/[slug]/page.tsx, app/page.tsx).
-// - When its owner or Admin changes a listing, its own page is dropped at once, so they see the change on their next
+// - When its owner or Admin changes a listing, its own page is cleared at once, so they see the change on their next
 //   visit (dropListingPages).
-// - A listing also shows on the home and in the "Similares" and "Más del vendedor" rows of other listings. Every
-//   change to a public listing, its photos or an active store is recorded in the database, whichever path made it,
-//   and within about a minute every cached listing page and the home are dropped (dropCachedListingPages, from
-//   app/api/internal/public-pages/refresh). That holds even when a rebuild fails, which otherwise keeps the old copy.
-// A failed drop of a listing's own page is caught up by the job; the job keeps its changes until a drop succeeds.
+// - A listing also shows on the home and in the "Similares" and "Más del vendedor" rows of other listings. Every change
+//   to what these pages show is recorded in the database, whichever path made it, and every minute while changes wait,
+//   every cached listing page and the home are cleared (dropCachedListingPages, from app/api/internal/public-pages/refresh),
+//   until the check page proves a clear reached the cache after each change.
+// A failed clear of a listing's own page is caught up by the job.
+export const CACHE_PROBE_PATH = "/api/public-pages/probe";
+
 export function dropListingPages(slugs: (string | null | undefined)[]) {
   for (const slug of new Set(slugs)) {
     if (slug) drop(`/instrumentos/${slug}`);
   }
 }
 
-// True when both drops were accepted.
+// True when every clear was accepted. Next.js sends them to the cache together, after the response. The check page goes
+// last and only after the pages, so it never shows a new nonce for a clear that left them out.
 export function dropCachedListingPages() {
   const listings = drop("/instrumentos/[slug]", "page");
   const home = drop("/");
-  return listings && home;
+  return listings && home && drop(CACHE_PROBE_PATH);
 }
 
 function drop(path: string, type?: "page") {

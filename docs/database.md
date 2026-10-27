@@ -1238,21 +1238,31 @@ be applied before the deploy.
 ## Launch audit: public page refresh
 
 Migration `20261112130000_launch_audit_page_refresh.sql` (finding A19 of the 26 Oct 2026 launch audit). Suite:
-`tests/launch-audit-page-refresh.sql`. Nothing before it reads the new table, so it can be applied before the deploy.
+`tests/launch-audit-page-refresh.sql`. Nothing before it reads the new tables, so it can be applied before the deploy.
 
-- `laria_private.public_page_changes` (`id` identity, `changed_at`, `claim_id`, `first_dropped_at`; no API access):
-  one row per statement that changes what the cached home and listing pages show. Statement-level triggers with
-  transition tables (`<table>_public_page_changes_insert|update|delete` on `listings`, `stores` and `listing_photos`)
-  write it: a listing public before or after the statement (`laria_private.listing_row_is_public`, the rule of
-  `listing_is_public` for a row's own values) added, removed or changed in any column but `view_count`,
-  `availability_checkin_at` and `updated_at`; an active store added, removed or changed in any column but `updated_at`,
-  or a store entering or leaving `active`; a photo of a public listing added, removed or changed. Writers only insert,
-  so they never wait on each other or on the job.
-- `claim_public_page_changes()` (service role only) puts a new claim on every row and returns it, or null when none
-  wait. `complete_public_page_changes(p_claim uuid)` (service role only), called after the job dropped the pages,
-  deletes the claim's rows first dropped at least 30 seconds earlier, records a first drop on the others and returns
-  the rows deleted. A claim another run took over since does nothing. The job is
-  `app/api/internal/public-pages/refresh/route.ts`, every minute from `vercel.json`.
-- Columns added later count as shown on a page. One that a job updates on public listings without any page showing it
-  belongs in the trigger's exclusion list, or the job clears the cache each time it runs.
+- `laria_private.public_page_changes` (`id` identity, `changed_at`, `claim_id`, `claimed_at`, `first_claimed_at`,
+  `armed_nonce`; no API access): one row per statement that changes what the cached home and listing pages show.
+  Statement-level triggers with transition tables (`<table>_public_page_changes_insert|update|delete`) write it:
+  - `listings`: a listing shown publicly before or after the statement (`laria_private.listing_row_is_shown`: approved
+    or sold, from a Particular or an active store, for a row's own values) added, removed or changed in any column but
+    `view_count`, `availability_checkin_at` and `updated_at`;
+  - `listing_photos`: a photo of such a listing added, removed or changed in any column but `updated_at`;
+  - `stores`: a store entering or leaving `active`, or an active store added, removed or changed in a column the pages
+    show (`laria_private.mark_store_page_changes` lists them; e-mail, contact person, plan and the like don't count);
+  - `profiles` (update and delete only): `full_name`, `phone`, `city`, `region` or `created_at` changed, or a profile
+    removed;
+  - `transaction_reviews`: a buyer's review of a seller added, changed or removed.
+  Writers only insert, so they never wait on each other or on the job.
+- `laria_private.public_page_deployment`: the deployment the job last ran in (one row).
+- `claim_public_page_changes(p_deployment text default null)` (service role only): a deployment other than the last one
+  adds a row; then it puts a new claim on every row, folds rows waiting for the same thing into one (not armed and first
+  claimed by the same run, or armed with the same nonce), and returns the claim, or null when none wait.
+- `complete_public_page_changes(p_claim uuid, p_nonce text)` (service role only): `p_nonce` is the check page's nonce
+  (`app/api/public-pages/probe`) the run read after claiming, or null. It deletes the claim's rows armed with another
+  nonce (a clear reached the cache since), arms the rows first claimed at least 35 seconds before this claim with
+  `p_nonce`, and returns `{done, waiting}`. A claim another run took over since does nothing. The job is
+  `app/api/internal/public-pages/refresh/route.ts`, every minute from `vercel.json`; it clears the pages while rows wait.
+- Columns added later count as shown on a page, except on `stores` and `profiles`, which list theirs. A column that a
+  job updates on shown listings without any page showing it belongs in the listing trigger's exclusion list, or the job
+  clears the cache each time it runs; a new store or profile field a cached page shows belongs in its list.
 <!-- /launch-audit:page-refresh -->

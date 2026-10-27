@@ -1,8 +1,8 @@
 // Launch audit A19: public pages come from the cache. The home and the listing pages are rebuilt in the background at
 // most once a minute and the sitemap once an hour; the category landings, which read ?page, render on every request
-// from their own folders; when a listing's owner or Admin changes it, its own page is dropped at once; every change to
-// a public listing, its photos or an active store is recorded, and every cached listing page and the home are dropped
-// within the minute; a failed read is never cached.
+// from their own folders; when a listing's owner or Admin changes it, its own page is cleared at once; every change to
+// what the cached pages show is recorded, and every cached listing page and the home are cleared every minute until a
+// check page proves the cache took a clear after it; a failed read is never cached.
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
@@ -70,11 +70,11 @@ function query(result) {
   return builder;
 }
 
-test("A19: a listing's own page, or every listing page and the home, are dropped, and a failed drop breaks nothing", () => {
+test("A19: a listing's own page, or every listing page, the home and the check page, are cleared, and a failed clear breaks nothing", () => {
   const calls = [];
   let failing = null;
   const warnings = [];
-  const { dropListingPages, dropCachedListingPages } = loadModule("lib/listing-cache.ts", {
+  const { dropListingPages, dropCachedListingPages, CACHE_PROBE_PATH } = loadModule("lib/listing-cache.ts", {
     "server-only": {},
     "next/cache": { revalidatePath: (...args) => { if (failing === args[0]) throw new Error("cache unavailable"); calls.push(args.filter(Boolean)); } },
   });
@@ -82,89 +82,172 @@ test("A19: a listing's own page, or every listing page and the home, are dropped
   console.warn = (...args) => warnings.push(args.join(" "));
   try {
     dropListingPages(["fender-stratocaster-1b2c", null, "fender-stratocaster-1b2c", "", "yamaha-c40"]);
-    // Every listing page (its own, and the "Similares" and "Más del vendedor" rows of the others) and the home.
+    // Every listing page (its own, and the "Similares" and "Más del vendedor" rows of the others), the home, then the
+    // check page.
     assert.equal(dropCachedListingPages(), true);
-    // A failed drop is reported, and the other one is still tried.
+    // A failed clear is reported, the other page is still tried, and the check page is left alone: it shows no clear.
     failing = "/instrumentos/[slug]";
     assert.equal(dropCachedListingPages(), false);
     failing = "/";
     assert.equal(dropCachedListingPages(), false);
+    failing = CACHE_PROBE_PATH;
+    assert.equal(dropCachedListingPages(), false);
   } finally {
     console.warn = warn;
   }
+  assert.equal(CACHE_PROBE_PATH, "/api/public-pages/probe");
   assert.deepEqual(calls, [
-    ["/instrumentos/fender-stratocaster-1b2c"], ["/instrumentos/yamaha-c40"], ["/instrumentos/[slug]", "page"], ["/"],
-    ["/"], ["/instrumentos/[slug]", "page"],
+    ["/instrumentos/fender-stratocaster-1b2c"], ["/instrumentos/yamaha-c40"],
+    ["/instrumentos/[slug]", "page"], ["/"], ["/api/public-pages/probe"],
+    ["/"],
+    ["/instrumentos/[slug]", "page"],
+    ["/instrumentos/[slug]", "page"], ["/"],
   ]);
-  assert.equal(warnings.length, 2);
+  assert.equal(warnings.length, 3);
   assert.match(warnings[0], /listing-page-refresh-failed cache unavailable/);
 });
 
-test("A19: every minute, recorded changes to public pages drop every cached listing page and the home, then are reported", async () => {
-  const before = process.env.CRON_SECRET;
+test("A19: the check page is cached until a clear and says only its nonce", async () => {
+  const source = read("app/api/public-pages/probe/route.ts");
+  assert.match(source, /\nexport const dynamic = "force-static";\nexport const revalidate = false;\n/);
+  assert.doesNotMatch(source, REQUEST_BOUND);
+  const { GET } = loadModule("app/api/public-pages/probe/route.ts", { "next/server": nextServer });
+  const first = await GET().json();
+  assert.deepEqual(Object.keys(first), ["nonce"]);
+  assert.match(first.nonce, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.notEqual((await GET().json()).nonce, first.nonce);
+});
+
+test("A19: every minute, recorded changes clear every cached page until the check page proves a clear after them", async () => {
+  const before = { secret: process.env.CRON_SECRET, deployment: process.env.VERCEL_DEPLOYMENT_ID, url: process.env.VERCEL_URL };
   process.env.CRON_SECRET = "local-scheduler-secret";
+  process.env.VERCEL_DEPLOYMENT_ID = "dpl_4Kc2";
+  delete process.env.VERCEL_URL;
+  const SECRET = "Bearer local-scheduler-secret";
+  const CLAIM = "7d420173-2925-4e4d-a5a0-405f12a61c59";
+  const NONCE_A = "0f1e2d3c-4b5a-4968-8776-655443322110";
+  const NONCE_B = "9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6d";
   const steps = [];
+  const probes = [];
+  const fetched = [];
   let claim = null;
+  let report = { done: 0, waiting: 1 };
   let failing = null;
   let dropWorks = true;
   const admin = {
     from: () => { throw new Error("the job reads only the record"); },
     rpc: async (name, args) => {
-      steps.push(args ? [name, args] : [name]);
+      steps.push([name, args]);
       if (failing === name) return { data: null, error: { message: "timeout" } };
-      return { data: name === "claim_public_page_changes" ? claim : 2, error: null };
+      return { data: name === "claim_public_page_changes" ? claim : report, error: null };
     },
+  };
+  const fetchBefore = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    steps.push(["probe"]);
+    fetched.push([url, init.headers["User-Agent"], typeof init.signal?.aborted]);
+    const next = probes.shift() ?? { status: 200, headers: { "x-vercel-cache": "HIT" }, body: { nonce: NONCE_A } };
+    if (next instanceof Error) throw next;
+    return new Response(JSON.stringify(next.body), { status: next.status, headers: next.headers });
   };
   const route = loadModule("app/api/internal/public-pages/refresh/route.ts", {
     "next/server": nextServer,
+    "node:timers/promises": { setTimeout: async (ms) => { steps.push(["wait", ms]); } },
+    "@/lib/site": { absoluteUrl: (path) => `https://laria.audio${path}` },
     "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => admin },
-    "@/lib/listing-cache": { dropCachedListingPages: () => { steps.push(["drop"]); return dropWorks; } },
+    "@/lib/listing-cache": { CACHE_PROBE_PATH: "/api/public-pages/probe", dropCachedListingPages: () => { steps.push(["drop"]); return dropWorks; } },
   });
   const get = async (authorization) => {
     const response = await route.GET(new Request("http://localhost/api/internal/public-pages/refresh", authorization ? { headers: { Authorization: authorization } } : {}));
     return { status: response.status, body: await response.json(), cache: response.headers.get("cache-control") };
   };
+  const claimed = (deployment = "dpl_4Kc2") => ["claim_public_page_changes", { p_deployment: deployment }];
+  const reported = (nonce) => ["complete_public_page_changes", { p_claim: CLAIM, p_nonce: nonce }];
   const logs = [];
-  const info = console.info;
-  const error = console.error;
+  const consoleBefore = { info: console.info, warn: console.warn, error: console.error };
   console.info = (...args) => logs.push(args.join(" "));
+  console.warn = (...args) => logs.push(args.join(" "));
   console.error = (...args) => logs.push(args.join(" "));
   try {
     assert.equal((await get()).status, 401);
     assert.equal((await get("Bearer ordinary-user-token")).status, 401);
     // Same length in characters, longer in bytes: refused, not an error.
-    assert.equal((await get(`Bearer local-scheduler-secre\u00e9`)).status, 401);
+    assert.equal((await get(`Bearer local-scheduler-secreé`)).status, 401);
     assert.deepEqual(steps, []);
 
-    // A quiet minute drops nothing.
-    assert.deepEqual(await get("Bearer local-scheduler-secret"), { status: 200, body: { refreshed: false }, cache: "no-store" });
-    assert.deepEqual(steps.splice(0), [["claim_public_page_changes"]]);
+    // A quiet minute: one call naming the deployment, nothing read or cleared.
+    assert.deepEqual(await get(SECRET), { status: 200, body: { refreshed: false }, cache: "no-store" });
+    assert.deepEqual(steps.splice(0), [claimed()]);
 
-    // Waiting changes: claimed, every page dropped, then reported with the claim.
-    claim = "7d420173-2925-4e4d-a5a0-405f12a61c59";
-    assert.deepEqual(await get("Bearer local-scheduler-secret"), { status: 200, body: { refreshed: true }, cache: "no-store" });
-    assert.deepEqual(steps.splice(0), [["claim_public_page_changes"], ["drop"], ["complete_public_page_changes", { p_claim: claim }]]);
-    assert.match(logs.at(-1), /public_pages_refreshed \{"done":2\}/);
+    // Waiting changes: claimed, the check page read, the nonce reported, and every page cleared while changes wait.
+    claim = CLAIM;
+    assert.deepEqual(await get(SECRET), { status: 200, body: { refreshed: true }, cache: "no-store" });
+    assert.deepEqual(steps.splice(0), [claimed(), ["probe"], reported(NONCE_A), ["drop"]]);
+    assert.deepEqual(fetched.at(-1), ["https://laria.audio/api/public-pages/probe", "Laria public pages refresh", "boolean"]);
+    assert.match(logs.at(-1), /^public_pages_refreshed \{"done":0,"waiting":1,"checked":true\}$/);
 
-    // A failed drop is not reported, so the changes wait for the next run.
+    // Once nothing waits, nothing is cleared.
+    report = { done: 1, waiting: 0 };
+    assert.equal((await get(SECRET)).status, 200);
+    assert.deepEqual(steps.splice(0), [claimed(), ["probe"], reported(NONCE_A)]);
+    assert.match(logs.at(-1), /^public_pages_refreshed \{"done":1,"waiting":0,"checked":true\}$/);
+    report = { done: 0, waiting: 1 };
+
+    // A stale copy, served while the check page rebuilds, is read again a second later; locally Next.js names the copy.
+    probes.push({ status: 200, headers: { "x-vercel-cache": "STALE" }, body: { nonce: NONCE_A } },
+      { status: 200, headers: { "x-nextjs-cache": "MISS" }, body: { nonce: NONCE_B } });
+    assert.equal((await get(SECRET)).status, 200);
+    assert.deepEqual(steps.splice(0), [claimed(), ["probe"], ["wait", 1000], ["probe"], reported(NONCE_B), ["drop"]]);
+
+    // A check page that can't be read: three tries, then a report without a nonce, and the pages are still cleared.
+    probes.push(new Error("The operation was aborted due to timeout"),
+      { status: 500, headers: { "x-vercel-cache": "MISS" }, body: { nonce: NONCE_B } },
+      { status: 200, headers: { "x-vercel-cache": "HIT" }, body: { nonce: "not-a-nonce" } });
+    assert.equal((await get(SECRET)).status, 200);
+    assert.deepEqual(steps.splice(0), [claimed(), ["probe"], ["wait", 1000], ["probe"], ["wait", 1000], ["probe"], reported(null), ["drop"]]);
+    assert.ok(logs.includes('public_pages_probe_unavailable {"seen":"HIT"}'));
+    assert.match(logs.at(-1), /"checked":false/);
+    // A copy that names no cache isn't the cache's.
+    probes.push(...Array(3).fill({ status: 200, headers: {}, body: { nonce: NONCE_B } }));
+    await get(SECRET);
+    assert.deepEqual(steps.splice(0).filter(([step]) => step !== "wait").at(-2), reported(null));
+
+    // A failed clear is an error, and the changes wait for the next run.
     dropWorks = false;
-    assert.equal((await get("Bearer local-scheduler-secret")).status, 503);
-    assert.deepEqual(steps.splice(0), [["claim_public_page_changes"], ["drop"]]);
+    assert.equal((await get(SECRET)).status, 503);
+    assert.deepEqual(steps.splice(0), [claimed(), ["probe"], reported(NONCE_A), ["drop"]]);
     dropWorks = true;
 
-    // Without the record nothing is dropped, so the cached copies keep serving; a failed report is an error too.
+    // Without the record nothing is cleared, so the cached copies keep serving.
     failing = "claim_public_page_changes";
-    assert.equal((await get("Bearer local-scheduler-secret")).status, 503);
-    assert.deepEqual(steps.splice(0), [["claim_public_page_changes"]]);
+    assert.equal((await get(SECRET)).status, 503);
+    assert.deepEqual(steps.splice(0), [claimed()]);
+    // After a failed report the changes still wait: the pages are cleared anyway, and the run is an error.
     failing = "complete_public_page_changes";
-    assert.equal((await get("Bearer local-scheduler-secret")).status, 503);
-    assert.deepEqual(steps.splice(0), [["claim_public_page_changes"], ["drop"], ["complete_public_page_changes", { p_claim: claim }]]);
-    assert.match(logs.at(-1), /public_pages_refresh_failure \{"step":"complete","message":"timeout"\}/);
+    assert.equal((await get(SECRET)).status, 503);
+    assert.deepEqual(steps.splice(0), [claimed(), ["probe"], reported(NONCE_A), ["drop"]]);
+    assert.match(logs.at(-1), /^public_pages_refresh_failure \{"step":"complete","message":"timeout"\}$/);
+    failing = null;
+    report = 3;
+    assert.equal((await get(SECRET)).status, 503);
+    assert.deepEqual(steps.splice(0).at(-1), ["drop"]);
+    report = { done: 0, waiting: 1 };
+
+    // Each deployment is named by its id, or its address; locally by nothing.
+    delete process.env.VERCEL_DEPLOYMENT_ID;
+    process.env.VERCEL_URL = "mkt-instrumentos-4kc2.vercel.app";
+    claim = null;
+    await get(SECRET);
+    delete process.env.VERCEL_URL;
+    await get(SECRET);
+    assert.deepEqual(steps.splice(0), [claimed("mkt-instrumentos-4kc2.vercel.app"), claimed(null)]);
   } finally {
-    console.info = info;
-    console.error = error;
-    if (before === undefined) delete process.env.CRON_SECRET;
-    else process.env.CRON_SECRET = before;
+    Object.assign(console, consoleBefore);
+    globalThis.fetch = fetchBefore;
+    for (const [name, value] of [["CRON_SECRET", before.secret], ["VERCEL_DEPLOYMENT_ID", before.deployment], ["VERCEL_URL", before.url]]) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
   }
 
   // Scheduled every minute.
@@ -172,17 +255,37 @@ test("A19: every minute, recorded changes to public pages drop every cached list
   assert.deepEqual(crons.find((cron) => cron.path === "/api/internal/public-pages/refresh"), { path: "/api/internal/public-pages/refresh", schedule: "* * * * *" });
 });
 
-test("A19: the database records changes to public listings, photos and active stores for the job", () => {
+test("A19: the database records changes to what the cached pages show, from listings to reviews", () => {
   const migration = read("supabase/migrations/20261112130000_launch_audit_page_refresh.sql");
-  for (const table of ["listings", "stores", "listing_photos"]) {
-    for (const event of ["insert", "update", "delete"]) {
+  const triggers = { listings: ["insert", "update", "delete"], listing_photos: ["insert", "update", "delete"], stores: ["insert", "update", "delete"], profiles: ["update", "delete"], transaction_reviews: ["insert", "update", "delete"] };
+  for (const [table, events] of Object.entries(triggers)) {
+    for (const event of events) {
       assert.match(migration, new RegExp(`create trigger ${table}_public_page_changes_${event}\\nafter ${event} on public\\.${table}\\nreferencing [^\\n]+\\nfor each statement`), `${table} ${event}`);
     }
   }
-  // View counts and the check-in reminder's time change no page.
+  assert.equal(migration.match(/^create trigger /gm).length, 14);
+  // View counts and the check-in reminder's time change no page; sold listings stay at their address.
   assert.match(migration, /array\['view_count', 'availability_checkin_at', 'updated_at'\]/);
+  assert.match(migration, /select p_status in \('approved', 'sold'\)/);
+  // Every store field a cached page reads counts, and nothing else does.
+  const counted = new Set([...migration.match(/row\(o\.status[\s\S]*?\)\n/)[0].matchAll(/o\.(\w+)/g)].map((match) => match[1]));
+  const listingPage = read("app/instrumentos/[slug]/page.tsx");
+  const shown = [
+    ...listingPage.match(/\n {8}stores \(([\s\S]*?)\)/)[1].split(","),
+    ...read("lib/catalog.ts").match(/const STORE_AND_PHOTO_COLUMNS = ` \(([\s\S]*?)\)/)[1].split(","),
+    ...read("lib/home.ts").match(/\.from\("stores"\)\s*\.select\("([^"]+)"\)/)[1].split(","),
+    ...[...read("supabase/migrations/20261109120000_ux_effortless_integration.sql")
+      .match(/function public\.get_public_seller_facts[\s\S]*?\n\$\$;/)[0].matchAll(/store_row\.(\w+)/g)].map((match) => match[1]),
+  ].map((field) => field.trim()).filter((field) => field && field !== "id");
+  for (const field of shown) assert.ok(counted.has(field), `store field ${field} is shown but not counted`);
+  for (const field of ["email", "contact_person", "listing_plan", "rejection_reason", "updated_at"]) assert.ok(!counted.has(field), field);
+  // The seller's and reviewers' names, the seller's contact and start date.
+  assert.match(migration, /where row\(o\.full_name, o\.phone, o\.city, o\.region, o\.created_at\)/);
+  for (const field of ["full_name", "phone", "city", "region", "created_at"]) assert.match(listingPage, new RegExp(`profiles!listings_owner_user_id_fkey \\([^)]*\\b${field}\\b`), field);
   // The claim and the report are the service role's alone (tests/launch-audit-page-refresh.sql runs them).
-  assert.match(migration, /grant execute on function public\.claim_public_page_changes\(\), public\.complete_public_page_changes\(uuid\)\nto service_role;/);
+  assert.match(migration, /grant execute on function public\.claim_public_page_changes\(text\), public\.complete_public_page_changes\(uuid, text\)\nto service_role;/);
+  assert.match(migration, /claimed_at >= first_claimed_at \+ interval '35 seconds'/);
+  for (const page of ["app/page.tsx", "app/instrumentos/[slug]/page.tsx"]) assert.match(read(page), /\nexport const maxDuration = 30;\n/, page);
   assert.match(read("tests/launch-audit-page-refresh.sql"), /the third review's case/);
 });
 
