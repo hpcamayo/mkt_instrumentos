@@ -4,23 +4,19 @@ This checklist records infrastructure work that must be complete before Laria op
 
 ## Marketplace email worker — mandatory
 
-PRE-GO-LIVE on Vercel Hobby deliberately has no automatic worker registration. Controlled QA invokes `GET /api/internal/email/process` with the server-only `CRON_SECRET`. Durable jobs, retries and daily matches remain in Postgres until a protected worker invocation claims them. There is no pre-launch Immediate-email latency SLA.
+Scheduled since launch audit A25: Laria is on Vercel Pro, and `vercel.json` has Vercel Cron call `GET /api/internal/email/process` every 5 minutes with `Authorization: Bearer ${CRON_SECRET}` (Vercel adds it from the project's `CRON_SECRET`). The claim cancels e-mails past their kind's maximum age, sends an account's own e-mails before reminders and alerts, and stays within a daily limit (80, `laria_private.set_email_daily_limit`) so the backlog queued while no worker ran is never sent at once. The push worker runs at the same cadence and the import cleanup daily (`docs/owner-manual.md`, "E-mail, push and import jobs").
 
-Before go-live:
-
-1. Provision a supported automatic scheduler for the existing protected worker route.
-2. Start with an approximately 5–15 minute cadence.
-3. Verify the scheduler supplies `Authorization: Bearer ${CRON_SECRET}` and exposes no secret to browser code or logs.
+1. ~~Provision a supported automatic scheduler for the existing protected worker route.~~ Vercel Cron.
+2. ~~Start with an approximately 5–15 minute cadence.~~ Every 5 minutes.
+3. ~~Verify the scheduler supplies `Authorization: Bearer ${CRON_SECRET}` and exposes no secret to browser code or logs.~~ Vercel Cron sends the project's `CRON_SECRET`; the routes compare it in constant time.
 4. Run an empty protected scheduler smoke.
 5. Verify a new Immediate alert is delivered automatically without manual invocation.
 6. Verify retryable provider failure is picked up automatically without a duplicate logical send.
 7. Verify completed `America/Lima` daily windows are prepared and sent once, with no empty digest.
-8. Review Resend sending limits, bounce/complaint handling and current deliverability signals.
-9. Update architecture/operations documentation to remove the pre-go-live manual-worker limitation.
+8. Review Resend sending limits, bounce/complaint handling and current deliverability signals. On a paid Resend plan, raise the daily limit.
+9. ~~Update architecture/operations documentation to remove the pre-go-live manual-worker limitation.~~ Done with A25.
 
-Worker readiness (reviewed in Sprint 9, unchanged): `GET /api/internal/email/process` is `force-dynamic`, `maxDuration = 60`, authorizes only `Authorization: Bearer ${CRON_SECRET}` with a timing-safe comparison, prepares completed Lima daily windows, and processes at most four claimed batches of 25 per invocation. Claims, retries and daily-window preparation are idempotent in Postgres, so a 5–15 minute cadence (for example a Vercel Cron entry on a plan that allows it, or another trusted HTTPS scheduler) needs no code change. Sprint 9 deliberately adds no Supabase Cron, `vercel.json` cron or other interim workaround. `ALERT-005` stays Blocked until the natural daily-window owner test produces real evidence.
-
-Sprint 9 final launch acceptance must not close while this section remains incomplete.
+Worker readiness (reviewed in Sprint 9): `GET /api/internal/email/process` is `force-dynamic`, `maxDuration = 60`, authorizes only `Authorization: Bearer ${CRON_SECRET}` with a timing-safe comparison, prepares completed Lima daily windows, and processes at most four claimed batches of 25 per invocation. Claims, retries and daily-window preparation are idempotent in Postgres. `ALERT-005` stays Blocked until the natural daily-window owner test produces real evidence.
 
 ## Public discovery and SEO — mandatory
 

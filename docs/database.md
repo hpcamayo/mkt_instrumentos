@@ -1394,3 +1394,28 @@ application before it calls none of the new functions, so it can be applied befo
   EXCLUSIVE lock on its table. The first statement takes all of them at once with `nowait`, retrying for 30 seconds
   (`PRIVACY_TABLES_BUSY`); every other lock wait is capped at 10 seconds.
 <!-- /launch-audit:privacy -->
+
+<!-- launch-audit:email -->
+## Launch audit: e-mail backlog
+
+Migration `20261114160000_launch_audit_email_backlog.sql` (finding A25 of the 26 Oct 2026 launch audit). Suite:
+`tests/launch-audit-email-backlog.sql`. It changes only how `public.claim_marketplace_email_deliveries` picks e-mails,
+so it can be applied before the deploy that schedules the worker (`vercel.json`, every 5 minutes).
+
+- Maximum age (`laria_private.email_max_age(event_type)`): `search_alert_immediate` 1 day; `listing_price_drop`,
+  `listing_back_in_stock` and `search_alert_daily` 2 days; `follow_weekly`, `listing_availability_checkin`,
+  `listing_purchase_check`, `listing_purchase_confirmation_reminder` and `listing_review_reminder` 3 days; every other
+  kind, including any added later, 7 days. Each claim first cancels pending and retry e-mails older than that
+  (`status = 'cancelled'`, `failure_code = 'expired'`), after giving back stale worker locks and before the
+  out-of-stock check of review fix A7. Notifications are untouched.
+- Order (`laria_private.email_priority(event_type)`): 0 an account's own business (every kind not listed below), 1 the
+  four reminders above, 2 alerts and digests (`search_alert_immediate`, `search_alert_daily`, `listing_price_drop`,
+  `listing_back_in_stock`, `follow_weekly`); oldest first within each. The payload array follows the same order.
+- Daily limit: `laria_private.email_settings` (one row; `daily_limit` 80, `changed_at`, `changed_by`, `reason`; no API
+  access). A claim hands out at most `p_limit` and at most the limit minus the e-mails sent since midnight UTC
+  (Resend's daily reset; index `marketplace_email_sent_idx`) and those being sent. Claims take
+  `pg_advisory_xact_lock` so two at once can't spend the same allowance. `laria_private.set_email_daily_limit(limit,
+  reason)` is for an operator in the SQL editor (no API role may call it); 0 pauses marketplace e-mails.
+- Kinds the `features/marketplace` branch adds (account security, offers, trades, services) get 7 days and priority
+  0 unless it adds them to both functions.
+<!-- /launch-audit:email -->
