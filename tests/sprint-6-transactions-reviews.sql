@@ -345,7 +345,8 @@ end $$;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"61000000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 do $$ declare copy public.listings; begin
- copy:=public.relist_sold_listing('63000000-0000-4000-8000-000000000001');
+ -- The app's relist (launch audit A31 retired relist_sold_listing).
+ copy:=public.copy_owned_listing('63000000-0000-4000-8000-000000000001','relist');
  if copy.relisted_from_listing_id<>'63000000-0000-4000-8000-000000000001' then raise exception 'Relist lost original anchor'; end if;
  insert into qa_s6_ids values('relist',copy.id);
 end $$;

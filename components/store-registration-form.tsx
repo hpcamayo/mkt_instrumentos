@@ -24,6 +24,7 @@ import {
   SOCIAL_HINTS,
   STORE_IMAGE_GUIDANCE,
   normalizeSocialInput,
+  storeIdentityChanged,
   type SocialNetwork,
   type StorePrefill,
 } from "@/lib/store-profile";
@@ -53,6 +54,8 @@ export type StoreApplication = {
   status: "pending" | "active" | "hidden" | "rejected";
   is_verified: boolean;
   rejection_reason: string | null;
+  // A09: set while the badge waits for Laria after a change of name, RUC or razón social.
+  verification_lapsed_at?: string | null;
 };
 
 type StorePhoto = { id: string; image_url: string; alt_text: string | null };
@@ -76,6 +79,8 @@ export function StoreRegistrationForm({
 }) {
   const [confirm, confirmDialog] = useConfirm();
   const [businessChanged, setBusinessChanged] = useState(false);
+  // A09: a verified Tienda that changes its name, RUC or razón social keeps selling, but the badge waits for Laria.
+  const [badgeAtStake, setBadgeAtStake] = useState(false);
   const [validation, errorSummary] = useFormErrors("tienda-reg", "guardar los datos de la tienda");
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const submit = useMemo(() => (supabase ? createPublicSubmission(supabase) : null), [supabase]);
@@ -133,11 +138,17 @@ export function StoreRegistrationForm({
       setMessage("");
       return;
     }
-    // shop-03: ask before a business change that sends payment methods back to review.
-    if (store && hasPaymentMethods && (fields.ruc !== (store.ruc ?? "") || fields.razon_social !== (store.razon_social ?? ""))) {
+    // shop-03: ask before a business change that sends payment methods back to review. A09: and before a change that
+    // takes the verified badge off until Laria checks the business again.
+    const paymentsAtStake = Boolean(store && hasPaymentMethods && (fields.ruc !== (store.ruc ?? "") || fields.razon_social !== (store.razon_social ?? "")));
+    const verifiedAtStake = Boolean(store?.is_verified && storeIdentityChanged(store, fields));
+    if (paymentsAtStake || verifiedAtStake) {
       const ok = await confirm({
-        title: "¿Cambiar el RUC o la razón social?",
-        body: "Tus medios de pago vuelven a revisión y no se muestran a los compradores hasta que Laria los apruebe otra vez.",
+        title: verifiedAtStake ? "¿Cambiar los datos que verificamos?" : "¿Cambiar el RUC o la razón social?",
+        body: [
+          verifiedAtStake ? "Tu tienda sigue activa, pero deja de mostrarse como Tienda verificada hasta que Laria revise el cambio. Mientras tanto, tus publicaciones nuevas pasan por revisión." : "",
+          paymentsAtStake ? "Tus medios de pago vuelven a revisión y no se muestran a los compradores hasta que Laria los apruebe otra vez." : "",
+        ].filter(Boolean).join(" "),
         confirmLabel: "Guardar cambios",
         cancelLabel: "Revisar",
       });
@@ -231,6 +242,11 @@ export function StoreRegistrationForm({
     if (!form) return;
     const data = new FormData(form);
     setBusinessChanged(digits(text(data, "ruc")) !== (store.ruc ?? "") || text(data, "razon_social") !== (store.razon_social ?? ""));
+    setBadgeAtStake(store.is_verified && storeIdentityChanged(store, {
+      name: text(data, "name"),
+      ruc: digits(text(data, "ruc")),
+      razon_social: text(data, "razon_social"),
+    }));
   };
 
   return (
@@ -246,7 +262,7 @@ export function StoreRegistrationForm({
 
       <FormSection id="tienda-perfil-publico" title="Perfil público" hint="Lo que los compradores ven en tu página y en tus publicaciones.">
         <div className="grid gap-5 sm:grid-cols-2">
-          <StoreField label="Nombre público de la tienda" name="name" error={validation.errorFor("name")} defaultValue={defaults.name} />
+          <StoreField label="Nombre público de la tienda" name="name" error={validation.errorFor("name")} defaultValue={defaults.name} onInput={watchBusiness} />
           <Field id="tienda-reg-whatsapp_phone" label="WhatsApp para compradores" error={validation.errorFor("whatsapp_phone")}><PhoneInput name="whatsapp_phone" required defaultValue={defaults.whatsapp_phone} /></Field>
           <LocationFields idPrefix="tienda-reg" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} defaultCity={defaults.city ?? undefined} defaultRegion={defaults.region ?? undefined} />
           <StoreField label="Distrito (opcional)" name="district" required={false} defaultValue={store?.district} />
@@ -282,6 +298,11 @@ export function StoreRegistrationForm({
               Laria revisa otra vez los datos de tu empresa
               {hasPaymentMethods ? ", y tus medios de pago vuelven a revisión: no se muestran a los compradores hasta que se aprueben otra vez" : ""}.
             </p>
+          </Notice>
+        ) : null}
+        {badgeAtStake ? (
+          <Notice tone="warning" title="La insignia de Tienda verificada espera una nueva revisión">
+            <p>Con otro nombre, RUC o razón social, tu tienda sigue activa pero deja de mostrarse como verificada hasta que Laria revise el cambio.</p>
           </Notice>
         ) : null}
         <Checkbox

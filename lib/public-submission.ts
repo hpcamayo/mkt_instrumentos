@@ -24,6 +24,17 @@ type Attempt = {
 export function createPublicSubmission(client: Client) {
   let attempt: Attempt | null = null;
   let busy = false;
+  // Launch audit A35: a token that expired while the form was open (a week, or a deploy that started expiring them) is
+  // refused before anything is written; renew it for the same submission, whose folder and photos carry over, and send
+  // once more.
+  const send = async (current: Attempt, payload: Record<string, unknown>) => {
+    const request = () => submissionRequest({ ...payload, token: current.token });
+    return request().catch(async (error) => {
+      if (!(error instanceof SubmissionRejected && error.expired)) throw error;
+      current.token = (await submissionRequest({ action: "renew", token: current.token })).token;
+      return request();
+    });
+  };
   return async (
     kind: Kind,
     fields: Record<string, unknown>,
@@ -53,7 +64,7 @@ export function createPublicSubmission(client: Client) {
           throw new Error(
             "Reintenta con los mismos datos y fotos para confirmar el envío anterior.",
           );
-        await submissionRequest({ action: "cleanup", token: attempt.token });
+        await send(attempt, { action: "cleanup" });
         attempt = null;
       }
       if (!attempt) {
@@ -98,10 +109,7 @@ export function createPublicSubmission(client: Client) {
           }
         } catch {
           try {
-            await submissionRequest({
-              action: "cleanup",
-              token: attempt.token,
-            });
+            await send(attempt, { action: "cleanup" });
             attempt = null;
           } catch {
             // Retain the token so a retry can reuse or clean the same folder.
@@ -114,9 +122,8 @@ export function createPublicSubmission(client: Client) {
       attempt.commitStarted = true;
       onProgress?.({ step: "complete" });
       try {
-        await submissionRequest({
+        await send(attempt, {
           action: "complete",
-          token: attempt.token,
           fields,
           paths,
           roles: files.map(({ role }) => role ?? null),
@@ -146,14 +153,19 @@ async function submissionRequest(payload: object) {
     body: JSON.stringify(payload),
   });
   const result = await response.json();
-  if (!response.ok)
-    throw new (result.rejected === true ? SubmissionRejected : Error)(
-      result.message ?? "No se pudo completar el envío. Intenta nuevamente.",
-    );
+  if (!response.ok) {
+    const message = result.message ?? "No se pudo completar el envío. Intenta nuevamente.";
+    throw result.rejected === true ? new SubmissionRejected(message, result.renew === true) : new Error(message);
+  }
   return result;
 }
 
-class SubmissionRejected extends Error {}
+class SubmissionRejected extends Error {
+  // The token expired; the submission can go on with a renewed one.
+  constructor(message: string, readonly expired = false) {
+    super(message);
+  }
+}
 
 function extension(type: string) {
   if (type === "image/jpeg") return "jpg";

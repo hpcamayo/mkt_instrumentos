@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { HTML_LIMITED_BOT_UA_RE } from "next/dist/shared/lib/router/utils/html-bots";
 import { NON_INDEXABLE_PATH_PREFIXES } from "./lib/site";
+import { securityHeaders } from "./lib/security-headers";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
@@ -21,6 +22,11 @@ const nextConfig: NextConfig = {
   htmlLimitedBots: HTML_LIMITED_BOTS,
   async headers() {
     return [
+      // Launch audit A11: CSP, framing, sniffing, referrer and permissions on every response.
+      {
+        source: "/:path*",
+        headers: securityHeaders({ supabaseUrl, vercelEnv: process.env.VERCEL_ENV, nodeEnv: process.env.NODE_ENV }),
+      },
       ...noIndexSources.map((source) => ({
         source,
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
@@ -31,20 +37,22 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // Launch audit A24: the optimizer only resizes Laria's own public photos (listings and store images), so nobody
+    // can spend the monthly transformations on someone else's images. placehold.co serves the seed data
+    // (supabase/seed.sql) outside production.
     remotePatterns: [
-      { protocol: "https", hostname: "placehold.co", pathname: "/**" },
+      ...(process.env.VERCEL_ENV === "production"
+        ? []
+        : [{ protocol: "https" as const, hostname: "placehold.co", pathname: "/**" }]),
       ...(supabaseUrl
-        ? [
-            {
-              protocol: new URL(supabaseUrl).protocol.replace(":", "") as
-                "https" | "http",
-              hostname: new URL(supabaseUrl).hostname,
-              port: new URL(supabaseUrl).port,
-              pathname: "/storage/v1/object/public/**",
-            },
-          ]
+        ? ["listing-photos", "store-assets"].map((bucket) => ({
+            protocol: new URL(supabaseUrl).protocol.replace(":", "") as
+              "https" | "http",
+            hostname: new URL(supabaseUrl).hostname,
+            port: new URL(supabaseUrl).port,
+            pathname: `/storage/v1/object/public/${bucket}/**`,
+          }))
         : []),
-      { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
     ],
   },
 };

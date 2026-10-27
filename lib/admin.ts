@@ -91,6 +91,7 @@ const ADMIN_VALUE_LABELS: Record<string, string> = {
   store_hidden: "Tienda ocultada",
   store_verified: "Tienda verificada",
   store_verification_revoked: "Verificación revocada",
+  store_identity_changed: "Cambió el nombre, el RUC o la razón social",
   store_profile_updated: "Perfil de tienda actualizado",
   report_resolved: "Reporte resuelto",
   report_dismissed: "Reporte desestimado",
