@@ -43,9 +43,15 @@ $$;
 create function pg_temp.method_revision(p_method text) returns integer language sql security definer as $$
   select revision from public.store_payment_methods where store_id = current_setting('qa.store_a')::uuid and method = p_method::public.store_payment_method
 $$;
+-- Owners act on a second-step session (aal2), as safe-08 requires once a store has an approved payment method;
+-- as_first_step is the session without it.
 create function pg_temp.as_user(p_name text) returns void language plpgsql as $$
 begin
-  perform set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.id(p_name), 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.id(p_name), 'role', 'authenticated', 'aal', 'aal2')::text, true);
+end $$;
+create function pg_temp.as_first_step(p_name text) returns void language plpgsql as $$
+begin
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.id(p_name), 'role', 'authenticated', 'aal', 'aal1')::text, true);
 end $$;
 create function pg_temp.as_admin() returns void language plpgsql as $$
 begin
@@ -249,6 +255,13 @@ select pg_temp.review_method('link_de_pago', 'approve');
 select pg_temp.check(pg_temp.cuotas('cuotas-cara') = 12, 'installments not back with an approved card method');
 
 -- ------------------------------------------------------------------ changes, rejection, disabling, withdrawal
+
+-- safe-08: with an approved payment method, a first-step session cannot change the installments.
+select pg_temp.as_first_step('owner_a');
+do $$ begin
+  perform pg_temp.expect_error($q$select public.set_store_installments(6, '{}', null, null, true)$q$, 'TWO_STEP_REQUIRED');
+  perform pg_temp.expect_error($q$select public.withdraw_store_installments()$q$, 'TWO_STEP_REQUIRED');
+end $$;
 
 select pg_temp.as_user('owner_a');
 do $$ declare result jsonb; begin

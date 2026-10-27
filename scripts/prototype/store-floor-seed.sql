@@ -54,7 +54,8 @@ begin
     raise notice 'Cuotas not present; skipping';
     return;
   end if;
-  perform set_config('request.jwt.claims', '{"sub":"d0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+  -- A second-step session (safe-08): the store has an approved payment method.
+  perform set_config('request.jwt.claims', '{"sub":"d0000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2"}', true);
   perform public.set_store_installments(12, array['BCP', 'BBVA', 'Interbank'], 500, 'Las procesa Izipay en el POS.', true);
   perform set_config('request.jwt.claims',
     '{"sub":"d0000000-0000-4000-8000-000000000002","role":"authenticated","app_metadata":{"role":"admin"}}', true);

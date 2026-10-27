@@ -1198,8 +1198,9 @@ Migration `20261109120000_ux_effortless_integration.sql` (not applied to any hos
 <!-- feature-ideas:store-floor -->
 ## Feature ideas: store floor (arrivals, warranty and returns, try-outs)
 
-Migrations `20261206120000`–`20261206120300` (not applied to any hosted database). Write-up:
-`docs/feature-ideas/store-floor.md`. Suite: `tests/store-floor.sql`. No shared function is redefined.
+Migrations `20261206120000`–`20261206120400` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/store-floor.md`. Suites: `tests/store-floor.sql`, `tests/store-installments.sql`. No shared
+function is redefined.
 
 - `public.store_warranty_policies` (pk store_id, condition_group new|open_box|used; warranty_months 0–60,
   warranty_provider store|brand (only with months), returns_days 0–30, returns_note 1–100 (only with days)): public for
@@ -1233,6 +1234,21 @@ Migrations `20261206120000`–`20261206120300` (not applied to any hosted databa
 - `public.run_store_floor_daily()` (service_role): `laria_private.expire_arrival_estimates()` then
   `laria_private.run_tryout_daily()` (expire unanswered requests, one reminder for today and tomorrow, delete try-outs
   90 days past). Idempotent.
+- buy-09, `20261206120400`: `public.store_installment_offers` (pk store_id; max_installments 2–36, cards text[] from
+  `laria_private.installment_card_options()`, min_price_pen, owner_note, status
+  pending_review|approved|rejected|disabled|withdrawn, revision, reviewed_by/at, review_reason) and the append-only
+  `public.store_installment_offer_changes`; owner and Admin read only, safe-08's second step for owner writes.
+  Functions: `set_store_installments(integer, text[], integer, text, boolean)` (pilot on, verified store, a card method
+  proposed or approved, p_interest_free true), `withdraw_store_installments()`, `admin_review_store_installments(uuid,
+  text, text, integer)` (audited `store_installments_<state>`), `get_admin_store_installment_offers(text, integer,
+  integer)`, `get_store_installment_offer(uuid)` (anon; null unless public through
+  `laria_private.public_installment_offer`: pilot on, approved, store active and verified, an approved card method).
+- `public.listings.installments_max` (smallint 2–36): the public offer's count for a store listing at or above its
+  minimum price, set by the BEFORE trigger `listings_a_store_installments` whenever written;
+  `laria_private.refresh_store_installments(uuid)` recomputes a store's unsold listings (locked in id order), called by
+  the owner and Admin functions and by triggers on `store_payment_methods` (status), `stores` (status, is_verified) and
+  `laria_private.assisted_commerce_settings` (pilot_enabled). Listing flag `acepta_cuotas` (sort 50), appended by its
+  own trigger `listings_flags_store_floor_installments`.
 <!-- /feature-ideas:store-floor -->
 
 <!-- feature-ideas:listing-details -->

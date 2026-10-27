@@ -67,6 +67,12 @@ create trigger store_installment_offers_bump_revision
 before update on public.store_installment_offers
 for each row execute function laria_private.bump_payment_method_revision();
 
+-- safe-08 (accounts batch, 20261201120000): like its payment methods, a store with an approved method changes its
+-- installments only from a second-step session. Admin decisions pass, as they do for methods.
+create trigger store_installment_offers_require_two_step
+before insert or update or delete on public.store_installment_offers
+for each row execute function laria_private.require_two_step_for_store_change();
+
 create table public.store_installment_offer_changes (
   id             uuid primary key default gen_random_uuid(),
   store_id       uuid not null references public.stores(id) on delete cascade,
