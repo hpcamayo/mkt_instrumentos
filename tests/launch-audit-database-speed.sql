@@ -35,34 +35,72 @@ grant execute on function pg_temp.check(boolean, text), pg_temp.claims(text, boo
   pg_temp.plan(text)
 to anon, authenticated, service_role;
 
--- 1. Every foreign key of public and laria_private has an index that starts with its columns, but the three left out
--- on purpose: the fixed list of event types, and two keys whose first column has a unique index of its own.
-select pg_temp.check(coalesce((
-    select array_agg(fk order by fk)
-    from (
-      select c.conrelid::regclass::text || ' (' || (
-          select string_agg(a.attname, ', ' order by k.ord)
-          from unnest(c.conkey) with ordinality k(attnum, ord)
-          join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum
-        ) || ')' as fk
-      from pg_constraint c
-      join pg_class t on t.oid = c.conrelid
-      join pg_namespace n on n.oid = t.relnamespace
-      where c.contype = 'f' and n.nspname in ('public', 'laria_private')
-        and not exists (
-          select 1 from pg_index i
-          where i.indrelid = c.conrelid
-            and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] @> c.conkey
-            and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] <@ c.conkey)
-    ) keys
-  ), '{}') = array['marketplace_events (event_type)', 'store_import_photo_assignments (asset_id, session_id)',
-    'store_inventory_items (listing_id, store_id)'],
-  'every foreign key has an index but the three left out on purpose');
+-- 1. Every foreign key of public and laria_private has an index a lookup by the key can use, but the three left out on
+-- purpose: the fixed list of event types, and two keys whose first column has a unique index of its own. Such an index
+-- starts with the key's columns and has no condition, or only "<column> is not null" on those columns, which a lookup
+-- by equal values always meets. An index for only some rows (open ones, one kind) leaves the others to a full read.
+create function pg_temp.unindexed_keys(p_schemas text[]) returns text[] language sql as $$
+  select coalesce(array_agg(fk order by fk), '{}')
+  from (
+    select c.conrelid::regclass::text || ' (' || array_to_string(key.columns, ', ') || ')' as fk
+    from pg_constraint c
+    join pg_class t on t.oid = c.conrelid
+    join pg_namespace n on n.oid = t.relnamespace
+    cross join lateral (
+      select array(
+        select a.attname::text
+        from unnest(c.conkey) with ordinality k(attnum, ord)
+        join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum
+        order by k.ord) as columns
+    ) key
+    where c.contype = 'f' and n.nspname = any (p_schemas)
+      and not exists (
+        select 1 from pg_index i
+        where i.indrelid = c.conrelid
+          and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] @> c.conkey
+          and (i.indkey::int2[])[0:cardinality(c.conkey) - 1] <@ c.conkey
+          and (i.indpred is null or not exists (
+            select 1
+            from regexp_split_to_table(
+              regexp_replace(pg_get_expr(i.indpred, i.indrelid), '[()]', '', 'g'), ' AND ') part
+            where part !~ '^[a-z_][a-z0-9_]* IS NOT NULL$' or split_part(part, ' ', 1) <> all (key.columns))))
+  ) keys
+$$;
+-- The check itself, on tables made for it.
+create schema a34_check;
+create table a34_check.parent (id integer primary key, code integer not null, unique (id, code));
+create table a34_check.full_index (parent_id integer not null references a34_check.parent);
+create index on a34_check.full_index (parent_id);
+create table a34_check.not_null_index (parent_id integer references a34_check.parent, note text);
+create index on a34_check.not_null_index (parent_id, note) where parent_id is not null;
+create table a34_check.two_columns (parent_id integer, code integer,
+  foreign key (parent_id, code) references a34_check.parent (id, code));
+create index on a34_check.two_columns (code, parent_id) where parent_id is not null and code is not null;
+create table a34_check.open_rows_only (parent_id integer not null references a34_check.parent, open boolean not null);
+create index on a34_check.open_rows_only (parent_id) where open;
+create table a34_check.one_kind_each (parent_id integer not null references a34_check.parent, kind text not null);
+create index on a34_check.one_kind_each (parent_id) where kind = 'a';
+create index on a34_check.one_kind_each (parent_id) where kind <> 'a';
+create table a34_check.other_column (parent_id integer references a34_check.parent, session_id uuid);
+create index on a34_check.other_column (parent_id, session_id) where parent_id is not null and session_id is not null;
+create table a34_check.either_column (parent_id integer references a34_check.parent, note text);
+create index on a34_check.either_column (parent_id) where parent_id is not null or note is not null;
+create table a34_check.second_column (parent_id integer not null references a34_check.parent, note text);
+create index on a34_check.second_column (note, parent_id);
+create table a34_check.no_index (parent_id integer references a34_check.parent);
+select pg_temp.check(pg_temp.unindexed_keys(array['a34_check']) = array['a34_check.either_column (parent_id)',
+    'a34_check.no_index (parent_id)', 'a34_check.one_kind_each (parent_id)', 'a34_check.open_rows_only (parent_id)',
+    'a34_check.other_column (parent_id)', 'a34_check.second_column (parent_id)'],
+  'the check takes an index with no condition or only "is not null" on the key, and no other');
+drop schema a34_check cascade;
+select pg_temp.check(pg_temp.unindexed_keys(array['public', 'laria_private']) = array['marketplace_events (event_type)',
+    'store_import_photo_assignments (asset_id, session_id)', 'store_inventory_items (listing_id, store_id)'],
+  'every foreign key has an index a lookup by it can use, but the three left out on purpose');
 select pg_temp.check(
-  (select indisunique and indkey[0] = (select attnum from pg_attribute
+  (select indisunique and indpred is null and indkey[0] = (select attnum from pg_attribute
       where attrelid = 'public.store_inventory_items'::regclass and attname = 'listing_id')
     from pg_index where indexrelid = 'public.store_inventory_items_listing_id_key'::regclass)
-  and (select indisunique and indkey[0] = (select attnum from pg_attribute
+  and (select indisunique and indpred is null and indkey[0] = (select attnum from pg_attribute
       where attrelid = 'public.store_import_photo_assignments'::regclass and attname = 'asset_id')
     from pg_index where indexrelid = 'public.store_import_photo_assignments_pkey'::regclass),
   'the two keys left out find their one row through a unique index on their first column');

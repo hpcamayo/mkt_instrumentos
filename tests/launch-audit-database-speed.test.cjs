@@ -26,7 +26,7 @@ test("A34: the index migration locks every table it indexes first, without waiti
   const { mode, tables } = lockedTables(sql);
   assert.equal(mode, "share");
   const indexed = [...sql.matchAll(/create index if not exists \w+\s+on (\w+\.\w+) \(/g)].map((match) => match[1]);
-  assert.equal(indexed.length, 47);
+  assert.equal(indexed.length, 54);
   assert.deepEqual([...tables].sort(), [...new Set(indexed)].sort());
   assert.match(sql, /set lock_timeout = '10s';[\s\S]*reset lock_timeout;\s*$/);
   assert.doesNotMatch(sql, /concurrently/i, "a migration runs in a transaction, where concurrently can't");
