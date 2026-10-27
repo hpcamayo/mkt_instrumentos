@@ -48,14 +48,19 @@ async function edit(actor,item,price,extra={}){return await ok(await actor.clien
  await api(storeBuyer,{action:'set',id:live.id,saved:true});
  await edit(owner,live,1100);await edit(owner,live,1100);await edit(owner,live,1150);
  assert.equal((await notes(live)).length,2);
- const first=(await notes(live)).find(row=>row.user_id===buyer.id);assert.equal(first.old_price_pen,1200);assert.equal(first.new_price_pen,1100);assert.match(first.message,/S\/ 1200 a S\/ 1100/);
+ const first=(await notes(live)).find(row=>row.user_id===buyer.id);assert.equal(first.old_price_pen,1200);assert.equal(first.new_price_pen,1100);assert.match(first.message,/S\/ 1,200 a S\/ 1,100/);
  assert.equal((await ok(await other.client.from('notifications').select('*').eq('id',first.id))).length,0);
  assert.ok((await other.client.rpc('mark_notification_read',{p_notification_id:first.id})).error);
  await ok(await buyer.client.rpc('mark_notification_read',{p_notification_id:first.id}));
  await api(buyer,{action:'set',id:live.id,saved:false});await api(buyer,{action:'set',id:live.id,saved:false});
- await edit(owner,live,1000);assert.equal((await notes(live)).length,3);
+ // save-08 (Effortless Laria): a listing alerts at most once in 24 hours, and only for a drop of 5% or more. ageDrops
+ // moves its last alert a day back, as if the next edit came the day after.
+ const ageDrops=async()=>ok(await service.from('listing_price_drops').update({created_at:new Date(Date.now()-25*3600e3).toISOString()}).eq('listing_id',live.id));
+ await ageDrops();await edit(owner,live,1000);assert.equal((await notes(live)).length,3);
  await api(buyer,{action:'set',id:live.id,saved:true});assert.equal((await notes(live)).length,3,'No retrospective drop');
- await edit(owner,live,900);assert.equal((await notes(live)).length,5);
+ await edit(owner,live,950);assert.equal((await notes(live)).length,3,'A second drop within 24 hours alerts nobody');
+ await ageDrops();await edit(owner,live,920);assert.equal((await notes(live)).length,3,'A drop under 5% alerts nobody');
+ await edit(owner,live,850);assert.equal((await notes(live)).length,5);
  const report=await ok(await owner.client.rpc('get_account_analytics',{p_days:30}));assert.equal(report.summary.favorites,2);assert.equal(report.summary.favorite_additions,3);assert.equal(report.summary.favorite_removals,1);assert.equal(report.summary.favorite_rate,null);assert.ok(!JSON.stringify(report).includes(buyer.id));
  const store=await application(storeOwner),inventory=await listing(storeOwner,'approved',store);
  await api(buyer,{action:'set',id:inventory.id,saved:true},409);

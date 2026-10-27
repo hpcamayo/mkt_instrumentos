@@ -1,10 +1,12 @@
 // Sprint 4 actual-storage/API photo lifecycle proof. Local Supabase only.
 // LARIA_TEST_ENV_FILE=/absolute/local.env node tests/photos.integration.cjs http://localhost:3100
 // Add LARIA_PHOTO_BROWSER=1 for optional actual browser editor proof (agent-browser required).
-// LARIA_TEST_DB_CONTAINER selects an isolated local stack; defaults to the documented local project.
+// LARIA_TEST_DB_CONTAINER selects an isolated local stack; it defaults to the documented local project's, so a stack
+// whose API isn't on the CLI's default port must name its own.
 const assert = require("node:assert/strict");
 const { loadEnvFile } = require("node:process");
 const { createClient } = require("@supabase/supabase-js");
+const { enrollTwoStep, twoStepCookie } = require("./support/two-step.cjs");
 const { spawnSync } = require("node:child_process");
 
 loadEnvFile(process.env.LARIA_TEST_ENV_FILE ?? ".env.local");
@@ -26,6 +28,11 @@ const objects = [];
 const suffix = crypto.randomUUID();
 const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9S8AAAAASUVORK5CYII=", "base64");
 const privateBucket = "listing-edit-photos";
+// The default container belongs to the stack on the CLI's default API port; another stack's fixture must not reach it.
+assert.ok(
+  process.env.LARIA_TEST_DB_CONTAINER || new URL(url).port === "54321",
+  "Set LARIA_TEST_DB_CONTAINER to this stack's database container.",
+);
 const databaseContainer = process.env.LARIA_TEST_DB_CONTAINER ?? "supabase_db_mkt_instrumentos";
 assert.match(databaseContainer, /^supabase_db_[a-zA-Z0-9_-]+$/, "Use a local Supabase database container.");
 
@@ -376,12 +383,18 @@ async function createUser(label, type, appMetadata = {}) {
   const created = await service.auth.admin.createUser({ email: user.email, password: user.password, email_confirm: true, app_metadata: appMetadata, user_metadata: { account_type: type, full_name: "QA Sprint 4 Fotos", phone: "51999999301", city: "Lima", region: "Lima" } });
   assert.equal(created.error, null);
   user.id = created.data.user.id;
+  user.admin = appMetadata.role === "admin";
   users.push(user);
   return user;
 }
 async function signIn(user) {
   const client = createClient(url, anonKey, { auth: { persistSession: false } });
   assert.equal((await client.auth.signInWithPassword({ email: user.email, password: user.password })).error, null);
+  // Admin's pages, photos and functions need the authenticator code (aal2).
+  if (user.admin) {
+    const factor = await enrollTwoStep(client);
+    return { user, client, cookie: await twoStepCookie(url, anonKey, user.email, user.password, factor) };
+  }
   const response = await fetch(`${base}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email, password: user.password }) });
   assert.equal(response.status, 200);
   return { user, client, cookie: response.headers.getSetCookie().map((value) => value.split(";", 1)[0]).join("; ") };
