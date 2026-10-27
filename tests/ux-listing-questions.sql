@@ -31,7 +31,7 @@ end $$;
 create function pg_temp.as_admin() returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.id('admin'), 'role', 'authenticated',
-    'app_metadata', jsonb_build_object('role', 'admin'))::text, true);
+    'aal', 'aal2', 'app_metadata', jsonb_build_object('role', 'admin'))::text, true);
 end $$;
 -- Reads that the browser roles cannot make (the table is closed to them).
 create function pg_temp.question(p_id uuid) returns public.listing_questions language sql security definer as $$

@@ -30,7 +30,8 @@ export async function GET() {
     hasStore,
     // "Pagos" in the account menu (PAY-1, review fix B6): only while the pilot is on.
     payments: hasStore && assistedCommerceEnabled(),
-    admin: !adminResult.error && adminResult.data === true,
+    // An Admin who hasn't entered the authenticator code yet still sees the link; Admin asks for the code (A15).
+    admin: (!adminResult.error && adminResult.data === true) || data.user.app_metadata?.role === "admin",
     name: profileResult.data?.full_name?.trim() || null,
     unreadNotifications: notificationsResult.error ? 0 : notificationsResult.count ?? 0,
     pendingBuyerConfirmations: confirmationsResult.error || !Number.isFinite(pending) ? 0 : pending,

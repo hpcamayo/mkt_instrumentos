@@ -18,7 +18,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
     const supabase = await getSupabaseServerClient();
     const { data } = supabase ? await supabase.auth.getUser() : { data: null };
     if (!data?.user) return missing();
-    const isAdmin = data.user.app_metadata.role === "admin";
+    // Admin only with the authenticator code entered (launch audit A15): public.is_admin() checks the session.
+    const isAdmin = data.user.app_metadata?.role === "admin" && (await supabase!.rpc("is_admin")).data === true;
     if (!isAdmin && !rows.some((listing) => listing!.owner_user_id === data.user.id)) {
       const revisions = await admin.from("listing_revision_photos").select("listing_revisions(owner_user_id)").eq("image_url", url);
       if (!revisions.data?.some((photo) => photo.listing_revisions?.owner_user_id === data.user.id)) return missing();

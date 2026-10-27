@@ -68,7 +68,8 @@ unchanged for their other callers (single-listing checks, saved-search alerts).
 
 The catalog route starts the shared facet read after URL and search-phrase validation, alongside its fresh inventory
 read. It passes that promise to `CatalogView`, which consumes it once. Category routes start facets and type counts
-alongside inventory and brands, then pass those reads through `CategoryLanding`. Previously the catalog waited for
+alongside inventory and brands in `app/instrumentos/_category/landing.tsx`, then pass those reads through
+`CategoryLanding`. Product pages retain their separate cached route. Previously the catalog waited for
 inventory before starting facets; categories waited for inventory/brands, then type counts, then facets.
 
 This changes scheduling only: the existing optional budgets, cache keys, cache bounds, breakers, recovery switch,

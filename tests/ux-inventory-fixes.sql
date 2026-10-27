@@ -55,7 +55,7 @@ values ('e7600000-0000-4000-8000-000000000002', 'e5600000-0000-4000-8000-0000000
 
 set local role authenticated;
 select set_config('request.jwt.claims',
-  '{"sub":"e1000000-0000-4000-8000-000000000099","role":"authenticated","app_metadata":{"role":"admin"}}', true);
+  '{"sub":"e1000000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}', true);
 select public.admin_set_store_inventory_enabled('e6600000-0000-4000-8000-000000000001', true, 'Piloto UX');
 select public.admin_set_store_inventory_enabled('e6600000-0000-4000-8000-000000000002', true, 'Piloto UX');
 

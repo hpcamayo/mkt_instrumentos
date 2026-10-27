@@ -87,18 +87,19 @@ test("SEO-001/SEO-007: category landing pages come from the canonical taxonomy w
   }
 });
 
-test("SEO-001: listing slugs can never equal a reserved category slug and the route dispatches categories first", () => {
+test("SEO-001: listing slugs can never equal a reserved category slug and categories are routed before listings", () => {
   const submissions = source("app/api/submissions/route.ts");
   assert.match(submissions, /fields\.slug = `\$\{slug\}-\$\{id\}`;/);
   assert.match(source("supabase/migrations/20260913120000_listing_sprint_3.sql"), /original\.slug \|\| '-republicado-'/);
+  // Each landing has its own folder, which Next.js routes before the [slug] listing route (launch audit A19).
+  for (const { slug } of categories.categoryLandingPages) {
+    assert.match(source(`app/instrumentos/${slug}/page.tsx`), new RegExp(`categoryLandingRoute\\("${slug}"\\)`), slug);
+  }
   const detail = source("app/instrumentos/[slug]/page.tsx");
-  const page = detail.slice(detail.indexOf("export default async function ListingDetailPage"));
-  assert.ok(page.indexOf("getCategoryLandingBySlug(slug)") < page.indexOf("loadPublicListing(slug)"));
-  const metadata = detail.slice(detail.indexOf("export async function generateMetadata"), detail.indexOf("export default async function ListingDetailPage"));
-  assert.ok(metadata.indexOf("getCategoryLandingBySlug(slug)") < metadata.indexOf("loadPublicListing(slug)"));
-  // One cached detail lookup is shared by metadata and page rendering.
+  assert.doesNotMatch(detail, /getCategoryLandingBySlug|searchParams/);
+  // One cached detail lookup is shared by metadata and page rendering, and one inventory query by a landing's.
   assert.match(detail, /const loadPublicListing = cache\(/);
-  assert.match(detail, /const loadCategoryPage = cache\(/);
+  assert.match(source("app/instrumentos/_category/landing.tsx"), /const loadCategoryPage = cache\(/);
 });
 
 test("SEO-002..SEO-005: category pages use the shared catalog query, 24-item stable pages and URL-driven filters", () => {
@@ -110,9 +111,9 @@ test("SEO-002..SEO-005: category pages use the shared catalog query, 24-item sta
   // Effortless Laria (find batch): /listados reads its page through the request-cached lib/catalog-data.ts.
   assert.match(source("app/listados/page.tsx"), /getCatalogPage\(filters, page\)/);
   assert.match(source("lib/catalog-data.ts"), /fetchCatalogPage\(supabase, filtersFromKey\(value\), page\)/);
-  const detail = source("app/instrumentos/[slug]/page.tsx");
-  assert.match(detail, /parseListingFilters\(\{ category \}\)[\s\S]*fetchCatalogPage\(supabase, filters, page\)/);
-  assert.match(detail, /getPageRedirect\(page, result\.count, result\.error\)/);
+  const landingRoute = source("app/instrumentos/_category/landing.tsx");
+  assert.match(landingRoute, /parseListingFilters\(\{ category \}\)[\s\S]*fetchCatalogPage\(supabase, filters, page\)/);
+  assert.match(landingRoute, /getPageRedirect\(page, result\.count, result\.error\)/);
   // UX-3: the landing renders the catalog's own view with its category fixed; the same contracts hold there.
   const landing = source("components/category-landing.tsx");
   assert.match(landing, /<CatalogView[\s\S]*filters=\{filters\}[\s\S]*scope=\{landingScope\(landing\.category\)\}[\s\S]*listings=\{listings\}[\s\S]*totalCount=\{totalCount\}[\s\S]*page=\{page\}[\s\S]*path=\{path\}/);
@@ -457,7 +458,8 @@ test("signup routes are noindex via metadata, X-Robots-Tag and robots.txt withou
 });
 
 test("filtered category metadata skips the inventory query that the redirect would discard", () => {
-  const detail = source("app/instrumentos/[slug]/page.tsx");
-  const metadata = detail.slice(detail.indexOf("export async function generateMetadata"), detail.indexOf("export default async function ListingDetailPage"));
-  assert.ok(metadata.indexOf("categoryFilterRedirect(landing, resolvedSearchParams)") < metadata.indexOf("loadCategoryPage("));
+  const landingRoute = source("app/instrumentos/_category/landing.tsx");
+  const metadata = landingRoute.slice(landingRoute.indexOf("async generateMetadata"), landingRoute.indexOf("async Page("));
+  assert.ok(metadata.indexOf("categoryFilterRedirect(landing, resolved)") > 0);
+  assert.ok(metadata.indexOf("categoryFilterRedirect(landing, resolved)") < metadata.indexOf("loadCategoryPage("));
 });

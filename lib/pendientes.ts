@@ -4,7 +4,7 @@
 export type PendienteAction =
   | { kind: "link"; href: string; label: string }
   | { kind: "purchase_check"; listingId: string }
-  | { kind: "buyer_report"; checkinId: string; stockManaged: boolean }
+  | { kind: "buyer_report"; checkinId: string; listingId: string; stockManaged: boolean }
   | { kind: "availability"; listingId: string; price: number | null };
 
 export type Pendiente = {
@@ -141,7 +141,7 @@ export function buildPendientes(data: PendientesData, { now = new Date() }: { no
     key: `report:${report.checkin_id}`, tone: "action",
     title: `${report.buyer_name ?? "Una persona"} dice que te compró ${quoted(report.title)}`,
     detail: report.stock_managed ? "El stock de esta publicación se controla en Inventario: registra la venta allí." : "Si es así, confírmalo y se abren las reseñas para ambos.",
-    action: { kind: "buyer_report", checkinId: report.checkin_id, stockManaged: report.stock_managed },
+    action: { kind: "buyer_report", checkinId: report.checkin_id, listingId: report.listing_id, stockManaged: report.stock_managed },
   });
   for (const review of buyer.reviews_due) push({
     key: `review:${review.reference_id}`, tone: "action", title: `Tu reseña ${dueLabel(review.deadline, now)}`,

@@ -149,7 +149,7 @@ from generate_series(0,11) n;
 -- Admin queues/counts are bounded and canonical. Report closure is separate
 -- from target moderation and a closed report permits a later new report.
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"81999999-0000-4000-8000-000000000098","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"81999999-0000-4000-8000-000000000098","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 do $$
 declare
  counts jsonb;
@@ -379,7 +379,7 @@ do $$ begin
 end $$;
 
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"81999999-0000-4000-8000-000000000098","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"81999999-0000-4000-8000-000000000098","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 select public.moderate_review('86000000-0000-4000-8000-000000000001',false,'Reporte revisado; se restaura la reseña');
 do $$ declare page jsonb; queue jsonb; begin
  page:=public.get_admin_domain_page('resenas',null,'visible',1,24);
@@ -398,7 +398,7 @@ do $$ begin
 end $$;
 
 set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"81999999-0000-4000-8000-000000000098","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"81999999-0000-4000-8000-000000000098","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 
 -- Existing listing state machine is the workbench authority and its action is audited.
 select public.review_listing('83000000-0000-4000-8000-000000000004','approve',null);
@@ -515,7 +515,7 @@ do $$ begin
 end $$;
 select set_config('request.jwt.claims','{"sub":"81000000-0000-4000-8000-000000000005","role":"authenticated"}',true);
 select public.resubmit_store_application('82000000-0000-4000-8000-000000000002');
-select set_config('request.jwt.claims','{"sub":"81999999-0000-4000-8000-000000000098","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+select set_config('request.jwt.claims','{"sub":"81999999-0000-4000-8000-000000000098","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 select public.review_store_application('82000000-0000-4000-8000-000000000002','approve',null);
 do $$ begin
  if not (public.get_admin_audit_history('store','82000000-0000-4000-8000-000000000002',10) @> jsonb_build_array(jsonb_build_object('action','store_active'))) then

@@ -48,7 +48,12 @@ function loadRoute(file, { configured = true } = {}) {
   };
   const target = path.join(root, file);
   delete require.cache[target];
-  try { return { route: require(target), started, core, facets, counts, brands }; }
+  try {
+    const loaded = require(target);
+    const category = loaded.categoryLandingRoute?.("guitarras");
+    const route = category ? { default: category.Page, generateMetadata: category.generateMetadata } : loaded;
+    return { route, started, core, facets, counts, brands };
+  }
   finally { Module._load = original; delete require.cache[target]; }
 }
 
@@ -68,8 +73,8 @@ test("catalog starts facets while inventory is pending and passes the same read 
 });
 
 test("category starts inventory, facets, type counts and brands together", async () => {
-  const state = loadRoute("app/instrumentos/[slug]/page.tsx");
-  const render = state.route.default({ params: Promise.resolve({ slug: "guitarras" }), searchParams: Promise.resolve({}) });
+  const state = loadRoute("app/instrumentos/_category/landing.tsx");
+  const render = state.route.default({ searchParams: Promise.resolve({}) });
   await tick();
   assert.deepEqual(state.started.sort(), ["brands", "core", "counts", "facets"]);
   state.core.resolve({ data: [{ id: "live" }], count: 100, error: null });
@@ -87,8 +92,8 @@ test("malformed URLs, interpreted phrases and forwarded category filters start n
     await assert.rejects(state.route.default({ searchParams: Promise.resolve(params) }), (error) => [307, 308].includes(error.status));
     assert.deepEqual(state.started, []);
   }
-  const category = loadRoute("app/instrumentos/[slug]/page.tsx");
-  await assert.rejects(category.route.default({ params: Promise.resolve({ slug: "guitarras" }), searchParams: Promise.resolve({ brand: "Fender" }) }), (error) => error.status === 307);
+  const category = loadRoute("app/instrumentos/_category/landing.tsx");
+  await assert.rejects(category.route.default({ searchParams: Promise.resolve({ brand: "Fender" }) }), (error) => error.status === 307);
   assert.deepEqual(category.started, []);
 });
 
@@ -96,12 +101,26 @@ test("a missing client starts no optional reads", async () => {
   const warn = console.warn;
   console.warn = () => {};
   try {
-    for (const file of ["app/listados/page.tsx", "app/instrumentos/[slug]/page.tsx"]) {
+    for (const file of ["app/listados/page.tsx", "app/instrumentos/_category/landing.tsx"]) {
       const state = loadRoute(file, { configured: false });
-      await state.route.default({ params: Promise.resolve({ slug: "guitarras" }), searchParams: Promise.resolve({}) });
+      await state.route.default({ searchParams: Promise.resolve({}) });
       assert.deepEqual(state.started, []);
     }
   } finally { console.warn = warn; }
+});
+
+test("category metadata reads only inventory, while redirected metadata skips all reads", async () => {
+  const state = loadRoute("app/instrumentos/_category/landing.tsx");
+  const metadata = state.route.generateMetadata({ searchParams: Promise.resolve({}) });
+  await tick();
+  assert.deepEqual(state.started, ["core"]);
+  state.core.resolve({ data: [], count: 100, error: null });
+  assert.equal((await metadata).alternates.canonical, "/instrumentos/guitarras");
+
+  const forwarded = loadRoute("app/instrumentos/_category/landing.tsx");
+  const moved = await forwarded.route.generateMetadata({ searchParams: Promise.resolve({ brand: "Fender" }) });
+  assert.deepEqual(moved.robots, { index: false, follow: true });
+  assert.deepEqual(forwarded.started, []);
 });
 
 test("core failures stay errors and overflow redirects do not wait for optional reads", async () => {

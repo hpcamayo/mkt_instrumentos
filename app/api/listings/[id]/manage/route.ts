@@ -14,6 +14,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import { createListingEditToken, readListingEditToken, submissionTokenSecret } from "@/lib/submission-token";
 import { cleanupListingEditUploads } from "@/lib/listing-photo-cleanup";
 import { listingLimitMessage } from "@/lib/store-allowance";
+import { dropListingPages } from "@/lib/listing-cache";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -38,7 +39,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   const { data: listing, error: listingError } = await supabase
     .from("listings")
     .select(
-      "id,owner_user_id,status,title,category,instrument_type,brand,model,condition,price_pen,city,region,description,attributes,listing_photos(image_url,alt_text,sort_order)",
+      "id,slug,owner_user_id,status,title,category,instrument_type,brand,model,condition,price_pen,city,region,description,attributes,listing_photos(image_url,alt_text,sort_order)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -60,6 +61,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       p_action: body.action,
     });
     if (error) return rpcFailure(error.message);
+    dropListingPages([listing.slug]);
     return NextResponse.json({ ok: true, listing: data });
   }
 
@@ -83,6 +85,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       p_price_pen: price,
     });
     if (error) return rpcFailure(error.message);
+    dropListingPages([listing.slug]);
     return NextResponse.json({ ok: true, listing: data });
   }
 
@@ -91,6 +94,7 @@ export async function POST(request: Request, { params }: RouteContext) {
       p_listing_id: id,
     });
     if (error) return rpcFailure(error.message);
+    dropListingPages([listing.slug]);
     return NextResponse.json({ ok: true, listing: data });
   }
 
@@ -146,6 +150,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (error) {
     return rpcFailure(error.message);
   }
+  // Launch audit A19: the immediate changes (price, description, place, details) show on the cached page at once.
+  dropListingPages([listing.slug]);
 
   // Discarded proposal references are now unattached; the database cleanup claim
   // preserves every live, sold, shared or retained-history reference.

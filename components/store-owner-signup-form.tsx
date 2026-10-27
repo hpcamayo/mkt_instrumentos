@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { LocationFields } from "@/components/location-fields";
 import { profileFieldErrors } from "@/lib/form-validation";
+import { checkEmailAvailability, signUpFoundExistingAccount } from "@/lib/auth/email-check";
+import { SIGN_UP_PAUSED, TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
 import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
 import {
   STORE_OWNER_ACCOUNT_TYPE,
@@ -72,20 +74,19 @@ export function StoreOwnerSignupForm() {
       setMessage(`Ingresa un correo y una contraseña de al menos ${PASSWORD_MIN_LENGTH} caracteres.`);
       return;
     }
-    const available = await fetch("/api/auth/check-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    }).then(async (response) => {
-      const result = await response.json().catch(() => null);
-      return response.ok && result?.ok && result.available;
-    });
-    if (!available) {
+    const emailCheck = await checkEmailAvailability(email);
+    if (emailCheck === "limited") {
       setState("error");
-      setMessage("Ese correo ya está registrado o no pudo verificarse. Usa un correo exclusivo para la Tienda.");
-      validation.setFieldError("email", "Usa un correo exclusivo para la Tienda que pueda verificarse.");
+      setMessage(TOO_MANY_ATTEMPTS);
       return;
     }
+    if (emailCheck === "exists") {
+      setState("error");
+      setMessage("Ese correo ya está registrado. Usa un correo exclusivo para la Tienda.");
+      validation.setFieldError("email", "Ese correo ya está registrado. Usa un correo exclusivo para la Tienda.");
+      return;
+    }
+    // A check that couldn't answer stops nothing: the sign-up below still finds an address that has an account.
     const supabase = getSupabaseBrowserClient();
     if (!supabase) {
       setState("error");
@@ -108,9 +109,20 @@ export function StoreOwnerSignupForm() {
         },
       },
     });
-    if (error || data.user?.identities?.length === 0) {
+    if (isAuthRateLimited(error)) {
+      setState("error");
+      setMessage(SIGN_UP_PAUSED);
+      return;
+    }
+    if (error) {
       setState("error");
       setMessage("No se pudo crear la cuenta. Usa un correo exclusivo para la Tienda e intenta nuevamente.");
+      return;
+    }
+    if (signUpFoundExistingAccount(data.user, STORE_OWNER_ACCOUNT_TYPE)) {
+      setState("error");
+      setMessage("Ese correo ya está registrado. Usa un correo exclusivo para la Tienda.");
+      validation.setFieldError("email", "Ese correo ya está registrado. Usa un correo exclusivo para la Tienda.");
       return;
     }
     if (data.session && data.user) {
