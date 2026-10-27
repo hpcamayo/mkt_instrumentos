@@ -87,52 +87,156 @@ function load(file, mocks) {
   return mod.exports;
 }
 
-// next/dynamic stand-in: records what each lazy part loads and with which options, and renders a marker.
-function lazyStandIn(calls) {
+// afterPage stand-in: records what each part loads and its loading and failed parts, and renders a marker.
+function afterPageStandIn(calls) {
   return {
-    __esModule: true,
-    default: (loader, options) => {
+    afterPage: (loader, parts) => {
       const target = /import\("([^"]+)"\)/.exec(String(loader))?.[1] ?? /require\("([^"]+)"\)/.exec(String(loader))?.[1];
-      calls.push({ target, options });
+      calls.push({ target, parts });
       return (props) => React.createElement("i", { "data-lazy": target, "data-listing": props.listingId });
     },
   };
 }
 
-test("A29: '¿Cómo te fue?' and its Supabase client load only for a signed-in visitor", () => {
+test("A29: '¿Cómo te fue?' and its Supabase client load for a visitor with an auth cookie or found signed in, waiting for neither", () => {
   const calls = [];
-  const render = (account) => {
+  // In the browser, useSyncExternalStore reads the snapshot (the cookie); on the server and while hydrating, the server
+  // snapshot (none).
+  const browserReact = { ...React, useSyncExternalStore: (subscribe, getSnapshot) => getSnapshot() };
+  const render = (cookies, account) => {
     const { PurchaseCheckin } = load("components/purchase-checkin.tsx", {
-      "next/dynamic": lazyStandIn(calls),
+      ...(cookies === null ? {} : { react: browserReact }),
+      "@/components/after-page": afterPageStandIn(calls),
       "@/components/marketplace-account-provider": { useMarketplaceAccount: () => account },
     });
-    return renderToStaticMarkup(React.createElement(PurchaseCheckin, { listingId: "l1" }));
+    try {
+      if (cookies !== null) globalThis.document = { cookie: cookies };
+      return renderToStaticMarkup(React.createElement(PurchaseCheckin, { listingId: "l1" }));
+    } finally {
+      delete globalThis.document;
+    }
   };
-  // Hydrating (the server's state), still checking, signed out: nothing, so nothing loads.
-  assert.equal(render({ settled: false, ready: false, authenticated: false }), "");
-  assert.equal(render({ settled: false, ready: false, authenticated: true }), "");
-  assert.equal(render({ settled: true, ready: true, authenticated: false }), "");
-  // Signed in, also while the account is checked again on focus (ready false, settled and authenticated kept).
-  assert.equal(render({ settled: true, ready: true, authenticated: true }), '<i data-lazy="@/components/purchase-checkin-question" data-listing="l1"></i>');
-  assert.equal(render({ settled: true, ready: false, authenticated: true }), '<i data-lazy="@/components/purchase-checkin-question" data-listing="l1"></i>');
-  assert.ok(calls.every((call) => call.target === "@/components/purchase-checkin-question" && call.options.ssr === false));
+  const asked = '<i data-lazy="@/components/purchase-checkin-question" data-listing="l1"></i>';
+  const signedIn = "laria_device=1; sb-abc-auth-token.0=base64-x; sb-abc-auth-token.1=y";
+  // Hydrating (the server's state, even with the cookie), or no cookie and not signed in: nothing, so nothing loads.
+  assert.equal(render(null, { settled: false, ready: false, authenticated: false }), "");
+  assert.equal(render("laria_device=1", { settled: true, ready: true, authenticated: false }), "");
+  assert.equal(render("sb-abc-auth-token-code-verifier=z", { settled: true, ready: true, authenticated: false }), "");
+  // Codex's first review: an account check that failed, or that is still merging the device's favorites (settled
+  // false), no longer hides the question from a visitor with the cookie, as before A29.
+  assert.equal(render(signedIn, { settled: true, ready: false, authenticated: false }), asked);
+  assert.equal(render(signedIn, { settled: false, ready: false, authenticated: false }), asked);
+  assert.equal(render("", { settled: false, ready: true, authenticated: true }), asked);
+  // Signed in, also while the account is checked again on focus (ready false, authenticated kept).
+  assert.equal(render("", { settled: true, ready: false, authenticated: true }), asked);
+  assert.ok(calls.every((call) => call.target === "@/components/purchase-checkin-question"));
+  // If its code fails to download, the question just isn't asked; nothing shows while it loads.
+  assert.equal(calls[0].parts.loading(), null);
+  assert.equal(calls[0].parts.failed(() => {}, { listingId: "l1" }), null);
+  // The cookie is read again when the tab regains focus; the store page's server check is the same one.
+  assert.match(source("components/purchase-checkin.tsx"), /useSyncExternalStore\(subscribe, browserHasAuthCookie, \(\) => false\)/);
+  assert.match(source("components/purchase-checkin.tsx"), /window\.addEventListener\("focus", onChange\)/);
+  assert.match(source("lib/store-storefront.ts"), /export \{ hasSupabaseAuthCookie \} from "@\/lib\/supabase\/auth-cookie";/);
   // The question itself is big-08's, unchanged.
   const question = source("components/purchase-checkin-question.tsx");
   assert.match(question, /export default function PurchaseCheckinQuestion/);
   assert.match(question, /getSupabaseBrowserClient/);
 });
 
-test("A29: the lightbox loads on demand, starting when a pointer or the focus reaches the photos", () => {
+test("A29: a part loaded after the page shows its loading part on the server, and only itself fails, with a retry", async () => {
+  const { afterPage } = load("components/after-page.tsx", {});
+  const loads = [];
+  const Part = afterPage(
+    () => {
+      loads.push("load");
+      return Promise.resolve(() => React.createElement("b", null, "part"));
+    },
+    { loading: () => React.createElement("p", null, "loading"), failed: () => React.createElement("p", null, "failed") },
+  );
+  // The server (and hydration) render the loading part and download nothing.
+  assert.equal(renderToStaticMarkup(React.createElement(Part, { id: "x" })), "<p>loading</p>");
+  assert.deepEqual(loads, []);
+
+  // In the browser: hooks run by hand, so the tree the part returns can be read.
+  const lazies = [];
+  const state = { attempt: 0, sets: 0 };
+  const browserReact = {
+    ...React,
+    lazy: (factory) => {
+      const type = () => null;
+      lazies.push({ factory, type });
+      return type;
+    },
+    useState: () => [state.attempt, (update) => { state.sets += 1; state.attempt = update(state.attempt); }],
+    useSyncExternalStore: (subscribe, getSnapshot) => getSnapshot(),
+  };
+  const browser = load("components/after-page.tsx", { react: browserReact });
+  let retry = null;
+  const failedFor = [];
+  // The first download fails, the second works.
+  const downloads = [Promise.reject(new Error("Loading chunk 123 failed.")), Promise.resolve(() => null)];
+  downloads[0].catch(() => {});
+  const Lazy = browser.afterPage(() => downloads.shift(), {
+    loading: () => "loading",
+    failed: (again, props) => {
+      retry = again;
+      failedFor.push(props);
+      return "failed";
+    },
+  });
+  assert.equal(lazies.length, 1, "one lazy part, made once and shared");
+  const tree = Lazy({ id: "x" });
+  const Boundary = tree.type;
+  assert.equal(tree.key, "0");
+  const suspense = tree.props.children;
+  assert.equal(suspense.type, React.Suspense);
+  assert.equal(suspense.props.fallback, "loading");
+  assert.equal(suspense.props.children.type, lazies[0].type);
+  assert.deepEqual(suspense.props.children.props, { id: "x" });
+
+  // The download fails: the lazy part rejects (React shows it to the boundary), and a new one is ready for the next
+  // try, since React keeps a failed lazy part's error.
+  await assert.rejects(lazies[0].factory(), /Loading chunk 123 failed/);
+  assert.equal(lazies.length, 2);
+
+  // The boundary: its children until they throw, then `failed`, with the part's props.
+  const boundary = new Boundary({ failed: tree.props.failed, children: "children" });
+  assert.equal(boundary.render(), "children");
+  boundary.state = { ...boundary.state, ...Boundary.getDerivedStateFromError(new Error("Loading chunk 123 failed.")) };
+  assert.equal(boundary.render(), "failed");
+  assert.deepEqual(failedFor, [{ id: "x" }]);
+
+  // Retry, or the part's next showing: a new boundary (its key) around the new lazy part, which downloads again.
+  retry();
+  assert.equal(state.sets, 1);
+  const again = Lazy({ id: "x" });
+  assert.equal(again.key, "1");
+  assert.equal(again.props.children.props.children.type, lazies[1].type);
+  const loaded = await lazies[1].factory();
+  assert.equal(typeof loaded.default, "function");
+  assert.equal(lazies.length, 2, "a download that worked is kept");
+});
+
+test("A29: the lightbox loads on demand, starting when a pointer or the focus reaches the photos, and a failed download only says so", () => {
   const calls = [];
-  const lazy = load("components/listing/listing-lazy.tsx", { "next/dynamic": lazyStandIn(calls) });
-  assert.deepEqual(calls.map((call) => [call.target, call.options.ssr]), [
-    ["@/components/listing/lightbox", false],
-    ["@/components/listing/listing-questions", false],
-  ]);
+  const lazy = load("components/listing/listing-lazy.tsx", { "@/components/after-page": afterPageStandIn(calls) });
+  assert.deepEqual(calls.map((call) => call.target), ["@/components/listing/lightbox", "@/components/listing/listing-questions"]);
   assert.equal(typeof lazy.preloadLightbox, "function");
-  assert.match(source("components/listing/listing-lazy.tsx"), /export function preloadLightbox\(\) \{\s*void import\("@\/components\/listing\/lightbox"\);/);
+  assert.match(source("components/listing/listing-lazy.tsx"), /export function preloadLightbox\(\) \{\s*import\("@\/components\/listing\/lightbox"\)\.catch\(\(\) => \{\}\);/);
   assert.match(source("components/listing/listing-gallery.tsx"), /<div className="grid gap-3" onPointerEnter=\{preloadLightbox\} onFocus=\{preloadLightbox\}>/);
   assert.match(source("components/store/store-photos.tsx"), /<ul className="flex flex-wrap gap-2" onPointerEnter=\{preloadLightbox\} onFocus=\{preloadLightbox\}>/);
+  // Nothing while it loads; if it fails, a note over the page with "Reintentar" and "Cerrar", which closes it as the
+  // lightbox would, at the photo it opened on.
+  const lightbox = calls[0].parts;
+  assert.equal(lightbox.loading(), null);
+  const retries = [];
+  const closed = [];
+  const failed = lightbox.failed(() => retries.push(true), { start: 2, onClose: (index) => closed.push(index) });
+  const html = renderToStaticMarkup(failed);
+  assert.match(html, /^<div role="alert"[^>]*><p[^>]*>No pudimos abrir la foto\.<\/p><button[^>]*>Reintentar<\/button><button[^>]*>Cerrar<\/button><\/div>$/);
+  failed.props.retry();
+  failed.props.close();
+  assert.deepEqual([retries, closed], [[true], [2]]);
 });
 
 test("A29: the questions section's code loads after the page, and the server still sends its heading and loading line", () => {
@@ -143,13 +247,22 @@ test("A29: the questions section's code loads after the page, and the server sti
     "@/components/content-report": { ContentReport: () => null },
   });
   const calls = [];
-  const { QuestionsLoading } = load("components/listing/listing-lazy.tsx", { "next/dynamic": lazyStandIn(calls) });
+  const { QuestionsLoading, QuestionsFailed } = load("components/listing/listing-lazy.tsx", { "@/components/after-page": afterPageStandIn(calls) });
   // The section's own first render (before the account check) and the stand-in the server now sends are the same
   // markup; only useId's values may differ.
   const ids = (html) => html.replace(/(id|aria-labelledby)="(?!preguntas")[^"]+"/g, '$1="x"');
   const own = ids(renderToStaticMarkup(React.createElement(ListingQuestions, { listingId: "l1", sold: false, loginHref: "/login" })));
   assert.equal(ids(renderToStaticMarkup(React.createElement(QuestionsLoading))), own);
   assert.match(own, /^<section id="preguntas"[^>]*><h2[^>]*>Preguntas<\/h2><p role="status"[^>]*>Cargando preguntas…<\/p><\/section>$/);
-  assert.equal(calls.find((call) => call.target === "@/components/listing/listing-questions").options.loading().type, QuestionsLoading);
+  const questions = calls.find((call) => call.target === "@/components/listing/listing-questions").parts;
+  assert.equal(questions.loading().type, QuestionsLoading);
+  // A failed download keeps the section and its anchor, says so and offers "Reintentar", instead of app/error.tsx
+  // replacing the listing (Codex's first review).
+  const failed = questions.failed(() => {});
+  assert.equal(failed.type, QuestionsFailed);
+  assert.match(
+    renderToStaticMarkup(failed),
+    /^<section id="preguntas"[^>]*><h2[^>]*>Preguntas<\/h2><div[^>]*><p role="alert"[^>]*>No pudimos cargar las preguntas\.<\/p><button type="button"[^>]*>Reintentar<\/button><\/div><\/section>$/,
+  );
   assert.match(source("app/instrumentos/[slug]/page.tsx"), /import \{ ListingQuestions \} from "@\/components\/listing\/listing-lazy";/);
 });

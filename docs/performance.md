@@ -108,19 +108,27 @@ figure; 223.7 kB gzipped at level 9), because big-08's "¿Cómo te fue?" importe
 supabase-js with Realtime and Auth, and the Buffer polyfill it pulls in, about 62 kB compressed, for a question only a
 signed-in buyer can see. The photo lightbox and the questions section also loaded with the page before anyone used them.
 
-- `components/purchase-checkin.tsx` renders `components/purchase-checkin-question.tsx` (the question and its client)
-  with `next/dynamic` and `ssr: false`, and only once the account check says the visitor is signed in.
-- `components/listing/listing-lazy.tsx` holds the parts that load after the page: the lightbox (on the first photo
-  opened; its download starts when a pointer or the focus reaches the photos, here and on the store page) and
-  "Preguntas", which reads its questions in the browser anyway. The server sends the same heading and "Cargando
-  preguntas…" as before.
+- `components/after-page.tsx` loads these parts after the page, in the browser only, as `next/dynamic` with
+  `ssr: false` does, with one difference: if a part's code fails to download (a phone losing signal, say), only that
+  part says so, and its "Reintentar", or its next showing, downloads the code again. With `next/dynamic` that failure
+  reached `app/error.tsx`, which replaced the whole listing, and a retry never downloaded the part again.
+- `components/purchase-checkin.tsx` loads `components/purchase-checkin-question.tsx` (the question and its client)
+  only for a visitor who may be signed in: when the browser has a Supabase auth cookie, as before A29, or when the
+  account check finds the visitor signed in, whichever comes first, so a failed or slow account check doesn't hide it.
+  If its code fails to download, the question just isn't asked that time.
+- `components/listing/listing-lazy.tsx` holds the other parts that load after the page: the lightbox (on the first
+  photo opened; its download starts when a pointer or the focus reaches the photos, here and on the store page; if it
+  fails, "No pudimos abrir la foto." with "Reintentar" and "Cerrar") and "Preguntas", which reads its questions in the
+  browser anyway. The server sends the same heading and "Cargando preguntas…" as before; if the section's code fails
+  to download, it says "No pudimos cargar las preguntas." with "Reintentar", as when its questions don't load.
 - The safety sheet stays with the page: it opens from the contact button, the page's main action, and must not wait for
   a download. The related listings' cards stay too: they are server-rendered and hydrate with the page.
 
-Production build of 27 Oct 2026 (main `d263269` against this change, gzipped at level 9): the listing page 223.7 kB to
-154.1 kB (Next.js shows 229 kB to 158 kB), the store page 156.0 kB to 153.9 kB, every other page within 0.1 kB.
+Production build of 27 Oct 2026 (main `35c3d23` against this change, gzipped at level 9): the listing page 223.7 kB to
+154.6 kB (Next.js shows 229 kB to 158 kB), the store page 156.0 kB to 154.3 kB, every other page within 0.1 kB.
 `tests/launch-audit-listing-bundle.test.cjs` follows the page's static imports through its client components and fails
-if the Supabase client, the lightbox or the questions section is back in the page's bundle.
+if the Supabase client, the lightbox or the questions section is back in the page's bundle. It also checks when "¿Cómo
+te fue?" loads, and what each part shows, and downloads again, when its code fails to download.
 
 ## Checks
 
