@@ -15,6 +15,8 @@ import {
 } from "@/components/inventory/item-detail";
 import { SkuListingDetailsPanel, type SkuListingDetails } from "@/components/inventory/sku-listing-details";
 import { ArrivalForm } from "@/components/store-floor/arrival-control";
+// Feature ideas, accounts batch (safe-02): private serial numbers.
+import { InventorySerials } from "@/components/stolen-gear/inventory-serials";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
@@ -181,6 +183,7 @@ export default async function InventoryItemPage({ params, searchParams }: Props)
         </div>
         <ItemDetailsForm key={item.version} item={item} canWrite={canWrite} />
         <ItemCategoryForm key={`categoria-${item.version}`} item={item} canWrite={canWrite} />
+        <InventorySerials itemId={item.id} canWrite={canWrite && !archived} />
         {/* fix-09: no catalog matching exists yet, so only a real link is mentioned. */}
         {item.catalog_product_id ? <p className="t-meta">Catálogo: vinculado a un modelo del catálogo de Laria.</p> : null}
       </section>

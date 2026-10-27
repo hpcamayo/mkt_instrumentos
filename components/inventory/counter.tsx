@@ -4,6 +4,7 @@ import { Camera, CameraOff, Minus, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { undoMovements } from "@/components/inventory/stock-action-sheet";
 import { UndoNotice, type InventoryNotice } from "@/components/inventory/undo-notice";
+import { CounterPurchaseOffer } from "@/components/trust/counter-purchase-code";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
@@ -35,7 +36,7 @@ function storage() {
   }
 }
 
-export function Counter({ storeId }: { storeId: string }) {
+export function Counter({ storeId, storeName = "la tienda" }: { storeId: string; storeName?: string }) {
   const id = useId();
   const [items, setItems] = useState<CounterItem[]>([]);
   const [loaded, setLoaded] = useState<"loading" | "online" | "offline" | "failed">("loading");
@@ -49,6 +50,8 @@ export function Counter({ storeId }: { storeId: string }) {
   const [queue, setQueue] = useState<QueuedSale[]>([]);
   const [notice, setNotice] = useState<InventoryNotice | null>(null);
   const [camera, setCamera] = useState(false);
+  // deal-trust (reach-11): the last sale recorded online in the store, for its customer code.
+  const [lastSale, setLastSale] = useState<string | null>(null);
   // The shared Input does not forward refs; the field's id finds it.
   const codeInput = { get current() { return typeof document === "undefined" ? null : document.getElementById(`${id}-entrada`) as HTMLInputElement | null; } };
   const changeNotice = useCallback((next: InventoryNotice) => setNotice(next), []);
@@ -162,6 +165,7 @@ export function Counter({ storeId }: { storeId: string }) {
     setItems((current) => current.map((item) => (available.has(item.id) ? { ...item, quantity_available: available.get(item.id)!, version: item.version + 1 } : item)));
     setCart([]);
     setSaleKey(newRequestKey("mostrador"));
+    setLastSale(sale.channel === "tienda_fisica" ? sale.key : null);
     setNotice({
       kind: "success",
       message: `Venta registrada: ${numbers.format(units)} ${units === 1 ? "unidad" : "unidades"} (${CHANNEL_LABELS[channel]}).`,
@@ -226,6 +230,7 @@ export function Counter({ storeId }: { storeId: string }) {
       <section aria-labelledby={`${id}-venta`} className="grid gap-4 rounded-panel border border-subtle bg-white p-4 md:p-5 lg:sticky lg:top-4">
         <h2 id={`${id}-venta`} className="t-section text-ink">Venta</h2>
         {notice ? <UndoNotice notice={notice} onChange={changeNotice} /> : null}
+        {lastSale ? <CounterPurchaseOffer key={lastSale} saleKey={lastSale} storeName={storeName} onDismiss={() => setLastSale(null)} /> : null}
         {cart.length ? (
           <ul className="divide-y divide-subtle rounded-control border border-subtle">
             {cart.map((line) => (
@@ -262,7 +267,7 @@ export function Counter({ storeId }: { storeId: string }) {
         <Button block loading={busy} loadingLabel="Registrando…" disabled={!cart.length} onClick={record}>
           {cart.length ? `Registrar venta (${numbers.format(units)} ${units === 1 ? "unidad" : "unidades"})` : "Registrar venta"}
         </Button>
-        <p className="t-meta">Es una anotación de tu tienda: descuenta stock, pero no crea una venta verificada en Laria ni cobra nada.</p>
+        <p className="t-meta">Es una anotación de tu tienda: descuenta stock y no cobra nada. Para que cuente como compra verificada en Laria, muestra el código al cliente después de registrarla.</p>
         {waiting.length ? (
           <Notice tone="warning" role="status">
             {waiting.length === 1 ? "1 venta espera conexión" : `${waiting.length} ventas esperan conexión`} en este equipo. Se registrarán solas; no cierres sesión en este equipo hasta entonces.{" "}

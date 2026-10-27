@@ -21,11 +21,17 @@ const links = [
   { href: "/admin/reportes", label: "Reportes" },
   { href: "/admin/resenas", label: "Reseñas" },
   { href: "/admin/transacciones", label: "Transacciones" },
+  // deal-trust batch: review photos, Puntos seguros, counter purchases.
+  { href: "/admin/confianza", label: "Confianza" },
   { href: "/admin/legacy", label: "Publicaciones históricas" },
   // discovery batch (docs/feature-ideas/discovery.md): collections, maker stores, verified artists.
   { href: "/admin/colecciones", label: "Colecciones" },
   { href: "/admin/fabricantes", label: "Fabricantes y talleres" },
   { href: "/admin/artistas", label: "Artistas verificados" },
+  // Feature ideas, accounts batch (safe-10, safe-05, safe-02).
+  { href: "/admin/ayuda", label: "Ayuda" },
+  { href: "/admin/fotos-repetidas", label: "Fotos repetidas" },
+  { href: "/admin/equipos-reportados", label: "Equipos reportados" },
   // feature-ideas services (bet-02)
   { href: "/admin/servicios", label: "Servicios" },
   // Feature ideas, store-reach batch: dealer authorizations (reach-04) and Laria's campaigns (reach-05).

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import type { Metadata } from "next";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 import { CatalogLink, CatalogNavigation, CatalogResults } from "@/components/catalog-navigation";
 import { JsonLd } from "@/components/json-ld";
 import { ListingCard } from "@/components/listing-card";
@@ -17,6 +17,7 @@ import { StoreListingFilters, StoreSortMenu } from "@/components/store/store-lis
 import { StoreOwnerNotice } from "@/components/store/store-owner-notice";
 import { StoreAboutSection, StoreSectionLinks, type StoreAbout } from "@/components/store/store-sections";
 import { StripCurrent } from "@/components/strip-current";
+import { StoreTrustMarks } from "@/components/trust/listing-trust";
 import { buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
@@ -399,12 +400,14 @@ function StoreView({
   const filtered = storeFiltersActive(filters);
   // The controls show once there is something to narrow, and stay while a filter is on (so it can be removed).
   const showControls = filtered || (storeTotal ?? total ?? 0) > 0;
+  // deal-trust: «Tienda destacada» and «Punto seguro Laria», streamed; not in the owner's preview.
+  const trustMarks = preview ? null : <Suspense fallback={null}><StoreTrustMarks storeId={store.id} /></Suspense>;
   return (
     <>
       {preview ? null : <StoreVisitTelemetry storeId={store.id} />}
       {store.is_verified && !preview ? <StripCurrent value="verified_stores" /> : null}
       {isOwner ? <StoreOwnerNotice status={status} /> : null}
-      <StoreHeader store={store} total={storeTotal} rating={rating} location={location} preview={preview} />
+      <StoreHeader store={store} total={storeTotal} rating={rating} location={location} preview={preview} trust={trustMarks} />
       <StoreSectionLinks total={storeTotal} reviews={reputation ? reputation.review_count : null} />
       <PageContainer as="section" className="grid gap-10 pb-12 pt-6 lg:gap-14 lg:pt-8">
         <CatalogNavigation>

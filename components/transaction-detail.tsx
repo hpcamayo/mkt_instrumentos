@@ -16,6 +16,8 @@ import {
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
 import { BuyerChoice } from "@/components/transactions/buyer-choice";
+import { ProvenanceLink } from "@/components/trust/provenance-link";
+import { OwnReviewPhotos, ReviewPhotoPicker, attachReviewPhotos, uploadReviewPhotos, type PickedPhoto } from "@/components/trust/review-photos";
 import { StarRating } from "@/components/transactions/star-rating";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
@@ -66,10 +68,11 @@ export function TransactionDetailView({
   }
 
   async function createClaim() {
-    if (!eligibleSelectedBuyer || !supabase) return;
+    if (!eligibleSelectedBuyer || !supabase || !detail.listing_id) return;
+    const listingId = detail.listing_id;
     await run(
       () => supabase.rpc("create_transaction_claim", {
-        p_listing_id: detail.listing_id,
+        p_listing_id: listingId,
         p_buyer_user_id: eligibleSelectedBuyer,
       }),
       "Enviamos la solicitud al contacto seleccionado.",
@@ -77,14 +80,15 @@ export function TransactionDetailView({
   }
 
   async function recordExternal() {
-    if (!supabase) return;
+    if (!supabase || !detail.listing_id) return;
+    const listingId = detail.listing_id;
     if (!(await confirm({
       title: "¿Registrar esta venta como realizada fuera de Laria o con una persona sin cuenta?",
       body: "No habilita reseñas verificadas.",
       confirmLabel: "Registrar venta",
     }))) return;
     await run(
-      () => supabase.rpc("record_external_sale", { p_listing_id: detail.listing_id }),
+      () => supabase.rpc("record_external_sale", { p_listing_id: listingId }),
       "La venta quedó registrada sin comprador Laria. No habilita reseñas verificadas.",
     );
   }
@@ -115,6 +119,7 @@ export function TransactionDetailView({
     <div className="grid gap-5">
       {message ? <PageNotice kind={messageKind} message={message} /> : null}
       {confirmDialog}
+      {detail.origin === "counter" ? <CounterPurchaseHeader detail={detail} /> : (
       <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
         <PageHeader
           eyebrow={detail.role === "buyer" ? "Compra" : "Venta"}
@@ -126,6 +131,7 @@ export function TransactionDetailView({
           La verificación significa únicamente que vendedor y comprador reconocen una relación originada en Laria. No verifica pago, entrega, envío, autenticidad ni condición.
         </Notice>
       </section>
+      )}
 
       {detail.role === "seller" && detail.state !== "verified" ? (
         <SellerAttribution
@@ -165,7 +171,35 @@ export function TransactionDetailView({
           closing={justConfirmed && detail.role === "buyer" && !detail.own_review}
         />
       ) : null}
+
+      {/* deal-trust (safe-11): the buyer of a listing can link the publication where they resell it. */}
+      {detail.role === "buyer" && detail.state === "verified" && detail.transaction_id && detail.origin !== "counter" ? (
+        <ProvenanceLink transactionId={detail.transaction_id} />
+      ) : null}
     </div>
+  );
+}
+
+// deal-trust (reach-11): a purchase the buyer confirmed with the store's counter code. No publication: the store, what
+// was sold and when.
+function CounterPurchaseHeader({ detail }: { detail: TransactionDetail }) {
+  return (
+    <section className="rounded-panel border border-subtle bg-white p-5 sm:p-6">
+      <PageHeader
+        eyebrow={detail.role === "buyer" ? "Compra en tienda" : "Venta en tienda"}
+        title={detail.listing_title}
+        meta={<><StatusTag domain="claim" status={detail.state} className="mt-1" /><p className="mt-2">{detail.role === "buyer" ? "Compraste" : "Vendiste"} en {detail.seller_name}: {formatDateTime(detail.sold_at)}</p></>}
+        actions={detail.store_slug ? <Link href={`/tiendas/${detail.store_slug}`} className={buttonClasses({ variant: "secondary" })}>Ver la tienda</Link> : null}
+      />
+      {detail.lines?.length ? (
+        <ul className="mt-4 grid gap-1 t-ui text-ink">
+          {detail.lines.map((line, index) => <li key={`${index}-${line.name}`}>{line.quantity > 1 ? `${line.quantity} × ` : ""}{line.name}</li>)}
+        </ul>
+      ) : null}
+      <Notice tone="info" role="note" className="mt-5">
+        La tienda registró esta venta en su mostrador y {detail.role === "buyer" ? "tú la confirmaste" : "el cliente la confirmó"} con el código de la tienda. No verifica pago, garantía, autenticidad ni condición.
+      </Notice>
+    </section>
   );
 }
 
@@ -239,6 +273,9 @@ function ReviewSection({
 }) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [confirm, confirmDialog] = useConfirm();
+  // deal-trust (safe-06): the buyer's photos, uploaded and attached right after the review is sent.
+  const [photos, setPhotos] = useState<PickedPhoto[]>([]);
+  const [photoProblem, setPhotoProblem] = useState("");
   async function submitReview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!supabase || !detail.transaction_id) return;
@@ -249,14 +286,30 @@ function ReviewSection({
       body: "La reseña será final: no podrás editarla ni eliminarla libremente.",
       confirmLabel: "Enviar reseña",
     }))) return;
+    const transactionId = detail.transaction_id;
+    const picked = detail.role === "buyer" ? photos : [];
+    let photoError = "";
     await run(
-      () => supabase.rpc("submit_transaction_review", {
-        p_transaction_id: detail.transaction_id!,
-        p_rating: Number(form.get("rating")),
-        p_comment: String(form.get("comment") ?? ""),
-      }),
-      "Tu reseña fue enviada. Permanecerá oculta hasta que ambas partes reseñen o termine el plazo.",
+      async () => {
+        const result = await supabase.rpc("submit_transaction_review", {
+          p_transaction_id: transactionId,
+          p_rating: Number(form.get("rating")),
+          p_comment: String(form.get("comment") ?? ""),
+        });
+        if (result.error || picked.length === 0 || typeof result.data !== "string") return result;
+        try {
+          const attached = await attachReviewPhotos(result.data, await uploadReviewPhotos(transactionId, picked));
+          if (attached.error) photoError = attached.error;
+        } catch (caught) {
+          photoError = caught instanceof Error ? caught.message : "REVIEW_PHOTO";
+        }
+        return { error: null };
+      },
+      picked.length
+        ? "Tu reseña fue enviada. Permanecerá oculta hasta que ambas partes reseñen o termine el plazo; Laria revisa tus fotos antes de mostrarlas."
+        : "Tu reseña fue enviada. Permanecerá oculta hasta que ambas partes reseñen o termine el plazo.",
     );
+    if (photoError) setPhotoProblem("Tu reseña se envió, pero no pudimos guardar las fotos. Puedes agregarlas aquí hasta mañana a esta hora.");
   }
 
   return (
@@ -271,6 +324,10 @@ function ReviewSection({
         <Notice tone="success" role="note" title="Tu reseña fue enviada" className="mt-4">
           <p className="mt-1 text-ink-2">{stars(detail.own_review.rating)}{detail.own_review.comment ? ` · ${detail.own_review.comment}` : ""}</p>
           <p className="mt-2 t-meta">No puede editarse ni eliminarse libremente.</p>
+          {photoProblem ? <p role="alert" className="mt-2 t-meta font-semibold text-danger">{photoProblem}</p> : null}
+          {detail.transaction_id && detail.own_review.direction === "buyer_to_seller" ? (
+            <OwnReviewPhotos transactionId={detail.transaction_id} reviewId={detail.own_review.id} submittedAt={detail.own_review.submitted_at} />
+          ) : null}
         </Notice>
       ) : detail.review_window_open ? (
         <form onSubmit={submitReview} className="mt-5 grid gap-4">
@@ -278,6 +335,7 @@ function ReviewSection({
           <Field id="resena-comment" label="Comentario opcional">
             <Textarea name="comment" maxLength={2000} rows={4} />
           </Field>
+          {detail.role === "buyer" ? <ReviewPhotoPicker photos={photos} onChange={setPhotos} disabled={busy} /> : null}
           <Button type="submit" className="w-fit" loading={busy}>Enviar reseña final</Button>
         </form>
       ) : <p className="mt-4 rounded-panel bg-canvas px-4 py-3 t-ui font-semibold text-ink-2">El plazo para enviar una reseña terminó.</p>}

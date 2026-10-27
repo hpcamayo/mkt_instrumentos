@@ -8,7 +8,7 @@ import { PageContainer } from "@/components/page-container";
 import { Pagination } from "@/components/pagination";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
-import { CAMPAIGN_PAGE_SIZE, CAMPAIGN_SLUG, campaignCards, campaignPagePath, campaignPeriodLabel, campaignPhaseLine, parsePublicCampaign } from "@/lib/campaigns";
+import { CAMPAIGN_PAGE_SIZE, CAMPAIGN_PHASE_LABELS, CAMPAIGN_SLUG, campaignCards, campaignPagePath, campaignPeriodLabel, campaignPhaseLine, parsePublicCampaign } from "@/lib/campaigns";
 import { catalogCardSelect } from "@/lib/catalog";
 import { formatNumber } from "@/lib/catalog-filters";
 import type { ListingCardData } from "@/lib/listings";
@@ -87,7 +87,7 @@ export default async function CampaignPage({ params, searchParams }: Props) {
         ) : (
           <>
             <h1 className="t-page text-ink">{campaign.name}</h1>
-            <p className="mt-1 t-ui font-semibold text-ink">{campaignPhaseLine(campaign)} · {campaignPeriodLabel(campaign)}</p>
+            <p className="mt-1 t-ui font-semibold text-ink">{CAMPAIGN_PHASE_LABELS[campaign.phase]} · {campaignPeriodLabel(campaign)}</p>
             {campaign.description ? <p className="text-lead mt-2 max-w-[68ch] t-body text-ink-2">{campaign.description}</p> : null}
             <details className="mt-4 max-w-[68ch] rounded-panel border border-subtle bg-white">
               <summary className="flex min-h-11 cursor-pointer items-center px-4 t-ui font-semibold text-ink">Qué revisó Laria</summary>

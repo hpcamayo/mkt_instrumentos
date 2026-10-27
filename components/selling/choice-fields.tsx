@@ -76,7 +76,8 @@ export function TypeChips({
   );
 }
 
-// Condition as cards with a one-line definition. Uncontrolled unless `value` is passed.
+// Condition as a scale, best to worst, each step with its one-line definition (sell-10, lib/listing-condition.ts):
+// one column, so the order reads as a scale. Uncontrolled unless `value` is passed.
 export function ConditionCards({
   id,
   name,
@@ -100,12 +101,12 @@ export function ConditionCards({
     <fieldset className="grid min-w-0 gap-2">
       <legend className="mb-1.5 t-ui font-semibold text-ink">{legend}</legend>
       <GroupError id={id} error={error} />
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-1.5">
         {options.map((option, index) => (
           <label
             key={option.value}
             className={cn(
-              "flex min-h-11 cursor-pointer items-start gap-2.5 rounded-panel border border-line-strong bg-surface p-3 transition-colors duration-120 hover:bg-canvas",
+              "flex min-h-11 cursor-pointer items-start gap-2.5 rounded-panel border border-line-strong bg-surface px-3 py-2.5 transition-colors duration-120 hover:bg-canvas",
               "has-[:checked]:border-ink has-[:checked]:shadow-[inset_0_0_0_1px_var(--ink)]",
               error && "border-danger",
             )}
@@ -119,9 +120,9 @@ export function ConditionCards({
               className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-ink"
               {...groupProps(id, error)}
             />
-            <span className="min-w-0">
+            <span className="min-w-0 sm:grid sm:grid-cols-[10.5rem_minmax(0,1fr)] sm:gap-3">
               <span className="block t-ui font-semibold text-ink">{option.label}</span>
-              {option.description ? <span className="mt-0.5 block t-meta">{option.description}</span> : null}
+              {option.description ? <span className="mt-0.5 block t-meta sm:mt-0">{option.description}</span> : null}
             </span>
           </label>
         ))}

@@ -143,6 +143,10 @@ do $$ begin
   perform pg_temp.expect_error(format($q$select laria_private.write_listing_sale_terms(%L, '{"ships_provinces":true,"carriers":["dhl"]}')$q$, pg_temp.id('lp')), 'SALE_TERMS_INVALID');
   perform pg_temp.expect_error(format($q$select laria_private.write_listing_sale_terms(%L, '{"lima_delivery":"laria"}')$q$, pg_temp.id('lp')), 'SALE_TERMS_INVALID');
   perform pg_temp.expect_error(format($q$select laria_private.write_listing_sale_terms(%L, '{"accepts_trades":true,"trade_categories":["cars"]}')$q$, pg_temp.id('lp')), 'SALE_TERMS_INVALID');
+  -- The categories are the catalog's, a later category included (discovery's andean, 20261207120000).
+  perform laria_private.write_listing_sale_terms(pg_temp.id('lp'), '{"accepts_trades":true,"trade_categories":["andean","winds"]}');
+  perform pg_temp.check((pg_temp.listing('lp')).trade_categories = '{andean,winds}', 'trade categories follow the catalog');
+  perform laria_private.write_listing_sale_terms(pg_temp.id('lp'), '{"accepts_trades":false}');
   perform pg_temp.expect_error(format($q$select laria_private.write_listing_sale_terms(%L, '{"pickup":"maybe"}')$q$, pg_temp.id('lp')), 'SALE_TERMS_INVALID');
   perform pg_temp.expect_error(format($q$select laria_private.write_listing_sale_terms(%L, '{"price":1}')$q$, pg_temp.id('lp')), 'SALE_TERMS_INVALID');
   perform pg_temp.expect_error(format($q$select laria_private.write_listing_sale_terms(%L, '{"accepts_trades":true,"trade_wants":"Escríbeme al 999 888 777"}')$q$, pg_temp.id('lp')), 'SALE_TERMS_CONTACT_DETAILS');
@@ -184,6 +188,15 @@ do $$ begin
   -- A direct owner update cannot forge a flag.
   update public.listings set listing_flags = '{acepta_cambios}' where id = pg_temp.id('lp');
   perform pg_temp.check(not ((pg_temp.listing('lp')).listing_flags @> '{acepta_cambios}'), 'owner cannot forge a flag');
+end $$;
+reset role;
+-- The trade categories check runs as whoever writes the row (here the service role, as a submission does).
+set local role service_role;
+do $$ begin
+  update public.listings set accepts_trades = true, trade_categories = '{andean}' where id = pg_temp.id('lp');
+  perform pg_temp.check((pg_temp.listing('lp')).trade_categories = '{andean}', 'an API role passes the category check');
+  perform pg_temp.expect_error(format($q$update public.listings set trade_categories = '{cars}' where id = %L$q$, pg_temp.id('lp')), 'listings_trade_categories_check');
+  update public.listings set accepts_trades = false, trade_categories = '{}' where id = pg_temp.id('lp');
 end $$;
 reset role;
 select set_config('app.allow_listing_admin_fields', 'true', true);
@@ -357,6 +370,61 @@ set local role anon;
 do $$ begin
   perform pg_temp.check((select public_map_latitude from public.stores where id = pg_temp.id('store')) = -12.121123, 'anon reads the public pin');
   perform pg_temp.expect_error($q$select map_latitude from public.stores$q$, 'permission denied');
+end $$;
+
+-- ------------------------------------------------------------------ discovery's maker marks, saved with the listing
+
+reset role;
+insert into public.store_maker_profiles(store_id, kind, craft_city) values (pg_temp.id('store'), 'taller', 'Ayacucho');
+select pg_temp.remember('sub_m', 'd1300000-0000-4000-8000-000000000010'),
+       pg_temp.remember('sub_m2', 'd1300000-0000-4000-8000-000000000011'),
+       pg_temp.remember('sub_a', 'd1300000-0000-4000-8000-000000000012');
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+set local role service_role;
+do $$ begin
+  perform public.complete_listing_submission(pg_temp.id('sub_m'), 'store_listing',
+    pg_temp.fields(pg_temp.id('owner'), pg_temp.id('store'), 'ld-sub-m', 'Nuevo'), pg_temp.photos(pg_temp.id('sub_m')),
+    '{"maker":{"handmade":true,"made_to_order_weeks":6,"artist_note":null}}');
+  perform pg_temp.check((select handmade and made_to_order_weeks = 6 from public.listing_maker_details where listing_id = pg_temp.id('sub_m')),
+    'a maker store saves its marks with the listing');
+  -- Discovery's rules and errors, before anything is saved.
+  perform pg_temp.expect_error(format($q$select public.complete_listing_submission(%L, 'store_listing', %L, %L, '{"maker":{"handmade":false,"made_to_order_weeks":30,"artist_note":null}}')$q$,
+    pg_temp.id('sub_m2'), pg_temp.fields(pg_temp.id('owner'), pg_temp.id('store'), 'ld-sub-m2', 'Nuevo'), pg_temp.photos(pg_temp.id('sub_m2'))), 'MADE_TO_ORDER_INVALID');
+  perform pg_temp.expect_error(format($q$select public.complete_listing_submission(%L, 'store_listing', %L, %L, '{"maker":{"handmade":false,"made_to_order_weeks":null,"artist_note":"Usado en la gira"}}')$q$,
+    pg_temp.id('sub_m2'), pg_temp.fields(pg_temp.id('owner'), pg_temp.id('store'), 'ld-sub-m2', 'Nuevo'), pg_temp.photos(pg_temp.id('sub_m2'))), 'ARTIST_REQUIRED');
+  perform pg_temp.expect_error(format($q$select public.complete_listing_submission(%L, 'listing', %L, %L, '{"maker":{"handmade":true}}')$q$,
+    pg_temp.id('sub_a'), pg_temp.fields(pg_temp.id('seller'), null, 'ld-sub-a', 'Bueno'), pg_temp.photos(pg_temp.id('sub_a'))), 'MAKER_REQUIRED');
+  perform pg_temp.expect_error(format($q$select public.complete_listing_submission(%L, 'listing', %L, %L, '{"maker":{"handmade":"yes"}}')$q$,
+    pg_temp.id('sub_a'), pg_temp.fields(pg_temp.id('seller'), null, 'ld-sub-a', 'Bueno'), pg_temp.photos(pg_temp.id('sub_a'))), 'LISTING_DETAILS_INVALID');
+end $$;
+reset role;
+do $$ begin
+  perform pg_temp.check(not exists (select 1 from public.listings where id in (pg_temp.id('sub_m2'), pg_temp.id('sub_a'))), 'refused marks leave no listing');
+end $$;
+insert into public.artist_profiles(user_id, slug, display_name, verified_by) values (pg_temp.id('seller'), 'ld-artista', 'Artista Detalles', pg_temp.id('owner'));
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+set local role service_role;
+do $$ begin
+  perform public.complete_listing_submission(pg_temp.id('sub_a'), 'listing',
+    pg_temp.fields(pg_temp.id('seller'), null, 'ld-sub-a', 'Bueno'), pg_temp.photos(pg_temp.id('sub_a')),
+    '{"maker":{"handmade":false,"made_to_order_weeks":null,"artist_note":"  Usado en la   gira 2024 "}}');
+  perform pg_temp.check((select artist_note = 'Usado en la gira 2024' and not handmade from public.listing_maker_details where listing_id = pg_temp.id('sub_a')),
+    'a verified artist saves the note, spaces tidied');
+end $$;
+reset role;
+-- A duplicate keeps the maker's marks; the owner clears them through the same writer.
+set local role authenticated;
+select pg_temp.as_user('owner');
+do $$ declare copy public.listings; begin
+  copy := public.copy_owned_listing(pg_temp.id('sub_m'), 'duplicate');
+  perform pg_temp.check((select handmade and made_to_order_weeks = 6 from public.listing_maker_details where listing_id = copy.id), 'the copy keeps the marks');
+  perform public.update_owned_listing_details(pg_temp.id('sub_m'), '{"maker":{"handmade":false,"made_to_order_weeks":null,"artist_note":null}}');
+  perform pg_temp.check(not exists (select 1 from public.listing_maker_details where listing_id = pg_temp.id('sub_m')), 'clearing every mark removes the row');
+end $$;
+select pg_temp.as_user('seller');
+do $$ declare copy public.listings; begin
+  copy := public.copy_owned_listing(pg_temp.id('sub_a'), 'duplicate');
+  perform pg_temp.check(not exists (select 1 from public.listing_maker_details where listing_id = copy.id), 'an artist note is not copied');
 end $$;
 
 reset role;

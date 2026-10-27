@@ -7,10 +7,12 @@ import { StoreInventoryAccess } from "@/components/store-inventory-access";
 import { StoreRegistrationForm, type StoreApplication } from "@/components/store-registration-form";
 import { StoreFloorPanel } from "@/components/store-floor/store-floor-panel";
 import { StoreReachLinks } from "@/components/store-reach/store-reach-links";
+import { SafeSpotSettingsCard } from "@/components/trust/safe-spot-settings";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusEntryTag } from "@/components/ui/tag";
 import { getAccountContext } from "@/lib/account-context";
+import { readSafeSpotSettings } from "@/lib/deal-trust";
 import { assistedCommerceEnabled } from "@/lib/payment-methods";
 import { getOpenStoreRequest, getStoreAllowanceDetail } from "@/lib/store-allowance";
 import { getInventorySummary } from "@/lib/store-inventory";
@@ -23,15 +25,17 @@ export default async function StoreAccountPage() {
   const { user, profile, store, supabase } = await getAccountContext();
   if (profile?.account_type !== "store_owner") redirect("/mi-cuenta");
   const db = supabase as unknown as SupabaseClient | null;
-  const [{ data: photos }, paymentMethods, allowance, summary, inventoryRequest] = store && db
+  const [{ data: photos }, paymentMethods, allowance, summary, inventoryRequest, safeSpot] = store && db
     ? await Promise.all([
         db.from("store_photos").select("id,image_url,alt_text").eq("store_id", store.id).order("sort_order"),
         db.from("store_payment_methods").select("method", { count: "exact", head: true }).eq("store_id", store.id).in("status", ["approved", "pending_review"]),
         getStoreAllowanceDetail(db),
         getInventorySummary(db),
         getOpenStoreRequest(db, "inventory_access"),
+        // deal-trust (safe-03): «Punto seguro Laria»; a failed read leaves the card out.
+        db.rpc("get_my_safe_spot").then(({ data, error }) => (error ? null : readSafeSpotSettings(data)), () => null),
       ])
-    : [{ data: [] }, { count: 0 }, null, null, null];
+    : [{ data: [] }, { count: 0 }, null, null, null, null];
   const inventoryEnabled = Boolean(summary?.inventory_enabled);
   const canWrite = store ? ["pending", "active"].includes(store.status) : false;
   return (
@@ -51,6 +55,9 @@ export default async function StoreAccountPage() {
           <Link href="/mi-cuenta/tienda/valores-por-defecto" className="link font-semibold">Valores por defecto</Link>: el estado y el texto que
           repites en cada publicación (garantía, horario, entrega) se llenan solos.
           {assistedCommerceEnabled() ? <> <Link href="/mi-cuenta/tienda/pagos" className="link font-semibold">Pagos</Link>: indica cómo pueden pagarte los compradores.</> : null}
+          {/* Feature ideas, selling-tools batch (sell-02, sell-03, run-04, buy-06). */}
+          {" "}<Link href="/mi-cuenta/tienda/ofertas/ajustes" className="link font-semibold">Qué recibimos</Link>: compra de usados, consignación, parte de pago e insumos que vendes.
+          {/* /Feature ideas, selling-tools batch */}
         </p>
       ) : null}
       {/* store-floor: today's try-outs, warranty, labels and poster. */}
@@ -59,6 +66,8 @@ export default async function StoreAccountPage() {
       {store && canWrite ? <StoreDiscoveryLink /> : null}
       {/* Feature ideas, store-reach batch (docs/feature-ideas/store-reach.md): Mercado Libre, feeds, dealers, campaigns, demand */}
       {store && canWrite ? <StoreReachLinks /> : null}
+      {/* deal-trust (safe-03) */}
+      {store && store.status === "active" && safeSpot ? <SafeSpotSettingsCard initial={safeSpot} /> : null}
       <StoreRegistrationForm
         store={(store as StoreApplication | null) ?? null}
         photos={photos ?? []}

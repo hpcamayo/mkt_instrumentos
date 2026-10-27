@@ -10,6 +10,7 @@ import { useDisclosureGroup } from "@/components/use-disclosure";
 import { BRANDS_ANCHOR, categoryBrandHref } from "@/lib/category-nav";
 import { categoryMenus, currentStripKey, stripItems, type CategoryMenu } from "@/lib/shell";
 import { cn } from "@/lib/utils";
+import { catalogRefinementRel } from "@/lib/catalog-links";
 
 // The category strip (docs/ux-redesign/ux-2-shell.md, amended 3 Oct for N12): "Instrumentos", the eight categories
 // and "Tiendas verificadas" in the UX-2 strip. "Instrumentos" and "Tiendas verificadas" are links; each category is a
@@ -114,7 +115,7 @@ export function CategoryPanel({ menu, brands = [], onChoose }: { menu: CategoryM
             <ul className="mt-1">
               {menu.types.map((type) => (
                 <li key={type.value}>
-                  <Link href={type.href} onClick={onChoose} className={cn(PANEL_LINK, "font-semibold text-ink")}>
+                  <Link href={type.href} rel={catalogRefinementRel(type.href)} onClick={onChoose} className={cn(PANEL_LINK, "font-semibold text-ink")}>
                     {type.label}
                   </Link>
                 </li>
@@ -129,7 +130,7 @@ export function CategoryPanel({ menu, brands = [], onChoose }: { menu: CategoryM
                 <ul className="mt-1">
                   {type.subtypes.map((subtype) => (
                     <li key={subtype.href}>
-                      <Link href={subtype.href} onClick={onChoose} className={cn(PANEL_LINK, "text-ink")}>{subtype.label}</Link>
+                      <Link href={subtype.href} rel={catalogRefinementRel(subtype.href)} onClick={onChoose} className={cn(PANEL_LINK, "text-ink")}>{subtype.label}</Link>
                     </li>
                   ))}
                 </ul>
@@ -141,7 +142,7 @@ export function CategoryPanel({ menu, brands = [], onChoose }: { menu: CategoryM
                 <ul className="mt-1">
                   {brands.map((brand, index) => (
                     <li key={brand} className={cn(index >= PHONE_BRANDS && "hidden md:block")}>
-                      <Link href={categoryBrandHref(menu.key, brand)} onClick={onChoose} className={cn(PANEL_LINK, "text-ink")}>{brand}</Link>
+                      <Link href={categoryBrandHref(menu.key, brand)} rel="nofollow" onClick={onChoose} className={cn(PANEL_LINK, "text-ink")}>{brand}</Link>
                     </li>
                   ))}
                 </ul>

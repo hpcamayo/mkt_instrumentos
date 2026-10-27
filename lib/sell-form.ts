@@ -1,5 +1,6 @@
 import { MAX_LISTING_PHOTOS, MIN_LISTING_PHOTOS } from "@/lib/listing-submission";
 import { conditionDefinition } from "@/lib/listing-condition";
+import { checkListingDetails } from "@/lib/listing-details";
 import { getConditionLabel } from "@/lib/listings";
 
 // The sell form's copy and checks (docs/ux-redesign/ux-5-selling.md). Pure, so the form and the tests share them.
@@ -34,6 +35,10 @@ export type SellDraft = {
   regionValue: string | null;
   description: string;
   acceptedRules: boolean;
+  // listing-details: the batches' extra fields (lib/listing-details.ts), checked when given, and whether a store
+  // sells it (some details depend on it).
+  details?: Record<string, unknown>;
+  isStore?: boolean;
 };
 
 export type SellField =
@@ -48,9 +53,11 @@ export type SellField =
   | "city"
   | "region"
   | "description"
+  | "details"
   | "marketplace_rules";
 
-export type SellError = { field: SellField; message: string };
+// target: the input an error is about when it is not the field's own (a detail's input, lib/listing-details.ts).
+export type SellError = { field: SellField; message: string; key?: string; target?: string };
 
 // Errors in the order the fields appear on the page, so the summary reads top to bottom.
 export function validateSellDraft(draft: SellDraft): SellError[] {
@@ -73,6 +80,10 @@ export function validateSellDraft(draft: SellDraft): SellError[] {
     add("description", draft.description
       ? `Escribe al menos ${DESCRIPTION_MIN} caracteres; llevas ${draft.description.length}.`
       : `Escribe una descripción de al menos ${DESCRIPTION_MIN} caracteres.`);
+  }
+  if (draft.details) {
+    const checked = checkListingDetails(draft.details, { isStore: Boolean(draft.isStore) });
+    if (!checked.ok) errors.push({ field: "details", message: checked.message, key: checked.key, target: checked.field });
   }
   if (!draft.acceptedRules) add("marketplace_rules", "Acepta los términos y reglas para publicar.");
   return errors;

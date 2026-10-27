@@ -10,6 +10,7 @@ import { FollowButton } from "@/components/following/follow-button";
 import { FilterSheetButton } from "@/components/filter-sheet";
 import { ListingCard } from "@/components/listing-card";
 import { ListingFilters } from "@/components/listing-filters";
+import { CatalogMapSwitch } from "@/components/map/catalog-map-switch";
 import { PageContainer } from "@/components/page-container";
 import { Pagination } from "@/components/pagination";
 import { SortMenu, SortSheetButton } from "@/components/sort-control";
@@ -22,6 +23,7 @@ import {
   RESULTS_STATUS_ID,
   appliedFilters,
   catalogHref,
+  catalogSearchParams,
   catalogTitle,
   clearedFilters,
   formatNumber,
@@ -148,7 +150,7 @@ export async function CatalogView({
           {scoped ? (
             <p className="mt-3 t-meta">
               Buscando “{filters.q}” en {scoped}.{" "}
-              <CatalogLink href={catalogHref({ cities: [], conditions: [], advanced: {}, sort: filters.sort, q: filters.q })} focusId={RESULTS_STATUS_ID} className="link font-semibold">
+              <CatalogLink href={catalogHref({ cities: [], conditions: [], advanced: {}, sort: filters.sort, q: filters.q })} rel="nofollow" focusId={RESULTS_STATUS_ID} className="link font-semibold">
                 Buscar en todo el catálogo
               </CatalogLink>
             </p>
@@ -181,7 +183,7 @@ export async function CatalogView({
                             <ul className="mt-3 flex flex-wrap gap-2">
                               {rescue.ways.map((way) => (
                                 <li key={way.chip.key}>
-                                  <CatalogLink href={way.chip.href} focusId={RESULTS_STATUS_ID} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                                  <CatalogLink href={way.chip.href} rel="nofollow" focusId={RESULTS_STATUS_ID} className={buttonClasses({ variant: "secondary", size: "sm" })}>
                                     Sin {way.chip.text.startsWith("“") ? way.chip.text : `“${way.chip.text}”`} hay {formatNumber(way.count)}
                                   </CatalogLink>
                                 </li>
@@ -219,6 +221,7 @@ export async function CatalogView({
                   emptyState
                 )
               ) : (
+                <CatalogMapSwitch query={catalogSearchParams(filters).toString()}>
                 <CatalogTrail href={trailHref} label={title}>
                   <div className={LISTING_GRID}>
                     {listings.map((listing, index) => (
@@ -235,6 +238,7 @@ export async function CatalogView({
                   <CatalogLoadMore filters={filters} page={page} total={totalCount} />
                   <Pagination page={page} total={totalCount} path={path} params={params} phoneLoadMore />
                 </CatalogTrail>
+                </CatalogMapSwitch>
               )}
             </CatalogResults>
           </div>

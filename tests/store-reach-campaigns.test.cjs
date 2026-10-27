@@ -61,7 +61,8 @@ test("reach-05: rows parse strictly", () => {
 
 test("reach-05: dates are plain dates in Lima, never a countdown", () => {
   const campaign = parseCampaign(CAMPAIGN);
-  assert.equal(campaignPeriodLabel(campaign), "Del 15 de diciembre de 2026 al 31 de diciembre de 2026");
+  assert.equal(campaignPeriodLabel(campaign), "Del 15 de diciembre al 31 de diciembre de 2026");
+  assert.equal(campaignPeriodLabel({ startsAt: "2026-12-20T05:00:00.000Z", endsAt: "2027-01-03T05:00:00.000Z" }), "Del 20 de diciembre de 2026 al 2 de enero de 2027");
   assert.equal(campaignPhaseLine(campaign), "Hasta el 31 de diciembre de 2026");
   assert.equal(campaignPhaseLine({ ...campaign, phase: "upcoming" }), "Empieza el 15 de diciembre de 2026");
   assert.equal(campaignPhaseLine({ ...campaign, phase: "ended" }), "Terminó el 31 de diciembre de 2026");

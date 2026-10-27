@@ -36,6 +36,8 @@ import { getCategoryLabel, getConditionLabel } from "@/lib/listings";
 import { PageHeader } from "@/components/ui/page-header";
 import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
+// Feature ideas, accounts batch (safe-05, safe-02).
+import { ListingRedFlags } from "@/components/admin-feature/listing-red-flags";
 
 const ADMIN_DATE_FORMATTER = new Intl.DateTimeFormat("es-PE", {
   timeZone: "America/Lima",
@@ -623,6 +625,8 @@ function QueueItem({
           {storePhotos.map((photo, index) => typeof photo.image_url === "string" ? <QueuePhoto key={String(photo.id ?? photo.image_url)} href={photo.image_url} label={`Foto de tienda ${index + 1}`} /> : null)}
         </ul>
       ) : null}
+
+      {queue === "publicaciones" ? <ListingRedFlags listingId={id} /> : null}
 
       {/* POST 16: the listing's sound clip is reviewed with it; played only on tap. */}
       {adminString(item, "sound_clip_url") ? <audio controls preload="none" src={adminString(item, "sound_clip_url")} className="w-full max-w-md" aria-label="Escuchar el sonido de la publicación" /> : null}

@@ -14,6 +14,7 @@ import { getCardSpecLine } from "@/lib/listing-specs";
 import { installmentLine } from "@/lib/payment-methods";
 import { formatPrice } from "@/lib/price";
 import { Price } from "@/components/ui/price";
+import { PriceModeMark } from "@/components/listing-details/price-mode-mark";
 import { visiblePreviousPrice } from "@/lib/listing-page";
 import { StatusTag } from "@/components/ui/tag";
 import { VerifiedIcon } from "@/components/ui/verified-mark";
@@ -124,6 +125,7 @@ export function ListingCard({ listing, variant = "grid", source = "catalog", hea
           {/* FIND 10 and list-05: a real drop of the past 30 days shows the old price struck through ("Antes" for screen
               readers), the same one the listing page shows. */}
           <Price value={listing.price_pen} previous={visiblePreviousPrice(listing, Date.now())} />
+          {listing.price_pen !== null ? <PriceModeMark mode={listing.price_mode} /> : null}
           {isOutOfStock(listing) ? <StatusTag domain="stock" status={listing.restock_expected_on ? "restock_expected" : "out_of_stock"} /> : null}
         </p>
         {/* store-floor, buy-09: the store's interest-free installments, worked out on this price. */}

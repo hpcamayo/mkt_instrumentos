@@ -246,7 +246,7 @@ test("header: bell, avatar and an account menu with the rail's sections, counts,
   const menu = html.slice(html.indexOf('id="menu-cuenta"'));
   assert.match(menu, /^id="menu-cuenta" hidden=""/);
   const labels = [...menu.matchAll(/<a href="([^"]+)"[^>]*><span[^>]*>([^<]+)<\/span>/g)].map((match) => match[2]);
-  assert.deepEqual(labels, ["Resumen", "Mis publicaciones", "Publicar", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(labels, ["Resumen", "Mis publicaciones", "Publicar", "Mi equipo", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.match(menu, /3 notificaciones sin leer/);
   assert.match(menu, /1 compras requieren tu confirmación/);
   assert.match(menu, /href="\/admin"[^>]*>Admin</);
@@ -301,21 +301,24 @@ test("home header: Categorías menu, Tiendas verificadas from 768 px, Cómo func
   assert.match(source("components/site-header.tsx"), /\{menu\.open \? <HomeCategoryPanel panelRef=\{menu\.panelRef\} onChoose=\{\(\) => menu\.close\(\)\} \/> : null\}/);
 });
 
-test("the home Categorías panel: Todos los instrumentos, every category with its types, Tiendas verificadas (PUB-011–015 destinations)", () => {
+test("the home Categorías panel: Todos los instrumentos, every category with its types, Tiendas verificadas (PUB-011–015 destinations) and Servicios para músicos", () => {
   const html = renderHomeHeader({ open: true });
   assert.match(html, /aria-expanded="true" aria-controls="menu-categorias"/);
   // The panel follows its button in the markup, so Tab goes from the button into it.
-  const panel = html.slice(html.indexOf('<div id="menu-categorias"'), html.indexOf("Tiendas verificadas</a></div></div>") + 35);
+  const panel = html.slice(html.indexOf('<div id="menu-categorias"'), html.indexOf("Servicios para músicos</a></div></div>") + 38);
   assert.ok(html.indexOf('aria-controls="menu-categorias"') < html.indexOf('id="menu-categorias"'));
   assert.ok(html.indexOf('id="menu-categorias"') < html.indexOf('href="#como-funciona"'));
   assert.match(panel, /^<div id="menu-categorias" class="surface-light menu-fade absolute inset-x-0 top-full z-40 max-h-\[calc\(100dvh-56px\)\] overflow-y-auto[^"]*shadow-level-1[^"]*md:max-h-none md:overflow-visible">/);
   assert.match(panel, /<ul class="[^"]*md:grid-cols-4[^"]*">/);
-  const links = [...panel.matchAll(/<a href="([^"]+)" class="([^"]*)"[^>]*>([^<]+)<\/a>/g)].map((match) => ({ href: match[1].replace(/&amp;/g, "&"), className: match[2], label: match[3] }));
+  const links = [...panel.matchAll(/<a href="([^"]+)"(?: rel="([^"]+)")? class="([^"]*)"[^>]*>([^<]+)<\/a>/g)].map((match) => ({ href: match[1].replace(/&amp;/g, "&"), rel: match[2], className: match[3], label: match[4] }));
+  for (const link of links) assert.equal(link.rel, link.href.startsWith("/listados?") ? "nofollow" : undefined, link.href);
   const expected = [
     ["Todos los instrumentos", "/listados"],
     ...shell.categoryMenus.flatMap((menu) => [[menu.label, menu.href], ...menu.types.map((type) => [type.label, type.href])]),
     // find-13: the stores directory (was N7's filtered catalog).
     ["Tiendas verificadas", "/tiendas"],
+    // feature-ideas services (bet-02): its own section, after the stores.
+    ["Servicios para músicos", "/servicios"],
   ];
   assert.deepEqual(links.map((link) => [link.label, link.href]), expected);
   // Every destination is a client link; 44 px rows on phones, 36 px from 768 px; types indented on phones.
@@ -390,7 +393,8 @@ test("footers: full on the home with four columns, slim everywhere else (N5)", (
   for (const href of full.matchAll(/href="([^"]+)"/g)) assert.doesNotMatch(href[1], /como-funciona|consejos-para-vender/);
   const slim = renderToStaticMarkup(React.createElement(SiteFooter, { variant: "slim" }));
   assert.match(slim, /© 2026 Laria · No cobramos comisiones ni procesamos pagos\./);
-  assert.deepEqual([...slim.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1]), ["/consejos-de-seguridad", "/terminos", "/privacidad", "/libro-de-reclamaciones"]);
+  // Feature ideas, accounts batch (safe-10): the help center comes first.
+  assert.deepEqual([...slim.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1]), ["/ayuda", "/consejos-de-seguridad", "/terminos", "/privacidad", "/libro-de-reclamaciones"]);
 });
 
 test("404 and 500 share one body: title, one line, the search and two links", () => {

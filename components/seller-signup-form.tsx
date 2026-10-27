@@ -16,6 +16,7 @@ import { Field, Input } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { PasswordInput } from "@/components/ui/password-input";
 import { ResendConfirmation } from "@/components/auth/resend-confirmation";
+import { OAuthButtons, oauthProvidersEnabled } from "@/components/auth/oauth-buttons";
 
 type FormState =
   | "idle"
@@ -180,6 +181,13 @@ export function SellerSignupForm() {
   return (
     <form ref={validation.formRef} noValidate className="space-y-5" onSubmit={handleSubmit} onChange={validation.onChange}>
       {errorSummary}
+      {/* buy-11 (accounts batch): Google and Apple skip the confirmation e-mail. */}
+      {oauthProvidersEnabled() ? (
+        <div className="space-y-3 border-b border-subtle pb-5">
+          <OAuthButtons next={destination ?? "/mi-cuenta?welcome=1"} />
+          <p className="t-ui font-semibold text-ink">O crea tu cuenta con tu correo</p>
+        </div>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="signup-full-name" error={validation.errorFor("fullName")} label="Nombre completo" className="sm:col-span-2">
           <Input name="fullName" required autoComplete="name" placeholder="Tu nombre" />

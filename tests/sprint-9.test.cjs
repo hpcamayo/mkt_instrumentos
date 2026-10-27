@@ -241,9 +241,16 @@ test("robots.txt blocks private, account, Admin, API and auth routes and adverti
   const robots = load("app/robots.ts").default;
   withEnv({ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: undefined }, () => {
     const result = robots();
-    for (const path of ["/mi-cuenta", "/admin", "/api/", "/login", "/logout", "/auth", "/vender", "/restablecer-contrasena", "/registro/vendedor", "/registro/tienda"]) assert.ok(result.rules.disallow.includes(path), path);
-    for (const path of ["/registro/vendedor/invitacion", "/registro/tienda/invitacion"]) assert.ok(result.rules.disallow.some((rule) => path.startsWith(rule)), path);
-    for (const path of ["/listados", "/instrumentos", "/tiendas", "/terminos"]) assert.equal(result.rules.disallow.some((rule) => path.startsWith(rule)), false, path);
+    const general = result.rules.find((rule) => rule.userAgent === "*");
+    for (const rule of result.rules) {
+      for (const path of ["/mi-cuenta", "/admin", "/api/", "/login", "/logout", "/auth", "/vender", "/restablecer-contrasena", "/registro/vendedor", "/registro/tienda"]) assert.ok(rule.disallow.includes(path), path);
+      for (const path of ["/registro/vendedor/invitacion", "/registro/tienda/invitacion"]) assert.ok(rule.disallow.some((entry) => path.startsWith(entry)), path);
+      for (const path of ["/instrumentos", "/tiendas", "/terminos"]) assert.equal(rule.disallow.some((entry) => path.startsWith(entry)), false, path);
+    }
+    assert.equal(general.disallow.includes("/listados"), false, "Google/Bing and other discovery agents retain catalog pagination");
+    const limited = result.rules.find((rule) => Array.isArray(rule.userAgent));
+    assert.deepEqual(limited.userAgent, ["Amazonbot", "Reflectionbot", "MJ12bot"]);
+    assert.ok(limited.disallow.includes("/listados"));
     assert.equal(result.sitemap, "https://laria.audio/sitemap.xml");
   });
   withEnv({ VERCEL_ENV: "preview" }, () => assert.deepEqual(robots().rules, { userAgent: "*", disallow: "/" }));
@@ -408,9 +415,9 @@ test("public footer, forms and navigation link to legal/safety pages and categor
 test("account navigation follows the frozen IA on desktop and mobile with precise active states", () => {
   const navigation = load("lib/account-navigation.ts");
   const particular = navigation.getAccountNavigationItems("seller", false);
-  assert.deepEqual(particular.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(particular.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Mi equipo", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   const store = navigation.getAccountNavigationItems("store_owner", true);
-  assert.deepEqual(store.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar", "Pruebas", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(store.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar", "Pruebas", "Ofertas", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   for (const items of [particular, store, navigation.getAccountNavigationItems("store_owner", false)]) {
     const hrefs = items.map((item) => item.href);
     assert.equal(new Set(hrefs).size, hrefs.length);
