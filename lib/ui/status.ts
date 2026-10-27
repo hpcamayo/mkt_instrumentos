@@ -69,8 +69,10 @@ const ALERT: Record<string, StatusEntry> = {
   deleted: { label: "Eliminada", tone: "neutral" },
 };
 
-// Stock of an inventory-linked listing (listings.stock_state). It never changes the listing's own status.
+// Stock of an inventory-linked listing (listings.stock_state). It never changes the listing's own status. "Reservado" is
+// a Particular's reservation (talk-06, docs/ux-effortless/maybes-reservado.md): the listing stays published.
 const STOCK: Record<string, StatusEntry> = {
+  reserved: { label: "Reservado", tone: "warning", icon: "review" },
   out_of_stock: { label: "Agotado", tone: "neutral", icon: "stockout" },
 };
 
