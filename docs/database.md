@@ -585,9 +585,12 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
 6. Give every UPDATE and DELETE in a function or trigger a WHERE clause (`where true` when every row is meant).
    Supabase loads pg_safeupdate for API connections, which refuses one without, the statements of the functions and
    triggers an API call runs included; local Postgres and the migration connection don't load it, so only production
-   fails. `tests/api-safeupdate.integration.cjs` scans every function of `public` and `laria_private` after a reset,
-   with the SQL each one builds for EXECUTE (its strings, pieces joined with `||`, and `format()` filled in). It can't
-   see what a variable, a table or another function adds, so write the WHERE in the string itself.
+   fails. `tests/api-safeupdate.integration.cjs` scans every plpgsql and sql function of `public` and `laria_private`
+   after a reset, with the SQL each one builds for EXECUTE (its strings with their escapes, pieces joined with `||`,
+   and `format()` filled in as PostgreSQL fills it in, which it checks against the database's own `format()`), and the
+   SQL that SQL builds, three levels down; deeper fails. It can't see what a variable built elsewhere (over several
+   assignments, say), a table or another function (`concat()`, `replace()`, `string_agg()`) adds, nor `format()`
+   arguments passed as a VARIADIC array other than `ARRAY[...]`, so write the WHERE in the string itself.
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
