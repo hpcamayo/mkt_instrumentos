@@ -96,6 +96,23 @@ test("A19: a listing's own page, or every listing page, the home and the check p
     console.warn = warn;
   }
   assert.equal(CACHE_PROBE_PATH, "/api/public-pages/probe");
+  // Each deployment is named by its id, or its address; outside Vercel by nothing.
+  const { currentDeployment } = loadModule("lib/listing-cache.ts", { "server-only": {}, "next/cache": { revalidatePath: () => undefined } });
+  const env = { id: process.env.VERCEL_DEPLOYMENT_ID, url: process.env.VERCEL_URL };
+  try {
+    process.env.VERCEL_DEPLOYMENT_ID = "dpl_4Kc2";
+    process.env.VERCEL_URL = "mkt-instrumentos-4kc2.vercel.app";
+    assert.equal(currentDeployment(), "dpl_4Kc2");
+    delete process.env.VERCEL_DEPLOYMENT_ID;
+    assert.equal(currentDeployment(), "mkt-instrumentos-4kc2.vercel.app");
+    delete process.env.VERCEL_URL;
+    assert.equal(currentDeployment(), null);
+  } finally {
+    for (const [name, value] of [["VERCEL_DEPLOYMENT_ID", env.id], ["VERCEL_URL", env.url]]) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
   assert.deepEqual(calls, [
     ["/instrumentos/fender-stratocaster-1b2c"], ["/instrumentos/yamaha-c40"],
     ["/instrumentos/[slug]", "page"], ["/"], ["/api/public-pages/probe"],
@@ -107,22 +124,25 @@ test("A19: a listing's own page, or every listing page, the home and the check p
   assert.match(warnings[0], /listing-page-refresh-failed cache unavailable/);
 });
 
-test("A19: the check page is cached until a clear and says only its nonce", async () => {
+test("A19: the check page is cached until a clear and says only its nonce and the deployment that built it", async () => {
   const source = read("app/api/public-pages/probe/route.ts");
   assert.match(source, /\nexport const dynamic = "force-static";\nexport const revalidate = false;\n/);
   assert.doesNotMatch(source, REQUEST_BOUND);
-  const { GET } = loadModule("app/api/public-pages/probe/route.ts", { "next/server": nextServer });
+  const { GET } = loadModule("app/api/public-pages/probe/route.ts", { "next/server": nextServer, "@/lib/listing-cache": { currentDeployment: () => "dpl_4Kc2" } });
   const first = await GET().json();
-  assert.deepEqual(Object.keys(first), ["nonce"]);
+  assert.deepEqual(Object.keys(first), ["nonce", "deployment"]);
   assert.match(first.nonce, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.equal(first.deployment, "dpl_4Kc2");
   assert.notEqual((await GET().json()).nonce, first.nonce);
+  // Outside Vercel there is no deployment to name.
+  const local = loadModule("app/api/public-pages/probe/route.ts", { "next/server": nextServer, "@/lib/listing-cache": { currentDeployment: () => null } });
+  assert.equal((await local.GET().json()).deployment, null);
 });
 
 test("A19: every minute, recorded changes clear every cached page until the check page proves a clear after them", async () => {
-  const before = { secret: process.env.CRON_SECRET, deployment: process.env.VERCEL_DEPLOYMENT_ID, url: process.env.VERCEL_URL };
+  const before = { secret: process.env.CRON_SECRET };
   process.env.CRON_SECRET = "local-scheduler-secret";
-  process.env.VERCEL_DEPLOYMENT_ID = "dpl_4Kc2";
-  delete process.env.VERCEL_URL;
+  let deployment = "dpl_4Kc2";
   const SECRET = "Bearer local-scheduler-secret";
   const CLAIM = "7d420173-2925-4e4d-a5a0-405f12a61c59";
   const NONCE_A = "0f1e2d3c-4b5a-4968-8776-655443322110";
@@ -146,7 +166,7 @@ test("A19: every minute, recorded changes clear every cached page until the chec
   globalThis.fetch = async (url, init) => {
     steps.push(["probe"]);
     fetched.push([url, init.headers["User-Agent"], typeof init.signal?.aborted]);
-    const next = probes.shift() ?? { status: 200, headers: { "x-vercel-cache": "HIT" }, body: { nonce: NONCE_A } };
+    const next = probes.shift() ?? { status: 200, headers: { "x-vercel-cache": "HIT" }, body: { nonce: NONCE_A, deployment: "dpl_4Kc2" } };
     if (next instanceof Error) throw next;
     return new Response(JSON.stringify(next.body), { status: next.status, headers: next.headers });
   };
@@ -155,14 +175,14 @@ test("A19: every minute, recorded changes clear every cached page until the chec
     "node:timers/promises": { setTimeout: async (ms) => { steps.push(["wait", ms]); } },
     "@/lib/site": { absoluteUrl: (path) => `https://laria.audio${path}` },
     "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => admin },
-    "@/lib/listing-cache": { CACHE_PROBE_PATH: "/api/public-pages/probe", dropCachedListingPages: () => { steps.push(["drop"]); return dropWorks; } },
+    "@/lib/listing-cache": { CACHE_PROBE_PATH: "/api/public-pages/probe", currentDeployment: () => deployment, dropCachedListingPages: () => { steps.push(["drop"]); return dropWorks; } },
   });
   const get = async (authorization) => {
     const response = await route.GET(new Request("http://localhost/api/internal/public-pages/refresh", authorization ? { headers: { Authorization: authorization } } : {}));
     return { status: response.status, body: await response.json(), cache: response.headers.get("cache-control") };
   };
   const claimed = (deployment = "dpl_4Kc2") => ["claim_public_page_changes", { p_deployment: deployment }];
-  const reported = (nonce) => ["complete_public_page_changes", { p_claim: CLAIM, p_nonce: nonce }];
+  const reported = (nonce, from = "dpl_4Kc2") => ["complete_public_page_changes", { p_claim: CLAIM, p_nonce: nonce, p_deployment: from }];
   const logs = [];
   const consoleBefore = { info: console.info, warn: console.warn, error: console.error };
   console.info = (...args) => logs.push(args.join(" "));
@@ -194,23 +214,37 @@ test("A19: every minute, recorded changes clear every cached page until the chec
     report = { done: 0, waiting: 1 };
 
     // A stale copy, served while the check page rebuilds, is read again a second later; locally Next.js names the copy.
-    probes.push({ status: 200, headers: { "x-vercel-cache": "STALE" }, body: { nonce: NONCE_A } },
-      { status: 200, headers: { "x-nextjs-cache": "MISS" }, body: { nonce: NONCE_B } });
+    probes.push({ status: 200, headers: { "x-vercel-cache": "STALE" }, body: { nonce: NONCE_A, deployment: "dpl_4Kc2" } },
+      { status: 200, headers: { "x-nextjs-cache": "MISS" }, body: { nonce: NONCE_B, deployment: "dpl_4Kc2" } });
     assert.equal((await get(SECRET)).status, 200);
     assert.deepEqual(steps.splice(0), [claimed(), ["probe"], ["wait", 1000], ["probe"], reported(NONCE_B), ["drop"]]);
 
     // A check page that can't be read: three tries, then a report without a nonce, and the pages are still cleared.
     probes.push(new Error("The operation was aborted due to timeout"),
-      { status: 500, headers: { "x-vercel-cache": "MISS" }, body: { nonce: NONCE_B } },
-      { status: 200, headers: { "x-vercel-cache": "HIT" }, body: { nonce: "not-a-nonce" } });
+      { status: 500, headers: { "x-vercel-cache": "MISS" }, body: { nonce: NONCE_B, deployment: "dpl_4Kc2" } },
+      { status: 200, headers: { "x-vercel-cache": "HIT" }, body: { nonce: "not-a-nonce", deployment: "dpl_4Kc2" } });
     assert.equal((await get(SECRET)).status, 200);
     assert.deepEqual(steps.splice(0), [claimed(), ["probe"], ["wait", 1000], ["probe"], ["wait", 1000], ["probe"], reported(null), ["drop"]]);
     assert.ok(logs.includes('public_pages_probe_unavailable {"seen":"HIT"}'));
     assert.match(logs.at(-1), /"checked":false/);
     // A copy that names no cache isn't the cache's.
-    probes.push(...Array(3).fill({ status: 200, headers: {}, body: { nonce: NONCE_B } }));
+    probes.push(...Array(3).fill({ status: 200, headers: {}, body: { nonce: NONCE_B, deployment: "dpl_4Kc2" } }));
     await get(SECRET);
     assert.deepEqual(steps.splice(0).filter(([step]) => step !== "wait").at(-2), reported(null));
+    // Codex's fifth review: the domain moved to another deployment while this one runs (a deploy, a rollback). Its
+    // check page says nothing about this deployment's cache, so it isn't reported, nor is a copy that names none.
+    probes.push(...Array(3).fill({ status: 200, headers: { "x-vercel-cache": "HIT" }, body: { nonce: NONCE_B, deployment: "dpl_9Zx1" } }));
+    await get(SECRET);
+    assert.deepEqual(steps.splice(0), [claimed(), ["probe"], ["wait", 1000], ["probe"], ["wait", 1000], ["probe"], reported(null), ["drop"]]);
+    assert.ok(logs.includes('public_pages_probe_unavailable {"seen":"HIT other deployment"}'));
+    probes.push(...Array(3).fill({ status: 200, headers: { "x-vercel-cache": "HIT" }, body: { nonce: NONCE_B } }));
+    await get(SECRET);
+    assert.deepEqual(steps.splice(0).filter(([step]) => step !== "wait").at(-2), reported(null));
+    // Its own copy, after one from the other deployment, counts.
+    probes.push({ status: 200, headers: { "x-vercel-cache": "HIT" }, body: { nonce: NONCE_A, deployment: "dpl_9Zx1" } },
+      { status: 200, headers: { "x-vercel-cache": "HIT" }, body: { nonce: NONCE_B, deployment: "dpl_4Kc2" } });
+    await get(SECRET);
+    assert.deepEqual(steps.splice(0), [claimed(), ["probe"], ["wait", 1000], ["probe"], reported(NONCE_B), ["drop"]]);
 
     // A failed clear is an error, and the changes wait for the next run.
     dropWorks = false;
@@ -233,21 +267,22 @@ test("A19: every minute, recorded changes clear every cached page until the chec
     assert.deepEqual(steps.splice(0).at(-1), ["drop"]);
     report = { done: 0, waiting: 1 };
 
-    // Each deployment is named by its id, or its address; locally by nothing.
-    delete process.env.VERCEL_DEPLOYMENT_ID;
-    process.env.VERCEL_URL = "mkt-instrumentos-4kc2.vercel.app";
+    // Outside Vercel there is no deployment: the claim and the report say so, and the check page, built the same way,
+    // names none either.
+    deployment = null;
+    await get(SECRET);
+    probes.push({ status: 200, headers: { "x-nextjs-cache": "HIT" }, body: { nonce: NONCE_B, deployment: null } });
+    await get(SECRET);
+    assert.deepEqual(steps.splice(0), [claimed(null), ["probe"], ["wait", 1000], ["probe"], ["wait", 1000], ["probe"], reported(null, null), ["drop"],
+      claimed(null), ["probe"], reported(NONCE_B, null), ["drop"]]);
     claim = null;
     await get(SECRET);
-    delete process.env.VERCEL_URL;
-    await get(SECRET);
-    assert.deepEqual(steps.splice(0), [claimed("mkt-instrumentos-4kc2.vercel.app"), claimed(null)]);
+    assert.deepEqual(steps.splice(0), [claimed(null)]);
   } finally {
     Object.assign(console, consoleBefore);
     globalThis.fetch = fetchBefore;
-    for (const [name, value] of [["CRON_SECRET", before.secret], ["VERCEL_DEPLOYMENT_ID", before.deployment], ["VERCEL_URL", before.url]]) {
-      if (value === undefined) delete process.env[name];
-      else process.env[name] = value;
-    }
+    if (before.secret === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = before.secret;
   }
 
   // Scheduled every minute.
@@ -257,13 +292,49 @@ test("A19: every minute, recorded changes clear every cached page until the chec
 
 test("A19: the database records changes to what the cached pages show, from listings to reviews", () => {
   const migration = read("supabase/migrations/20261112130000_launch_audit_page_refresh.sql");
-  const triggers = { listings: ["insert", "update", "delete"], listing_photos: ["insert", "update", "delete"], stores: ["insert", "update", "delete"], profiles: ["update", "delete"], transaction_reviews: ["insert", "update", "delete"] };
+  const all = ["insert", "update", "delete"];
+  const triggers = {
+    "public.listings": all, "public.listing_photos": all, "public.listing_sound_clips": all, "public.stores": all,
+    "public.profiles": ["update", "delete"], "public.transaction_reviews": all, "public.store_payment_methods": all,
+    "public.store_inventory_items": all, "laria_private.assisted_commerce_settings": ["update"],
+  };
   for (const [table, events] of Object.entries(triggers)) {
+    const [schema, name] = table.split(".");
     for (const event of events) {
-      assert.match(migration, new RegExp(`create trigger ${table}_public_page_changes_${event}\\nafter ${event} on public\\.${table}\\nreferencing [^\\n]+\\nfor each statement`), `${table} ${event}`);
+      assert.match(migration, new RegExp(`create or replace trigger ${name}_public_page_changes_${event}\\nafter ${event} on ${schema}\\.${name}\\nreferencing [^\\n]+\\nfor each statement`), `${table} ${event}`);
     }
   }
-  assert.equal(migration.match(/^create trigger /gm).length, 14);
+  assert.equal(migration.match(/^create or replace trigger /gm).length, 24);
+  // Codex's fifth review: replacing a trigger takes the same SHARE ROW EXCLUSIVE lock as creating it, where dropping one
+  // takes ACCESS EXCLUSIVE, which blocks reads too.
+  assert.doesNotMatch(migration, /^(drop|create) trigger /m);
+  // The listing page's sound clip and, during the payments pilot, its purchase details are covered too. The triggers
+  // judge what those show as the functions that read them do, so a change to either function shows here.
+  assert.match(read("components/selling/listing-sound-clip.tsx"), /from\("listing_sound_clips"\)/);
+  assert.match(read("app/instrumentos/[slug]/page.tsx"), /rpc\("get_listing_purchase_request"/);
+  const latest = (name) => {
+    const made = new RegExp(`create (or replace )?function ${name.replace(".", "\\.")}\\(`);
+    const file = fs.readdirSync("supabase/migrations").sort().reverse()
+      .find((candidate) => made.test(read(`supabase/migrations/${candidate}`)));
+    const text = read(`supabase/migrations/${file}`);
+    const start = text.search(made);
+    return text.slice(start, text.indexOf("$$;", start));
+  };
+  const purchase = latest("public.get_listing_purchase_request");
+  assert.match(purchase, /methods := laria_private\.public_payment_methods\(listing_record\.store_id\);/);
+  assert.match(purchase, /select i\.merchant_sku, i\.quantity_available into sku, available[\s\S]*i\.inventory_status = 'active';/);
+  assert.match(purchase, /least\(greatest\(available, 1\), 10\)/);
+  assert.match(latest("laria_private.public_payment_methods"),
+    /jsonb_build_object\('method', m\.method, 'provider_label', m\.provider_label\)[\s\S]*m\.status = 'approved' and s\.status = 'active' and s\.is_verified;/);
+  assert.match(migration, /\(select o\.store_id, o\.method, o\.provider_label from old_rows o where o\.status = 'approved'/);
+  assert.match(migration, /where s\.status = 'active' and s\.is_verified\n/);
+  assert.match(migration, /\(select o\.listing_id, o\.merchant_sku, least\(greatest\(o\.quantity_available, 1\), 10\) from old_rows o\n\s+where o\.listing_id is not null and o\.inventory_status = 'active'/);
+  // Changes that come with time: a review's deadline (laria_private.review_is_visible) and a pause's end
+  // (public.listing_is_paused).
+  assert.match(latest("laria_private.review_is_visible"), /review_deadline\s*<=\s*now\(\)/);
+  assert.match(latest("public.listing_is_paused"), /p_paused_until > \(now\(\) at time zone 'America\/Lima'\)::date/);
+  // A review in either direction counts: the second one reveals the first.
+  assert.doesNotMatch(migration, /direction = 'buyer_to_seller'/);
   // View counts and the check-in reminder's time change no page; sold listings stay at their address.
   assert.match(migration, /array\['view_count', 'availability_checkin_at', 'updated_at'\]/);
   assert.match(migration, /select p_status in \('approved', 'sold'\)/);
@@ -283,8 +354,10 @@ test("A19: the database records changes to what the cached pages show, from list
   assert.match(migration, /where row\(o\.full_name, o\.phone, o\.city, o\.region, o\.created_at\)/);
   for (const field of ["full_name", "phone", "city", "region", "created_at"]) assert.match(listingPage, new RegExp(`profiles!listings_owner_user_id_fkey \\([^)]*\\b${field}\\b`), field);
   // The claim and the report are the service role's alone (tests/launch-audit-page-refresh.sql runs them).
-  assert.match(migration, /grant execute on function public\.claim_public_page_changes\(text\), public\.complete_public_page_changes\(uuid, text\)\nto service_role;/);
+  assert.match(migration, /grant execute on function public\.claim_public_page_changes\(text\), public\.complete_public_page_changes\(uuid, text, text\)\nto service_role;/);
   assert.match(migration, /claimed_at >= first_claimed_at \+ interval '35 seconds'/);
+  // A proof counts only in the deployment that armed the row.
+  assert.match(migration, /armed_nonce <> p_nonce and armed_deployment is not distinct from p_deployment/);
   for (const page of ["app/page.tsx", "app/instrumentos/[slug]/page.tsx"]) assert.match(read(page), /\nexport const maxDuration = 30;\n/, page);
   assert.match(read("tests/launch-audit-page-refresh.sql"), /the third review's case/);
 });

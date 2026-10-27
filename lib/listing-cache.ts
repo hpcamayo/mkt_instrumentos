@@ -12,6 +12,13 @@ import { revalidatePath } from "next/cache";
 // A failed clear of a listing's own page is caught up by the job.
 export const CACHE_PROBE_PATH = "/api/public-pages/probe";
 
+// The deployment this code runs in. Each deployment has a cache of its own, and a clear reaches only the cache of the
+// deployment that asks for it, so the check page names the deployment that built it and the job trusts only its own.
+// Vercel sets both at build time and at run time; outside Vercel there is none.
+export function currentDeployment() {
+  return process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_URL || null;
+}
+
 export function dropListingPages(slugs: (string | null | undefined)[]) {
   for (const slug of new Set(slugs)) {
     if (slug) drop(`/instrumentos/${slug}`);

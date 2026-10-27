@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 import { NextResponse } from "next/server";
-import { CACHE_PROBE_PATH, dropCachedListingPages } from "@/lib/listing-cache";
+import { CACHE_PROBE_PATH, currentDeployment, dropCachedListingPages } from "@/lib/listing-cache";
 import { absoluteUrl } from "@/lib/site";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
@@ -16,8 +16,8 @@ const NONCE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // the cached public pages show is recorded in the database, whichever path made it
 // (supabase/migrations/20261112130000_launch_audit_page_refresh.sql, which explains the steps). While changes wait,
 // each run claims them, reads the check page's nonce, reports it, and clears every cached listing page, the home and the
-// check page (lib/listing-cache.ts). A change is done once a later run reads a new nonce; a run that fails anywhere
-// leaves its changes to the next one. A quiet minute does one database call and clears nothing.
+// check page (lib/listing-cache.ts). A change is done once a later run in the same deployment reads a new nonce; a run
+// that fails anywhere leaves its changes to the next one. A quiet minute does one database call and clears nothing.
 export async function GET(request: Request) {
   if (!isAuthorized(request)) return NextResponse.json({ message: "No autorizado." }, { status: 401, headers: NO_STORE });
   const client = getSupabaseAdminClient();
@@ -25,13 +25,13 @@ export async function GET(request: Request) {
   const db = client as unknown as import("@supabase/supabase-js").SupabaseClient;
 
   // A deploy or a rollback serves pages from its build or its own past, so a new deployment counts as a change.
-  const deployment = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_URL || null;
+  const deployment = currentDeployment();
   const claim = await db.rpc("claim_public_page_changes", { p_deployment: deployment });
   if (claim.error) return failure("claim", claim.error.message);
   if (!claim.data) return NextResponse.json({ refreshed: false }, { headers: NO_STORE });
 
-  const nonce = await readProbeNonce();
-  const report = await db.rpc("complete_public_page_changes", { p_claim: claim.data, p_nonce: nonce });
+  const nonce = await readProbeNonce(deployment);
+  const report = await db.rpc("complete_public_page_changes", { p_claim: claim.data, p_nonce: nonce, p_deployment: deployment });
   const counts = report.error ? null : readCounts(report.data);
   // Nothing left waiting needs no clear; after a failed report the changes still wait, so the pages are cleared anyway.
   const cleared = counts?.waiting === 0 || dropCachedListingPages();
@@ -42,9 +42,11 @@ export async function GET(request: Request) {
   return NextResponse.json({ refreshed: true }, { headers: NO_STORE });
 }
 
-// The check page's nonce as the cache serves it now, or null. A stale copy is tried again, a second apart, since the
-// cache rebuilds it in the background.
-async function readProbeNonce() {
+// The check page's nonce as this deployment's cache serves it now, or null. A stale copy is tried again, a second
+// apart, since the cache rebuilds it in the background, and so is a copy from another deployment: the site's domain
+// moves to a new deployment (a deploy, a rollback) while runs of the old one finish, and a clear here says nothing about
+// another deployment's cache.
+async function readProbeNonce(deployment: string | null) {
   let seen = "";
   for (let attempt = 0; attempt < 3; attempt += 1) {
     if (attempt > 0) await sleep(1000);
@@ -56,7 +58,9 @@ async function readProbeNonce() {
       seen = (response.headers.get("x-vercel-cache") ?? response.headers.get("x-nextjs-cache") ?? "none").toUpperCase();
       const body: unknown = response.ok ? await response.json() : null;
       const nonce = body && typeof body === "object" && "nonce" in body ? body.nonce : null;
-      if (CURRENT_COPY.has(seen) && typeof nonce === "string" && NONCE.test(nonce)) return nonce;
+      const built = body && typeof body === "object" && "deployment" in body ? body.deployment : undefined;
+      if (built !== deployment) seen = `${seen} other deployment`;
+      else if (CURRENT_COPY.has(seen) && typeof nonce === "string" && NONCE.test(nonce)) return nonce;
       if (!response.ok) seen = `${seen} ${response.status}`;
     } catch (error) {
       seen = error instanceof Error ? error.name : "error";
