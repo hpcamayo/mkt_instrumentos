@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const { loadEnvFile } = require("node:process");
 const { createClient } = require("@supabase/supabase-js");
+const { enrollTwoStep, twoStepCookie } = require("./support/two-step.cjs");
 
 loadEnvFile(process.env.LARIA_TEST_ENV_FILE ?? ".env.local");
 const base = process.argv[2];
@@ -236,7 +237,7 @@ async function verifyLifecycle(ownerSession, storeSession, adminSession, buyerSe
 async function createUser(label, type, phone, appMetadata = {}) {
   const user = { email: `s4-analytics-${label}-${suffix}@example.invalid`, password: `Qa-${crypto.randomUUID()}` };
   const created = await service.auth.admin.createUser({ email: user.email, password: user.password, email_confirm: true, app_metadata: appMetadata, user_metadata: { account_type: type, full_name: `QA Analytics ${label}`, phone, city: "Lima", region: "Lima" } });
-  assert.equal(created.error, null); user.id = created.data.user.id; users.push(user); return user;
+  assert.equal(created.error, null); user.id = created.data.user.id; user.admin = appMetadata.role === "admin"; users.push(user); return user;
 }
 async function newVisitor() {
   const response = await fetch(`${base}/api/events/session`, { method: "POST", headers: { Origin: new URL(base).origin } });
@@ -255,6 +256,12 @@ async function newVisitor() {
 async function signIn(user) {
   const client = createClient(url, anonKey, { auth: { persistSession: false } });
   assert.equal((await client.auth.signInWithPassword({ email: user.email, password: user.password })).error, null);
+  // Admin's functions and Admin's exclusion from the counts need the authenticator code (aal2).
+  if (user.admin) {
+    const factor = await enrollTwoStep(client);
+    const visitor = await newVisitor();
+    return { user, client, cookie: `${visitor.cookie}; ${await twoStepCookie(url, anonKey, user.email, user.password, factor)}` };
+  }
   const response = await fetch(`${base}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email, password: user.password }) });
   assert.equal(response.status, 200);
   const visitor = await newVisitor();

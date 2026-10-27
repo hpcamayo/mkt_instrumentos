@@ -1,0 +1,65 @@
+# Launch audit A14: the release-gate cases of acceptance/cases.tsv, end to end, on every pull request into main, every
+# push to main and by hand. scripts/acceptance/full-stack.sh starts a full local Supabase on the runner (Postgres 17,
+# Auth, PostgREST, Storage), builds and starts the app, and runs the end-to-end tests with throwaway accounts. Nothing
+# here reads a repository secret, hosted Supabase or production. Each action is pinned to a commit, the one its tag
+# pointed to on 27 Oct 2026. docs/acceptance/full-stack.md has the details.
+name: Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # Only to download the Supabase images from ghcr.io signed in (below).
+  packages: read
+
+concurrency:
+  group: acceptance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-stack:
+    name: Release-gate cases on a full local stack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: 2.98.2
+      - name: Install dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.28.0 --activate
+          pnpm install --frozen-lockfile
+      # ghcr.io limits anonymous downloads from the shared runner addresses. If full-stack.sh gets to it, the downloads are
+      # signed in with the run's own token, which can only read.
+      - name: Sign in to the image registry
+        run: printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+        env:
+          REGISTRY_TOKEN: ${{ github.token }}
+      - name: Acceptance run
+        run: bash scripts/acceptance/full-stack.sh "$RUNNER_TEMP/acceptance"
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          # ghcr.io and public.ecr.aws refused the Supabase images on most runs (toomanyrequests, and ECR's data limit
+          # for the runner's address). Docker Hub doesn't limit GitHub's own runners, under an agreement between GitHub
+          # and Docker, so the images come from there first, and from the other two in turn if it refuses them too.
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: docker.io
+      # The stack's start, each test's output, the build and the app's log, kept for two weeks.
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: acceptance-logs
+          path: ${{ runner.temp }}/acceptance
+          retention-days: 14

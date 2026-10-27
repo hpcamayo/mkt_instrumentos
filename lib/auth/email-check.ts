@@ -32,3 +32,10 @@ export function signUpFoundExistingAccount(
   if (Array.isArray(user.identities) && user.identities.length === 0) return true;
   return !!user.user_metadata && user.user_metadata.account_type !== accountType;
 }
+
+// Launch audit A14 (AUTH-002): when Auth confirms new addresses or phone numbers on its own (its autoconfirm settings),
+// Supabase answers a sign-up for a confirmed address with the error user_already_exists instead. The address has an
+// account all the same.
+export function signUpErrorFoundExistingAccount(error: { code?: string } | null | undefined) {
+  return error?.code === "user_already_exists";
+}

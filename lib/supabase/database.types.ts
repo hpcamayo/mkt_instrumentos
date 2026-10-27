@@ -5039,6 +5039,10 @@ export type Database = {
       get_account_follows: { Args: never; Returns: Json }
       get_account_pendientes: { Args: never; Returns: Json }
       get_account_search_alerts: { Args: { p_since?: string }; Returns: Json }
+      get_admin_app_errors: {
+        Args: { p_days?: number; p_source?: string }
+        Returns: Json
+      }
       get_admin_audit_history: {
         Args: { p_limit?: number; p_target_id: string; p_target_type: string }
         Returns: Json
@@ -5102,6 +5106,7 @@ export type Database = {
         Args: { p_status?: string; p_store_id?: string }
         Returns: Json
       }
+      get_app_health: { Args: never; Returns: Json }
       get_catalog_review_decisions: { Args: never; Returns: Json }
       get_catalog_review_queue: {
         Args: {
@@ -5546,6 +5551,18 @@ export type Database = {
               error: true
             } & "Could not choose the best candidate function between: public.recent_price_drop_at(p_listing => listings), public.recent_price_drop_at(p_listing => public_listings). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
           }
+      record_app_error: {
+        Args: {
+          p_client?: string
+          p_digest?: string
+          p_kind: string
+          p_message: string
+          p_name: string
+          p_route: string
+          p_source: string
+        }
+        Returns: string
+      }
       record_external_sale: { Args: { p_listing_id: string }; Returns: string }
       record_marketplace_event: {
         Args: {
@@ -5559,6 +5576,10 @@ export type Database = {
           p_store_id?: string
           p_submission_id?: string
         }
+        Returns: Json
+      }
+      record_marketplace_events: {
+        Args: { p_actor_user_id?: string; p_events: Json; p_session_id: string }
         Returns: Json
       }
       record_purchase_request_sale: {

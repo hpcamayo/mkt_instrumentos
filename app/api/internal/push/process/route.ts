@@ -5,7 +5,7 @@ import { createPushSender, type PushSender } from "@/lib/push/web-push";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
 // big-12 (docs/ux-effortless/speed.md): sends pending push notices. CRON_SECRET-protected like the e-mail worker
-// and, like it, started by hand until a scheduler runs it every few minutes after launch.
+// and, like it, run by Vercel Cron every 5 minutes (vercel.json, launch audit A25).
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 

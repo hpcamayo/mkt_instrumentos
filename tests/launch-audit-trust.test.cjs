@@ -486,6 +486,19 @@ test("A28: Supabase's sign-up answer is read as the account asked for only when 
   for (const [user, expected] of cases) assert.equal(signUpFoundExistingAccount(user, "seller"), expected, JSON.stringify(user));
 });
 
+test("A14 (AUTH-002): with Auth's autoconfirm on, Supabase's user_already_exists error is read as an existing account, and no other error is", () => {
+  const { signUpErrorFoundExistingAccount } = require("@/lib/auth/email-check");
+  const cases = [
+    [null, false],
+    [undefined, false],
+    [{ code: "user_already_exists", status: 422, message: "User already registered" }, true],
+    [{ code: "email_exists", status: 422 }, false],
+    [{ code: "over_email_send_rate_limit", status: 429 }, false],
+    [{ status: 500, message: "User already registered" }, false],
+  ];
+  for (const [error, expected] of cases) assert.equal(signUpErrorFoundExistingAccount(error), expected, JSON.stringify(error));
+});
+
 // A sign-up form, rendered with its hooks recorded, submitted with the given address.
 function signupHarness(file, name) {
   const state = [];
@@ -580,6 +593,18 @@ test("A28: a sign-up goes on to Supabase when the e-mail check can't answer, and
       assert.deepEqual(duplicate.calls.signUps, ["ana@example.com"]);
       assert.equal(duplicate.message(), form.exists, form.name);
       assert.equal(duplicate.calls.fieldErrors.email, form.exists, form.name);
+      // A14 (AUTH-002): with Auth's autoconfirm on, Supabase answers the error user_already_exists instead. Same message.
+      const autoconfirmed = signupHarness(form.file, form.name);
+      autoconfirmed.signUpAnswers({ data: { user: null, session: null }, error: { code: "user_already_exists", status: 422, message: "User already registered" } });
+      await autoconfirmed.submit("ana@example.com");
+      assert.equal(autoconfirmed.message(), form.exists, form.name);
+      assert.equal(autoconfirmed.calls.fieldErrors.email, form.exists, form.name);
+      // Any other error is a failed sign-up, not an account.
+      const failed = signupHarness(form.file, form.name);
+      failed.signUpAnswers({ data: { user: null, session: null }, error: { code: "unexpected_failure", status: 500, message: "Database error saving new user" } });
+      await failed.submit("ana@example.com");
+      assert.match(failed.message(), /^No se pudo crear la cuenta\./, form.name);
+      assert.equal(failed.calls.fieldErrors.email, undefined, form.name);
       // Codex's fourth review of #55: an account of the other type still waiting for its confirmation comes back as it
       // was registered, with its identity (Supabase sent its confirmation again). It is not the account asked for.
       for (const metadata of [{ account_type: form.other, full_name: "Ana Pérez" }, { full_name: "Ana Pérez" }]) {

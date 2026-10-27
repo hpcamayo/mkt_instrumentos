@@ -19,7 +19,9 @@ export async function prepareDueLimaDayDigests(client: MarketplaceEmailQueueClie
   let digestDate = localDate;
   // Replaying a bounded week makes scheduler outages recoverable without ever
   // combining different Lima calendar days into one digest. Database dedupe
-  // makes every replay safe.
+  // makes every replay safe. The claim cancels a digest more than a day past
+  // the end of its day (launch audit A25), so after an outage only the latest
+  // one goes out.
   for (let daysAgo = 1; daysAgo <= 7; daysAgo += 1) {
     digestDate = previousCalendarDate(digestDate);
     const { data, error } = await client.rpc("prepare_daily_search_alert_emails", { p_digest_date: digestDate, p_limit: 100 });
