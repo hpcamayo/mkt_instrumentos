@@ -4,10 +4,11 @@
 --     (account, listings, drafts, favorites, follows, alerts, reviews, purchases and sales, questions, help tickets,
 --     stolen-gear reports, devices and e-mail preferences). Reviews received appear once they are public.
 --   * Deleting the account: my_account_deletion_check says whether self-service deletion applies (an Admin account or
---     one that runs a store is closed with the team instead). service_delete_account, called by the server with the
---     service role after it re-checks the password, runs A20's laria_private.anonymize_account (or its stand-in) and
---     then laria_private.anonymize_account_feature_data for this batch's own tables; the server then soft-deletes the
---     Supabase Auth user. Verified transactions and their reviews stay, under "Cuenta eliminada".
+--     one that runs a store is closed with the team instead). public.service_delete_account, called by the server with
+--     the service role after it re-checks the password, runs A20's laria_private.anonymize_account, which clears this
+--     branch's tables through laria_private.anonymize_account_feature_data (both in
+--     20261210120400_feat_account_privacy.sql); the server then soft-deletes the Supabase Auth user. Verified
+--     transactions and their reviews stay, under "Cuenta eliminada".
 -- New objects only.
 
 create or replace function public.export_my_data()
@@ -126,62 +127,3 @@ end;
 $$;
 revoke all on function public.my_account_deletion_check() from public, anon;
 grant execute on function public.my_account_deletion_check() to authenticated;
-
--- This batch's own data, after anonymize_account: devices, recovery codes, help tickets, stolen-gear reports (their
--- photos' paths come back so the server removes the files), private serials and photo hashes of the account's listings.
-create or replace function laria_private.anonymize_account_feature_data(p_user_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public, laria_private
-as $$
-declare
-  photo_paths jsonb;
-  tickets integer;
-  reports integer;
-begin
-  if auth.role() is distinct from 'service_role' then
-    raise exception using errcode = '42501', message = 'ANONYMIZE_SERVICE_REQUIRED';
-  end if;
-  delete from public.account_devices where user_id = p_user_id;
-  delete from laria_private.account_recovery_codes where user_id = p_user_id;
-  delete from laria_private.account_recovery_attempts where user_id = p_user_id;
-  delete from public.help_tickets where user_id = p_user_id;
-  get diagnostics tickets = row_count;
-  select coalesce(jsonb_agg(p.storage_path), '[]'::jsonb) into photo_paths
-  from public.stolen_gear_report_photos p join public.stolen_gear_reports r on r.id = p.report_id
-  where r.reporter_id = p_user_id;
-  delete from public.stolen_gear_reports where reporter_id = p_user_id;
-  get diagnostics reports = row_count;
-  delete from public.listing_serials s using public.listings l where l.id = s.listing_id and l.owner_user_id = p_user_id;
-  delete from public.listing_photo_fingerprints f using public.listings l where l.id = f.listing_id and l.owner_user_id = p_user_id;
-  return jsonb_build_object('help_tickets', tickets, 'stolen_reports', reports, 'stolen_photo_paths', photo_paths);
-end;
-$$;
-revoke all on function laria_private.anonymize_account_feature_data(uuid) from public, anon, authenticated;
-grant execute on function laria_private.anonymize_account_feature_data(uuid) to service_role;
-
--- The server's entry point for self-service deletion (service role only; the server checked who is asking).
-create or replace function public.service_delete_account(p_user_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public, laria_private
-as $$
-declare
-  blocker text;
-  core jsonb;
-  feature jsonb;
-begin
-  if auth.role() is distinct from 'service_role' then
-    raise exception using errcode = '42501', message = 'DELETE_SERVICE_REQUIRED';
-  end if;
-  blocker := laria_private.account_deletion_blocker(p_user_id);
-  if blocker is not null then raise exception 'DELETE_BLOCKED_%', upper(blocker); end if;
-  core := laria_private.anonymize_account(p_user_id, 'self_service');
-  feature := laria_private.anonymize_account_feature_data(p_user_id);
-  return jsonb_build_object('account', core, 'feature_data', feature);
-end;
-$$;
-revoke all on function public.service_delete_account(uuid) from public, anon, authenticated;
-grant execute on function public.service_delete_account(uuid) to service_role;

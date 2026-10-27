@@ -24,6 +24,7 @@ import {
   startSubmission,
   uploadObject,
   type Capability,
+  type Renewed,
 } from "@/components/selling/listing-uploads";
 import { PhotoStep, type FormPhoto } from "@/components/selling/photo-step";
 import { PhotoPrepareError, isAcceptedPhotoType, prepareListingPhoto } from "@/components/selling/prepare-photo";
@@ -37,7 +38,7 @@ import { PriceInput } from "@/components/ui/price-input";
 import { Notice } from "@/components/ui/notice";
 import { Textarea } from "@/components/ui/textarea";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
-import { MAX_LISTING_PHOTOS, getInstrumentTypeOptions } from "@/lib/listing-submission";
+import { MAX_LISTING_PHOTOS, MIN_LISTING_PHOTOS, getInstrumentTypeOptions } from "@/lib/listing-submission";
 import type { ListingDetailAccess } from "@/lib/listing-detail-access";
 import { checkListingDetails, detailFieldId } from "@/lib/listing-details";
 import { categoryOptions, conditionOptions, particularConditionOptions } from "@/lib/listings";
@@ -50,6 +51,8 @@ import {
   hasContent,
   localDraftKey,
   parseLocalDraft,
+  removedDraftFiles,
+  removedFilesMessage,
   savedAgo,
   serverDraftRow,
   similarValues,
@@ -70,6 +73,7 @@ import {
 import { addStarter, descriptionStarters, sellHints, shotList, titleFromBrandModel } from "@/lib/sell-guidance";
 import { SHARED_PHOTOS_PARAM, takeSharedPhotos } from "@/lib/share-target";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { UploadLimitReached } from "@/lib/upload-allowance";
 import { cn } from "@/lib/utils";
 import { ListingSerialField } from "@/components/stolen-gear/listing-serial-field";
 
@@ -269,17 +273,31 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
 
   function acceptRestore() {
     if (restore) {
-      apply(restore);
+      const draft = restore;
+      apply(draft);
       // The draft's token may have expired while it waited on this device; if renewing fails for another reason
       // (offline, signed out), publishing tries again.
-      if (restore.submission) {
-        void renew(restore.submission).catch((error) => {
+      if (draft.submission) {
+        void renew(draft.submission).then((renewed) => dropRemovedFiles(draft, renewed)).catch((error) => {
           if (error instanceof SubmissionLost) setMessage({ kind: "error", text: error.message });
         });
       }
     }
     setRestore(null);
     setReady(true);
+  }
+
+  // Launch audit A18: the photos and clip of a draft kept only on this device are removed after 48 hours; those gone
+  // leave the form, and the seller is told to add them again.
+  function dropRemovedFiles(draft: LocalDraft, renewed: Renewed) {
+    if (!renewed.present || submission.current?.id !== renewed.id) return;
+    const removed = removedDraftFiles(draft, renewed.present);
+    if (!removed.photos.length && !removed.clip) return;
+    const gone = new Set(removed.photos);
+    setPhotos((current) => current.filter((photo) => !photo.path || !gone.has(photo.path)));
+    if (removed.clip) setClip((current) => (current?.path === draft.soundClip?.path ? null : current));
+    if (draft.photos.length - removed.photos.length < MIN_LISTING_PHOTOS) setStep(0);
+    setMessage({ kind: "error", text: removedFilesMessage(removed.photos.length, removed.clip) });
   }
 
   async function discardRestore() {
@@ -304,7 +322,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
   async function renew(old: Capability) {
     try {
       const renewed = await renewSubmission(old.token);
-      if (submission.current?.id === old.id) submission.current = renewed;
+      if (submission.current?.id === old.id) submission.current = { id: renewed.id, token: renewed.token, folder: renewed.folder };
       return renewed;
     } catch (error) {
       if (error instanceof SubmissionLost && submission.current?.id === old.id) {
@@ -363,7 +381,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
     if (!table || !row) return false;
     const { error } = await table.upsert(row);
     if (error) {
-      if (explicit) setMessage({ kind: "error", text: /LIMIT/.test(error.message) ? "Tienes 20 borradores. Publica o descarta alguno para guardar otro." : "No pudimos guardar el borrador en tu cuenta. Sigue guardado en este dispositivo." });
+      if (explicit) setMessage({ kind: "error", text: /LIMIT/.test(error.message) ? "Tienes 20 borradores. Publica o descarta alguno para guardar otro." : /UPLOAD_REMOVED/.test(error.message) ? "Una de las fotos o el sonido ya no está guardado en Laria. Quítalo y vuelve a agregarlo." : "No pudimos guardar el borrador en tu cuenta. Sigue guardado en este dispositivo." });
       return false;
     }
     return true;
@@ -425,8 +443,9 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
         await uploadObject(PHOTO_BUCKET, path, file, (fraction) => updatePhoto(key, { progress: fraction }));
         updatePhoto(key, { status: "done", progress: 1, path });
       } catch (error) {
-        updatePhoto(key, { status: "error", error: error instanceof Error ? shortError(error.message) : "No se subió" });
+        updatePhoto(key, { status: "error", error: error instanceof UploadLimitReached ? "Límite diario" : error instanceof Error ? shortError(error.message) : "No se subió" });
         if (error instanceof PhotoPrepareError) setMessage({ kind: "error", text: `«${source.name}»: ${error.message}` });
+        if (error instanceof UploadLimitReached) setMessage({ kind: "error", text: error.message });
       } finally {
         pending.current.delete(key);
       }
@@ -524,7 +543,8 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
       await uploadObject(SOUND_BUCKET, path, target.blob, (fraction) => update({ progress: fraction }));
       update({ status: "done", progress: 1, path });
     } catch (error) {
-      update({ status: "error", error: error instanceof Error ? shortError(error.message) : "No se subió" });
+      update({ status: "error", error: error instanceof UploadLimitReached ? "Límite diario" : error instanceof Error ? shortError(error.message) : "No se subió" });
+      if (error instanceof UploadLimitReached) setMessage({ kind: "error", text: error.message });
     }
   }
 

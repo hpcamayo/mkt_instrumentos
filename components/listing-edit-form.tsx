@@ -28,6 +28,7 @@ import { useFormErrors } from "@/components/use-form-errors";
 import { returnLabel } from "@/lib/listing-return";
 import { fieldsForRejection, rejectionNote, rejectionReasonLabel, type ListingField } from "@/lib/rejection-reasons";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { uploadLimitReached } from "@/lib/upload-allowance";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select } from "@/components/ui/field";
 import { PriceInput } from "@/components/ui/price-input";
@@ -384,7 +385,8 @@ export function ListingEditForm({
           attempt.uploadedPaths.push(path);
           setProgress(`Subiendo foto ${index + 1} de ${photos.length}…`);
           const { error } = await supabase.storage.from(attempt.bucket).upload(path, upload, { contentType: upload.type, upsert: false });
-          if (error) throw new Error("No se pudo subir una de las fotos.");
+          // Launch audit A18: a refusal may be the account's daily limit, whose message says when the next one fits.
+          if (error) throw (await uploadLimitReached(supabase, attempt.bucket)) ?? new Error("No se pudo subir una de las fotos.");
           attempt.photoPayload.push({ path, alt_text: `Foto de ${values.title}` });
         }
       }

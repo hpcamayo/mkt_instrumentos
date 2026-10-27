@@ -165,7 +165,7 @@ function StoreTryoutCard({ tryout, showDay = false, compact = false, children }:
       {!compact ? (
         <div className="flex flex-wrap items-center gap-2">
           {children}
-          {open ? (
+          {open && tryout.buyer_phone ? (
             <a href={storeWhatsAppHref(tryout)} target="_blank" rel="noopener noreferrer" className={buttonClasses({ variant: "quiet", size: "sm" })}>
               <MessageCircle aria-hidden />WhatsApp {formatPhoneForDisplay(tryout.buyer_phone)}
             </a>

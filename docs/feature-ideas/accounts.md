@@ -17,7 +17,7 @@ their account. the 'keep me logged in' option must work 100%".
 | File | What | Redefines |
 | --- | --- | --- |
 | `20261201120000_feat_account_security.sql` | Two-step requirement, devices, sessions, recovery codes; the batch's four e-mail types and context keys | none (e-mail checks extended in place, see below) |
-| `20261201120100_feat_anonymize_standin.sql` | Stand-in for the launch audit's A20 `laria_private.anonymize_account` | none: created only if A20's function does not exist |
+| ~~`20261201120100_feat_anonymize_standin.sql`~~ | Removed at integration: A20 is on main (`20261114120000_launch_audit_privacy.sql`) | none |
 | `20261201120200_feat_help_center.sql` | Help tickets | none |
 | `20261201120300_feat_photo_red_flags.sql` | Photo hashes and red flags | none |
 | `20261201120400_feat_stolen_gear.sql` | Stolen-gear reports, private serials, matches, the `stolen-gear-photos` bucket | none |
@@ -118,14 +118,15 @@ current access token until it expires (one hour by default), as with any Supabas
   - "Eliminar mi cuenta" lists what happens (listings stop showing, name, WhatsApp, city, favorites, alerts, drafts
     and notices are erased, confirmed purchases or sales stay as «Cuenta eliminada», it cannot be undone, download
     first), asks for the password (or the account's e-mail typed out when it only uses Google or Apple) and one
-    confirmation. The server re-checks the password, runs `service_delete_account` (A20's anonymiser, then this
-    batch's tables), removes the person's stolen-gear photos, signs out and soft-deletes the Supabase user, then
-    lands on the sign-in page with "Eliminamos tu cuenta".
+    confirmation. The server re-checks the password, runs `service_delete_account` (A20's anonymiser, which clears
+    the branch's tables through `laria_private.anonymize_account_feature_data` and queues the stolen-gear photos for
+    the daily uploads sweep), signs out and soft-deletes the Supabase user, then lands on the sign-in page with
+    "Eliminamos tu cuenta".
   - Admin accounts and accounts that run a store see why they cannot delete here and a link to write to the team.
 
 **Files.** `app/mi-cuenta/datos/page.tsx`, `components/account/{email-change-form,account-deletion}.tsx`,
 `app/api/account/{email,data,delete}/route.ts`, `lib/account/route-helpers.ts`, `lib/account-navigation.ts` (marked
-tab), `app/mi-cuenta/seguridad/page.tsx`, migrations `…120100` (A20 stand-in) and `…120500`.
+tab), `app/mi-cuenta/seguridad/page.tsx`, migrations `…120500` and the integration's `20261210120400_feat_account_privacy.sql`.
 
 **How to test.** As `comprador@laria.test`: change the e-mail and see the pending notice; download the file and open
 it. As a throwaway account: delete it, check that signing in again fails and that `auth.users` has `deleted_at` and no
@@ -140,7 +141,9 @@ password, and the profile reads «Cuenta eliminada».
   that need a decision).
 - **FD-accounts-9.** The A20 stand-in is created only when A20's `laria_private.anonymize_account(uuid, text)` does
   not exist; the integrator removes `20261201120100_feat_anonymize_standin.sql` once A20 is merged. This batch's own
-  tables are cleaned by `laria_private.anonymize_account_feature_data(uuid)`.
+  tables are cleaned by `laria_private.anonymize_account_feature_data(uuid)`. *Integrated 2026-10-27:* the stand-in is
+  gone, and the hook (now in `20261210120400_feat_account_privacy.sql`) covers every branch table and runs for Admin's
+  anonymising too.
 
 **Limitations.** Deletion is immediate (no grace period); the page says so before asking. Data in e-mail provider logs and
 backups follows their own retention. A person with an open store must ask the team.

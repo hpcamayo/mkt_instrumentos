@@ -582,3 +582,18 @@ test("A19: the browser asks for the refresh after changing a listing directly, a
   assert.match(workbench, /if \(mutation\.kind === "listing"\) void refreshListingPages\(\{ listings: \[mutation\.id\] \}\);/);
   assert.match(workbench, /if \(mutation\.kind === "revision"\) void refreshListingPages\(\{ revisions: \[mutation\.id\] \}\);/);
 });
+
+test("A19 follow-up: the claim's update of every waiting row has a WHERE clause, which Supabase requires on API calls", () => {
+  const claimOf = (file) =>
+    read(`supabase/migrations/${file}`).match(/create or replace function public\.claim_public_page_changes[\s\S]*?\n\$\$;\n/)[0];
+  const first = claimOf("20261113130000_launch_audit_page_refresh.sql");
+  const fixed = claimOf("20261113140000_launch_audit_page_refresh_safeupdate.sql");
+  // The same function but for that one statement (tests/api-safeupdate.integration.cjs scans every function).
+  assert.equal(
+    fixed.replace(/\n {2}-- Every waiting row[^\n]*\n {2}--[^\n]*\n/, "\n").replace("set claim_id = claim where true;", "set claim_id = claim;"),
+    first,
+  );
+  assert.match(fixed, /\n {2}update laria_private\.public_page_changes set claim_id = claim where true;\n/);
+  const fix = read("supabase/migrations/20261113140000_launch_audit_page_refresh_safeupdate.sql");
+  assert.doesNotMatch(fix.replace(/^--.*\n/gm, ""), /\b(lock table|alter table|grant|revoke|create policy|create (or replace )?trigger)\b/i);
+});

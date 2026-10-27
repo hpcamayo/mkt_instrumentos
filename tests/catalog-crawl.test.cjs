@@ -105,7 +105,10 @@ function loadCatalogRoute() {
   let clients = 0;
   const original = Module._load;
   const mocks = {
-    "@/lib/catalog-data": { getCatalogPage: async (filters, page) => { reads.push({ filters, page }); return { data: [], count: 100, error: null }; } },
+    "@/lib/catalog-data": {
+      getCatalogPage: async (filters, page) => { reads.push({ filters, page }); return { data: [], count: 100, error: null }; },
+      getCatalogFacets: async () => null,
+    },
     "@/lib/supabase/public-read-client": { getRequestReads: () => { clients += 1; return { supabase: {} }; } },
     "@/lib/marketplace-events-server": { createSearchReceipt: () => null },
     "next/navigation": {

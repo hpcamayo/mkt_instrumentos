@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     { "path": "/api/internal/public-pages/refresh", "schedule": "* * * * *" },
+    { "path": "/api/internal/uploads/sweep", "schedule": "30 9 * * *" },
     { "path": "/api/internal/jobs/photo-fingerprints", "schedule": "0 6 * * *" },
     { "path": "/api/internal/jobs/deal-trust", "schedule": "30 7 * * *" },
     { "path": "/api/internal/jobs/store-floor", "schedule": "0 13 * * *" },

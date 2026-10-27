@@ -54,6 +54,7 @@ const ADMIN_VALUE_LABELS: Record<string, string> = {
   store: "Tienda",
   store_owner: "Tienda",
   verified: "Verificada",
+  account: "Cuenta",
   acoso: "Acoso",
   articulo_prohibido: "Artículo o contenido prohibido",
   contenido_inapropiado: "Contenido inapropiado",
@@ -98,6 +99,8 @@ const ADMIN_VALUE_LABELS: Record<string, string> = {
   review_hidden: "Reseña ocultada",
   review_restored: "Reseña restaurada",
   legacy_owner_linked: "Publicación histórica vinculada",
+  anonymize_account: "Cuenta anonimizada",
+  result: "Datos borrados",
 };
 
 export function adminValueLabel(value: string) {

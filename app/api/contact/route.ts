@@ -4,6 +4,7 @@ import { eventSources, isEntityId, isUuid, type EventSource } from "@/lib/market
 import { getMarketplaceActor, getMarketplaceSession, logMarketplaceEventFailure, recordMarketplaceEvent, sameOriginEventRequest } from "@/lib/marketplace-events-server";
 import { buildStoreWhatsAppUrl, buildWhatsAppUrl, resolveContactPhone, type ListingDetailData } from "@/lib/listings";
 import { assistedCommerceEnabled, buildPurchaseWhatsAppUrl, clampPurchaseQuantity, readPurchaseRequest } from "@/lib/payment-methods";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 export async function POST(request: Request) {
@@ -23,8 +24,17 @@ export async function POST(request: Request) {
   // contact, so a stale page never strands the buyer.
   let purchase = false;
   if (body.listingId) {
-    const { data, error } = await client.from("listings").select("id,title,slug,price_pen,stock_state,seller_type,owner_user_id,contact_name,whatsapp_phone,city,region,created_at,profiles!listings_owner_user_id_fkey(full_name,phone,city,region,created_at),stores(whatsapp_phone)").eq("id", body.listingId).eq("status", "approved").maybeSingle();
-    if (error || !data) return failure(404, requestId);
+    // Launch audit A27: the public API key may not read a listing's contact or a seller's profile. The listing comes
+    // through the public key, so row-level security still decides it is public; its contact comes with the service
+    // role, and is used only when the listing is.
+    const admin = getSupabaseAdminClient();
+    if (!admin) return failure(503, requestId);
+    const [listing, contact] = await Promise.all([
+      client.from("listings").select("id,title,slug,price_pen,stock_state,seller_type,owner_user_id,city,region,created_at,stores(whatsapp_phone)").eq("id", body.listingId).eq("status", "approved").maybeSingle(),
+      admin.from("listings").select("contact_name,whatsapp_phone,profiles!listings_owner_user_id_fkey(full_name,phone,city,region,created_at)").eq("id", body.listingId).maybeSingle(),
+    ]);
+    if (listing.error || contact.error || !listing.data || !contact.data) return failure(404, requestId);
+    const data = { ...listing.data, ...contact.data };
     url = buildWhatsAppUrl(data as unknown as ListingDetailData);
     if (body.intent === "purchase" && assistedCommerceEnabled() && data.seller_type === "store") {
       const { data: context } = await client.rpc("get_listing_purchase_request", { p_listing_id: body.listingId });

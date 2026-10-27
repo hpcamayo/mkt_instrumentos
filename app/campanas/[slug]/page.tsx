@@ -67,7 +67,8 @@ export default async function CampaignPage({ params, searchParams }: Props) {
   const { supabase } = getRequestReads();
   if (campaign?.entries.length && supabase) {
     const { data, error } = await supabase
-      .from("listings")
+      // public_listings: the card's photo_count reads a row of public columns (lib/catalog.ts).
+      .from("public_listings")
       .select(catalogCardSelect())
       .in("id", campaign.entries.map((entry) => entry.listingId))
       .eq("status", "approved")

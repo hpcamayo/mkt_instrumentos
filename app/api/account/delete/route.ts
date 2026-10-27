@@ -8,12 +8,12 @@ import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import type { Database } from "@/lib/supabase/database.types";
 
 type DeletionCheck = { allowed?: boolean; blocker?: string | null; has_password?: boolean };
-type DeletionResult = { feature_data?: { stolen_photo_paths?: unknown } };
 
 // safe-09 (accounts batch): "Eliminar mi cuenta". The person confirms with their password (or, for an account that only
 // uses Google or Apple, by typing its e-mail). Listings leave the site, personal data is removed, and verified purchases
-// and sales stay under "Cuenta eliminada" (A20's laria_private.anonymize_account plus this batch's own tables). The
-// Supabase Auth user is then soft-deleted, which ends every session.
+// and sales stay under "Cuenta eliminada" (A20's laria_private.anonymize_account, which clears this branch's tables
+// too; files it no longer needs, such as stolen-gear photos, go with the daily uploads sweep). The Supabase Auth user is
+// then soft-deleted, which ends every session.
 export async function POST(request: Request) {
   const client = await accountClient(request, { secondStep: true });
   if ("response" in client) return client.response;
@@ -48,16 +48,12 @@ export async function POST(request: Request) {
     if (email !== user.email.toLowerCase()) return accountError("Escribe el correo de tu cuenta tal como aparece arriba.", 400);
   }
 
-  const { data, error } = await admin.rpc("service_delete_account", { p_user_id: user.id });
+  const { error } = await admin.rpc("service_delete_account", { p_user_id: user.id });
   if (error?.message?.includes("DELETE_BLOCKED_")) {
     return accountError(blockerMessage(error.message.includes("ADMIN") ? "admin" : "store"), 409, "DELETE_BLOCKED");
   }
   if (error) return accountError("No pudimos eliminar tu cuenta. Vuelve a intentarlo.", 503);
 
-  const paths = (data as DeletionResult | null)?.feature_data?.stolen_photo_paths;
-  if (Array.isArray(paths) && paths.length) {
-    await admin.storage.from("stolen-gear-photos").remove(paths.filter((path): path is string => typeof path === "string"));
-  }
   await supabase.auth.signOut({ scope: "local" });
   const { error: deleteError } = await admin.auth.admin.deleteUser(user.id, true);
   if (deleteError) {

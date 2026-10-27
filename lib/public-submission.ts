@@ -1,4 +1,5 @@
 import type { getPublicSupabaseClient } from "@/lib/supabase/public-client";
+import { uploadLimitReached } from "@/lib/upload-allowance";
 
 type Client = NonNullable<ReturnType<typeof getPublicSupabaseClient>>;
 type Kind = "listing" | "store" | "store_listing";
@@ -108,13 +109,16 @@ export function createPublicSubmission(client: Client) {
               throw error;
           }
         } catch {
+          // Launch audit A18: a refusal may be the account's daily limit, whose message says when the next one fits.
+          // Asked before the cleanup, which frees places.
+          const limited = await uploadLimitReached(client, bucket);
           try {
             await send(attempt, { action: "cleanup" });
             attempt = null;
           } catch {
             // Retain the token so a retry can reuse or clean the same folder.
           }
-          throw new Error(
+          throw limited ?? new Error(
             "No se pudieron subir las fotos. Reintenta sin cerrar esta página.",
           );
         }

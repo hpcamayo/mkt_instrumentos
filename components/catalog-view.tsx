@@ -18,7 +18,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { AppliedChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NoticeIcon, noticeClassName } from "@/components/ui/notice";
-import { getCatalogFacets, getCatalogRescue } from "@/lib/catalog-data";
+import { getCatalogRescue, type getCatalogFacets } from "@/lib/catalog-data";
 import {
   RESULTS_STATUS_ID,
   appliedFilters,
@@ -54,6 +54,7 @@ export async function CatalogView({
   lead,
   types,
   filters,
+  facets: facetsRead,
   scope,
   listings,
   totalCount,
@@ -71,6 +72,8 @@ export async function CatalogView({
   lead?: ReactNode;
   types?: ReactNode;
   filters: ListingFiltersType;
+  // Started by the route alongside inventory; do not restart it after the parent finishes rendering.
+  facets: ReturnType<typeof getCatalogFacets>;
   scope: CatalogScope;
   listings: ListingCardData[];
   totalCount: number;
@@ -87,7 +90,7 @@ export async function CatalogView({
   // Optional reads, together (lib/catalog-data.ts): each gives up at the optional budget and the page renders without it.
   const [facets, rescue] = error
     ? [null, null]
-    : await Promise.all([getCatalogFacets(filters), listings.length === 0 && appliedFilters(filters, scope).length > 0 ? getCatalogRescue(filters, scope) : null]);
+    : await Promise.all([facetsRead, listings.length === 0 && appliedFilters(filters, scope).length > 0 ? getCatalogRescue(filters, scope) : null]);
   const applied = appliedFilters(filters, scope);
   // FIND 01: a text search inside other filters says so, with the escape to the whole catalog.
   const scoped = filters.q && applied.some((chip) => chip.key !== "q") ? catalogTitle(withQuery({ ...filters, brand: undefined }, undefined)) : null;

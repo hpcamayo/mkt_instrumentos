@@ -62,7 +62,8 @@ export async function getCardsByIds(listingIds: string[]): Promise<ListingCardDa
   if (!supabase) return null;
   if (listingIds.length === 0) return [];
   const { data, error } = await supabase
-    .from("listings")
+    // public_listings: the card's photo_count reads a row of public columns (lib/catalog.ts).
+    .from("public_listings")
     .select(catalogCardSelect())
     .in("id", listingIds.slice(0, 120))
     .eq("status", "approved")

@@ -599,7 +599,7 @@ Detail: [docs/feature-ideas/accounts.md](feature-ideas/accounts.md).
 - FD-accounts-6: E-mail change lives in Seguridad (how you sign in), not in Perfil.
 - FD-accounts-7: The export is one JSON file downloaded on the spot.
 - FD-accounts-8: Self-service deletion anonymises instead of erasing rows that other people rely on: verified transactions and their reviews stay under «Cuenta eliminada»; unsold listings are archived, sold ones kept as history.
-- FD-accounts-9: The A20 stand-in is created only when A20's `laria_private.anonymize_account(uuid, text)` does not exist; the integrator removes `20261201120100_feat_anonymize_standin.sql` once A20 is merged.
+- FD-accounts-9: The A20 stand-in is created only when A20's `laria_private.anonymize_account(uuid, text)` does not exist; the integrator removes `20261201120100_feat_anonymize_standin.sql` once A20 is merged. Done at integration (2026-10-27): the hook in `20261210120400_feat_account_privacy.sql` clears every branch table, for self-service and Admin anonymising alike.
 - FD-accounts-10: The buttons stay hidden until Henri turns each provider on: `NEXT_PUBLIC_AUTH_GOOGLE=1` and `NEXT_PUBLIC_AUTH_APPLE=1`, after setting up the provider in Supabase Auth (client IDs and secrets live in Supabase, not in Laria's environment).
 - FD-accounts-11: Articles live in code (`lib/help/articles.ts`), reviewed like any copy; no CMS.
 - FD-accounts-12: Laria sends e-mail only to addresses that belong to an account.

@@ -1,6 +1,7 @@
 "use client";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { uploadLimitReached } from "@/lib/upload-allowance";
 
 // Uploads that happen while the seller fills the form (POST 03, big-06). The submission is started (or a saved draft
 // resumed, POST 02) on the first photo; each photo then goes straight to its own path in the submission's folder,
@@ -8,6 +9,8 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 // takes a new slot), which keeps uploads immutable (upsert off) and lets the publish route drop the unused ones.
 
 export type Capability = { id: string; token: string; folder: string };
+// Launch audit A18: a renewal also says, by bucket, which files are still in the folder (null when Storage can't say).
+export type Renewed = Capability & { present?: Record<string, string[]> | null };
 export type UploadKind = "listing" | "store_listing";
 
 const NETWORK = "No pudimos conectar con Laria. Revisa tu conexión y vuelve a intentarlo.";
@@ -46,7 +49,7 @@ export function resumeDraftSubmission(draftId: string) {
 
 // A fresh token for the same submission (same id and folder), for its owner only.
 export function renewSubmission(token: string) {
-  return submissionRequest<Capability>({ action: "renew", token });
+  return submissionRequest<Renewed>({ action: "renew", token });
 }
 
 export function publicUrl(bucket: string, path: string) {
@@ -78,7 +81,8 @@ export async function uploadObject(bucket: string, path: string, file: Blob, onP
     request.onload = () => {
       if (request.status >= 200 && request.status < 300) return resolve();
       if (/exists|duplicate/i.test(request.responseText)) return resolve();
-      reject(new Error("No se pudo subir. Toca Reintentar."));
+      // Launch audit A18: a refusal may be the account's daily limit, whose message says when the next file fits.
+      void uploadLimitReached(supabase, bucket).then((limited) => reject(limited ?? new Error("No se pudo subir. Toca Reintentar.")));
     };
     request.onerror = () => reject(new Error("Se cortó la conexión. Toca Reintentar."));
     request.send(file);

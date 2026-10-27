@@ -7,13 +7,15 @@ begin;
 create schema catalog_perf_old;
 grant usage on schema catalog_perf_old to anon, authenticated;
 
+-- The ids only: the comparison reads nothing else, and since 20261114140000 the browser roles may not read a whole
+-- listings row (launch audit A27). The rule is the previous one, verbatim.
 create or replace function catalog_perf_old.catalog_search(p_q text)
-returns setof public.listings
+returns table (id uuid)
 language sql
 stable
 set search_path = public, extensions
 as $$
-  select l.*
+  select l.id
   from public.listings l
   where l.status = 'approved'
     and public.listing_matches_query(public.listing_search_text(l.title, l.brand, l.model, l.category, l.instrument_type), p_q)

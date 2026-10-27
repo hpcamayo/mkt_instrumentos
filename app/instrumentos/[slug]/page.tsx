@@ -727,7 +727,8 @@ function ListingDetail({
 }
 
 // "Publicaciones similares" (list-07): candidates of the same type (or category), plus the same brand in the category
-// when that is thin, ranked by brand, a price within 30% and the city (lib/listing-page.ts). Eight at most.
+// when that is thin, ranked by brand, a price within 30% and the city (lib/listing-page.ts). Eight at most. The cards
+// read public_listings, since photo_count reads a row of public columns (lib/catalog.ts).
 async function getSimilarListings(
   supabase: PublicSupabaseClient,
   listing: ListingDetailData,
@@ -736,7 +737,7 @@ async function getSimilarListings(
   const primaryFilterValue = listing.instrument_type ?? listing.category;
   const base = () =>
     supabase
-      .from("listings")
+      .from("public_listings")
       .select(relatedListingSelect)
       .eq("status", "approved")
       .or(DISCOVERABLE_STOCK_FILTER)
@@ -754,26 +755,51 @@ async function getSimilarListings(
   return { listings: rankSimilarListings(candidates, listing, RELATED_ROW_MAX) };
 }
 
+// A Particular listing without an account (an old one) finds its seller's other listings by WhatsApp number, which
+// the public API key may not read (launch audit A27). The ids come from the server with the service role, from the
+// rows the public policy shows of a Particular (approved, no store); the cards themselves are read as usual. Null
+// when the lookup fails, like a failed query below.
+async function sameNumberListingIds(listing: ListingDetailData) {
+  const admin = getSupabaseAdminClient();
+  if (!admin) return null;
+  if (!listing.whatsapp_phone) return [];
+  const { data, error } = await admin
+    .from("listings")
+    .select("id")
+    .eq("seller_type", "individual")
+    .is("store_id", null)
+    .eq("status", "approved")
+    .eq("whatsapp_phone", listing.whatsapp_phone)
+    .neq("id", listing.id)
+    .limit(200)
+    .abortSignal(budgetSignal(getRequestReads().deadline, READ_BUDGETS.coreMs));
+  return error ? null : (data ?? []).map((row) => row.id);
+}
+
 const getMoreFromSellerListings = cache(
   async function getMoreFromSellerListings(
     supabase: PublicSupabaseClient,
     listing: ListingDetailData,
   ) {
+    const storeId = listing.seller_type === "store" ? listing.store_id : null;
+    const sameNumber = storeId || listing.owner_user_id ? [] : await sameNumberListingIds(listing);
+    if (!sameNumber) return { listings: [] as ListingCardData[], publishedCount: null };
+
     const baseQuery = supabase
-      .from("listings")
+      .from("public_listings")
       .select(relatedListingSelect, { count: "exact" })
       .eq("status", "approved")
       .or(DISCOVERABLE_STOCK_FILTER)
       .neq("id", listing.id);
 
     const query =
-      listing.seller_type === "store" && listing.store_id
-        ? baseQuery.eq("store_id", listing.store_id)
+      storeId
+        ? baseQuery.eq("store_id", storeId)
         : listing.owner_user_id
           ? baseQuery.eq("owner_user_id", listing.owner_user_id)
           : baseQuery
               .eq("seller_type", "individual")
-              .eq("whatsapp_phone", listing.whatsapp_phone);
+              .in("id", sameNumber);
 
     const { count, data } = await query
       .order("published_at", { ascending: false, nullsFirst: false })

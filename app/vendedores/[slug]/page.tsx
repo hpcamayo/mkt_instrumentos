@@ -99,7 +99,8 @@ export default async function SellerProfilePage({ params }: SellerPageProps) {
 
   const [listingsResult, reputationResult] = await Promise.all([
     supabase
-      .from("listings")
+      // public_listings: the cards' photo_count reads a row of public columns (lib/catalog.ts).
+      .from("public_listings")
       .select(LISTING_SELECT)
       .eq("status", "approved")
       .eq("seller_type", "individual")

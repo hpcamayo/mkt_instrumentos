@@ -29,6 +29,7 @@ export default function PrivacyPage() {
           <li><strong>Tiendas</strong>: RUC, razón social, correo y teléfono comerciales, dirección, ubicación, persona de contacto y, si los agregas, logo, banner, fotos y redes sociales.</li>
           <li><strong>Publicaciones</strong>: fotos, título, descripción, precio, estado, ubicación y características del artículo.</li>
           <li><strong>Actividad en Laria</strong>: publicaciones vistas o mostradas, favoritos, búsquedas y filtros, alertas guardadas, clics en el botón de WhatsApp, reportes, confirmaciones de transacción y reseñas.</li>
+          <li><strong>Notificaciones</strong>: si activas los avisos en tu navegador, la dirección que el navegador nos da para enviártelos. Cada aviso viaja cifrado a través del servicio de notificaciones del fabricante de tu navegador (Google, Apple, Mozilla o Microsoft), que conoce esa dirección pero no puede leer el aviso.</li>
         </ul>
       </LegalSection>
 
@@ -83,12 +84,20 @@ export default function PrivacyPage() {
 
       <LegalSection title="7. Conservación">
         <p>Conservamos tus datos mientras tu cuenta esté activa y el tiempo necesario para mantener el historial de publicaciones, ventas, reseñas y moderación, prevenir abusos y cumplir obligaciones legales. Las publicaciones vendidas se conservan como historial.</p>
+        <ul>
+          <li>Las vistas, búsquedas, filtros y favoritos que registramos para las estadísticas dejan de estar vinculados a tu cuenta y a tu sesión a los 90 días, y los demás registros de las estadísticas, como los clics en WhatsApp, a los 365 días. Desde entonces solo cuentan como cifras.</li>
+          <li>Las fotos y los sonidos que subes y no llegan a usarse en una publicación, en tu tienda o en un borrador guardado en tu cuenta se borran pasadas 48 horas.</li>
+        </ul>
       </LegalSection>
 
       <LegalSection title="8. Tus derechos">
         <p>Puedes actualizar tu nombre, WhatsApp, ciudad y región desde <Link href="/mi-cuenta/perfil">Mi cuenta</Link>. También puedes solicitar el acceso, la rectificación, la cancelación de tus datos o la oposición a su tratamiento.</p>
         <PrivacyFeatureRights />
         <LegalContact purpose="Para ejercer estos derechos o hacer consultas sobre privacidad," />
+        <ul>
+          <li><strong>Plazos.</strong> Escríbenos desde el correo de tu cuenta o acredita que eres su titular. Respondemos dentro de los plazos del reglamento de la Ley N.° 29733: 8 días hábiles para información, 20 para acceso y portabilidad, y 10 para rectificación, cancelación u oposición. Si a la solicitud le falta algo, te lo decimos dentro de 5 días hábiles y tienes 5 días hábiles para completarla. Si un caso lo justifica, podemos ampliar el plazo una sola vez por el mismo tiempo, y te lo avisamos antes.</li>
+          <li><strong>Cancelación.</strong> Anonimizamos tu cuenta: tu nombre pasa a ser «Cuenta eliminada» y se borran tu teléfono, tu correo, tu contraseña, tus sesiones, tus favoritos, alertas, borradores y avisos. Tus publicaciones no vendidas se archivan, y ninguna publicación conserva tus datos de contacto. Conservamos sin tus datos las ventas confirmadas, las reseñas y los reportes, porque también son registros de otras personas, y los reclamos del Libro de Reclamaciones con los datos que pide la ley, durante el plazo que esta fija. Si tienes una tienda, primero se cierra; su RUC y su razón social se conservan, porque son datos de la empresa.</li>
+        </ul>
       </LegalSection>
 
       <LegalSection title="9. Cambios">

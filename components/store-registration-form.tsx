@@ -12,6 +12,7 @@ import { normalizePeruRegion } from "@/lib/location";
 import { createPublicSubmission, type SubmissionFile } from "@/lib/public-submission";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import type { Database } from "@/lib/supabase/database.types";
+import { UploadLimitReached, uploadLimitReached } from "@/lib/upload-allowance";
 import { FormSection } from "@/components/selling/choice-fields";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -190,7 +191,7 @@ export function StoreRegistrationForm({
       for (const [index, item] of uploadItems.entries()) {
         const path = `${userData.user.id}/${store.id}/profile-${Date.now()}-${index}.${extension(item.file.type)}`;
         const { error } = await supabase.storage.from("store-assets").upload(path, item.file, { cacheControl: "31536000" });
-        if (error) throw error;
+        if (error) throw (await uploadLimitReached(supabase, "store-assets")) ?? error;
         const url = supabase.storage.from("store-assets").getPublicUrl(path).data.publicUrl;
         if (item.role === "logo") updates.logo_url = url;
         else if (item.role === "banner") updates.banner_url = url;
@@ -383,6 +384,7 @@ function allowedImage(file: File) { return ["image/jpeg", "image/png", "image/we
 function extension(type: string) { return type === "image/jpeg" ? "jpg" : type === "image/png" ? "png" : "webp"; }
 
 export function getStoreSubmissionErrorMessage(error: unknown) {
+  if (error instanceof UploadLimitReached) return error.message;
   const detail = typeof error === "string" ? error
     : error && typeof error === "object" && "message" in error && typeof error.message === "string" ? error.message : "";
   if (

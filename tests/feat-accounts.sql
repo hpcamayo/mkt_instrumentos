@@ -492,7 +492,7 @@ select pg_temp.as_service();
 do $$ declare result jsonb; begin
   perform pg_temp.expect_error($q$select public.service_delete_account('f8100000-0000-4000-8000-000000000001')$q$, 'DELETE_BLOCKED_STORE');
   result := public.service_delete_account('f8100000-0000-4000-8000-000000000002');
-  perform pg_temp.check((result->'account'->>'listings_archived')::integer = 2, 'listings not removed: ' || result::text);
+  perform pg_temp.check((result->>'listings_archived')::integer = 2, 'listings not removed: ' || result::text);
 end $$;
 reset role;
 do $$ begin
@@ -504,15 +504,19 @@ do $$ begin
   perform pg_temp.check(not exists (select 1 from public.listing_serials where listing_id = 'f8300000-0000-4000-8000-000000000001'), 'serial kept');
 end $$;
 
--- The reporter's own deletion removes their reports and hands back the photo paths to delete.
+-- The reporter's own deletion removes their reports and queues the photos for the uploads sweep.
 set local role service_role;
 select pg_temp.as_service();
 do $$ declare result jsonb; begin
   result := public.service_delete_account('f8100000-0000-4000-8000-000000000003');
-  perform pg_temp.check((result->'feature_data'->>'stolen_reports')::integer = 1
-    and result->'feature_data'->'stolen_photo_paths'->>0 like 'f8100000-0000-4000-8000-000000000003/%'
-    and (result->'feature_data'->>'help_tickets')::integer = 1, 'feature data not removed: ' || result::text);
+  perform pg_temp.check((result->'features'->>'stolen_reports')::integer = 1
+    and (result->'features'->>'stolen_photos_queued')::integer >= 1
+    and (result->'features'->>'help_tickets')::integer = 1, 'feature data not removed: ' || result::text);
 end $$;
 reset role;
+do $$ begin
+  perform pg_temp.check(exists (select 1 from laria_private.upload_removals where bucket = 'stolen-gear-photos'
+    and path like 'f8100000-0000-4000-8000-000000000003/%' and removed_at is null), 'stolen-gear photo not queued');
+end $$;
 
 rollback;
