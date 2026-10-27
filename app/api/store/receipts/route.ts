@@ -100,7 +100,7 @@ export async function POST(request: Request) {
       const apiUrl = typeof fields.api_url === "string" ? fields.api_url.trim() : null;
       const token = typeof fields.token === "string" ? fields.token.trim() : null;
       if (token || apiUrl) {
-        if (!apiUrl || !NUBEFACT_URL.test(apiUrl)) return failure("Pega la RUTA completa de Nubefact: empieza con https://api.nubefact.com/api/v1/.", 400, "EINVOICE_URL");
+        if (!apiUrl || !NUBEFACT_URL.test(apiUrl)) return failure("Pega la RUTA completa, tal como aparece en tu cuenta de Nubefact.", 400, "EINVOICE_URL");
         let usable = token;
         if (!usable) {
           // A new route with the saved token.

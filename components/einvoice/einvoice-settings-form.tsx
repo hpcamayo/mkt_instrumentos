@@ -97,7 +97,7 @@ export function EinvoiceSettingsForm({ settings }: { settings: EinvoiceSettings 
         </p>
       )}
       {feedback ? <Notice tone={feedback.kind === "success" ? "success" : "danger"} role={feedback.kind === "success" ? "status" : "alert"}>{feedback.message}</Notice> : null}
-      <Field id={`${id}-ruta`} label="RUTA" hint="Empieza con https://api.nubefact.com/api/v1/">
+      <Field id={`${id}-ruta`} label="RUTA" hint="Cópiala completa, tal como aparece en Nubefact.">
         <Input value={apiUrl} onChange={(event) => setApiUrl(event.target.value)} autoComplete="off" spellCheck={false} />
       </Field>
       <Field id={`${id}-token`} label="TOKEN" optional={settings.connected} hint={settings.connected ? `Guardado (termina en ${settings.token_hint}). Pega uno nuevo solo para cambiarlo.` : "Lo guardamos cifrado y no se vuelve a mostrar."}>

@@ -8,9 +8,14 @@ import type { LocationStock, PublicLocation, StoreLocation } from "@/lib/store-l
 type AnyClient = SupabaseClient<any, any, any>;
 
 export async function getOwnLocations(supabase: AnyClient): Promise<StoreLocation[]> {
-  const { data, error } = await (supabase as unknown as SupabaseClient).rpc("get_store_locations");
-  if (error || !data) return [];
-  return ((data as { locations?: StoreLocation[] }).locations ?? []);
+  try {
+    const { data, error } = await (supabase as unknown as SupabaseClient).rpc("get_store_locations");
+    if (error || !data) return [];
+    return ((data as { locations?: StoreLocation[] }).locations ?? []);
+  } catch {
+    // A store without sedes reads as before if the read itself fails.
+    return [];
+  }
 }
 
 // Stock per location for some SKU (or all of a store's, when itemIds is null), in pages the API accepts.

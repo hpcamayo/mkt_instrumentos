@@ -36,7 +36,7 @@ function VoidSheet({ receipt, onClose, onDone }: { receipt: ReceiptRecord; onClo
       footer={<div className="flex flex-wrap gap-2"><Button variant="danger" loading={busy} loadingLabel="Anulando…" onClick={submit} disabled={reason.trim().length < 3}>Anular comprobante</Button><Button variant="secondary" onClick={onClose}>Cancelar</Button></div>}>
       <div className="grid gap-4">
         {error ? <Notice tone="danger" role="alert">{error}</Notice> : null}
-        <p className="t-body text-ink">La anulación se comunica a SUNAT por Nubefact. No cambia el stock: si el cliente devolvió el producto, registra la devolución en Inventario.</p>
+        <p className="t-body text-ink">La anulación se comunica a SUNAT por Nubefact. No cambia el stock: si el cliente devolvió el equipo, registra la devolución en Inventario.</p>
         <Field id={`${id}-motivo`} label="Motivo" hint="Por ejemplo: error en el precio, venta devuelta.">
           <Input value={reason} maxLength={100} onChange={(event) => setReason(event.target.value)} />
         </Field>
