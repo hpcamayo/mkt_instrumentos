@@ -1363,6 +1363,7 @@ export type Database = {
           admin_hidden_reason: string | null
           comment: string | null
           direction: string
+          held_at: string | null
           id: string
           rating: number
           reviewer_user_id: string
@@ -1377,6 +1378,7 @@ export type Database = {
           admin_hidden_reason?: string | null
           comment?: string | null
           direction: string
+          held_at?: string | null
           id?: string
           rating: number
           reviewer_user_id: string
@@ -1391,6 +1393,7 @@ export type Database = {
           admin_hidden_reason?: string | null
           comment?: string | null
           direction?: string
+          held_at?: string | null
           id?: string
           rating?: number
           reviewer_user_id?: string
@@ -2202,6 +2205,7 @@ export type Database = {
         Args: { p_limit?: number; p_week_start: string }
         Returns: number
       }
+      publish_held_review: { Args: { p_review_id: string }; Returns: boolean }
       record_external_sale: { Args: { p_listing_id: string }; Returns: string }
       record_marketplace_event: {
         Args: {
