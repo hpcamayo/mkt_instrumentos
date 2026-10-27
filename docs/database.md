@@ -1402,12 +1402,14 @@ Migration `20261114160000_launch_audit_email_backlog.sql` (finding A25 of the 26
 `tests/launch-audit-email-backlog.sql`. It changes only how `public.claim_marketplace_email_deliveries` picks e-mails,
 so it can be applied before the deploy that schedules the worker (`vercel.json`, every 5 minutes).
 
-- Maximum age (`laria_private.email_max_age(event_type)`): `search_alert_immediate` 1 day; `listing_price_drop`,
-  `listing_back_in_stock` and `search_alert_daily` 2 days; `follow_weekly`, `listing_availability_checkin`,
+- Maximum age (`laria_private.email_max_age(event_type)`): `search_alert_immediate` and `search_alert_daily` 1 day;
+  `listing_price_drop` and `listing_back_in_stock` 2 days; `follow_weekly`, `listing_availability_checkin`,
   `listing_purchase_check`, `listing_purchase_confirmation_reminder` and `listing_review_reminder` 3 days; every other
-  kind, including any added later, 7 days. Each claim first cancels pending and retry e-mails older than that
-  (`status = 'cancelled'`, `failure_code = 'expired'`), after giving back stale worker locks and before the
-  out-of-stock check of review fix A7. Notifications are untouched.
+  kind, including any added later, 7 days. Age runs from `laria_private.email_content_time(event_type, context,
+  created_at)`: the end of a daily digest's `digest_date` in Lima, 00:00 in Lima of a weekly digest's `week_start`,
+  otherwise `created_at` (the worker's catch-up queues the digests of the seven days before it in one run). Each claim
+  first cancels pending and retry e-mails past that (`status = 'cancelled'`, `failure_code = 'expired'`), after giving
+  back stale worker locks and before the out-of-stock check of review fix A7. Notifications are untouched.
 - Order (`laria_private.email_priority(event_type)`): 0 an account's own business (every kind not listed below), 1 the
   four reminders above, 2 alerts and digests (`search_alert_immediate`, `search_alert_daily`, `listing_price_drop`,
   `listing_back_in_stock`, `follow_weekly`); oldest first within each. The payload array follows the same order.

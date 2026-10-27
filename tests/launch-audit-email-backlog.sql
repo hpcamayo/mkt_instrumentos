@@ -42,10 +42,18 @@ where status in ('pending', 'retry');
 -- ------------------------------------------------------------------ the rules
 
 do $$ begin
-  perform pg_temp.check(laria_private.email_max_age('search_alert_immediate') = interval '1 day', 'an instant alert lasts a day');
+  perform pg_temp.check(laria_private.email_max_age('search_alert_immediate') = interval '1 day'
+    and laria_private.email_max_age('search_alert_daily') = interval '1 day', 'an instant alert or a daily digest lasts a day');
   perform pg_temp.check(laria_private.email_max_age('listing_price_drop') = interval '2 days'
-    and laria_private.email_max_age('listing_back_in_stock') = interval '2 days'
-    and laria_private.email_max_age('search_alert_daily') = interval '2 days', 'drops, restocks and digests last two days');
+    and laria_private.email_max_age('listing_back_in_stock') = interval '2 days', 'drops and restocks last two days');
+  perform pg_temp.check(laria_private.email_content_time('search_alert_daily', '{"digest_date":"2026-10-20"}', now())
+    = '2026-10-21 05:00:00+00', 'a daily digest ages from the end of its day in Lima');
+  perform pg_temp.check(laria_private.email_content_time('follow_weekly', '{"week_start":"2026-10-26","items":[]}', now())
+    = '2026-10-26 05:00:00+00', 'the weekly digest ages from the start of its Monday in Lima');
+  perform pg_temp.check(laria_private.email_content_time('store_approved', '{}', '2026-10-01 12:00:00+00')
+    = '2026-10-01 12:00:00+00', 'anything else ages from when it was queued');
+  perform pg_temp.check(laria_private.email_content_time('search_alert_daily', '{"digest_date":"pronto"}', '2026-10-01 12:00:00+00')
+    = '2026-10-01 12:00:00+00', 'a digest without a readable day ages from when it was queued');
   perform pg_temp.check(laria_private.email_max_age('listing_review_reminder') = interval '3 days'
     and laria_private.email_max_age('follow_weekly') = interval '3 days', 'reminders and the weekly digest last three days');
   perform pg_temp.check(laria_private.email_max_age('transaction_confirmation_requested') = interval '7 days'
@@ -70,6 +78,10 @@ select pg_temp.queue(4, 'store_approved', interval '6 days', 'retry');       -- 
 select pg_temp.queue(5, 'listing_review_reminder', interval '4 days');       -- past its three days
 select pg_temp.queue(8, 'transaction_confirmed', interval '1 hour');         -- still due, the account's own, newest
 select pg_temp.queue(9, 'listing_review_reminder', interval '2 days');       -- still due, a reminder
+-- Queued just now by the worker's catch-up, for a day that ended two days ago.
+insert into laria_private.marketplace_email_deliveries(id, event_type, recipient_user_id, dedupe_key, context)
+values (pg_temp.id(15), 'search_alert_daily', 'a2500000-0000-4000-8000-000000000001', 'la25-15',
+  jsonb_build_object('digest_date', (clock_timestamp() at time zone 'America/Lima')::date - 3));
 -- A worker that stopped mid-send on a ten-day-old e-mail.
 insert into laria_private.marketplace_email_deliveries(id, event_type, recipient_user_id, dedupe_key, status, attempt_count,
   created_at, next_attempt_at, locked_at, locked_by)
@@ -102,9 +114,10 @@ reset role;
 
 do $$ begin
   perform pg_temp.check((select array_agg(id order by id) from laria_private.marketplace_email_deliveries
-    where id = any(array[pg_temp.id(1), pg_temp.id(3), pg_temp.id(5), pg_temp.id(6)])
-      and status = 'cancelled' and failure_code = 'expired') = array[pg_temp.id(1), pg_temp.id(3), pg_temp.id(5), pg_temp.id(6)],
-    'e-mails past their age are cancelled as expired, the stopped worker''s too');
+    where id = any(array[pg_temp.id(1), pg_temp.id(3), pg_temp.id(5), pg_temp.id(6), pg_temp.id(15)])
+      and status = 'cancelled' and failure_code = 'expired')
+      = array[pg_temp.id(1), pg_temp.id(3), pg_temp.id(5), pg_temp.id(6), pg_temp.id(15)],
+    'e-mails past their age are cancelled as expired, the stopped worker''s and the old day''s digest too');
   perform pg_temp.check((select count(*) from laria_private.marketplace_email_deliveries
     where id = any(array[pg_temp.id(2), pg_temp.id(4), pg_temp.id(8), pg_temp.id(9)]) and status = 'processing') = 4,
     'the due ones are being sent');

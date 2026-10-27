@@ -6,10 +6,13 @@
 -- the sign-up and password e-mails Supabase Auth sends through the same account).
 --
 -- After:
--- 1. Each kind of e-mail has a maximum age (laria_private.email_max_age): an instant search alert one day; a price
---    drop, a back-in-stock notice or a daily digest two days; reminders and the weekly follow digest three days;
---    everything else (moderation results, sales, reviews, questions, store decisions) a week. The claim cancels older
---    ones (status cancelled, failure_code expired) instead of sending them. Their in-app notices stay.
+-- 1. Each kind of e-mail has a maximum age (laria_private.email_max_age): an instant search alert or a daily digest
+--    one day; a price drop or a back-in-stock notice two days; reminders and the weekly follow digest three days;
+--    everything else (moderation results, sales, reviews, questions, store decisions) a week. Age runs from when the
+--    e-mail was queued, except for digests, whose age runs from the end of the day or the start of the week they cover
+--    (laria_private.email_content_time): the worker's first run prepares the digests of the seven days before it, all
+--    queued that minute. The claim cancels older ones (status cancelled, failure_code expired) instead of sending
+--    them. Their in-app notices stay.
 -- 2. The claim hands out an account's own business first (moderation, sales, reviews, questions, stores), then
 --    reminders, then alerts and digests (laria_private.email_priority), oldest first within each.
 -- 3. A daily limit (laria_private.email_settings, 80 by default, so sign-up and password e-mails keep 20 of Resend's
@@ -22,14 +25,14 @@
 -- first priority unless it is added to the two functions. Nothing else changes.
 -- Locks: none beyond creating the table, the functions and an index on the queue (a few hundred rows).
 -- Rollback: recreate claim_marketplace_email_deliveries from 20261029120200_review_fixes_alerts_and_import.sql, then
--- drop set_email_daily_limit, email_settings, email_priority, email_max_age and marketplace_email_sent_idx. Cancelled
--- e-mails stay cancelled.
+-- drop set_email_daily_limit, email_settings, email_priority, email_content_time, email_max_age and
+-- marketplace_email_sent_idx. Cancelled e-mails stay cancelled.
 
 set lock_timeout = '10s';
 
 -- ----------------------------------------------------------------------------------------------- 1. the rules
 
--- How long an e-mail of each kind stays worth sending after it was queued.
+-- How long an e-mail of each kind stays worth sending, from laria_private.email_content_time.
 create or replace function laria_private.email_max_age(p_event_type text)
 returns interval
 language sql
@@ -37,11 +40,28 @@ immutable
 set search_path = ''
 as $$
   select case
-    when p_event_type = 'search_alert_immediate' then interval '1 day'
-    when p_event_type in ('listing_price_drop', 'listing_back_in_stock', 'search_alert_daily') then interval '2 days'
+    when p_event_type in ('search_alert_immediate', 'search_alert_daily') then interval '1 day'
+    when p_event_type in ('listing_price_drop', 'listing_back_in_stock') then interval '2 days'
     when p_event_type in ('follow_weekly', 'listing_availability_checkin', 'listing_purchase_check',
                           'listing_purchase_confirmation_reminder', 'listing_review_reminder') then interval '3 days'
     else interval '7 days'
+  end;
+$$;
+
+-- When an e-mail's age starts: a daily digest at the end of its day in Lima, the weekly follow digest at the start of
+-- its week (the Monday it is sent, 00:00 in Lima), anything else when it was queued.
+create or replace function laria_private.email_content_time(p_event_type text, p_context jsonb, p_created_at timestamptz)
+returns timestamptz
+language sql
+stable
+set search_path = ''
+as $$
+  select case
+    when p_event_type = 'search_alert_daily' and p_context ->> 'digest_date' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+      then ((p_context ->> 'digest_date')::date + 1)::timestamp at time zone 'America/Lima'
+    when p_event_type = 'follow_weekly' and p_context ->> 'week_start' ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+      then (p_context ->> 'week_start')::date::timestamp at time zone 'America/Lima'
+    else p_created_at
   end;
 $$;
 
@@ -63,6 +83,7 @@ as $$
 $$;
 
 revoke all on function laria_private.email_max_age(text) from public, anon, authenticated;
+revoke all on function laria_private.email_content_time(text, jsonb, timestamptz) from public, anon, authenticated;
 revoke all on function laria_private.email_priority(text) from public, anon, authenticated;
 
 -- ----------------------------------------------------------------------------------------------- 2. the daily limit
@@ -134,7 +155,8 @@ begin
   update laria_private.marketplace_email_deliveries delivery
   set status = 'cancelled', failure_code = 'expired'
   where delivery.status in ('pending', 'retry')
-    and delivery.created_at < clock_timestamp() - laria_private.email_max_age(delivery.event_type);
+    and laria_private.email_content_time(delivery.event_type, delivery.context, delivery.created_at)
+        < clock_timestamp() - laria_private.email_max_age(delivery.event_type);
 
   -- Review fix A7 (design §5.2): nothing about a listing that ran out of stock after its e-mail was queued.
   update laria_private.search_alert_matches match
