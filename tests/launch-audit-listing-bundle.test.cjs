@@ -173,7 +173,9 @@ test("A29: a part loaded after the page shows its loading part on the server, an
       lazies.push({ factory, type });
       return type;
     },
-    useState: () => [state.attempt, (update) => { state.sets += 1; state.attempt = update(state.attempt); }],
+    // The attempt; an initializer (where the focus was when the part was asked for) is read as React reads it on mount.
+    useState: (initial) =>
+      typeof initial === "function" ? [initial()] : [state.attempt, (update) => { state.sets += 1; state.attempt = update(state.attempt); }],
     useSyncExternalStore: (subscribe, getSnapshot) => getSnapshot(),
   };
   const reports = [];
@@ -183,19 +185,46 @@ test("A29: a part loaded after the page shows its loading part on the server, an
   });
   let retry = null;
   const failedFor = [];
+  const focusFor = [];
   // The first download fails, the second works.
   const downloads = [Promise.reject(new Error("Loading chunk 123 failed.")), Promise.resolve(() => null)];
   downloads[0].catch(() => {});
   const Lazy = browser.afterPage(() => downloads.shift(), {
     loading: () => "loading",
-    failed: (again, props) => {
+    failed: (again, props, focus) => {
       retry = again;
       failedFor.push(props);
+      focusFor.push(focus);
       return "failed";
     },
   });
   assert.equal(lazies.length, 1, "one lazy part, made once and shared");
-  const tree = Lazy({ id: "x" });
+  // A page with a photo that has the focus when the part is asked for, a question field and the body.
+  class FakeElement {
+    constructor() {
+      this.isConnected = true;
+      this.focusedWith = [];
+    }
+    focus(options) {
+      this.focusedWith.push(options);
+      globalThis.document.activeElement = this;
+    }
+  }
+  const [photo, question, body] = [new FakeElement(), new FakeElement(), new FakeElement()];
+  const onPage = (run) => {
+    const saved = Object.getOwnPropertyDescriptors(globalThis);
+    globalThis.HTMLElement = FakeElement;
+    globalThis.document = { body, activeElement: photo };
+    try {
+      return run();
+    } finally {
+      for (const name of ["HTMLElement", "document"]) {
+        if (saved[name]) Object.defineProperty(globalThis, name, saved[name]);
+        else delete globalThis[name];
+      }
+    }
+  };
+  const tree = onPage(() => Lazy({ id: "x" }));
   const Boundary = tree.type;
   assert.equal(tree.key, "0");
   const suspense = tree.props.children;
@@ -220,6 +249,26 @@ test("A29: a part loaded after the page shows its loading part on the server, an
   boundary.componentDidCatch(chunkError);
   assert.deepEqual(reports, [["boundary", chunkError]]);
 
+  // The focus is free while it stays where it was when the part was asked for, or nowhere in particular; not once the
+  // visitor took it elsewhere. `restore` puts it back on that element, while it is still on the page.
+  const [focus] = focusFor;
+  onPage(() => {
+    assert.equal(focus.free(), true);
+    globalThis.document.activeElement = body;
+    assert.equal(focus.free(), true);
+    globalThis.document.activeElement = null;
+    assert.equal(focus.free(), true);
+    globalThis.document.activeElement = question;
+    assert.equal(focus.free(), false, "the visitor moved on to type a question");
+    focus.restore();
+    assert.equal(globalThis.document.activeElement, photo);
+    assert.deepEqual(photo.focusedWith, [{ preventScroll: true }]);
+    photo.isConnected = false;
+    globalThis.document.activeElement = question;
+    focus.restore();
+    assert.equal(globalThis.document.activeElement, question, "a photo no longer on the page isn't focused");
+  });
+
   // Retry, or the part's next showing: a new boundary (its key) around the new lazy part, which downloads again.
   retry();
   assert.equal(state.sets, 1);
@@ -239,24 +288,38 @@ test("A29: the lightbox loads on demand, starting when a pointer or the focus re
   assert.match(source("components/listing/listing-lazy.tsx"), /export function preloadLightbox\(\) \{\s*import\("@\/components\/listing\/lightbox"\)\.catch\(\(\) => \{\}\);/);
   assert.match(source("components/listing/listing-gallery.tsx"), /<div className="grid gap-3" onPointerEnter=\{preloadLightbox\} onFocus=\{preloadLightbox\}>/);
   assert.match(source("components/store/store-photos.tsx"), /<ul className="flex flex-wrap gap-2" onPointerEnter=\{preloadLightbox\} onFocus=\{preloadLightbox\}>/);
+  // Each press of a photo opens the lightbox anew (a new key), so one whose code failed to download tries again at the
+  // photo pressed, instead of the failed note staying with nothing opened.
+  for (const file of ["components/listing/listing-gallery.tsx", "components/store/store-photos.tsx"]) {
+    assert.match(source(file), /set(?:LightboxAt|OpenAt)\(index\);\s*setOpened\(\(count\) => count \+ 1\);/, file);
+    assert.match(source(file), /<Lightbox\s+key=\{opened\}/, file);
+  }
   // While it loads, "Abriendo la foto…", shown only past 200 ms; if it fails, a note over the page with "Reintentar",
-  // which takes the focus, and "Cerrar", which closes it as the lightbox would, at the photo it opened on, as Escape does.
+  // which takes the focus unless the visitor moved it elsewhere meanwhile, and "Cerrar", which closes it as the lightbox
+  // would, at the photo it opened on, as Escape does.
   const lightbox = calls[0].parts;
   assert.match(renderToStaticMarkup(lightbox.loading()), /^<p role="status" class="wait-note [^"]*">Abriendo la foto…<\/p>$/);
   assert.match(source("app/globals.css"), /\.wait-note \{\s*animation: menu-fade 120ms ease-out 200ms both;\s*\}/);
-  const retries = [];
+  const steps = [];
   const closed = [];
-  const failed = lightbox.failed(() => retries.push(true), { start: 2, onClose: (index) => closed.push(index) });
+  const focus = (free) => ({ free: () => free, restore: () => steps.push("focus back on the photo") });
+  const props = { start: 2, onClose: (index) => closed.push(index) };
+  const failed = lightbox.failed(() => steps.push("retry"), props, focus(true));
   const html = renderToStaticMarkup(failed);
   assert.match(html, /^<div role="alert"[^>]*><p[^>]*>No pudimos abrir la foto\.<\/p><button[^>]*>Reintentar<\/button><button[^>]*>Cerrar<\/button><\/div>$/);
-  failed.props.retry();
   failed.props.close();
-  assert.deepEqual([retries, closed], [[true], [2]]);
+  assert.deepEqual(closed, [2]);
   const note = failed.type(failed.props);
-  assert.equal(note.props.children[1].props.autoFocus, true, "Reintentar takes the focus");
+  const again = note.props.children[1];
+  assert.equal(again.props.autoFocus, true, "Reintentar takes the focus");
+  // Reintentar gives the focus back to the photo first, so it doesn't fall to the page while the code downloads again.
+  again.props.onClick();
+  assert.deepEqual(steps, ["focus back on the photo", "retry"]);
   note.props.onKeyDown({ key: "Enter" });
   note.props.onKeyDown({ key: "Escape" });
   assert.deepEqual(closed, [2, 2], "Escape closes the note; other keys don't");
+  const elsewhere = lightbox.failed(() => {}, props, focus(false));
+  assert.equal(elsewhere.type(elsewhere.props).props.children[1].props.autoFocus, false, "the focus stays where the visitor took it");
 });
 
 test("A29: the questions section's code loads after the page, and the server still sends its heading and loading line", () => {

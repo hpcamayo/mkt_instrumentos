@@ -23,6 +23,8 @@ export const THUMB_SIZES = "(max-width: 1023px) 56px, 72px";
 export function ListingGallery({ photos, title }: { photos: ListingPhotoData[]; title: string }) {
   const [active, setActive] = useState(0);
   const [lightboxAt, setLightboxAt] = useState<number | null>(null);
+  // Each press of a photo opens the lightbox anew, so one whose code failed to download tries again at that photo.
+  const [opened, setOpened] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const returnFocus = useRef(false);
@@ -54,6 +56,7 @@ export function ListingGallery({ photos, title }: { photos: ListingPhotoData[]; 
   function openLightbox(index: number, opener: HTMLElement) {
     openerRef.current = opener;
     setLightboxAt(index);
+    setOpened((count) => count + 1);
   }
 
   if (total === 0) {
@@ -151,6 +154,7 @@ export function ListingGallery({ photos, title }: { photos: ListingPhotoData[]; 
 
       {lightboxAt !== null ? (
         <Lightbox
+          key={opened}
           photos={photos}
           title={title}
           start={lightboxAt}

@@ -4,7 +4,10 @@
 // rather than the Supabase client, so instrumentation.ts can use it in either runtime, and rather than Next.js's
 // fetch, which would count the call as part of the page: an error during a background page refresh would then turn
 // the cached page dynamic. Best effort: it never throws, gives up after 2.5 seconds, and does nothing without the
-// database settings (local builds and tests).
+// database settings (local builds and tests). The arguments are still checked against the generated types (`satisfies`),
+// so a renamed one fails the typecheck instead of silently stopping the count.
+import type { Database } from "@/lib/supabase/database";
+
 export type AppErrorReport = {
   source: "server" | "browser";
   kind: string;
@@ -33,7 +36,7 @@ export async function recordAppError(report: AppErrorReport) {
         p_message: report.message.slice(0, 2000),
         p_client: (report.client ?? "").slice(0, 40),
         p_digest: report.digest ? report.digest.slice(0, 40) : null,
-      }),
+      } satisfies Database["public"]["Functions"]["record_app_error"]["Args"]),
       signal: AbortSignal.timeout(RECORD_TIMEOUT_MS),
     });
     return response.ok;

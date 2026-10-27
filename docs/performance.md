@@ -120,8 +120,10 @@ signed-in buyer can see. The photo lightbox and the questions section also loade
   just isn't asked that time.
 - `components/listing/listing-lazy.tsx` holds the other parts that load after the page: the lightbox (on the first photo
   opened; its download starts when a pointer or the focus reaches the photos, here and on the store page; a wait past
-  200 ms shows "Abriendo la foto…"; if it fails, "No pudimos abrir la foto." with "Reintentar", which takes the focus,
-  and "Cerrar" (or Escape)) and "Preguntas", which reads its questions in the browser anyway. The server sends the same
+  200 ms shows "Abriendo la foto…"; if it fails, "No pudimos abrir la foto." with "Reintentar", which takes the focus
+  unless the visitor moved it elsewhere meanwhile and gives it back to the photo while the code downloads again, and
+  "Cerrar" (or Escape); each press of a photo opens the lightbox anew, so it also tries again) and "Preguntas", which
+  reads its questions in the browser anyway. The server sends the same
   heading and "Cargando preguntas…" as before; if the section's code fails to download, it says "No pudimos cargar las
   preguntas." with "Reintentar", as when its questions don't load.
 - The safety sheet stays with the page: it opens from the contact button, the page's main action, and must not wait for
