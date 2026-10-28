@@ -614,7 +614,7 @@ Built after the owner's "go ahead" (2026-10-27) on the five ideas left as maybes
 
 ## Feature ideas: proposed decisions (2026-10-26)
 
-These are the decisions taken while building the feature ideas Henri approved on 2026-10-26 (marking page https://claude.ai/artifact/7iWMJuxxKLaxsdibsWEZQd). They remain proposals until Henri reviews the combined build. Each line gives the decision's first sentence; the batch write-up in `docs/feature-ideas/` has the full text, the reasoning, the files and the limits. The plan and its rules are in [docs/feature-ideas/build-plan.md](feature-ideas/build-plan.md), and what was left for later is in [docs/feature-ideas/deferred.md](feature-ideas/deferred.md).
+These are the decisions taken while building the feature ideas Henri approved on 2026-10-26 (marking page https://claude.ai/artifact/7iWMJuxxKLaxsdibsWEZQd). Henri reviewed all of them on 2026-10-28, in plain words on https://claude.ai/artifact/EgR1W2EAwZaYkQ5edxbf5f, and kept every one, so they stand as decided. Each line gives the decision's first sentence; the batch write-up in `docs/feature-ideas/` has the full text, the reasoning, the files and the limits. The plan and its rules are in [docs/feature-ideas/build-plan.md](feature-ideas/build-plan.md), and what was left for later is in [docs/feature-ideas/deferred.md](feature-ideas/deferred.md).
 
 ### Accounts, help and safety (accounts)
 
