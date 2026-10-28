@@ -51,9 +51,9 @@ The category URL follow-up at `49a38e5be7b6e195617a841fe1c572420769dab0` deploye
 The Acceptance workflow (`.github/workflows/acceptance.yml`, [the full-stack acceptance run](acceptance/full-stack.md))
 runs the release-gate cases end to end on a full local Supabase stack, on every pull request into `main` and every push
 to it. Its run of 2026-10-27 (GitHub Actions run 40574393086) passed every check, so the 52 Automated cases A14 found
-unrun are Pass. Still open: a person's review of the 14 Manual or Both cases (PUB-006, PUB-007, LIST-011, SEO-006,
-SEO-007, LEGAL-005, LEGAL-006, SCOPE-001 to SCOPE-006 and SCOPE-008), the owner's call on LIST-008 and the natural
-daily test of `ALERT-005`. Current acceptance is **384 Pass / 154 Not Run / 1 Blocked / 539 total**.
+unrun are Pass, and the owner accepted LIST-008 on 2026-10-28. Still open: a person's review of the 14 Manual or Both
+cases (PUB-006, PUB-007, LIST-011, SEO-006, SEO-007, LEGAL-005, LEGAL-006, SCOPE-001 to SCOPE-006 and SCOPE-008) and
+the natural daily test of `ALERT-005`. Current acceptance is **385 Pass / 153 Not Run / 1 Blocked / 539 total**.
 
 ## Catalog schema and reduced catalog — production release, 2026-10-09 (passed)
 

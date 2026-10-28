@@ -53,9 +53,10 @@ app's own pages make: the same route, database function or table call, signed in
 | WA-008 to WA-010 | Only signed-in contacts make a buyer selectable when the listing is sold; others aren't; a buyer appears once. |
 | SCOPE-001, SCOPE-003 to SCOPE-006, LEGAL-006 | The account pages (Particular and store) offer no checkout, shipping, commission, paid plan, chat or guarantee. |
 
-LIST-008 prints a NOTE: since the marketplace categories (migration 20261022120000) every category has instrument
-types plus "Otro", so a category without types no longer exists. The run shows that a pedal sent with "Otro" and no
-characteristics is accepted; whether that settles the case is the owner's call.
+LIST-008 asks for a category without instrument types. Since the marketplace categories (migration 20261022120000)
+every category has instrument types plus "Otro", so the case runs as the closest thing: a pedal sent with "Otro" and
+no characteristics is accepted. The owner accepted that as the case on 28 Oct 2026; until then the run printed it as a
+NOTE for the owner.
 
 `scripts/acceptance/public-pages.cjs` checks what any visitor reads, with GET requests and no session: PUB-006,
 PUB-007, LEGAL-005, LEGAL-006, SCOPE-001 to SCOPE-006, SCOPE-008, SEO-006, SEO-007, LIST-001 and AUTH-019. It is
@@ -78,8 +79,9 @@ more.
 The run of 27 Oct 2026 (GitHub Actions run 40574393086, commit 30e9c1f) passed every check. The 52 Automated cases
 among the 68 are Pass, with the run as evidence. The 14 Manual or Both ones (PUB-006, PUB-007, LIST-011, SEO-006,
 SEO-007, LEGAL-005, LEGAL-006, SCOPE-001 to SCOPE-006 and SCOPE-008) keep Not Run with the run added to their evidence,
-because a person still reviews them. LIST-008 waits for the owner's call (above), and ALERT-005 stays Blocked (below).
-The registry then counts 384 Pass, 154 Not Run and 1 Blocked among its 539 cases.
+because a person still reviews them. LIST-008 waited for the owner's call (above), and ALERT-005 stays Blocked (below).
+The registry then counted 384 Pass, 154 Not Run and 1 Blocked among its 539 cases. With LIST-008 accepted on 28 Oct
+2026 it counts 385 Pass and 153 Not Run.
 
 After the review, the checks of AUTH-004, AUTH-008, AUTH-013, LIST-022 and SDASH-003 grew to the whole of each case
 (expired links, Supabase's own refusal, a retry with other photos, removing assets and links). They passed in run

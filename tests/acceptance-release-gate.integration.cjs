@@ -675,10 +675,10 @@ function digits(value) {
   });
 
   // LIST-008 asks for a category without instrument types. Since the marketplace categories (migration 20261022120000)
-  // every category has its types plus "Otro", so the case can't run as written; this shows the closest thing, a seller
-  // who doesn't know the type picks "Otro" and leaves the characteristics out. It prints a NOTE, never a PASS: whether
-  // that settles the case is the owner's call.
-  try {
+  // every category has its types plus "Otro", so the case can't run as written; it runs as the closest thing, a seller
+  // who doesn't know the type picks "Otro" and leaves the characteristics out. The owner accepted that as the case on
+  // 28 Oct 2026.
+  await check("LIST-008", "a pedal sent with \"Otro\" and no characteristics is accepted", async () => {
     const options = getInstrumentTypeOptions("pedals").map((option) => option.value);
     assert.deepEqual(options, ["pedals", "other"]);
     const submission = await startSubmission(sellerCookie, sellerClient);
@@ -687,10 +687,8 @@ function digits(value) {
     created.listings.push(submission.id);
     pedals = await listing(submission.id, "id,slug,status,instrument_type");
     assert.equal(pedals.status, "pending");
-    console.log("NOTE LIST-008 every category has instrument types; a pedal sent with \"Otro\" and no characteristics was accepted (owner to confirm the case)");
-  } catch (error) {
-    report(`FAIL LIST-008 a pedal sent with "Otro" and no characteristics: ${error.message}`);
-  }
+    return "every category has its types plus \"Otro\"; the pedal waits for review";
+  });
 
   await check("LIST-010", "a listing without the optional characteristics publishes", async () => {
     const submission = await startSubmission(sellerCookie, sellerClient);
