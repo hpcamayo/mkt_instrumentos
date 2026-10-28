@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Check, ChevronLeft, Circle, CloudUpload, Eye, Share2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { ListingAssist } from "@/components/ai/listing-assist";
 import { ListingCardPreview, ListingPagePreview, type PreviewListing } from "@/components/selling/listing-preview";
 import { ConditionCards, FormSection, TypeChips } from "@/components/selling/choice-fields";
@@ -1218,7 +1217,7 @@ function shortError(text: string) {
 
 function draftsTable() {
   const supabase = getSupabaseBrowserClient();
-  return supabase ? (supabase as unknown as SupabaseClient).from("listing_drafts") : null;
+  return supabase ? supabase.from("listing_drafts") : null;
 }
 
 // The share marker is not carried on to any other address (reloads, links, Publicar otro).

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "db:types": "supabase gen types typescript --project-id hswkjandadscduodejig --schema public,graphql_public > lib/supabase/database.types.ts.tmp && mv lib/supabase/database.types.ts.tmp lib/supabase/database.types.ts || { rm -f lib/supabase/database.types.ts.tmp; exit 1; }",
     "test": "node --require ./tests/setup-alias.cjs --test tests/*.test.cjs"
   },
   "dependencies": {

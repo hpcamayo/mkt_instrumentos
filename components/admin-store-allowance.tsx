@@ -25,8 +25,7 @@ export function AdminStoreAllowance({ storeId, onComplete }: { storeId: string; 
     setOpen(true);
     setBusy(true);
     setError("");
-    const { data, error: loadError } = await (supabase as unknown as { rpc: (fn: string, args: object) => Promise<{ data: unknown; error: unknown }> })
-      .rpc("get_store_listing_quota", { p_store_id: storeId });
+    const { data, error: loadError } = await supabase.rpc("get_store_listing_quota", { p_store_id: storeId });
     setBusy(false);
     if (loadError || !data) {
       setError("No pudimos cargar el cupo de la tienda.");
@@ -50,7 +49,7 @@ export function AdminStoreAllowance({ storeId, onComplete }: { storeId: string; 
     }
     setBusy(true);
     setError("");
-    const { data, error: saveError } = await (supabase as unknown as { rpc: (fn: string, args: object) => Promise<{ data: unknown; error: { message?: string } | null }> })
+    const { data, error: saveError } = await supabase
       .rpc("admin_set_store_listing_allowance", { p_store_id: storeId, p_allowance: allowance, p_reason: reason.trim() });
     setBusy(false);
     if (saveError || !data) {

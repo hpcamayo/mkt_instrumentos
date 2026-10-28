@@ -4,7 +4,7 @@ import { getLoginPath } from "@/lib/auth/redirects";
 import { isProtectedAccountPath } from "@/lib/auth/protected-paths";
 import { isRefusedCrossSiteApiWrite } from "@/lib/same-origin";
 import type { Database } from "@/lib/supabase/database.types";
-import { blocksCatalogCrawler, isCatalogDataPath } from "@/lib/catalog-crawlers";
+import { blocksCatalogCrawler, blocksFilteredCatalogCrawler, isCatalogDataPath } from "@/lib/catalog-crawlers";
 import { parseCatalogRequest, searchParamsRecord } from "@/lib/catalog-request";
 
 export async function middleware(request: NextRequest) {
@@ -12,10 +12,7 @@ export async function middleware(request: NextRequest) {
   if (isCatalogDataPath(request.nextUrl.pathname)) {
     // Public traffic must leave this branch before constructing a session client or touching cookies.
     if (blocksCatalogCrawler(request.nextUrl.pathname, request.headers.get("user-agent") ?? "")) {
-      return new NextResponse(request.method === "HEAD" ? null : "Acceso no permitido.", {
-        status: 403,
-        headers: { "Cache-Control": "private, no-store", "Content-Type": "text/plain; charset=utf-8", Vary: "User-Agent" },
-      });
+      return catalogCrawlerDenied(request.method);
     }
     if (request.nextUrl.pathname === "/listados" || request.nextUrl.pathname === "/listados/") {
       const { redirectHref } = parseCatalogRequest(searchParamsRecord(request.nextUrl.searchParams));
@@ -25,6 +22,9 @@ export async function middleware(request: NextRequest) {
           headers: { "Cache-Control": "private, no-store" },
         });
       }
+    }
+    if (blocksFilteredCatalogCrawler(pathname, request.headers.get("user-agent") ?? "", request.nextUrl.searchParams)) {
+      return catalogCrawlerDenied(request.method);
     }
     return NextResponse.next();
   }
@@ -82,6 +82,13 @@ export async function middleware(request: NextRequest) {
   }
 
   return response;
+}
+
+function catalogCrawlerDenied(method: string) {
+  return new NextResponse(method === "HEAD" ? null : "Acceso no permitido.", {
+    status: 403,
+    headers: { "Cache-Control": "private, no-store", "Content-Type": "text/plain; charset=utf-8", Vary: "User-Agent" },
+  });
 }
 
 export const config = {

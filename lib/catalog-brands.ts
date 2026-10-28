@@ -9,8 +9,7 @@ import { createPublicReadClient } from "@/lib/supabase/public-read-client";
 // instrument catalog): its current model-level products, each placed in a marketplace category by its catalog category
 // (lib/catalog-brands-aggregate.ts), and each product's manufacturer. Reference tables are public read-only, so the anon key reads
 // them; nothing is written. The catalog changes only when the loader runs, so the result is shared for a day
-// (lib/shared-aggregate.ts). `lib/supabase/database.types.ts` does not describe the catalog tables yet, hence the
-// untyped queries and the local row types below.
+// (lib/shared-aggregate.ts).
 
 const PAGE_SIZE = 1000; // PostgREST's default max rows on Supabase
 const REVALIDATE_SECONDS = 60 * 60 * 24;
@@ -23,7 +22,6 @@ type ManufacturerRow = { id: string; canonical_name: string };
 async function loadCatalogBrands(deadline: Deadline): Promise<CatalogBrandsByCategory> {
   const supabase = createPublicReadClient(deadline, CATALOG_LOAD_MS);
   if (!supabase) return {};
-  const untyped = supabase as unknown as { from: (table: string) => any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- tables not in database.types.ts
 
   // Every page of a query ordered by id. The first page also returns the row count, so the rest load together.
   type Page<Row> = PromiseLike<{ data: Row[] | null; error: { message: string } | null; count: number | null }>;
@@ -42,7 +40,7 @@ async function loadCatalogBrands(deadline: Deadline): Promise<CatalogBrandsByCat
   const [products, manufacturers] = await Promise.all([
     // Current, model-level products that are not quarantined: what the catalog lookup offers as a product.
     readAll<ProductRow>((from, withCount) =>
-      untyped
+      supabase
         .from("catalog_products")
         .select("id, category_id, manufacturer_id", count(withCount))
         .is("superseded_at", null)
@@ -53,7 +51,7 @@ async function loadCatalogBrands(deadline: Deadline): Promise<CatalogBrandsByCat
         .range(...range(from)),
     ),
     readAll<ManufacturerRow>((from, withCount) =>
-      untyped.from("catalog_manufacturers").select("id, canonical_name", count(withCount)).order("id").range(...range(from)),
+      supabase.from("catalog_manufacturers").select("id, canonical_name", count(withCount)).order("id").range(...range(from)),
     ),
   ]);
 

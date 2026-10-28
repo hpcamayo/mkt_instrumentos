@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { ImportWizard } from "@/components/store-import/import-wizard";
 import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -16,7 +15,7 @@ export default async function StoreImportSessionPage({ params }: { params: Promi
   if (profile?.account_type !== "store_owner") redirect("/mi-cuenta/publicaciones");
   if (!store) redirect("/mi-cuenta/tienda");
   if (!isImportSessionId(sessionId) || !supabase) notFound();
-  const session = await readImportSession(supabase as unknown as SupabaseClient, sessionId).catch(() => null);
+  const session = await readImportSession(supabase, sessionId).catch(() => null);
   if (!session || session.store_id !== store.id) notFound();
   if (session.options?.source === "inventory_selection") redirect(`/mi-cuenta/tienda/publicar-seleccionados/${session.id}`);
 

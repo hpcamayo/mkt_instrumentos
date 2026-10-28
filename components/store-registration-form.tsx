@@ -10,7 +10,7 @@ import { PageNotice } from "@/components/page-notice";
 import { normalizePeruRegion } from "@/lib/location";
 import { createPublicSubmission, type SubmissionFile } from "@/lib/public-submission";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 import { UploadLimitReached, uploadLimitReached } from "@/lib/upload-allowance";
 import { FormSection } from "@/components/selling/choice-fields";
 import { Button, buttonClasses } from "@/components/ui/button";

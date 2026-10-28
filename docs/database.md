@@ -42,7 +42,7 @@ Older Laria business docs describe the intended model in product language. The c
 
 Migration files and the live Supabase schema are the source of truth for current implementation only. The functional specification wins for required V1 behavior. Product names should become schema names only through an explicit migration and app update.
 
-`lib/supabase/database.types.ts` includes the Phase 2 account tables, ownership fields, enums, and helper RPCs. Keep it aligned with later migrations. The PostgREST computed photo-count field uses explicit query result types because the SDK select parser does not infer computed columns.
+`lib/supabase/database.types.ts` is generated from production's schema with `pnpm db:types` (the Supabase CLI, signed in to the project) and is never edited by hand: generate it again once a migration is applied to production, and commit it with the code that uses the change. A branch whose migrations aren't in production yet can generate it from a local stack that has them (`supabase gen types typescript --local --schema public,graphql_public`). Every client is typed with `lib/supabase/database.ts`, which takes the generated types and lets the function arguments the app passes null to accept it, since PostgreSQL doesn't record which arguments do: a list of arguments by function, and every argument of the Inventario actions (`lib/inventory-actions.ts`), whose functions answer a missing value with their own message. A call to a function or table that isn't in the generated types fails the typecheck. The PostgREST computed photo-count field uses explicit query result types because the SDK select parser does not infer computed columns.
 
 ### `public.profiles`
 
@@ -637,8 +637,11 @@ When adding tables, columns, indexes, policies, RPCs, or storage buckets:
    after a reset, with the SQL each one builds for EXECUTE (its strings with their escapes, pieces joined with `||`,
    and `format()` filled in as PostgreSQL fills it in, which it checks against the database's own `format()`), and the
    SQL that SQL builds, three levels down; deeper fails. It can't see what a variable built elsewhere (over several
-   assignments, say), a table or another function (`concat()`, `replace()`, `string_agg()`) adds, nor `format()`
-   arguments passed as a VARIADIC array other than `ARRAY[...]`, so write the WHERE in the string itself.
+   assignments, say), a table or another function (`concat()`, `replace()`, `string_agg()`) adds, `format()`
+   arguments passed as a VARIADIC array other than `ARRAY[...]`, nor `U&''` strings, so write the WHERE in the string
+   itself. A sql function written `BEGIN ATOMIC` keeps no source text, so the test reads its body back with
+   `pg_get_function_sqlbody()`. It can also report what isn't there: a WHERE that only such an unseen part adds reads
+   as missing, and text that reads like an UPDATE or DELETE without being run (a message, say) counts as one.
 
 ## Missing V1 Data Models and Post-V1 Concepts
 
@@ -1390,10 +1393,11 @@ nothing the site reads, so it is applied before its application deploys:
 - The application: the catalog, the home, the store page, the compare page and the listing page's similar and seller
   rows read `public_listings`. The contact button (`app/api/contact`) reads the listing with the public key, so the
   policies still decide it is public, and its contact (`contact_name`, `whatsapp_phone`, the owner's profile) with the
-  service role. "Más de este vendedor" for an old Particular listing without an account matches the seller by
-  WhatsApp number on the server with the service role, then reads the cards as usual. Admin's listing editor loads
-  through `admin_get_listing`. `tests/launch-audit-contacts.test.cjs` checks that no read through the public key
-  names a private column, a computed field on `listings` or another user's profile.
+  service role. "Más de este vendedor" for an old Particular listing without an account matches the seller by WhatsApp
+  number on the server with the service role, which gives the four newest ids and the seller's count however many
+  listings there are, then reads the cards as usual. Admin's listing editor loads through `admin_get_listing`.
+  `tests/launch-audit-contacts.test.cjs` checks that no read through the public key names a private column, a computed
+  field on `listings` or another user's profile.
 
 Step 2, `20261114140000_launch_audit_contact_columns.sql` (suite `tests/launch-audit-contact-columns.sql`; three
 older suites now read a visitor's view the same way), is applied once step 1's application is live: it revokes
@@ -1708,4 +1712,12 @@ so it can be applied before the deploy that schedules the worker (`vercel.json`,
   the value in both places.
 - Kinds the `features/marketplace` branch adds (account security, offers, trades, services) get 7 days and priority
   0 unless it adds them to both functions.
+- Known limits, left from the review as Lows: `day_start` and `count_start` are read when the claim starts, before
+  its advisory lock, so a claim that waits on the lock across midnight UTC counts from the day before. It hands out
+  fewer new e-mails, and the retries of the day before's uncertain e-mails go out as if they had their place in the
+  new day, outside its allowance; the worker claims 25 at a time, so the review found this matters only with a limit
+  under 25. And the one-click links in alerts, price drops and the weekly digest expire 180 days after each attempt
+  (`lib/email/links.ts`), so a retry of an uncertain send has another body under the same `Idempotency-Key`: Resend
+  answers 409, no second copy goes out, and after 5 tries the e-mail ends `failed` although the first attempt was
+  delivered. Taking the expiry from the delivery's `created_at`, added to its payload, would fix it.
 <!-- /launch-audit:email -->

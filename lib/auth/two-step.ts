@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 
 // safe-08 (accounts batch): the parts of lib/auth/mfa.ts that also run in middleware and in the browser.
 //   aal1: the password, e-mail link or Google/Apple step only;  aal2: the authenticator code too.

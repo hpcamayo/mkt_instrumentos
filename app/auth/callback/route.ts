@@ -15,7 +15,7 @@ import {
   upsertStoreOwnerProfile,
 } from "@/lib/auth/profile";
 import { RATE_LIMITS, allowRequest } from "@/lib/rate-limit";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 import { visitorAuthKey } from "@/lib/supabase/visitor-auth";
 
 export async function GET(request: NextRequest) {

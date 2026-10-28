@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { inventoryCall, type InventoryActionBody } from "@/lib/inventory-actions";
-import { CONFLICT_CODES, inventoryDb, inventoryError } from "@/lib/store-inventory";
+import { CONFLICT_CODES, inventoryError } from "@/lib/store-inventory";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
 // Owner inventory actions (docs/store-operations/design.md §4.2, §13). The route only shapes arguments: every rule
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return NextResponse.json({ code: "AUTH_REQUIRED", message: "Ingresa a tu cuenta." }, { status: 401 });
 
-  const { data, error } = await inventoryDb(supabase).rpc(call.fn, call.args);
+  const { data, error } = await supabase.rpc(call.fn, call.args);
   if (error) {
     const failure = inventoryError(error.message);
     if (failure.code === "UNKNOWN") console.error("inventory action failed", call.fn, error.code, error.message);

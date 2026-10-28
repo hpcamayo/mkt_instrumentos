@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { CategoryLandingPage } from "@/lib/category-pages";
-import { getCategoryLandingByValue } from "@/lib/category-pages";
-import { instrumentFilterGroups } from "@/lib/instrument-filters";
+import { activeCatalogFilterKeys, catalogIndexing, catalogParamValues as values } from "@/lib/catalog-indexing";
+export { catalogFilterKeys } from "@/lib/catalog-indexing";
 import {
   formatPrice,
   getCategoryLabel,
@@ -22,38 +22,13 @@ import {
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
-// Query keys that change catalog results. Anything else (for example utm_*) is
-// ignored for indexing decisions and never forwarded.
-export const catalogFilterKeys: ReadonlySet<string> = new Set([
-  "q",
-  "category",
-  "location",
-  "city",
-  "condition",
-  "brand",
-  "seller_type",
-  "instrument_type",
-  "min_price",
-  "max_price",
-  "sort",
-  ...instrumentFilterGroups.flatMap((group) => group.filters.map((filter) => filter.key)),
-]);
-
-function values(value: string | string[] | undefined) {
-  return (Array.isArray(value) ? value : [value]).filter((item): item is string => typeof item === "string" && item.trim() !== "");
-}
-
 function paged(path: string, page: number) {
   return page > 1 ? `${path}?page=${page}` : path;
 }
 
-function activeFilterKeys(searchParams: SearchParams) {
-  return Object.keys(searchParams).filter((key) => catalogFilterKeys.has(key) && values(searchParams[key]).length > 0);
-}
-
 // Category landing pages list the whole category; refinements belong to /listados.
 export function categoryFilterRedirect(landing: CategoryLandingPage, searchParams: SearchParams) {
-  const keys = activeFilterKeys(searchParams).filter((key) => key !== "category");
+  const keys = activeCatalogFilterKeys(searchParams).filter((key) => key !== "category");
   if (keys.length === 0) return null;
   const params = new URLSearchParams({ category: landing.category });
   for (const key of keys) {
@@ -81,7 +56,7 @@ export function buildCategoryMetadata(landing: CategoryLandingPage, page: number
 export function buildCatalogMetadata(searchParams: SearchParams, page: number, filteredTitle?: string): Metadata {
   const description = "Explora guitarras, bajos, baterías, pedales, amplificadores y equipos de audio de particulares y tiendas en Perú. Contacto directo por WhatsApp.";
   const heading = "Instrumentos musicales en venta en Perú";
-  const keys = activeFilterKeys(searchParams);
+  const { keys, landing } = catalogIndexing(searchParams);
   const titled = (text: string) => (page > 1 ? `${text} – Página ${page}` : text);
   // og:url always names the same page as the canonical (or, when there is none, the page itself).
   const pageMetadata = (url: string, title: string, pageDescription: string, extra: Metadata = {}): Metadata => ({
@@ -97,7 +72,6 @@ export function buildCatalogMetadata(searchParams: SearchParams, page: number, f
   }
 
   // A category-only catalog URL duplicates its landing page (including its pagination).
-  const landing = keys.length === 1 && keys[0] === "category" ? getCategoryLandingByValue(values(searchParams.category)[0]) : null;
   if (landing) {
     const canonical = paged(`/instrumentos/${landing.slug}`, page);
     return pageMetadata(canonical, landing.heading, landing.description, { alternates: { canonical } });

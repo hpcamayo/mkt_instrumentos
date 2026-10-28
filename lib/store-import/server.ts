@@ -4,7 +4,7 @@ import "server-only";
 // repeatedly; each call takes the session lease, runs bounded units of work for at most STEP_BUDGET_MS, checkpoints,
 // and releases the lease. Every database call uses the owner's own session, so auth.uid() decides ownership.
 import { createHash } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient, FunctionCall } from "@/lib/supabase/database";
 import {
   IMPORT_COMMIT_CHUNK_ROWS,
   IMPORT_PLAN_CHUNK_ROWS,
@@ -16,9 +16,7 @@ import { parseImportRow } from "./rows";
 import { compactCells, readSpreadsheet } from "./sheet";
 import { ImportFileError, type ImportCell, type SpreadsheetFormat } from "./types";
 
-// Untyped on purpose: the import functions are not in the generated database types yet (the combined prototype
-// regenerates them), and every value crossing this boundary is checked by the database anyway.
-type Db = SupabaseClient;
+type Db = DatabaseClient;
 
 export const STEP_BUDGET_MS = 20_000;
 const STAGE_UNITS_PER_STEP = 2;
@@ -75,7 +73,7 @@ export function importErrorFrom(error: { message?: string; code?: string } | nul
   return new ImportRequestError("IMPORT_UNAVAILABLE", "No pudimos continuar la importación. Intenta de nuevo.", 503);
 }
 
-async function call<T>(db: Db, fn: string, args: Record<string, unknown>): Promise<T> {
+async function call<T>(db: Db, ...[fn, args]: FunctionCall): Promise<T> {
   const { data, error } = await db.rpc(fn, args);
   if (error) throw importErrorFrom(error);
   return data as T;

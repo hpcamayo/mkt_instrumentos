@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { sameOriginEventRequest } from "@/lib/marketplace-events-server";
+import type { DatabaseClient } from "@/lib/supabase/database";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import {
   isQuestionId,
@@ -14,8 +14,7 @@ import {
 
 // big-11: public questions on a listing. GET ?listingId= reads the Q&A and the caller's flags (signed in or not);
 // POST { action: "ask" | "answer" | "hide" | "restore", listingId, … } writes through the database functions and
-// answers with the refreshed Q&A. The RPCs are newer than lib/supabase/database.types.ts, so they go through an
-// untyped view of the same cookie-bound client; the database checks every permission.
+// answers with the refreshed Q&A. They run as the cookie-bound client; the database checks every permission.
 const NO_STORE = { "Cache-Control": "private, no-store" };
 
 async function client() {
@@ -23,10 +22,10 @@ async function client() {
   if (!supabase) return null;
   // Refreshes an expired session, so the RPC sees the visitor's account.
   const { data } = await supabase.auth.getUser();
-  return { db: supabase as unknown as SupabaseClient, userId: data?.user?.id ?? null };
+  return { db: supabase, userId: data?.user?.id ?? null };
 }
 
-async function readState(db: SupabaseClient, listingId: string) {
+async function readState(db: DatabaseClient, listingId: string) {
   const { data, error } = await db.rpc("get_listing_questions", { p_listing_id: listingId });
   // The raw RPC shape: the browser parses it with parseListingQuestions (parsing here too would hand it camelCase it
   // cannot read).

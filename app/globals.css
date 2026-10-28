@@ -112,6 +112,12 @@ figcaption {
   }
 }
 
+/* A note for a short wait (the photo lightbox's code downloading, components/listing/listing-lazy.tsx): it fades in
+   only once the wait passes 200 ms, so a quick one never flickers. */
+.wait-note {
+  animation: menu-fade 120ms ease-out 200ms both;
+}
+
 /* Catalog results while a navigation is pending (components/catalog-navigation.tsx): they stay on screen and dim
    only after 200 ms, so fast navigations never flicker; they come back at once. */
 .catalog-results {

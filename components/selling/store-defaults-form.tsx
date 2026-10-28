@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { PageNotice } from "@/components/page-notice";
 import { Button } from "@/components/ui/button";
 import { Field, Select } from "@/components/ui/field";
@@ -25,8 +24,7 @@ export function StoreDefaultsForm({ storeId, initial }: { storeId: string; initi
     if (!supabase) return setMessage({ kind: "error", text: "No pudimos conectar. Intenta nuevamente." });
     setSaving(true);
     setMessage(null);
-    // store_listing_defaults is newer than the generated database types.
-    const { error } = await (supabase as unknown as SupabaseClient).from("store_listing_defaults").upsert({
+    const { error } = await supabase.from("store_listing_defaults").upsert({
       store_id: storeId,
       condition: condition || null,
       description_footer: footer.trim(),
