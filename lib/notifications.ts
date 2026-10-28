@@ -34,6 +34,10 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   listing_question_asked: "Te hicieron una pregunta",
   listing_question_answered: "Respondieron tu pregunta",
   listing_back_in_stock: "Volvió a estar disponible",
+  // Effortless Laria maybes, talk-06 "Reservado".
+  listing_reservation_ended: "¿Se vendió?",
+  listing_released: "Se liberó una reserva",
+  listing_reservation_sold: "Se vendió lo que esperabas",
   // ux my-listings
   listing_purchase_check: "¿Lo compraste?",
   listing_buyer_reported_purchase: "Te reportaron una compra",
@@ -75,6 +79,11 @@ export function notificationHref(notification: NotificationTarget, listingSlug?:
     : isQuestionNotification(notification.event_type) && notification.listing_id
     ? `/instrumentos/${notification.listing_id}#preguntas`
     : notification.event_type === "listing_back_in_stock" && notification.listing_id
+    ? `/instrumentos/${notification.listing_id}`
+    // talk-06: the seller answers "¿Se vendió?" in Pendientes; the people who waited open the listing.
+    : notification.event_type === "listing_reservation_ended"
+    ? "/mi-cuenta"
+    : (notification.event_type === "listing_released" || notification.event_type === "listing_reservation_sold") && notification.listing_id
     ? `/instrumentos/${notification.listing_id}`
     : notification.event_type === "store_stock_summary"
     ? "/mi-cuenta/tienda/inventario?stock=low"

@@ -8,11 +8,14 @@ import {
   exitHref,
   feedTitle,
   limaDay,
+  markReserved,
   readDescubrirRequest,
   windowStart,
   type DescubrirItem,
 } from "@/lib/descubrir";
+import { reservedCardIds } from "@/lib/listing-reservations-server";
 import { warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
+import { getRequestReads } from "@/lib/supabase/public-read-client";
 import { NOINDEX_ROBOTS } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +47,12 @@ export default async function DescubrirPage({ searchParams }: DescubrirPageProps
       result = second;
     }
   }
-  if (result && !result.error) initial = { listings: (result.data ?? []) as DescubrirItem[], total: result.count ?? null };
+  if (result && !result.error) {
+    const listings = (result.data ?? []) as DescubrirItem[];
+    // talk-06: the first page's "Reservado" tags (optional; none when that read is off or failed).
+    const reserved = await reservedCardIds(listings, getRequestReads().deadline);
+    initial = { listings: markReserved(listings, reserved), total: result.count ?? null };
+  }
 
   return (
     <main id="contenido" tabIndex={-1} className="surface-frame h-[100dvh] overflow-hidden bg-frame">

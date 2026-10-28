@@ -190,3 +190,48 @@ test("every direct caller of an optional catalog aggregate checks the switch", (
   // The rescue's counts and fallbacks are ordinary listing reads, guarded where they start.
   assert.match(fs.readFileSync(path.join(root, "lib/catalog-data.ts"), "utf8"), /export async function getCatalogRescue[\s\S]*?if \(catalogEnrichmentDisabled\(\)\) return null;/);
 });
+
+// talk-06 (docs/ux-effortless/maybes-reservado.md): the "Reservado" badge on catalog cards is an optional read too.
+test("catalog recovery skips the reserved-card read before creating a database client", async () => {
+  const { reservedCardIds } = loadServer("lib/listing-reservations-server.ts", { "@/lib/supabase/public-read-client": noClient });
+  const deadline = { signal: new AbortController().signal, expiresAt: Date.now() + 8000 };
+  await withRecoveryFlag("true", async () => {
+    assert.deepEqual([...await reservedCardIds([{ id: "l1", seller_type: "individual" }], deadline)], []);
+  });
+  // A page of store listings asks nothing either way.
+  await withRecoveryFlag(undefined, async () => {
+    assert.deepEqual([...await reservedCardIds([{ id: "s1", seller_type: "store" }], deadline)], []);
+  });
+});
+
+test("normal operation reads the reserved cards among the page's Particular listings, and a failure shows no badge", async () => {
+  const calls = [];
+  let fail = false;
+  const client = { rpc(name, args) {
+    calls.push({ name, ids: args.p_listing_ids });
+    const result = fail ? { data: null, error: { message: "timeout" } } : { data: [{ listing_id: "l2", reserved_until: "2026-10-29T23:30:00Z" }], error: null };
+    return { abortSignal: () => Promise.resolve(result), then: (resolve) => resolve(result) };
+  } };
+  const { reservedCardIds, resetReservedCardsForTests } = loadServer("lib/listing-reservations-server.ts", {
+    "@/lib/supabase/public-read-client": { createPublicReadClient: () => client },
+  });
+  const deadline = { signal: new AbortController().signal, expiresAt: Date.now() + 8000 };
+  const page = [{ id: "l1", seller_type: "individual" }, { id: "l2", seller_type: "individual" }, { id: "s1", seller_type: "store" }];
+  await withRecoveryFlag(undefined, async () => {
+    assert.deepEqual([...await reservedCardIds(page, deadline)], ["l2"]);
+    assert.deepEqual(calls, [{ name: "get_reserved_listings", ids: ["l1", "l2"] }]);
+    fail = true;
+    assert.deepEqual([...await reservedCardIds(page, deadline)], []);
+    // Three failures pause it: the fourth page asks nothing.
+    await reservedCardIds(page, deadline);
+    await reservedCardIds(page, deadline);
+    const before = calls.length;
+    assert.deepEqual([...await reservedCardIds(page, deadline)], []);
+    assert.equal(calls.length, before);
+    resetReservedCardsForTests();
+  });
+  // The catalog grid and "Ver 24 más" both pass it to the cards.
+  assert.match(fs.readFileSync(path.join(root, "components/catalog-view.tsx"), "utf8"), /reservedCardIds\(listings, getRequestReads\(\)\.deadline\)[\s\S]*reserved=\{reserved\.has\(listing\.id\)\}/);
+  assert.match(fs.readFileSync(path.join(root, "app/api/catalog/page/route.ts"), "utf8"), /reserved: \[\.\.\.reserved\]/);
+  assert.match(fs.readFileSync(path.join(root, "components/catalog-load-more.tsx"), "utf8"), /reserved=\{loaded\.reserved\.includes\(listing\.id\)\}/);
+});

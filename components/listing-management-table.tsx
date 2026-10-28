@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ImageOff, Pause } from "lucide-react";
+import { Clock, ImageOff, Pause } from "lucide-react";
 import { useCallback, useState, type FormEvent } from "react";
 import { ControlStockButton } from "@/components/inventory/inventory-actions";
 import { PageNotice } from "@/components/page-notice";
@@ -27,6 +27,16 @@ import {
   type UndoableAction,
 } from "@/lib/my-listings";
 import { refreshListingPages } from "@/lib/listing-page-refresh";
+import {
+  RESERVATION_DAYS,
+  endSentence,
+  reservationDaysLabel,
+  reservationEndText,
+  reservationTagText,
+  watchersText,
+  type ReservationDays,
+  type ReservationOutcome,
+} from "@/lib/listing-reservations";
 import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { cn } from "@/lib/utils";
@@ -41,6 +51,9 @@ const CONFIRMATIONS: Record<"sold" | "withdraw_sold", ConfirmOptions> = {
 };
 
 type ManageResult = { ok: true; data: Record<string, unknown> | null } | { ok: false; message: string };
+
+// talk-06: "Se vendió" after a reservation is the ordinary sold flow, with the same kind of confirmation.
+const RESERVATION_SOLD: ConfirmOptions = { title: "¿Se vendió esta publicación?", body: "Quedará marcada como vendida y avisaremos a quienes esperaban que se libere.", confirmLabel: "Sí, se vendió" };
 
 async function manage(listingId: string, body: Record<string, unknown>): Promise<ManageResult> {
   const response = await fetch(`/api/listings/${listingId}/manage`, {
@@ -57,10 +70,13 @@ export function ListingManagementTable({
   listings,
   emptyMessage,
   canControlStock = false,
+  canReserve = false,
 }: {
   listings: ManagedListing[];
   emptyMessage: string;
   canControlStock?: boolean;
+  // talk-06: Particular listings can be reserved (Mis publicaciones); a store holds units through Inventario.
+  canReserve?: boolean;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -69,6 +85,7 @@ export function ListingManagementTable({
   const [undoing, setUndoing] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
+  const [reserving, setReserving] = useState<string | null>(null);
   const [confirm, confirmDialog] = useConfirm();
   const dismissToast = useCallback(() => setToast(null), []);
 
@@ -151,6 +168,36 @@ export function ListingManagementTable({
     return null;
   }
 
+  // talk-06: reserve (or change the period); the public page shows "Reservado" at once.
+  async function reserve(listing: ManagedListing, days: ReservationDays) {
+    setBusyId(listing.id);
+    setError("");
+    const result = await manage(listing.id, { action: "reserve", days });
+    setBusyId(null);
+    if (!result.ok) return setError(result.message);
+    setReserving(null);
+    const until = typeof result.data?.reservedUntil === "string" ? reservationEndText(result.data.reservedUntil) : null;
+    notify(until ? `Reservada hasta ${endSentence(until)}` : "Publicación reservada.");
+    router.refresh();
+  }
+
+  // "Quitar reserva" or "Sigue disponible" tell the people waiting; "Se vendió" goes on to choose the buyer.
+  async function endReservation(listing: ManagedListing, outcome: ReservationOutcome) {
+    if (outcome === "sold" && !(await confirm(RESERVATION_SOLD))) return;
+    setBusyId(listing.id);
+    setError("");
+    const result = await manage(listing.id, { action: "end_reservation", outcome });
+    setBusyId(null);
+    if (!result.ok) return setError(result.message);
+    if (outcome === "sold") {
+      router.push(`/mi-cuenta/transacciones/${listing.id}`);
+      return;
+    }
+    const told = typeof result.data?.told === "number" ? result.data.told : 0;
+    notify(told ? `Ya no está reservada. Avisamos a ${told === 1 ? "la persona que esperaba" : `las ${told} personas que esperaban`}.` : "Ya no está reservada.");
+    router.refresh();
+  }
+
   async function runBulk(action: UndoableAction, ids: string[]) {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return { ok: false as const, message: "No se pudo completar la acción." };
@@ -187,7 +234,7 @@ export function ListingManagementTable({
     return <EmptyState className="rounded-none border-0" title={emptyMessage} />;
   }
 
-  const actionsById = new Map(listings.map((listing) => [listing.id, rowActions(listing, { canControlStock })]));
+  const actionsById = new Map(listings.map((listing) => [listing.id, rowActions(listing, { canControlStock, canReserve })]));
   const selectable = listings.filter((listing) => actionsById.get(listing.id)?.select);
   const chosen = selectable.filter((listing) => selected.has(listing.id));
   const toHide = chosen.filter((listing) => listing.status === "approved").map((listing) => listing.id);
@@ -249,6 +296,7 @@ export function ListingManagementTable({
               const actions = actionsById.get(listing.id)!;
               const busy = busyId === listing.id;
               const paused = pausedLabel(listing.paused_until);
+              const reservation = actions.reserve ? listing.reservation ?? null : null;
               return (
                 <tr key={listing.id} className="grid gap-2 px-4 py-4 align-top md:table-row md:p-0">
                   <td className="block md:table-cell md:px-3 md:py-4">
@@ -268,6 +316,12 @@ export function ListingManagementTable({
                       <div className="min-w-0">
                         <p className="font-semibold text-ink">{listing.title}</p>
                         {paused ? <p className="mt-1"><Tag icon={<Pause aria-hidden />}>{paused}</Tag></p> : null}
+                        {reservation ? (
+                          <p className="mt-1">
+                            <Tag tone="warning" icon={<Clock aria-hidden />} wrap>{reservation.ended ? "Terminó la reserva · ¿Se vendió?" : reservationTagText(reservation.until)}</Tag>
+                          </p>
+                        ) : null}
+                        {reservation && reservation.watchers > 0 ? <p className="mt-1 t-meta">{watchersText(reservation.watchers)}</p> : null}
                         {listing.revisionStatus === "pending" ? (
                           <p className="mt-1 t-meta font-semibold text-ink">Cambios en revisión; la versión aprobada sigue pública.</p>
                         ) : null}
@@ -327,7 +381,21 @@ export function ListingManagementTable({
                         <Link href={`/mi-cuenta/publicaciones/${listing.id}/editar`} className="link font-semibold">Editar</Link>
                       ) : null}
                       {actions.hide ? <ActionButton disabled={busy} onClick={() => runLifecycle(listing, "hide")}>Ocultar</ActionButton> : null}
-                      {actions.markSold ? <ActionButton disabled={busy} onClick={() => runConfirmed(listing, "sold")}>Marcar vendida</ActionButton> : null}
+                      {actions.markSold && !reservation?.ended ? <ActionButton disabled={busy} onClick={() => runConfirmed(listing, "sold")}>Marcar vendida</ActionButton> : null}
+                      {actions.reserve && !reservation ? <ActionButton disabled={busy} onClick={() => setReserving(listing.id)}>Reservar</ActionButton> : null}
+                      {reservation && !reservation.ended ? (
+                        <>
+                          <ActionButton disabled={busy} onClick={() => setReserving(listing.id)}>Cambiar reserva</ActionButton>
+                          <ActionButton disabled={busy} onClick={() => endReservation(listing, "available")}>Quitar reserva</ActionButton>
+                        </>
+                      ) : null}
+                      {reservation?.ended ? (
+                        <>
+                          <ActionButton disabled={busy} onClick={() => endReservation(listing, "sold")}>Se vendió</ActionButton>
+                          <ActionButton disabled={busy} onClick={() => endReservation(listing, "available")}>Sigue disponible</ActionButton>
+                          <ActionButton disabled={busy} onClick={() => setReserving(listing.id)}>Reservar otra vez</ActionButton>
+                        </>
+                      ) : null}
                       {actions.restore ? <ActionButton disabled={busy} onClick={() => runLifecycle(listing, "restore")}>Restaurar</ActionButton> : null}
                       {actions.soldFromHidden ? <ActionButton disabled={busy} onClick={() => runConfirmed(listing, "sold")}>Ya lo vendí</ActionButton> : null}
                       {actions.attribute ? (
@@ -339,6 +407,7 @@ export function ListingManagementTable({
                       {actions.duplicate ? <ActionButton disabled={busy} onClick={() => runCopy(listing, "duplicate")}>Duplicar</ActionButton> : null}
                       {actions.controlStock ? <ControlStockButton listing={{ id: listing.id, title: listing.title }} /> : null}
                     </div>
+                    {reserving === listing.id ? <ReservationPicker listingId={listing.id} busy={busy} onPick={(days) => reserve(listing, days)} onCancel={() => setReserving(null)} /> : null}
                     {actions.isAdminHidden ? <p className="mt-2 text-meta text-ink-2">Solo administración puede restaurarla.</p> : null}
                     {actions.relist ? <p className="mt-2 text-meta text-ink-2">El original es historial inmutable. Republicar crea un borrador nuevo con los mismos datos.</p> : null}
                   </td>
@@ -427,6 +496,23 @@ function PriceEditor({
         <Button variant="quiet" size="sm" onClick={close}>Cancelar</Button>
       </div>
     </form>
+  );
+}
+
+// talk-06: how long to hold it for the buyer. One tap reserves; a new period replaces a running one.
+function ReservationPicker({ listingId, busy, onPick, onCancel }: { listingId: string; busy: boolean; onPick: (days: ReservationDays) => void; onCancel: () => void }) {
+  const titleId = `reservar-${listingId}`;
+  return (
+    <div role="group" aria-labelledby={titleId} className="mt-3 grid max-w-72 gap-2 whitespace-normal">
+      <p id={titleId} className="t-ui font-semibold text-ink">¿Por cuántos días la reservas?</p>
+      <div className="flex flex-wrap gap-2">
+        {RESERVATION_DAYS.map((days) => (
+          <Button key={days} variant="secondary" size="sm" disabled={busy} onClick={() => onPick(days)}>{reservationDaysLabel(days)}</Button>
+        ))}
+        <Button variant="quiet" size="sm" onClick={onCancel}>Cancelar</Button>
+      </div>
+      <p className="t-meta">Sigue visible con la etiqueta «Reservado» y quien quiera puede pedir que le avisemos si se libera. Al terminar te preguntamos si se vendió.</p>
+    </div>
   );
 }
 

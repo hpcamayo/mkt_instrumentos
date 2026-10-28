@@ -3,6 +3,7 @@ import { CheckCircle2, Circle, ExternalLink } from "lucide-react";
 import { getAccountContext } from "@/lib/account-context";
 import { listingStatusLabel } from "@/lib/account-ui";
 import { isSellerProfileComplete } from "@/lib/auth/profile";
+import { endedReservations, readMyListingReservations } from "@/lib/listing-reservations";
 import { buildPendientes, parsePendientes, storeChecklist, type ChecklistStep } from "@/lib/pendientes";
 import { assistedCommerceEnabled } from "@/lib/payment-methods";
 import { PendientesList } from "@/components/pendientes-list";
@@ -26,12 +27,17 @@ export default async function AccountPage({
 }) {
   const status = await searchParams;
   const { user, profile, store, supabase } = await getAccountContext();
-  const pendientesRead = supabase ? await supabase.rpc("get_account_pendientes") : { data: null, error: null };
+  const storeOwner = profile?.account_type === "store_owner";
+  const [pendientesRead, reservations] = await Promise.all([
+    supabase ? supabase.rpc("get_account_pendientes") : { data: null, error: null },
+    // talk-06: a Particular's ended reservations ask "¿Se vendió?" (a store holds units through Inventario).
+    supabase && !storeOwner ? readMyListingReservations(supabase) : null,
+  ]);
   const pendientes = parsePendientes(pendientesRead.data);
-  const items = pendientes ? buildPendientes(pendientes) : [];
+  const items = pendientes ? buildPendientes(pendientes, { reservations: endedReservations(reservations ?? []) }) : [];
   const pausedUntil = pendientes?.seller.paused_until ?? null;
 
-  if (profile?.account_type === "store_owner") {
+  if (storeOwner) {
     const { data: inventory } = store && supabase
       ? await supabase.from("listings").select("id,status").eq("store_id", store.id)
       : { data: [] };

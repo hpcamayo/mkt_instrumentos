@@ -9,38 +9,46 @@ import { buttonClasses } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
-type Viewer = { authenticated: boolean; owner: boolean; stockManaged: boolean; watching: boolean };
+// releaseWatching: "Avísame si se libera" (talk-06), asked only on a reserved listing.
+type Viewer = { authenticated: boolean; owner: boolean; stockManaged: boolean; watching: boolean; releaseWatching?: boolean };
 
-// One request per listing and page load, shared by the owner bar and the availability buttons.
+// One request per listing and page load, shared by the owner bar and the availability buttons. On a reserved listing
+// (the page tells every caller) it also asks about "Avísame si se libera".
 const viewers = new Map<string, Promise<Viewer | null>>();
-function loadViewer(listingId: string) {
-  let pending = viewers.get(listingId);
+function loadViewer(listingId: string, reserved: boolean) {
+  const key = reserved ? `${listingId}:reserved` : listingId;
+  let pending = viewers.get(key);
   if (!pending) {
-    pending = fetch("/api/listing-viewer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ listingId }) })
+    pending = fetch("/api/listing-viewer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(reserved ? { listingId, reserved: true } : { listingId }) })
       .then((response) => (response.ok ? (response.json() as Promise<Viewer>) : null))
       .catch(() => null);
-    viewers.set(listingId, pending);
+    viewers.set(key, pending);
   }
   return pending;
 }
 
-function useViewer(listingId: string) {
+function forgetViewer(listingId: string) {
+  viewers.delete(listingId);
+  viewers.delete(`${listingId}:reserved`);
+}
+
+function useViewer(listingId: string, reserved = false) {
   const account = useMarketplaceAccount();
   const [viewer, setViewer] = useState<Viewer | null>(null);
   useEffect(() => {
     if (!account.ready || !account.authenticated) return;
     let active = true;
-    void loadViewer(listingId).then((value) => { if (active) setViewer(value); });
+    void loadViewer(listingId, reserved).then((value) => { if (active) setViewer(value); });
     return () => { active = false; };
-  }, [account.ready, account.authenticated, listingId]);
+  }, [account.ready, account.authenticated, listingId, reserved]);
   return account.ready && account.authenticated ? viewer : null;
 }
 
 // The owner's shortcuts on their own public listing (mine-05): Editar · Bajar precio · Marcar vendida · Compartir.
 // Shown only to the owner, after the page loads; visitors never see it. A listing whose stock Inventario controls
 // offers "Ver en Inventario" instead of "Marcar vendida" (D-15). `share` is the page's share control.
-export function OwnerBar({ listingId, sold, share, className }: { listingId: string; sold: boolean; share?: ReactNode; className?: string }) {
-  const viewer = useViewer(listingId);
+export function OwnerBar({ listingId, sold, reserved = false, share, className }: { listingId: string; sold: boolean; reserved?: boolean; share?: ReactNode; className?: string }) {
+  const viewer = useViewer(listingId, reserved);
   const router = useRouter();
   const [confirm, confirmDialog] = useConfirm();
   const [message, setMessage] = useState<string | null>(null);
@@ -118,7 +126,7 @@ export function RestockAlert({ listingId, className }: { listingId: string; clas
       return;
     }
     setWatching(result.watching === true);
-    viewers.delete(listingId);
+    forgetViewer(listingId);
   }
 
   return (
@@ -127,6 +135,52 @@ export function RestockAlert({ listingId, className }: { listingId: string; clas
         <BellRing aria-hidden />{current ? "Te avisaremos · Cancelar aviso" : "Avísame cuando vuelva"}
       </button>
       <p role="status" className="t-meta">{message ?? (current ? "Te escribiremos una vez cuando vuelva a estar disponible." : "")}</p>
+    </div>
+  );
+}
+
+// "Avísame si se libera" on a reserved listing (talk-06, docs/ux-effortless/maybes-reservado.md): the main action while
+// the seller holds it for someone. One notice, in the app and by e-mail, when the seller says it is still available or a
+// day after the end without an answer; then the request ends. A sale is told in the app. Visitors get a sign-in link
+// that comes back here; the owner sees nothing.
+export function ReleaseAlert({ listingId, className }: { listingId: string; className?: string }) {
+  const account = useMarketplaceAccount();
+  const pathname = usePathname();
+  const viewer = useViewer(listingId, true);
+  const [watching, setWatching] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const current = watching ?? viewer?.releaseWatching ?? false;
+  if (!account.ready) return null;
+  if (viewer?.owner) return null;
+  if (!account.authenticated) {
+    return (
+      <Link href={`/login?next=${encodeURIComponent(pathname)}`} className={buttonClasses({ className })}>
+        <BellRing aria-hidden />Ingresa para que te avisemos si se libera
+      </Link>
+    );
+  }
+
+  async function toggle() {
+    setBusy(true);
+    setMessage(null);
+    const response = await fetch("/api/listing-viewer", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ listingId, watch: !current, kind: "release" }) }).catch(() => null);
+    const result = await response?.json().catch(() => null);
+    setBusy(false);
+    if (!response?.ok) {
+      setMessage(result?.message ?? "No pudimos guardar el aviso. Intenta de nuevo.");
+      return;
+    }
+    setWatching(result.watching === true);
+    forgetViewer(listingId);
+  }
+
+  return (
+    <div className={cn("grid gap-1", className)}>
+      <button type="button" aria-pressed={current} disabled={busy} aria-busy={busy} onClick={() => void toggle()} className={buttonClasses({ variant: current ? "secondary" : "primary" })}>
+        <BellRing aria-hidden />{current ? "Te avisaremos · Cancelar aviso" : "Avísame si se libera"}
+      </button>
+      <p role="status" className="t-meta">{message ?? (current ? "Te escribiremos una vez si se libera." : "")}</p>
     </div>
   );
 }

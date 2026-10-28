@@ -26,14 +26,18 @@ const ICONS: Record<StatusIcon, ReactNode> = {
   low: <AlertTriangle aria-hidden />,
 };
 
+// `wrap`: the text takes a second line instead of being cut, for a tag in a table cell whose width it would otherwise
+// set (an uncut tag is as wide as its whole text).
 export function Tag({
   tone = "neutral",
   icon,
+  wrap = false,
   className,
   children,
 }: {
   tone?: StatusTone;
   icon?: ReactNode;
+  wrap?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -46,7 +50,7 @@ export function Tag({
       )}
     >
       {icon}
-      <span className="min-w-0 truncate">{children}</span>
+      <span className={wrap ? "min-w-0" : "min-w-0 truncate"}>{children}</span>
     </span>
   );
 }
