@@ -2,8 +2,9 @@
 
 How the eight batches of the Effortless Laria program (build plan `/mnt/project-files/ux-ideas/build-plan.md`) came
 together on `ux/effortless`. Each batch has its own write-up next to this one; this page records only what changed when
-they met: the same idea built twice, a rule two batches needed to share, a file both edited. Proposed decisions are
-numbered UXD-integration-n, like the batches' own.
+they met: the same idea built twice, a rule two batches needed to share, a file both edited. Its decisions are
+numbered UXD-integration-n, like the batches' own. The owner reviewed the combined build on 2026-10-20 and
+confirmed UXD-integration-11 on 2026-10-28.
 
 Merge order (by migration slot): find (#27), listing (#24), accounts (#28), selling (#25), my listings (#23), stores
 (#26, then the store-columns fix #30), inventory (#29), speed. Integration migration: `20261109120000`.
@@ -163,6 +164,8 @@ The accounts batch (#28) shipped shared pieces and listed where the other batche
 - **Decision.** The street follows the store's choice everywhere: the explainer shows it only while the store shows it
   on its page, and otherwise says "Una dirección en Miraflores, Lima", the way it says a phone is on file without the
   number. RUC and razón social stay, as trust-03 lists them.
+- **Accepted.** By the owner on the review page (2026-10-20, "A store can show its street address if it agrees"),
+  and again in the thread on 2026-10-28.
 - **Files.** `supabase/migrations/20261109120000_ux_effortless_integration.sql` (`get_public_seller_facts` returns
   `public_address` and `address_checked`), `lib/listing-page.ts`, `components/listing/verified-explainer.tsx`,
   `tests/ux-listing-page.sql`, `tests/ux-effortless-listing-page.test.cjs`.
@@ -204,8 +207,12 @@ Not yet covered by an SQL suite: the import trigger that remembers a SKU's publi
 
 ## Acceptance cases
 
-All 261 proposed cases, EASE-001 to EASE-766 and all Not Run, are in `acceptance-proposal.tsv`, built from the
-batches' files and checked with `python3 -B acceptance/validate.py --cases docs/ux-effortless/acceptance-proposal.tsv`.
-They join `acceptance/cases.tsv` only after Henri's review. The integration's own cases are EASE-750 to EASE-766
-(`integration-acceptance.tsv`). The five maybes added 82 more to the same file, EASE-800 to EASE-882
-([maybes.md](maybes.md)).
+All 343 cases, EASE-001 to EASE-882, joined `acceptance/cases.tsv` as Not Run on 2026-10-28. The owner accepted the
+first 261 (EASE-001 to EASE-766) on the review page on 2026-10-20 and all of them, the maybes' 82 included, on
+2026-10-28. Results go to `acceptance/cases.tsv` only; `acceptance-proposal.tsv` and the batches' files stay as the
+record of what was proposed. In the registry each case keeps its wording, with three changes to its metadata: the
+Automation column says Automated, Manual or Both, as the registry's other cases do (the test files it named are at the
+end of the steps, "Automated check: …"); the baseline column says BUILD; and the spec references lose their
+"(proposed)" marks, with EASE-160 to EASE-169 pointing to [listing.md](listing.md), which holds the listing media
+write-up. The integration's own cases are EASE-750 to EASE-766 (`integration-acceptance.tsv`); the maybes' are
+EASE-800 to EASE-882 ([maybes.md](maybes.md)).

@@ -81,7 +81,8 @@ among the 68 are Pass, with the run as evidence. The 14 Manual or Both ones (PUB
 SEO-007, LEGAL-005, LEGAL-006, SCOPE-001 to SCOPE-006 and SCOPE-008) keep Not Run with the run added to their evidence,
 because a person still reviews them. LIST-008 waited for the owner's call (above), and ALERT-005 stays Blocked (below).
 The registry then counted 384 Pass, 154 Not Run and 1 Blocked among its 539 cases. With LIST-008 accepted on 28 Oct
-2026 it counts 385 Pass and 153 Not Run.
+2026 it counts 385 Pass and 153 Not Run. The 343 Effortless Laria cases joined the same day as Not Run, which makes
+882 cases with 496 Not Run.
 
 After the review, the checks of AUTH-004, AUTH-008, AUTH-013, LIST-022 and SDASH-003 grew to the whole of each case
 (expired links, Supabase's own refusal, a retry with other photos, removing assets and links). They passed in run
