@@ -157,7 +157,7 @@ async function seek(page, test, { from = 0, limit = 400 } = {}) {
       const count = await slotCount(page);
       await jump(page, count - 1);
       const shown = await screen(page);
-      if (test(shown)) return count - 1;
+      if (count - 1 >= from && test(shown)) return count - 1;
       if (STOP_TITLES.test(shown.heading)) return -1;
       for (let wait = 0; wait < 80 && (await slotCount(page)) === count; wait += 1) await h.sleep(250);
     }
@@ -218,7 +218,9 @@ async function liveText(page) {
 async function focusInfo(page) {
   return page.evaluate(() => {
     const node = document.activeElement;
-    return node ? { tag: node.tagName, id: node.id || "", name: node.getAttribute("aria-label") || node.textContent.trim().slice(0, 60) } : null;
+    // The page itself (body) has no name: a check that wants a control never matches the whole page's text.
+    if (!node || node === document.body || node === document.documentElement) return { tag: node ? node.tagName : "NONE", id: "", name: "" };
+    return { tag: node.tagName, id: node.id || "", name: node.getAttribute("aria-label") || node.textContent.trim().slice(0, 60) };
   });
 }
 

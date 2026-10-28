@@ -341,6 +341,7 @@ module.exports = [
       await share.click();
       await menu.waitFor();
       t.check(await share.getAttribute("aria-expanded") === "true", "Compartir opens a menu (aria-expanded true)");
+      await page.waitForTimeout(400);
       await t.shot(page, "menu");
 
       await menu.getByRole("button", { name: "Copiar enlace" }).click();
@@ -464,7 +465,11 @@ module.exports = [
           return { og: meta("og:image"), width: meta("og:image:width"), height: meta("og:image:height") };
         });
         if (!og) {
-          t.check(false, `${route}: no og:image`);
+          t.check(false, `${route}: no og:image (and no twitter:image), so a pasted link shows no picture`);
+          // The card itself, fetched directly, to show what the page should point to.
+          const direct = await u.fetchBinary(t.url(`${route === "/" ? "" : route}/opengraph-image`));
+          t.note(`${route}/opengraph-image answers ${direct.status} ${u.pngSize(direct.buffer) ? `${u.pngSize(direct.buffer).width}x${u.pngSize(direct.buffer).height}` : ""} but no page meta points to it`);
+          if (direct.status === 200) u.saveImage(t, `og-${label}-direct`, direct.buffer);
           continue;
         }
         const url = new URL(og, t.base);

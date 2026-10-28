@@ -140,12 +140,15 @@ async function fillSell(page, { photos = samples(2), category = "Guitarras", typ
   description = "Guitarra en muy buen estado, con estuche y cuerdas nuevas, lista para tocar.", stopAfter = 3 } = {}) {
   const form = sellForm(page);
   await form.waitFor({ timeout: 30_000 });
-  if (category) await form.getByRole("button", { name: category, exact: true }).click();
+  if (category) {
+    const chip = form.getByRole("button", { name: category, exact: true });
+    if ((await chip.getAttribute("aria-pressed")) !== "true") await chip.click();
+  }
   if (photos.length) await page.locator("#venta-fotos").setInputFiles(photos);
   await waitUploads(page);
   if (stopAfter === 1) return;
   await continueStep(page);
-  if (type) await form.getByText(type, { exact: true }).click();
+  if (type) await chooseType(form, type);
   if (brand !== null) await form.getByLabel("Marca", { exact: true }).fill(brand);
   if (model !== null) await form.getByLabel("Modelo", { exact: true }).fill(model);
   if (title !== null) await form.getByLabel("Título", { exact: true }).fill(title);
@@ -154,6 +157,16 @@ async function fillSell(page, { photos = samples(2), category = "Guitarras", typ
   if (condition) await form.locator(`input[name="condition"][value="${condition}"]`).check({ force: true });
   if (price !== null) await form.getByLabel("Precio en soles").fill(String(price));
   if (description !== null) await form.locator("#venta-description").fill(description);
+}
+
+// The instrument type radio whose label starts with the given text (Guitarras eléctricas, Amplificadores…).
+async function chooseType(form, type) {
+  const radios = form.locator('input[name="instrument_type"]');
+  await radios.first().waitFor({ timeout: 15_000 });
+  const labels = await radios.evaluateAll((nodes) => nodes.map((node) => (node.closest("label")?.innerText || "").trim()));
+  const index = labels.findIndex((label) => label.startsWith(type));
+  if (index < 0) throw new Error(`no instrument type ${type} (${labels.join(" | ")})`);
+  await radios.nth(index).check({ force: true });
 }
 
 // Every photo shows Subida (or Reintentar after an error).
@@ -220,7 +233,34 @@ async function until(fn, { timeout = 15_000, every = 300 } = {}) {
 
 const adminId = () => h.sql(`select id from auth.users where email = ${L(h.DEMO.admin)}`)[0].id;
 
+// Opens one item of an Admin queue and selects it. publicaciones: pending listings by created_at; revisiones: pending
+// revisions by submitted_at; 20 a page, so the page is worked out from the item's place.
+async function adminItem(t, page, queue, id, title) {
+  const rank = queue === "revisiones"
+    ? h.sql(`select count(*)::int as n from public.listing_revisions r, public.listing_revisions me where me.id = ${L(id)}
+        and r.status = 'pending' and (r.submitted_at, r.id) < (me.submitted_at, me.id)`)[0].n
+    : h.sql(`select count(*)::int as n from public.listings l, public.listings me where me.id = ${L(id)}
+        and l.status = 'pending' and (l.created_at, l.id) < (me.created_at, me.id)`)[0].n;
+  const first = Math.floor(rank / 20) + 1;
+  for (const number of [first, first - 1, first + 1].filter((n) => n >= 1)) {
+    await t.goto(page, `/admin?cola=${queue}&pagina=${number}`);
+    const item = page.locator("button[aria-controls='moderation-detail']").filter({ hasText: title });
+    if (await item.count()) {
+      await item.first().click();
+      await page.locator("#moderation-detail").getByRole("button", { name: new RegExp(`: ${id}$`) }).first().waitFor({ timeout: 15_000 });
+      return page.locator("#moderation-detail");
+    }
+  }
+  throw new Error(`${title} is not in the ${queue} queue near page ${first}`);
+}
+
+// A SKU through create_inventory_item, as the owner (fields: merchant_sku, product_name, unit_price_pen…).
+function sku(owner, fields, quantity = 2) {
+  const [row] = h.sqlAs(owner.id, `select public.create_inventory_item(${L(JSON.stringify(fields))}::jsonb, ${Number(quantity)}, ${L(`c-${h.tag()}`)}) as r`);
+  return row.r.item;
+}
+
 module.exports = {
   L, ROOT, STORAGE, rows, attempt, rolledBack, contact, jpeg, phonePhoto, samples, objects, diskPath, photoFile, sellForm,
-  continueStep, fillSell, waitUploads, publish, newestListing, renderEmail, emailPayload, mainText, until, adminId,
+  continueStep, fillSell, chooseType, waitUploads, publish, newestListing, renderEmail, emailPayload, mainText, until, adminId, adminItem, sku,
 };

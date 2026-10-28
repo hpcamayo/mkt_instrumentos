@@ -525,7 +525,9 @@ cases.push({
     const before = eventCount();
     const page = await t.page({ as: owner.email });
     const posts = [];
-    page.on("request", (request) => { if (request.method() === "POST" && new URL(request.url()).pathname.startsWith("/api/events")) posts.push(request.url()); });
+    page.on("request", (request) => {
+      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/events") posts.push(...(JSON.parse(request.postData() || "{}").events || []).map((event) => event.type));
+    });
     const response = await t.goto(page, `/tiendas/${store.slug}`);
     t.check(response.status() === 200, `the owner opens /tiendas/${store.slug} while it is in review (${response.status()})`);
     const notice = page.getByRole("status").filter({ hasText: "Vista previa: solo tú ves esta página" });
@@ -543,9 +545,9 @@ cases.push({
     await t.shot(page, "pending-preview", { fullPage: true });
     await page.reload({ waitUntil: "load" });
     await t.sleep(3000);
-    t.check(eventCount() === before && posts.length === 0, `opening the preview twice sent no event and recorded no visit (${posts.length} event requests)`);
+    t.check(eventCount() === before && !posts.includes("store_view"), `opening the preview twice sent no store visit and recorded nothing (events sent: ${posts.join(", ") || "none"})`);
     for (const [status, text] of [["rejected", "Laria no aprobó tu solicitud"], ["hidden", "Laria ocultó tu tienda"]]) {
-      t.exec(`update public.stores set status = ${L(status)}${status === "rejected" ? ", rejection_reason = 'El RUC no coincide con la razón social.'" : ""} where id = ${L(store.id)}`);
+      t.exec(`select set_config('app.allow_store_admin_fields', 'true', true); update public.stores set status = ${L(status)}${status === "rejected" ? ", rejection_reason = 'El RUC no coincide con la razón social.'" : ""} where id = ${L(store.id)}`);
       const again = await t.goto(page, `/tiendas/${store.slug}`);
       const shown = page.getByRole("status").filter({ hasText: "Vista previa: solo tú ves esta página" });
       t.check(again.status() === 200 && await shown.isVisible() && (await shown.innerText()).includes(text)
@@ -553,9 +555,9 @@ cases.push({
       await t.shot(page, `${status}-preview`);
     }
     await t.sleep(2000);
-    t.check(eventCount() === before && posts.length === 0, "no visit was recorded for the rejected or hidden preview either");
+    t.check(eventCount() === before && !posts.includes("store_view"), `no visit was sent or recorded for the rejected or hidden preview either (events sent: ${posts.join(", ") || "none"})`);
     // Control: once the store is public, a visitor's opening is recorded, so the zero above is not a broken recorder.
-    t.exec(`update public.stores set status = 'active', rejection_reason = null where id = ${L(store.id)}`);
+    t.exec(`select set_config('app.allow_store_admin_fields', 'true', true); update public.stores set status = 'active', rejection_reason = null where id = ${L(store.id)}`);
     const visitor = await t.page();
     await t.goto(visitor, `/tiendas/${store.slug}`);
     const after = await d.until(() => eventCount() > before, { timeout: 15_000 });
@@ -575,7 +577,7 @@ cases.push({
     const pages = [];
     for (const [label, email] of viewers) pages.push([label, await t.page(email ? { as: email } : {})]);
     for (const status of ["pending", "rejected", "hidden"]) {
-      t.exec(`update public.stores set status = ${L(status)} where id = ${L(store.id)}`);
+      t.exec(`select set_config('app.allow_store_admin_fields', 'true', true); update public.stores set status = ${L(status)} where id = ${L(store.id)}`);
       for (const [label, page] of pages) {
         const response = await t.goto(page, `/tiendas/${store.slug}`);
         const text = await page.locator("main").innerText();
@@ -975,6 +977,595 @@ cases.push({
   id: "EASE-549",
   run: async (t) => {
     t.skip("legal review pending");
+  },
+});
+
+// ------------------------------------------------------------------ Inventario (Effortless Laria, inventory batch)
+
+const INV = "/mi-cuenta/tienda/inventario";
+const tableText = async (page) => (await page.locator("table").first().innerText().catch(() => "")).replace(/\s+/g, " ");
+const skuCode = (prefix) => `${prefix}-${require("./harness.cjs").tag().slice(-6).toUpperCase()}`;
+async function selectPage(page) {
+  await page.getByRole("checkbox", { name: "Seleccionar todos los de esta página" }).filter({ visible: true }).first().check();
+}
+const bar = (page) => page.getByRole("region", { name: "Acciones para los SKU seleccionados" });
+const undoButton = (page) => page.getByRole("button", { name: "Deshacer", exact: true });
+// A summary tile's number: the <dd> after the <dt> with that label.
+const tileValue = (page, label) => page.evaluate((name) => {
+  const dt = [...document.querySelectorAll("dt")].find((node) => node.textContent.trim() === name);
+  return dt ? dt.nextElementSibling?.textContent.trim() ?? null : null;
+}, label);
+const count = (query) => Number(require("./harness.cjs").sql(query)[0]?.n ?? 0);
+
+cases.push({
+  id: "EASE-600",
+  run: async (t) => {
+    const { owner, store } = d.inventoryStore({ name: `Busqueda Música ${t.tag().slice(-4)}` });
+    const listing = t.listing(owner, { storeRow: store, title: `Pedal Boss DS-1 Distorsión ${t.tag().slice(-4)}`, category: "pedals", type: "pedals", brand: "Boss", model: "DS-1", price: 289 });
+    const code = `75${String(Date.now()).slice(-11)}`;
+    const mine = d.sku(owner, { merchant_sku: skuCode("PED"), product_name: "Pedal para la prueba", listing_id: listing.id, external_reference: code }, 4);
+    const strings = d.sku(owner, { merchant_sku: skuCode("CUE"), product_name: "Cuerdas 10-46" }, 3);
+    const rival = d.inventoryStore({ name: `Otra Busqueda ${t.tag().slice(-4)}` });
+    const rivalListing = t.listing(rival.owner, { storeRow: rival.store, title: "Boss DS-1 Distortion de otra tienda", category: "pedals", type: "pedals", brand: "Boss", model: "DS-1" });
+    const theirs = d.sku(rival.owner, { merchant_sku: skuCode("RIV"), product_name: "Boss DS-1 Distortion", listing_id: rivalListing.id, external_reference: code }, 2);
+    const page = await t.page({ as: owner.email });
+    for (const q of ["boss", "BOSS", "distorsion", "DS-1 boss", "ds-1 BOSS distorsión", code]) {
+      await t.goto(page, `${INV}?q=${encodeURIComponent(q)}`);
+      const text = await tableText(page);
+      t.check(text.includes(mine.merchant_sku) && !text.includes(strings.merchant_sku) && !text.includes(theirs.merchant_sku),
+        `“${q}” finds ${mine.merchant_sku} and nothing else (not the other store's ${theirs.merchant_sku})`);
+    }
+    await t.goto(page, `${INV}?q=${encodeURIComponent("boss cuerdas")}`);
+    const none = await tableText(page);
+    t.check(!none.includes(mine.merchant_sku) && !none.includes(strings.merchant_sku), "“boss cuerdas”: every word must appear, so nothing matches");
+    await t.goto(page, `${INV}?q=${encodeURIComponent("10-46")}`);
+    t.check((await tableText(page)).includes(strings.merchant_sku), "“10-46” finds the strings by their name");
+    await t.goto(page, `${INV}?q=${encodeURIComponent("DS-1 boss")}`);
+    await t.shot(page, "search");
+  },
+});
+
+cases.push({
+  id: "EASE-601",
+  run: async (t) => {
+    const { owner } = d.inventoryStore({ name: `Teclea Música ${t.tag().slice(-4)}` });
+    const boss = d.sku(owner, { merchant_sku: skuCode("BOSS"), product_name: "Boss SD-1 Super OverDrive" }, 2);
+    const strings = d.sku(owner, { merchant_sku: skuCode("CUE"), product_name: "Cuerdas Ernie Ball 10-46" }, 6);
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, "/mi-cuenta/tienda");
+    await t.goto(page, `${INV}?q=cuerdas`);
+    t.check((await tableText(page)).includes(strings.merchant_sku), "the previous search “cuerdas” shows the strings");
+    const before = await page.evaluate(() => history.length);
+    const box = page.locator("[data-inventory-search]");
+    await box.fill("");
+    await box.pressSequentially("boss", { delay: 120 });
+    const followed = await page.waitForURL((url) => url.searchParams.get("q") === "boss", { timeout: 5_000 }).then(() => true).catch(() => false);
+    await t.sleep(1000);
+    const text = await tableText(page);
+    t.check(followed && text.includes(boss.merchant_sku) && !text.includes(strings.merchant_sku), "after a short pause the table shows the matches without pressing Buscar");
+    const after = await page.evaluate(() => history.length);
+    t.note(`history entries added while typing: ${after - before}`);
+    await t.shot(page, "typed");
+    await page.goBack({ waitUntil: "load" });
+    await t.sleep(800);
+    const back = new URL(page.url());
+    t.check(back.pathname === INV && back.searchParams.get("q") === "cuerdas", `Back returns to the previous search “cuerdas” (it went to ${back.pathname}${back.search})`);
+    await t.shot(page, "after-back");
+  },
+});
+
+cases.push({
+  id: "EASE-602",
+  run: async (t) => {
+    const { owner, store } = d.inventoryStore({ name: `Revision Música ${t.tag().slice(-4)}` });
+    const make = (status, extra = {}) => t.listing(owner, { storeRow: store, status, title: `Guitarra ${status} ${t.tag().slice(-4)}`, extra });
+    const pending = make("pending");
+    const changed = make("approved");
+    const rejected = make("rejected", { rejection_reason: "Las fotos no muestran el instrumento." });
+    const plain = make("approved");
+    t.exec(`insert into public.listing_revisions (listing_id, owner_user_id, store_id, status, changed_fields, title)
+      values (${L(changed.id)}, ${L(owner.id)}, ${L(store.id)}, 'pending', array['title'], ${L(`${changed.title} (nuevo título)`)})`);
+    const skus = {};
+    for (const [name, row] of Object.entries({ pending, changed, rejected, plain })) skus[name] = d.sku(owner, { merchant_sku: skuCode(name.slice(0, 3).toUpperCase()), product_name: row.title, listing_id: row.id }, 2).merchant_sku;
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, INV);
+    const review = page.getByRole("link", { name: /^En revisión: \d+\. Ver en la tabla$/ });
+    const reviewCount = Number(/: (\d+)\./.exec(await review.getAttribute("aria-label"))[1]);
+    await review.click();
+    await page.waitForURL((url) => url.searchParams.get("publicacion") === "in_review", { timeout: 20_000 });
+    await t.sleep(500);
+    let text = await tableText(page);
+    t.check(reviewCount === 2 && text.includes(skus.pending) && text.includes(skus.changed) && !text.includes(skus.rejected) && !text.includes(skus.plain),
+      `En revisión counts ${reviewCount} and opens the new publication and the one with a change in review, nothing else`);
+    await t.shot(page, "in-review");
+    await t.goto(page, INV);
+    const rejectedTile = page.getByRole("link", { name: /^Rechazadas: \d+\. Ver en la tabla$/ });
+    t.check(await rejectedTile.count() === 1 && /: 1\./.test(await rejectedTile.getAttribute("aria-label")), "Rechazadas shows 1");
+    await rejectedTile.click();
+    await page.waitForURL((url) => url.searchParams.get("publicacion") === "rejected", { timeout: 20_000 });
+    await t.sleep(500);
+    text = await tableText(page);
+    t.check(text.includes(skus.rejected) && !text.includes(skus.pending) && !text.includes(skus.changed), "and opens the rejected one");
+    const clean = d.inventoryStore({ name: `Sin Rechazos ${t.tag().slice(-4)}` });
+    d.sku(clean.owner, { merchant_sku: skuCode("OK"), product_name: "Sin rechazos" }, 1);
+    const other = await t.page({ as: clean.owner.email });
+    await t.goto(other, INV);
+    t.check(await other.getByRole("link", { name: /^Rechazadas:/ }).count() === 0 && await other.locator("dt", { hasText: "Rechazadas" }).count() === 0,
+      "a store with nothing rejected has no Rechazadas tile");
+  },
+});
+
+cases.push({
+  id: "EASE-603",
+  run: async (t) => {
+    const { owner, store } = d.inventoryStore({ name: `Catalogo Música ${t.tag().slice(-4)}` });
+    const listing = t.listing(owner, { storeRow: store, title: `Bajo vinculado ${t.tag().slice(-4)}`, category: "basses", type: "bass" });
+    const linked = d.sku(owner, { merchant_sku: skuCode("VIN"), product_name: "Bajo con publicación", listing_id: listing.id }, 1);
+    const loose = d.sku(owner, { merchant_sku: skuCode("SUE"), product_name: "Correa suelta" }, 5);
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, INV);
+    await page.getByRole("button", { name: /^Filtrar/ }).first().click();
+    const sheet = page.getByRole("dialog", { name: "Filtrar inventario" });
+    await sheet.waitFor({ timeout: 10_000 });
+    const legends = await sheet.locator("legend").allInnerTexts();
+    t.check(!legends.some((legend) => /Catálogo/i.test(legend)) && await sheet.getByText(/Catálogo/).count() === 0, `the filter sheet has no Catálogo filter (${legends.join(", ")})`);
+    await t.shot(page, "filters");
+    await t.goto(page, `${INV}?catalogo=matched`);
+    const text = await tableText(page);
+    t.check(text.includes(linked.merchant_sku) && text.includes(loose.merchant_sku), "an old catalogo=matched link shows every SKU");
+    await t.goto(page, `${INV}/${loose.id}`);
+    t.check(!/cat[aá]logo/i.test(await d.mainText(page)), "the page of an unlinked SKU does not mention the catalog");
+    const [catalog] = t.sql(`select to_regclass('public.catalog_products') is not null as present`);
+    const [product] = catalog?.present ? t.sql(`select id from public.catalog_products limit 1`) : [];
+    if (product) {
+      t.exec(`update public.store_inventory_items set catalog_product_id = ${L(product.id)} where id = ${L(linked.id)}`);
+      await t.goto(page, `${INV}/${linked.id}`);
+      t.check((await d.mainText(page)).includes("Catálogo: vinculado"), "a SKU linked to the catalog says so");
+    } else t.note("no catalog product in the local database to link; the linked-SKU line is checked in the source only");
+  },
+});
+
+cases.push({
+  id: "EASE-604",
+  run: async (t) => {
+    const { owner } = d.inventoryStore({ name: `Pasos Música ${t.tag().slice(-4)}` });
+    const three = d.sku(owner, { merchant_sku: skuCode("TRES"), product_name: "Afinador de pinza" }, 3);
+    const zero = d.sku(owner, { merchant_sku: skuCode("CERO"), product_name: "Capo agotado" }, 0);
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, `${INV}?q=${three.merchant_sku}`);
+    const available = () => Number(d.item(three.id).quantity_available);
+    await page.getByRole("button", { name: `Registrar venta de 1 unidad de ${three.merchant_sku}` }).click();
+    const sold = page.getByText(`Venta de 1 unidad registrada en ${three.merchant_sku} (tienda física). Quedan 2 disponibles.`);
+    t.check(await sold.waitFor({ timeout: 10_000 }).then(() => true).catch(() => false) && available() === 2, "−1 records a sale at once: 2 available");
+    await t.shot(page, "sold");
+    await undoButton(page).click();
+    t.check(await d.until(() => available() === 3, { timeout: 10_000 }) && await page.getByText(`Deshecho. ${three.merchant_sku} volvió a como estaba.`).isVisible(), "Deshacer within 10 s puts it back to 3");
+    await page.getByRole("button", { name: `Reponer 1 unidad de ${three.merchant_sku}` }).click();
+    await page.getByText(`1 unidad repuesta en ${three.merchant_sku}. Hay 4 disponibles.`).waitFor({ timeout: 10_000 });
+    t.check(available() === 4, "+1 adds one: 4 available");
+    await t.goto(page, `${INV}?q=${zero.merchant_sku}`);
+    t.check(await page.getByRole("button", { name: `Registrar venta de 1 unidad de ${zero.merchant_sku}` }).isDisabled(), "−1 is disabled at zero");
+    // The notice takes focus when it appears, which pauses its 10 s countdown; once the owner moves on it runs out.
+    await t.goto(page, `${INV}?q=${three.merchant_sku}`);
+    await page.getByRole("button", { name: `Registrar venta de 1 unidad de ${three.merchant_sku}` }).click();
+    await undoButton(page).waitFor({ timeout: 10_000 });
+    await t.sleep(1500);
+    const paused = /en pausa/.test(await page.locator("main").innerText());
+    await page.locator("h1").first().click();
+    await t.sleep(11_500);
+    t.check(await undoButton(page).count() === 0, "once focus leaves the notice, Deshacer goes away after 10 s");
+    t.note(`while the notice keeps the focus it gets on arrival, the countdown reads “en pausa” (${paused ? "seen" : "not seen"}), so Deshacer stays until the owner moves on`);
+  },
+});
+
+cases.push({
+  id: "EASE-605",
+  run: async (t) => {
+    const { owner } = d.inventoryStore({ name: `Deshacer Música ${t.tag().slice(-4)}` });
+    const item = d.sku(owner, { merchant_sku: skuCode("DES"), product_name: "Pedal de volumen" }, 5);
+    const kept = d.sku(owner, { merchant_sku: skuCode("VEN"), product_name: "Cable de 3 m" }, 5);
+    d.move(owner, kept.id, "sale", 1, "tienda_fisica");
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, `${INV}?q=${item.merchant_sku}`);
+    await page.getByRole("button", { name: `Registrar venta de 1 unidad de ${item.merchant_sku}` }).click();
+    await undoButton(page).click();
+    await d.until(() => Number(d.item(item.id).quantity_available) === 5, { timeout: 10_000 });
+    const [sale] = t.sql(`select id from public.store_stock_movements where item_id = ${L(item.id)} and movement_type = 'sale' order by created_at desc limit 1`);
+    await t.goto(page, `${INV}/${item.id}`);
+    const historyText = (await page.locator("section[aria-labelledby='historial-titulo']").innerText()).replace(/\s+/g, " ");
+    t.check(/Venta/.test(historyText) && /Deshecho/.test(historyText), `the history shows the sale marked Deshecho: ${historyText.slice(0, 220)}`);
+    t.check(await page.getByRole("button", { name: `Deshacer este movimiento de ${item.merchant_sku}` }).count() === 0, "the undone sale offers no second Deshacer");
+    await t.shot(page, "history");
+    await t.goto(page, INV);
+    const sales = await tileValue(page, "Ventas registradas por la tienda");
+    t.check(sales === "1", `the sales tile counts the 1 unit sold, not the corrected sale (${sales})`);
+    const again = d.statementAs(owner.id, `select public.undo_stock_movements(array[${L(sale.id)}]::uuid[], ${L(d.key("undo"))})`);
+    t.check(!again.ok, `a second undo is refused (${again.error})`);
+  },
+});
+
+cases.push({
+  id: "EASE-607",
+  timeout: 300_000,
+  run: async (t) => {
+    const { owner } = d.inventoryStore({ name: `Lote Música ${t.tag().slice(-4)}` });
+    const prefix = `LOT${t.tag().slice(-4).toUpperCase()}`;
+    const items = Array.from({ length: 10 }, (_, n) => d.sku(owner, { merchant_sku: `${prefix}-${String(n + 1).padStart(2, "0")}`, product_name: `Púa lote ${n + 1}`, unit_price_pen: 100 + n }, 5));
+    // An eleventh SKU in the same search, left unticked, so the list keeps a row after Archivar.
+    const spare = d.sku(owner, { merchant_sku: `${prefix}-99`, product_name: "Púa que no se toca", unit_price_pen: 50 }, 5);
+    const ids = items.map((row) => L(row.id)).join(",");
+    const snapshot = () => JSON.stringify(t.sql(`select id, unit_price_pen, low_stock_threshold, category, inventory_status, quantity_on_hand from public.store_inventory_items where id in (${ids}) order by merchant_sku`));
+    const spareRow = () => JSON.stringify(t.sql(`select unit_price_pen, low_stock_threshold, category, inventory_status, quantity_on_hand from public.store_inventory_items where id = ${L(spare.id)}`));
+    const initial = snapshot();
+    const spareInitial = spareRow();
+    const page = await t.page({ as: owner.email });
+    const runBulk = async (label, fill, submit, changed) => {
+      await t.goto(page, `${INV}?q=${prefix}`);
+      await selectPage(page);
+      await page.getByRole("checkbox", { name: `Seleccionar ${spare.merchant_sku}` }).uncheck();
+      await bar(page).getByText("10 SKU seleccionados").waitFor({ timeout: 10_000 });
+      await bar(page).getByRole("button", { name: label, exact: true }).click();
+      const dialog = page.getByRole("dialog");
+      await dialog.waitFor({ timeout: 10_000 });
+      await fill(dialog);
+      await submit(dialog);
+      const offered = await undoButton(page).waitFor({ timeout: 15_000 }).then(() => true).catch(() => false);
+      await t.sleep(1500);
+      const after = snapshot();
+      t.check(offered && after !== initial && changed(JSON.parse(after)) && spareRow() === spareInitial, `${label}: applied to the 10 SKU (not the unticked one) with Deshacer`);
+      if (!await undoButton(page).count()) return t.check(false, `${label}: Deshacer is still on screen after the list refreshes`);
+      await undoButton(page).click();
+      t.check(await d.until(() => snapshot() === initial, { timeout: 15_000 }), `${label}: Deshacer restores every SKU of the batch`);
+    };
+    await runBulk("Umbral de stock bajo", (dialog) => dialog.getByLabel("Avisar con stock bajo desde").fill("4"),
+      (dialog) => dialog.getByRole("button", { name: "Aplicar a 10 SKU" }).click(), (rows) => rows.every((row) => row.low_stock_threshold === 4));
+    await runBulk("Cambiar precios", (dialog) => dialog.getByLabel("Porcentaje (negativo para bajar)").fill("10"),
+      async (dialog) => { await dialog.getByRole("button", { name: "Revisar cambios" }).click(); await dialog.getByRole("button", { name: "Aplicar a 10 SKU" }).click(); },
+      (rows) => rows.every((row, n) => Number(row.unit_price_pen) > 100 + n));
+    await runBulk("Categoría", (dialog) => dialog.getByLabel("Categoría del SKU").selectOption("pedals"),
+      (dialog) => dialog.getByRole("button", { name: "Aplicar a 10 SKU" }).click(), (rows) => rows.every((row) => row.category === "pedals"));
+    await runBulk("Ajustar stock", async (dialog) => {
+      for (const input of await dialog.locator("input[name^='q-']").all()) await input.fill("2");
+    }, (dialog) => dialog.getByRole("button", { name: "Guardar movimientos" }).click(), (rows) => rows.every((row) => row.quantity_on_hand === 7));
+    await runBulk("Archivar", () => {}, (dialog) => dialog.getByRole("button", { name: "Archivar 10 SKU" }).click(), (rows) => rows.every((row) => row.inventory_status === "archived"));
+    await t.shot(page, "after-undo");
+    // Archivar on every SKU of the list on screen: the list empties after the refresh.
+    const lone = `VAC${t.tag().slice(-4).toUpperCase()}`;
+    const pair = [1, 2].map((n) => d.sku(owner, { merchant_sku: `${lone}-${n}`, product_name: `Correa ${n}` }, 1));
+    await t.goto(page, `${INV}?q=${lone}`);
+    await selectPage(page);
+    await bar(page).getByRole("button", { name: "Archivar", exact: true }).click();
+    await page.getByRole("dialog", { name: "Archivar SKU" }).getByRole("button", { name: "Archivar 2 SKU" }).click();
+    await undoButton(page).waitFor({ timeout: 15_000 }).catch(() => {});
+    await d.until(() => pair.every((row) => d.item(row.id).inventory_status === "archived"), { timeout: 10_000 });
+    await t.sleep(2500);
+    const stillOffered = await undoButton(page).count();
+    await t.shot(page, "emptied-list");
+    t.check(stillOffered > 0, `when Archivar empties the list on screen, Deshacer stays (page shows: ${(await d.mainText(page)).includes("Ningún SKU coincide con la búsqueda") ? "“Ningún SKU coincide con la búsqueda” and no notice" : "the list"})`);
+  },
+});
+
+cases.push({
+  id: "EASE-610",
+  run: async (t) => {
+    const { owner } = d.inventoryStore({ name: `Sin Piloto ${t.tag().slice(-4)}` });
+    const page = await t.page({ as: owner.email });
+    const response = await t.goto(page, "/mi-cuenta/tienda/solicitudes");
+    t.check(response.status() === 404, `with the payments pilot off /mi-cuenta/tienda/solicitudes answers ${response.status()}`);
+    await t.goto(page, "/mi-cuenta/tienda");
+    t.check(await page.locator("a[href='/mi-cuenta/tienda/solicitudes']").count() === 0 && await page.getByRole("link", { name: /^Solicitudes/ }).count() === 0, "the account menu has no Solicitudes entry");
+    await t.shot(page, "menu");
+    // Ctrl+K's "Ir a" list is fixed: note whether it still offers the page.
+    await t.goto(page, INV);
+    await page.locator("h1").first().click();
+    await page.keyboard.press("Control+k");
+    const go = page.getByRole("dialog", { name: "Ir a" });
+    if (await go.waitFor({ timeout: 5_000 }).then(() => true).catch(() => false)) {
+      await go.getByLabel("Sección o SKU").fill("solicitudes");
+      await t.sleep(400);
+      const offered = (await go.getByRole("listbox").innerText().catch(() => "")).replace(/\s+/g, " ");
+      t.note(`Ctrl+K “Ir a” with “solicitudes” offers: ${offered || "nothing"}`);
+    }
+  },
+});
+
+cases.push({
+  id: "EASE-612",
+  run: async (t) => {
+    const { owner, store } = d.inventoryStore({ name: `Umbral Música ${t.tag().slice(-4)}` });
+    const bare = d.sku(owner, { merchant_sku: skuCode("SIN"), product_name: "Sin aviso" }, 4);
+    const own = d.sku(owner, { merchant_sku: skuCode("PRO"), product_name: "Con aviso propio", low_stock_threshold: 7 }, 9);
+    const page = await t.page({ as: owner.email });
+    const save = async (value, apply) => {
+      await t.goto(page, INV);
+      await page.getByRole("button", { name: "Ajustes de stock" }).click();
+      const dialog = page.getByRole("dialog", { name: "Ajustes de stock" });
+      await dialog.getByLabel("Aviso de stock bajo por defecto").fill(String(value));
+      const option = dialog.getByLabel("Usarlo también en los SKU que hoy no tienen aviso");
+      if (apply) await option.check(); else await option.uncheck();
+      await dialog.getByRole("button", { name: "Guardar ajustes" }).click();
+      await dialog.waitFor({ state: "detached", timeout: 10_000 }).catch(() => {});
+      await t.sleep(800);
+    };
+    await save(2, false);
+    t.check(d.item(bare.id).low_stock_threshold === null && d.item(own.id).low_stock_threshold === 7, "a default of 2 without the option leaves existing SKU as they are");
+    await t.goto(page, INV);
+    await page.getByRole("button", { name: "Nuevo SKU" }).first().click();
+    const sheet = page.getByRole("dialog", { name: "Nuevo SKU" });
+    const code = skuCode("NUE");
+    await sheet.locator("input[name='product_name']").fill("Pedal nuevo con el aviso de la tienda");
+    await sheet.locator("input[name='merchant_sku']").fill(code);
+    await sheet.locator("input[name='opening']").fill("3");
+    t.check(await sheet.locator("input[name='low_stock_threshold']").inputValue() === "", "the new SKU's own threshold starts empty, meaning the store's default");
+    await sheet.getByRole("button", { name: "Crear SKU", exact: true }).click();
+    const created = await d.until(() => d.itemBySku(store.id, code), { timeout: 10_000 });
+    t.check(created && created.low_stock_threshold === 2, `a new SKU starts with the default (${created?.low_stock_threshold})`);
+    await save(2, true);
+    t.check(d.item(bare.id).low_stock_threshold === 2 && d.item(own.id).low_stock_threshold === 7, "with the option, SKU without a threshold get 2 and the one with its own keeps 7");
+    await t.shot(page, "after");
+  },
+});
+
+cases.push({
+  id: "EASE-617",
+  run: async (t) => {
+    const { owner, store } = d.inventoryStore({ name: `Duplicar Música ${t.tag().slice(-4)}` });
+    const created = d.sku(owner, { merchant_sku: skuCode("ORI"), product_name: "Cuerdas Elixir Nanoweb", variant_label: "10-46", unit_price_pen: 79, low_stock_threshold: 3, external_reference: `78${String(Date.now()).slice(-10)}` }, 12);
+    // The category is set the way the new-SKU sheet sets it, after creating the SKU.
+    t.sqlAs(owner.id, `select public.set_inventory_item_category(${L(created.id)}, 'guitars', ${Number(created.version)}) as r`);
+    const source = d.item(created.id);
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, `${INV}/${source.id}`);
+    await page.getByRole("button", { name: "Duplicar SKU" }).click();
+    const sheet = page.getByRole("dialog", { name: "Duplicar SKU" });
+    await sheet.waitFor({ timeout: 10_000 });
+    const value = (selector) => sheet.locator(selector).inputValue();
+    const values = {
+      name: await value("input[name='product_name']"), sku: await value("input[name='merchant_sku']"), variant: await value("input[name='variant_label']"),
+      stock: await value("input[name='opening']"), price: await value("input[name='unit_price_pen']"), threshold: await value("input[name='low_stock_threshold']"),
+      reference: await value("input[name='external_reference']"), category: await value("select[name='category']"),
+    };
+    t.check(values.name === source.product_name && values.variant === "10-46" && /79/.test(values.price) && values.threshold === "3" && values.category === "guitars",
+      `Duplicar prefills name, variant, price, threshold and category (${JSON.stringify(values)})`);
+    t.check(values.sku === "" && values.stock === "0" && values.reference === "", "but not the SKU code, the stock or the barcode");
+    await t.shot(page, "duplicate");
+    const copy = skuCode("COP");
+    await sheet.locator("input[name='merchant_sku']").fill(copy);
+    await sheet.locator("input[name='variant_label']").fill("11-49");
+    await sheet.getByRole("button", { name: "Crear SKU", exact: true }).click();
+    const made = await d.until(() => d.itemBySku(store.id, copy), { timeout: 10_000 });
+    t.check(made && made.product_name === source.product_name && Number(made.unit_price_pen) === 79 && made.quantity_on_hand === 0 && made.variant_label === "11-49", "the copy is created with the same data and no stock");
+    await t.goto(page, INV);
+    await page.getByRole("button", { name: "Nuevo SKU" }).first().click();
+    const fresh = page.getByRole("dialog", { name: "Nuevo SKU" });
+    await fresh.locator("input[name='product_name']").fill("Cuerdas D'Addario EXL");
+    await fresh.getByLabel("Tiene variantes (calibres, colores, tallas)").check();
+    const base = `CUE${t.tag().slice(-4).toUpperCase()}`;
+    await fresh.locator("input[name='merchant_sku']").fill(base);
+    await fresh.getByLabel("Variantes").fill("10-46, 9-42\n11-49");
+    await fresh.locator("input[name='opening']").fill("5");
+    await t.shot(page, "variants");
+    await fresh.getByRole("button", { name: "Crear 3 SKU" }).click();
+    const variants = await d.until(() => {
+      const rows = t.sql(`select merchant_sku, variant_label, quantity_on_hand from public.store_inventory_items where store_id = ${L(store.id)} and merchant_sku like ${L(`${base}-%`)} order by merchant_sku`);
+      return rows.length === 3 ? rows : null;
+    }, { timeout: 15_000 });
+    t.check(variants && variants.every((row) => row.quantity_on_hand === 5) && ["10-46", "11-49", "9-42"].every((label) => variants.some((row) => row.variant_label === label && row.merchant_sku === `${base}-${label}`)),
+      `variants create one SKU per line with a suffix: ${(variants || []).map((row) => row.merchant_sku).join(", ")}`);
+  },
+});
+
+function manySkus(owner, prefix, total) {
+  const made = [];
+  for (let n = 1; n <= total; n += 1) made.push(d.sku(owner, { merchant_sku: `${prefix}-${String(n).padStart(3, "0")}`, product_name: `Artículo ${String(n).padStart(3, "0")} de la serie` }, 2));
+  return made;
+}
+
+cases.push({
+  id: "EASE-618",
+  timeout: 300_000,
+  run: async (t) => {
+    const { owner, store } = d.inventoryStore({ name: `Coinciden Música ${t.tag().slice(-4)}` });
+    const prefix = `COI${t.tag().slice(-4).toUpperCase()}`;
+    const listing = t.listing(owner, { storeRow: store, title: `Teclado publicado ${t.tag().slice(-4)}`, category: "keyboards", type: "keyboards" });
+    manySkus(owner, prefix, 54);
+    const blocked = d.sku(owner, { merchant_sku: `${prefix}-PUB`, product_name: "Artículo publicado de la serie", listing_id: listing.id }, 2);
+    const archivedCount = () => count(`select count(*)::int as n from public.store_inventory_items where store_id = ${L(store.id)} and inventory_status = 'archived'`);
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, `${INV}?q=${prefix}`);
+    await selectPage(page);
+    const banner = page.getByRole("status").filter({ hasText: "SKU de esta página" });
+    t.check(/Seleccionaste los 50 SKU de esta página/.test(await banner.innerText()), "selecting the page selects its 50 SKU");
+    await banner.getByRole("button", { name: "Seleccionar los 55 que coinciden" }).click();
+    await page.getByText("Seleccionaste los 55 SKU que coinciden.").waitFor({ timeout: 10_000 });
+    await t.shot(page, "matching");
+    t.check(/55 SKU seleccionados/.test(await bar(page).innerText()), "the banner and the bar count the 55 matches");
+    const [download] = await Promise.all([page.waitForEvent("download"), bar(page).getByRole("link", { name: "Exportar CSV" }).click()]);
+    const lines = fs.readFileSync(await download.path(), "utf8").replace(/^﻿/, "").trim().split(/\r?\n/);
+    t.check(lines.length === 56 && lines.slice(1).every((line) => line.startsWith(prefix)), `the export reaches all 55 (${lines.length - 1} rows)`);
+    await bar(page).getByRole("button", { name: "Archivar", exact: true }).click();
+    await page.getByRole("dialog", { name: "Archivar SKU" }).getByRole("button", { name: "Archivar 55 SKU" }).click();
+    await undoButton(page).waitFor({ timeout: 20_000 });
+    const notice = (await page.locator("main").innerText()).replace(/\s+/g, " ");
+    const sentence = /\d+ SKU archivados\.[^.]*\./.exec(notice)?.[0] ?? notice.slice(0, 200);
+    t.check(archivedCount() === 54, `the action reached every match: ${archivedCount()} archived`);
+    t.check(/publicación publicada o en revisión/.test(sentence), `the notice gives the reason the others did not change: “${sentence}”`);
+    t.check(sentence.includes(blocked.merchant_sku), `the skipped SKU is listed by name (${blocked.merchant_sku}) in “${sentence}”`);
+    await t.shot(page, "archived");
+    await undoButton(page).click();
+    t.check(await d.until(() => archivedCount() === 0, { timeout: 20_000 }), "Deshacer brings all 54 back");
+  },
+});
+
+cases.push({
+  id: "EASE-621",
+  run: async (t) => {
+    const { owner, store } = d.inventoryStore({ name: `Vistas Música ${t.tag().slice(-4)}` });
+    d.sku(owner, { merchant_sku: skuCode("BAJ"), product_name: "Stock bajo", low_stock_threshold: 3 }, 1);
+    d.sku(owner, { merchant_sku: skuCode("ALT"), product_name: "Stock alto", low_stock_threshold: 3 }, 9);
+    const views = () => t.sql(`select name, filters from public.store_inventory_views where store_id = ${L(store.id)} order by created_at`);
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, INV);
+    const nav = page.getByRole("navigation", { name: "Vistas guardadas" });
+    const builtIn = await nav.getByRole("link").allInnerTexts();
+    t.check(builtIn.length === 4, `four built-in views: ${builtIn.join(" | ")}`);
+    const name = `Bajos sin publicar ${t.tag().slice(-3)}`;
+    const saveView = async (url) => {
+      await t.goto(page, url);
+      await nav.getByRole("button", { name: "Guardar vista" }).click();
+      const dialog = page.getByRole("dialog", { name: "Guardar esta vista" });
+      await dialog.getByLabel("Nombre de la vista").fill(name);
+      await dialog.getByRole("button", { name: "Guardar", exact: true }).click();
+      await dialog.waitFor({ state: "detached", timeout: 10_000 }).catch(() => {});
+      await t.sleep(600);
+    };
+    await saveView(`${INV}?stock=low&publicacion=none`);
+    await t.goto(page, INV);
+    const saved = nav.getByRole("link", { name });
+    t.check(await saved.count() === 1, `the view “${name}” is listed after the four`);
+    await t.shot(page, "saved");
+    await saved.click();
+    await page.waitForURL((url) => url.searchParams.get("stock") === "low", { timeout: 10_000 }).catch(() => {});
+    const reopened = new URL(page.url()).searchParams;
+    t.check(reopened.get("stock") === "low" && reopened.get("publicacion") === "none", `reopening it applies its filters (${new URL(page.url()).search})`);
+    await saveView(`${INV}?stock=out&publicacion=none`);
+    const afterSameName = views();
+    t.check(afterSameName.length === 1 && afterSameName[0].filters.stock === "out", `the same name replaces the view, one per name (${JSON.stringify(afterSameName)})`);
+    await t.goto(page, INV);
+    await nav.getByRole("button", { name: `Borrar la vista ${name}` }).click();
+    t.check(await d.until(() => views().length === 0, { timeout: 10_000 }), "the view can be deleted");
+    // Up to 12 of the store's own, saved as the owner.
+    for (let n = 1; n <= 12; n += 1) t.sqlAs(owner.id, `select public.save_inventory_view(${L(`Vista ${n}`)}, '{"stock":"low"}'::jsonb) as r`);
+    const thirteenth = d.statementAs(owner.id, `select public.save_inventory_view('Vista 13', '{"stock":"low"}'::jsonb)`);
+    t.check(views().length === 12 && !thirteenth.ok, `twelve views are kept and a 13th is refused (${thirteenth.error})`);
+    await t.goto(page, INV);
+    t.check((await nav.getByRole("link").count()) === 16, "the chips show the four built-in views plus the twelve");
+  },
+});
+
+cases.push({
+  id: "EASE-622",
+  run: async (t) => {
+    const { owner } = d.inventoryStore({ name: `Atajos Música ${t.tag().slice(-4)}` });
+    const item = d.sku(owner, { merchant_sku: skuCode("ATA"), product_name: "Atril plegable" }, 4);
+    const page = await t.page({ as: owner.email, width: 1366 });
+    await t.goto(page, INV);
+    const searchBox = page.locator("[data-inventory-search]");
+    const searchFocused = () => page.evaluate(() => Boolean(document.activeElement?.hasAttribute("data-inventory-search")));
+    const closeDialog = async () => {
+      await page.keyboard.press("Escape");
+      await page.getByRole("dialog").waitFor({ state: "detached", timeout: 5_000 }).catch(() => {});
+    };
+    await page.locator("h1").first().click();
+    await page.keyboard.press("/");
+    t.check(await searchFocused(), "/ moves to the inventory search");
+    await page.keyboard.type("n");
+    t.check(await page.getByRole("dialog").count() === 0 && await searchBox.inputValue() === "n", "typing n in the search box only types");
+    await searchBox.fill("");
+    await page.locator("h1").first().click();
+    await page.keyboard.press("n");
+    const newSheet = page.getByRole("dialog", { name: "Nuevo SKU" });
+    t.check(await newSheet.waitFor({ timeout: 5_000 }).then(() => true).catch(() => false), "n opens Nuevo SKU");
+    const nameBox = newSheet.locator("input[name='product_name']");
+    await nameBox.click();
+    await page.keyboard.type("v?ar/");
+    t.check(await page.getByRole("dialog", { name: "Atajos de teclado" }).count() === 0 && await nameBox.inputValue() === "v?ar/", "typed in a field (the sheet's Nombre), v ? a r / are just letters");
+    await newSheet.getByRole("button", { name: "Cancelar" }).click();
+    await newSheet.waitFor({ state: "detached", timeout: 5_000 }).catch(() => {});
+    await page.locator("h1").first().click();
+    await page.keyboard.press("?");
+    const help = page.getByRole("dialog", { name: "Atajos de teclado" });
+    const helpOpen = await help.waitFor({ timeout: 5_000 }).then(() => true).catch(() => false);
+    const helpText = helpOpen ? (await help.innerText()).replace(/\s+/g, " ") : "";
+    t.check(helpOpen && ["Buscar en tu inventario", "Nuevo SKU", "Registrar venta", "Reponer stock", "Ajustar (conteo)", "Ir a cualquier sección", "Ver estos atajos"].every((line) => helpText.includes(line)), "? lists the shortcuts");
+    await t.shot(page, "help");
+    await closeDialog();
+    const row = page.locator("tbody tr").filter({ hasText: item.merchant_sku }).first();
+    for (const [key, title] of [["v", "Registrar venta"], ["r", "Reponer stock"], ["a", "Conteo"]]) {
+      await row.focus();
+      await page.keyboard.press(key);
+      const opened = await page.getByRole("dialog", { name: title }).waitFor({ timeout: 5_000 }).then(() => true).catch(() => false);
+      t.check(opened, `${key} on the focused row opens ${title}`);
+      await closeDialog();
+    }
+    await page.locator("h1").first().click();
+    await page.keyboard.press("Control+k");
+    const go = page.getByRole("dialog", { name: "Ir a" });
+    t.check(await go.waitFor({ timeout: 5_000 }).then(() => true).catch(() => false), "Ctrl+K opens Ir a");
+    await go.getByLabel("Sección o SKU").fill("precios");
+    await page.keyboard.press("Enter");
+    await page.waitForURL(/\/inventario\/precios/, { timeout: 10_000 }).catch(() => {});
+    t.check(page.url().includes("/inventario/precios"), "and Enter goes to the section");
+    await t.goto(page, INV);
+    const rowButtons = page.locator("tbody tr").filter({ hasText: item.merchant_sku });
+    t.check(await page.getByRole("button", { name: "Nuevo SKU" }).first().isVisible() && await page.getByRole("button", { name: "Buscar", exact: true }).isVisible()
+      && await page.getByRole("button", { name: "Atajos de teclado" }).isVisible()
+      && await rowButtons.getByRole("button", { name: "Registrar venta", exact: true }).count() === 1
+      && await rowButtons.getByRole("button", { name: "Reponer stock", exact: true }).count() === 1 && await rowButtons.getByRole("button", { name: "Ajustar", exact: true }).count() === 1,
+    "every action also has a button");
+  },
+});
+
+cases.push({
+  id: "EASE-623",
+  timeout: 300_000,
+  run: async (t) => {
+    const { owner } = d.inventoryStore({ name: `Paginas Música ${t.tag().slice(-4)}` });
+    const prefix = `PAG${t.tag().slice(-4).toUpperCase()}`;
+    manySkus(owner, prefix, 57);
+    const page = await t.page({ as: owner.email, width: 1280 });
+    await t.goto(page, `${INV}?q=${prefix}&orden=name`);
+    const pages = page.getByRole("navigation", { name: "Páginas del inventario" });
+    t.check(/1–50 de 57 SKU/.test((await pages.innerText()).replace(/\s+/g, " ")), "page 1 says 1–50 de 57 SKU");
+    await pages.getByRole("link", { name: "Siguiente" }).click();
+    await page.waitForURL((url) => url.search.length > `?q=${prefix}&orden=name`.length, { timeout: 15_000 });
+    await t.sleep(600);
+    const range = (await pages.innerText()).replace(/\s+/g, " ");
+    t.check(/51–57 de 57 SKU/.test(range), `page 2 says ${range}`);
+    const listUrl = page.url();
+    await page.locator("tbody tr").first().getByRole("link", { name: "Editar" }).click();
+    await page.waitForURL(/\/inventario\/[0-9a-f-]{36}/, { timeout: 15_000 });
+    const nav = page.getByRole("navigation", { name: "Otros SKU de la lista" });
+    const position = (await nav.innerText()).replace(/\s+/g, " ");
+    t.check(/^51 de 57/.test(position) && await nav.getByRole("link", { name: "Anterior" }).count() === 1 && await nav.getByRole("link", { name: "Siguiente" }).count() === 1,
+      `the SKU page shows “${position}” with Anterior and Siguiente`);
+    await t.shot(page, "sku");
+    await nav.getByRole("link", { name: "Siguiente" }).click();
+    await page.waitForFunction(() => /^52 de 57/.test(document.querySelector("nav[aria-label='Otros SKU de la lista']")?.innerText.trim() ?? ""), null, { timeout: 15_000 }).catch(() => {});
+    t.check(/^52 de 57/.test((await nav.innerText()).trim()), "Siguiente opens the next SKU of the list (52 de 57)");
+    await page.getByRole("navigation", { name: "Ruta de navegación" }).getByRole("link", { name: "Inventario" }).click();
+    await page.waitForURL((url) => url.pathname === INV, { timeout: 15_000 });
+    await t.sleep(600);
+    const back = (await pages.innerText()).replace(/\s+/g, " ");
+    t.check(/51–57 de 57 SKU/.test(back), `the breadcrumb returns to the same page (${back}; ${page.url() === listUrl ? "same URL" : page.url()})`);
+    await t.shot(page, "page-2");
+  },
+});
+
+cases.push({
+  id: "EASE-624",
+  run: async (t) => {
+    const { owner, store } = d.inventoryStore({ name: `Categoria Música ${t.tag().slice(-4)}` });
+    const loose = d.sku(owner, { merchant_sku: skuCode("CAT"), product_name: "Metrónomo digital" }, 3);
+    const listing = t.listing(owner, { storeRow: store, title: `Guitarra con su categoría ${t.tag().slice(-4)}`, category: "guitars", type: "electric_guitar" });
+    const linked = d.sku(owner, { merchant_sku: skuCode("LIG"), product_name: "Guitarra vinculada", listing_id: listing.id }, 1);
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, `${INV}/${loose.id}`);
+    await page.getByLabel("Categoría del SKU").selectOption("percussion");
+    await page.getByText("Categoría guardada.").waitFor({ timeout: 10_000 }).catch(() => {});
+    t.check(d.item(loose.id).category === "percussion", "the SKU page sets the category on change");
+    await t.shot(page, "sku-category");
+    const invalid = d.statementAs(owner.id, `select public.set_inventory_item_category(${L(loose.id)}, 'trompetas-raras', ${Number(d.item(loose.id).version)})`);
+    t.check(!invalid.ok, `an invalid category is refused (${invalid.error})`);
+    await t.goto(page, `${INV}?q=${encodeURIComponent(linked.merchant_sku)}`);
+    await selectPage(page);
+    await bar(page).getByRole("button", { name: "Categoría", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Cambiar categoría" });
+    await dialog.getByLabel("Categoría del SKU").selectOption("pedals");
+    await dialog.getByRole("button", { name: "Aplicar a 1 SKU" }).click();
+    await undoButton(page).waitFor({ timeout: 10_000 });
+    const [after] = t.sql(`select i.category as sku_category, l.category as listing_category from public.store_inventory_items i join public.listings l on l.id = i.listing_id where i.id = ${L(linked.id)}`);
+    t.check(after.sku_category === "pedals" && after.listing_category === "guitars", `in bulk the SKU takes the category and its publication keeps its own (${JSON.stringify(after)})`);
   },
 });
 

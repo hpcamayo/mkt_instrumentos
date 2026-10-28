@@ -22,7 +22,8 @@ async function resultCards(page, scope = "#resultados") {
     title: a.textContent.trim(),
     slug: a.getAttribute("href").split("/").pop(),
     text: a.closest("article").innerText.replace(/\s+/g, " ").trim(),
-    drop: Boolean(a.closest("article").querySelector("s")),
+    // A real drop shows "Antes" and the old price struck through (a line-through span, components/ui/price.tsx).
+    drop: Boolean(a.closest("article").querySelector("s, del, .line-through")),
   })));
 }
 

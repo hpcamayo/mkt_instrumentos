@@ -37,7 +37,7 @@ function rolledBack(statements) {
   const file = path.join(os.tmpdir(), `ease-b-${process.pid}-${Date.now()}.sql`);
   fs.writeFileSync(file, `\\set ON_ERROR_STOP 1\nbegin;\n${statements}\nrollback;\n`);
   try {
-    const out = execFileSync("psql", [h.PG, "-At", "-q", "-f", file], { encoding: "utf8" });
+    const out = execFileSync("psql", [h.PG, "-At", "-q", "-f", file], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
     return out.split("\n").filter((line) => line.startsWith("ROW ")).map((line) => JSON.parse(line.slice(4)));
   } finally {
     fs.rmSync(file, { force: true });
@@ -191,11 +191,9 @@ async function navigationLog(page) {
 
 // --- E-mail links ------------------------------------------------------------------------------------------------------
 
-// The product's own signer (lib/email/links.ts) with server A's key, as the e-mail worker would sign a link.
-function emailLinks() {
-  if (h.LIVE) throw new Error("emailLinks is local only");
-  const env = Object.fromEntries(fs.readFileSync(path.join(ROOT, ".env.local"), "utf8").split("\n")
-    .map((line) => /^([A-Z0-9_]+)=(.*)$/.exec(line.trim())).filter(Boolean).map((match) => [match[1], match[2].replace(/^"|"$/g, "")]));
+// A product module (TypeScript included) loaded the way the unit tests load it: tests/setup-alias.cjs, with
+// "server-only" answered by an empty module.
+function requireProduct(file) {
   const Module = require("node:module");
   if (!require.cache["server-only-stub"]) {
     const resolve = Module._resolveFilename;
@@ -205,22 +203,67 @@ function emailLinks() {
     require.cache["server-only-stub"] = { id: "server-only-stub", filename: "server-only-stub", loaded: true, exports: {} };
   }
   require(path.join(ROOT, "tests", "setup-alias.cjs"));
+  return require(path.join(ROOT, file));
+}
+
+// Runs fn with server A's e-mail link key in this process's environment (read from .env.local, never printed), then
+// puts the environment back.
+async function withServerKeys(fn) {
+  const env = Object.fromEntries(fs.readFileSync(path.join(ROOT, ".env.local"), "utf8").split("\n")
+    .map((line) => /^([A-Z0-9_]+)=(.*)$/.exec(line.trim())).filter(Boolean).map((match) => [match[1], match[2].replace(/^"|"$/g, "")]));
   const before = { own: process.env.EMAIL_LINK_SECRET, service: process.env.SUPABASE_SERVICE_ROLE_KEY };
-  const links = require(path.join(ROOT, "lib", "email", "links.ts"));
-  const withKeys = (fn) => (...args) => {
-    if (env.EMAIL_LINK_SECRET) process.env.EMAIL_LINK_SECRET = env.EMAIL_LINK_SECRET;
-    else delete process.env.EMAIL_LINK_SECRET;
-    process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
-    try {
-      return fn(...args);
-    } finally {
-      if (before.own === undefined) delete process.env.EMAIL_LINK_SECRET;
-      else process.env.EMAIL_LINK_SECRET = before.own;
-      if (before.service === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-      else process.env.SUPABASE_SERVICE_ROLE_KEY = before.service;
-    }
+  if (env.EMAIL_LINK_SECRET) process.env.EMAIL_LINK_SECRET = env.EMAIL_LINK_SECRET;
+  else delete process.env.EMAIL_LINK_SECRET;
+  process.env.SUPABASE_SERVICE_ROLE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
+  try {
+    return await fn();
+  } finally {
+    if (before.own === undefined) delete process.env.EMAIL_LINK_SECRET;
+    else process.env.EMAIL_LINK_SECRET = before.own;
+    if (before.service === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = before.service;
+  }
+}
+
+// The product's own signer (lib/email/links.ts) with server A's key, as the e-mail worker would sign a link.
+// create and read are async (they run under withServerKeys).
+function emailLinks() {
+  if (h.LIVE) throw new Error("emailLinks is local only");
+  const links = requireProduct("lib/email/links.ts");
+  return {
+    create: (...args) => withServerKeys(() => links.createEmailLinkToken(...args)),
+    read: (...args) => withServerKeys(() => links.readEmailLinkToken(...args)),
+    labels: links.EMAIL_LINK_LABELS,
   };
-  return { create: withKeys(links.createEmailLinkToken), read: withKeys(links.readEmailLinkToken), labels: links.EMAIL_LINK_LABELS };
+}
+
+// The e-mails the worker would send for these delivery rows, made by the worker itself
+// (processMarketplaceEmailBatch in lib/email/marketplace-email.ts) with server A's link key and BASE as the address.
+// Its queue is a stand-in that hands out only these rows, each with the payload the claim would give it
+// (laria_private.marketplace_email_payload, read in a transaction that is rolled back), and its provider keeps the
+// messages instead of sending them. Nothing is claimed, sent or marked. Returns { result, messages, calls }.
+async function renderDeliveries(ids, { baseUrl = h.BASE } = {}) {
+  if (h.LIVE) throw new Error("renderDeliveries is local only");
+  if (!ids.length) return { result: null, messages: [], calls: [] };
+  const list = ids.map(h.literal).join(", ");
+  const payloads = rolledBack(`
+    update laria_private.marketplace_email_deliveries d set recipient_email = u.email from auth.users u
+      where d.id in (${list}) and u.id = d.recipient_user_id;
+    select 'ROW ' || laria_private.marketplace_email_payload(d)::text from laria_private.marketplace_email_deliveries d
+      where d.id in (${list}) order by d.created_at, d.id;`);
+  const worker = requireProduct("lib/email/marketplace-email.ts");
+  const messages = [];
+  const calls = [];
+  const client = {
+    async rpc(name, args) {
+      calls.push({ name, args });
+      if (name === "claim_marketplace_email_deliveries") return { data: payloads, error: null };
+      return { data: name === "fail_marketplace_email_delivery" ? "failed" : true, error: null };
+    },
+  };
+  const provider = { async send(message) { messages.push(message); return { messageId: `ease-${messages.length}` }; } };
+  const result = await withServerKeys(() => worker.processMarketplaceEmailBatch({ client, provider, baseUrl, limit: Math.min(100, payloads.length) }));
+  return { result, messages, calls, payloads };
 }
 
 // A tab whose requests are not routed. The harness routes every request, and request interception turns the browser's
@@ -248,7 +291,32 @@ async function smallControls(locator, min = 24) {
     .filter((item) => item.width < size || item.height < size), min);
 }
 
+// Undersized controls inside an element that WCAG 2.5.8's spacing exception does not cover: a 24 px circle centred on
+// the control meets another control, or the circle of another undersized one. Nested controls are not compared.
+async function crowdedTargets(locator, min = 24) {
+  return locator.evaluate((root, size) => {
+    const targets = [...document.querySelectorAll("a[href], button, input:not([type='hidden']), textarea, select, [role='button']")]
+      .filter((element) => element.getClientRects().length > 0)
+      .map((element) => ({ element, box: element.getBoundingClientRect() }));
+    const small = (box) => box.width < size || box.height < size;
+    const centre = (box) => ({ x: box.left + box.width / 2, y: box.top + box.height / 2 });
+    const reaches = (point, box) => {
+      const dx = Math.max(box.left - point.x, 0, point.x - box.right);
+      const dy = Math.max(box.top - point.y, 0, point.y - box.bottom);
+      return dx * dx + dy * dy < (size / 2) ** 2;
+    };
+    return targets.filter(({ element, box }) => root.contains(element) && small(box)).flatMap((target) => {
+      const point = centre(target.box);
+      const near = targets.filter((other) => other !== target && !other.element.contains(target.element) && !target.element.contains(other.element)
+        && (small(other.box) ? Math.hypot(centre(other.box).x - point.x, centre(other.box).y - point.y) < size : reaches(point, other.box)));
+      const name = (element) => (element.getAttribute("aria-label") || element.textContent || element.tagName).trim().slice(0, 40);
+      return near.length ? [{ name: name(target.element), near: near.map((other) => name(other.element)) }] : [];
+    });
+  }, min);
+}
+
 module.exports = {
   ROOT, pngSize, fetchBinary, saveImage, rolledBack, catalogCards, publicListing, openLightbox, photoLoaded, lightboxState,
-  near, touch, slowPageChanges, watchNavigationFeedback, navigationLog, emailLinks, smallControls, plainPage,
+  near, touch, slowPageChanges, watchNavigationFeedback, navigationLog, requireProduct, emailLinks, renderDeliveries,
+  smallControls, crowdedTargets, plainPage,
 };

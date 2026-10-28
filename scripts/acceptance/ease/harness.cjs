@@ -8,24 +8,31 @@
 // GET or HEAD is refused before it leaves the browser (views, contacts, impressions and forms included), WhatsApp never
 // opens, service workers are blocked, nothing signs in, the database helpers refuse to run, page loads are spaced three
 // seconds apart and /listados and the catalog page route stay under 20 requests a minute (the firewall allows 30).
+//
+// Live with throwaway accounts (LIVE=1 LIVE_ACCOUNTS=1): the signed-in cases instead, on the real site with accounts of
+// the run only; the database helpers go through live.cjs, which also keeps the run to its own data and removes it. A
+// case that needs what only the local copy has (the demo accounts, the job secret, an Admin sign-in) stops as Not Run.
 "use strict";
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
+const { LocalOnly, LiveUnsafe } = require("./errors.cjs");
 
 const BASE = (process.env.BASE || "http://localhost:3000").replace(/\/$/, "");
 const PILOT_BASE = (process.env.PILOT_BASE || "http://localhost:3200").replace(/\/$/, "");
 const AI_BASE = (process.env.AI_BASE || "http://localhost:3100").replace(/\/$/, "");
 const LIVE = process.env.LIVE === "1";
+const LIVE_ACCOUNTS = LIVE && process.env.LIVE_ACCOUNTS === "1";
+const live = LIVE_ACCOUNTS ? require("./live.cjs") : null;
 const OUT = process.env.OUT || "/mnt/project-files/ux-ideas/acceptance-run/screens";
 const PG = process.env.PGURL || "postgresql://postgres@127.0.0.1:54322/postgres";
 const PHOTOS = process.env.PHOTO_DIR || "/tmp/laria-prototype/storage/listing-photos/descubrir";
 const PHOTO_BASE = process.env.PHOTO_BASE || "http://127.0.0.1:54321/storage/v1/object/public/listing-photos/descubrir";
 const CRON_SECRET = process.env.CRON_SECRET || "local-cron-secret";
-const PASSWORD = "laria-demo-2026";
+const PASSWORD = live ? live.PASSWORD : "laria-demo-2026";
 const WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
-const DEMO = {
+const DEMO_SEED = {
   store: "demo-tienda@laria.test",
   admin: "admin@laria.test",
   buyer: "comprador@laria.test",
@@ -33,6 +40,17 @@ const DEMO = {
   storeId: "d1000000-0000-4000-8000-000000000001",
   storeSlug: "laria-demo-musica",
 };
+// The live site has none of the demo accounts. With throwaway accounts, the Admin's e-mail stands for the run's own
+// account that Admin SQL is run as (live.actorId); everything else of the demo stops the case as local only.
+const DEMO = LIVE
+  ? new Proxy(DEMO_SEED, {
+    get(target, key) {
+      if (typeof key !== "string" || !Object.prototype.hasOwnProperty.call(target, key)) return target[key];
+      if (key === "admin" && live) return live.actorEmail();
+      throw new LocalOnly(`uses the demo ${key}, which only the local copy has`);
+    },
+  })
+  : DEMO_SEED;
 const WHATSAPP = /(^|\.)(wa\.me|whatsapp\.com)$/i;
 
 function loadPlaywright() {
@@ -66,34 +84,37 @@ async function paceCatalog() {
   }
 }
 
-// ------------------------------------------------------------------ database (local only)
+// ------------------------------------------------------------------ database (local, or live.cjs with throwaway accounts)
 function refuseLive(what) {
-  if (LIVE) throw new Error(`${what} is local only; this case should not run live`);
+  if (LIVE && !LIVE_ACCOUNTS) throw new LocalOnly(`${what} needs the database, which signed-out live checks never use`);
 }
 const literal = (value) => (value === null || value === undefined ? "null" : `'${String(value).replace(/'/g, "''")}'`);
 
 // Rows of a query as objects.
 function sql(query) {
   refuseLive("sql");
+  if (live) return live.rows(query);
   const out = execFileSync("psql", [PG, "-At", "-v", "ON_ERROR_STOP=1", "-c", `select coalesce(json_agg(q), '[]'::json) from (${query}) q`], { encoding: "utf8" });
   return JSON.parse(out.trim() || "[]");
 }
 // Statements, in one transaction, with the listing admin fields allowed (published_at and the like, as the seeds do).
 function exec(statements) {
   refuseLive("exec");
+  if (live) return live.exec(statements);
   execFileSync("psql", [PG, "-v", "ON_ERROR_STOP=1", "-q", "-o", "/dev/null", "-c",
     `begin; select set_config('app.allow_listing_admin_fields', 'true', true); ${statements}; commit;`], { encoding: "utf8" });
 }
 // Run a function as a signed-in user (or anon with userId null), the way the SQL suites do. Returns the rows.
 function sqlAs(userId, query, { admin = false } = {}) {
   refuseLive("sqlAs");
+  if (live) return live.rowsAs(userId, query, { admin });
   const claims = userId
     ? { sub: userId, role: "authenticated", aal: "aal2", ...(admin ? { app_metadata: { role: "admin" } } : {}) }
     : { role: "anon" };
   const role = userId ? "authenticated" : "anon";
   const out = execFileSync("psql", [PG, "-At", "-v", "ON_ERROR_STOP=1", "-c",
     `begin; set local role ${role}; select set_config('request.jwt.claims', ${literal(JSON.stringify(claims))}, true); ` +
-    `select coalesce(json_agg(q), '[]'::json) from (${query}) q; commit;`], { encoding: "utf8" });
+    `select coalesce(jsonb_agg(q), '[]'::jsonb) from (${query}) q; commit;`], { encoding: "utf8" });
   const line = out.split("\n").find((row) => row.startsWith("[")) || "[]";
   return JSON.parse(line);
 }
@@ -104,6 +125,8 @@ const slugify = (text) => text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerC
 
 // A new account: kind buyer (name and e-mail only), particular (with WhatsApp and city), store_owner or admin.
 function account({ kind = "buyer", name, phone, city = "Lima", region = "Lima" } = {}) {
+  refuseLive("account");
+  if (live) return live.account({ kind, name, phone, city, region });
   const id = crypto.randomUUID();
   const label = tag();
   const email = `ease-${label}@laria.test`;
@@ -130,12 +153,12 @@ function store(owner, { name, verified = true, status = "active", inventory = fa
   exec(`insert into public.stores (id, slug, name, razon_social, ruc, email, contact_person, contact_name, whatsapp_phone,
       city, district, region, address, description, owner_user_id, status, listing_plan, is_verified, show_address)
     values (${literal(id)}, ${literal(slug)}, ${literal(storeName)}, ${literal(`${storeName} SAC`)}, ${literal(ruc)},
-      ${literal(owner.email)}, ${literal(owner.name)}, ${literal(owner.name)}, ${literal(owner.phone || "51999000199")},
+      ${literal(owner.email)}, ${literal(owner.name)}, ${literal(owner.name)}, ${literal(owner.phone || (live ? live.PHONE : "51999000199"))},
       ${literal(city)}, ${literal(district)}, ${literal(city)}, ${literal(address)},
       'Tienda de prueba para la aceptación.', ${literal(owner.id)}, ${literal(status)}, ${literal(plan)}, ${verified}, ${showAddress})`);
   if (inventory) {
-    const [admin] = sql(`select id from auth.users where email = ${literal(DEMO.admin)}`);
-    sqlAs(admin.id, `select public.admin_set_store_inventory_enabled(${literal(id)}, true, 'Aceptación EASE') as ok`, { admin: true });
+    const adminId = live ? live.actorId() : sql(`select id from auth.users where email = ${literal(DEMO.admin)}`)[0].id;
+    sqlAs(adminId, `select public.admin_set_store_inventory_enabled(${literal(id)}, true, 'Aceptación EASE') as ok`, { admin: true });
   }
   return { id, slug, name: storeName, ruc };
 }
@@ -154,7 +177,7 @@ function listing(seller, { storeRow = null, status = "approved", title, category
   const columns = {
     id, slug, title: listingTitle, seller_type: storeRow ? "store" : "individual", status, category,
     instrument_type: type, brand, model, condition, price_pen: price, city, region,
-    contact_name: seller.name, whatsapp_phone: seller.phone || "51999000198",
+    contact_name: seller.name, whatsapp_phone: seller.phone || (live ? live.PHONE : "51999000198"),
     description: description || `${listingTitle}. Publicación de prueba para la aceptación, en buen estado y lista para tocar.`,
     owner_user_id: seller.id, store_id: storeRow ? storeRow.id : null, created_by_source: "self_service",
     attributes: JSON.stringify(attributes), ...extra,
@@ -163,11 +186,13 @@ function listing(seller, { storeRow = null, status = "approved", title, category
   const values = names.map((name) => literal(columns[name]));
   exec(`insert into public.listings (${names.join(", ")}, marketplace_rules_accepted_at, published_at, created_at)
     values (${values.join(", ")}, now(), ${status === "approved" || status === "sold" ? at : "null"}, ${at})`);
-  const files = photoFiles();
   if (photos > 0) {
-    const start = Math.floor(Math.random() * files.length);
-    const rows = Array.from({ length: photos }, (_, n) =>
-      `(${literal(id)}, ${literal(`${PHOTO_BASE}/${files[(start + n) % files.length]}`)}, ${literal(`Foto ${n + 1} de ${listingTitle}`)}, ${n})`);
+    // Live: uploaded to Storage as the seller; local: the stack's sample photos.
+    const files = live ? null : photoFiles();
+    const start = live ? 0 : Math.floor(Math.random() * files.length);
+    const urls = live ? live.photoUrls(seller, photos)
+      : Array.from({ length: photos }, (_, n) => `${PHOTO_BASE}/${files[(start + n) % files.length]}`);
+    const rows = urls.map((url, n) => `(${literal(id)}, ${literal(url)}, ${literal(`Foto ${n + 1} de ${listingTitle}`)}, ${n})`);
     exec(`insert into public.listing_photos (listing_id, image_url, alt_text, sort_order) values ${rows.join(", ")}`);
   }
   return { id, slug, title: listingTitle, price, path: `/instrumentos/${slug}` };
@@ -178,7 +203,7 @@ const notifications = (userId) => sql(`select * from public.notifications where 
 
 // The internal job routes (e-mail and push workers and the like), as the schedule calls them.
 async function cron(route, { base = BASE, method = "POST" } = {}) {
-  refuseLive("cron");
+  if (LIVE) throw new LocalOnly("needs the job secret, which only the local copy has");
   const response = await fetch(`${base}${route}`, { method, headers: { Authorization: `Bearer ${CRON_SECRET}` } });
   return { status: response.status, body: await response.text() };
 }
@@ -205,7 +230,7 @@ function axePath() {
 }
 
 module.exports = {
-  BASE, PILOT_BASE, AI_BASE, LIVE, OUT, PG, PASSWORD, DEMO, WCAG, CRON_SECRET, WHATSAPP,
+  BASE, PILOT_BASE, AI_BASE, LIVE, LIVE_ACCOUNTS, live, LocalOnly, LiveUnsafe, OUT, PG, PASSWORD, DEMO, WCAG, CRON_SECRET, WHATSAPP,
   loadPlaywright, sleep, paceNavigation, paceCatalog, literal, sql, exec, sqlAs, account, store, listing, emails,
   notifications, cron, totp, axePath, slugify, tag,
 };

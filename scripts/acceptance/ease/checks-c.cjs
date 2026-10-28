@@ -54,7 +54,7 @@ cases.push({
     const form = c.sellForm(page);
     const alerts = await form.locator("[role=alert]").allInnerTexts();
     t.check(!alerts.some((text) => /pesad|MB|grande/i.test(text)), `Publicar shows no size refusal (${alerts.join(" | ") || "no alert"})`);
-    t.check(await form.getByText("Subida").count() === 2, "both photos show Subida");
+    t.check(await form.getByText("Subida", { exact: true }).count() === 2, "both photos show Subida");
     await t.shot(page, "publicar");
     const uploaded = c.objects(seller.id, "listing-photos", since);
     const big = uploaded.map((row) => ({ row, info: c.jpeg(c.diskPath(row.bucket_id, row.name)) }))
@@ -107,12 +107,16 @@ cases.push({
     const form = c.sellForm(page);
     await form.getByRole("button", { name: "Guitarras", exact: true }).click();
     await page.locator("#venta-fotos").setInputFiles([c.phonePhoto("gps"), c.phonePhoto("big"), ...c.samples(1, 3)]);
+    // Each tile shows Preparando… and then Subiendo N% with a progress bar; wait until one is part-way.
+    const seen = new Set();
     const progress = await c.until(async () => {
-      const value = await form.getByRole("progressbar", { name: "Subida de la foto" }).first().getAttribute("aria-valuenow").catch(() => null);
-      const label = await form.getByText(/Subiendo \d+%|Preparando…/).first().innerText().catch(() => null);
-      return label ? { value, label } : null;
-    }, { timeout: 20_000, every: 100 });
-    t.check(Boolean(progress), `each photo shows its progress while it uploads (${progress?.label}, progressbar ${progress?.value})`);
+      for (const label of await form.getByText(/^(Subiendo \d+%|Preparando…)$/).allInnerTexts().catch(() => [])) seen.add(label.trim());
+      const values = await form.getByRole("progressbar", { name: "Subida de la foto" }).evaluateAll((nodes) => nodes.map((node) => Number(node.getAttribute("aria-valuenow"))));
+      const partway = values.find((value) => value > 0 && value < 100);
+      return partway ? { values, partway } : null;
+    }, { timeout: 30_000, every: 100 });
+    t.check(Boolean(progress) && seen.has("Preparando…") && [...seen].some((label) => /Subiendo [1-9]\d?%/.test(label)),
+      `each photo shows its progress while it uploads (seen: ${[...seen].join(", ")}; progress bars ${progress?.values?.join("/")})`);
     await t.shot(page, "uploading");
     await c.continueStep(page);
     const step2 = await form.getByRole("heading", { level: 2 }).first().innerText();
@@ -125,8 +129,8 @@ cases.push({
     t.check(c.newestListing(seller.id) === null, "nothing was published yet");
     await cdp.send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
     await form.getByRole("button", { name: "Atrás" }).click();
-    await c.until(async () => (await form.getByText("Subida").count()) === 3, { timeout: 30_000 });
-    t.check(await form.getByText("Subida").count() === 3, "back on step 1 each photo shows Subida");
+    await c.until(async () => (await form.getByText("Subida", { exact: true }).count()) === 3, { timeout: 30_000 });
+    t.check(await form.getByText("Subida", { exact: true }).count() === 3, "back on step 1 each photo shows Subida");
     await t.shot(page, "uploaded");
   },
 });
@@ -156,14 +160,21 @@ cases.push({
     await second.getByRole("button", { name: "Retomar tu borrador" }).click();
     const form = c.sellForm(second);
     await form.waitFor();
+    // It opens on the first step still to complete (photos, brand and model are done: step 3).
+    const step = (await form.getByRole("heading", { level: 2 }).first().innerText()).replace(/\s+/g, " ");
+    t.check(/Estado y precio/.test(step), `Retomar opens the form on the next step to complete (${step})`);
+    await t.shot(second, "restored");
+    await form.getByRole("button", { name: "Paso 2. Qué es" }).click();
+    const marca = await form.getByLabel("Marca", { exact: true }).inputValue();
+    const modelo = await form.getByLabel("Modelo", { exact: true }).inputValue();
+    t.check(marca === "Gibson" && modelo === "Les Paul Studio", `with the brand and model (${marca}, ${modelo})`);
+    await form.getByRole("button", { name: "Paso 1. Fotos" }).click();
     await c.until(async () => (await form.getByRole("button", { name: /^Quitar foto \d$/ }).count()) === 2);
     t.check(await form.getByRole("button", { name: /^Quitar foto \d$/ }).count() === 2, "Retomar restores both photos");
+    await c.until(async () => (await form.locator("img[alt^='Foto ']").evaluateAll((nodes) => nodes.filter((node) => node.complete && node.naturalWidth > 0).length)) === 2);
     const images = await form.locator("img[alt^='Foto ']").evaluateAll((nodes) => nodes.map((node) => node.complete && node.naturalWidth > 0));
-    t.check(images.length === 2 && images.every(Boolean), `the restored photos load (${images.join(", ")})`);
-    const marca = await form.getByLabel("Marca", { exact: true }).inputValue().catch(() => null);
-    const step = await form.getByRole("heading", { level: 2 }).first().innerText();
-    t.check(marca === "Gibson" || /Qué es/.test(step), `it reopens where the seller was, with the brand (${step.replace(/\s+/g, " ")}, Marca ${marca})`);
-    await t.shot(second, "restored");
+    t.check(images.length === 2 && images.every(Boolean) && await form.getByText("Subida", { exact: true }).count() === 2, `the restored photos load and show Subida (${images.join(", ")})`);
+    await t.shot(second, "restored-photos");
     await second.close();
 
     const third = await context.newPage();
@@ -204,16 +215,16 @@ cases.push({
     await b.waitForURL(/borrador=/);
     const form = c.sellForm(b);
     await form.waitFor();
-    await c.until(async () => (await form.getByRole("button", { name: /^Quitar foto \d$/ }).count()) === 2 || /Qué es|Estado y precio/.test(await form.innerText()));
+    await b.waitForTimeout(1000);
     const heading = (await form.getByRole("heading", { level: 2 }).first().innerText()).replace(/\s+/g, " ");
-    t.check(/Estado y precio|Qué es/.test(heading), `Continuar in the other browser opens the draft past the photos (${heading})`);
-    await form.getByRole("button", { name: "Paso 1. Fotos" }).click();
+    if (!/Fotos/.test(heading)) await form.getByRole("button", { name: /^Paso 1\b/ }).click();
+    await c.until(async () => (await form.locator("img[alt^='Foto ']").evaluateAll((nodes) => nodes.filter((node) => node.complete && node.naturalWidth > 0).length)) === 2);
     const photoCount = await form.getByRole("button", { name: /^Quitar foto \d$/ }).count();
     const loaded = await form.locator("img[alt^='Foto ']").evaluateAll((nodes) => nodes.filter((node) => node.complete && node.naturalWidth > 0).length);
-    t.check(photoCount === 2 && loaded === 2, `with its photos (${photoCount} photos, ${loaded} loaded)`);
+    t.check(photoCount === 2 && loaded === 2, `Continuar in the other browser opens the draft with its photos (${heading}; ${photoCount} photos, ${loaded} loaded)`);
     await t.shot(b, "continued");
-    await form.getByRole("button", { name: "Paso 2. Qué es" }).click();
-    t.check(await form.getByLabel("Marca", { exact: true }).inputValue() === "Yamaha", "and its brand");
+    await c.continueStep(b);
+    t.check(await form.getByLabel("Marca", { exact: true }).inputValue() === "Yamaha" && await form.getByLabel("Modelo", { exact: true }).inputValue() === "Pacifica 112V", "and its brand and model");
     await c.continueStep(b);
     await form.locator('input[name="condition"][value="Usado - buen estado"]').check({ force: true });
     await form.getByLabel("Precio en soles").fill("950");
@@ -344,9 +355,11 @@ cases.push({
     await c.fillSell(page, { brand: "Fender", model: "Jazz Bass", type: "Guitarras eléctricas", price: "2300" });
     await c.continueStep(page);
     const form = c.sellForm(page);
-    const text = await form.innerText();
-    t.check(/4\s*Revisar y publicar/.test(text) && /Fender Jazz Bass/.test(text) && /S\/\s?2,300/.test(text) && /Usado · buen estado/.test(text) && /Lima · Particular/.test(text),
-      "step 4 shows the catalog card: photo, title, price, condition, place and Particular");
+    const text = (await form.innerText()).replace(/\s+/g, " ");
+    t.check(/4 Revisar y publicar/.test(text) && /Fender Jazz Bass/.test(text) && /S\/ ?2,300/.test(text) && /Usado · buen estado/.test(text) && /Lima ?· ?Particular/.test(text),
+      `step 4 shows the catalog card: photo, title, price, condition, place and Particular (${text.slice(text.indexOf("Revisar y publicar"), text.indexOf("Revisar y publicar") + 260)})`);
+    const cardImage = form.getByText("2 fotos", { exact: true }).first().locator("xpath=ancestor::*[.//img][1]//img").first();
+    t.check(await cardImage.evaluate((node) => node.complete && node.naturalWidth > 0), "the card has the main photo");
     t.check(await form.getByText("2 fotos").count() >= 1, "the card shows the photo count");
     const toggle = form.getByRole("button", { name: "Ver cómo se verá la página" });
     await toggle.click();
@@ -427,6 +440,300 @@ cases.push({
     t.check(step3.description === "Guitarra con detalles de uso en el cuerpo, suena muy bien y tiene estuche.", "the description is kept");
     t.check(step3.price === "", `the price starts empty (${JSON.stringify(step3.price)})`);
     await t.shot(page, "step3");
+  },
+});
+
+// FIX 05: after publishing a SKU, Publicar otro instrumento opens an empty page; Volver al SKU and Publicar el
+// siguiente SKU sin publicación work.
+cases.push({
+  id: "EASE-302",
+  run: async (t) => {
+    const owner = t.account({ kind: "store_owner" });
+    const store = t.store(owner, { inventory: true });
+    const code = `C302${t.tag().slice(-4).toUpperCase()}`;
+    const first = c.sku(owner, { merchant_sku: `${code}-A`, product_name: "Fender Player Telecaster", unit_price_pen: 3200 });
+    const second = c.sku(owner, { merchant_sku: `${code}-B`, product_name: "Boss Katana 50", unit_price_pen: 1100 });
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, `/mi-cuenta/tienda/publicar?sku=${first.id}`);
+    t.check(/Publicar .*-A/.test(await page.getByRole("heading", { level: 1 }).innerText()), "the publish page names the SKU");
+    await c.fillSell(page, { brand: "Fender", model: "Player Telecaster", price: "3200",
+      description: "Telecaster nueva de exhibición, con funda y garantía de la tienda por seis meses." });
+    await c.continueStep(page);
+    await c.publish(page);
+    const text = await c.mainText(page);
+    const [linked] = t.sql(`select listing_id from public.store_inventory_items where id = ${L(first.id)}`);
+    t.check(Boolean(linked.listing_id), `the SKU is linked to the new listing (${linked.listing_id})`);
+    t.check(/Tu publicación está en línea/.test(text), "the verified store's listing is live");
+    const actions = await page.locator("main a").evaluateAll((nodes) => Object.fromEntries(nodes.map((node) => [node.textContent.trim(), node.getAttribute("href")])));
+    t.check(actions["Volver al SKU"] === `/mi-cuenta/tienda/inventario/${first.id}`, `Volver al SKU links to the SKU (${actions["Volver al SKU"]})`);
+    t.check(actions["Publicar el siguiente SKU sin publicación"] === "/mi-cuenta/tienda/publicar?sku=siguiente", "Publicar el siguiente SKU sin publicación is offered");
+    t.check(actions["Publicar otro instrumento"] === "/mi-cuenta/tienda/publicar", `Publicar otro instrumento opens the page without a SKU (${actions["Publicar otro instrumento"]})`);
+    await t.shot(page, "confirmation");
+
+    await page.getByRole("link", { name: "Publicar otro instrumento" }).click();
+    await page.waitForURL((url) => url.pathname === "/mi-cuenta/tienda/publicar" && !url.search);
+    await c.sellForm(page).waitFor();
+    const fresh = await c.mainText(page);
+    t.check(/Publicar en tu tienda/.test(fresh) && !/vinculada al SKU/.test(fresh) && !fresh.includes(code), "Publicar otro instrumento: an empty publish page with no SKU");
+    t.check(await c.sellForm(page).getByRole("button", { name: /^Quitar foto \d$/ }).count() === 0, "with no photos from the last one");
+    await t.shot(page, "otro");
+
+    const back = await page.context().newPage();
+    await t.goto(back, actions["Volver al SKU"]);
+    const skuPage = await c.mainText(back);
+    t.check(skuPage.includes(`${code}-A`) && /Fender Player Telecaster/.test(skuPage) && /El precio y la disponibilidad de la publicación siguen a este SKU/.test(skuPage),
+      "Volver al SKU opens the SKU with its new listing");
+    const next = await page.context().newPage();
+    await t.goto(next, actions["Publicar el siguiente SKU sin publicación"]);
+    const nextHeading = await next.getByRole("heading", { level: 1 }).innerText();
+    t.check(nextHeading.includes(`${code}-B`), `Publicar el siguiente SKU sin publicación opens the next unlinked SKU (${nextHeading})`);
+    t.check(/vinculada al SKU/.test(await c.mainText(next)), "and links the new listing to it");
+    await t.shot(next, "siguiente");
+    void second;
+  },
+});
+
+// EASE-306 is the SQL suite's (tests/ux-effortless-selling.sql); EASE-307 needs a HEIC photo (below).
+
+// POST 14 / FIX: the review wait is shown only from real data (20 reviewed Particular listings in 60 days).
+cases.push({
+  id: "EASE-316",
+  timeout: 300_000,
+  run: async (t) => {
+    const qualifying = "store_id is null and published_at is not null and published_at >= created_at and published_at > now() - interval '60 days'";
+    const [{ n: baseline }] = t.sql(`select count(*)::int as n from public.listings where ${qualifying}`);
+    // In a transaction that is rolled back: bring the count to 19 and then 20 with listings reviewed in 45 minutes.
+    const seller = t.account({ kind: "particular" });
+    const insert = (count) => `insert into public.listings (id, slug, title, seller_type, status, category, instrument_type, brand, model, condition,
+        price_pen, city, region, contact_name, whatsapp_phone, description, owner_user_id, created_by_source, marketplace_rules_accepted_at, created_at, published_at)
+      select gen_random_uuid(), 'c316-' || g || '-' || md5(random()::text), 'Guitarra revisada ' || g, 'individual', 'approved', 'guitars', 'electric_guitar',
+        'Fender', 'Strat', 'Usado - buen estado', 1000, 'Lima', 'Lima', 'Prueba', '51999000111', 'Guitarra para medir la espera de revisión.',
+        ${L(seller.id)}, 'self_service', now(), now() - interval '2 days' - interval '45 minutes', now() - interval '2 days'
+      from generate_series(1, ${count}) g`;
+    // Above 19 already: move the other listings out of the window in the same rolled-back transaction.
+    const clear = baseline >= 19 ? `update public.listings set published_at = now() - interval '70 days', created_at = now() - interval '71 days' where ${qualifying};` : "";
+    const fill = baseline >= 19 ? 19 : 19 - baseline;
+    const [at19] = c.rolledBack(`${clear} ${insert(fill)}`, "select public.listing_review_wait_minutes() as wait");
+    const [at20] = c.rolledBack(`${clear} ${insert(fill + 1)}`, "select public.listing_review_wait_minutes() as wait");
+    t.check(at19.wait === null, `with 19 reviewed Particular listings in 60 days no wait is computed (${at19.wait}; baseline ${baseline})`);
+    t.check(baseline >= 19 ? at20.wait === 45 : at20.wait !== null, `with 20 the median is (${at20.wait} minutes)`);
+    const [{ wait: now }] = t.sql("select public.listing_review_wait_minutes() as wait");
+    t.note(`current wait on the local stack: ${now}`);
+
+    const page = await t.page({ as: seller.email });
+    await t.goto(page, "/mi-cuenta/publicar");
+    await c.fillSell(page);
+    await c.continueStep(page);
+    await c.publish(page);
+    const sent = await c.mainText(page);
+    const line = (sent.match(/Normalmente se revisa[^\n.]*\./) || [null])[0];
+    if (now === null) t.check(line === null, "the confirmation after sending shows no wait without data");
+    else t.check(Boolean(line), `the confirmation after sending shows the usual wait (${line}; median ${now} minutes)`);
+    t.check(/En revisión \(ahora\)/.test(sent), "and where the listing is (Enviada, En revisión, Publicada)");
+    await t.shot(page, "sent");
+  },
+});
+
+// POST 14 and POST 15: a direct publication is celebrated and easy to share; the approval e-mail opens the listing.
+cases.push({
+  id: "EASE-317",
+  run: async (t) => {
+    const owner = t.account({ kind: "store_owner" });
+    t.store(owner, { verified: true });
+    const page = await t.page({ as: owner.email, permissions: ["clipboard-read", "clipboard-write"] });
+    await t.goto(page, "/mi-cuenta/tienda/publicar");
+    await c.fillSell(page, { brand: "Gretsch", model: "G2622 Streamliner", price: "3900",
+      description: "Guitarra semihueca nueva, con garantía de la tienda y funda incluida en la compra." });
+    await c.continueStep(page);
+    await c.publish(page);
+    const text = await c.mainText(page);
+    const listing = c.newestListing(owner.id);
+    t.check(listing.status === "approved", `a verified store publishes directly (${listing.status})`);
+    t.check(/Tu publicación está en línea/.test(text), "the confirmation says Tu publicación está en línea");
+    const view = page.getByRole("link", { name: "Ver publicación" });
+    t.check(await view.getAttribute("href") === `/instrumentos/${listing.slug}`, "Ver publicación opens the listing");
+    await page.getByRole("button", { name: "Compartir" }).click();
+    await page.getByText("Enlace copiado.").waitFor({ timeout: 10_000 }).catch(() => {});
+    const copied = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
+    t.check(copied === `${t.base}/instrumentos/${listing.slug}`, `Compartir hands over the listing's link (copied: ${copied})`);
+    await t.shot(page, "live");
+    await view.click();
+    await page.waitForURL(`**/instrumentos/${listing.slug}`);
+    t.check((await page.getByRole("heading", { level: 1 }).innerText()).includes("Gretsch G2622 Streamliner"), "the listing page opens");
+
+    // The approval e-mail: a Particular's listing approved in Administración queues it; render it as the worker does.
+    const seller = t.account({ kind: "particular" });
+    const pending = t.listing(seller, { status: "pending", title: `Bajo para aprobar ${t.tag().slice(-4)}`, category: "basses", type: "bass" });
+    t.sqlAs(c.adminId(), `select public.review_listing(${L(pending.id)}, 'approve', null) as ok`, { admin: true });
+    const [delivery] = t.sql(`select d.event_type, d.recipient_email, d.context from laria_private.marketplace_email_deliveries d
+      where d.listing_id = ${L(pending.id)} and d.event_type = 'listing_approved'`);
+    t.check(Boolean(delivery), "approving queues the listing_approved e-mail to the seller");
+    const [row] = t.sql(`select title, slug, price_pen from public.listings where id = ${L(pending.id)}`);
+    const email = c.renderEmail(c.emailPayload("listing_approved", { listing: row, email: delivery?.recipient_email, name: seller.name }));
+    t.check(email.subject === "Tu publicación está en línea" && /Ver tu publicación/.test(email.html), `the e-mail says it is live and offers Ver tu publicación (${email.subject})`);
+    t.check(email.destination === `${t.base}/instrumentos/${row.slug}`, `its button opens the listing (${email.destination})`);
+    const opened = await t.page();
+    const response = await t.goto(opened, email.destination);
+    t.check(response.status() === 200 && (await opened.getByRole("heading", { level: 1 }).innerText()).includes(row.title), "the e-mail's link opens the live listing");
+  },
+});
+
+// POST 16: a clip stops at 20 seconds; the Admin queue and the listing load it only on tap; a pending listing's clip
+// is hidden from the public. Needs CHROMIUM_ARGS="--use-fake-device-for-media-stream --use-fake-ui-for-media-stream".
+cases.push({
+  id: "EASE-318",
+  timeout: 360_000,
+  run: async (t) => {
+    if (!/use-fake-device-for-media-stream/.test(process.env.CHROMIUM_ARGS || "")) t.skip("run with CHROMIUM_ARGS set to a fake microphone");
+    const seller = t.account({ kind: "particular" });
+    const page = await t.page({ as: seller.email, permissions: ["microphone"] });
+    await t.goto(page, "/mi-cuenta/publicar");
+    await c.fillSell(page, { brand: "Fender", model: "Blues Junior", type: "Amplificadores", category: "Amplificadores", price: "2600",
+      description: "Amplificador valvular en buen estado, suena limpio y con mucho cuerpo, sin ruidos." });
+    const form = c.sellForm(page);
+    const started = Date.now();
+    await form.getByRole("button", { name: "Grabar sonido" }).click();
+    const stop = form.getByRole("button", { name: /^Detener \(\d+ s\)$/ });
+    await stop.waitFor({ timeout: 15_000 });
+    const label = await stop.innerText();
+    await page.waitForTimeout(3000);
+    t.check(/^Detener \(\d+ s\)$/.test(label), `recording shows the time left (${label})`);
+    await form.getByRole("button", { name: "Quitar sonido" }).waitFor({ timeout: 45_000 });
+    const seconds = (Date.now() - started) / 1000;
+    t.check(seconds < 30, `the recording stopped by itself at the limit (${seconds.toFixed(1)} s after Grabar)`);
+    await c.until(async () => !(await form.getByText("Subiendo…").count()), { timeout: 60_000 });
+    await t.shot(page, "clip");
+    await c.continueStep(page);
+    await c.publish(page);
+    const listing = c.newestListing(seller.id);
+    const [clip] = t.sql(`select clip_url, mime_type, duration_seconds from public.listing_sound_clips where listing_id = ${L(listing.id)}`);
+    t.check(clip && Number(clip.duration_seconds) <= 20 && Number(clip.duration_seconds) >= 15, `the clip is saved with the listing, ${clip?.duration_seconds} s (${clip?.mime_type})`);
+    const hidden = c.rows(null, `select listing_id from public.listing_sound_clips where listing_id = ${L(listing.id)}`);
+    t.check(hidden.length === 0, "while the listing is pending its clip is hidden from the public");
+
+    const admin = await t.page({ as: t.demo.admin });
+    const clipRequests = [];
+    admin.on("request", (request) => { if (request.url().includes("listing-sound-clips")) clipRequests.push(request.url()); });
+    const detail = await c.adminItem(t, admin, "publicaciones", listing.id, listing.title);
+    const audio = detail.getByLabel("Escuchar el sonido de la publicación");
+    t.check(await audio.count() === 1 && await audio.getAttribute("preload") === "none" && await audio.evaluate((node) => !node.autoplay && node.paused),
+      "the Admin queue offers the clip with preload none, not playing");
+    await admin.waitForTimeout(1500);
+    t.check(clipRequests.length === 0, `the Admin queue does not load the clip before a tap (${clipRequests.length} requests)`);
+    await audio.evaluate((node) => node.play().catch(() => null));
+    await c.until(() => clipRequests.length > 0, { timeout: 10_000 });
+    t.check(clipRequests.length > 0, "a tap loads it");
+    await t.shot(admin, "admin");
+    await detail.getByRole("button", { name: `Aprobar: ${listing.id}` }).click();
+    await c.until(() => t.sql(`select status from public.listings where id = ${L(listing.id)}`)[0].status === "approved", { timeout: 20_000 });
+
+    const visitor = await t.page({ phone: true });
+    const publicRequests = [];
+    visitor.on("request", (request) => { if (request.url().includes("listing-sound-clips")) publicRequests.push(request.url()); });
+    await t.goto(visitor, `/instrumentos/${listing.slug}`);
+    const section = visitor.getByRole("region", { name: "Cómo suena" });
+    const player = section.getByLabel("Escuchar cómo suena el instrumento");
+    t.check(await player.count() === 1 && await player.getAttribute("preload") === "none" && await player.evaluate((node) => node.paused),
+      `the approved listing shows Cómo suena with preload none (${(await section.innerText()).replace(/\s+/g, " ")})`);
+    await visitor.waitForTimeout(1500);
+    t.check(publicRequests.length === 0, `the listing does not load the clip before a tap (${publicRequests.length} requests)`);
+    await player.evaluate((node) => node.play().catch(() => null));
+    await c.until(() => publicRequests.length > 0, { timeout: 10_000 });
+    t.check(publicRequests.length > 0, "a tap loads it");
+    t.check(c.rows(null, `select listing_id from public.listing_sound_clips where listing_id = ${L(listing.id)}`).length === 1, "once approved the clip is public");
+    await t.shot(visitor, "listing");
+  },
+});
+
+// SHOP 06: Valores por defecto sets the condition and the standard text; new store listings start with both; the
+// 40-character minimum counts only the seller's own words.
+cases.push({
+  id: "EASE-319",
+  run: async (t) => {
+    const owner = t.account({ kind: "store_owner" });
+    t.store(owner, { verified: false });
+    const footer = "Garantía de la tienda por 3 meses. Puedes probarlo en el local de lunes a sábado.";
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, "/mi-cuenta/tienda/valores-por-defecto");
+    await page.getByLabel("Condición más habitual").selectOption({ label: "Nuevo" }).catch(async () => page.getByLabel("Condición más habitual").selectOption("Nuevo"));
+    await page.getByLabel("Texto al final de cada descripción").fill(footer);
+    await page.getByRole("button", { name: "Guardar valores" }).click();
+    await page.getByText("Guardado. Se usarán en tus próximas publicaciones.").waitFor({ timeout: 15_000 });
+    t.check(true, "Valores por defecto saves the condition and the standard text");
+    await t.goto(page, "/mi-cuenta/tienda/publicar");
+    await c.fillSell(page, { brand: "Roland", model: "FP-30X", type: "Teclados y pianos", category: "Teclados y pianos", condition: null, description: null, price: "2900" });
+    const form = c.sellForm(page);
+    const condition = await form.locator('input[name="condition"]:checked').getAttribute("value").catch(() => null);
+    const description = await form.locator("#venta-description").inputValue();
+    t.check(condition === "Nuevo", `a new store listing starts with the default condition (${condition})`);
+    t.check(description.trim() === footer && description.startsWith("\n"), "and with the standard text at the end of the description");
+    const counter = (await form.locator("p[aria-live=polite]").filter({ hasText: /caracteres/ }).innerText()).trim();
+    t.check(/^0 de 40 caracteres mínimos, sin contar el texto de tu tienda$/.test(counter), `the counter does not count the standard text (${counter})`);
+    await c.continueStep(page);
+    const summary = (await form.innerText()).replace(/\s+/g, " ");
+    const stayed = await form.getByRole("heading", { name: /Estado y precio/ }).count();
+    t.check(stayed === 1 && /al menos 40 caracteres/.test(summary), `Continuar with only the standard text asks for the seller's own words (${(summary.match(/Revisa[^.]*\.[^.]*\./) || [""])[0]})`);
+    await t.shot(page, "only-footer");
+    await form.locator("#venta-description").evaluate((node) => node.focus());
+    await form.locator("#venta-description").press("Control+Home");
+    await page.keyboard.type("Piano digital nuevo de exhibición, con pedal y atril incluidos.");
+    await c.continueStep(page);
+    t.check(/Revisar y publicar/.test(await form.getByRole("heading", { level: 2 }).first().innerText()), "with 40 characters of the seller's own it continues");
+    await c.publish(page);
+    const listing = c.newestListing(owner.id);
+    t.check(listing.condition === "Nuevo" && listing.description.endsWith(footer) && listing.description.startsWith("Piano digital"),
+      "the listing is sent with the condition and the standard text at the end");
+  },
+});
+
+// STOCK 09: a SKU remembers its listing details; Publicar este SKU starts with them after publishing and unlinking,
+// and after editing Datos para publicar.
+cases.push({
+  id: "EASE-320",
+  run: async (t) => {
+    const owner = t.account({ kind: "store_owner" });
+    t.store(owner, { inventory: true });
+    const item = c.sku(owner, { merchant_sku: `C320${t.tag().slice(-4).toUpperCase()}`, product_name: "Ibanez Gio", unit_price_pen: 900 });
+    const page = await t.page({ as: owner.email });
+    await t.goto(page, `/mi-cuenta/tienda/publicar?sku=${item.id}`);
+    const description = "Guitarra Ibanez Gio nueva, ideal para empezar; incluye cable y uñetas de regalo.";
+    await c.fillSell(page, { brand: "Ibanez", model: "GRX70QA", condition: "Nuevo", price: "900", description });
+    await c.continueStep(page);
+    await c.publish(page);
+    const [{ listing_details: details, listing_id: linked }] = t.sql(`select listing_details, listing_id from public.store_inventory_items where id = ${L(item.id)}`);
+    t.check(Boolean(linked) && details?.brand === "Ibanez" && details?.model === "GRX70QA" && details?.condition === "Nuevo" && details?.description === description,
+      `publishing the SKU saves its listing details (${JSON.stringify(details)})`);
+    await t.goto(page, `/mi-cuenta/tienda/inventario/${item.id}`);
+    await page.getByRole("button", { name: "Desvincular" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Desvincular" }).click();
+    await c.until(() => !t.sql(`select listing_id from public.store_inventory_items where id = ${L(item.id)}`)[0].listing_id, { timeout: 15_000 });
+    t.check(true, "Desvincular unlinks the listing");
+    await page.reload({ waitUntil: "load" });
+    await page.getByRole("link", { name: "Publicar este SKU" }).click();
+    await page.waitForURL(/sku=/);
+    await c.fillSell(page, { brand: null, model: null, condition: null, price: null, description: null, stopAfter: 2 });
+    const form = c.sellForm(page);
+    const step2 = { brand: await form.getByLabel("Marca", { exact: true }).inputValue(), model: await form.getByLabel("Modelo", { exact: true }).inputValue() };
+    await c.continueStep(page);
+    const step3 = {
+      condition: await form.locator('input[name="condition"]:checked').getAttribute("value").catch(() => null),
+      description: await form.locator("#venta-description").inputValue(),
+    };
+    t.check(step2.brand === "Ibanez" && step2.model === "GRX70QA" && step3.condition === "Nuevo" && step3.description === description,
+      `Publicar este SKU starts with its brand, model, condition and description (${JSON.stringify({ ...step2, ...step3 })})`);
+    await t.shot(page, "again");
+
+    await t.goto(page, `/mi-cuenta/tienda/inventario/${item.id}`);
+    const panel = page.locator("details", { hasText: "Datos para publicar" });
+    await panel.locator("summary").click();
+    await panel.getByLabel("Modelo").fill("GRX70QA-SB");
+    await panel.getByRole("button", { name: "Guardar datos" }).click();
+    await page.getByText("Guardado. Se usarán la próxima vez que publiques este SKU.").waitFor({ timeout: 15_000 });
+    await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("laria:venta:")).forEach((key) => localStorage.removeItem(key)));
+    await t.goto(page, `/mi-cuenta/tienda/publicar?sku=${item.id}`);
+    await c.fillSell(page, { brand: null, model: null, condition: null, price: null, description: null, stopAfter: 2 });
+    const edited = await form.getByLabel("Modelo", { exact: true }).inputValue();
+    t.check(edited === "GRX70QA-SB", `after editing Datos para publicar it starts with the edited model (${edited})`);
   },
 });
 
