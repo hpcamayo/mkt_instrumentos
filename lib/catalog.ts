@@ -85,9 +85,22 @@ function applyFilters<Q extends { eq: any; in: any; or: any; ilike: any; gte: an
 // both keep the same filters, 24-item pages and deterministic ordering.
 // `signal` cancels the request (lib/request-deadline.ts); without one the client's own budget applies.
 export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: ListingFilters, page: number, pageSize = LISTINGS_PAGE_SIZE, signal?: AbortSignal) {
+  return catalogPageQuery(supabase, filters, page, pageSize, signal, {});
+}
+
+// Descubrir (big-02, lib/descubrir.ts): the same page with up to `photos` photos of each listing and, for "Lo nuevo",
+// only the listings published since `publishedSince` (an ISO timestamp), so the page's count is the feed's.
+export type DescubrirPageOptions = { photos: number; publishedSince?: string };
+
+export async function fetchDescubrirPage(supabase: PublicSupabaseClient, filters: ListingFilters, page: number, options: DescubrirPageOptions, signal?: AbortSignal) {
+  return catalogPageQuery(supabase, filters, page, LISTINGS_PAGE_SIZE, signal, options);
+}
+
+function catalogPageQuery(supabase: PublicSupabaseClient, filters: ListingFilters, page: number, pageSize: number, signal: AbortSignal | undefined, options: Partial<DescubrirPageOptions>) {
   const storeRelation = filters.sellerType === "verified_store" ? "stores!inner" : "stores";
   const select = filters.sort === "price_drop" ? `${catalogCardSelect(storeRelation)}, recent_price_drop_at` : filters.sort === "verified_first" ? `${catalogCardSelect(storeRelation)}, seller_verified_rank` : catalogCardSelect(storeRelation);
   let query = applyFilters(source(supabase, filters, select, { count: "exact" }), filters);
+  if (options.publishedSince) query = query.gte("published_at", options.publishedSince);
 
   if (filters.sort === "price_asc") {
     query = query.order("price_pen", { ascending: true, nullsFirst: false });
@@ -106,7 +119,7 @@ export async function fetchCatalogPage(supabase: PublicSupabaseClient, filters: 
     foreignTable: "listing_photos",
     ascending: true,
   });
-  query = query.limit(1, { foreignTable: "listing_photos" });
+  query = query.limit(options.photos ?? 1, { foreignTable: "listing_photos" });
   if (signal) query = query.abortSignal(signal);
 
   return query

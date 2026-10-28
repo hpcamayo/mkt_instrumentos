@@ -5,7 +5,9 @@ export type PendienteAction =
   | { kind: "link"; href: string; label: string }
   | { kind: "purchase_check"; listingId: string }
   | { kind: "buyer_report"; checkinId: string; listingId: string; stockManaged: boolean }
-  | { kind: "availability"; listingId: string; price: number | null };
+  | { kind: "availability"; listingId: string; price: number | null }
+  // talk-06 (maybes): a reservation ended; "Sí, se vendió" or "No, sigue disponible".
+  | { kind: "reservation"; listingId: string };
 
 export type Pendiente = {
   key: string;
@@ -125,9 +127,12 @@ export function dueLabel(deadline: string, now = new Date()) {
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 const quoted = (title: string) => `«${title}»`;
 
+// talk-06: a Particular's reservations that ended (lib/listing-reservations.ts, read beside get_account_pendientes).
+export type EndedReservation = { listing_id: string; title: string; watchers: number };
+
 // The ordered list. Buyer and seller items apply to every account (a Particular buys and sells; a store owner can
 // buy too); store items only to a store owner with a store.
-export function buildPendientes(data: PendientesData, { now = new Date() }: { now?: Date } = {}): Pendiente[] {
+export function buildPendientes(data: PendientesData, { now = new Date(), reservations = [] }: { now?: Date; reservations?: EndedReservation[] } = {}): Pendiente[] {
   const { buyer, seller, store } = data;
   const items: Pendiente[] = [];
   const push = (item: Pendiente) => items.push(item);
@@ -168,6 +173,13 @@ export function buildPendientes(data: PendientesData, { now = new Date() }: { no
     key: `available:${listing.listing_id}`, tone: "action", title: `¿${quoted(listing.title)} sigue disponible?`,
     detail: "Responde en un toque y quienes buscan sabrán que pueden escribirte.",
     action: { kind: "availability", listingId: listing.listing_id, price: listing.price_pen },
+  });
+  for (const reservation of reservations) push({
+    key: `reservation:${reservation.listing_id}`, tone: "action", title: `¿Se vendió ${quoted(reservation.title)}?`,
+    detail: reservation.watchers
+      ? `Terminó la reserva. ${plural(reservation.watchers, "persona espera", "personas esperan")} saber si se libera.`
+      : "Terminó la reserva que marcaste. Respóndelo en un toque.",
+    action: { kind: "reservation", listingId: reservation.listing_id },
   });
   for (const sale of seller.unattributed) push({
     key: `sale:${sale.listing_id}`, tone: "action", title: `¿A quién le vendiste ${quoted(sale.title)}?`,

@@ -1721,3 +1721,85 @@ so it can be applied before the deploy that schedules the worker (`vercel.json`,
   answers 409, no second copy goes out, and after 5 tries the e-mail ends `failed` although the first attempt was
   delivered. Taking the expiry from the delivery's `created_at`, added to its payload, would fix it.
 <!-- /launch-audit:email -->
+
+<!-- ux-effortless:maybes reservado -->
+## Effortless Laria maybes: "Reservado" (talk-06)
+
+Migration `20261120100000_ux_maybes_reservado.sql` (not applied to any hosted database). SQL suite:
+`tests/maybes-reservado.sql`.
+
+- `public.listing_reservations`: one row per reserved listing (`listing_id` primary key → listings, cascade;
+  `reserved_at`; `reserved_until`, at most 5 days after `reserved_at`; `ended_at`, set when the job asked the seller,
+  never before `reserved_until`). Partial indexes on `reserved_until` for running and ended periods. RLS on, no
+  policies, nothing granted to `anon`/`authenticated`. A row lives while the period runs and, after its end, until the
+  seller answers or 24 hours pass.
+- `public.listing_release_watches`: "Avísame si se libera" (`user_id` → profiles, cascade; `listing_id` → listings,
+  cascade; primary key `(user_id, listing_id)`, index on `listing_id`). RLS on, no policies, no grants.
+- Public functions (errors read `RESERVATION_…` or `RELEASE_WATCH_…: mensaje en español`):
+  - `get_reserved_listings(p_listing_ids uuid[]) → (listing_id, reserved_until)` (anon, authenticated): the running
+    periods of published Particular listings among the first 200 ids.
+  - `get_my_listing_reservations() → (listing_id, title, slug, reserved_until, ended_at, watchers)` (authenticated): the
+    caller's periods of published listings, running or waiting for an answer, with how many people wait.
+  - `set_listing_reservation(p_listing_id uuid, p_days integer) → timestamptz` (authenticated): the owner's published
+    Particular listing, 1, 2, 3 or 5 days from now; a new period replaces the old one; marks earlier
+    `listing_reservation_ended` notifications read.
+  - `end_listing_reservation(p_listing_id uuid, p_outcome text) → integer` (authenticated): `available`
+    (`confirm_listing_available`) or `sold` (`set_owned_listing_lifecycle(…, 'sold')`); deletes the period, tells the
+    people waiting and returns how many were told.
+  - `set_listing_release_watch(p_listing_id uuid, p_watch boolean) → boolean` and
+    `get_listing_release_watch(p_listing_id uuid) → boolean` (authenticated): only while the period runs, never on
+    one's own listing.
+- `laria_private.run_listing_reservations() → jsonb {closed, asked, released}`, pg_cron `listing-reservations` every
+  minute: closes the periods of listings that left `approved` (watchers told in the app if sold, otherwise their
+  requests deleted); marks run-out periods ended and asks the seller once through
+  `ux_notify_once('reservation_ended:<listing>:<end>', …, 'listing_reservation_ended', …)` (notification and e-mail);
+  deletes periods ended 24 hours ago and tells the people waiting. `laria_private.tell_release_watchers(listing,
+  'released' | 'sold')` deletes the requests and writes `listing_released` (with an e-mail, key `released:<notification>`)
+  or `listing_reservation_sold` (in the app) notifications.
+- Event types added with `ux_extend_text_check`: notifications `listing_reservation_ended`, `listing_released`,
+  `listing_reservation_sold`; e-mail deliveries `listing_reservation_ended`, `listing_released`.
+  `laria_private.email_max_age` / `email_priority`: `listing_released` 2 days, priority 2; `listing_reservation_ended`
+  3 days, priority 1.
+- Launch audit A19: statement triggers `listing_reservations_public_page_changes_{insert,update,delete}` record a page
+  change when a shown listing's period starts, changes, ends or closes while running.
+- Launch audit A20: trigger `account_anonymizations_release_watches` (before insert on
+  `laria_private.account_anonymizations`) deletes the account's requests and adds `release_watches` to the counts.
+<!-- /ux-effortless:maybes reservado -->
+
+<!-- ux-effortless:maybes ai -->
+## Effortless Laria maybes: AI helpers (stock-24, big-07)
+
+Migration `20261120120000_maybes_ai_helpers.sql` (not applied to any hosted database). SQL suite: `tests/maybes-ai.sql`.
+Write-up: `docs/ux-effortless/maybes-ai.md`.
+
+- `laria_private.ai_requests`: one row per call of "Pregúntale a tu tienda" or "Completar con IA" that reached
+  Anthropic's API, without its content: `feature` (`store_question` or `listing_assist`), `user_id` (profiles, set null
+  on delete and when the account is anonymized), `store_id` (stores, set null on delete; questions only), `model` (the
+  one that answered, or `unknown`), `input_tokens` and `output_tokens` (every attempt), `outcome` (`answered`,
+  `no_match`, `refused`, `invalid`, `failed`) and `created_at`. RLS on, no API access; indexes on `user_id` and
+  `store_id` (where not null) and `created_at`.
+- `public.record_ai_request(feature, user_id, store_id, model, input_tokens, output_tokens, outcome)`, service role
+  only, writes a row (`AI_REQUEST_INVALID` for an unknown feature or outcome; an anonymized account's call is written
+  without it).
+- The pg_cron job `ai-request-retention` (daily 09:55 UTC, `laria_private.run_ai_request_retention()`) deletes rows
+  older than 90 days. The trigger `account_anonymizations_unlink_ai_requests` on `laria_private.account_anonymizations`
+  unlinks an anonymized account's rows.
+- The daily limits use `public.consume_rate_limit` with the buckets `ai.store_question` (50 a store),
+  `ai.listing_assist` (20 an account) and `ai.daily` (the site, `LARIA_AI_DAILY_CAP`, 500 by default), keyed by an HMAC
+  of the subject. The table's and function's types live in `lib/ai/usage.ts` until the generated types include them.
+<!-- /ux-effortless:maybes ai -->
+
+<!-- ux-effortless:maybes -->
+## Effortless Laria maybes: error lists, and Descubrir
+
+Migration `20261120900000_ux_maybes_error_lists.sql` (not applied to any hosted database). Write-up:
+`docs/ux-effortless/maybes.md`.
+
+- It replaces `laria_private.app_error_route_patterns()` and `laria_private.app_error_own_messages()` (launch audit
+  A13) whole, with the routes `/descubrir`, `/api/listing-assist` and `/api/store/ask` and the maybes' own messages
+  (`AI_REQUEST_INVALID`, `RELEASE_WATCH_…` and `RESERVATION_…`). An applied migration is never edited, so a later list
+  replaces the function again and keeps every entry; `tests/launch-audit-monitoring.test.cjs` reads the newest
+  definition of each.
+- Descubrir (big-02) has no migration: it reads `public_listings` (and `catalog_search` for a text search) through the
+  catalog's own query, and its "Reservado" tags through `get_reserved_listings`.
+<!-- /ux-effortless:maybes -->

@@ -195,8 +195,9 @@ export function getListingSecondaryTitle(listing: {
   return productName && productName !== listing.title ? productName : null;
 }
 
-export function buildWhatsAppUrl(listing: ListingDetailData) {
-  return whatsAppUrl(resolveContactPhone(listing), listingContactMessage(listing, { outOfStock: isOutOfStock(listing) }));
+// talk-06: `reserved` gives the message for a reserved listing.
+export function buildWhatsAppUrl(listing: ListingDetailData, options: { reserved?: boolean } = {}) {
+  return whatsAppUrl(resolveContactPhone(listing), listingContactMessage(listing, { outOfStock: isOutOfStock(listing), reserved: options.reserved }));
 }
 
 export function buildStoreWhatsAppUrl(store: {

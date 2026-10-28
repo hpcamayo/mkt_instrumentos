@@ -7,7 +7,8 @@ import { ContentReport } from "@/components/content-report";
 import { JsonLd } from "@/components/json-ld";
 import { ContactModule } from "@/components/listing/contact-module";
 import { QuickQuestions, SignInHint } from "@/components/listing/contact-extras";
-import { OwnerBar, RestockAlert, SimilarAlert } from "@/components/listing/listing-viewer";
+import { OwnerBar, ReleaseAlert, RestockAlert, SimilarAlert } from "@/components/listing/listing-viewer";
+import { OfferButton } from "@/components/listing/offer-sheet";
 import { ListingGallery } from "@/components/listing/listing-gallery";
 import { RELATED_ROW_MAX, RelatedListings, RelatedListingsSkeleton } from "@/components/listing/related-listings";
 import { ShareListing } from "@/components/listing/share-button";
@@ -41,6 +42,7 @@ import {
   type SellerFacts,
 } from "@/lib/listing-page";
 import { needsSafetySheet, quickQuestions } from "@/lib/contact-message";
+import { endSentence, isReservationRunning, readReservedListings, reservationEndText, type ReservedListing } from "@/lib/listing-reservations";
 import { isEntityId } from "@/lib/marketplace-event-payload";
 import {
   DISCOVERABLE_STOCK_FILTER,
@@ -58,7 +60,7 @@ import {
 import { ListingSoundClip } from "@/components/selling/listing-sound-clip";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { warnMissingSupabaseEnv, type getPublicSupabaseClient } from "@/lib/supabase/public-client";
-import { getRequestReads } from "@/lib/supabase/public-read-client";
+import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
 import { READ_BUDGETS, budgetSignal } from "@/lib/request-deadline";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
 import {
@@ -287,13 +289,14 @@ export default async function ListingDetailPage({
       : null;
   // fast-01: every call the page waits for runs at once. A failed reputation call leaves the reviews (and the rating
   // figure) out instead of claiming there are none; failed facts or breakdown leave only those parts out.
-  const [reputationResult, reviewPageResult, factsResult, purchase] = await Promise.all([
+  const [reputationResult, reviewPageResult, factsResult, purchase, reservation] = await Promise.all([
     reputationTarget ? supabase.rpc("get_public_reputation", reputationTarget) : null,
     reviewSubject
       ? supabase.rpc("get_public_review_page", { p_subject_user_id: reviewSubject.user, p_subject_store_id: reviewSubject.store, p_offset: 0, p_limit: 1 })
       : null,
     supabase.rpc("get_public_seller_facts", { p_listing_id: listing.id }),
     loadPurchaseRequest(supabase, listing),
+    loadReservation(supabase, listing),
   ]);
   const reputation = reputationResult && !reputationResult.error ? readPublicReputation(reputationResult.data) : null;
   const reviewPage = reviewPageResult && !reviewPageResult.error ? readReviewPage(reviewPageResult.data) : null;
@@ -309,6 +312,7 @@ export default async function ListingDetailPage({
         reviewSubject={reviewSubject}
         facts={facts}
         purchase={purchase}
+        reservation={reservation}
       />
     </>
   );
@@ -336,6 +340,14 @@ async function loadPurchaseRequest(supabase: PublicSupabaseClient, listing: List
   return error ? null : readPurchaseRequest(data);
 }
 
+// talk-06 (docs/ux-effortless/maybes-reservado.md): only a Particular's published listing can be reserved. Optional: a
+// failed read shows the listing as not reserved. The page is refreshed when a period starts, changes or ends.
+async function loadReservation(supabase: PublicSupabaseClient, listing: ListingDetailData): Promise<ReservedListing | null> {
+  if (listing.status !== "approved" || listing.seller_type !== "individual" || listing.store_id) return null;
+  const rows = await readReservedListings(supabase, [listing.id], optionalReadSignal(getRequestReads().deadline)).catch(() => null);
+  return rows?.[0] ?? null;
+}
+
 // The listing page (docs/ux-redesign/ux-4-listing-store.md § Listing page, answers L1–L21). From 1024 px two columns:
 // the gallery, "Especificaciones", "Descripción", the questions and the reviews on the left (7 of 12); the decision
 // column on the right (identity, the quick questions, the contact module, the seller card, "Reportar publicación").
@@ -345,6 +357,8 @@ async function loadPurchaseRequest(supabase: PublicSupabaseClient, listing: List
 // spec strip), dates people say (list-04), a real price drop (list-05), the one limitation line (list-02, the trust
 // note is gone), quick questions and the visitor hint (talk-02, talk-05), the seller's facts (list-10, trust-03), every
 // review (list-06), "Avísame" (list-11), the owner's shortcuts (mine-05) and eight similar listings (list-07).
+// Maybes (docs/ux-effortless/maybes-reservado.md): "Reservado" with "Avísame si se libera" (talk-06), and "Hacer una
+// oferta" on a Particular's listing that is not reserved (talk-07).
 function ListingDetail({
   listing,
   supabase,
@@ -353,6 +367,7 @@ function ListingDetail({
   reviewSubject,
   facts,
   purchase,
+  reservation,
 }: {
   listing: ListingDetailData;
   supabase: PublicSupabaseClient;
@@ -361,6 +376,7 @@ function ListingDetail({
   reviewSubject: { user?: string; store?: string } | null;
   facts: SellerFacts | null;
   purchase: PurchaseRequest | null;
+  reservation: ReservedListing | null;
 }) {
   const now = Date.now();
   const store = normalizeStore(listing);
@@ -376,6 +392,10 @@ function ListingDetail({
     ? new Date(confirmedAt).toLocaleDateString("es-PE", { day: "numeric", month: "long", timeZone: "America/Lima" })
     : null;
   const paused = !isSold && listing.paused_until && listing.paused_until > new Date().toLocaleDateString("en-CA", { timeZone: "America/Lima" }) ? listing.paused_until : null;
+  // talk-06: the badge goes at the end of the period, also before the job marks it ended.
+  const reservedUntil = !isSold && reservation && isReservationRunning(reservation, now) ? reservation.reserved_until : null;
+  // talk-07: an offer on a Particular's published listing with a price, while nothing holds it.
+  const offer = !isSold && !purchase && !reservedUntil && listing.seller_type === "individual" && listing.price_pen !== null && listing.price_pen > 0;
   const place = `${listing.city}, ${listing.region}`;
   const published = listing.published_at ?? listing.created_at;
   const updated = formatUpdatedAgo(listing.content_changed_at, published, now);
@@ -396,7 +416,7 @@ function ListingDetail({
     facts,
   };
   const specLine = keySpecLine(getSpecStrip(listing, 5));
-  const contactHref = purchase ? buildPurchaseWhatsAppUrl(resolveContactPhone(listing), listing, purchase.sku) : buildWhatsAppUrl(listing);
+  const contactHref = purchase ? buildPurchaseWhatsAppUrl(resolveContactPhone(listing), listing, purchase.sku) : buildWhatsAppUrl(listing, { reserved: Boolean(reservedUntil) });
   const typeHref = listing.instrument_type
     ? categoryTypePath(listing.category, listing.instrument_type)
     : categoryLandingPath(listing.category);
@@ -412,7 +432,7 @@ function ListingDetail({
       <PageContainer className="pb-10 pt-3 md:pt-5 lg:pb-14">
         <Breadcrumbs items={listingBreadcrumbs(listing, displayTitle)} phoneBackLink />
 
-        <OwnerBar listingId={listing.id} sold={isSold} className="mt-2 md:mt-3" />
+        <OwnerBar listingId={listing.id} sold={isSold} reserved={Boolean(reservedUntil)} className="mt-2 md:mt-3" />
 
         <div className="mt-2 flex min-w-0 flex-col gap-6 md:mt-4 lg:grid lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:gap-x-8 lg:gap-y-10">
           <div className="order-1 min-w-0 lg:col-span-7 lg:row-start-1">
@@ -430,10 +450,16 @@ function ListingDetail({
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <Price value={listing.price_pen} previous={visiblePreviousPrice(listing, now)} size="detail" />
                 {outOfStock ? <StatusTag domain="stock" status="out_of_stock" /> : null}
+                {reservedUntil ? <StatusTag domain="stock" status="reserved" /> : null}
               </p>
               {outOfStock ? (
                 <p className="mt-2 t-ui text-ink-2">
                   Sin unidades disponibles por ahora. Te avisamos cuando vuelva, o consulta a la tienda.
+                </p>
+              ) : null}
+              {reservedUntil ? (
+                <p className="mt-2 t-ui text-ink-2">
+                  Quien vende lo reservó para otra persona hasta {endSentence(reservationEndText(reservedUntil) ?? "")} Puedes pedir que te avisemos si se libera, o escribirle igual.
                 </p>
               ) : null}
               <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -443,7 +469,8 @@ function ListingDetail({
                 </ListingDetailMetadata>
               </p>
               {/* A seller's recent "sigue disponible" (my listings check-ins) answers the quiet-listing note (list-04). */}
-              {availabilityConfirmed ? (
+              {/* talk-06: while reserved, the reservation line above says where it stands. */}
+              {reservedUntil ? null : availabilityConfirmed ? (
                 <p className="mt-1 t-meta">Quien vende confirmó que sigue disponible el {availabilityConfirmed}.</p>
               ) : quiet ? (
                 <p className="mt-2 t-meta">Esta publicación tiene un tiempo: consulta si sigue disponible.</p>
@@ -467,8 +494,18 @@ function ListingDetail({
             ) : (
               <>
                 {outOfStock ? <RestockAlert listingId={listing.id} className="order-3 lg:order-2" /> : null}
+                {reservedUntil ? <ReleaseAlert listingId={listing.id} className="order-3 lg:order-2" /> : null}
                 <div className="order-3 grid gap-3 lg:order-2">
                   {purchase ? null : <QuickQuestions listingId={listing.id} questions={quickQuestions(listing.seller_type)} />}
+                  {offer && listing.price_pen !== null ? (
+                    <OfferButton
+                      listingId={listing.id}
+                      href={contactHref}
+                      listing={{ title: listing.title, slug: listing.slug, price_pen: listing.price_pen }}
+                      safety={needsSafetySheet(listing.price_pen, false)}
+                      className="justify-self-start"
+                    />
+                  ) : null}
                   <SignInHint />
                 </div>
                 <ContactModule
@@ -477,6 +514,7 @@ function ListingDetail({
                   purchase={Boolean(purchase)}
                   maxQuantity={purchase?.maxQuantity}
                   safety={needsSafetySheet(listing.price_pen, Boolean(purchase))}
+                  reserved={Boolean(reservedUntil)}
                   className="order-3 lg:order-3"
                 />
                 <ShareListing

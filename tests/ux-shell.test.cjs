@@ -78,6 +78,8 @@ test("each route gets its frame: header, strip, phone search and footer (N3–N5
     "/mi-cuenta/publicar": { header: "publishing", strip: "wide", phoneSearch: "none", footer: "slim" },
     "/mi-cuenta/tienda/publicar": { header: "publishing", strip: "wide", phoneSearch: "none", footer: "slim" },
     "/admin": { header: "none", strip: "none", phoneSearch: "none", footer: "none" },
+    // Descubrir (big-02) fills the screen with one listing and draws its own bar and <main>.
+    "/descubrir": { header: "none", strip: "none", phoneSearch: "none", footer: "none" },
     "/admin/tiendas": { header: "none", strip: "none", phoneSearch: "none", footer: "none" },
   };
   for (const [pathname, expected] of Object.entries(expectations)) assert.deepEqual(shell.getShellLayout(pathname), expected, pathname);

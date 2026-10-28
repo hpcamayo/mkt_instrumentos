@@ -207,4 +207,5 @@ Not yet covered by an SQL suite: the import trigger that remembers a SKU's publi
 All 261 proposed cases, EASE-001 to EASE-766 and all Not Run, are in `acceptance-proposal.tsv`, built from the
 batches' files and checked with `python3 -B acceptance/validate.py --cases docs/ux-effortless/acceptance-proposal.tsv`.
 They join `acceptance/cases.tsv` only after Henri's review. The integration's own cases are EASE-750 to EASE-766
-(`integration-acceptance.tsv`).
+(`integration-acceptance.tsv`). The five maybes added 82 more to the same file, EASE-800 to EASE-882
+([maybes.md](maybes.md)).

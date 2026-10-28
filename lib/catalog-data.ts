@@ -1,9 +1,10 @@
 import "server-only";
 import { cache } from "react";
-import { countCatalog, fetchCatalogPage } from "@/lib/catalog";
+import { countCatalog, fetchCatalogPage, fetchDescubrirPage } from "@/lib/catalog";
 import { requestCatalogFacets, type CatalogFacetData } from "@/lib/catalog-facets";
 import { appliedFilters, catalogSearchParams, type AppliedFilter } from "@/lib/catalog-filters";
 import { catalogEnrichmentDisabled } from "@/lib/catalog-guard";
+import { DESCUBRIR_PHOTOS, limaMidnight } from "@/lib/descubrir";
 import { parseListingFilters, type ListingCardData, type ListingFilters } from "@/lib/listings";
 import { READ_BUDGETS, budgetSignal, type Deadline } from "@/lib/request-deadline";
 import { createBreaker, sharedAggregate } from "@/lib/shared-aggregate";
@@ -63,6 +64,14 @@ const pageByKey = cache(async (value: string, page: number) => {
 
 export function getCatalogPage(filters: ListingFilters, page: number) {
   return pageByKey(key(filters), page);
+}
+
+// Descubrir's first screens (big-02): the first page of the feed with every photo of each listing, and for "Lo nuevo"
+// only what was published since the window's first Lima day. Core data, on the render's deadline like the catalog's.
+export function getDescubrirPage(filters: ListingFilters, since: string | null) {
+  const { supabase } = getRequestReads();
+  if (!supabase) return null;
+  return fetchDescubrirPage(supabase, filters, 1, { photos: DESCUBRIR_PHOTOS, publishedSince: since ? limaMidnight(since) : undefined });
 }
 
 // FIND 04: when a search finds nothing, one-tap ways out with their counts ("Sin “Arequipa” hay 12") and the closest

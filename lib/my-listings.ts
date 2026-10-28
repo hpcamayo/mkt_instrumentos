@@ -26,6 +26,8 @@ export type ManagedListing = {
   photoUrl?: string | null;
   // mine-12 vacation mode: the date the listing returns (YYYY-MM-DD, America/Lima).
   paused_until?: string | null;
+  // talk-06 "Reservado" (Particular listings): the period, running or ended and waiting for "¿Se vendió?".
+  reservation?: { until: string; ended: boolean; watchers: number } | null;
 };
 
 // ------------------------------------------------------------------ tabs, search, sort, pages
@@ -241,10 +243,12 @@ export type RowActions = {
   select: boolean;
   attribute: boolean;
   controlStock: boolean;
+  // talk-06: "Reservar" a Particular's published listing, or change, end or answer its period.
+  reserve: boolean;
 };
 
 // A listing whose stock Inventario controls is sold and priced from Inventario (D-15): no sale or price actions here.
-export function rowActions(listing: Pick<ManagedListing, "status" | "hidden_source" | "inventoryItemId">, { canControlStock = false } = {}): RowActions {
+export function rowActions(listing: Pick<ManagedListing, "status" | "hidden_source" | "inventoryItemId">, { canControlStock = false, canReserve = false } = {}): RowActions {
   const { status } = listing;
   const isAdminHidden = status === "hidden" && listing.hidden_source === "admin";
   const ownerHidden = status === "hidden" && listing.hidden_source === "owner";
@@ -270,6 +274,7 @@ export function rowActions(listing: Pick<ManagedListing, "status" | "hidden_sour
     select: status === "approved" || ownerHidden,
     attribute: status === "sold",
     controlStock: !stockManaged && canControlStock && edit,
+    reserve: canReserve && status === "approved" && !stockManaged,
   };
 }
 

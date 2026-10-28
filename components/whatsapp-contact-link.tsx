@@ -14,6 +14,7 @@ import type { EventSource } from "@/lib/marketplace-event-payload";
 // sheet before the first such contact (talk-04); "Continuar a WhatsApp" there is itself a plain link.
 // `intent="purchase"` (PAY-1) tells the contact route to record the purchase intent; the route checks eligibility.
 // `quantity` (stock-23) is already in a purchase request's message (withPurchaseQuantity); the route clamps it too.
+// `addQuestions={false}`: an offer (talk-07) sends its own message, without the quick questions.
 type ContactTarget = { listingId?: string; storeId?: string; intent?: "purchase"; quantity?: number; source: EventSource };
 
 // The event the contact route records: identity and source only, never the message.
@@ -40,14 +41,14 @@ export function planContact({ href, questions, safety, modified, seen }: { href:
   return { destination: withQuestions(href, questions), sheet: safety && !modified && !seen };
 }
 
-export function WhatsAppContactLink({ href, listingId, storeId, intent, quantity, source = "detail", safety = false, className, children }: { href: string; listingId?: string; storeId?: string; intent?: "purchase"; quantity?: number; source?: EventSource; safety?: boolean; className?: string; children: ReactNode }) {
+export function WhatsAppContactLink({ href, listingId, storeId, intent, quantity, source = "detail", safety = false, addQuestions = true, className, children }: { href: string; listingId?: string; storeId?: string; intent?: "purchase"; quantity?: number; source?: EventSource; safety?: boolean; addQuestions?: boolean; className?: string; children: ReactNode }) {
   const [pending, setPending] = useState<string | null>(null);
 
   const record = () => void recordContact({ listingId, storeId, intent, quantity, source });
 
   function contact(event: MouseEvent<HTMLAnchorElement>) {
     const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
-    const { destination, sheet } = planContact({ href, questions: listingId ? getQuestions(listingId) : [], safety, modified, seen: safety ? safetySheetSeen() : true });
+    const { destination, sheet } = planContact({ href, questions: listingId && addQuestions ? getQuestions(listingId) : [], safety, modified, seen: safety ? safetySheetSeen() : true });
     if (sheet) {
       event.preventDefault();
       setPending(destination);

@@ -119,6 +119,19 @@ A sold listing disappears from normal catalog and search but remains available a
 `Republicar` (sold) and `Duplicar` (any listing that is not archived) create a new **draft** with the text, specs and photos copied, open it in the edit form so the seller can adjust price or photos, and send it with the usual submission (replaces the direct relist copy; UXD-my-listings-6). An owner can mark an owner-hidden listing sold (`Ya lo vendí`), and can withdraw a pending, draft or rejected listing as sold (`Lo vendí, retirar`): it goes to the sold history as archived and never becomes public. An owner can pause all their listings until a return date between tomorrow and 90 days (`Modo vacaciones`): the listings stay public with `Vuelve el …`, WhatsApp contact is replaced by that note, availability questions stop, and everything returns by itself on that date.
 <!-- ux my-listings: end -->
 
+<!-- Effortless Laria maybes (docs/ux-effortless/maybes-reservado.md): Reservado -->
+### Reserved listings
+
+A Particular can mark a published listing "Reservado" for 1, 2, 3 or 5 days when they agreed to hold it for a buyer.
+It stays public and contactable: the listing page (with the end date), the catalog cards and Descubrir say "Reservado",
+and a signed-in buyer can ask "Avísame si se libera". Laria never records who it was held for. When the period ends the
+seller is asked once, in the app, by e-mail and in Pendientes, whether it sold: "Se vendió" is the ordinary sold flow,
+"Sigue disponible" confirms availability; without an answer it reads as available after 24 hours. The people waiting
+are told once, when it is free again or (in the app) when it sold, and their request then ends. Store listings are not
+reserved this way; stores hold units through Inventario. *(Effortless Laria maybe talk-06; proposed
+UXD-maybes-reservado-1 to UXD-maybes-reservado-4.)*
+<!-- end maybes: Reservado -->
+
 ## Particular Dashboard and Dynamic Profile Data
 
 `Mi cuenta` for a Particular seller supports:
@@ -312,6 +325,21 @@ Proposed with the find batch (`docs/ux-effortless/find.md`, UXD-find-1 to UXD-fi
   precio" and "Vistos recientemente" follow. Nothing of this leaves the device. The vitrina and the category tiles
   are retired.
 
+<!-- Effortless Laria maybes (docs/ux-effortless/maybes-descubrir.md): Descubrir -->
+### Descubrir (Effortless Laria maybe big-02)
+
+`/descubrir` shows listings one per screen, as a second way to browse; the grid stays the default. From the home,
+"Descubrir lo nuevo" shows the listings published in the last 7 Lima days, newest first (30 days when the week holds
+fewer than 12), with a stop after today's listings. From any results list, "Ver en Descubrir" shows that list, with its
+filters and order, to its end. Each screen has the photos (swipe or arrows), the price, the title, the key specs, the
+place and the seller, WhatsApp, ♥, "No me interesa" and "Ver publicación"; a reserved listing says "Reservado" there
+too. Every gesture has a button and the keyboard works on a computer. No autoplay, no endless loop and no swipe
+verdicts; every feed ends with a screen that says what was seen. "No me interesa" is kept on the device and only hides
+listings in Descubrir. The page is not indexed, and the bulk catalog crawlers are refused there as on `/listados`.
+Analytics: impressions with the home or catalog source; contacts through `/api/contact`; no listing view. *(Proposed
+UXD-maybes-descubrir-1 to UXD-maybes-descubrir-9.)*
+<!-- end maybes: Descubrir -->
+
 ## WhatsApp Contact Tracking
 
 Laria records buyer intent when a user initiates WhatsApp contact. It never records WhatsApp message content.
@@ -319,6 +347,15 @@ Laria records buyer intent when a user initiates WhatsApp contact. It never reco
 The event associates the listing, authenticated buyer when present, seller or store, timestamp, and useful source/context. It supports conversion analytics and determines which authenticated buyers are eligible for transaction confirmation when a seller marks that listing sold. Anonymous contact remains possible, but an anonymous buyer cannot later participate in the verified Laria transaction or review workflow for that contact.
 
 The WhatsApp message opens pre-filled with the listing's title, price (when set) and link, asking whether it is still available. Optional quick questions (try it, shipping, case, negotiable price), never preselected, are appended when chosen. The button opens WhatsApp at once; the contact is recorded in the background and never delays or blocks it. Before a buyer's first contact about a listing from S/ 1,000, or any purchase request, a short safety sheet appears once per browser. Signed-out visitors see a quiet hint to sign in first so they can later confirm the purchase and review; contact never requires an account. *(Effortless Laria, talk-01 to talk-05; proposed UXD-listing-6 and UXD-listing-7.)*
+
+<!-- Effortless Laria maybes (docs/ux-effortless/maybes-reservado.md): Reservado and Hacer una oferta -->
+On a reserved listing the message says so instead of asking whether it is still available ("Vi que está reservado. Si
+se libera, ¿me avisas?"), from the listing page and from Descubrir alike. On a Particular's published listing with a
+price that is not reserved, "Hacer una oferta" lets the buyer name an amount in soles (with three round amounts under
+the price as suggestions) and opens WhatsApp with "Hola, te ofrezco S/ … por tu … publicado en Laria: <link>". The
+amount lives only in the buyer's message: Laria records the contact as any other and never stores the offer.
+*(Effortless Laria maybes talk-06 and talk-07; proposed UXD-maybes-reservado-5 and UXD-maybes-2.)*
+<!-- end maybes: Reservado and Hacer una oferta -->
 
 ## Marketplace Analytics
 
@@ -423,6 +460,22 @@ Proposed with the speed batch (UXD-speed-1 to UXD-speed-4 and UXD-speed-13); not
 - The error page offers "Reintentar", which asks the server again and redraws the failed part in place.
 - Pages meet WCAG 2.2 AA: every gesture has a button, bars fixed to the bottom of the screen never cover a focused field, touch targets are at least 24 px, and status changes are announced to screen readers.
 <!-- end speed batch: speed and accessibility -->
+
+<!-- Effortless Laria maybes (docs/ux-effortless/maybes-ai.md): AI helpers -->
+## AI Helpers (Effortless Laria maybes, off by default)
+
+Proposed with the maybes stock-24 and big-07 (UXD-maybes-ai-1 to UXD-maybes-ai-7). Neither shows until the server has
+`ANTHROPIC_API_KEY` and `LARIA_AI_HELPERS=1`.
+
+- **Pregúntale a tu tienda (stores with Inventario).** A question in plain words on Mi tienda or Inventario opens the
+  existing Inventario filters, a view of Estadísticas or Reposición, with "Así lo entendí" listing each filter used as a
+  removable chip and saying what no filter covers. Only the question goes to the AI service, never the store's data.
+  50 questions per store a day.
+- **Completar con IA (sell form, Particular and store).** After the photos, one button sends up to four reduced photos
+  and returns suggestions for category and type, brand, model, title, details and description, each used only when the
+  seller taps it; nothing about condition, price or specifications, and moderation is unchanged. 20 a day per account.
+- A site-wide daily cap applies to both, and each call is logged without its content for 90 days.
+<!-- end maybes: AI helpers -->
 
 ## Legal and Safety
 

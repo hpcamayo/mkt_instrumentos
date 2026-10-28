@@ -2,7 +2,7 @@
 
 `LARIA_CATALOG_ENRICHMENT_DISABLED=true` temporarily skips optional catalog database reads. Leave it unset for normal operation.
 
-When enabled, the server skips facet counts, data-derived price shortcuts, empty-search rescue counts and fallback suggestions, optional brand/menu aggregates, the home page's category counts and total, type counts, and the search box's brand and model suggestions. The existing empty-data fallbacks keep the filters usable without fabricated numbers. The facet endpoint returns HTTP 200 with JSON `null` and a 60-second CDN cache lifetime; the suggestion endpoint returns HTTP 200 with an empty list, and submitting a search works as usual.
+When enabled, the server skips facet counts, data-derived price shortcuts, empty-search rescue counts and fallback suggestions, optional brand/menu aggregates, the home page's category counts and total, type counts, the search box's brand and model suggestions, and the "Reservado" badge on catalog cards (the listing page itself still shows it). The existing empty-data fallbacks keep the filters usable without fabricated numbers. The facet endpoint returns HTTP 200 with JSON `null` and a 60-second CDN cache lifetime; the suggestion endpoint returns HTTP 200 with an empty list, and submitting a search works as usual.
 
 The sell form's brand suggestions come from the reference instrument catalog, not from listing aggregates, so they stay available with the switch on.
 

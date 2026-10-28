@@ -12,13 +12,15 @@ import { cn } from "@/lib/utils";
 
 const RESTORE_KEY = "laria:ver-mas";
 type Restore = { href: string; pages: number; scrollY: number; at: number };
+// talk-06: a page of cards and the ones among them that say "Reservado".
+type LoadedPage = { listings: ListingCardData[]; reserved: string[] };
 
 // FIND 15 (Effortless Laria): on phones, "Ver 24 más" loads the next page under the current one instead of a numbered
 // page that reloads and starts at the top. The numbered pages stay in the page for search engines and wider screens
 // (components/pagination.tsx). Opening a listing remembers how far the list went and where the screen was, so coming
 // back shows the same place.
 export function CatalogLoadMore({ filters, page, total }: { filters: ListingFilters; page: number; total: number }) {
-  const [extra, setExtra] = useState<ListingCardData[][]>([]);
+  const [extra, setExtra] = useState<LoadedPage[]>([]);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const restored = useRef(false);
   const pages = Math.ceil(total / LISTINGS_PAGE_SIZE);
@@ -30,8 +32,8 @@ export function CatalogLoadMore({ filters, page, total }: { filters: ListingFilt
     params.set("page", String(target));
     const response = await fetch(`/api/catalog/page?${params}`, { headers: { accept: "application/json" } });
     if (!response.ok) throw new Error(String(response.status));
-    const body = (await response.json()) as { listings?: ListingCardData[] };
-    return body.listings ?? [];
+    const body = (await response.json()) as { listings?: ListingCardData[]; reserved?: string[] };
+    return { listings: body.listings ?? [], reserved: Array.isArray(body.reserved) ? body.reserved : [] };
   }
 
   async function more() {
@@ -54,7 +56,7 @@ export function CatalogLoadMore({ filters, page, total }: { filters: ListingFilt
     writeStore(RESTORE_KEY, null, "session");
     (async () => {
       try {
-        const loaded: ListingCardData[][] = [];
+        const loaded: LoadedPage[] = [];
         for (let target = page + 1; target <= saved.pages; target += 1) loaded.push(await load(target));
         setExtra(loaded);
         requestAnimationFrame(() => window.scrollTo({ top: saved.scrollY, behavior: "instant" as ScrollBehavior }));
@@ -77,11 +79,11 @@ export function CatalogLoadMore({ filters, page, total }: { filters: ListingFilt
     <div className="md:hidden" onClickCapture={rememberPlace}>
       {extra.length > 0 ? (
         <ul className={cn(LISTING_GRID, "mt-6")} aria-label={`Más resultados, hasta ${formatNumber(Math.min(total, lastLoaded * LISTINGS_PAGE_SIZE))}`}>
-          {extra.flat().map((listing) => (
+          {extra.flatMap((loaded) => loaded.listings.map((listing) => (
             <li key={listing.id} className="min-w-0">
-              <ListingCard listing={listing} sizes={LISTING_GRID_SIZES} />
+              <ListingCard listing={listing} sizes={LISTING_GRID_SIZES} reserved={loaded.reserved.includes(listing.id)} />
             </li>
-          ))}
+          )))}
         </ul>
       ) : null}
       <div className="mt-6 flex flex-col items-center gap-2">

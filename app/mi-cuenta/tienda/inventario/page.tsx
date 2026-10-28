@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { StoreAskBox } from "@/components/ai/store-ask-box";
+import { UnderstoodPanel } from "@/components/ai/understood-panel";
 import { InventoryCategoryChips } from "@/components/inventory/inventory-category-chips";
 import { InventoryDemand } from "@/components/inventory/inventory-demand";
 import { InventorySettingsButton } from "@/components/inventory/inventory-settings";
@@ -15,6 +17,8 @@ import {
 } from "@/components/listing-management-table";
 import { getAccountContext } from "@/lib/account-context";
 import { getAccountAnalytics } from "@/lib/account-analytics";
+import { aiHelpersEnabled } from "@/lib/ai/config";
+import { inventoryUnderstood, understoodFromParams } from "@/lib/ai/store-question";
 import { getStoreListingQuota } from "@/lib/store-allowance";
 import { buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -56,14 +60,16 @@ export default async function StoreInventoryPage({ searchParams }: { searchParam
   const summary = supabase ? await getInventorySummary(supabase) : null;
   // Inventory is per store during the pilot (D-2): a store without it keeps the V1 publications table unchanged.
   if (summary?.inventory_enabled && params.vista !== "publicaciones") {
-    return <InventoryView summary={summary} storeName={store.name} params={params} />;
+    return <InventoryView summary={summary} storeName={store.name} params={params} ask={aiHelpersEnabled()} />;
   }
   return <PublicationsView store={store} summary={summary} />;
 }
 
-async function InventoryView({ summary, storeName, params }: { summary: InventorySummary; storeName: string; params: Record<string, string | string[] | undefined> }) {
+async function InventoryView({ summary, storeName, params, ask }: { summary: InventorySummary; storeName: string; params: Record<string, string | string[] | undefined>; ask: boolean }) {
   const { supabase } = await getAccountContext();
   const { filters, cursor } = parseInventoryFilters(params);
+  // stock-24: "Pregúntale a tu tienda" and, after a question, what it became.
+  const understood = understoodFromParams(params);
   const [page, lastImport, categoryCounts, views, demand] = supabase
     ? await Promise.all([
       getInventoryPage(supabase, filters, cursor), getLastImportErrors(supabase), getInventoryCategoryCounts(supabase),
@@ -94,6 +100,8 @@ async function InventoryView({ summary, storeName, params }: { summary: Inventor
           <Notice tone="warning" role="note">Tu tienda no puede registrar cambios de inventario en este momento. Puedes consultar el stock y exportarlo.</Notice>
         </div>
       ) : null}
+      {ask ? <StoreAskBox /> : null}
+      {understood ? <UnderstoodPanel understood={inventoryUnderstood(filters, understood.gaps)} className="border-b border-subtle" /> : null}
       <InventorySummaryTiles summary={summary} importErrors={lastImport?.errors ?? null} importHref={lastImport?.href} />
       <InventoryDemand rows={demand} />
       <InventoryToolbar filters={filters} />
