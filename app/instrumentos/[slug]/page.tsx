@@ -11,7 +11,8 @@ import { ContactModule } from "@/components/listing/contact-module";
 import { StoreTermsLine } from "@/components/store-floor/store-terms";
 import { TryoutEntry } from "@/components/store-floor/tryout-entry";
 import { QuickQuestions, SignInHint } from "@/components/listing/contact-extras";
-import { OwnerBar, RestockAlert, SimilarAlert } from "@/components/listing/listing-viewer";
+import { OwnerBar, ReleaseAlert, RestockAlert, SimilarAlert } from "@/components/listing/listing-viewer";
+import { OfferButton } from "@/components/listing/offer-sheet";
 import { ListingGallery } from "@/components/listing/listing-gallery";
 import { RELATED_ROW_MAX, RelatedListings, RelatedListingsSkeleton } from "@/components/listing/related-listings";
 import { ShareListing } from "@/components/listing/share-button";
@@ -60,6 +61,7 @@ import {
   type SellerFacts,
 } from "@/lib/listing-page";
 import { needsSafetySheet, quickQuestions, tradeQuestion } from "@/lib/contact-message";
+import { endSentence, isReservationRunning, readReservedListings, reservationEndText, type ReservedListing } from "@/lib/listing-reservations";
 import { isEntityId } from "@/lib/marketplace-event-payload";
 import {
   DISCOVERABLE_STOCK_FILTER,
@@ -328,7 +330,7 @@ export default async function ListingDetailPage({
       : null;
   // fast-01: every call the page waits for runs at once. A failed reputation call leaves the reviews (and the rating
   // figure) out instead of claiming there are none; failed facts or breakdown leave only those parts out.
-  const [reputationResult, reviewPageResult, factsResult, purchase, combo, installments] = await Promise.all([
+  const [reputationResult, reviewPageResult, factsResult, purchase, combo, installments, reservation] = await Promise.all([
     reputationTarget ? supabase.rpc("get_public_reputation", reputationTarget) : null,
     reviewSubject
       ? supabase.rpc("get_public_review_page", { p_subject_user_id: reviewSubject.user, p_subject_store_id: reviewSubject.store, p_offset: 0, p_limit: 1 })
@@ -337,6 +339,7 @@ export default async function ListingDetailPage({
     loadPurchaseRequest(supabase, listing),
     loadListingCombo(supabase, listing),
     loadInstallments(supabase, listing),
+    loadReservation(supabase, listing),
   ]);
   const reputation = reputationResult && !reputationResult.error ? readPublicReputation(reputationResult.data) : null;
   const reviewPage = reviewPageResult && !reviewPageResult.error ? readReviewPage(reviewPageResult.data) : null;
@@ -354,6 +357,7 @@ export default async function ListingDetailPage({
         purchase={purchase}
         combo={combo}
         installments={purchase ? installments : null}
+        reservation={reservation}
       />
     </>
   );
@@ -423,6 +427,14 @@ async function loadInstallments(supabase: PublicSupabaseClient, listing: Listing
   return offer && (!offer.minPricePen || (listing.price_pen ?? 0) >= offer.minPricePen) ? offer : null;
 }
 
+// talk-06 (docs/ux-effortless/maybes-reservado.md): only a Particular's published listing can be reserved. Optional: a
+// failed read shows the listing as not reserved. The page is refreshed when a period starts, changes or ends.
+async function loadReservation(supabase: PublicSupabaseClient, listing: ListingDetailData): Promise<ReservedListing | null> {
+  if (listing.status !== "approved" || listing.seller_type !== "individual" || listing.store_id) return null;
+  const rows = await readReservedListings(supabase, [listing.id], optionalReadSignal(getRequestReads().deadline)).catch(() => null);
+  return rows?.[0] ?? null;
+}
+
 // The listing page (docs/ux-redesign/ux-4-listing-store.md § Listing page, answers L1–L21). From 1024 px two columns:
 // the gallery, "Especificaciones", "Descripción", the questions and the reviews on the left (7 of 12); the decision
 // column on the right (identity, the quick questions, the contact module, the seller card, "Reportar publicación").
@@ -432,6 +444,8 @@ async function loadInstallments(supabase: PublicSupabaseClient, listing: Listing
 // spec strip), dates people say (list-04), a real price drop (list-05), the one limitation line (list-02, the trust
 // note is gone), quick questions and the visitor hint (talk-02, talk-05), the seller's facts (list-10, trust-03), every
 // review (list-06), "Avísame" (list-11), the owner's shortcuts (mine-05) and eight similar listings (list-07).
+// Maybes (docs/ux-effortless/maybes-reservado.md): "Reservado" with "Avísame si se libera" (talk-06), and "Hacer una
+// oferta" on a Particular's listing that is not reserved (talk-07).
 function ListingDetail({
   listing,
   supabase,
@@ -442,6 +456,7 @@ function ListingDetail({
   purchase,
   combo,
   installments,
+  reservation,
 }: {
   listing: ListingDetailData;
   supabase: PublicSupabaseClient;
@@ -452,6 +467,7 @@ function ListingDetail({
   purchase: PurchaseRequest | null;
   combo: { offer: BundleOffer | null; companions: Companion[] };
   installments: InstallmentOffer | null;
+  reservation: ReservedListing | null;
 }) {
   const now = Date.now();
   const store = normalizeStore(listing);
@@ -467,6 +483,12 @@ function ListingDetail({
     ? new Date(confirmedAt).toLocaleDateString("es-PE", { day: "numeric", month: "long", timeZone: "America/Lima" })
     : null;
   const paused = !isSold && listing.paused_until && listing.paused_until > new Date().toLocaleDateString("en-CA", { timeZone: "America/Lima" }) ? listing.paused_until : null;
+  // talk-06: the badge goes at the end of the period, also before the job marks it ended.
+  const reservedUntil = !isSold && reservation && isReservationRunning(reservation, now) ? reservation.reserved_until : null;
+  // talk-07: an offer on a Particular's published listing with a price, while nothing holds it. Not when the seller
+  // marked the price fixed (sell-07, "Precio fijo"): an offer button would contradict the seller's own word.
+  const offer = !isSold && !purchase && !reservedUntil && listing.seller_type === "individual" && listing.price_pen !== null
+    && listing.price_pen > 0 && listing.price_mode !== "fixed";
   const place = `${listing.city}, ${listing.region}`;
   const published = listing.published_at ?? listing.created_at;
   const updated = formatUpdatedAgo(listing.content_changed_at, published, now);
@@ -500,7 +522,7 @@ function ListingDetail({
   const comboSeller = sellerKey && !outOfStock ? { key: sellerKey, name: seller.name, type: listing.seller_type } : null;
   // deal-trust (safe-03): the meetup sheet links the type's try-out checklist (discovery's guides) when there is one.
   const tryOutGuide = isStore ? undefined : guidesForListing(listing.category, listing.instrument_type).find((guide) => guide.kind === "revisar");
-  const contactHref = purchase ? buildPurchaseWhatsAppUrl(resolveContactPhone(listing), listing, purchase.sku) : buildWhatsAppUrl(listing);
+  const contactHref = purchase ? buildPurchaseWhatsAppUrl(resolveContactPhone(listing), listing, purchase.sku) : buildWhatsAppUrl(listing, { reserved: Boolean(reservedUntil) });
   const typeHref = listing.instrument_type
     ? categoryTypePath(listing.category, listing.instrument_type)
     : categoryLandingPath(listing.category);
@@ -516,7 +538,7 @@ function ListingDetail({
       <PageContainer className="pb-10 pt-3 md:pt-5 lg:pb-14">
         <Breadcrumbs items={listingBreadcrumbs(listing, displayTitle)} phoneBackLink />
 
-        <OwnerBar listingId={listing.id} sold={isSold} className="mt-2 md:mt-3" />
+        <OwnerBar listingId={listing.id} sold={isSold} reserved={Boolean(reservedUntil)} className="mt-2 md:mt-3" />
 
         <div className="mt-2 flex min-w-0 flex-col gap-6 md:mt-4 lg:grid lg:grid-cols-12 lg:grid-rows-[auto_1fr] lg:gap-x-8 lg:gap-y-10">
           <div className="order-1 min-w-0 lg:col-span-7 lg:row-start-1">
@@ -538,6 +560,7 @@ function ListingDetail({
                 {/* sell-07: the seller's word on the price. */}
                 {priceMode && listing.price_pen !== null ? <Tag tone="line">{PRICE_MODE_LABELS[priceMode]}</Tag> : null}
                 {outOfStock ? <StatusTag domain="stock" status={listing.restock_expected_on ? "restock_expected" : "out_of_stock"} /> : null}
+                {reservedUntil ? <StatusTag domain="stock" status="reserved" /> : null}
               </p>
               {/* store-floor, buy-09: the store's interest-free installments on this price. */}
               {installments ? <p className="mt-1 t-ui font-semibold text-ink">{installmentLine(listing.price_pen, installments.maxInstallments)}</p> : null}
@@ -545,6 +568,11 @@ function ListingDetail({
                 <p className="mt-2 t-ui text-ink-2">
                   {/* store-floor, reach-08: "Por llegar" with the store's estimated date. */}
                   {restockNote(listing.restock_expected_on)}
+                </p>
+              ) : null}
+              {reservedUntil ? (
+                <p className="mt-2 t-ui text-ink-2">
+                  Quien vende lo reservó para otra persona hasta {endSentence(reservationEndText(reservedUntil) ?? "")} Puedes pedir que te avisemos si se libera, o escribirle igual.
                 </p>
               ) : null}
               <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -558,7 +586,8 @@ function ListingDetail({
               {isStore && !isSold ? <StoreTermsLine terms={listing} storeName={store?.name ?? null} className="mt-3" /> : null}
               {isSold ? null : <ListingReachMarks listing={listing} />}{/* Feature ideas, store-reach batch (reach-04, reach-05). */}
               {/* A seller's recent "sigue disponible" (my listings check-ins) answers the quiet-listing note (list-04). */}
-              {availabilityConfirmed ? (
+              {/* talk-06: while reserved, the reservation line above says where it stands. */}
+              {reservedUntil ? null : availabilityConfirmed ? (
                 <p className="mt-1 t-meta">Quien vende confirmó que sigue disponible el {availabilityConfirmed}.</p>
               ) : quiet ? (
                 <p className="mt-2 t-meta">Esta publicación tiene un tiempo: consulta si sigue disponible.</p>
@@ -583,9 +612,19 @@ function ListingDetail({
             ) : (
               <>
                 {outOfStock ? <RestockAlert listingId={listing.id} arriving={Boolean(listing.restock_expected_on)} className="order-3 lg:order-2" /> : null}
+                {reservedUntil ? <ReleaseAlert listingId={listing.id} className="order-3 lg:order-2" /> : null}
                 <div className="order-3 grid gap-3 lg:order-2">
                   {purchase ? null : <QuickQuestions listingId={listing.id} questions={questions} />}
                   <TrackRecordChip listingId={listing.id} />
+                  {offer && listing.price_pen !== null ? (
+                    <OfferButton
+                      listingId={listing.id}
+                      href={contactHref}
+                      listing={{ title: listing.title, slug: listing.slug, price_pen: listing.price_pen }}
+                      safety={needsSafetySheet(listing.price_pen, false)}
+                      className="justify-self-start"
+                    />
+                  ) : null}
                   <SignInHint />
                 </div>
                 {/* store-locations (run-02): "Disponible en …" and where to collect, for stores with sedes. */}
@@ -600,6 +639,7 @@ function ListingDetail({
                   purchase={Boolean(purchase)}
                   maxQuantity={purchase?.maxQuantity}
                   safety={needsSafetySheet(listing.price_pen, Boolean(purchase))}
+                  reserved={Boolean(reservedUntil)}
                   className="order-3 lg:order-3"
                 />
                 {/* store-floor, buy-07: "Reservar una prueba" when the store takes try-outs. */}

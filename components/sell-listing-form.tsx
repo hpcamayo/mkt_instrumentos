@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check, ChevronLeft, Circle, CloudUpload, Eye, Share2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { flushSync } from "react-dom";
+import { ListingAssist } from "@/components/ai/listing-assist";
 import { ListingCardPreview, ListingPagePreview, type PreviewListing } from "@/components/selling/listing-preview";
 import { ConditionCards, FormSection, TypeChips } from "@/components/selling/choice-fields";
 import { ListingDetailFields } from "@/components/listing-details/detail-fields";
@@ -111,6 +112,8 @@ type Props = {
   reviewWaitMinutes?: number | null;
   // listing-details: the optional fields this seller may fill (lib/listing-detail-access.ts).
   detailAccess?: ListingDetailAccess;
+  // big-07: "Completar con IA", when the server has the AI helpers on.
+  aiAssist?: boolean;
 };
 
 type Clip = NonNullable<ClipState> & { path?: string; slot: number; type: EncodedClip["type"]; blob?: Blob };
@@ -143,7 +146,7 @@ export const SELL_STEPS: { title: string; fields: SellField[] }[] = [
 // Photo paths allow slots 0–99 (app/api/submissions); a replaced photo never reuses its slot.
 const MAX_SLOT = 99;
 
-export function SellListingForm({ ownerId, profile, store, inventorySku: initialSku, brandsByCategory = {}, storeDefaults, serverDraft, reviewWaitMinutes = null, detailAccess }: Props) {
+export function SellListingForm({ ownerId, profile, store, inventorySku: initialSku, brandsByCategory = {}, storeDefaults, serverDraft, reviewWaitMinutes = null, detailAccess, aiAssist = false }: Props) {
   const kind = store ? "store_listing" : "listing";
   const direct = store?.status === "active" && store.isVerified;
   // FIX 05: the SKU being published. Starting another listing clears it, so the next one is never sent for a linked SKU.
@@ -585,6 +588,20 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
     clearError("details");
   }
 
+  // big-07: the suggestions the seller chose to use. A field they change no longer shows its error.
+  function applyAssist(next: SellValues) {
+    const changed: [SellField, boolean][] = [
+      ["category", next.category !== values.category],
+      ["instrument_type", next.instrumentType !== values.instrumentType],
+      ["brand", next.brand !== values.brand],
+      ["model", next.model !== values.model],
+      ["title", next.title !== values.title],
+      ["description", next.description !== values.description],
+    ];
+    setValues(next);
+    for (const [field, isChanged] of changed) if (isChanged) clearError(field);
+  }
+
   function clearError(field: SellField) {
     setErrors((current) => (current.some((error) => error.field === field) ? current.filter((error) => error.field !== field) : current));
   }
@@ -833,6 +850,15 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
 
           {step === 1 ? (
             <FormSection id={`${ID}-paso`} step={2} title="Qué es">
+              {aiAssist ? (
+                <ListingAssist
+                  photos={photos}
+                  source={(photo) => prepared.current.get(photo.key) ?? originals.current.get(photo.key) ?? null}
+                  values={values}
+                  footer={store ? storeDefaults?.descriptionFooter.trim() ?? "" : ""}
+                  onApply={applyAssist}
+                />
+              ) : null}
               <Field id={FIELD_IDS.category} label="Categoría" error={errorFor("category")}>
                 <Select name="category" value={values.category} onChange={(event) => setCategory(event.target.value)}>
                   <option value="">Selecciona una opción</option>

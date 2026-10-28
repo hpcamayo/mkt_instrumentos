@@ -7,10 +7,12 @@ const VIEWED_KEY = "laria:vistos";
 const INTENT_KEY = "laria:pendiente";
 const SEARCHES_KEY = "laria:busquedas";
 const DISMISSED_KEY = "laria:alertas-descartadas";
+const HIDDEN_KEY = "laria:descubrir-ocultos";
 export const DEVICE_SAVES_EVENT = "laria:device-saves";
 
 export const MAX_DEVICE_FAVORITES = 100;
 export const MAX_VIEWED = 30;
+export const MAX_HIDDEN = 200;
 const INTENT_TTL_MS = 60 * 60 * 1000;
 
 type DeviceFavorite = { id: string; at: number };
@@ -81,8 +83,30 @@ export function clearViewed() {
   write(VIEWED_KEY, null);
 }
 
+// Descubrir's "No me interesa" (big-02): the listings this device asked not to see there again, newest first. Only
+// Descubrir reads them; the catalog and the home are unchanged.
+export function getHiddenListings(): string[] {
+  const items = read<string[]>(HIDDEN_KEY, []);
+  return Array.isArray(items) ? items.filter(isId) : [];
+}
+
+export function setListingHidden(id: string, hidden: boolean) {
+  if (!isId(id)) return getHiddenListings();
+  const rest = getHiddenListings().filter((item) => item !== id);
+  const next = hidden ? [id, ...rest].slice(0, MAX_HIDDEN) : rest;
+  write(HIDDEN_KEY, next.length ? next : null);
+  return next;
+}
+
+export function showHiddenListings(ids: readonly string[]) {
+  const shown = new Set(ids);
+  const next = getHiddenListings().filter((item) => !shown.has(item));
+  write(HIDDEN_KEY, next.length ? next : null);
+  return next;
+}
+
 export function clearDeviceSaves() {
-  for (const key of [FAVORITES_KEY, VIEWED_KEY, INTENT_KEY, SEARCHES_KEY, DISMISSED_KEY]) write(key, null);
+  for (const key of [FAVORITES_KEY, VIEWED_KEY, INTENT_KEY, SEARCHES_KEY, DISMISSED_KEY, HIDDEN_KEY]) write(key, null);
   try {
     document.cookie = `${LAST_VISIT_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;
     document.cookie = `${PREVIOUS_VISIT_COOKIE}=; Max-Age=0; Path=/; SameSite=Lax`;

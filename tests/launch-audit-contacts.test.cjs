@@ -184,6 +184,8 @@ function contactRoute({ publicRows, adminRows, admin = true, log }) {
     "next/server": { NextResponse: { json: (body, init = {}) => new Response(JSON.stringify(body), { ...init, headers: { "Content-Type": "application/json", ...init.headers } }) } },
     "@/lib/supabase/public-client": { getPublicSupabaseClient: () => fakeClient(publicRows, log, "public") },
     "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => (admin ? fakeClient(adminRows, log, "admin") : null) },
+    // talk-06's optional reservation read (tests/maybes-reservado.test.cjs): none here.
+    "@/lib/listing-reservations-server": { reservedCardIds: async () => new Set() },
     "@/lib/marketplace-events-server": {
       sameOriginEventRequest: () => true,
       getMarketplaceActor: async () => null,

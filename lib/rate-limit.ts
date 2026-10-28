@@ -36,11 +36,17 @@ export type RateLimitVerdict = "allowed" | "limited" | "unavailable";
 // check then refuses to answer, since it would otherwise say whether an address has an account with no limit at all;
 // the routes that call Supabase Auth go on (allowRequest), under Supabase's own limits.
 export async function checkRequest(rule: RateLimitRule, request: Request): Promise<RateLimitVerdict> {
+  return checkKey(rule, clientAddress(request));
+}
+
+// The same count under a subject the route chooses instead of the visitor's address (an account, a store, the whole
+// site), stored as an HMAC the same way.
+export async function checkKey(rule: RateLimitRule, subject: string): Promise<RateLimitVerdict> {
   const admin = getSupabaseAdminClient();
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!admin || !secret) return "unavailable";
   const key = createHmac("sha256", createHash("sha256").update(`laria-rate-limit:${secret}`).digest())
-    .update(clientAddress(request))
+    .update(subject)
     .digest("hex");
   const { data, error } = await admin.rpc("consume_rate_limit", {
     p_bucket: rule.bucket,

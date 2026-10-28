@@ -113,8 +113,10 @@ async function main() {
     const { tables, stepStart, withoutStep } = load(expected.file);
     assert.deepEqual([...tables].sort(), expected.tables);
     assert.ok(stepStart > 0 && !/^\s*lock table /m.test(withoutStep));
+    // The migration's own triggers on its own tables: a later table with page-change triggers of its own (talk-06's
+    // public.listing_reservations) is not this migration's.
     const triggers = async () =>
-      (await control.query(`select count(*)::int as n from pg_trigger where tgname like '%\\_public\\_page\\_changes\\_%' and not tgisinternal and ${expected.triggers.where}`)).rows[0].n;
+      (await control.query(`select count(*)::int as n from pg_trigger where tgname like '%\\_public\\_page\\_changes\\_%' and not tgisinternal and ${expected.triggers.where} and tgrelid = any($1::regclass[])`, [tables])).rows[0].n;
     const before = await triggers();
     assert.equal(before, expected.triggers.count, "apply every migration first (setup-local-db.sh reset)");
 

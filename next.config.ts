@@ -5,6 +5,12 @@ import { securityHeaders } from "./lib/security-headers";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
+// UX-Effortless maybes: LARIA_AI_FAKE makes the AI helpers answer with fixed text for local screenshots
+// (lib/ai/fake-client.ts), under `next dev` only. A production build refuses to start with it set.
+if (process.env.NODE_ENV === "production" && process.env.LARIA_AI_FAKE) {
+  throw new Error("LARIA_AI_FAKE is only for local screenshots under next dev. Remove it to build.");
+}
+
 // Private, account, Admin and auth utility routes must never be indexed, even
 // when a crawler reaches them through a redirect or an external link.
 const noIndexSources = NON_INDEXABLE_PATH_PREFIXES.flatMap((prefix) => [prefix, `${prefix}/:path*`]);

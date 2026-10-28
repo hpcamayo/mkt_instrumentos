@@ -121,7 +121,8 @@ test("SEO-002..SEO-005: category pages use the shared catalog query, 24-item sta
   assert.match(view, /<ListingFilters filters=\{filters\} scope=\{scope\} facets=\{facets\} \/>/);
   assert.match(view, /<Pagination page=\{page\} total=\{totalCount\} path=\{path\} params=\{params\} phoneLoadMore \/>/);
   // One card per listing, keyed by its id (the one card also takes the grid's eager row and image sizes).
-  assert.match(view, /\{listings\.map\(\(listing, index\) => \(\s*<ListingCard key=\{listing\.id\} listing=\{listing\} eager=\{index < 4\} sizes=\{LISTING_GRID_SIZES\} compare \/>/);
+  // talk-06 (maybes): the card also says "Reservado" when the seller reserved it.
+  assert.match(view, /\{listings\.map\(\(listing, index\) => \(\s*<ListingCard key=\{listing\.id\} listing=\{listing\} eager=\{index < 4\} sizes=\{LISTING_GRID_SIZES\} compare reserved=\{reserved\.has\(listing\.id\)\} \/>/);
   assert.match(landing, /<SearchTelemetry/);
   for (const text of [landing, view]) assert.doesNotMatch(text, /placehold|lorem|Ejemplo/i);
 

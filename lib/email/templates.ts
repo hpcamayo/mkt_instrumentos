@@ -156,6 +156,16 @@ function templateContent(payload: MarketplaceEmailPayload): TemplateContent {
       ctaLabel: "Ver publicación",
       path: listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/notificaciones",
     };
+    // talk-06 "Reservado" (maybes): the seller's question when a reservation ends, and the one notice to each person who
+    // asked "Avísame si se libera".
+    case "listing_reservation_ended": return listingTemplate(`¿Se vendió “${listing?.title ?? "tu publicación"}”?`, "Terminó la reserva que marcaste. Respóndelo en un toque: si sigue disponible, avisamos a quienes esperan que se libere.", "Responder", "/mi-cuenta");
+    case "listing_released": return {
+      subject: "Se liberó una publicación que esperabas",
+      heading: "Ya no está reservado",
+      body: `“${listing?.title ?? "La publicación que esperabas"}” ya no está reservado. Si te sigue interesando, escríbele a quien vende. Te avisamos una sola vez, como pediste.`,
+      ctaLabel: "Ver publicación",
+      path: listing ? `/instrumentos/${listing.slug}` : "/mi-cuenta/notificaciones",
+    };
     case "follow_weekly": return followTemplate(payload);
     // Feature ideas, accounts batch. All four are transactional: they are about the person's own account or request.
     // safe-08: a sign-in from a browser this account had not used before.

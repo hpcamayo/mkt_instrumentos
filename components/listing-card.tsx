@@ -42,6 +42,8 @@ type ListingCardProps = {
   sizes?: string;
   // FIND 12: the "Comparar" tick, on desktop catalog cards.
   compare?: boolean;
+  // talk-06: the seller reserved it (lib/listing-reservations-server.ts reads which cards are).
+  reserved?: boolean;
 };
 
 // BIG 01: opening a listing from a card adds to the taste behind "Para ti". Nothing leaves the device. The listing
@@ -64,7 +66,7 @@ function usePrefetchOnIntent(href: string, reducedData: boolean) {
 // then the title, price, a spec line and a seller line. One link, the title, stretched over the whole card, and the
 // favourite above it: two tab stops. Showcase variant (the vitrina): a bordered box with the square photo, the ink price
 // tag on it (H3) and a caption with the category, a one-line title and the seller line; no favourite, one tab stop.
-export function ListingCard({ listing, variant = "grid", source = "catalog", headingLevel = 2, eager = false, sizes = DEFAULT_SIZES, compare = false }: ListingCardProps) {
+export function ListingCard({ listing, variant = "grid", source = "catalog", headingLevel = 2, eager = false, sizes = DEFAULT_SIZES, compare = false, reserved = false }: ListingCardProps) {
   const impressionRef = useListingImpression(listing.id, source);
   const photo = listing.listing_photos[0];
   const photoCount = listing.photo_count ?? listing.listing_photos.length;
@@ -126,7 +128,7 @@ export function ListingCard({ listing, variant = "grid", source = "catalog", hea
               readers), the same one the listing page shows. */}
           <Price value={listing.price_pen} previous={visiblePreviousPrice(listing, Date.now())} />
           {listing.price_pen !== null ? <PriceModeMark mode={listing.price_mode} /> : null}
-          {isOutOfStock(listing) ? <StatusTag domain="stock" status={listing.restock_expected_on ? "restock_expected" : "out_of_stock"} /> : null}
+          {isOutOfStock(listing) ? <StatusTag domain="stock" status={listing.restock_expected_on ? "restock_expected" : "out_of_stock"} /> : reserved ? <StatusTag domain="stock" status="reserved" /> : null}
         </p>
         {/* store-floor, buy-09: the store's interest-free installments, worked out on this price. */}
         {installments ? <p className="t-meta text-ink">{installments}</p> : null}

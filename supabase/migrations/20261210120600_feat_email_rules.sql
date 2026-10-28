@@ -13,9 +13,11 @@
 --   * a private offer to people who saved a listing is optional, like a price drop (OPTIONAL_EMAIL_TYPES): two days,
 --     priority 2.
 --
--- Both functions are recreated with main's cases unchanged and these added.
+-- Both functions are recreated with main's cases unchanged and these added. Main's cases include the five maybes'
+-- reservation kinds (20261120100000_ux_maybes_reservado.sql): listing_released is two days and priority 2,
+-- listing_reservation_ended three days and priority 1.
 --
--- Locks: none (two immutable functions). Rollback: recreate both from 20261114160000.
+-- Locks: none (two immutable functions). Rollback: recreate both from 20261120100000.
 
 create or replace function laria_private.email_max_age(p_event_type text)
 returns interval
@@ -25,9 +27,10 @@ set search_path = ''
 as $$
   select case
     when p_event_type in ('search_alert_immediate', 'search_alert_daily') then interval '1 day'
-    when p_event_type in ('listing_price_drop', 'listing_back_in_stock') then interval '2 days'
+    when p_event_type in ('listing_price_drop', 'listing_back_in_stock', 'listing_released') then interval '2 days'
     when p_event_type in ('follow_weekly', 'listing_availability_checkin', 'listing_purchase_check',
-                          'listing_purchase_confirmation_reminder', 'listing_review_reminder') then interval '3 days'
+                          'listing_purchase_confirmation_reminder', 'listing_review_reminder',
+                          'listing_reservation_ended') then interval '3 days'
     -- Feature ideas (this migration).
     when p_event_type in ('account_new_device', 'listing_tryout_reminder', 'listing_tryout_confirmed',
                           'listing_tryout_declined', 'listing_tryout_cancelled', 'store_tryout_requested',
@@ -46,9 +49,10 @@ set search_path = ''
 as $$
   select case
     when p_event_type in ('search_alert_immediate', 'search_alert_daily', 'listing_price_drop', 'listing_back_in_stock',
-                          'follow_weekly') then 2
+                          'follow_weekly', 'listing_released') then 2
     when p_event_type in ('listing_availability_checkin', 'listing_purchase_check',
-                          'listing_purchase_confirmation_reminder', 'listing_review_reminder') then 1
+                          'listing_purchase_confirmation_reminder', 'listing_review_reminder',
+                          'listing_reservation_ended') then 1
     -- Feature ideas (this migration).
     when p_event_type = 'listing_private_offer' then 2
     when p_event_type in ('gear_reminder_due', 'listing_tryout_reminder') then 1

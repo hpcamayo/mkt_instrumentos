@@ -17,6 +17,13 @@ import { createListingEditToken, readListingEditToken, submissionTokenSecret } f
 import { cleanupListingEditUploads } from "@/lib/listing-photo-cleanup";
 import { listingLimitMessage } from "@/lib/store-allowance";
 import { dropListingPages } from "@/lib/listing-cache";
+import {
+  endListingReservation,
+  parseReservationDays,
+  parseReservationOutcome,
+  reservationErrorMessage,
+  setListingReservation,
+} from "@/lib/listing-reservations";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -67,6 +74,25 @@ export async function POST(request: Request, { params }: RouteContext) {
     if (error) return rpcFailure(error.message);
     dropListingPages([listing.slug]);
     return NextResponse.json({ ok: true, listing: data });
+  }
+
+  // talk-06 "Reservado" (docs/ux-effortless/maybes-reservado.md): reserve for 1, 2, 3 or 5 days, or end the period
+  // ("available" tells the people waiting that it is free; "sold" is the ordinary sold flow). The page shows it at once.
+  if (body.action === "reserve") {
+    const days = parseReservationDays(body.days);
+    if (days === null) return failure("Elige 1, 2, 3 o 5 días.");
+    const result = await setListingReservation(supabase, id, days);
+    if (result.error !== null) return reservationFailure(result.error);
+    dropListingPages([listing.slug]);
+    return NextResponse.json({ ok: true, reservedUntil: result.data });
+  }
+  if (body.action === "end_reservation") {
+    const outcome = parseReservationOutcome(body.outcome);
+    if (!outcome) return failure("Acción no compatible.");
+    const result = await endListingReservation(supabase, id, outcome);
+    if (result.error !== null) return reservationFailure(result.error);
+    dropListingPages([listing.slug]);
+    return NextResponse.json({ ok: true, told: result.data });
   }
 
   // mine-10 / shop-08: "Republicar" (a sold listing) and "Duplicar" copy the listing into a new draft with its photos;
@@ -368,6 +394,12 @@ function rpcFailure(message: string) {
     return failure("La publicación vendida es un registro histórico y no puede modificarse.", 409);
   }
   return failure("No se pudo completar la acción. Revisa el estado e intenta nuevamente.", 409);
+}
+
+// The reservation functions word their own messages; anything else (a sale the sold flow refused) reads as usual.
+function reservationFailure(message: string) {
+  const known = reservationErrorMessage(message);
+  return known ? failure(known, 409) : rpcFailure(message);
 }
 
 function asObject(value: unknown) {

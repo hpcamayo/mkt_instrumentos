@@ -106,6 +106,7 @@ function catalogCrawlerDenied(method: string) {
 export const config = {
   matcher: [
     "/listados",
+    "/descubrir",
     "/api/catalog/:path*",
     "/mi-cuenta/:path*",
     "/mis-publicaciones/:path*",

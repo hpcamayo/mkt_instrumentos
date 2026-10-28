@@ -2764,6 +2764,82 @@ export type Database = {
           },
         ]
       }
+      listing_release_watches: {
+        Row: {
+          created_at: string
+          listing_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          listing_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          listing_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_release_watches_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_release_watches_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "public_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_release_watches_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listing_reservations: {
+        Row: {
+          ended_at: string | null
+          listing_id: string
+          reserved_at: string
+          reserved_until: string
+        }
+        Insert: {
+          ended_at?: string | null
+          listing_id: string
+          reserved_at?: string
+          reserved_until: string
+        }
+        Update: {
+          ended_at?: string | null
+          listing_id?: string
+          reserved_at?: string
+          reserved_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listing_reservations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "listing_reservations_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: true
+            referencedRelation: "public_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listing_revision_photos: {
         Row: {
           alt_text: string | null
@@ -8618,6 +8694,10 @@ export type Database = {
         Returns: Json
       }
       end_consignment: { Args: { p_consignment_id: string }; Returns: boolean }
+      end_listing_reservation: {
+        Args: { p_listing_id: string; p_outcome: string }
+        Returns: number
+      }
       export_my_data: { Args: never; Returns: Json }
       fail_marketplace_email_delivery: {
         Args: {
@@ -8882,6 +8962,10 @@ export type Database = {
         Returns: Json
       }
       get_listing_questions: { Args: { p_listing_id: string }; Returns: Json }
+      get_listing_release_watch: {
+        Args: { p_listing_id: string }
+        Returns: boolean
+      }
       get_listing_selling_public: {
         Args: { p_listing_id: string }
         Returns: Json
@@ -8924,6 +9008,17 @@ export type Database = {
         Returns: Json
       }
       get_my_consignments: { Args: never; Returns: Json }
+      get_my_listing_reservations: {
+        Args: never
+        Returns: {
+          ended_at: string
+          listing_id: string
+          reserved_until: string
+          slug: string
+          title: string
+          watchers: number
+        }[]
+      }
       get_my_private_offer: { Args: { p_listing_id: string }; Returns: Json }
       get_my_provenance_options: {
         Args: { p_transaction_id: string }
@@ -9083,6 +9178,13 @@ export type Database = {
       get_purchase_checkin: { Args: { p_listing_id: string }; Returns: Json }
       get_push_subscription: { Args: { p_endpoint: string }; Returns: string }
       get_reorder_list: { Args: never; Returns: Json }
+      get_reserved_listings: {
+        Args: { p_listing_ids: string[] }
+        Returns: {
+          listing_id: string
+          reserved_until: string
+        }[]
+      }
       get_review_photo_object: { Args: { p_photo_id: string }; Returns: Json }
       get_safe_meetup_spots: {
         Args: { p_city: string; p_limit?: number; p_region: string }
@@ -9501,6 +9603,18 @@ export type Database = {
               error: true
             } & "Could not choose the best candidate function between: public.recent_price_drop_at(p_listing => listings), public.recent_price_drop_at(p_listing => public_listings). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
           }
+      record_ai_request: {
+        Args: {
+          p_feature: string
+          p_input_tokens: number
+          p_model: string
+          p_outcome: string
+          p_output_tokens: number
+          p_store_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       record_app_error: {
         Args: {
           p_client?: string
@@ -10164,6 +10278,14 @@ export type Database = {
           p_step_percent: number
         }
         Returns: Json
+      }
+      set_listing_release_watch: {
+        Args: { p_listing_id: string; p_watch: boolean }
+        Returns: boolean
+      }
+      set_listing_reservation: {
+        Args: { p_days: number; p_listing_id: string }
+        Returns: string
       }
       set_listing_serial: {
         Args: { p_listing_id: string; p_serial: string }

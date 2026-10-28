@@ -10,7 +10,9 @@ import { WhatsAppGlyph } from "@/components/ui/whatsapp-glyph";
 // "Cómo comprar seguro" (list-02, talk-04): the safety advice where it is read, at the moment of contact, instead of
 // repeated footnotes. Opened from the one line beside the contact button, and once (per browser) before the first
 // contact about something expensive or a purchase request. With `continueHref` it ends in "Continuar a WhatsApp", a
-// plain link, so the contact still opens straight away. Copy pending the legal review (list-02).
+// plain link, so the contact still opens straight away. Descubrir (big-02) has no link yet when the sheet opens: with
+// `onContinue` alone the same button calls it, inside the press, and Descubrir opens WhatsApp from there.
+// Copy pending the legal review (list-02).
 export const SAFETY_TIPS = [
   "Prueba el equipo antes de pagar: en la tienda o en un lugar público y concurrido.",
   "No pagues por adelantado a alguien que no conoces, aunque el precio parezca una oportunidad.",
@@ -44,6 +46,21 @@ export function SafetySheet({
         <WhatsAppGlyph />
         {continueLabel}
       </a>
+    </div>
+  ) : onContinue ? (
+    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <button type="button" className={buttonClasses({ variant: "secondary" })} onClick={onDismiss}>Volver</button>
+      <button
+        type="button"
+        className={buttonClasses()}
+        onClick={() => {
+          onContinue();
+          onDismiss();
+        }}
+      >
+        <WhatsAppGlyph />
+        {continueLabel}
+      </button>
     </div>
   ) : (
     <div className="flex justify-end">

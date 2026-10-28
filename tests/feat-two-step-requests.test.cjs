@@ -59,6 +59,7 @@ const SERVICE_ROLE_USES = {
   "lib/email/marketplace-email.ts": "jobs (CRON_SECRET)",
   "lib/listing-photo-cleanup.ts": "jobs and routes above, after their checks",
   "lib/selling-jobs.ts": "jobs (CRON_SECRET)",
+  "lib/ai/usage.ts": "counts and logs the AI routes' calls, after those routes ask sessionOwesTwoStep",
 };
 
 function walk(dir, files = []) {
@@ -83,6 +84,10 @@ test("safe-08: every use of the service role says why a session that owes its co
     if (why.startsWith("Admin")) assert.match(read(file), /requireAdmin\(|rpc\("is_admin"\)|admin_get_dealer_document/, file);
   }
   assert.match(read("lib/mercadolibre/routes.ts"), /if \(await sessionOwesTwoStep\(client\)\) return \{ response:/);
+  // The five maybes' AI routes (main): their limits and log use the service role, so they ask first.
+  for (const route of ["app/api/store/ask/route.ts", "app/api/listing-assist/route.ts"]) {
+    assert.match(read(route), /if \(await sessionOwesTwoStep\(supabase\)\) return failure\(403, "TWO_STEP_REQUIRED", TWO_STEP_OWED_MESSAGE\);/, route);
+  }
   // A failed check counts as owing the code.
   assert.match(read("lib/auth/complete-session.ts"), /return Boolean\(error\) \|\| data !== false;/);
 });

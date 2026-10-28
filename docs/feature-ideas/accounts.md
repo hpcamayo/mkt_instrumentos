@@ -53,7 +53,7 @@ sessions".
   (PostgREST's pre-request check, `public.check_two_step_request`) and every Storage request (a restrictive policy),
   except the four calls of signing in and the code step (`my_two_step_owed`, `my_two_step_requirement`,
   `record_sign_in_device`, `use_my_recovery_code`). Routes that use the service role ask `public.my_two_step_owed()`
-  first (`lib/auth/complete-session.ts`; `tests/feat-two-step-requests.test.cjs` lists every use of the service role
+  first, the two AI routes of the five maybes before any AI call (`lib/auth/complete-session.ts`; `tests/feat-two-step-requests.test.cjs` lists every use of the service role
   and why it is safe). Without this, someone with the password alone could skip the code step and use the account
   through the API. Public pages still open; the header shows the session as signed out until the code.
 - **"Mantener sesión iniciada".** A checkbox on the sign-in page, ticked by default, with "Desmárcalo en una

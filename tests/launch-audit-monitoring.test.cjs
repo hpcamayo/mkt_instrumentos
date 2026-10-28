@@ -11,6 +11,15 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 const migrationFile = "supabase/migrations/20261114170000_launch_audit_monitoring.sql";
+// A later migration adds routes or messages by replacing a list function whole (an applied migration is never edited),
+// so the lists are read from the newest migration that defines them.
+function newestDefinition(signature) {
+  const dir = path.join(root, "supabase/migrations");
+  const names = fs.readdirSync(dir).filter((name) => name.endsWith(".sql")).sort().reverse();
+  const name = names.find((file) => read(`supabase/migrations/${file}`).includes(`create or replace function ${signature}\n`));
+  assert.ok(name, `a migration defines ${signature}`);
+  return read(`supabase/migrations/${name}`);
+}
 
 function loadModule(filename, mocks = {}) {
   const Module = require("node:module");
@@ -360,8 +369,9 @@ test("A13: a message is kept only as one of the site's own or a known message, f
   assert.doesNotMatch(migration, /scrub_error_text|app_error_browser_message/);
   assert.match(migration, /\n  v_message text := laria_private\.app_error_message\(p_message\);\n/);
   assert.match(migration, /v_fingerprint := md5\(concat_ws\(chr\(31\), p_source, v_kind, case when p_source = 'server' then v_route else '' end,\n    v_name, v_message, v_client\)\);/);
-  const start = migration.indexOf("select array[", migration.indexOf("create or replace function laria_private.app_error_own_messages()"));
-  const body = migration.slice(start + "select array[".length, migration.indexOf("]::text[]", start));
+  const messages = newestDefinition("laria_private.app_error_own_messages()");
+  const start = messages.indexOf("select array[", messages.indexOf("create or replace function laria_private.app_error_own_messages()"));
+  const body = messages.slice(start + "select array[".length, messages.indexOf("]::text[]", start));
   const own = [...body.matchAll(/'((?:[^']|'')*)'/g)].map((match) => match[1].replaceAll("''", "'"));
   assert.ok(own.length > 700, `the site's own messages (${own.length})`);
   assert.equal(new Set(own).size, own.length, "each once");
@@ -380,8 +390,9 @@ test("A13: a message is kept only as one of the site's own or a known message, f
 
 test("A13: every page and route of the site is in the database's list of route patterns, and every browser family in its client list", () => {
   const migration = read(migrationFile);
-  const start = migration.indexOf("select array[", migration.indexOf("create or replace function laria_private.app_error_route_patterns()"));
-  const listed = [...migration.slice(start, migration.indexOf("]::text[]", start)).matchAll(/'([^']+)'/g)].map((match) => match[1]);
+  const patterns = newestDefinition("laria_private.app_error_route_patterns()");
+  const start = patterns.indexOf("select array[", patterns.indexOf("create or replace function laria_private.app_error_route_patterns()"));
+  const listed = [...patterns.slice(start, patterns.indexOf("]::text[]", start)).matchAll(/'([^']+)'/g)].map((match) => match[1]);
   assert.ok(listed.length > 200 && listed.includes("/tiendas/[slug]"), "the database's list of route patterns");
   assert.equal(new Set(listed).size, listed.length, "each pattern once");
   for (const pattern of listed) assert.match(pattern, /^\/$|^(\/[A-Za-z0-9_.\-[\]]+)+$/, pattern);

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { StoreAskBox } from "@/components/ai/store-ask-box";
 import { StoreDiscoveryLink } from "@/components/discovery/store-discovery-link";
 import { StoreAllowanceMeter } from "@/components/store-allowance-meter";
 import { StoreInventoryAccess } from "@/components/store-inventory-access";
@@ -12,6 +13,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusEntryTag } from "@/components/ui/tag";
 import { getAccountContext } from "@/lib/account-context";
+import { aiHelpersEnabled } from "@/lib/ai/config";
 import { readSafeSpotSettings } from "@/lib/deal-trust";
 import { assistedCommerceEnabled } from "@/lib/payment-methods";
 import { getOpenStoreRequest, getStoreAllowanceDetail } from "@/lib/store-allowance";
@@ -47,6 +49,8 @@ export default async function StoreAccountPage() {
         actions={store ? <Link href={`/tiendas/${store.slug}`} className={buttonClasses({ variant: "secondary" })}>Ver mi página</Link> : null}
       />
       {store ? <StoreStatus store={store as StoreApplication} /> : null}
+      {/* stock-24: the same question box as Inventario's. */}
+      {store && inventoryEnabled && aiHelpersEnabled() ? <StoreAskBox className="rounded-panel border border-subtle bg-white" /> : null}
       {store && allowance && canWrite ? <StoreAllowanceMeter detail={allowance} inventoryEnabled={inventoryEnabled} /> : null}
       {store && canWrite && summary && !inventoryEnabled ? <StoreInventoryAccess openRequest={inventoryRequest} /> : null}
       {store ? (
