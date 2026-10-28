@@ -53,7 +53,9 @@ export function CategoryTiles({ counts }: { counts: Record<string, number | null
   return (
     <nav aria-labelledby="categorias-titulo">
       <h2 id="categorias-titulo" className="sr-only">Categorías</h2>
-      <ul className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 md:flex-wrap md:overflow-visible lg:mx-0 lg:px-0">
+      {/* Relative, so the hidden "publicaciones" of the chips past the edge scroll with the row instead of widening the
+          page on phones. */}
+      <ul className="scrollbar-none relative -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 md:flex-wrap md:overflow-visible lg:mx-0 lg:px-0">
         {shown.map((category) => {
           const count = counts[category.value];
           return (

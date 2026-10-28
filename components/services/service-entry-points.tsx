@@ -29,7 +29,8 @@ export function HomeServicesTeaser({ counts }: { counts: ServiceKindCounts | nul
           Ver servicios<span className="sr-only">: {serviceCountLabel(counts.total)}</span>
         </Link>
       </div>
-      <ul className="scrollbar-none -mx-4 flex gap-4 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:gap-x-6 md:gap-y-1 md:overflow-visible md:px-0">
+      {/* Relative, so the hidden "servicios" past the edge scroll with the row instead of widening the page on phones. */}
+      <ul className="scrollbar-none relative -mx-4 flex gap-4 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:gap-x-6 md:gap-y-1 md:overflow-visible md:px-0">
         {kinds.map((category) => {
           const count = counts.categories[category] ?? 0;
           return (
