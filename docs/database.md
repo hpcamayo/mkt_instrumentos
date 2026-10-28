@@ -691,7 +691,9 @@ brand list (`lib/catalog-brands.ts`, read-only, on branch `ux/catalog-category-n
   - `detail_status`, `missing_attributes`, `untrusted_attributes`: whether a product is detailed enough to autofill;
   - `variant_attributes`: attributes that differ between variants, so they are filled only from the variant a listing
     names.
-- **Matching:** `catalog_lookup(query, manufacturer_hint, max_results)` returns ranked candidates.
+- **Matching:** `catalog_lookup(query, manufacturer_hint, max_results)` returns ranked candidates. Its fuzzy (trigram)
+  stage compares at most 16 identity phrases of two to four words, without the noise words and with phrases that hold a
+  digit first; exact aliases, token sets, model codes and SKUs still read the whole title (`20261114192000`).
   `catalog_match(query, manufacturer_hint)` decides MATCH / FAMILY / CONFLICTING / INSUFFICIENT with a tier (AUTO /
   REVIEW / INSUFFICIENT). `catalog_jev_inputs(query, manufacturer_hint)` is Jev's one-row contract. Helpers:
   `catalog_normalize()`, `catalog_compact()`; vocabulary table `catalog_lookup_terms`.
