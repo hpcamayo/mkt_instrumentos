@@ -224,6 +224,8 @@ test("big-02: the page route serves Descubrir's pages with every photo and the w
   const route = load("app/api/catalog/page/route.ts", {
     "@/lib/catalog": catalog,
     "@/lib/supabase/public-read-client": { createPublicReadClient: () => ({}) },
+    // talk-06's optional read: here only listing b is reserved.
+    "@/lib/listing-reservations-server": { reservedCardIds: async (listings) => new Set(listings.filter((listing) => listing.id === "b").map((listing) => listing.id)) },
   });
   const { NextRequest } = require("next/server");
   const get = (query) => route.GET(new NextRequest(`https://laria.audio/api/catalog/page?${query}`));
@@ -231,12 +233,12 @@ test("big-02: the page route serves Descubrir's pages with every photo and the w
 
   let response = await get("category=guitars&page=2");
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { listings: [{ id: "a" }], total: 40 });
+  assert.deepEqual(await response.json(), { listings: [{ id: "a" }], total: 40, reserved: [] });
   assert.equal(calls[0][0], "catalog", "Ver 24 más is unchanged");
   assert.equal(calls[0][1][1], 2);
 
   response = await get(`fotos=todas&desde=${today}&page=3`);
-  assert.deepEqual(await response.json(), { listings: [{ id: "b" }], total: 9 });
+  assert.deepEqual(await response.json(), { listings: [{ id: "b" }], total: 9, reserved: ["b"] }, "Descubrir's pages name their reserved listings");
   assert.equal(response.headers.get("cache-control"), "public, max-age=30");
   assert.equal(calls[1][0], "descubrir");
   assert.equal(calls[1][1][1], 3);
