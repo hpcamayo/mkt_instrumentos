@@ -1,0 +1,1575 @@
+{
+ "gtr-fender-player-strat": {
+  "ids": [
+   "f767254f-ec6e-571d-967c-cd363d468aaf"
+  ],
+  "names": [
+   "Player Stratocaster"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-fender-player-strat-hss": {
+  "ids": [
+   "89f1c4d0-4c9e-5f94-b95d-0328b6d216e3"
+  ],
+  "names": [
+   "Player Stratocaster HSS"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-fender-player-tele": {
+  "ids": [
+   "6e3312cc-106f-5cb8-9364-a6256c107a48"
+  ],
+  "names": [
+   "Player Telecaster"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-fender-ampro2-strat": {
+  "ids": [
+   "7324bd43-6678-511d-a046-fe7449a72720"
+  ],
+  "names": [
+   "American Professional II Stratocaster"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-squier-cv50s-strat": {
+  "ids": [
+   "cae1645d-5eba-58ba-bc67-6db4322927f7"
+  ],
+  "names": [
+   "Classic Vibe '50s Stratocaster"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-squier-affinity-strat": {
+  "ids": [
+   "26e00c3c-814a-539d-a839-2ed72863bed0"
+  ],
+  "names": [
+   "Affinity Series Stratocaster"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-squier-bullet-strat-ht": {
+  "ids": [
+   "2a1effaa-8fba-5d6f-b1c4-474c9d718eaf"
+  ],
+  "names": [
+   "Bullet Stratocaster HT"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-gibson-lp-std-50s": {
+  "ids": [
+   "49726b75-48aa-50b3-875b-c543486a08a0"
+  ],
+  "names": [
+   "Les Paul Standard '50s"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-gibson-sg-std": {
+  "ids": [
+   "3d37004e-c425-5279-976e-2d7ae621aae4"
+  ],
+  "names": [
+   "SG Standard"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-epiphone-lp-special-ii": {
+  "ids": [
+   "1ed64762-dbc7-5636-8810-c471183d1018"
+  ],
+  "names": [
+   "Les Paul Special II"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-epiphone-lp-std-50s": {
+  "ids": [
+   "a67dab61-6f51-5151-8c9c-c54cc2fea116"
+  ],
+  "names": [
+   "Les Paul Standard 50s"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-ibanez-grg121dx": {
+  "ids": [
+   "5dddf993-78d0-57a3-ac29-82d09b199ab9"
+  ],
+  "names": [
+   "GRG121DX"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-ibanez-rg550": {
+  "ids": [
+   "f3efa0ad-0537-5e4d-8fe2-a3f8faf06a6c"
+  ],
+  "names": [
+   "RG550"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-ibanez-rg421": {
+  "ids": [
+   "1f6ab269-9060-51d8-9c83-0a13b7b869fe"
+  ],
+  "names": [
+   "RG421"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-yamaha-pac012": {
+  "ids": [
+   "1da17c26-b18c-5798-b907-85fbbd81ee78"
+  ],
+  "names": [
+   "Pacifica PAC012"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-yamaha-pac112v": {
+  "ids": [
+   "ccd3a94a-f95b-56cd-a915-b65f00a83314"
+  ],
+  "names": [
+   "Pacifica PAC112V"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-yamaha-pac112j": {
+  "ids": [
+   "85fdcfa6-7a5e-5dba-ad4e-5b910f0e8d21"
+  ],
+  "names": [
+   "Pacifica PAC112J"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-jackson-js22": {
+  "ids": [
+   "ee37c35a-24b4-5dba-b094-872aff5abc12"
+  ],
+  "names": [
+   "JS22 Dinky"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-ltd-ec256": {
+  "ids": [
+   "99a463a0-fe84-55a0-92fa-b2762c3aaeb6"
+  ],
+  "names": [
+   "LTD EC-256"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-prs-se-custom24": {
+  "ids": [
+   "6bd1657e-fe33-5dd2-a4f0-bd5a48187ff0"
+  ],
+  "names": [
+   "SE Custom 24"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "gtr-gretsch-g2622": {
+  "ids": [
+   "dbc13958-c3e9-5b01-8623-6d4bd1b84a34"
+  ],
+  "names": [
+   "G2622 Streamliner Center Block"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ac-yamaha-f310": {
+  "ids": [
+   "f4e35eb7-c5ee-5bbb-96d2-8f9b2babaaee"
+  ],
+  "names": [
+   "F310"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ac-yamaha-fg800": {
+  "ids": [
+   "d2f1ede9-0205-59e0-b6c9-5d65024df5d0"
+  ],
+  "names": [
+   "FG800"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ac-yamaha-c40": {
+  "ids": [
+   "46b023e9-3f71-5dc7-9271-716159ee1ba5"
+  ],
+  "names": [
+   "C40"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ac-taylor-214ce": {
+  "ids": [
+   "14f74aa4-63bf-53f7-95c3-92d90e2fbc5d"
+  ],
+  "names": [
+   "214ce"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ac-martin-d28": {
+  "ids": [
+   "22399bda-a24b-52b0-9d2f-6bdee99711d4"
+  ],
+  "names": [
+   "D-28"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ac-fender-cd60s": {
+  "ids": [
+   "091ead30-8774-53f1-afe5-677e499eae3a"
+  ],
+  "names": [
+   "CD-60S"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ac-takamine-gd30ce": {
+  "ids": [
+   "95077046-9e51-503b-b2d0-7b8618c11263"
+  ],
+  "names": [
+   "GD30CE"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "bass-fender-player-pbass": {
+  "ids": [
+   "7647e591-b164-5ad2-a9b8-9170e9b7357d"
+  ],
+  "names": [
+   "Player Precision Bass"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "bass-fender-player-jbass": {
+  "ids": [
+   "27471f8c-5c63-529d-b229-6e10559a3c7b"
+  ],
+  "names": [
+   "Player Jazz Bass"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "bass-fender-player-jbass-v": {
+  "ids": [
+   "c211bc3f-648f-5abd-afe0-02577fa7469a"
+  ],
+  "names": [
+   "Player Jazz Bass V"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "bass-squier-affinity-jbass": {
+  "ids": [
+   "cc99e53b-d56e-54f0-b26f-be668eb94d72"
+  ],
+  "names": [
+   "Affinity Series Jazz Bass"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "bass-ibanez-sr300e": {
+  "ids": [
+   "ba00cce3-a8c7-5539-abfa-98e68504bff0"
+  ],
+  "names": [
+   "SR300E"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "bass-ibanez-gsr200": {
+  "ids": [
+   "f15a2914-cb8a-53fe-8f87-393a99fb2da3"
+  ],
+  "names": [
+   "GSR200"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "bass-yamaha-trbx174": {
+  "ids": [
+   "d7fa15e1-25b1-5bbf-8ddf-88990d2bb160"
+  ],
+  "names": [
+   "TRBX174"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "bass-musicman-stingray-special": {
+  "ids": [
+   "8cb5a1ff-a2f6-52cb-b668-f375afbf0a2f"
+  ],
+  "names": [
+   "StingRay Special"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "drm-pearl-export-exx": {
+  "ids": [
+   "aa08260a-356b-5e43-84d2-e10128ce201b"
+  ],
+  "names": [
+   "Export EXX"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "drm-pearl-roadshow": {
+  "ids": [
+   "a80b54dc-d68b-5d79-b81d-0c9e17a98881"
+  ],
+  "names": [
+   "Roadshow"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "drm-tama-imperialstar": {
+  "ids": [
+   "48324840-135a-56c7-9a5d-4b2ecc8a2dd9"
+  ],
+  "names": [
+   "Imperialstar"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "drm-tama-superstar-classic": {
+  "ids": [
+   "3f2d6632-9148-56a1-94a7-60bf5be74c09"
+  ],
+  "names": [
+   "Superstar Classic"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "drm-yamaha-stage-custom-birch": {
+  "ids": [
+   "48f78c33-5e5f-5143-8476-e0ab18d8d572"
+  ],
+  "names": [
+   "Stage Custom Birch"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "drm-roland-td07kv": {
+  "ids": [
+   "4f330e9b-36c3-5625-ad6b-146f36627070"
+  ],
+  "names": [
+   "TD-07KV"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "drm-roland-td17kvx": {
+  "ids": [
+   "7b29b546-e237-53d2-8cf4-339ad1d4fa2e"
+  ],
+  "names": [
+   "TD-17KVX"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "drm-alesis-nitro-mesh": {
+  "ids": [
+   "1ab23b9e-9e42-5126-9fd8-f84becc1fe83"
+  ],
+  "names": [
+   "Nitro Mesh Kit"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "drm-mapex-mars": {
+  "ids": [
+   "1c4fcb21-9410-5f3b-8bdd-f5f95b69ecde"
+  ],
+  "names": [
+   "Mars"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "cym-zildjian-acustom-crash-18": {
+  "ids": [
+   "e7e87937-5388-555a-be42-b5168766ca16"
+  ],
+  "names": [
+   "18\" A Custom Crash"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "cym-zildjian-acustom-crash-16": {
+  "ids": [
+   "c67caf55-b4bf-5857-8e5b-1a670b6dd7fa"
+  ],
+  "names": [
+   "16\" A Custom Crash"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "cym-zildjian-acustom-ride-20": {
+  "ids": [
+   "c69a95dc-8f50-5afa-89c7-bbf923bbedde"
+  ],
+  "names": [
+   "20\" A Custom Ride"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "cym-zildjian-kcustom-dark-crash-18": {
+  "ids": [
+   "f12456a6-26ce-50af-910d-64e6a578a859"
+  ],
+  "names": [
+   "18\" K Custom Dark Crash"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "cym-sabian-aax-crash-18": {
+  "ids": [
+   "3c044469-39e3-539f-95c4-db780099446e"
+  ],
+  "names": [
+   "18\" AAX X-Plosion Crash"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "cym-sabian-hhx-hats-14": {
+  "ids": [
+   "d03e7eef-d85b-5cce-be77-4a959258a335"
+  ],
+  "names": [
+   "14\" HHX Evolution Hats"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "cym-meinl-hcs-hihat-14": {
+  "ids": [
+   "5c8c4e2b-9a30-5dc8-bc41-70b2437d60c5"
+  ],
+  "names": [
+   "HCS 14\" Hihat"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "cym-paiste-pst7-crash-18": {
+  "ids": [
+   "c7a85f4a-a96f-5915-bd5f-faa2f9b89eff"
+  ],
+  "names": [
+   "PST 7 18\" Crash"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-shure-sm57": {
+  "ids": [
+   "e82ca00a-6786-5f89-825d-4c5d248311ba"
+  ],
+  "names": [
+   "SM57"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-shure-sm58": {
+  "ids": [
+   "35f88774-ebc1-5715-9a03-f3d3e7641708"
+  ],
+  "names": [
+   "SM58"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-shure-beta58a": {
+  "ids": [
+   "6219f201-c50c-56b9-9b75-e3fcf3eebfaa"
+  ],
+  "names": [
+   "Beta 58A"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-shure-sm7b": {
+  "ids": [
+   "b2f6a7a6-9307-59a6-b258-767c2305a19d"
+  ],
+  "names": [
+   "SM7B"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-at-at2020": {
+  "ids": [
+   "c9898eb6-7b44-584a-909c-73c20811c373"
+  ],
+  "names": [
+   "AT2020"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-at-at2020usbplus": {
+  "ids": [
+   "a9357cd7-9cb6-5f84-9dab-69fcaae2513b"
+  ],
+  "names": [
+   "AT2020USB+"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-rode-nt1a": {
+  "ids": [
+   "98b3d045-002a-516e-b169-dcbcc5c47f9a"
+  ],
+  "names": [
+   "NT1-A"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-rode-podmic": {
+  "ids": [
+   "8cfecaa6-8d04-55cf-8672-374807c61456"
+  ],
+  "names": [
+   "PodMic"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-behringer-c1": {
+  "ids": [
+   "86f8b0e2-9071-5dab-837a-f77d522d46f8"
+  ],
+  "names": [
+   "C-1"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-sennheiser-e835": {
+  "ids": [
+   "93a0d6e3-ef01-5110-8558-7587a22bbde7"
+  ],
+  "names": [
+   "e 835"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "mic-akg-p120": {
+  "ids": [
+   "db5707b5-715b-524a-9a89-fa432c6d3e18"
+  ],
+  "names": [
+   "P120"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-ds1": {
+  "ids": [
+   "6366192c-1c5f-580b-b7c0-ed8e3302bd33"
+  ],
+  "names": [
+   "DS-1"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-ds2": {
+  "ids": [
+   "b1176147-f82f-52b0-9161-99680a99bdfb"
+  ],
+  "names": [
+   "DS-2"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-sd1": {
+  "ids": [
+   "0e71c10b-ef50-57df-94ae-35b6a5dcceb2"
+  ],
+  "names": [
+   "SD-1"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-bd2": {
+  "ids": [
+   "256e5cb1-e574-5486-bb58-675cc8bdb842"
+  ],
+  "names": [
+   "BD-2"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-dd3": {
+  "ids": [
+   "8b405240-9069-5443-8a98-461ccb6a7d40"
+  ],
+  "names": [
+   "DD-3"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-dd3t": {
+  "ids": [
+   "4d63ad44-68c0-5d94-a657-f2cc5758b710"
+  ],
+  "names": [
+   "DD-3T"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-dd7": {
+  "ids": [
+   "361b21ad-0b93-5760-a0ef-f3a1d04831c8"
+  ],
+  "names": [
+   "DD-7"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-dd8": {
+  "ids": [
+   "751be237-6516-5bfb-8328-569769a5327a"
+  ],
+  "names": [
+   "DD-8"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-rc1": {
+  "ids": [
+   "6367c5d8-d23f-5007-9490-dc31e3a7b6f3"
+  ],
+  "names": [
+   "RC-1"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-tu3": {
+  "ids": [
+   "f3178147-190e-5b30-bec7-3e974e411d9c"
+  ],
+  "names": [
+   "TU-3"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-ch1": {
+  "ids": [
+   "d70c2f14-5d51-52d6-a4f6-15c0ba2982b4"
+  ],
+  "names": [
+   "CH-1"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-boss-gt1": {
+  "ids": [
+   "296e7e30-a8bd-53ad-bd00-cd89b318157b"
+  ],
+  "names": [
+   "GT-1"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-ibanez-ts9": {
+  "ids": [
+   "233abed5-2a65-5b53-8b85-ada908cc89df"
+  ],
+  "names": [
+   "TS9 Tube Screamer"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-ibanez-ts808": {
+  "ids": [
+   "be2a24a3-ed6c-51e5-aec5-45bb413fca3f"
+  ],
+  "names": [
+   "TS808 Tube Screamer"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-ibanez-tsmini": {
+  "ids": [
+   "0167b853-a2d4-5b04-b365-2c6c19f60cbc"
+  ],
+  "names": [
+   "TS Mini Tube Screamer"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-ehx-bigmuff": {
+  "ids": [
+   "c985358b-e7f2-52a1-a93a-888755c717fe"
+  ],
+  "names": [
+   "Big Muff Pi"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-ehx-nanobigmuff": {
+  "ids": [
+   "834a77ad-4b91-57f0-a28d-bdad2cf03bfd"
+  ],
+  "names": [
+   "Nano Big Muff Pi"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-mxr-phase90": {
+  "ids": [
+   "00122478-019b-590b-8e44-a106f23ba315"
+  ],
+  "names": [
+   "Phase 90"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-dunlop-gcb95": {
+  "ids": [
+   "90f679aa-4414-5432-9fb0-fd193a7a65f0"
+  ],
+  "names": [
+   "Cry Baby GCB95"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-line6-hxstomp": {
+  "ids": [
+   "5bd90b66-4fb6-5381-9fb9-c4dd03614e43"
+  ],
+  "names": [
+   "HX Stomp"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-zoom-g1xfour": {
+  "ids": [
+   "8c3b5fa7-e2ec-59d2-825d-d295a2528c8f"
+  ],
+  "names": [
+   "G1X FOUR"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ped-proco-rat2": {
+  "ids": [
+   "0e5bc234-574e-5778-be97-c58d952b42ac"
+  ],
+  "names": [
+   "RAT2"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-fender-champion20": {
+  "ids": [
+   "5d474c36-5486-58fa-8c1d-ef202964b4dd"
+  ],
+  "names": [
+   "Champion 20"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-fender-champion40": {
+  "ids": [
+   "48163811-e713-5705-a5f7-11b1bb069a50"
+  ],
+  "names": [
+   "Champion 40"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-fender-mustang-lt25": {
+  "ids": [
+   "30ad2299-68ee-5e2c-828e-a46e9c5982c8"
+  ],
+  "names": [
+   "Mustang LT25"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-fender-blues-jr-iv": {
+  "ids": [
+   "6614eaee-33cc-5b48-a1be-633245b96c20"
+  ],
+  "names": [
+   "Blues Junior IV"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-fender-frontman10g": {
+  "ids": [
+   "fb1df75a-3938-5dfc-97be-01db217d6b7e"
+  ],
+  "names": [
+   "Frontman 10G"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-fender-rumble40": {
+  "ids": [
+   "a5200fb5-15c4-587b-8814-1d14fe581c63"
+  ],
+  "names": [
+   "Rumble 40"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-marshall-dsl40cr": {
+  "ids": [
+   "4a23c870-2e6b-5ec3-9946-e9f32657b2d7"
+  ],
+  "names": [
+   "DSL40CR"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-orange-crush20rt": {
+  "ids": [
+   "f676130d-3d5f-5c8f-9b52-c60d0f65d20c"
+  ],
+  "names": [
+   "Crush 20RT"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-vox-ac15c1": {
+  "ids": [
+   "4f473542-cdd1-5d97-833b-8d43ab11a5f1"
+  ],
+  "names": [
+   "AC15C1"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-vox-ac30c2": {
+  "ids": [
+   "8df4c007-ae45-53cd-812e-34da7f220d8c"
+  ],
+  "names": [
+   "AC30C2"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-boss-katana50-mk2": {
+  "ids": [
+   "96045d96-406b-5ea5-8916-10fe0b4c7861"
+  ],
+  "names": [
+   "Katana-50 MkII"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-boss-katana100-mk2": {
+  "ids": [
+   "6c9af8ad-2ba6-530a-b18a-6545cce89f62"
+  ],
+  "names": [
+   "Katana-100 MkII"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-roland-jc120": {
+  "ids": [
+   "adf28da0-01b0-5ee7-9914-212783b58631"
+  ],
+  "names": [
+   "JC-120 Jazz Chorus"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "amp-ampeg-ba110": {
+  "ids": [
+   "a5982b13-3028-5497-9f1f-684f2009a5c2"
+  ],
+  "names": [
+   "BA-110"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-focusrite-2i2-3g": {
+  "ids": [
+   "877c2308-2c06-59cc-8404-f6aa8f65f252"
+  ],
+  "names": [
+   "Scarlett 2i2 3rd Gen"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-focusrite-2i2-4g": {
+  "ids": [
+   "002335f1-ef33-54e7-87fb-6ad376fb452c"
+  ],
+  "names": [
+   "Scarlett 2i2 4th Gen"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-focusrite-solo-3g": {
+  "ids": [
+   "3bf404fc-9fc7-5516-b8c0-f1d8cc4ed56f"
+  ],
+  "names": [
+   "Scarlett Solo 3rd Gen"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-focusrite-4i4-3g": {
+  "ids": [
+   "441b44d7-e3b6-557f-ae5d-03a1c45f9e45"
+  ],
+  "names": [
+   "Scarlett 4i4 3rd Gen"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-behringer-umc22": {
+  "ids": [
+   "e9527ccf-b320-5a3b-9b27-862aeb582cef"
+  ],
+  "names": [
+   "UMC22"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-behringer-umc202hd": {
+  "ids": [
+   "f0f0d226-5ac1-5f8c-a822-09138c1c7a32"
+  ],
+  "names": [
+   "UMC202HD"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-behringer-umc404hd": {
+  "ids": [
+   "f8039ad3-e4b3-5e95-90da-bc7adda18334"
+  ],
+  "names": [
+   "UMC404HD"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-presonus-audiobox96": {
+  "ids": [
+   "55a63135-465b-5199-8632-ab0b063d2774"
+  ],
+  "names": [
+   "AudioBox USB 96"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-ua-volt2": {
+  "ids": [
+   "6465415a-4d60-5d4b-9e5b-834fd05b9c39"
+  ],
+  "names": [
+   "Volt 2"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-motu-m2": {
+  "ids": [
+   "a6af17c7-2e9b-541c-9852-e85aae11274f"
+  ],
+  "names": [
+   "M2"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "ai-steinberg-ur22c": {
+  "ids": [
+   "0e957025-9d88-5cb7-a950-8c348a5365a6"
+  ],
+  "names": [
+   "UR22C"
+  ],
+  "levels": [
+   "model"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "fam-fender-strat": {
+  "ids": [
+   "0a0c2941-5e9e-504d-ad0f-7fc85a70e2c4"
+  ],
+  "names": [
+   "Stratocaster"
+  ],
+  "levels": [
+   "family"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "fam-fender-tele": {
+  "ids": [
+   "d62b9fd3-b379-5ff5-bb25-8ee48262092a"
+  ],
+  "names": [
+   "Telecaster"
+  ],
+  "levels": [
+   "family"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "fam-gibson-lp": {
+  "ids": [
+   "cfea586e-dfcd-5c9a-9c5f-fab6b199e343"
+  ],
+  "names": [
+   "Les Paul"
+  ],
+  "levels": [
+   "family"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "fam-fender-pbass": {
+  "ids": [
+   "98f38a99-cd24-5502-ab7e-2f1b2bbe0c22"
+  ],
+  "names": [
+   "Precision Bass"
+  ],
+  "levels": [
+   "family"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "fam-fender-jbass": {
+  "ids": [
+   "8865a7e3-261c-545e-aef1-a58b71bda50f"
+  ],
+  "names": [
+   "Jazz Bass"
+  ],
+  "levels": [
+   "family"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "fam-focusrite-scarlett": {
+  "ids": [
+   "acf75e50-b8ad-536f-ba1e-c9f58d489f16"
+  ],
+  "names": [
+   "Scarlett"
+  ],
+  "levels": [
+   "family"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "fam-boss-katana": {
+  "ids": [
+   "8e0c7523-527c-5427-bb3b-498f17973b4c"
+  ],
+  "names": [
+   "Katana"
+  ],
+  "levels": [
+   "family"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "fam-pearl-export": {
+  "ids": [
+   "b983a4b3-528e-5ef2-bbcb-11e58d775780"
+  ],
+  "names": [
+   "Export"
+  ],
+  "levels": [
+   "family"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "fam-zildjian-acustom": {
+  "ids": [
+   "ff253d7c-ae52-56bb-a969-479297c18d4c"
+  ],
+  "names": [
+   "A Custom"
+  ],
+  "levels": [
+   "family"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ },
+ "fam-ibanez-ts": {
+  "ids": [
+   "601a0513-63b6-5ee7-8ec3-97b2697c0ae0"
+  ],
+  "names": [
+   "Tube Screamer"
+  ],
+  "levels": [
+   "family"
+  ],
+  "method": "model_key",
+  "ambiguous": false
+ }
+}

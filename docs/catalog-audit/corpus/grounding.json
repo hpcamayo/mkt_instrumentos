@@ -1,0 +1,970 @@
+[
+  {
+    "key": "gtr-fender-player-strat",
+    "exists": true,
+    "official_name": "Player Stratocaster",
+    "maker_status": "discontinued",
+    "reference_url": "https://eu.fender.com/products/player-stratocaster",
+    "notes": "Superseded by the Player II Stratocaster (2024 Player II series); some regional fender.com pages still list the original Player."
+  },
+  {
+    "key": "gtr-fender-player-strat-hss",
+    "exists": true,
+    "official_name": "Player Stratocaster HSS",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.fender.com/en-US/electric-series/player/guitars/player-stratocaster-hss/",
+    "notes": "Superseded by Player II Stratocaster HSS (2024); do not conflate with Player Plus or Player II Modified HSS."
+  },
+  {
+    "key": "gtr-fender-player-tele",
+    "exists": true,
+    "official_name": "Player Telecaster",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.fender.com/en-FI/electric-guitars/telecaster/player-telecaster/0145212515.html",
+    "notes": "Superseded by Player II Telecaster (2024); 'Acoustasonic Player Telecaster' is a different acoustic-electric model."
+  },
+  {
+    "key": "gtr-fender-ampro2-strat",
+    "exists": true,
+    "official_name": "American Professional II Stratocaster",
+    "maker_status": "current",
+    "reference_url": "https://fender.com/it-IT/chitarre-stratocaster/american-professional-ii-stratocaster/0173900772.html",
+    "notes": "Distinct from the earlier American Professional (I) Stratocaster; HSS and limited hardtail variants exist."
+  },
+  {
+    "key": "gtr-squier-cv50s-strat",
+    "exists": true,
+    "official_name": "Classic Vibe '50s Stratocaster",
+    "maker_status": "current",
+    "reference_url": "https://www.fender.com/products/classic-vibe-50s-stratocaster-ht",
+    "notes": "Squier-branded (Fender sells it); separate HT (hardtail) variant exists."
+  },
+  {
+    "key": "gtr-squier-affinity-strat",
+    "exists": true,
+    "official_name": "Affinity Series Stratocaster",
+    "maker_status": "current",
+    "reference_url": "https://www.fender.com/products/affinity-series-stratocaster",
+    "notes": "Squier; HSS, FMT HSS and pack variants are separate SKUs."
+  },
+  {
+    "key": "gtr-squier-bullet-strat-ht",
+    "exists": true,
+    "official_name": "Bullet Stratocaster HT",
+    "maker_status": "current",
+    "reference_url": "https://fender.com/products/bullet-stratocaster-ht",
+    "notes": "Squier Bullet series hardtail model."
+  },
+  {
+    "key": "gtr-gibson-lp-std-50s",
+    "exists": true,
+    "official_name": "Les Paul Standard '50s",
+    "maker_status": "current",
+    "reference_url": "https://www.gibson.com/products/gibson-les-paul-standard-50s-figured-top-heritage-cherry-sunburst",
+    "notes": "Figured-top and Plain-top versions; distinct from Epiphone's Les Paul Standard 50s."
+  },
+  {
+    "key": "gtr-gibson-sg-std",
+    "exists": true,
+    "official_name": "SG Standard",
+    "maker_status": "current",
+    "reference_url": "https://www.gibson.com/products/gibson-sg-standard-heritage-cherry",
+    "notes": "Distinct from SG Standard '61 and Epiphone SG Standard."
+  },
+  {
+    "key": "gtr-epiphone-lp-special-ii",
+    "exists": true,
+    "official_name": "Les Paul Special-II (later Les Paul Special-II E1)",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.gibson.com/en-eu/products/epiphone-les-paul-special-ii-e1-ebony",
+    "notes": "Maker page says no longer available; Les Paul Special Satin E1 appears to be its successor (not officially confirmed)."
+  },
+  {
+    "key": "gtr-epiphone-lp-std-50s",
+    "exists": true,
+    "official_name": "Les Paul Standard 50s",
+    "maker_status": "current",
+    "reference_url": "https://www.gibson.com/en-gb/products/epiphone-les-paul-standard-50s-heritage-cherry-sunburst",
+    "notes": "Inspired by Gibson collection; some retailers list specific finishes as discontinued; do not confuse with Gibson Les Paul Standard '50s."
+  },
+  {
+    "key": "gtr-ibanez-grg121dx",
+    "exists": true,
+    "official_name": "GRG121DX",
+    "maker_status": "current",
+    "reference_url": "https://www.ibanez.com/na/products/detail/grg121dx_2y_05.html",
+    "notes": "GIO line; left-handed GRG121DXL; specs changed across model years."
+  },
+  {
+    "key": "gtr-ibanez-rg550",
+    "exists": true,
+    "official_name": "RG550",
+    "maker_status": "current",
+    "reference_url": "https://www.ibanez.com/eu/products/detail/rg550_00_04.html",
+    "notes": "Current model is a Genesis Collection reissue of the 1987 RG550; vintage originals exist."
+  },
+  {
+    "key": "gtr-ibanez-rg421",
+    "exists": true,
+    "official_name": "RG421",
+    "maker_status": "current",
+    "reference_url": "https://www.ibanez.com/na/products/detail/rg421_1p_06.html",
+    "notes": "Variants RG421QM, RG421EX etc. are distinct SKUs."
+  },
+  {
+    "key": "gtr-yamaha-pac012",
+    "exists": true,
+    "official_name": "PAC012",
+    "maker_status": "current",
+    "reference_url": "https://usa.yamaha.com/products/musical_instruments/guitars_basses/el_guitars/pacifica/pac_100.html",
+    "notes": "Entry Pacifica, listed by Yamaha in the PAC012/100 series."
+  },
+  {
+    "key": "gtr-yamaha-pac112v",
+    "exists": true,
+    "official_name": "PAC112V",
+    "maker_status": "current",
+    "reference_url": "https://shop.usa.yamaha.com/en/p/instruments/guitars-basses-amps/electric-guitars/pac112v-pacifica-electric-guitar",
+    "notes": "Still sold by Yamaha USA but marked discontinued on Yamaha Thailand; PAC112VM/VMX are maple-board variants."
+  },
+  {
+    "key": "gtr-yamaha-pac112j",
+    "exists": true,
+    "official_name": "PAC112J",
+    "maker_status": "current",
+    "reference_url": "https://shop.sg.yamaha.com/pac112j-lake-placid-blue-1.html",
+    "notes": "Left-handed PAC112JL; status confirmed only via regional Yamaha shop listings."
+  },
+  {
+    "key": "gtr-jackson-js22",
+    "exists": true,
+    "official_name": "JS Series Dinky Arch Top JS22 DKA",
+    "maker_status": "current",
+    "reference_url": "https://www.jacksonguitars.com/products/js-series-dinky-arch-top-js22-dka",
+    "notes": "Maker name includes 'Arch Top' and 'DKA'; JS22-7 and JS22Q variants and LH version exist."
+  },
+  {
+    "key": "gtr-ltd-ec256",
+    "exists": true,
+    "official_name": "LTD EC-256",
+    "maker_status": "current",
+    "reference_url": "https://www.espguitars.com/products/32053-ec-256",
+    "notes": "ESP's LTD sub-brand; per-finish product pages."
+  },
+  {
+    "key": "gtr-prs-se-custom24",
+    "exists": true,
+    "official_name": "SE Custom 24",
+    "maker_status": "current",
+    "reference_url": "https://prsguitars.com/electrics/model/se_custom_24",
+    "notes": "PRS keeps per-model-year pages; Quilt, Floyd, Lefty and SE Custom 24-08 are distinct variants."
+  },
+  {
+    "key": "gtr-gretsch-g2622",
+    "exists": true,
+    "official_name": "G2622 Streamliner Center Block Double-Cut with V-Stoptail",
+    "maker_status": "current",
+    "reference_url": "https://www.gretschguitars.com/gear/build/center-block/g2622-streamliner-center-block-double-cut-with-v-stoptail/2817050516",
+    "notes": "Newer units have BT-3S pickups (earlier BT-2S); Bigsby versions are G2622T/G2622TG."
+  },
+  {
+    "key": "ac-yamaha-f310",
+    "exists": true,
+    "official_name": "F310",
+    "maker_status": "current",
+    "reference_url": "https://mea.yamaha.com/en/musical-instruments/guitars-basses-amps/explore/F310/en/",
+    "notes": "F310P is the package version; GigMaker packs bundle it."
+  },
+  {
+    "key": "ac-yamaha-fg800",
+    "exists": true,
+    "official_name": "FG800",
+    "maker_status": "current",
+    "reference_url": "https://in.yamaha.com/en/products/musical_instruments/guitars_basses/ac_guitars/fg_series/fg_800/index.html",
+    "notes": "FG800M (matte) and FGX800C (cutaway electro) are distinct models."
+  },
+  {
+    "key": "ac-yamaha-c40",
+    "exists": true,
+    "official_name": "C40II",
+    "maker_status": "current",
+    "reference_url": "https://shop.usa.yamaha.com/en/p/instruments/guitars-basses-amps/acoustic-guitars/c40-pkg-gigmaker-classical-guitar-package",
+    "notes": "Current product number is C40II (label may read 'C40'); original C40 preceded it."
+  },
+  {
+    "key": "ac-taylor-214ce",
+    "exists": true,
+    "official_name": "214ce",
+    "maker_status": "current",
+    "reference_url": "https://www.taylorguitars.com/guitars/acoustic/214ce-0",
+    "notes": "Taylor has several 214ce variants (e.g. 214ce-K, Plus, DLX) with different tonewoods."
+  },
+  {
+    "key": "ac-martin-d28",
+    "exists": true,
+    "official_name": "D-28",
+    "maker_status": "current",
+    "reference_url": "https://www.martinguitar.com/guitars/standard-series/D-28.html",
+    "notes": "Standard Series refreshed in 2025 (and 2017); satin, StreetLegend and left-handed variants."
+  },
+  {
+    "key": "ac-fender-cd60s",
+    "exists": true,
+    "official_name": "CD-60S Dreadnought",
+    "maker_status": "current",
+    "reference_url": "https://www.fender.com/en-US/holiday-gift-guide-products/cd-60s-dreadnought/0970110021.html",
+    "notes": "Distinct from older CD-60 (laminate) and CD-60SCE (cutaway electro)."
+  },
+  {
+    "key": "ac-takamine-gd30ce",
+    "exists": true,
+    "official_name": "GD30CE",
+    "maker_status": "current",
+    "reference_url": "https://www.takamine.com/gd30ce-nat",
+    "notes": "Finish suffixes NAT/BLK/BSB; GD30CE-12 is the 12-string."
+  },
+  {
+    "key": "bass-fender-player-pbass",
+    "exists": true,
+    "official_name": "Player Precision Bass",
+    "maker_status": "discontinued",
+    "reference_url": "https://bax-shop.co.uk/right-handed-bass-guitar/fender-player-precision-bass-black-pf",
+    "notes": "Superseded by Player II Precision Bass (2024); retailers mark original discontinued."
+  },
+  {
+    "key": "bass-fender-player-jbass",
+    "exists": true,
+    "official_name": "Player Jazz Bass",
+    "maker_status": "discontinued",
+    "reference_url": "https://es.fender.com/en/products/player-jazz-bass",
+    "notes": "Superseded by Player II Jazz Bass (2024)."
+  },
+  {
+    "key": "bass-fender-player-jbass-v",
+    "exists": true,
+    "official_name": "Player Jazz Bass V",
+    "maker_status": "unclear",
+    "reference_url": "https://www.zzounds.com/item--FEN0149953",
+    "notes": "Model 0149953xxx; Player II line only shows a Player II Modified Active Jazz Bass V, not a plain 5-string; do not confuse with Player Plus Jazz Bass V."
+  },
+  {
+    "key": "bass-squier-affinity-jbass",
+    "exists": true,
+    "official_name": "Affinity Series Jazz Bass",
+    "maker_status": "current",
+    "reference_url": "https://fender.com/en-US/electric-basses/jazz-bass/affinity-series-jazz-bass/0378601569.html",
+    "notes": "Separate Affinity Series Active Jazz Bass exists (2024)."
+  },
+  {
+    "key": "bass-ibanez-sr300e",
+    "exists": true,
+    "official_name": "SR300E",
+    "maker_status": "current",
+    "reference_url": "https://www.ibanez.com/usa/products/detail/sr300e_1p_05.html",
+    "notes": "SR300EB/SR300EL and other suffix variants exist."
+  },
+  {
+    "key": "bass-ibanez-gsr200",
+    "exists": true,
+    "official_name": "GSR200",
+    "maker_status": "current",
+    "reference_url": "https://www.ibanez.com/usa/products/detail/gsr200_10.html",
+    "notes": "GIO bass; body woods vary by year; GSR200PC is a variant."
+  },
+  {
+    "key": "bass-yamaha-trbx174",
+    "exists": true,
+    "official_name": "TRBX174",
+    "maker_status": "current",
+    "reference_url": "https://shop.usa.yamaha.com/en/p/instruments/guitars-basses-amps/guitar-type/beginner-guitars/trbx174-4-string-electric-bass-guitar",
+    "notes": "TRBX174EW is a distinct exotic-wood variant."
+  },
+  {
+    "key": "bass-musicman-stingray-special",
+    "exists": true,
+    "official_name": "StingRay Special",
+    "maker_status": "current",
+    "reference_url": "https://www.music-man.com/instruments/basses/stingray-special",
+    "notes": "Introduced 2018; H/HH and StingRay 5 Special variants; distinct from StingRay Classic."
+  },
+  {
+    "key": "drm-pearl-export-exx",
+    "exists": true,
+    "official_name": "Export (EXX)",
+    "maker_status": "current",
+    "reference_url": "https://pearldrum.com/en/products/drum-set/export-exx/export",
+    "notes": "Pearl brands the line 'Export' with EXX model prefix; earlier EXL/EX generations exist."
+  },
+  {
+    "key": "drm-pearl-roadshow",
+    "exists": true,
+    "official_name": "Roadshow",
+    "maker_status": "current",
+    "reference_url": "https://pearldrum.com/en/products/drum-sets/roadshow/roadshow",
+    "notes": "Roadshow Jr. and eRoadshow (electronic) are distinct products."
+  },
+  {
+    "key": "drm-tama-imperialstar",
+    "exists": true,
+    "official_name": "Imperialstar",
+    "maker_status": "current",
+    "reference_url": "https://www.tama.com/usa/products/drum_kits/imperialstar_drumkit.html",
+    "notes": "Retailers list individual configs as discontinued, but Tama USA still has the line with 2025 news."
+  },
+  {
+    "key": "drm-tama-superstar-classic",
+    "exists": true,
+    "official_name": "Superstar Classic",
+    "maker_status": "current",
+    "reference_url": "https://www.tama.com/usa/products/drum_kits/superstar_classic_drumkit.html",
+    "notes": "All-maple line; distinct from older Superstar / Superstar Hyper-Drive."
+  },
+  {
+    "key": "drm-yamaha-stage-custom-birch",
+    "exists": true,
+    "official_name": "Stage Custom Birch",
+    "maker_status": "current",
+    "reference_url": "https://usa.yamaha.com/products/musical_instruments/drums/ac_drums/drum_sets/stage_custom_birch/index.html",
+    "notes": "Introduced 2008; Stage Custom Hip and Bop Kit are related configurations."
+  },
+  {
+    "key": "drm-roland-td07kv",
+    "exists": true,
+    "official_name": "TD-07KV",
+    "maker_status": "current",
+    "reference_url": "https://www.roland.com/us/products/td-07kv/",
+    "notes": "TD-07KVX and TD-07DMK are distinct kits in the same series."
+  },
+  {
+    "key": "drm-roland-td17kvx",
+    "exists": true,
+    "official_name": "TD-17KVX",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.roland.com/us/products/td-17kvx/",
+    "notes": "Roland marks it discontinued; succeeded by TD-17KVX2 (itself reported replaced by TD316)."
+  },
+  {
+    "key": "drm-alesis-nitro-mesh",
+    "exists": true,
+    "official_name": "Nitro Mesh Kit",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.alesis.com/products/view2/nitro-mesh-kit.html",
+    "notes": "Retailers mark it discontinued; Nitro Max is the newer entry mesh kit (no official discontinuation notice found)."
+  },
+  {
+    "key": "drm-mapex-mars",
+    "exists": true,
+    "official_name": "Mars",
+    "maker_status": "discontinued",
+    "reference_url": "https://mapexdrums.com/us/news/mapex-mars-reimagined-with-all-maple-and-timeless-birch-options",
+    "notes": "Original Mars series replaced in 2022 by Mars Maple and Mars Birch, which reuse the Mars name."
+  },
+  {
+    "key": "cym-zildjian-acustom-crash-18",
+    "exists": true,
+    "official_name": "18\" A Custom Crash",
+    "maker_status": "current",
+    "reference_url": "https://zildjian.com/products/a-custom-crashes",
+    "notes": "Distinct from A Custom Fast Crash and A Custom Projection Crash."
+  },
+  {
+    "key": "cym-zildjian-acustom-crash-16",
+    "exists": true,
+    "official_name": "16\" A Custom Crash",
+    "maker_status": "current",
+    "reference_url": "https://zildjian.com/products/a-custom-crashes",
+    "notes": "Distinct from A Custom Fast Crash and A Custom Projection Crash."
+  },
+  {
+    "key": "cym-zildjian-acustom-ride-20",
+    "exists": true,
+    "official_name": "20\" A Custom Ride",
+    "maker_status": "current",
+    "reference_url": "https://zildjian.com/products/a-custom-rides",
+    "notes": "Separate 20\" A Custom Medium Ride (A20519) and A Custom Ping Ride exist."
+  },
+  {
+    "key": "cym-zildjian-kcustom-dark-crash-18",
+    "exists": true,
+    "official_name": "18\" K Custom Dark Crash",
+    "maker_status": "current",
+    "reference_url": "https://zildjian.com/products/k-custom-dark-crashes",
+    "notes": "Distinct from K Dark Thin Crash and K Custom Session/Special Dry crashes."
+  },
+  {
+    "key": "cym-sabian-aax-crash-18",
+    "exists": true,
+    "official_name": "18\" AAX X-Plosion Crash",
+    "maker_status": "current",
+    "reference_url": "https://sabian.com/product/21887xb-18-inch-aax-x-plosion-crash/",
+    "notes": "Part 21887XB; the 18\" AAX X-Plosion Fast Crash (21885XB) and HHX X-Plosion Crash are different cymbals."
+  },
+  {
+    "key": "cym-sabian-hhx-hats-14",
+    "exists": true,
+    "official_name": "14\" HHX Evolution Hats",
+    "maker_status": "unclear",
+    "reference_url": "https://www.palenmusic.com/products/sabian-11402xeb-14-hhx-evolution-hats",
+    "notes": "Part 11402XEB; one UK retailer lists it discontinued, US dealers still sell it; no Sabian product page found."
+  },
+  {
+    "key": "cym-meinl-hcs-hihat-14",
+    "exists": true,
+    "official_name": "HCS 14\" Hihat",
+    "maker_status": "current",
+    "reference_url": "https://meinlcymbals.com/en/products/hcs14h-m3485.html",
+    "notes": "Model code HCS14H."
+  },
+  {
+    "key": "cym-paiste-pst7-crash-18",
+    "exists": true,
+    "official_name": "PST 7 Crash",
+    "maker_status": "current",
+    "reference_url": "https://www.paiste.com/en/products/models/227-crash",
+    "notes": "Sizes 16-19\"; PST 7 Thin Crash and Heavy Crash are separate models."
+  },
+  {
+    "key": "mic-shure-sm57",
+    "exists": true,
+    "official_name": "SM57",
+    "maker_status": "current",
+    "reference_url": "https://www.shure.com/en-US/products/microphones/sm57",
+    "notes": "Distinct from Beta 57A."
+  },
+  {
+    "key": "mic-shure-sm58",
+    "exists": true,
+    "official_name": "SM58",
+    "maker_status": "current",
+    "reference_url": "https://www.shure.com/en-US/products/microphones/sm58",
+    "notes": "SM58S has an on/off switch; distinct from Beta 58A."
+  },
+  {
+    "key": "mic-shure-beta58a",
+    "exists": true,
+    "official_name": "BETA 58A",
+    "maker_status": "current",
+    "reference_url": "https://www.shure.com/en-US/products/microphones/beta_58a",
+    "notes": "Supercardioid sibling of the SM58."
+  },
+  {
+    "key": "mic-shure-sm7b",
+    "exists": true,
+    "official_name": "SM7B",
+    "maker_status": "current",
+    "reference_url": "https://www.shure.com/en-US/products/microphones/sm7b",
+    "notes": "SM7dB is a separate model with built-in preamp."
+  },
+  {
+    "key": "mic-at-at2020",
+    "exists": true,
+    "official_name": "AT2020",
+    "maker_status": "current",
+    "reference_url": "https://www.audio-technica.com/en-gb/press/everything-you-need-to-know-about-at2020",
+    "notes": "XLR model; distinct from USB versions AT2020USB+, AT2020USB-X and AT2020USB-XP."
+  },
+  {
+    "key": "mic-at-at2020usbplus",
+    "exists": true,
+    "official_name": "AT2020USB+",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.audio-technica.com/en-us/at2020usb",
+    "notes": "Audio-Technica marks it discontinued; successor is AT2020USB-X (2022)."
+  },
+  {
+    "key": "mic-rode-nt1a",
+    "exists": true,
+    "official_name": "NT1-A",
+    "maker_status": "current",
+    "reference_url": "https://rode.com/en-us/products/nt1a/",
+    "notes": "Distinct from RØDE NT1 (incl. 5th Gen) and NT2-A."
+  },
+  {
+    "key": "mic-rode-podmic",
+    "exists": true,
+    "official_name": "PodMic",
+    "maker_status": "current",
+    "reference_url": "https://brandstore.rode.com/de/products/podmic",
+    "notes": "PodMic USB is a separate model."
+  },
+  {
+    "key": "mic-behringer-c1",
+    "exists": true,
+    "official_name": "C-1",
+    "maker_status": "current",
+    "reference_url": "https://www.behringer.com/en/products/0504-AAE",
+    "notes": "C-1U is the USB version; some US retailers list it no longer available."
+  },
+  {
+    "key": "mic-sennheiser-e835",
+    "exists": true,
+    "official_name": "e 835",
+    "maker_status": "current",
+    "reference_url": "https://www.sennheiser.com/en-us/catalog/products/microphones/e-835/e-835-004513",
+    "notes": "e 835-S (switch) and e 835-S-PTT are variants."
+  },
+  {
+    "key": "mic-akg-p120",
+    "exists": true,
+    "official_name": "P120",
+    "maker_status": "current",
+    "reference_url": "https://www.akg.com/microphones/condenser-microphones/3101H00400.html?bvstate=pg:2/ct:r",
+    "notes": "Perception series ('Perception 120'); AKG US page showed it sold out."
+  },
+  {
+    "key": "ped-boss-ds1",
+    "exists": true,
+    "official_name": "DS-1 Distortion",
+    "maker_status": "current",
+    "reference_url": "https://www.boss.info/us/products/ds-1/",
+    "notes": "DS-1X, DS-1W (Waza Craft) and anniversary editions are distinct."
+  },
+  {
+    "key": "ped-boss-ds2",
+    "exists": true,
+    "official_name": "DS-2 Turbo Distortion",
+    "maker_status": "current",
+    "reference_url": "https://www.boss.info/us/products/ds-2/",
+    "notes": "BOSS still lists it; one UK retailer marks it end of life."
+  },
+  {
+    "key": "ped-boss-sd1",
+    "exists": true,
+    "official_name": "SD-1 Super OverDrive",
+    "maker_status": "current",
+    "reference_url": "https://www.boss.info/us/products/sd-1/",
+    "notes": "SD-1W (Waza Craft) is distinct."
+  },
+  {
+    "key": "ped-boss-bd2",
+    "exists": true,
+    "official_name": "BD-2 Blues Driver",
+    "maker_status": "current",
+    "reference_url": "https://www.boss.info/latinamerica/products/bd-2/",
+    "notes": "BD-2W (Waza Craft) is distinct."
+  },
+  {
+    "key": "ped-boss-dd3",
+    "exists": true,
+    "official_name": "DD-3 Digital Delay",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.boss.info/us/products/dd-3/",
+    "notes": "BOSS marks it discontinued; replaced by DD-3T (2019)."
+  },
+  {
+    "key": "ped-boss-dd3t",
+    "exists": true,
+    "official_name": "DD-3T Digital Delay",
+    "maker_status": "current",
+    "reference_url": "https://www.boss.info/us/products/dd-3t/",
+    "notes": "DD-3 with tap tempo; easily confused with DD-3."
+  },
+  {
+    "key": "ped-boss-dd7",
+    "exists": true,
+    "official_name": "DD-7 Digital Delay",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.boss.info/us/products/dd-7/support/",
+    "notes": "BOSS marks it discontinued; succeeded by DD-8 (2019)."
+  },
+  {
+    "key": "ped-boss-dd8",
+    "exists": true,
+    "official_name": "DD-8 Digital Delay",
+    "maker_status": "current",
+    "reference_url": "https://www.boss.info/us/whats_new/press_releases/2019/BOSS-ANNOUNCES-DD-3T-AND-DD-8-DIGITAL-DELAY-PEDALS/",
+    "notes": "Successor to DD-7."
+  },
+  {
+    "key": "ped-boss-rc1",
+    "exists": true,
+    "official_name": "RC-1 Loop Station",
+    "maker_status": "current",
+    "reference_url": "https://www.boss.info/us/products/rc-1/",
+    "notes": "Distinct from RC-5/RC-3 loopers; RC-1-BK was a limited edition."
+  },
+  {
+    "key": "ped-boss-tu3",
+    "exists": true,
+    "official_name": "TU-3 Chromatic Tuner",
+    "maker_status": "current",
+    "reference_url": "https://www.boss.info/us/products/tu-3/",
+    "notes": "TU-3W (Waza) and TU-3S are distinct."
+  },
+  {
+    "key": "ped-boss-ch1",
+    "exists": true,
+    "official_name": "CH-1 Super Chorus",
+    "maker_status": "current",
+    "reference_url": "https://www.boss.info/us/products/CH-1/",
+    "notes": ""
+  },
+  {
+    "key": "ped-boss-gt1",
+    "exists": true,
+    "official_name": "GT-1 Guitar Effects Processor",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.boss.info/us/products/gt-1/",
+    "notes": "Search results report BOSS's GT-1 page marks it discontinued (page fetch failed, not directly verified); Pocket GT loads GT-1 patches."
+  },
+  {
+    "key": "ped-ibanez-ts9",
+    "exists": true,
+    "official_name": "TS9 Tube Screamer",
+    "maker_status": "current",
+    "reference_url": "https://www.ibanez.com/usa/products/detail/ts9_99.html",
+    "notes": "Reissue of the 1982 TS9; TS9DX is a different pedal."
+  },
+  {
+    "key": "ped-ibanez-ts808",
+    "exists": true,
+    "official_name": "TS808 Tube Screamer",
+    "maker_status": "current",
+    "reference_url": "https://www.ibanez.com/na/products/detail/ts808_99.html",
+    "notes": "Reissue of the 1979 original; TS808HW and TS808DX are distinct."
+  },
+  {
+    "key": "ped-ibanez-tsmini",
+    "exists": true,
+    "official_name": "TSMINI Tube Screamer Mini",
+    "maker_status": "current",
+    "reference_url": "https://www.ibanez.com/eu/products/detail/ts_mini_01.html",
+    "notes": "Maker model code TSMINI."
+  },
+  {
+    "key": "ped-ehx-bigmuff",
+    "exists": true,
+    "official_name": "Big Muff Pi",
+    "maker_status": "current",
+    "reference_url": "https://www.ehx.com/products/big-muff-pi/",
+    "notes": "The 'NYC' Big Muff; many variants (Nano, Deluxe, Green Russian, Triangle, Big Muff Pi 2) are distinct."
+  },
+  {
+    "key": "ped-ehx-nanobigmuff",
+    "exists": true,
+    "official_name": "Nano Big Muff Pi",
+    "maker_status": "unclear",
+    "reference_url": "https://www.ehx.com/products/nano-big-muff-pi/",
+    "notes": "EHX product page shows 'NOT AVAILABLE' while retailers still sell it; Nano Bass Big Muff is distinct."
+  },
+  {
+    "key": "ped-mxr-phase90",
+    "exists": true,
+    "official_name": "MXR Phase 90 (M101)",
+    "maker_status": "current",
+    "reference_url": "https://www.jimdunlop.com/mxr-phase-90/",
+    "notes": "Script, '74 Vintage, EVH and 50th Anniversary (M101GLD) versions are distinct."
+  },
+  {
+    "key": "ped-dunlop-gcb95",
+    "exists": true,
+    "official_name": "Cry Baby Standard Wah (GCB95)",
+    "maker_status": "current",
+    "reference_url": "https://www.jimdunlop.com/cry-baby-standard-wah/",
+    "notes": "Maker name is 'Cry Baby Standard Wah'; GCB95F Classic and 95Q are distinct."
+  },
+  {
+    "key": "ped-line6-hxstomp",
+    "exists": true,
+    "official_name": "HX Stomp",
+    "maker_status": "current",
+    "reference_url": "https://line6.com/hx-stomp/",
+    "notes": "HX Stomp XL is a separate larger model."
+  },
+  {
+    "key": "ped-zoom-g1xfour",
+    "exists": true,
+    "official_name": "G1X FOUR",
+    "maker_status": "current",
+    "reference_url": "https://zoomcorp.com/en/us/multi-effects/guitar-effects/g1-four-g1x-four/",
+    "notes": "Zoom styles it 'G1x Four'; G1 FOUR lacks the expression pedal; Zoom still issued effect updates in 2026 but one Zoom page showed it unavailable."
+  },
+  {
+    "key": "ped-proco-rat2",
+    "exists": true,
+    "official_name": "RAT2",
+    "maker_status": "current",
+    "reference_url": "https://zzounds.com/item--PRCRAT2",
+    "notes": "Long-running RAT variant; distinct from original RAT, Turbo RAT and Vintage RAT; no maker page found in results."
+  },
+  {
+    "key": "amp-fender-champion20",
+    "exists": true,
+    "official_name": "Champion 20",
+    "maker_status": "discontinued",
+    "reference_url": "https://es.fender.com/en/products/champion-20",
+    "notes": "Replaced by Champion II series (Champion II 25/50/100); some regional Fender pages still list it as sold out."
+  },
+  {
+    "key": "amp-fender-champion40",
+    "exists": true,
+    "official_name": "Champion 40",
+    "maker_status": "discontinued",
+    "reference_url": "https://nl.fender.com/products/champion-40",
+    "notes": "Replaced by Champion II 50; some regional Fender pages still list it."
+  },
+  {
+    "key": "amp-fender-mustang-lt25",
+    "exists": true,
+    "official_name": "Mustang LT25",
+    "maker_status": "current",
+    "reference_url": "https://www.fender.com/products/mustang-lt25",
+    "notes": "Distinct from Mustang LT40S/LT50 and older Mustang I/II (V2)."
+  },
+  {
+    "key": "amp-fender-blues-jr-iv",
+    "exists": true,
+    "official_name": "Blues Junior IV",
+    "maker_status": "current",
+    "reference_url": "https://uk.fender.com/products/blues-junior-iv",
+    "notes": "Earlier Blues Junior/III and limited editions (Color Trio, 30th Anniversary) are distinct."
+  },
+  {
+    "key": "amp-fender-frontman10g",
+    "exists": true,
+    "official_name": "Frontman 10G",
+    "maker_status": "current",
+    "reference_url": "https://www.fender.com/products/frontman-10g",
+    "notes": "Distinct from Frontman 15G/20G."
+  },
+  {
+    "key": "amp-fender-rumble40",
+    "exists": true,
+    "official_name": "Rumble 40",
+    "maker_status": "current",
+    "reference_url": "https://www.fender.com/products/rumble-40",
+    "notes": "Current revision is Rumble 40 (V3); Rumble Studio 40 is a different digital amp."
+  },
+  {
+    "key": "amp-marshall-dsl40cr",
+    "exists": true,
+    "official_name": "DSL40CR",
+    "maker_status": "current",
+    "reference_url": "https://www.zzounds.com/item--MSHDSL40CR",
+    "notes": "Successor to DSL40C; no marshall.com page found in results."
+  },
+  {
+    "key": "amp-orange-crush20rt",
+    "exists": true,
+    "official_name": "Crush 20RT",
+    "maker_status": "current",
+    "reference_url": "https://www.gak.co.uk/en/orange-crush-20rt-orange/109736",
+    "notes": "Distinct from Crush 20 (no reverb/tuner); one US retailer lists it no longer available."
+  },
+  {
+    "key": "amp-vox-ac15c1",
+    "exists": true,
+    "official_name": "AC15C1",
+    "maker_status": "current",
+    "reference_url": "https://voxamps.com/product/the-vox-ac15-custom/",
+    "notes": "Vox calls it 'AC15 Custom'; AC15C1X has an Alnico Blue speaker."
+  },
+  {
+    "key": "amp-vox-ac30c2",
+    "exists": true,
+    "official_name": "AC30C2",
+    "maker_status": "current",
+    "reference_url": "https://voxamps.com/product/ac30-custom/",
+    "notes": "Vox calls it 'AC30 Custom'; AC30C2X has Alnico Blue speakers."
+  },
+  {
+    "key": "amp-boss-katana50-mk2",
+    "exists": true,
+    "official_name": "KATANA-50 MkII",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.boss.info/us/products/katana-50_mk2/",
+    "notes": "Replaced by Katana-50 Gen 3 (2024); MkII EX variant exists."
+  },
+  {
+    "key": "amp-boss-katana100-mk2",
+    "exists": true,
+    "official_name": "KATANA-100 MkII",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.boss.info/us/products/katana-100_mk2/",
+    "notes": "Replaced by Katana-100 Gen 3 (2024)."
+  },
+  {
+    "key": "amp-roland-jc120",
+    "exists": true,
+    "official_name": "JC-120 Jazz Chorus",
+    "maker_status": "current",
+    "reference_url": "https://www.roland.com/us/products/jc-120/",
+    "notes": "In production since 1975; JC-120 software plugin and 50th Anniversary edition are distinct."
+  },
+  {
+    "key": "amp-ampeg-ba110",
+    "exists": true,
+    "official_name": "BA-110 V2",
+    "maker_status": "discontinued",
+    "reference_url": "https://www.gearank.com/gear/ampeg-ba110-v2",
+    "notes": "Retailers mark it discontinued; Ampeg's Rocket Bass RB-110 now fills the 1x10 slot (successor not officially confirmed)."
+  },
+  {
+    "key": "ai-focusrite-2i2-3g",
+    "exists": true,
+    "official_name": "Scarlett 2i2 [3rd Gen]",
+    "maker_status": "discontinued",
+    "reference_url": "https://us.focusrite.com/products/scarlett-2i2-3rd-gen",
+    "notes": "Replaced by the 4th Gen (2023); Focusrite still sells refurbished units."
+  },
+  {
+    "key": "ai-focusrite-2i2-4g",
+    "exists": true,
+    "official_name": "Scarlett 2i2 4th Gen",
+    "maker_status": "current",
+    "reference_url": "https://us.focusrite.com/products/scarlett-2i2",
+    "notes": "A limited Scarlett 2i2 Anniversary Edition also exists."
+  },
+  {
+    "key": "ai-focusrite-solo-3g",
+    "exists": true,
+    "official_name": "Scarlett Solo [3rd Gen]",
+    "maker_status": "discontinued",
+    "reference_url": "https://us.focusrite.com/products/scarlett-solo-3rd-gen",
+    "notes": "Replaced by Scarlett Solo 4th Gen (2023); Focusrite page shows sold out."
+  },
+  {
+    "key": "ai-focusrite-4i4-3g",
+    "exists": true,
+    "official_name": "Scarlett 4i4 [3rd Gen]",
+    "maker_status": "discontinued",
+    "reference_url": "https://us.focusrite.com/products/scarlett-4i4-3rd-gen",
+    "notes": "Replaced by Scarlett 4i4 4th Gen (2023)."
+  },
+  {
+    "key": "ai-behringer-umc22",
+    "exists": true,
+    "official_name": "UMC22",
+    "maker_status": "current",
+    "reference_url": "https://www.behringer.com/en/products/0805-AAJ",
+    "notes": "U-PHORIA series."
+  },
+  {
+    "key": "ai-behringer-umc202hd",
+    "exists": true,
+    "official_name": "UMC202HD",
+    "maker_status": "current",
+    "reference_url": "https://www.behringer.com/en/products/0805-AAR",
+    "notes": "U-PHORIA series."
+  },
+  {
+    "key": "ai-behringer-umc404hd",
+    "exists": true,
+    "official_name": "UMC404HD",
+    "maker_status": "current",
+    "reference_url": "https://www.behringer.com/en/products/0805-AAT",
+    "notes": "Distinct from the older UMC404 (non-HD)."
+  },
+  {
+    "key": "ai-presonus-audiobox96",
+    "exists": true,
+    "official_name": "AudioBox USB 96",
+    "maker_status": "unclear",
+    "reference_url": "https://www.presonus.com/products/audiobox-usb-96-25th-anniversary",
+    "notes": "Sold as 25th Anniversary (black) and Blue editions plus bundles; PreSonus US listings showed sold out."
+  },
+  {
+    "key": "ai-ua-volt2",
+    "exists": true,
+    "official_name": "Volt 2",
+    "maker_status": "unclear",
+    "reference_url": "https://www.uaudio.com/products/volt-2-usb-audio-interface",
+    "notes": "A successor Volt 2 Gen 2 (and Volt 2 Max) now exists; original still has a product page."
+  },
+  {
+    "key": "ai-motu-m2",
+    "exists": true,
+    "official_name": "M2",
+    "maker_status": "current",
+    "reference_url": "https://motu.com/en-us/products/m-series/m2/",
+    "notes": ""
+  },
+  {
+    "key": "ai-steinberg-ur22c",
+    "exists": true,
+    "official_name": "UR22C",
+    "maker_status": "current",
+    "reference_url": "https://www.steinberg.net/audio-interfaces/ur-c-series/",
+    "notes": "Successor to UR22mkII; UR22C Recording Pack bundle exists."
+  },
+  {
+    "key": "fam-fender-strat",
+    "exists": true,
+    "official_name": "Stratocaster",
+    "maker_status": "current",
+    "reference_url": "https://en.wikipedia.org/wiki/Fender_Performer_Stratocaster",
+    "notes": "Product family since 1954 spanning many series (Player, Player II, American Professional II, Squier); URL is a Wikipedia redirect that resolved to the Fender Stratocaster article in search results."
+  },
+  {
+    "key": "fam-fender-tele",
+    "exists": true,
+    "official_name": "Telecaster",
+    "maker_status": "current",
+    "reference_url": "https://en.wikipedia.org/wiki/Fender_Telecaster",
+    "notes": "Product family since 1951 (Esquire 1950); also Squier-branded models."
+  },
+  {
+    "key": "fam-gibson-lp",
+    "exists": true,
+    "official_name": "Les Paul",
+    "maker_status": "current",
+    "reference_url": "https://en.wikipedia.org/wiki/Gibson_Les_Paul",
+    "notes": "Gibson family since 1952 (Standard, Custom, Studio, Junior, Special); Epiphone sells licensed Les Pauls."
+  },
+  {
+    "key": "fam-fender-pbass",
+    "exists": true,
+    "official_name": "Precision Bass",
+    "maker_status": "current",
+    "reference_url": "https://en.wikipedia.org/wiki/Fender_Precision_Bass",
+    "notes": "Family since 1951; Squier models also use the name."
+  },
+  {
+    "key": "fam-fender-jbass",
+    "exists": true,
+    "official_name": "Jazz Bass",
+    "maker_status": "current",
+    "reference_url": "https://en.wikipedia.org/wiki/Fender_Jazz_Bass",
+    "notes": "Family since 1960; 5-string models carry a 'V' suffix."
+  },
+  {
+    "key": "fam-focusrite-scarlett",
+    "exists": true,
+    "official_name": "Scarlett",
+    "maker_status": "current",
+    "reference_url": "https://focusrite.com/scarlett",
+    "notes": "Generations 1st-4th; model names need the generation to identify a product."
+  },
+  {
+    "key": "fam-boss-katana",
+    "exists": true,
+    "official_name": "Katana",
+    "maker_status": "current",
+    "reference_url": "https://www.boss.info/us/categories/amplifiers/katana/",
+    "notes": "Generations: original (2016), MkII (2019), Gen 3 (2024)."
+  },
+  {
+    "key": "fam-pearl-export",
+    "exists": true,
+    "official_name": "Export",
+    "maker_status": "current",
+    "reference_url": "https://pearldrum.com/en/products/drum-set/export-exx/export",
+    "notes": "Generations include EX, EXX, EXL."
+  },
+  {
+    "key": "fam-zildjian-acustom",
+    "exists": true,
+    "official_name": "A Custom",
+    "maker_status": "current",
+    "reference_url": "https://zildjian.com/products/a-custom-crashes",
+    "notes": "Cymbal series; many sub-models (Fast, Projection, Medium, EFX)."
+  },
+  {
+    "key": "fam-ibanez-ts",
+    "exists": true,
+    "official_name": "Tube Screamer",
+    "maker_status": "current",
+    "reference_url": "https://en.wikipedia.org/wiki/Ibanez_Tube_Screamer",
+    "notes": "Family includes TS808, TS9, TS Mini, TS9DX and Waza-style hand-wired versions."
+  }
+]
