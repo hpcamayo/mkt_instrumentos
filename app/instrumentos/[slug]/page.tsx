@@ -591,7 +591,8 @@ function ListingDetail({
           </div>
         </div>
 
-        <div className="mt-10 grid gap-10 lg:mt-14 lg:gap-14">
+        {/* One column that never grows past the page: the similar listings scroll sideways inside it on phones. */}
+        <div className="mt-10 grid grid-cols-1 gap-10 lg:mt-14 lg:gap-14">
           <Suspense fallback={<RelatedListingsSkeleton />}>
             <SimilarListings supabase={supabase} listing={listing} href={typeHref} />
           </Suspense>
