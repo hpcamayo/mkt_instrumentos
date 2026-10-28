@@ -193,6 +193,38 @@ test("talk-06 and talk-07: the WhatsApp messages for a reserved listing and for 
   assert.equal(withMessage("no es un enlace", "b"), "no es un enlace");
 });
 
+test("talk-06: the contact route's link says the listing is reserved, so Descubrir's WhatsApp button says it too", async () => {
+  const LISTING = "d6000000-0000-4000-8000-000000000001";
+  const row = (sellerType) => ({ id: LISTING, title: "Fender Stratocaster", slug: "fender-stratocaster", price_pen: 2000, stock_state: null, seller_type: sellerType,
+    owner_user_id: "d6000000-0000-4000-8000-000000000002", city: "Lima", region: "Lima", created_at: "2026-10-01T00:00:00Z", stores: sellerType === "store" ? { whatsapp_phone: "987654322" } : null });
+  const contactRow = { contact_name: "Ana", whatsapp_phone: "987654320", profiles: { full_name: "Ana", phone: "987654321", city: "Lima", region: "Lima", created_at: "2026-09-01T00:00:00Z" } };
+  const client = (data) => ({ from: () => query({ data, error: null }) });
+  const asked = [];
+  const text = async (sellerType, reserved) => {
+    const route = load("app/api/contact/route.ts", {
+      "next/server": nextServer,
+      "@/lib/supabase/public-client": { getPublicSupabaseClient: () => client(row(sellerType)) },
+      "@/lib/supabase/admin-client": { getSupabaseAdminClient: () => client(contactRow) },
+      "@/lib/marketplace-events-server": { sameOriginEventRequest: () => true, getMarketplaceActor: async () => null, getMarketplaceSession: async () => null, recordMarketplaceEvent: async () => ({ recorded: true }), logMarketplaceEventFailure: () => {} },
+      "@/lib/listing-reservations-server": { reservedCardIds: async (listings, deadline) => { asked.push({ listings, deadline }); return reserved(); } },
+    });
+    const response = await route.POST(new Request("https://laria.audio/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId: crypto.randomUUID(), listingId: LISTING, source: "home" }),
+    }));
+    assert.equal(response.status, 200);
+    return new URL((await response.json()).url).searchParams.get("text");
+  };
+  assert.match(await text("individual", () => new Set([LISTING])), /Vi que está reservado\. Si se libera, ¿me avisas\?$/);
+  assert.deepEqual(asked[0].listings, [{ id: LISTING, seller_type: "individual" }], "the period is read beside the listing, by its id");
+  assert.ok(asked[0].deadline.expiresAt - Date.now() <= 1500, "within the optional budget");
+  assert.match(await text("individual", () => new Set()), /¿Sigue disponible\?$/);
+  // A store's listing is never reserved, and a read that failed leaves the usual message: the contact still opens.
+  assert.match(await text("store", () => new Set([LISTING])), /¿Sigue disponible\?$/);
+  assert.match(await text("individual", () => { throw new Error("read failed"); }), /¿Sigue disponible\?$/);
+});
+
 test("talk-06: an ended period asks «¿Se vendió?» in Pendientes, and the row actions, notices and e-mails follow", () => {
   const { buildPendientes } = require("@/lib/pendientes.ts");
   const empty = {

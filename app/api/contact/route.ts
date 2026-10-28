@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { eventSources, isEntityId, isUuid, type EventSource } from "@/lib/marketplace-event-payload";
 import { getMarketplaceActor, getMarketplaceSession, logMarketplaceEventFailure, recordMarketplaceEvent, sameOriginEventRequest } from "@/lib/marketplace-events-server";
+import { reservedCardIds } from "@/lib/listing-reservations-server";
 import { buildStoreWhatsAppUrl, buildWhatsAppUrl, resolveContactPhone, type ListingDetailData } from "@/lib/listings";
 import { assistedCommerceEnabled, buildPurchaseWhatsAppUrl, clampPurchaseQuantity, readPurchaseRequest } from "@/lib/payment-methods";
+import { READ_BUDGETS, createDeadline } from "@/lib/request-deadline";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
@@ -27,15 +29,19 @@ export async function POST(request: Request) {
     // Launch audit A27: the public API key may not read a listing's contact or a seller's profile. The listing comes
     // through the public key, so row-level security still decides it is public; its contact comes with the service
     // role, and is used only when the listing is.
+    // talk-06: a reserved listing's message says so, as on its page ("Vi que está reservado…"); Descubrir's button
+    // takes its link from here. Read beside the listing, and optional: when that read is off, slow or failed, the
+    // message is the usual one. Only Particular listings can be reserved, so a store's listing is never in the answer.
     const admin = getSupabaseAdminClient();
     if (!admin) return failure(503, requestId);
-    const [listing, contact] = await Promise.all([
+    const [listing, contact, reserved] = await Promise.all([
       client.from("listings").select("id,title,slug,price_pen,stock_state,seller_type,owner_user_id,city,region,created_at,stores(whatsapp_phone)").eq("id", body.listingId).eq("status", "approved").maybeSingle(),
       admin.from("listings").select("contact_name,whatsapp_phone,profiles!listings_owner_user_id_fkey(full_name,phone,city,region,created_at)").eq("id", body.listingId).maybeSingle(),
+      reservedCardIds([{ id: body.listingId, seller_type: "individual" }], createDeadline(READ_BUDGETS.optionalMs, request.signal)).catch(() => new Set<string>()),
     ]);
     if (listing.error || contact.error || !listing.data || !contact.data) return failure(404, requestId);
     const data = { ...listing.data, ...contact.data };
-    url = buildWhatsAppUrl(data as unknown as ListingDetailData);
+    url = buildWhatsAppUrl(data as unknown as ListingDetailData, { reserved: data.seller_type === "individual" && reserved.has(body.listingId) });
     if (body.intent === "purchase" && assistedCommerceEnabled() && data.seller_type === "store") {
       const { data: context } = await client.rpc("get_listing_purchase_request", { p_listing_id: body.listingId });
       const request = readPurchaseRequest(context);
