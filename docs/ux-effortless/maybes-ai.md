@@ -2,7 +2,7 @@
 
 Ideas: `/mnt/project-files/ux-ideas/ideas.json`. Henri marked both "maybe" on 2026-10-19 (stock-24: "would be awesome
 but whats the needed infrastructure") and said "go ahead" on 2026-10-27. Branch `ux/maybes-ai`, migration slot
-20261120120000, acceptance range EASE-860 to EASE-899 (proposed in `maybes-ai-acceptance.tsv`). Screenshots:
+20261120120000, acceptance range EASE-860 to EASE-879 (proposed in `maybes-ai-acceptance.tsv`). Screenshots:
 `/mnt/project-files/ux-ideas/screens/maybes/ai/`.
 
 Both helpers are **off by default**. They show only when the server has `ANTHROPIC_API_KEY` and `LARIA_AI_HELPERS=1`
@@ -130,39 +130,16 @@ read badges and headstocks less reliably; which one to use is Henri's call. The 
 
 To switch off: remove `LARIA_AI_HELPERS` (or the key) and redeploy; nothing else changes.
 
-## For docs/database.md
+## In docs/database.md
 
-### Effortless Laria: AI helpers (maybes stock-24 and big-07)
+Section "Effortless Laria maybes: AI helpers (stock-24, big-07)". The two routes join the launch audit's A13 route list,
+and `AI_REQUEST_INVALID` its own messages, with `20261120900000_ux_maybes_error_lists.sql`.
 
-Migration `20261120120000_maybes_ai_helpers.sql`. `laria_private.ai_requests`: one row per call of "Pregúntale a tu
-tienda" or "Completar con IA" that reached Anthropic's API, without its content: `feature` (`store_question` or
-`listing_assist`), `user_id` (profiles, set null on delete and when the account is anonymized), `store_id` (stores, set
-null on delete; questions only), `model` (the one that answered, or `unknown`), `input_tokens` and `output_tokens` (every
-attempt), `outcome` (`answered`, `no_match`, `refused`, `invalid`, `failed`) and `created_at`. RLS on, no API access;
-indexes on `user_id` and `store_id` (where not null) and `created_at`. `public.record_ai_request(feature, user_id,
-store_id, model, input_tokens, output_tokens, outcome)`, service role only, writes a row (`AI_REQUEST_INVALID` for an
-unknown feature or outcome; an anonymized account's call is written without it). The pg_cron job `ai-request-retention`
-(daily 09:55 UTC, `laria_private.run_ai_request_retention()`) deletes rows older than 90 days. The trigger
-`account_anonymizations_unlink_ai_requests` on `laria_private.account_anonymizations` unlinks an anonymized account's
-rows. The daily limits use `public.consume_rate_limit` with the buckets `ai.store_question` (50 a store),
-`ai.listing_assist` (20 an account) and `ai.daily` (the site, `LARIA_AI_DAILY_CAP`, 500 by default), keyed by an HMAC of
-the subject. The table's and function's types live in `lib/ai/usage.ts` until the generated types include them.
+## In docs/functional-spec.md
 
-## For docs/functional-spec.md
+"AI Helpers (Effortless Laria maybes, off by default)", before "Legal and Safety".
 
-### AI helpers (Effortless Laria maybes, off by default)
-
-- **Pregúntale a tu tienda (stores with Inventario).** A question in plain words on Mi tienda or Inventario opens the
-  existing Inventario filters, a view of Estadísticas or Reposición, with "Así lo entendí" listing each filter used as a
-  removable chip and saying what no filter covers. Only the question goes to the AI service, never the store's data.
-  50 questions per store a day.
-- **Completar con IA (sell form, Particular and store).** After the photos, one button sends up to four reduced photos
-  and returns suggestions for category and type, brand, model, title, details and description, each used only when the
-  seller taps it; nothing about condition, price or specifications, and moderation is unchanged. 20 a day per account.
-- Both need `ANTHROPIC_API_KEY` and `LARIA_AI_HELPERS=1` on the server, a site-wide daily cap applies, and each call is
-  logged without its content for 90 days.
-
-## Decisions
+## Proposed decisions
 
 - UXD-maybes-ai-1: The AI helpers call Claude through the official Anthropic SDK from two server routes, off unless both
   `ANTHROPIC_API_KEY` and `LARIA_AI_HELPERS=1` are set; Claude Opus 5.5 by default, `LARIA_AI_MODEL` to change it.

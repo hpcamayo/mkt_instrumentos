@@ -124,16 +124,13 @@ Descubrir never counts a listing view: that happens on the listing page when "Ve
 middleware's catalog branch refuses the bulk crawlers (Amazonbot, Reflectionbot, MJ12bot) on `/descubrir` as on
 `/listados`, with the same 403.
 
-## Room for Reservado (talk-06)
+## Reservado (talk-06)
 
 `DescubrirItem` is `ListingCardData & { reserved?: boolean }`; with `reserved: true` the screen shows the "Reservado"
 tag (warning tone, clock icon) beside the price. `markReserved(items, ids)` (`lib/descubrir.ts`) sets it from a set or
-list of ids, and the feed already applies the page route's `reserved` list when the route sends one. At integration:
-
-1. `app/api/catalog/page/route.ts`: keep both batches' changes, and give the Descubrir branch the same `reserved` list
-   as the catalog's (`reservedCardIds(data ?? [], deadline)`), so the answer is `{ listings, total, reserved }`.
-2. `app/descubrir/page.tsx`: mark the server's first page,
-   `initial.listings = markReserved(listings, await reservedCardIds(listings, getRequestReads().deadline))`.
+list of ids: the server marks the first page with the reservation batch's `reservedCardIds`, and the feed applies the
+page route's `reserved` list to the next ones (`docs/ux-effortless/maybes.md`, UXD-maybes-1). WhatsApp from a reserved
+listing says so, as on its page (UXD-maybes-2).
 
 ## Files
 
@@ -188,28 +185,18 @@ list of ids, and the feed already applies the page route's `reserved` list when 
 - A screen reader reads the screen in view only (the others are inert); "Anterior" and "Siguiente" in the bar move
   through the feed.
 
-## For docs/functional-spec.md
+## In docs/functional-spec.md
 
-### Descubrir (Effortless Laria maybe big-02)
+"Descubrir (Effortless Laria maybe big-02)", at the end of "Search, Browse and the Home".
 
-`/descubrir` shows listings one per screen, as a second way to browse; the grid stays the default. From the home,
-"Descubrir lo nuevo" shows the listings published in the last 7 Lima days, newest first (30 days when the week holds
-fewer than 12), with a stop after today's listings. From any results list, "Ver en Descubrir" shows that list, with its
-filters and order, to its end. Each screen has the photos (swipe or arrows), the price, the title, the key specs, the
-place and the seller, WhatsApp, ♥, "No me interesa" and "Ver publicación"; every gesture has a button and the keyboard
-works on a computer. No autoplay, no endless loop and no swipe verdicts; every feed ends with a screen that says what was
-seen. "No me interesa" is kept on the device and only hides listings in Descubrir. The page is not indexed, and the bulk
-catalog crawlers are refused there as on `/listados`. Analytics: impressions with the home or catalog source; contacts
-through `/api/contact`; no listing view.
+## In docs/database.md
 
-## For docs/database.md
+None of its own: no migration, table, column, function or policy. Descubrir reads `public_listings` (and
+`catalog_search` for a text search) through the catalog's own query. `/descubrir` joins the launch audit's A13 route
+list with `20261120900000_ux_maybes_error_lists.sql` (section "Effortless Laria maybes: error lists, and Descubrir"). No
+new error message: Descubrir throws none of its own.
 
-None. No migration, table, column, function or policy: Descubrir reads `public_listings` (and `catalog_search` for a
-text search) through the catalog's own query. For the launch audit's A13 list, `laria_private.app_error_route_patterns()`
-needs `/descubrir` (the integrator's A13 migration; `tests/launch-audit-monitoring.test.cjs` names it until then). No new
-error message: Descubrir throws none of its own.
-
-## Decisions
+## Proposed decisions
 
 - UXD-maybes-descubrir-1: Descubrir is an extra mode reached from the home and the results lists; the grid stays the
   default and nothing redirects to it.

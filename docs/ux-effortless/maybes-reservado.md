@@ -110,8 +110,9 @@ still available, and the seller is asked afterwards whether it sold.
 - Nothing tells the buyer the listing was held for: Laria never knows who that is.
 - Once a period closes its row is deleted: there is no history of reservations.
 - The job needs pg_cron (`listing-reservations`, every minute), like the other jobs.
-- Until the integration migration adds the ten codes below to A13's own-messages list, the error log keeps them as
-  "Otro mensaje (no se guarda el texto)"; people see the messages either way.
+- The ten codes below join A13's own-messages list with `20261120900000_ux_maybes_error_lists.sql`; until that
+  migration is applied, the error log keeps them as "Otro mensaje (no se guarda el texto)". People see the messages
+  either way.
 
 ## talk-07 "Hacer una oferta"
 
@@ -157,17 +158,20 @@ stays open after sending, so the visitor can come back and change the amount.
 - Offers cannot be counted apart from other WhatsApp contacts (by design: nothing about them is stored).
 - Laria does not know whether the seller accepted; the sold flow and reviews work as for any contact.
 
-## For Descubrir (big-02)
+## The tag on other lists (Descubrir, the contact route)
 
 `reservedCardIds(listings: {id, seller_type}[], deadline)` in `lib/listing-reservations-server.ts` returns the ids that
 say "Reservado" for a public list of cards; it is optional (recovery switch, budget, breaker) and asks nothing for
 store listings. Pass the result to `ListingCard reserved={ids.has(listing.id)}`. Outside a render,
 `reservedListingIds(client, ids, signal?)` in `lib/listing-reservations.ts` reads with any client (200 ids a call) and
-returns `null` when a read failed.
+returns `null` when a read failed. Descubrir (big-02) marks its screens with it, and `/api/contact` reads the period the
+same way, so WhatsApp from Descubrir says the listing is reserved (`docs/ux-effortless/maybes.md`, UXD-maybes-1 and
+UXD-maybes-2).
 
-## For the integration migration (A13)
+## Error messages (A13)
 
-The functions' own messages, for `laria_private.app_error_own_messages()`:
+The functions' own messages, added to `laria_private.app_error_own_messages()` by
+`20261120900000_ux_maybes_error_lists.sql`:
 
 | Code | Message |
 | --- | --- |
@@ -186,93 +190,25 @@ No new route: the actions go through `/api/listings/[id]/manage` and `/api/listi
 `listing_reservation_ended`, `listing_released`; new notification types: those two and `listing_reservation_sold`. New
 schedule: pg_cron `listing-reservations`, every minute. No new environment variable.
 
-## For docs/database.md
+## In docs/database.md
 
-```markdown
-<!-- ux-effortless:maybes reservado -->
-## Effortless Laria maybes: "Reservado" (talk-06)
+Section "Effortless Laria maybes: "Reservado" (talk-06)".
 
-Migration `20261120100000_ux_maybes_reservado.sql` (not applied to any hosted database). SQL suite:
-`tests/maybes-reservado.sql`.
+## In docs/functional-spec.md
 
-- `public.listing_reservations`: one row per reserved listing (`listing_id` primary key → listings, cascade;
-  `reserved_at`; `reserved_until`, at most 5 days after `reserved_at`; `ended_at`, set when the job asked the seller,
-  never before `reserved_until`). Partial indexes on `reserved_until` for running and ended periods. RLS on, no
-  policies, nothing granted to `anon`/`authenticated`. A row lives while the period runs and, after its end, until the
-  seller answers or 24 hours pass.
-- `public.listing_release_watches`: "Avísame si se libera" (`user_id` → profiles, cascade; `listing_id` → listings,
-  cascade; primary key `(user_id, listing_id)`, index on `listing_id`). RLS on, no policies, no grants.
-- Public functions (errors read `RESERVATION_…` or `RELEASE_WATCH_…: mensaje en español`):
-  - `get_reserved_listings(p_listing_ids uuid[]) → (listing_id, reserved_until)` (anon, authenticated): the running
-    periods of published Particular listings among the first 200 ids.
-  - `get_my_listing_reservations() → (listing_id, title, slug, reserved_until, ended_at, watchers)` (authenticated): the
-    caller's periods of published listings, running or waiting for an answer, with how many people wait.
-  - `set_listing_reservation(p_listing_id uuid, p_days integer) → timestamptz` (authenticated): the owner's published
-    Particular listing, 1, 2, 3 or 5 days from now; a new period replaces the old one; marks earlier
-    `listing_reservation_ended` notifications read.
-  - `end_listing_reservation(p_listing_id uuid, p_outcome text) → integer` (authenticated): `available`
-    (`confirm_listing_available`) or `sold` (`set_owned_listing_lifecycle(…, 'sold')`); deletes the period, tells the
-    people waiting and returns how many were told.
-  - `set_listing_release_watch(p_listing_id uuid, p_watch boolean) → boolean` and
-    `get_listing_release_watch(p_listing_id uuid) → boolean` (authenticated): only while the period runs, never on
-    one's own listing.
-- `laria_private.run_listing_reservations() → jsonb {closed, asked, released}`, pg_cron `listing-reservations` every
-  minute: closes the periods of listings that left `approved` (watchers told in the app if sold, otherwise their
-  requests deleted); marks run-out periods ended and asks the seller once through
-  `ux_notify_once('reservation_ended:<listing>:<end>', …, 'listing_reservation_ended', …)` (notification and e-mail);
-  deletes periods ended 24 hours ago and tells the people waiting. `laria_private.tell_release_watchers(listing,
-  'released' | 'sold')` deletes the requests and writes `listing_released` (with an e-mail, key `released:<notification>`)
-  or `listing_reservation_sold` (in the app) notifications.
-- Event types added with `ux_extend_text_check`: notifications `listing_reservation_ended`, `listing_released`,
-  `listing_reservation_sold`; e-mail deliveries `listing_reservation_ended`, `listing_released`.
-  `laria_private.email_max_age` / `email_priority`: `listing_released` 2 days, priority 2; `listing_reservation_ended`
-  3 days, priority 1.
-- Launch audit A19: statement triggers `listing_reservations_public_page_changes_{insert,update,delete}` record a page
-  change when a shown listing's period starts, changes, ends or closes while running.
-- Launch audit A20: trigger `account_anonymizations_release_watches` (before insert on
-  `laria_private.account_anonymizations`) deletes the account's requests and adds `release_watches` to the counts.
-<!-- /ux-effortless:maybes reservado -->
-```
+"Reserved listings" under "Listing Lifecycle", and the paragraph on a reserved listing's message and "Hacer una oferta"
+under "WhatsApp Contact Tracking".
 
-## For docs/functional-spec.md
+## Proposed decisions
 
-Under "Listing Lifecycle", after "Sold and relisting":
-
-```markdown
-<!-- Effortless Laria maybes (docs/ux-effortless/maybes-reservado.md): Reservado -->
-### Reserved listings
-
-A Particular can mark a published listing "Reservado" for 1, 2, 3 or 5 days when they agreed to hold it for a buyer.
-It stays public and contactable: the listing page and the catalog cards say "Reservado" with the end date, and a
-signed-in buyer can ask "Avísame si se libera". Laria never records who it was held for. When the period ends the
-seller is asked once, in the app, by e-mail and in Pendientes, whether it sold: "Se vendió" is the ordinary sold flow,
-"Sigue disponible" confirms availability; without an answer it reads as available after 24 hours. The people waiting
-are told once, when it is free again or (in the app) when it sold, and their request then ends. Store listings are not
-reserved this way; stores hold units through Inventario.
-<!-- end maybes: Reservado -->
-```
-
-Under "WhatsApp Contact Tracking", after the paragraph on the opening message:
-
-```markdown
-<!-- Effortless Laria maybes: Hacer una oferta -->
-On a Particular's published listing with a price that is not reserved, "Hacer una oferta" lets the buyer name an
-amount in soles (with three round amounts under the price as suggestions) and opens WhatsApp with "Hola, te ofrezco
-S/ … por tu … publicado en Laria: <link>". The amount lives only in the buyer's message: Laria records the contact as
-any other and never stores the offer.
-<!-- end maybes: Hacer una oferta -->
-```
-
-## Decisions
-
-- UXD-reservado-1: A Particular can mark a published listing "Reservado" for 1, 2, 3 or 5 days; it stays public and
+- UXD-maybes-reservado-1: A Particular can mark a published listing "Reservado" for 1, 2, 3 or 5 days; it stays public and
   contactable, and stores hold units through Inventario instead (talk-06).
-- UXD-reservado-2: Reservations live in their own table, reachable only through functions; the public reads running
+- UXD-maybes-reservado-2: Reservations live in their own table, reachable only through functions; the public reads running
   periods of published Particular listings, and who a listing was held for is never recorded (talk-06).
-- UXD-reservado-3: When a period ends the seller is asked "¿Se vendió?" once (app, e-mail, Pendientes); "Sigue
+- UXD-maybes-reservado-3: When a period ends the seller is asked "¿Se vendió?" once (app, e-mail, Pendientes); "Sigue
   disponible" counts as an availability confirmation, and 24 hours without an answer release the listing without one
   (talk-06).
-- UXD-reservado-4: "Avísame si se libera" works only while the period runs and notifies once: in the app and by e-mail
+- UXD-maybes-reservado-4: "Avísame si se libera" works only while the period runs and notifies once: in the app and by e-mail
   when the listing is free again, in the app when it sold (talk-06).
-- UXD-reservado-5: "Hacer una oferta" is offered on Particular listings only; the amount is written into the buyer's
+- UXD-maybes-reservado-5: "Hacer una oferta" is offered on Particular listings only; the amount is written into the buyer's
   WhatsApp message and never stored, and the contact is recorded like any other (talk-07).

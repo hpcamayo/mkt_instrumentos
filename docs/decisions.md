@@ -582,3 +582,32 @@ Detail: [docs/ux-effortless/speed.md](ux-effortless/speed.md).
 - UXD-speed-11: Shared photos wait on the device, up to 10 and for one day, and reach Laria only when the form uploads them (big-12).
 - UXD-speed-12: The push worker is started by hand until a scheduler exists, and without VAPID keys it only logs (big-12).
 - UXD-speed-13: Every bar fixed to the bottom of the screen carries `data-bottom-bar` and measures itself, so focus scrolls clear of it, and the phone contact bar pads the listing page by its height (fast-04).
+
+### The five maybes (2026-10-28)
+
+Built after the owner's "go ahead" (2026-10-27) on the five ideas left as maybes: big-02, big-07, stock-24, talk-06 and talk-07. Proposed until the owner reviews them. Detail: [docs/ux-effortless/maybes.md](ux-effortless/maybes.md), [maybes-reservado.md](ux-effortless/maybes-reservado.md), [maybes-descubrir.md](ux-effortless/maybes-descubrir.md) and [maybes-ai.md](ux-effortless/maybes-ai.md).
+
+- UXD-maybes-reservado-1: A Particular can mark a published listing "Reservado" for 1, 2, 3 or 5 days; it stays public and contactable, and stores hold units through Inventario instead (talk-06).
+- UXD-maybes-reservado-2: Reservations live in their own table, reachable only through functions; the public reads running periods of published Particular listings, and who a listing was held for is never recorded (talk-06).
+- UXD-maybes-reservado-3: When a period ends the seller is asked "¿Se vendió?" once (app, e-mail, Pendientes); "Sigue disponible" counts as an availability confirmation, and 24 hours without an answer release the listing without one (talk-06).
+- UXD-maybes-reservado-4: "Avísame si se libera" works only while the period runs and notifies once: in the app and by e-mail when the listing is free again, in the app when it sold (talk-06).
+- UXD-maybes-reservado-5: "Hacer una oferta" is offered on Particular listings only; the amount is written into the buyer's WhatsApp message and never stored, and the contact is recorded like any other (talk-07).
+- UXD-maybes-descubrir-1: Descubrir is an extra mode reached from the home and the results lists; the grid stays the default and nothing redirects to it.
+- UXD-maybes-descubrir-2: "Lo nuevo" is the last 7 Lima days, or 30 when the week holds fewer than 12 listings; a results feed is the list itself, in its order.
+- UXD-maybes-descubrir-3: Verdicts are buttons (♥, "No me interesa"), never swipe directions; every gesture has a button and a key.
+- UXD-maybes-descubrir-4: No autoplay and no endless loop: stops after today's listings and every 48, and a visible end that counts what was seen.
+- UXD-maybes-descubrir-5: "No me interesa" is per device, only for Descubrir, and cleared with the device's other saves.
+- UXD-maybes-descubrir-6: Only the next listing's first photo is fetched ahead, and nothing under data saving.
+- UXD-maybes-descubrir-7: WhatsApp from Descubrir is the listing page's contact path, with the same safety sheet; the phone never travels with the feed.
+- UXD-maybes-descubrir-8: Descubrir counts impressions as the list it comes from (home or catalog) and never a view.
+- UXD-maybes-descubrir-9: `/descubrir` is not indexed and refuses the bulk catalog crawlers.
+- UXD-maybes-ai-1: The AI helpers call Claude through the official Anthropic SDK from two server routes, off unless both `ANTHROPIC_API_KEY` and `LARIA_AI_HELPERS=1` are set; Claude Opus 5.5 by default, `LARIA_AI_MODEL` to change it.
+- UXD-maybes-ai-2: Store questions send only the question and the filter vocabulary, never inventory data; the answer can only be the site's existing filters and views, checked again on the server.
+- UXD-maybes-ai-3: "Así lo entendí" shows each filter as a removable chip and says plainly what no filter covers, next to the closest filters; no new filters or reports were added for it.
+- UXD-maybes-ai-4: "Completar con IA" proposes identity and text only (category, type, brand, model, title, details, description), never condition, price or specifications; "Usar todo" never overwrites what the seller wrote, nor writes another instrument's name next to the brand or model they wrote.
+- UXD-maybes-ai-5: Photos are reduced in the browser to JPEGs of at most 1024 px without metadata and sent only on tap; nothing sent or answered is stored.
+- UXD-maybes-ai-6: Daily limits of 50 questions per store, 20 photo assists per account and a site-wide cap; a counter that can't count refuses the call.
+- UXD-maybes-ai-7: Each call is logged without content (feature, account, store, model, tokens, outcome) for 90 days, unlinked from an anonymized account.
+- UXD-maybes-1: Descubrir says "Reservado" like the catalog cards: the server's first page and the page route's `reserved` list come from the same optional read, so a read that is off or failed shows no tag rather than a wrong one (big-02, talk-06).
+- UXD-maybes-2: A reserved listing's WhatsApp message is the same from Descubrir as from its page ("Vi que está reservado. Si se libera, ¿me avisas?"): the contact route reads the period beside the listing, and without that read the message is the usual one (big-02, talk-06).
+- UXD-maybes-3: Descubrir keeps one contact button: "Hacer una oferta" and "Avísame si se libera" stay on the listing page, one tap away through "Ver publicación" (big-02, talk-06, talk-07).
