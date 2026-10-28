@@ -128,7 +128,7 @@ and a signed-in buyer can ask "Avísame si se libera". Laria never records who i
 seller is asked once, in the app, by e-mail and in Pendientes, whether it sold: "Se vendió" is the ordinary sold flow,
 "Sigue disponible" confirms availability; without an answer it reads as available after 24 hours. The people waiting
 are told once, when it is free again or (in the app) when it sold, and their request then ends. Store listings are not
-reserved this way; stores hold units through Inventario. *(Effortless Laria maybe talk-06; proposed
+reserved this way; stores hold units through Inventario. *(Effortless Laria maybe talk-06;
 UXD-maybes-reservado-1 to UXD-maybes-reservado-4.)*
 <!-- end maybes: Reservado -->
 
@@ -229,8 +229,8 @@ Commercial analytics include listing impressions, listing views, favorites, What
 The store home opens on **Hoy en tu tienda**: the same Pendientes plus today's purchase requests, out-of-stock SKUs people saved, low stock, an unfinished import with its expiry, and SKUs without a listing. A new store sees a checklist that ticks itself (Solicitud, Logo y portada, Descripción y redes, Primera publicación o Importar desde Excel, Medios de pago when the payments pilot is on, Ver tu página) until every step is done. `Estadísticas` adds a 12-week trend of views and contacts, the top listings by views, contacts and purchase requests, and the listings with contacts but no sale in 30 days.
 <!-- ux my-listings: end -->
 
-<!-- Effortless Laria, batch "stores" (docs/ux-effortless/stores.md): proposed until Henri's review. -->
-### Effortless Laria changes to stores (proposed)
+<!-- Effortless Laria, batch "stores" (docs/ux-effortless/stores.md) -->
+### Effortless Laria changes to stores
 
 - **Application and profile (shop-01, shop-03).** A new application is prefilled from the invitation or signup. Mi
   tienda separates "Perfil público" from "Datos de la empresa"; changing the RUC or razón social warns that declared
@@ -290,7 +290,7 @@ V1 includes useful, indexable category browsing pages such as `/instrumentos/gui
 
 ## Search, Browse and the Home (Effortless Laria, find batch)
 
-Proposed with the find batch (`docs/ux-effortless/find.md`, UXD-find-1 to UXD-find-16); not part of V1 until merged.
+Added after V1 with the find batch (`docs/ux-effortless/find.md`, UXD-find-1 to UXD-find-16); live since 2026-10-23.
 
 - **One search box.** The header, the home banner and the not-found page share one free-text search (`q`) over brand,
   model, type, category words and title. It ignores accents and case, forgives small typos (trigram similarity) and
@@ -336,8 +336,8 @@ place and the seller, WhatsApp, ♥, "No me interesa" and "Ver publicación"; a 
 too. Every gesture has a button and the keyboard works on a computer. No autoplay, no endless loop and no swipe
 verdicts; every feed ends with a screen that says what was seen. "No me interesa" is kept on the device and only hides
 listings in Descubrir. The page is not indexed, and the bulk catalog crawlers are refused there as on `/listados`.
-Analytics: impressions with the home or catalog source; contacts through `/api/contact`; no listing view. *(Proposed
-UXD-maybes-descubrir-1 to UXD-maybes-descubrir-9.)*
+Analytics: impressions with the home or catalog source; contacts through `/api/contact`; no listing view.
+*(Effortless Laria maybe big-02; UXD-maybes-descubrir-1 to UXD-maybes-descubrir-9.)*
 <!-- end maybes: Descubrir -->
 
 ## WhatsApp Contact Tracking
@@ -354,7 +354,7 @@ se libera, ¿me avisas?"), from the listing page and from Descubrir alike. On a 
 price that is not reserved, "Hacer una oferta" lets the buyer name an amount in soles (with three round amounts under
 the price as suggestions) and opens WhatsApp with "Hola, te ofrezco S/ … por tu … publicado en Laria: <link>". The
 amount lives only in the buyer's message: Laria records the contact as any other and never stores the offer.
-*(Effortless Laria maybes talk-06 and talk-07; proposed UXD-maybes-reservado-5 and UXD-maybes-2.)*
+*(Effortless Laria maybes talk-06 and talk-07; UXD-maybes-reservado-5 and UXD-maybes-2.)*
 <!-- end maybes: Reservado and Hacer una oferta -->
 
 ## Marketplace Analytics
@@ -452,7 +452,7 @@ A person can also receive their notices on a phone or browser ("Avisos en este t
 <!-- Effortless Laria, speed batch (docs/ux-effortless/speed.md): speed and accessibility -->
 ## Speed, Install and Accessibility (Effortless Laria, speed batch)
 
-Proposed with the speed batch (UXD-speed-1 to UXD-speed-4 and UXD-speed-13); not part of V1 until merged.
+Added after V1 with the speed batch (UXD-speed-1 to UXD-speed-4 and UXD-speed-13); live since 2026-10-23.
 
 - A tap that changes the page shows a thin bar after 100 ms and, after a second, a skeleton of the next page over the old one; faster changes show nothing. No route has a `loading.tsx` (owner decision Q1 A).
 - When the phone asks to save data or the connection is 3G or slower, images that appear after the page loads are requested smaller, and listing pages are not loaded ahead of time.
@@ -464,8 +464,8 @@ Proposed with the speed batch (UXD-speed-1 to UXD-speed-4 and UXD-speed-13); not
 <!-- Effortless Laria maybes (docs/ux-effortless/maybes-ai.md): AI helpers -->
 ## AI Helpers (Effortless Laria maybes, off by default)
 
-Proposed with the maybes stock-24 and big-07 (UXD-maybes-ai-1 to UXD-maybes-ai-7). Neither shows until the server has
-`ANTHROPIC_API_KEY` and `LARIA_AI_HELPERS=1`.
+Added with the maybes stock-24 and big-07 (UXD-maybes-ai-1 to UXD-maybes-ai-7). Neither shows until the server has
+`ANTHROPIC_API_KEY` and `LARIA_AI_HELPERS=1`; on 2026-10-28 the owner chose to leave them off for now.
 
 - **Pregúntale a tu tienda (stores with Inventario).** A question in plain words on Mi tienda or Inventario opens the
   existing Inventario filters, a view of Estadísticas or Reposición, with "Así lo entendí" listing each filter used as a
@@ -568,7 +568,7 @@ Inventory (Tiendas, enabled per store by an Admin during the pilot):
   CSV and Excel export with formula-safe text), the SKU page (stock actions, history, publication link, data, SKU
   change, archive), and publishing a SKU as a listing through the existing form and moderation.
 
-<!-- Effortless Laria, inventory batch (proposed; docs/ux-effortless/inventory.md) -->
+<!-- Effortless Laria, inventory batch (docs/ux-effortless/inventory.md) -->
 - Inventario search (fix-06) matches the SKU, name, variant, external reference (barcodes) and the linked
   publication's title, brand and model; every word must appear, in any order, ignoring accents and case, and the
   table follows the box as the owner types. The "En revisión" tile counts new publications and changes in review and
@@ -652,7 +652,7 @@ Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 migration `20260921120000_spri
 
 Subsequently, `SEO-005` passed real production category pagination/filter verification with disposable inventory and proven zero-residue cleanup. The category URL follow-up `49a38e5be7b6e195617a841fe1c572420769dab0` is READY at `laria.audio` as of 2026-09-30. Canonical acceptance was then **332 Pass / 70 Not Run / 1 Blocked / 403 total**. Owner checks `SEO-006`, `SEO-007`, `LEGAL-005` and `LEGAL-006` remain open; `ALERT-005` remains Blocked. The app release does not close the V1 launch gate or start automatic scheduling.
 
-On 2026-10-27 the Acceptance workflow (launch audit A14, `docs/acceptance/full-stack.md`) ran the release-gate cases end to end on a full local Supabase stack and passed every check; it runs on every pull request into `main`. The 52 Automated cases it covers are Pass, and on 2026-10-28 the owner accepted `LIST-008` as it runs, so canonical acceptance is **385 Pass / 153 Not Run / 1 Blocked / 539 total**. The Manual or Both cases `PUB-006`, `PUB-007`, `LIST-011`, `SEO-006`, `SEO-007`, `LEGAL-005`, `LEGAL-006`, `SCOPE-001` to `SCOPE-006` and `SCOPE-008` still need a person's review, and `ALERT-005` remains Blocked.
+On 2026-10-27 the Acceptance workflow (launch audit A14, `docs/acceptance/full-stack.md`) ran the release-gate cases end to end on a full local Supabase stack and passed every check; it runs on every pull request into `main`. The 52 Automated cases it covers are Pass, and on 2026-10-28 the owner accepted `LIST-008` as it runs, so canonical acceptance was **385 Pass / 153 Not Run / 1 Blocked / 539 total**; with the 343 Effortless Laria cases added as Not Run the same day it is **385 Pass / 496 Not Run / 1 Blocked / 882 total**. The Manual or Both cases `PUB-006`, `PUB-007`, `LIST-011`, `SEO-006`, `SEO-007`, `LEGAL-005`, `LEGAL-006`, `SCOPE-001` to `SCOPE-006` and `SCOPE-008` still need a person's review, and `ALERT-005` remains Blocked.
 
 - **DONE**: the functional area is materially implemented for its V1 requirement.
 - **MODIFY**: a related implementation exists, but it must change or expand to meet V1.
@@ -715,4 +715,4 @@ Sprint 8 implementation clarification: Admin authorization is checked server-sid
 
 Sprint 9 implementation clarification: public discovery uses one canonical origin (`NEXT_PUBLIC_SITE_URL`, default `https://laria.audio`), per-page canonical/Open Graph metadata, `robots.txt`, a bounded dynamic sitemap of public pages, non-empty categories, approved listings and active stores, and Product/Store/Breadcrumb JSON-LD. Sold listings stay reachable at their direct URL but are `noindex` and excluded from the sitemap. Account, Admin, API, signup/onboarding (`/registro/vendedor`, `/registro/tienda`) and authentication utility routes are `noindex` through metadata and `X-Robots-Tag`, and Vercel preview deployments are never indexable. The account shell follows the frozen V1 order and groups profile and password under `Perfil y seguridad`. Sprint 9 adds no migration, scheduler, payment, escrow, shipping, chat or paid feature.
 
-Effortless Laria listing page clarification (batch "listing", proposed UXD-listing-3 to UXD-listing-10): the listing page shows up to five key specs in one line under the title; dates read as people say them ("Publicado hace 2 semanas", "Actualizado hace 3 días" only after a later content change), and a listing untouched for months invites checking availability. The seller card shows only facts Laria records (activity bucket, confirmed sales, account age, confirmed e-mail) and "Tienda verificada" opens to list what Laria checked by hand (RUC, razón social, address, a phone on file) and since when. The reviews section shows the count per star and loads every review on request. Similar listings are ranked by brand, a price within 30% and the city, in a scrollable row of up to eight. Photos can be zoomed in the lightbox by gesture, button or key. "Compartir" shares the link (or a story image) and links show a generated preview card for public listings. The owner of a listing sees shortcuts to edit, lower the price or mark it sold. `/instrumentos/<listing id>` redirects to the listing's slug.
+Effortless Laria listing page clarification (batch "listing", UXD-listing-3 to UXD-listing-10): the listing page shows up to five key specs in one line under the title; dates read as people say them ("Publicado hace 2 semanas", "Actualizado hace 3 días" only after a later content change), and a listing untouched for months invites checking availability. The seller card shows only facts Laria records (activity bucket, confirmed sales, account age, confirmed e-mail) and "Tienda verificada" opens to list what Laria checked by hand (RUC, razón social, address, a phone on file) and since when. The reviews section shows the count per star and loads every review on request. Similar listings are ranked by brand, a price within 30% and the city, in a scrollable row of up to eight. Photos can be zoomed in the lightbox by gesture, button or key. "Compartir" shares the link (or a story image) and links show a generated preview card for public listings. The owner of a listing sees shortcuts to edit, lower the price or mark it sold. `/instrumentos/<listing id>` redirects to the listing's slug.

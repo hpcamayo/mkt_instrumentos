@@ -3,6 +3,26 @@
 Newest first. Status: pending (owner question open), decided (owner answered), superseded.
 Record who decided and when. A decided item changes only through a new entry.
 
+## Effortless Laria replaces ten earlier choices (owner, 2026-10-20; confirmed 2026-10-28)
+
+On the combined prototype's review page, on 2026-10-20, the owner accepted each Effortless Laria decision that changes
+one of the choices below ([`docs/decisions.md`](../decisions.md) § Effortless Laria decisions), and on 2026-10-28
+confirmed the street-address rule in the Quality-of-life features thread. Each choice's own row further down now says so
+in its status.
+
+| ID | Earlier choice | Now | Status |
+| --- | --- | --- | --- |
+| H1 | The home's first screen is the vitrina (B) | The home leads with instruments; the vitrina and the category tiles are retired (UXD-find-9, big-01) | superseded 2026-10-20 |
+| H2 | Vitrina tiles chosen automatically | Retired with the vitrina (UXD-find-9) | superseded 2026-10-20 |
+| N7 | "Tiendas verificadas" opens the catalog filtered to verified stores; no stores directory | It opens `/tiendas`: every active store, verified first, and a tab of verified stores' listings (UXD-stores-20, find-13) | superseded 2026-10-20 |
+| N8 | Brand-only search, "Busca por marca: Yamaha, Fender…" | One search over brand, model, type and title, "Busca guitarras, marcas, modelos…" (UXD-find-1, UXD-find-16, big-03) | superseded 2026-10-20 |
+| L8 | No "Compartir" ("Guardar" only) | "Compartir", with link previews and a story image for public listings (UXD-listing-10, list-08, list-09) | superseded 2026-10-20 |
+| L12 | Related listings: two sections, four cards, left out when empty | Still left out when empty, except that a sold listing keeps a one-line "Publicaciones similares" pointer (UXD-listing-2); similar listings became a row of up to eight (list-07) | changed in part 2026-10-20 |
+| L18 | "Sobre la tienda" without street address or contact person | The street shows wherever the store chooses to show it, and nowhere else (list-12, UXD-integration-11); still no contact person | superseded 2026-10-20; confirmed 2026-10-28 |
+| L19 | Store breadcrumb by store type | Every store page's breadcrumb goes through "Tiendas" (UXD-stores-23) | superseded 2026-10-20 |
+| L20 | No public confirmed-sales count | The seller card shows confirmed sales (UXD-listing-5, list-10) | superseded 2026-10-20 |
+| U16 | Resumen is not turned into a to-do list | The account home opens on Pendientes; metrics move to Estadísticas (UXD-my-listings-1, big-09) | superseded 2026-10-20 |
+
 ## UX redesign closed (owner, 2026-10-14)
 
 Henri: “all my manual checks pass. on web and mobile.” / “lets close the UX sprint.” / “as for N16, the local evidence suffices.” UX-4a/4b and UX-5–UX-8 are **CLOSED / ACCEPTED**; UX-1–UX-3 were already accepted. R01–R15 are recorded as owner-reported Pass, with no invented device/tool/metric detail. Current implemented choices are accepted as built, including U16/U17. See `ux-4-8-closure-review.md` for the complete sign-off, retained evidence limits and separate launch follow-ups.
@@ -10,7 +30,7 @@ Henri: “all my manual checks pass. on web and mobile.” / “lets close the U
 | ID | Decision | Status |
 | --- | --- | --- |
 | N16 | Option B: local authenticated/write-flow evidence suffices alongside the read-only production gate; no production test account or production write smoke is required to close UX-5–UX-7 | decided by owner, 14 Oct |
-| U16 | Keep the current Resumen; no new to-do-list implementation | accepted as built by owner, 14 Oct |
+| U16 | Keep the current Resumen; no new to-do-list implementation | accepted as built by owner, 14 Oct; superseded 2026-10-20 by UXD-my-listings-1 (Effortless Laria entry above) |
 | U17 | Keep the existing availability-aware favourites card | accepted as built by owner, 14 Oct |
 
 ## UX closure decisions (owner, 2026-10-14)
@@ -68,7 +88,7 @@ Brief `ux-6-accounts.md`. Under N17 the recommendations A1–A9 are taken provis
 | --- | --- | --- | --- |
 | U14 | Confirmation copy: a question title, a one-line body, a verb on the button ("Ocultar", "Marcar vendida", "Republicar copia", "Eliminar alerta", "Registrar venta", "Cancelar solicitud" with "Volver", "Enviar reseña"). "Registro" dropped from the mark-sold and relist questions (glossary) | The old questions kept; the button names the action instead of "Aceptar" | provisional (Claude Code) |
 | U15 | Onboarding forms (sign-in, sign-up, store application, password) keep their single top notice; per-field errors wait | They run on auth flows the overnight rules keep unchanged | decided 2026-10-14 by owner: implement now (see closure decisions) |
-| U16 | Resumen is not turned into a to-do list | It needs new reads across transactions and reviews | accepted as built 2026-10-14; see closure entry |
+| U16 | Resumen is not turned into a to-do list | It needs new reads across transactions and reviews | accepted as built 2026-10-14; see closure entry; superseded 2026-10-20 by UXD-my-listings-1 (Effortless Laria entry) |
 | U17 | Favoritos keeps its own card | A favourite can be sold or unavailable; the catalog card has no state for that | accepted as built 2026-10-14; see closure entry |
 
 ## UX-5 brief: provisional answers and build choices (cloud session, 10 Oct; for the UX-5 review)
@@ -111,19 +131,19 @@ The brief `ux-4-listing-store.md` asks L1–L21 on its review page https://claud
 | L5 | The one trust statement: the full limitation per surface | A | provisional 2026-10-09 (owner: all recommendations) |
 | L6 | F3: hide the public view counter (views still counted) | A | provisional 2026-10-09 (owner: all recommendations) |
 | L7 | F5: no safety step before WhatsApp | A | provisional 2026-10-09 (owner: all recommendations) |
-| L8 | "Compartir": not added ("Guardar" only) | A | provisional 2026-10-09 (owner: all recommendations) |
+| L8 | "Compartir": not added ("Guardar" only) | A | provisional 2026-10-09 (owner: all recommendations); superseded 2026-10-20 by UXD-listing-10 (Effortless Laria entry) |
 | L9 | Spec strip (type attributes) and a table without repeated fields | A | provisional 2026-10-09 (owner: all recommendations) |
 | L10 | Seller card with real figures; no second WhatsApp button | A | provisional 2026-10-09 (owner: all recommendations) |
 | L11 | Reviewer's name: first name and initial | B | provisional 2026-10-09 (owner: all recommendations) |
-| L12 | Related listings: two sections, four cards, left out when empty | A | provisional 2026-10-09 (owner: all recommendations) |
+| L12 | Related listings: two sections, four cards, left out when empty | A | provisional 2026-10-09 (owner: all recommendations); changed in part 2026-10-20 by UXD-listing-2 and list-07 (Effortless Laria entry) |
 | L13 | Current strip item on listing and verified store pages | A | provisional 2026-10-09 (owner: all recommendations) |
 | L14 | Owner's view of their own listing: not now | A | provisional 2026-10-09 (owner: all recommendations) |
 | L15 | Load the report form (and the Supabase client) only when pressed | A | provisional 2026-10-09 (owner: all recommendations) |
 | L16 | Store: section links; no in-store search, chips or sort | A | provisional 2026-10-09 (owner: all recommendations) |
 | L17 | Store: compact header; banner strip only when uploaded | A | provisional 2026-10-09 (owner: all recommendations) |
-| L18 | "Sobre la tienda" without street address or contact person | A | provisional 2026-10-09 (owner: all recommendations) |
-| L19 | Store breadcrumb by store type, none on phones | A | provisional 2026-10-09 (owner: all recommendations) |
-| L20 | F12: no public confirmed-sales count (it needs a migration) | A | provisional 2026-10-09 (owner: all recommendations) |
+| L18 | "Sobre la tienda" without street address or contact person | A | provisional 2026-10-09 (owner: all recommendations); superseded 2026-10-20 by list-12 and UXD-integration-11, confirmed 2026-10-28 (Effortless Laria entry) |
+| L19 | Store breadcrumb by store type, none on phones | A | provisional 2026-10-09 (owner: all recommendations); superseded 2026-10-20 by UXD-stores-23 (Effortless Laria entry) |
+| L20 | F12: no public confirmed-sales count (it needs a migration) | A | provisional 2026-10-09 (owner: all recommendations); superseded 2026-10-20 by UXD-listing-5 (Effortless Laria entry) |
 | L21 | F1 to UX-5, F2 after V1 | A | provisional 2026-10-09 (owner: all recommendations) |
 
 ## Release cadence (owner, 2026-10-09)
@@ -244,8 +264,8 @@ UX-1 was accepted by the owner on 30 Sep (`ux-1-acceptance.md`). The UX-2 brief 
 | N5 | Footer: full on the home; slim on every other public and account page; none in Admin | decided 2026-09-30 by owner |
 | G1 | The catalog page is called "Instrumentos" (header, footer, breadcrumbs, SEO title); `/listados` stays; the copy test's "Listados" exception goes | decided 2026-09-30 by owner |
 | N6 | Header data for the bell, the account menu and the avatar: the header's state endpoint (`/api/account-navigation`) also reads the user's name, the existing `is_admin` check and the two counts the account rail already reads (unread notifications, pending buyer confirmations). Same RLS client; no schema or rule change | decided 2026-09-30 by owner (asked during UX-2 implementation) |
-| N7 | "Tiendas verificadas" in the category strip and the footer: no stores directory exists, so it opens the catalog filtered to verified stores (`/listados?seller_type=verified_store`, the existing filter). A stores page would be new (UX-3/UX-4) | decided 2026-09-30 by owner (asked during UX-2 implementation) |
-| N8 | Search placeholder. The header search matches the brand only (`brand ILIKE '%text%'`), so audit item 17's "Marca, modelo o instrumento" would promise model and instrument search that returns nothing. One honest placeholder instead, "Busca por marca: Yamaha, Fender…", in the header now and the home banner in UX-3; brand-only search stays as it is | decided 2026-09-30 by owner (asked during UX-2 implementation); supersedes the placeholder text of audit item 17 |
+| N7 | "Tiendas verificadas" in the category strip and the footer: no stores directory exists, so it opens the catalog filtered to verified stores (`/listados?seller_type=verified_store`, the existing filter). A stores page would be new (UX-3/UX-4) | decided 2026-09-30 by owner (asked during UX-2 implementation); superseded 2026-10-20 by UXD-stores-20 (Effortless Laria entry) |
+| N8 | Search placeholder. The header search matches the brand only (`brand ILIKE '%text%'`), so audit item 17's "Marca, modelo o instrumento" would promise model and instrument search that returns nothing. One honest placeholder instead, "Busca por marca: Yamaha, Fender…", in the header now and the home banner in UX-3; brand-only search stays as it is | decided 2026-09-30 by owner (asked during UX-2 implementation); supersedes the placeholder text of audit item 17; superseded 2026-10-20 by UXD-find-1 and UXD-find-16 (Effortless Laria entry) |
 
 ## UX-2 accepted (owner, 2026-10-08)
 
@@ -301,8 +321,8 @@ All eleven questions are answered. The home with every decision applied is the c
 
 | ID | Question | Recommendation | Status |
 | --- | --- | --- | --- |
-| H1 | First screen: A Buscador / B Vitrina / C Afiche / D Dos puertas | B Vitrina (C as the bold alternative) | decided 2026-09-27 by owner: develop B |
-| H2 | How listings enter the vitrina — A automatic or B picked by Admin (new Admin control = product change under the V1 freeze, flag F8). Proposals on the canvas page "Inicio · decisiones" (30 Sep) | A: the newest approved listing of each category with 3 photos or more; each tile names its category; refreshes by itself | decided 2026-09-30 by owner: A (automatic); no Admin control, so F8 is closed |
+| H1 | First screen: A Buscador / B Vitrina / C Afiche / D Dos puertas | B Vitrina (C as the bold alternative) | decided 2026-09-27 by owner: develop B; superseded 2026-10-20 by UXD-find-9 (Effortless Laria entry) |
+| H2 | How listings enter the vitrina — A automatic or B picked by Admin (new Admin control = product change under the V1 freeze, flag F8). Proposals on the canvas page "Inicio · decisiones" (30 Sep) | A: the newest approved listing of each category with 3 photos or more; each tile names its category; refreshes by itself | decided 2026-09-30 by owner: A (automatic); no Admin control, so F8 is closed; superseded 2026-10-20 by UXD-find-9 (Effortless Laria entry) |
 | H3 | Price on the vitrina tiles: A yellow tag (exception to P5), B ink tag, C price in the caption. Proposals on "Inicio · decisiones" (30 Sep) | B ink tag (changed 30 Sep from "yellow, home only": with the art banner above, yellow tags would compete with the single yellow action) | decided 2026-09-30 by owner: B ink tag (#101217 fill, white text, 1.5 px white edge) |
 | H4 | Promises on the home ("Cómo funciona Laria", the sell block and the footer): 1 "Publicar es gratis", 2 "Laria no cobra comisión", 3 "Cada publicación la revisa Laria o viene de una tienda verificada", 4 "Laria revisa a mano su RUC, dirección y contacto", 5 "Solo se reseña después de una compra que comprador y vendedor confirmaron en Laria", 6 "Te avisamos por correo cuando está visible" | Checked against docs/functional-spec.md on 30 Sep (table on "Inicio · decisiones"): 3, 4 and 5 match the spec. 1 and 2 are true in V1; paid plans and commission enforcement are post-V1 in the spec, so the owner decides whether they are permanent. 6 holds once the automatic email sender is on (go-live checklist) | decided 2026-09-30 by owner: agrees with the proposals except 6, which leaves the home: an email notice is stated once the person acts (publishing a listing, buying, etc.; see "Email notices in context" below). 1–5 stay as written; 1 and 2 change together with any future paid plan or commission. Sell block now: "Publicar es gratis. Revisamos tu publicación antes de mostrarla." |
 | H5 | Band content | Headline, search and vitrina only; guarantees move to "Cómo funciona Laria" after the first listings | decided 2026-09-27 by owner ("not in this section, lower in the page") |

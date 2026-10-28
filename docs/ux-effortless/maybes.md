@@ -83,12 +83,15 @@ where the batches meet (23 checks, with axe WCAG 2.2 AA on Descubrir and the off
 
 Proposed and Not Run, in `acceptance-proposal.tsv` with the program's others: EASE-800 to EASE-829 (Reservado and Hacer
 una oferta), EASE-830 to EASE-859 (Descubrir), EASE-860 to EASE-878 (the AI helpers) and EASE-880 to EASE-882 (this
-page, `maybes-acceptance.tsv`). They join `acceptance/cases.tsv` only after Henri's review.
+page, `maybes-acceptance.tsv`). They joined `acceptance/cases.tsv` as Not Run on 2026-10-28, with the program's others
+([integration.md](integration.md#acceptance-cases)).
 
 ## Before switching on
 
-- Apply the three migrations from Henri's Mac, then merge.
+- Done: merged on 2026-10-28 (PR #74), and the three migrations applied to production from Henri's Mac at 13:41 UTC
+  the same day.
 - For the AI helpers: an Anthropic API key in a workspace with a spend limit, `ANTHROPIC_API_KEY` and
   `LARIA_AI_HELPERS=1` in Vercel, and legal review of the privacy-policy line in [maybes-ai.md](maybes-ai.md) § To
   switch it on. Claude Opus 5.5 by default, about US$31 a month for 30 store questions and 15 photo assists a day;
-  `LARIA_AI_MODEL=claude-haiku-5-5` costs about US$1 for the same use.
+  `LARIA_AI_MODEL=claude-haiku-5-5` costs about US$1 for the same use. On 2026-10-28 the owner chose to leave the AI
+  helpers off for now.
