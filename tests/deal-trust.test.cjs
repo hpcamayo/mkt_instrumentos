@@ -190,6 +190,21 @@ test("person pages stay out of search engines and the code page sends no referre
   assert.doesNotMatch(seller, /whatsapp_phone|full_name|contact_name|public_address/);
 });
 
+// Henri's screen review (27 Oct 2026, visitor-12): the buyer card shows its facts as figures with icons and the rating
+// as stars, the same on the card and in the buyer's own preview, and every figure is also said in words.
+test("the buyer card shows figures and stars, with every figure in words", () => {
+  const figures = read("components/trust/buyer-card-figures.tsx");
+  assert.match(read("app/comprador/[token]/page.tsx"), /<BuyerCardFigures card=\{card\} \/>/);
+  assert.match(read("components/trust/account-trust.tsx"), /<BuyerCardFigures card=\{record\} \/>/);
+  assert.match(figures, /<StarMeter value=\{average\}/);
+  assert.match(figures, /\{formatAverage\(average\)\}<\/span>\s*<span className="t-ui">de 5<\/span>/);
+  assert.match(figures, /Aún sin reseñas/);
+  assert.match(figures, /<span aria-hidden="true" className="[^"]*">\s*\{icon\}/);
+  const meter = read("components/ui/star-meter.tsx");
+  assert.match(meter, /<span aria-hidden="true"/);
+  assert.match(meter, /Math\.round\(value \* 10\) \/ 10/);
+});
+
 test("Laria never handles money in these words", () => {
   const files = [
     "components/trust/counter-purchase-code.tsx", "app/compra-en-tienda/[token]/page.tsx", "components/trust/seller-level-mark.tsx",

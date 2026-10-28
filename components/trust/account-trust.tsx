@@ -4,9 +4,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { Check, Circle } from "lucide-react";
 import Link from "next/link";
 import { useId, useState } from "react";
+import { BuyerCardFigures } from "@/components/trust/buyer-card-figures";
 import { CopyLink } from "@/components/trust/copy-link";
 import { SellerLevelMark } from "@/components/trust/seller-level-mark";
-import { TrackRecordConsent, TrackRecordFacts } from "@/components/trust/track-record-chip";
+import { TrackRecordConsent } from "@/components/trust/track-record-chip";
 import { Button } from "@/components/ui/button";
 import { buyerCardUrl } from "@/lib/contact-message";
 import {
@@ -115,8 +116,11 @@ function TrackRecordCard({ initial }: { initial: TrackRecord }) {
     <Card title="Tu historial de comprador">
       {record.enabled && record.token ? (
         <>
-          <p className="t-ui text-ink-2">Está activado: puedes agregarlo a tus mensajes a vendedores. La tarjeta muestra:</p>
-          <TrackRecordFacts record={record} />
+          <p className="t-ui text-ink-2">
+            Está activado: puedes agregarlo a tus mensajes a vendedores. Tu tarjeta muestra tu nombre de pila,
+            {" "}{record.firstName}, y esto:
+          </p>
+          <BuyerCardFigures card={record} />
           <Link href={`/comprador/${record.token}`} className="link w-fit t-ui font-semibold">Ver mi tarjeta</Link>
           <CopyLink url={buyerCardUrl(record.token)} label="Enlace de tu tarjeta de comprador" />
           <Button size="sm" variant="quiet" className="w-fit" loading={busy} onClick={() => void disable()}>Apagar mi historial</Button>

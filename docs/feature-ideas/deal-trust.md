@@ -145,8 +145,9 @@ name, buying in Laria since, verified purchases and the average rating sellers g
 verified purchase there is nothing to show and the chip doesn't appear.
 
 **Files.** `…100300_feat_seller_pages.sql` (`buyer_track_records`), `app/comprador/[token]/page.tsx`,
-`components/trust/track-record-chip.tsx`, `components/trust/track-record-state.ts`, `lib/contact-message.ts`
-(`trackRecordLine`, `buyerCardUrl`), `components/whatsapp-contact-link.tsx`.
+`components/trust/buyer-card-figures.tsx`, `components/ui/star-meter.tsx`, `components/trust/track-record-chip.tsx`,
+`components/trust/track-record-state.ts`, `lib/contact-message.ts` (`trackRecordLine`, `buyerCardUrl`),
+`components/whatsapp-contact-link.tsx`.
 
 - **FD-deal-trust-11.** Turning it on is consent shown in a sheet ("Nunca muestra tu teléfono, tu correo ni qué
   compraste…"). Each time it is turned on the card gets a new address, so links shared before turning it off stay
@@ -155,6 +156,11 @@ verified purchase there is nothing to show and the chip doesn't appear.
   the average and only with this opt-in; the comments stay private.
 - **FD-deal-trust-13.** Once on, the line is included by default in every WhatsApp message to a seller or store (the
   first contact and "Solicitar compra" alike) and can be removed per listing with the chip.
+- **Screen review (Henri, 28 Oct 2026).** "Use more visual motifs, not just plain text, like stars or a bar system."
+  The card now shows its facts as tiles with an icon each (`components/trust/buyer-card-figures.tsx`): confirmed
+  purchases as a figure with one blue block per purchase (up to ten, never empty blocks, so it doesn't read as a goal),
+  the sellers' rating as a figure with stars (`StarMeter`), and since when the buyer buys in Laria. Every figure is also
+  in words. The buyer's own preview in Compras y ventas shows the same tiles.
 
 ## safe-11: «Historial en Laria»
 

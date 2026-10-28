@@ -31,7 +31,7 @@ test("every shared primitive has a consumer outside components/ui", () => {
   const primitives = [
     "Button", "buttonClasses", "IconButton", "Field", "Input", "Select", "Textarea", "FileInput", "Checkbox",
     "Tag", "StatusTag", "StatusEntryTag", "CountBadge", "Chip", "ChipLink", "AppliedChip", "Radio", "Notice", "EmptyState",
-    "PageHeader", "Price", "VerifiedMark", "VerifiedIcon", "Skeleton", "WhatsAppGlyph", "Sheet",
+    "PageHeader", "Price", "VerifiedMark", "VerifiedIcon", "Skeleton", "WhatsAppGlyph", "Sheet", "StarMeter",
   ];
   const unused = primitives.filter((name) => !NOT_YET_USED.has(name) && importers(name).length === 0);
   assert.deepEqual(unused, []);
