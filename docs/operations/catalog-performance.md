@@ -106,6 +106,37 @@ reads for blocked or malformed requests. Deferred-read regressions in `tests/cat
 validation before reads, unavailable optional counts, core errors and prompt overflow redirects. Run the existing
 `tests/catalog-routing-http.cjs` against that fixture-backed build for the full SEO and pagination smoke checks.
 
+### Amzn-SearchBot filtered-catalog policy
+
+Amzn-SearchBot has a separate, filtered-only policy from the existing three bulk crawlers. `lib/catalog-indexing.ts`
+shares the existing metadata classification with the middleware guard: known, non-empty refinements that receive
+`noindex, follow` are refused to this agent on `/listados` and matching `/api/catalog` requests, before auth, metadata,
+layout or database work. Malformed HTML catalog URLs still take their existing small cleanup redirect first.
+
+The clean catalog, page-only pagination, canonical category-only aliases, tracking/unknown parameters and empty
+controls still pass the runtime guard. Category/product/store routes are outside it. Exact token matching leaves
+Amzn-User, Google, Bing, social previews and real browsers unchanged. A refused GET is the same 20-byte 403 as the
+existing guard; HEAD has no body, and both use `private, no-store` and `Vary: User-Agent` to prevent shared-cache leaks.
+Primary inventory freshness, optional-read budgets/caches and the parallel-read optimization are unchanged.
+
+The dedicated robots group repeats every private-path restriction because a specific group replaces `*`. It hints
+against refinement query keys in either parameter position, including duplicate URLs carrying empty refinement keys;
+the value-aware runtime guard still allows those empty controls. Category-only aliases, clean catalog pagination and
+tracking-only URLs are not disallowed. Private catalog APIs retain their existing robots exclusion for all agents.
+Percent-encoded keys and other forms not covered by the hints are still handled by the runtime classifier.
+
+This deliberately reduces Amazon's access to filtered variants; clean discovery remains available. Amazon documents
+separate policies for [Amzn-SearchBot and Amzn-User](https://developer.amazon.com/docs/amazonbot/amazonbot.html).
+[Faceted-navigation guidance](https://developers.google.com/crawling/docs/faceted-navigation) supports limiting this
+URL space when it is not intended for indexing. Neither policy changes nor successful smoke checks guarantee rankings.
+
+Verification: `tests/amzn-search-crawl.test.cjs` compares the actual metadata classification and routing decision,
+checks repeated/encoded/empty values, exact agent/path boundaries, GET/HEAD, cleanup ordering, no session client,
+robots privacy and untouched discovery. After building against `scripts/perf/catalog-latency.cjs fixture`, run
+`node tests/amzn-search-crawl-http.cjs http://127.0.0.1:43137 http://127.0.0.1:43135` plus
+`tests/catalog-routing-http.cjs` against the same app. The former verifies zero upstream calls on blocked requests and
+real-user access to the same URLs and API pagination; the latter retains the broader existing crawl/SEO checks.
+
 ## Budgets
 
 | Budget | Value | Covers |
