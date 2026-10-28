@@ -154,10 +154,14 @@ test("talk-06: a period runs until its end, and the end is a date in Lima, never
   ], now).map((item) => item.listing_id), ["just-ended", "ended"]);
 
   assert.deepEqual(reservations.RESERVATION_DAYS.map((days) => reservations.reservationDaysLabel(days)), ["1 día", "2 días", "3 días", "5 días"]);
-  assert.equal(reservations.reservationEndText("2026-10-29T23:30:00Z"), "el jueves 29 de octubre a las 6:30 p. m.");
-  assert.equal(reservations.reservationEndText("2026-10-30T18:05:00Z"), "el viernes 30 de octubre a la 1:05 p. m.");
-  assert.equal(reservations.reservationEndText("2026-11-02T14:00:00Z"), "el lunes 2 de noviembre a las 9:00 a. m.");
+  // The time keeps no-break spaces, so "p. m." never wraps.
+  assert.equal(reservations.reservationEndText("2026-10-29T23:30:00Z"), "el jueves 29 de octubre a las 6:30\u00a0p.\u00a0m.");
+  assert.equal(reservations.reservationEndText("2026-10-30T18:05:00Z"), "el viernes 30 de octubre a la 1:05\u00a0p.\u00a0m.");
+  assert.equal(reservations.reservationEndText("2026-11-02T14:00:00Z"), "el lunes 2 de noviembre a las 9:00\u00a0a.\u00a0m.");
   assert.equal(reservations.reservationEndText("nunca"), null);
+  // "p. m." closes the sentence too: "… a las 6:30 p. m. Puedes pedir …", never "p. m..".
+  assert.equal(reservations.endSentence("el jueves 29 de octubre a las 6:30 p. m."), "el jueves 29 de octubre a las 6:30 p. m.");
+  assert.equal(reservations.endSentence("el jueves 29 de octubre"), "el jueves 29 de octubre.");
   assert.equal(reservations.reservationTagText("2026-10-29T23:30:00Z"), "Reservada hasta el jue 29 oct.");
   assert.equal(reservations.reservationTagText("nunca"), "Reservada");
   assert.equal(reservations.watchersText(1), "1 persona pidió que le avisemos si se libera.");
@@ -438,7 +442,10 @@ test("talk-06 and talk-07: the listing page, the account pages and the migration
   assert.match(page, /const reservedUntil = !isSold && reservation && isReservationRunning\(reservation, now\) \? reservation\.reserved_until : null;/);
   assert.match(page, /const offer = !isSold && !purchase && !reservedUntil && listing\.seller_type === "individual" && listing\.price_pen !== null && listing\.price_pen > 0;/);
   assert.match(page, /buildWhatsAppUrl\(listing, \{ reserved: Boolean\(reservedUntil\) \}\)/);
-  assert.match(page, /Quien vende lo reservó para otra persona hasta \{reservationEndText\(reservedUntil\)\}/);
+  // While reserved, neither "sigue disponible" nor the quiet-listing note.
+  assert.match(page, /\{reservedUntil \? null : availabilityConfirmed \? \(/);
+  assert.match(page, /Quien vende lo reservó para otra persona hasta \{endSentence\(reservationEndText\(reservedUntil\) \?\? ""\)\} Puedes pedir/);
+  assert.match(source("components/listing-management-table.tsx"), /notify\(until \? `Reservada hasta \$\{endSentence\(until\)\}` : "Publicación reservada\."\);/);
   for (const piece of [/<StatusTag domain="stock" status="reserved" \/>/, /<ReleaseAlert listingId=\{listing\.id\}/, /<OwnerBar listingId=\{listing\.id\} sold=\{isSold\} reserved=\{Boolean\(reservedUntil\)\}/, /reserved=\{Boolean\(reservedUntil\)\}\s+className="order-3 lg:order-3"/]) assert.match(page, piece);
   // The visitor's own state comes from the private viewer route after the cached page loads.
   const viewer = source("components/listing/listing-viewer.tsx");

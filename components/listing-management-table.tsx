@@ -29,6 +29,7 @@ import {
 import { refreshListingPages } from "@/lib/listing-page-refresh";
 import {
   RESERVATION_DAYS,
+  endSentence,
   reservationDaysLabel,
   reservationEndText,
   reservationTagText,
@@ -176,7 +177,7 @@ export function ListingManagementTable({
     if (!result.ok) return setError(result.message);
     setReserving(null);
     const until = typeof result.data?.reservedUntil === "string" ? reservationEndText(result.data.reservedUntil) : null;
-    notify(until ? `Reservada hasta ${until}.` : "Publicación reservada.");
+    notify(until ? `Reservada hasta ${endSentence(until)}` : "Publicación reservada.");
     router.refresh();
   }
 
@@ -317,7 +318,7 @@ export function ListingManagementTable({
                         {paused ? <p className="mt-1"><Tag icon={<Pause aria-hidden />}>{paused}</Tag></p> : null}
                         {reservation ? (
                           <p className="mt-1">
-                            <Tag tone="warning" icon={<Clock aria-hidden />}>{reservation.ended ? "Terminó la reserva · ¿Se vendió?" : reservationTagText(reservation.until)}</Tag>
+                            <Tag tone="warning" icon={<Clock aria-hidden />} wrap>{reservation.ended ? "Terminó la reserva · ¿Se vendió?" : reservationTagText(reservation.until)}</Tag>
                           </p>
                         ) : null}
                         {reservation && reservation.watchers > 0 ? <p className="mt-1 t-meta">{watchersText(reservation.watchers)}</p> : null}

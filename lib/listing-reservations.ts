@@ -168,13 +168,19 @@ function pieces(format: Intl.DateTimeFormat, date: Date) {
 }
 
 // The end in words, in Lima: "el jueves 29 de octubre a las 6:30 p. m." (a date, never "mañana": the listing page is
-// cached, and a relative day would be wrong after midnight). Null for an unreadable date.
+// cached, and a relative day would be wrong after midnight). The time keeps no-break spaces, so "p. m." never wraps.
+// Null for an unreadable date.
 export function reservationEndText(iso: string) {
   const date = new Date(iso);
   if (!Number.isFinite(date.getTime())) return null;
   const { weekday, day, month } = pieces(longDate, date);
-  const time = clock.format(date).replace(/\s+/g, " ");
+  const time = clock.format(date).replace(/\s+/g, "\u00a0");
   return `el ${weekday} ${day} de ${month} ${time.startsWith("1:") ? "a la" : "a las"} ${time}`;
+}
+
+// The end as the close of a sentence: the period of "p. m." closes the sentence too, so no second one is added.
+export function endSentence(text: string) {
+  return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
 // The short form for a tag: "Reservada hasta el jue 29 oct."

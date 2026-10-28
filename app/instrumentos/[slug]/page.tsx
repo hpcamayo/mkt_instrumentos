@@ -42,7 +42,7 @@ import {
   type SellerFacts,
 } from "@/lib/listing-page";
 import { needsSafetySheet, quickQuestions } from "@/lib/contact-message";
-import { isReservationRunning, readReservedListings, reservationEndText, type ReservedListing } from "@/lib/listing-reservations";
+import { endSentence, isReservationRunning, readReservedListings, reservationEndText, type ReservedListing } from "@/lib/listing-reservations";
 import { isEntityId } from "@/lib/marketplace-event-payload";
 import {
   DISCOVERABLE_STOCK_FILTER,
@@ -459,7 +459,7 @@ function ListingDetail({
               ) : null}
               {reservedUntil ? (
                 <p className="mt-2 t-ui text-ink-2">
-                  Quien vende lo reservó para otra persona hasta {reservationEndText(reservedUntil)}. Puedes pedir que te avisemos si se libera, o escribirle igual.
+                  Quien vende lo reservó para otra persona hasta {endSentence(reservationEndText(reservedUntil) ?? "")} Puedes pedir que te avisemos si se libera, o escribirle igual.
                 </p>
               ) : null}
               <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -469,7 +469,8 @@ function ListingDetail({
                 </ListingDetailMetadata>
               </p>
               {/* A seller's recent "sigue disponible" (my listings check-ins) answers the quiet-listing note (list-04). */}
-              {availabilityConfirmed ? (
+              {/* talk-06: while reserved, the reservation line above says where it stands. */}
+              {reservedUntil ? null : availabilityConfirmed ? (
                 <p className="mt-1 t-meta">Quien vende confirmó que sigue disponible el {availabilityConfirmed}.</p>
               ) : quiet ? (
                 <p className="mt-2 t-meta">Esta publicación tiene un tiempo: consulta si sigue disponible.</p>

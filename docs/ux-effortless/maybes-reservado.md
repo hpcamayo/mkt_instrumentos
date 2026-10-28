@@ -2,8 +2,13 @@
 
 Two of the five ideas Henri left as "maybe" on the approval page; he said "go ahead" in the Quality-of-life thread on
 2026-10-27, read as yes to building all five. Branch `ux/maybes-reservado`, migration slot 20261120100000, acceptance
-range EASE-800 to EASE-829 (proposed in `maybes-reservado-acceptance.tsv`, Not Run). Screenshots:
-`/mnt/project-files/ux-ideas/screens/maybes/reservado/`. Nothing here is applied to a hosted database.
+range EASE-800 to EASE-829 (proposed in `maybes-reservado-acceptance.tsv`, Not Run). Nothing here is applied to a
+hosted database.
+
+Screenshots in `/mnt/project-files/ux-ideas/screens/maybes/reservado/`, at 390 and 1366 px: `talk-06-listing-reserved`,
+`talk-06-card-badge`, `talk-06-mis-publicaciones` (and `-picker`, `-ended` at 1366), `talk-06-pendientes`,
+`talk-06-buyer-notified` (1366), `talk-07-listing-not-reserved`, `talk-07-offer-sheet`. The demo photos are on
+placehold.co, which the sandbox cannot reach, so the screens draw the same grey placeholders.
 
 ## talk-06 "Reservado"
 
@@ -58,6 +63,7 @@ still available, and the seller is asked afterwards whether it sold.
 - `components/listing-card.tsx` (`reserved`), `components/catalog-view.tsx`, `components/catalog-load-more.tsx`,
   `app/api/catalog/page/route.ts` (`{listings, reserved}`), `lib/catalog-guard.ts`, `docs/operations/catalog-recovery.md`.
 - `app/mi-cuenta/publicaciones/page.tsx`, `components/listing-management-table.tsx` (`canReserve`, `ReservationPicker`),
+  `components/ui/tag.tsx` (`wrap`: the period's tag takes more lines instead of widening the table past 1366 px),
   `lib/my-listings.ts` (`reservation`, `rowActions(…).reserve`), `app/mi-cuenta/page.tsx`, `lib/pendientes.ts`,
   `components/pendientes-list.tsx`, `lib/notifications.ts`, `lib/email/templates.ts`.
 - Tests: `tests/maybes-reservado.sql`, `tests/maybes-reservado.test.cjs`, two cases in `tests/catalog-recovery.test.cjs`;
@@ -82,7 +88,8 @@ still available, and the seller is asked afterwards whether it sold.
   refused (`RESERVATION_STORE_LISTING`) and the store tables never offer it.
 - 1, 2, 3 or 5 days from the tap, not to the end of a day; no free date. A new period replaces a running one and the
   people waiting keep waiting.
-- The listing stays public and contactable while reserved; "Hacer una oferta" is hidden on it.
+- The listing stays public and contactable while reserved; "Hacer una oferta" is hidden on it, and so are "Quien vende
+  confirmó que sigue disponible" and the quiet-listing note: the reservation line says where it stands.
 - The end reads as a date and time in Lima ("el jueves 29 de octubre a las 6:30 p. m."), never "mañana", because the
   page is cached and a relative day would be wrong after midnight.
 - The badge goes at the end itself; the seller is asked once per period (the key is the listing and the end).
