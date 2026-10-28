@@ -102,7 +102,8 @@ async function StoreList({ supabase, city }: { supabase: PublicSupabaseClient; c
   const cities = storeDirectoryCities(stores);
   const shown = filterStoresByCity(stores, city);
   return (
-    <div className="grid gap-5">
+    // One column that never grows past the page: the city chips scroll sideways inside it on phones.
+    <div className="grid grid-cols-1 gap-5">
       <StoreCityChips cities={cities} current={city} total={stores.length} />
       <p className="t-meta tabular-nums" id="tiendas-estado">
         {formatNumber(shown.length)} {shown.length === 1 ? "tienda" : "tiendas"}
