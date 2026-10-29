@@ -39,4 +39,19 @@ function isUploadSetup(request, origin) {
     return ["renew", "cleanup"].includes(body?.action) && typeof body.token === "string" && body.token.length > 0;
   } catch { return false; }
 }
-module.exports = { readOnlyFetch, assertScopedSql, isFavoriteRead, isUploadSetup };
+// The CLI wraps PostgreSQL errors in a JSON message. Keep the server's first line, without SQLSTATE/context.
+function structuredSqlError(error) {
+  for (const raw of [error.stderr, error.stdout]) {
+    const text = String(raw || "");
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start < 0 || end < start) continue;
+    try {
+      const body = JSON.parse(text.slice(start, end + 1));
+      if (typeof body.message !== "string" || !body.message.includes("ERROR:")) continue;
+      return body.message.replace(/^.*?ERROR:\s*(?:[A-Z0-9]{5}:\s*)?/, "").split(/\n|\\n/)[0].trim();
+    } catch { /* This was not the CLI's structured SQL error. */ }
+  }
+  return null;
+}
+module.exports = { readOnlyFetch, assertScopedSql, isFavoriteRead, isUploadSetup, structuredSqlError };

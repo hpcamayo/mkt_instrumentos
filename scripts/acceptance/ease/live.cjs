@@ -19,7 +19,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { execFile, execFileSync } = require("node:child_process");
 const { LocalOnly, LiveUnsafe } = require("./errors.cjs");
-const { assertScopedSql, isFavoriteRead, isUploadSetup } = require("./live-safety.cjs");
+const { assertScopedSql, isFavoriteRead, isUploadSetup, structuredSqlError } = require("./live-safety.cjs");
 
 const RUN = (process.env.LIVE_RUN || `r${Date.now().toString(36)}`).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 16);
 const PASSWORD = process.env.LIVE_PASSWORD || `Ease-${crypto.randomBytes(18).toString("base64url")}`;
@@ -43,6 +43,8 @@ function failure(error) {
   if (detail.includes("LIVE_UNSAFE_ALERT")) {
     return new LiveUnsafe("a real buyer's saved-search alert would match a test listing, so it was not published");
   }
+  const sqlMessage = structuredSqlError(error);
+  if (sqlMessage) return new Error(`ERROR: ${sqlMessage}`);
   return new Error(`live database: ${detail.slice(0, 900)}`);
 }
 function run(text) {
@@ -71,7 +73,7 @@ function parse(out) {
       continue;
     }
     const only = Array.isArray(value) && value.length === 1 ? value[0] : value;
-    if (only && typeof only === "object" && !Array.isArray(only) && Object.keys(only).length === 1 && typeof only.result === "string") {
+    if (only && typeof only === "object" && !Array.isArray(only) && Object.keys(only).length === 1 && typeof only.result === "string" && /^\s*[[{]/.test(only.result)) {
       return JSON.parse(only.result);
     }
     return value;
@@ -563,6 +565,6 @@ if (require.main === module && process.argv.includes("--clean-up")) {
 }
 
 module.exports = {
-  RUN, PASSWORD, PHONE, rows, rowsAsync, exec, rowsAs, account, actorId, actorEmail, isActor, photoUrls, photoBytes, alertMatches,
+  RUN, PASSWORD, PHONE, parseRows: parse, rows, rowsAsync, exec, rowsAs, account, actorId, actorEmail, isActor, photoUrls, photoBytes, alertMatches,
   paceSignIn, rememberSignIn, savedSession, saveSession, guardRequest, startFence, beginCase, afterCase, finish, preflight,
 };

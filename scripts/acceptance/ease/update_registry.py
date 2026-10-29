@@ -137,6 +137,7 @@ def main():
     parser.add_argument("run", type=Path)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--application-revision", default="not recorded", help="Source commit actually served by the local browser-test app")
     args = parser.parse_args()
     registry_path = ROOT / "acceptance/cases.tsv"
     original = registry_path.read_bytes().decode("utf-8")
@@ -151,7 +152,7 @@ def main():
     mapping = json.loads((Path(__file__).parent / "supplemental-coverage.json").read_text())
     supplemental = supplemental_results(cases, local, unit_log, sql_report, mapping)
     audits = audit_results(args.run)
-    report = {"local_application_revision": "ba05b79842eb81178926425ab79a012659d4a797",
+    report = {"local_application_revision": args.application_revision,
               "live_url": "https://laria.audio", "live_deployment_revision": "not independently verified",
               "generated_at": datetime.now(ZoneInfo("America/Lima")).isoformat(), "cases": []}
     deployment_path = args.run / "live/deployment.json"

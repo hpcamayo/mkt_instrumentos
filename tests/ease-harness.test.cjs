@@ -73,3 +73,19 @@ test("fixture helpers propagate safety stop exceptions", () => {
     }
   } finally { h.sqlAs = original; }
 });
+
+
+test("SQL row results that are dates are not mistaken for CLI envelopes", () => {
+  const { parseRows } = require("../scripts/acceptance/ease/live.cjs");
+  const value = [{ result: "2026-10-31T05:44:37+00:00" }];
+  assert.deepEqual(parseRows(JSON.stringify(value)), value);
+  assert.deepEqual(parseRows(JSON.stringify({ result: JSON.stringify([{ id: 1 }]) })), [{ id: 1 }]);
+});
+
+test("structured CLI SQL errors preserve the business message without SQLSTATE or context", () => {
+  const { structuredSqlError } = require("../scripts/acceptance/ease/live-safety.cjs");
+  const message = "Failed to run sql query: ERROR:  P0001: RESERVATION_NOT_OWNED: No puedes administrar esta publicación.\nCONTEXT: PL/pgSQL function";
+  assert.equal(structuredSqlError({ stderr: "unexpected status 400: " + JSON.stringify({ message }) + "\nTry rerunning" }),
+    "RESERVATION_NOT_OWNED: No puedes administrar esta publicación.");
+  assert.equal(structuredSqlError({ stderr: "network timeout" }), null);
+});

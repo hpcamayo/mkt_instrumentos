@@ -86,5 +86,8 @@ python3 -B -m unittest discover -s acceptance -p 'test_*.py'
 git diff -- acceptance/cases.tsv
 ```
 
+Pass `--application-revision` with the source commit actually served by the local test app; otherwise the report
+says the revision was not recorded. It may differ from the checkout HEAD.
+
 Only status and evidence fields of executed EASE IDs change; all other registry bytes are preserved. No XLSX is
 regenerated. The dated report records the exact scope and remaining gaps.
