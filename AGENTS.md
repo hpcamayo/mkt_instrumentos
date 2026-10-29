@@ -17,17 +17,17 @@ The product should help buyers discover musical gear and contact sellers directl
 - Design mobile-first.
 - Keep features simple and working.
 
-The frozen V1 scope is defined in `docs/functional-spec.md`. V1 does not include:
+The expanded V1 scope is defined in `docs/functional-spec.md`; `docs/features.md` and `docs/documentation-status.md` distinguish main, approved PR #54 work, activation gates and deferred work. V1 does not include:
 
-- Payments
+- Laria-processed payments
 - Checkout
-- Delivery or shipping flows
+- Laria-managed delivery or shipping
 - Escrow
 - Commissions
 - Subscriptions
 - In-app chat
 
-V1 does include the account, ownership, favorites, alerts, verified-transaction review, reporting, moderation, analytics, and store-verification behavior specified in `docs/functional-spec.md`.
+V1 includes the account, ownership, retention, reputation, moderation and store-verification foundation plus the approved inventory, assisted-commerce, discovery, safety, selling-tool and separate-service extensions in `docs/functional-spec.md`. Approved scope does not imply deployment or acceptance; provider and pilot gates still apply.
 
 ## Canonical Product Instructions
 
@@ -116,4 +116,4 @@ If tests or verification could not be run, state that clearly.
 - Avoid unrelated refactors.
 - Prefer readable code and clear naming.
 - Add comments only when they clarify non-obvious logic.
-- Do not make a new product decision where the frozen V1 functional specification already defines the behavior.
+- Do not make a new product decision where the current V1 functional specification already defines the behavior.

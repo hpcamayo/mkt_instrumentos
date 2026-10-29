@@ -1,105 +1,58 @@
-# Roadmap
+# Laria roadmap
 
-`docs/functional-spec.md` is the canonical, frozen Laria V1 product contract. This roadmap orders implementation; it does not make V1 features optional or redefine their behavior.
+Updated 2026-10-28. [functional-spec.md](functional-spec.md) defines the expanded V1 contract. [features.md](features.md) inventories implementation; [documentation-status.md](documentation-status.md) records exact sources and release gates. This roadmap replaces the original Sprint 1–9 build sequence as the forward-looking plan.
 
-The current strategic goal remains to make Laria the best place in Peru to discover musical instruments and gear without adding transaction-processing complexity. Payments, checkout, escrow, delivery, commissions, subscriptions, paid boosts, and internal chat remain post-V1.
+## Foundation and extensions already on main
 
-## Completed Foundation
+The original public marketplace, owned Particular/store accounts, moderated publication and revisions, store approval/verification, lifecycle, favorites, analytics, verified purchases/reviews, reports, Admin hub, email, SEO and legal pages have implementations. Their dated production/owner evidence remains in the sprint and release records.
 
-### Public marketplace
+Main has also incorporated the UX redesign and ten-category taxonomy, store inventory/imports/Mostrador, the gated assisted-commerce pilot, Effortless Laria discovery/account/selling improvements, and launch-audit security/privacy/performance/operations fixes. The five Effortless maybes are now on main: reservations and release watches, WhatsApp offers, Descubrir and the two gated AI helpers. These are no longer unstarted roadmap suggestions.
 
-- Public homepage, approved-listing catalog, listing detail, and active store pages.
-- URL-driven musician-focused filters, sorting, result counts, chips, responsive layouts, loading and empty states.
-- Instrument-type and JSONB attribute filtering/display foundations.
-- Store identity and Tienda Verificada badge display.
-- Direct WhatsApp contact.
+“On main” does not mean every pilot is enabled or every acceptance case passed. This update does not close the launch gate. Do not use historical September totals or Hobby/manual-worker notes as current deployment facts.
 
-### Reliability and performance
+## Next release: approved feature ideas, PR #54
 
-- Stable 24-item catalog and store pagination.
-- Database photo counts and on-demand additional card photos.
-- Responsive images and streamed recommendation sections.
-- Reduced public authentication overhead and targeted email lookup.
-- First-publication timestamps.
-- Signed, idempotent public submission retries, atomic finalization, partial-upload cleanup attempts, and regression tests.
+[PR #54](https://github.com/hpcamayo/mkt_instrumentos/pull/54) is open and draft at this checkpoint. Of 60 approved ideas, 44 are built; 13 were explicitly postponed and 3 await catalog dependencies. The nine batch areas are:
 
-See `docs/performance.md`; this work is completed and must be preserved.
+1. Accounts, data controls, help and safety.
+2. Listing conditions, terms, combos and map.
+3. Deal trust, seller/buyer identity, reviews and counter-purchase QR.
+4. Mi equipo, store offers, consignment, part payment and price tools.
+5. Store reach: imports, feeds, dealers, campaigns and demand reporting.
+6. Store floor: arrivals, warranty, labels, try-outs and installments.
+7. Discovery: Andean category, makers, artists, guides, gifts and collections.
+8. Services for musicians, separate from item discovery.
+9. Sedes and merchant electronic receipts, with Nubefact activation explicitly deferred.
 
-### Account and ownership foundation
+## Release work remaining
 
-- Supabase Auth signup, email confirmation callback, password login, magic-link login, and logout.
-- Particular profiles and store-owner invitation setup.
-- Nullable listing/store ownership fields, store membership helpers, owner-aware RLS, and protected admin fields.
-- Protected `/mi-cuenta` shell.
+- Integrate later main follow-ups into the reviewed feature branch and keep application, generated types and all migrations compatible.
+- Finish legal review of the new Terms/Privacy text and set its approved publication date. Do not enable the assisted-commerce pilot merely because the code is merged.
+- Apply the 61 additional feature migrations in their approved coordinated release window immediately before merge/release. The condition migration breaks older application assumptions; do not apply it early as a standalone schema update.
+- Verify application, SQL, Auth/PostgREST/Storage two-step enforcement, background jobs, indexing, mobile layouts and the affected end-to-end flows on the compatible candidate.
+- Complete or consciously retain disabled provider-dependent features. Google setup is recorded; Apple is deferred; Mercado Libre client credentials are incomplete. Nubefact remains off until separately resumed and demo-tested. Google Shopping remains off; a product feed does not solve its checkout-eligibility mismatch.
+- Record the required owner/manual acceptance in the canonical registry. Proposed GROW cases and passing local automation do not imply manual Pass.
+- Verify actual Vercel/pg_cron job execution, delivery and failure handling after release. Pro scheduling replaces the early manual Hobby QA assumption.
 
-These foundations are incomplete product flows, not completion of the V1 account/dashboard requirements.
+The exact source and setup evidence is in [documentation-status.md](documentation-status.md). This roadmap grants no new deployment, migration or provider-activation authorization.
 
-## V1 Implementation Sequence
+## Catalog and Jev workstream
 
-The sequence below is an implementation recommendation only. Every item remains required by the frozen specification.
+The canonical instrument catalog already supplies a production data foundation, category/brand navigation and brand suggestions. Catalog-backed listing autofill, Jev moderation authority and a complete model/variant tree are separate work. The photo AI helper does not replace them. Research or a benchmark run does not establish a production release.
 
-### 1. Account-owned publication and lifecycle
+Dependencies still block the three catalog-dependent ideas (market price comparison, price guides and compatibility) and parts of Mi equipo/red flags (valuation and price-anomaly rules). Decisions about Jev's approval powers and thresholds remain explicit; current moderation rules continue.
 
-- Make one Particular account capable of buying and selling.
-- Require authentication for new Particular listings and attach ownership.
-- Resolve account-owned seller identity/contact data dynamically from the profile.
-- Add instrument type, dynamic attributes, marketplace-rules acceptance, and 2–10 photo management.
-- Implement owner listing management, immediate edits, moderated revisions that preserve the live version, hide/restore, sold direct URLs, and copied relisting.
-- Add profile editing, forgot/reset password, and password change.
+## Explicitly deferred work
 
-### 2. Store-owner operation and verification
+The 13 approved ideas marked later remain outside this release:
 
-- Bind the application to a separate store-owner account and one store.
-- Collect required business identity fields and enforce unique RUC.
-- Separate basic store approval (`Tienda`) from manual verification (`Tienda Verificada`).
-- Require moderation for normal Tienda inventory; allow qualifying Tienda Verificada inventory and edits to publish directly.
-- Approve pending inventory when verification is granted and preserve non-pending states.
-- Enforce the free 50-concurrent-listing cap.
-- Build store profile, inventory, lifecycle, and analytics tools.
+- Staff accounts; protected payments; managed shipping.
+- Listing video; pedalboard planner; auctions; rentals/rent-to-own.
+- Donations; store events/clinics; linked live demos; institutional quotes.
+- Paid store plans and paid featured placement.
 
-### 3. Buyer retention and marketplace measurement
+Separate feature-ideas maybes remain undecided/deferred: identity checks/fees, technician inspections, Ask Laria, photo search, WhatsApp alerts, custom store domains and WhatsApp publication. Partial limitations of built ideas remain in the [deferred register linked from the source map](documentation-status.md#pr-54-sources), including map bounds/geocoding, advanced installments, and additional receipt/document workflows.
 
-- Favorites and availability history.
-- Exact-state search alerts with immediate and daily frequencies and deduplication.
-- Price-drop alerts for eligible favorites with price deduplication.
-- Privacy-conscious marketplace event collection, including WhatsApp intent without message content.
-- Particular and store funnel analytics without revenue claims.
+## Marketplace priorities
 
-### 4. Verified transactions, reviews, and reports
-
-- Sold-item buyer selection limited to authenticated listing-specific WhatsApp contacts.
-- Buyer confirmation and verified Laria transaction records.
-- Two-way, one-per-side, double-blind reviews with a 10-day window.
-- Listing, store, and review reporting.
-- Clear disclaimers that Laria did not verify payment, delivery, or condition.
-
-### 5. Operational moderation and communications
-
-- Expand `/admin` from pending queues into the complete searchable moderation hub.
-- Add owner-visible required reasons, revision/history inspection, reports, reviews, verified transactions, user administration, store verification/revocation, and manual legacy ownership linking.
-- Add centralized marketplace email infrastructure for lifecycle, transaction, review, search-alert, and price-drop notifications.
-
-### 6. Discovery, legal, and launch completion
-
-- Real category SEO browsing pages using the catalog/filter system.
-- Terms/marketplace rules, Privacy Policy, prohibited-item rules, and marketplace safety guidance.
-- End-to-end QA, reliability, accessibility, Spanish copy, mobile/desktop polish, analytics validation, marketplace supply, and store onboarding.
-
-## V1 Freeze and Post-V1
-
-After all requirements are implemented, tested, and documented, freeze V1 and focus on quality and observed marketplace behavior. New features require an explicit product decision supported by usage or commercial evidence.
-
-Post-V1 candidates, not current commitments, include payments, escrow, shipping integrations, commission enforcement, paid subscriptions/packages, paid boosts, internal messaging, multiple store employees, automatic SUNAT verification, email change, account deletion, sophisticated fraud scoring, and expansion into separately branded verticals.
-
-Approved post-V1 direction (2026-10-08): the canonical instrument catalog is in production (schema and the reduced Peruvian-market data, `database.md`). Two sprints will read it, neither started: **Jev and listing autofill**, and **category navigation enrichment** (each category's tree of brands, product lines and models). Scope in `functional-spec.md` § Planned After V1.
-
-## Commercial Priorities
-
-Product development does not replace marketplace operations:
-
-1. Build a base of quality listings.
-2. Onboard initial stores.
-3. Make listings and safety guidance trustworthy without false guarantees.
-4. Track WhatsApp interest and search demand.
-5. Learn what buyers seek and what stores value.
-6. Use real marketplace evidence for post-V1 monetization decisions.
+Keep building supply and onboarding stores while verifying quality, Spanish copy, accessibility, safety guidance, contact conversion, email delivery and useful retention. Use observed searches, contacts, merchant activity and confirmed purchases to guide later decisions. Never present demand counts as predicted sales, verified relationships as payment processing, or merchant declarations as Laria guarantees. No charging in the current pilot.
