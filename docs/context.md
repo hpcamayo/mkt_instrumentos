@@ -1,148 +1,39 @@
-# Laria Codex Context
+# Laria working context
 
-Laria is a vertical marketplace for musical instruments and related gear in Peru. The current codebase is a Next.js + TypeScript + Tailwind CSS + Supabase MVP deployed through GitHub -> Vercel, with Supabase managed separately.
+Updated 2026-10-28. This is a short entry point for future work; the contract is [functional-spec.md](functional-spec.md), the implementation inventory is [features.md](features.md), and source/release evidence is [documentation-status.md](documentation-status.md).
 
-Strategic goal: make Laria the best place in Peru to discover musical instruments and gear before adding transactional complexity.
+## Product
 
-Product scope:
-- `docs/functional-spec.md` is canonical for the frozen V1 product contract. Code and schema describe current implementation, not the complete V1 scope.
-- Buyers discover approved listings and contact sellers by WhatsApp.
-- Sellers are either `individual` / Particular or `store` / Tienda.
-- Individual sellers submit used gear from `/vender`.
-- Stores register from `/registrar-tienda`; after approval they get public pages at `/tiendas/[slug]`.
-- Store products also appear in `/listados`.
-- Admin curation is central. Particular and normal Tienda listings require moderation; qualifying Tienda Verificada inventory publishes directly. Store pages require basic store approval.
-- Sprint 1 and Sprint 2 are **CLOSED / ACCEPTED**. Sprint 3 and Sprint 3.1 are deployed. Owner manual production retest PASS on 2026-09-16 covers `STORE-018`, `DASH-008`, `NOTIF-001`, `NOTIF-002`, `LIST-013`, `REV-011`, and `REV-012`; canonical evidence is in `acceptance/cases.tsv`. `REV-014` was the photo-amendment failure, not a new text-amendment failure.
-- Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 is production-deployed and operational; the verified production application release is `bb16e319540a9d6721e990bc1e9900825c7473ac` and the Sprint 7 application implementation is `37f7507829193306ddaaa37e80787069308bdffc`. Owner inbox/link acceptance passed on 2026-09-25 where exercised; `TX-018` owner production Compras UX acceptance passed on 2026-09-27; only `ALERT-005` remains blocked for its natural daily-email test. No automatic cron is registered while Laria remains pre-go-live on Vercel Hobby.
-- Sprint 8 moderation-first Admin, general reports, privileged audit and manual legacy ownership are **CLOSED / ACCEPTED** as of owner production QA on 2026-09-27. Migration `20260923120000_sprint_8_admin_reports_legacy.sql` is already live; the production retry verified 19/19 synchronized migrations. Hotfix `bb16e319540a9d6721e990bc1e9900825c7473ac` deployed READY as `dpl_EJDgtZ1utKjtMQeKAFsyGnCTFV9S`, was promoted to `laria.audio`, and passed production browser/session/hydration smoke. Owner acceptance records ADMIN-023 and TX-018 Pass, and reaffirms ADMIN-005 production smoke. See `docs/sprint-8-failed-gate-hotfix.md`. Sprint 9 (category SEO/public discovery, legal/safety pages and account-navigation cleanup) was committed/pushed as `bcf9e6142a1c86caa3feb8ee24cd23a126a3cc42`; its 2026-09-27 production gate failed and the application was restored to exact SHA `bb16e319540a9d6721e990bc1e9900825c7473ac` as `dpl_Fg23SKBd8fjfxKyiXuXGvrdXfZMB`. No migration or scheduler configuration changed. See `docs/sprint-9-production-release-gate.md` for blockers, evidence and remaining acceptance.
-- Sprint 9 remediation later passed the automated production re-gate. `SEO-005` then passed a real 25-listing category pagination/filter check using temporary inventory that was fully removed. The category URL follow-up `49a38e5be7b6e195617a841fe1c572420769dab0` deployed READY as `dpl_6TwxfiFvinP8LYUgwrVM8UJ6pnGA` and still serves `laria.audio` as of 2026-09-30. Global category and whole-category single-type links use the existing Spanish landings; narrower types and `other` retain filtered `/listados` URLs. Acceptance is 332 Pass / 70 Not Run / 1 Blocked / 403 total. Owner `SEO-006`, `SEO-007`, `LEGAL-005`, `LEGAL-006` and natural daily `ALERT-005` evidence remain open. No Sprint 10/11 catalog foundation was included in this deployed application commit; see `docs/sprint-9-production-release-gate.md`.
-- No paid plans are active in V1. Future monetization may start with stores, but the frozen V1 rule is a free 50-concurrent-listing cap.
-- V1 requires buyer/Particular accounts, ownership, seller/store dashboards, favorites, alerts, analytics, reports, verified transactions, transaction-bound reviews, moderation and final category/legal/safety work. See the implementation status in `docs/functional-spec.md`; Sprint 8 production deployment and owner closure evidence are recorded.
-- Payments, checkout, escrow, delivery, subscriptions, commissions, and in-app chat remain post-V1.
-- UI copy should stay in Spanish.
-- Visual/frontend work should follow `docs/design-system.md`.
-- The completed UI visual refresh covers the homepage, listings/catalog page, listing detail page, user/seller panel, and admin panel. It was UI-only: no backend logic, schema changes, Supabase queries, or marketplace features were added.
-- Domain/brand target: `laria.audio`. Some current app metadata/copy may still say "Instrumentos Peru"; treat Laria as the intended platform name.
+Laria is a Spanish-language, mobile-first marketplace for instruments and music gear in Peru. Particular accounts buy and sell used gear; separate store-owner accounts operate one store. Store products appear in general instrument search. WhatsApp carries private contact and commercial coordination.
 
-Important current routes:
-- `/`: homepage (UX-3b): a rotating art banner with the brand search, "En vitrina" (the newest listing with 3 or more photos per category), category tiles with counts, recent listings, how Laria works, verified stores and the sell block, all from real Supabase data (`lib/home.ts`).
-- `/listados`: advanced searchable listings page.
-- `/instrumentos/[slug]`: the eight reserved Spanish slugs resolve to real category landings; other public slugs resolve to listing details with a sticky desktop gallery at about 45% of the main detail grid, a wider right-side detail column, WhatsApp CTA, published/view metadata, seller/store trust box, description, full specs, and recommendation sections below the main grid.
-- `/login`: account login with email/password and magic-link modes.
-- `/recuperar-contrasena` and `/restablecer-contrasena`: password recovery and reset.
-- `/auth/callback`: Supabase signup, invite, magic-link, and recovery callback. It accepts PKCE codes and server-verifiable token hashes, then writes the session cookie on the final redirect.
-- `/confirmacion-correo`: legacy standalone confirmation-success page; current Particular confirmation lands on `/mi-cuenta?confirmed=1`.
-- `/logout`: session logout.
-- `/registro/vendedor`: Particular account signup for buying and selling. Signup metadata creates the complete profile; authenticated users are sent to `/mi-cuenta` instead of being asked for the same fields again. The database stores this account as `profiles.account_type='seller'`.
-- `/registro/vendedor/invitacion`: invited seller profile setup after Supabase invite callback.
-- `/registro/tienda/invitacion`: invited store-owner profile setup after Supabase invite callback; store approval still requires a pending store application.
-- `/mi-cuenta`: protected account summary inside a shared server-authenticated layout with a persistent desktop sidebar and equivalent mobile menu.
-- `/mi-cuenta/publicaciones` and `/mi-cuenta/publicar`: real Particular listing view and publication form.
-- `/mi-cuenta/publicaciones/[id]/editar`: shared owner listing editor with immediate/moderated edit separation.
-- `/mi-cuenta/tienda` and `/mi-cuenta/tienda/inventario`: Store Owner application/profile and inventory views.
-- `/mi-cuenta/tienda/publicar`: Store Owner inventory submission for pending, normal, or verified stores.
-- `/mi-cuenta/tienda/estadisticas`: real owner-only statistics with lifetime/7-day/30-day windows, production-deployed in Sprint 4.
-- `/mi-cuenta/perfil`: Particular profile editing.
-- `/mi-cuenta/seguridad`: authenticated password change.
-- `/mi-cuenta/notificaciones`: owner-scoped in-app listing/revision/store lifecycle notifications and read state.
-- `/mi-cuenta/favoritos` and `/mi-cuenta/favoritos/[id]`: Sprint 5 production private saved history and current safe public/sold destination resolver.
-- `/mi-cuenta/transacciones` and `/mi-cuenta/transacciones/[id]`: production Sprint 6 participant-scoped purchase/sale confirmation, history and immutable review flow.
-- `/mi-cuenta/alertas`: production Sprint 7 owner-scoped exact saved searches with Immediate/Daily frequency and pause/resume/delete.
-- `/api/alerts`: same-origin, session-bound saved-search mutations.
-- `/api/internal/email/process`: `CRON_SECRET`-protected bounded marketplace-email worker, run by Vercel Cron every 5 minutes since launch audit A25 (expiry by kind, an account's own e-mails first, 80 a day).
-- `/api/account-navigation` and `/api/favorites`: Sprint 5 production trusted hydrated header state and bounded own-favorite state/mutations.
-- `/tiendas/[slug]`: public store page plus approved store listings.
-- `/vender`: authenticated, account-owned Particular listing submission form.
-- `/publicar`: redirects to `/vender`.
-- `/registro/tienda`: separate Store Owner account signup.
-- `/registrar-tienda`: authenticated owner-bound store application/profile management.
-- `/admin`: local Sprint 8 server-authorized moderation workbench with canonical pending counts/tabs for publications, changes, stores, verification, reports and reviews.
-- `/admin/publicaciones`, `/admin/revisiones`, `/admin/tiendas`, `/admin/usuarios`, `/admin/reportes`, `/admin/resenas`, `/admin/transacciones`, and `/admin/legacy`: bounded deeper Admin search/history/operation pages. Transactions are read-only; legacy linking is explicit and one-time.
-- `/admin/auditoria/[targetType]/[targetId]`: bounded Admin-only privileged-action history.
-- `/api/listings/[id]/manage`: authenticated owner edit, lifecycle, and relist actions backed by trusted Postgres RPCs.
-- `/api/listings/[id]/photo-cleanup`: owner-bound reference-checked cleanup through a service-only retirement-claim RPC.
-- `/api/listing-images/...`: authorized private edit-photo delivery; unattached/proposed objects are not anonymous public assets.
-- `/api/events/session`, `/api/events`, and `/api/contact`: signed first-party identity bootstrap, bounded typed event batches, and canonical WhatsApp click-intent tracking (production Sprint 4).
-- `/api/admin/invite-user`: server-only admin invite endpoint using Supabase service role after verifying the current user is admin.
-- `/api/auth/check-email`: server-only duplicate-email precheck for seller signup. It uses a service-only indexed database lookup and returns only availability, never user details.
+V1 has grown beyond the initial frozen MVP. The approved scope includes the original marketplace plus store operations, Effortless Laria and the approved PR #54 feature extensions. Read their status separately: approval, implementation on main, implementation on a draft branch, activation and owner acceptance are different facts.
 
-Key files:
-- `lib/listings.ts`: shared listing types, filter parsing, labels, WhatsApp URLs.
-- `lib/listing-specs.ts`: listing detail spec rows, base field labels, and attributes JSONB display formatting.
-- `lib/instrument-filters.ts`: actual advanced filter config and current filter keys.
-- `lib/listing-submission.ts`: shared 2–10 photo, category/instrument type, and dynamic-attribute validation.
-- `components/listing-filters.tsx`: desktop sidebar and mobile filter/sort sheets.
-- `components/listing-card.tsx`: compact card with first-photo lazy loading and on-demand photo carousel fetch.
-- `app/instrumentos/[slug]/page.tsx`: listing detail layout, gallery, breadcrumb, specs, seller trust sections, similar listings, and more-from-seller listings.
-- `components/listing-detail-gallery.tsx`: interactive listing detail gallery with main image, thumbnails, and previous/next controls.
-- `components/listing-detail-metadata.tsx`: `Publicado hace X dias` / `Visto X veces` and client-side view-count increment.
-- `components/marketplace-telemetry.tsx` and `components/whatsapp-contact-link.tsx`: actual visible activity tracking and fail-safe WhatsApp intent recording.
-- `lib/marketplace-event-payload.ts`, `lib/marketplace-events-client.ts`, and `lib/marketplace-events-server.ts`: strict payloads, bounded retrying batches, server-verified actors, signed sessions/search receipts, and service-only event recording.
-- `components/listing-management-table.tsx`: role-shared inventory states and lifecycle actions.
-- `components/listing-edit-form.tsx`: split immediate/moderated edits plus staged photo proposals.
-- `lib/listing-photo-cleanup.ts`: explicit retryable cleanup failures, database reference/retirement checks, and trusted Storage removal; no browser deletion of historical objects.
-- `lib/account-analytics.ts` and `components/account-analytics.tsx`: validated request-scoped aggregate reads and honestly labelled real metrics; no global cache of private owner data.
-- `lib/auth/password.ts`: maps only Supabase `same_password` to safe Spanish guidance without inspecting the current password; unknown failures remain generic.
-- `components/page-notice.tsx`: shared accessible page-level result notice with focus and scroll-into-view behavior.
-- `components/notifications-list.tsx`: newest-first in-app notices, target navigation, and read actions.
-- `components/page-container.tsx`: shared public page width and horizontal padding wrapper.
-- `components/login-form.tsx`: login form with password and magic-link modes; login magic links do not create new users.
-- `components/seller-signup-form.tsx`: individual seller signup/profile completion form.
-- `components/invite-profile-setup-form.tsx`: shared invite setup form for seller/store owner profile completion.
-- `components/invite-recovery-panel.tsx`: safe fallback UI when invite metadata/profile type does not match the route.
-- `components/location-fields.tsx`: reusable city/region inputs for account and store onboarding.
-- `components/admin-navigation.tsx`: persistent desktop and collapsed mobile navigation for the server-authorized Admin shell.
-- `components/admin-workbench.tsx`: canonical moderation queues, counts, bounded pagination and trusted action controls.
-- `components/admin-domain-view.tsx`: deeper domain search/filter/history, report moderation and explicit legacy-link confirmation.
-- `components/content-report.tsx`: shared authenticated listing/store/revealed-review report flow with fixed reasons and accessible feedback.
-- `lib/admin.ts` and `lib/admin-server.ts`: client-safe Admin payload parsing/labels plus server-only user/role/count checks.
-- `components/transaction-center.tsx`, `components/transaction-detail.tsx`, and `lib/transactions.ts`: strict transaction/review presentation and JSON parsing inside the account shell.
-- `components/create-search-alert.tsx`, `components/saved-search-alerts.tsx`, and `lib/search-alerts.ts`: canonical filter serialization, readable Spanish summaries and saved-search actions.
-- `lib/email/provider.ts`, `lib/email/templates.ts`, and `lib/email/marketplace-email.ts`: Resend adapter, safe Spanish templates, Lima digest preparation and bounded outbox worker.
-- `components/reputation-summary.tsx`: visible non-hidden Particular/store review aggregate, recent review presentation and authenticated review reporting.
-- `app/api/admin/invite-user/route.ts`: trusted server route for admin-created seller/store-owner invites. Uses `SUPABASE_SERVICE_ROLE_KEY` only on the server.
-- `lib/auth/profile.ts`: profile upsert helper for individual seller accounts. Uses the schema value `seller` for Particular accounts.
-- `lib/location.ts`: valid Peru region list, city suggestions, and region normalization/validation.
-- `lib/supabase/server-client.ts`: cookie-aware Supabase server client for auth routes/session utilities.
-- `lib/supabase/admin-client.ts`: server-only service-role client used by trusted admin invite and duplicate-email routes and available for other server actions.
-- `lib/auth/session.ts`: current-user/session helpers and protected-route redirect helper.
-- `middleware.ts`: Supabase session refresh and protection for `/vender` and account routes.
-- `docs/auth-email-templates.md`: owner-facing Supabase Auth invite and magic-link email copy for Phase 2 accounts.
-- `docs/design-system.md`: canonical Laria visual system for future UI work.
-- `supabase/migrations/20260516180000_phase_2_accounts.sql`: Phase 2 account schema, ownership fields, helper functions, and RLS policies.
-- `supabase/migrations/20260910100000_particular_sprint_1.sql`: account-bound finalization, 2–10 publication requirements, profile projection policy, and removal of anonymous listing creation.
-- `supabase/migrations/20260910190000_store_sprint_2.sql`: Store Owner/application ownership, RUC uniqueness, store-photo RLS, trust/publication RPCs, active-parent visibility, and the concurrent inventory cap.
-- `supabase/migrations/20260913120000_listing_sprint_3.sql`: owner lifecycle, listing/revision moderation, sold immutability, relist lineage, proposed photos, and cap-safe restoration/relisting.
-- `supabase/migrations/20260916120000_sprint_3_1_acceptance_fixes.sql`: amendable/versioned pending revisions, stale-admin protection, notification schema/RLS/events, and read state.
-- `supabase/migrations/20260916180000_sprint_4_photos.sql`: private staging, canonical image validation, cleanup retirement claims, edit receipts, and empty-proposal photo-reference release (applied locally and in production).
-- `supabase/migrations/20260916200000_sprint_4_events.sql`: service-only typed events, authoritative lifecycle triggers, rolling view/impression dedupe, preserved view cache, and restricted grouped analytics (applied locally and in production).
-- `supabase/migrations/20260921120000_sprint_7_marketplace_email_alerts.sql`: normalized saved searches, prospective first-public matching, private durable marketplace outbox, service-only worker RPCs and canonical pending-buyer badge count (local and production).
-- `supabase/migrations/20260923120000_sprint_8_admin_reports_legacy.sql`: production-applied general report migration, bounded moderation/Admin readers, `admin_audit_actions`, and one-time manual legacy ownership linking.
-- `supabase/migrations/20260927120000_canonical_catalog.sql` … `20261021120000_catalog_attribute_value_es.sql` (25 files): the canonical instrument catalog schema (`catalog_*` tables, `catalog_lookup` / `catalog_match` / `catalog_jev_inputs`, review RPCs, the gap-queue search log). Production holds the reduced Peruvian-market catalog data (20,386 products of 170 brands). No application code reads it yet; Jev / listing autofill and category navigation are post-V1 sprints (`functional-spec.md`). The pipeline, the full catalog and its admin review screen live on branch `catalog/canonical-catalog`, not in `main`; see `database.md` § Canonical instrument catalog.
-- `supabase/migrations/*`: manual SQL migrations for schema, RLS, storage, metadata, and view count RPC.
+Laria processes no payment, holds no funds, provides no escrow, manages no shipping and guarantees neither authenticity nor transactions. Store payment-method declarations, installment offers, inventory sales and merchant Nubefact receipts do not change that role. There is no platform commission, subscription billing or paid promotion in the pilot. Public questions are permitted; private in-app chat is not.
 
-Operational rule: Vercel deploys code, but does not apply Supabase SQL migrations. Schema changes must be run manually in Supabase SQL Editor unless migration automation is added later.
+## Source checkpoint
 
-Context-reset rule: before product or behavior work, read `docs/functional-spec.md` first, then the relevant `/docs` references. Do not rely on chat history. The functional specification wins over older planning notes.
+The working checkout is older than remote main and contains existing local work. The October 28 documentation refresh read remote main at `728a85209494c581dec68e624332f7920411445d` and PR #54 at `a64bb9ceb78406b901317998e4c3e374989779ba`, without merging either into this checkout. Do not infer that a feature documented on newer source exists in an old local route tree.
 
-Local npm checks are available in this workspace. Use `npm run typecheck`, `npm run lint`, and `npm run build` for implementation tickets when code changes.
+Main contains the account/listing/store/retention/reputation/Admin foundation, redesign, ten categories, inventory/imports/Mostrador, gated assisted commerce, Effortless Laria, launch-audit fixes and the five maybes. PR #54 is open/draft with 44 built ideas and 61 unreleased feature migrations. Its scope includes safety/accounts, listing terms/map/combos, trust, Mi equipo/selling tools, store floor/reach/sedes, editorial discovery and a separate services marketplace. Nubefact activation is deferred. Full catalog autofill/Jev and price-dependent ideas remain separate work.
 
-Current reliability/performance reference: `docs/performance.md`. Catalog/store inventory is paginated; images are responsive; recommendations stream; public submissions use signed retries and atomic finalization through `/api/submissions`.
+The exact refs, pinned batch designs, setup observations and release constraints are in [documentation-status.md](documentation-status.md). Historical sprint notes describe their own checkpoints; old “local only”, “frozen”, “Hobby” and “not yet implemented” statements must be checked against the current source map.
 
-Sprint 4 implementation semantics: new edit photos use private `listing-edit-photos` owner/listing/attempt paths and authorized `/api/listing-images/...` URLs. Identical signed edit retries return one stored result; changed payloads are rejected. Pending amendments retain one versioned proposal and unchanged live photos until approval; restoration removes only intended differences. Cleanup claims are serialized with editing and protect every live/sold/shared/retained-history reference. Existing public/legacy objects remain compatible; no scheduled orphan sweeper was added.
+## Engineering and invariants
 
-Event identity is a random signed HttpOnly/SameSite=Lax first-party cookie with 24-hour expiry plus server-verified Auth identity when available; no raw IP, fingerprint, WhatsApp content, password, or auth-token payloads. Impressions require 50% real visible intersection; detail/store views are visible-client events, never SSR/prefetch effects. Database dedupe uses a rolling 30-minute identity/entity/event window; owner/admin commercial activity is excluded. Contact clicks remain separate intents, same-event retries are idempotent, and telemetry outage preserves contact navigation. Search filters/result counts use signed server receipts; lifecycle transitions are authoritative database triggers. Raw event access remains service-only, ordinary owners receive aggregate metrics without a buyer directory.
+Next.js App Router, React, TypeScript, Tailwind CSS and Supabase Auth/Postgres/Storage; Vercel deploys the application. Follow local patterns and keep changes scoped. Read [design-system.md](design-system.md) for UI work and the relevant accepted owner decisions. All user-facing copy is Spanish.
 
-Analytics semantics: Particular summary aggregates all owned inventory, not its recent-five list. Lifetime views preserve the historical cache; 7/30-day views use recorded events without fabricated history. CTR = recorded views / impressions; contact rate = contacts / recorded views in one period. Zero denominator is `Sin datos`; unavailable aggregates are not zero. Active inventory requires active-parent visibility; sold counts remain seller-marked state. Store statistics support 0/7/30 days. Sprint 5 adds current favorites/actions/rate. Production Sprint 6 separately adds buyer-confirmed transaction count and verified/contact rate; it is never labelled revenue, payment or delivery.
+- New Particular publications require ownership and moderation. Normal-store moderated edits preserve the approved live version in one versioned proposal; qualifying verified stores can publish directly.
+- Sold listing history is immutable. Republicar starts a new draft, without inherited favorites or transaction relationships.
+- Stores require basic approval before public visibility; verification is a distinct manual business-identity action. The default publication allowance is 50, with reasoned Admin overrides; stock/SKUs do not consume it.
+- Inventory changes are recorded, serialized and idempotent. Zero stock changes availability, not moderation state. Public unit counts stay hidden.
+- Listing-based transaction verification requires the eligible contact/participant confirmation flow. PR #54 adds a separate counter-purchase customer-code confirmation. A stock movement alone never creates verified reputation.
+- Instrument reviews use one review per side, a ten-day window and double-blind publication. Services have their own confirmation/client-review workflow and never enter item search, favorites, alerts or publication counts.
+- Contact analytics record intent, never WhatsApp contents. Raw actor/reporter data is private; owners receive bounded aggregates, never a general buyer directory. Never invent revenue from contacts or verification.
+- Server/database authorization, service-only secrets, required moderation reasons and privileged audit history remain mandatory. Account anonymization preserves shared historical relationships without personal identity.
+- Application deployment does not apply SQL migrations. Feature schema/application compatibility and provider/pilot activation have separate release gates; do not execute them as part of documentation work.
 
-Acceptance process: `acceptance/cases.tsv` is canonical and `acceptance/sprints.tsv` is the selective retrieval guide. Read only exact current-sprint IDs/domain prefixes, preserve unrelated rows/IDs, and validate TSV changes. Do not read or regenerate XLSX until the final V1 freeze gate. Sprint 7 owner evidence is recorded for `PDA-009`, `ALERT-003`, `ALERT-015`, and `MAIL-001`–`MAIL-007`; `TX-018` owner production Compras UX acceptance passed on 2026-09-27; only `ALERT-005` remains blocked for its natural daily-email test. Sprint 8 owner production QA closed on 2026-09-27: `ADMIN-023` and `TX-018` are Pass, `ADMIN-005` retains Pass with updated production evidence, and only `ALERT-005` remains Blocked. Current canonical counts: 323 Pass / 1 Blocked / 79 Not Run / 403 total.
+## Verification and acceptance
 
-Sprint 5 deployed architecture: shared root header/category shell surrounds all routes, while protected account navigation remains nested. Native brand search reuses `/listados` parsing and signed receipt analytics. Hydrated trusted account/favorite state is batched without public SSR Auth calls or a browser Auth SDK in the provider. Private own favorite relations, redacted unavailable history and listing-row-serialized atomic in-app price-drop notifications extend existing RLS and aggregate paths. Same-form duplicate-RUC retries release known rejection locking but never erase an earlier uncertain commit. Migration `20260917120000_sprint_5_favorites.sql` is applied locally and in production. Release source `516bf4591512b99748f14795f384e594143d1268` is pushed to main and deployed; the prior documentation commit is preserved.
+Use `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build` for applicable code changes, plus relevant SQL/integration/browser checks on the correct local schema. Newer-main harnesses and feature test instructions are pinned in the source map. Never use a production seed/reset as local setup.
 
-Sprint 6 production architecture: canonical category/type data drives the accessible mega-menu/mobile accordion. Authenticated exact-listing WhatsApp events at/before `sold_at` are the only selectable buyers. Row-locked RPCs preserve one active claim/verified relationship, explicit decline, external attribution, participant isolation and relist history. Verified transactions unlock two immutable database-timed double-blind reviews; visible non-hidden buyer-to-seller reviews aggregate to Particular/store, while seller-to-buyer history remains on the buyer without a public buyer profile. Review reports and admin hide/restore are minimal Sprint 6 compatibility, not the full Sprint 8 report hub. Event failures are structured/correlated without PII and never block contact. Production QA passed with zero residue and owner acceptance closed on 2026-09-20.
-
-Sprint 7 production architecture: both account roles use `Compras` plus a canonical pending-claim badge and expose `Alertas`. Normalized filters and indexed match buckets watch only first-public listing identities after activation; existing catalog rows are marker-only baseline. Immediate/daily matches and notification-derived lifecycle/price events append a private durable outbox. A Resend adapter uses the delivery UUID as provider idempotency key; bounded retries cannot roll back marketplace state. A secret-protected worker route prepares completed Lima days after 08:00 across a seven-day catch-up window, then claims/sends bounded batches. PRE-GO-LIVE on Vercel Hobby registers no automatic cron: QA invokes the worker manually, and frequent 5–15 minute automatic execution is mandatory before marketplace launch. Auth email remains Supabase-owned. Migration, application, verified sender and server-only production configuration were deployed and bounded provider QA finished with zero application residue.
-
-Sprint 8 production architecture: `app/admin/layout.tsx` server-verifies the Auth user and Admin JWT role around root and nested routes. `/admin` reads six canonical actionable counts and one bounded queue; deeper pages use URL-backed search/filter/pagination and dedicated bounded readers. The existing Sprint 6 review-report rows are forward-migrated without ID/history loss into one RLS-protected `reports` table covering eligible listings, active stores and revealed reviews. Reporter identity/report counts remain Admin-only; partial unique indexes make same-reporter open-report dedupe race-safe while preserving different reporters. Resolve/dismiss and target moderation are separate audited actions.
-
-`admin_audit_actions` stores trusted actor/action/target/time/bounded context for privileged listing, revision, store/verification, report, review and legacy transitions; raw access is denied and history reads are Admin-only and target-bounded. `link_legacy_listing_owner()` locks/rechecks an eligible unowned legacy Particular listing, accepts one explicitly selected existing Particular plus audit note, preserves identity/status/assets/history and permits exactly one winner. It never matches by email/phone automatically or supports reassignment. Sprint 8 adds no scheduler, Admin notification spam, account impersonation, transaction editing, or Sprint 9 work.
+`acceptance/cases.tsv` is the sole canonical acceptance registry, with selective retrieval via `acceptance/sprints.tsv`. Preserve unrelated IDs/status/evidence, do not infer manual Pass from code, and validate any TSV change with `python3 -B acceptance/validate.py`. Proposed cases require their acceptance process. Do not read or regenerate XLSX before the final freeze gate.

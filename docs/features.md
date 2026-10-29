@@ -1,418 +1,149 @@
-# Features
+# Laria features and implementation status
 
-This file describes current implementation. The frozen V1 requirements live in `docs/functional-spec.md`; missing behavior below is an implementation gap unless that specification marks it post-V1.
+Updated **2026-10-28 (America/Lima)**. This is the capability inventory; [functional-spec.md](functional-spec.md) is the product contract. See [documentation-status.md](documentation-status.md) for exact source refs, branch-only designs, verification evidence and release dependencies.
 
-Sprints 1–6 are **CLOSED / ACCEPTED**. Sprint 7 is production-deployed and operational; the owner accepted the exercised real-inbox paths on 2026-09-25, while `ALERT-005` and `TX-018` remain blocked for their exact owner checks. Sprint 8 is implemented and verified locally only; its migration and application changes are not deployed.
+**Main** below means the inspected remote main through PR #80, not this older local checkout or a new production smoke. **PR #54** means approved V1 functionality built on the open draft `features/marketplace` branch, pending its coordinated application/database release. **Gated** means code alone does not make the feature available. No row implies owner acceptance.
 
-## Marketplace Model
+## Capability overview
 
-Laria supports two seller models.
+| Area | Main | PR #54 additions | Activation or limitation |
+| --- | --- | --- | --- |
+| Discovery | Text search, URL filters/facets, categories, stores, comparison, recently viewed, device personalization, Descubrir | Maps, gifts, guides, collections, makers, artists, Andean instruments | Map is bounded to 300 matches; no precise Particular address. |
+| Accounts | Particular/store roles, Auth, profile/security, Admin MFA and anonymization | Remembered devices, account TOTP/recovery, secure email change, data export, Particular deletion, Google/Apple, help | OAuth buttons depend on provider configuration; incomplete two-step sessions are refused at API/Storage after PR migrations. |
+| Publication | Four-step form, background photo upload, drafts, moderation/revisions, sound clip, owner management | Detailed condition scale, fixed/open price, trades, delivery/try-out terms, combos | Particular and normal-store moderation remains; condition migration requires compatible code. |
+| Availability | Hide/restore, immutable sold history, new-draft republication, vacation mode, Particular reservations/release watches | Expected arrivals and store try-out bookings | A reservation is not a payment; a try-out holds time, not stock. |
+| Retention | Device/account favorites, shared lists, notes, follows, search/price/restock alerts, email preferences, push | Private offers, gear-maintenance reminders | Daily search digest offered first; push and email honor their own preferences and schedules. |
+| Trust | Listing-contact buyer/seller confirmation, double-blind reviews, public Q&A, reports and moderation | Seller pages/levels, buyer card, provenance, counter-purchase QR, review photos, safe meetup tools, stolen-gear leads | None verifies payment, delivery, authenticity or safety. |
+| Particular selling | Owned publications, Pendientes, analytics | Mi equipo, offers from stores, consignment, part payment, automatic price steps | No estimated gear value; agreements/payments stay with the parties. |
+| Store operations | Store approval/verification, SKU inventory, stock history, Mostrador, Excel/CSV import and publication | Sedes, labels/poster, warranty/exchange terms, try-outs, arrivals | Inventory is enabled per store; public buyers never see unit counts. |
+| Store commerce | Reviewed merchant payment methods and WhatsApp purchase-request pilot | Interest-free installments; Nubefact receipts | Assisted commerce has application/database gates. Nubefact is explicitly deferred and off. |
+| Store reach | Storefront, filtering, follows and aggregate analytics | Mercado Libre import, social feed, dealer mark, campaigns, demand counts | External credentials/history/eligibility required; demand is not stock advice. |
+| Services | — | Separate service directory, provider tools, moderation, confirmed-client reviews | Never enters instrument search, favorites, alerts or publication allowance. |
+| Administration | Moderation hub, reports, audit history, legacy ownership, operational health tools | New accounts/trust/service/dealer/campaign/help queues | Server and database authority; required reasons, bounded reads and audited mutations. |
 
-### Particular
+## Public discovery and navigation — main
 
-Individual sellers publishing used instruments.
+The home leads with actual instruments and the shared text search. It offers category chips, device-ranked Para ti, a reset and explanation, new listings since the last visit, price drops, followed arrivals and recently viewed items. Personal taste and comparison live on the device. The previous vitrina/category-tile home is historical.
 
-Current model:
-- Free listing submission.
-- Admin approval.
-- Buyer contacts seller through WhatsApp.
+`/listados` and `/instrumentos/<categoría>` share the real catalog. Search uses `q` over brand/model/type/category/title with accent/case folding, curated synonyms and small-typo tolerance. Supported phrases become removable filter chips. Existing filters survive a search; “Buscar en todo el catálogo” escapes them. Facet counts, multi-value location/condition filters, price shortcuts, result summaries and zero-result recovery use actual catalog data.
 
-Frozen V1 requirement:
-- A Particular account can buy and sell, owns its listings, and receives the dashboard, favorites, alerts, analytics, verified-transaction, and review capabilities in `docs/functional-spec.md`.
-- New Particular listings require an account and moderation.
+Results support price/date sorts, recent drops and verified stores first. Mobile adds the next 24 results in place; numbered pagination remains available. Comparison holds up to three listings at `/comparar`. Results trails preserve return context and previous/next listings. Main has ten categories: Guitarras, Bajos, Teclados, Percusión, Vientos, Cuerdas, Pedales, Amplificadores, Micrófonos and Audio. Retired drum/cymbal/audio-interface category URLs normalize to their replacements. Catalog-backed navigation already supplies subtype/brand links; a complete model/variant tree remains separate work.
 
-Post-V1 monetization possibilities (not active V1 features):
-- Featured listings.
-- Visibility boosts.
-- Transaction commission only later, if Laria controls payment/transaction flow.
+`/tiendas` lists active stores, verified first. Store pages show identity, the scope of verification, contact, available products and store-scoped category/brand/order controls. An owner can preview an unapproved store privately; it stays unavailable to public visitors.
 
-Reasoning: commission from individuals is weak early because WhatsApp/cash transactions can bypass the platform.
+`/descubrir` is an optional, finite one-listing-per-screen view of recent inventory or the current filtered results. Photos and listing actions have buttons and keyboard equivalents. No autoplay or endless loop; “No me interesa” stays on the device. It is noindex and counts impressions/contacts without inventing detail views.
 
-### Tienda
+## Cards, detail and WhatsApp — main
 
-Small music stores with public mini-shop pages.
+Cards share photo, price, readable specs, location/seller identity and favorite controls. They load the first image plus a computed photo count; no card carousel downloads every photo. Listing detail supports a zoomable gallery, specifications, actual price history indicators, seller/store facts, visible reviews, public questions, sharing and real similar listings. Sold records keep their direct URL and history, leave search and have no purchase/contact action. Unavailable former listings expose no private details.
 
-Current model:
-- Free store registration.
-- Admin approval.
-- Public store page.
-- Store products appear in general listings search.
+The single primary contact opens WhatsApp with a Spanish message. Quick questions are optional and adapt to facts already shown; event recording must never trap navigation. A first-contact safety sheet applies to higher-priced listings and purchase requests. The contact records intent and authenticated attribution, never the WhatsApp conversation.
 
-Frozen V1 requirement:
-- A normal Tienda continues to require product moderation.
-- A Tienda Verificada can directly publish qualifying inventory and edits; verification also approves its currently pending inventory.
-- Free stores have a 50-concurrent-listing cap. Paid plans are not active in V1.
+Public Q&A requires an account and prevents self-questions and contact details. Questions/one public seller answer are immutable, rate limited and reportable; Admin can hide/restore with a reason. Sold-listing questions become read-only. This is distinct from private chat.
 
-Post-V1 monetization possibilities (not active V1 features):
-- Monthly plans by listing volume.
-- Featured store placement.
-- Homepage/category boosts.
-- Catalog management services.
-
-Stores are likely the first realistic monetization engine.
-
-## Homepage
-
-Route: `/` (UX-3b, `docs/ux-redesign/ux-3-discovery.md` § Home; visuals in `docs/design-system.md` § Home)
-
-The home header (logo, "Categorías" menu with every category and type, "Tiendas verificadas", "Cómo funciona", "Vender", account) replaces the category strip on the home, then:
-- A banner: one of nine decided art pieces per visit (`lib/home-banner.ts`, `public/banners/`), the headline and the brand search (a GET form to `/listados`).
-- "En vitrina": the newest approved listing with 3 or more photos in each category, the five most recent of them, as showcase tiles with an ink price tag.
-- "Explora por categoría": the eight category landings with their approved-listing counts.
-- "Recién publicados": the newest approved listings not in the vitrina (eleven and an end tile on desktop, six on phones).
-- "Cómo funciona Laria" (`#como-funciona`): what Laria does and does not do, four promises and the safety line.
-- "Tiendas verificadas": up to three active verified stores and a "¿Tienes una tienda?" tile.
-- The sell block and the full footer.
-
-It reads real Supabase data with the public client (`lib/home.ts`): eight per-category vitrina queries on `listing_photo_count`, the newest approved listings, the total and per-category counts (head counts) and the three newest active verified stores. A failed listing query leaves its section out (logged on the server). Only the first photo of each listing is embedded.
-
-Layout uses the shared `PageContainer` public width system.
-
-## Listings Page
-
-Route: `/listados` ("Instrumentos"). The category landings (`/instrumentos/<categoría>`) render the same page with their category fixed (`components/catalog-view.tsx`; UX-3, `docs/ux-redesign/ux-3-discovery.md`).
-
-Features:
-- Public browse/search for approved listings; URL query params are the source of truth, so filtered pages are shareable.
-- Title row: the page title ("Instrumentos", the category, or "Tiendas verificadas") and the result count, for example `128 resultados`; from 1024 px the alert entry and "Ordenar: Más recientes".
-- Filters: on desktop a 272 px column of live facets (each option is a link; price and brand are small forms); below 1024 px "Filtrar" and "Ordenar" open bottom sheets, and the filter sheet applies once with "Ver resultados".
-- Condition and location take several values ("any of", repeated parameters; owner decision F11); the other filters take one.
-- Applied filter chips (one per value), "Limpiar todo".
-- Numbered pagination with "Mostrando 1–24 de N"; 24 per page, filters kept.
-- States: error with "Reintentar", empty catalog, `No encontramos resultados` with "Limpiar filtros" and the alert entry.
-- No route-level loading skeleton: while a navigation is pending the results stay on screen, dimmed after 200 ms.
-- Search alerts are offered when a filter or category narrows the search and every filter has one value.
-
-Layout:
-- `PageContainer` (1440 px). Desktop: the 272 px filter column, a 32 px gap, then the grid.
-- Grid: 2 columns on phones, 3 from 768 px, 4 from 1280 px.
-
-## Listing Cards
-
-Component: `components/listing-card.tsx`, the one listing card (UX-3, `docs/ux-redesign/ux-3-discovery.md` § The one listing card). The catalog, the category landings, store inventory and listing recommendations use it; the home's own card goes in UX-3b.
-
-- Square photo (`object-fit: cover`) in an 8 px rounded frame; responsive optimized image (PHOTO-016); the first grid row loads eagerly, the rest lazily.
-- Over the photo: the favourite (a 36 px white circle with a 44 px hit area) and "N fotos" when there is more than one photo. No arrows, dots or in-card carousel, and no category tag (the page already names it).
-- Under the photo: the title (two lines reserved so prices line up), the price, a spec line (the condition and up to two key attributes of the type, for example `Usado · buen estado · Shell pack · 22"`) and a seller line (city, then `Particular`, `Tienda` or `Tienda verificada` with the verified mark).
-- One link, the title, stretched over the whole card, plus the favourite: two tab stops. No store-name link on the card; the store is on the listing page.
-
-Cards intentionally do not show:
-- `Publicado hace X dias`
-- `Visto X veces`
-- raw `published_at`
-- raw `view_count`
-
-Why:
-- Category/type is page context, not card content; the key attributes say what the item is.
-- Short cards scan better in a dense marketplace grid.
-- Published/view metadata belongs on the detail page.
-
-## Listing Card Photo Behavior
-
-- Render only the first photo per listing; the card shows the photo count, not the other photos.
-- Production Sprint 4: record an impression only while at least 50% of the actual card is in the viewport and the document is visible; scrolling back into view does not inflate the rolling deduplicated count.
-
-Implementation:
-- Listing/store/home queries select `id`, `listing_id`, `image_url`, `alt_text`, and `sort_order` for the first embedded photo.
-- Browse pages read `photo_count` from the database-computed `listing_photo_count`.
-- `/api/listings/[id]/photos` (additional photos on demand, optionally excluding `exclude_id`) fed the card's carousel until UX-3; no page calls it now.
-
-## Listing Detail
-
-Route: `/instrumentos/[slug]`
-
-Features:
-- Reads one approved or sold listing by exact `slug`; sold records are available only on their direct detail URL and remain absent from catalog/search.
-- Uses a commercial two-column layout on desktop:
-  - Left side: sticky product gallery using `minmax(0,0.82fr)`, currently about 45% of the main detail grid.
-  - Right side: wider detail panel using `minmax(0,1fr)`, with breadcrumb, seller badge, title, price, metadata, key specs, WhatsApp CTA, seller trust box, description, and full specs.
-- Gallery behavior:
-  - Desktop gallery uses `position: sticky` with a top offset and remains beside the right-side detail panel while details scroll past it.
-  - Mobile gallery is not sticky and appears above the detail column.
-  - Main image uses `object-contain` to avoid aggressive instrument cropping.
-  - Thumbnail buttons update the active image and show a visible selected state.
-  - Previous/next buttons appear when multiple photos exist; arrow keys also work when the gallery is focused.
-  - Missing photos show a `Foto pendiente` fallback.
-  - The gallery renders one large active image plus compact thumbnails, preserving existing Supabase image URLs and upload/storage behavior.
-- Breadcrumb format is `Inicio / Categoria / Titulo`, with the category linking back to filtered listings.
-- Title prefers `brand + model`, falling back to the original listing title.
-- Top metadata shows:
-  - `Publicado hace X dias`
-  - `Visto X veces`
-- Key specs near the title/price show category, brand, model, condition, city, seller, and selected instrument attributes when available.
-- The right detail column shows `Descripción` and `Especificaciones completas` below `Sobre el vendedor` or `Sobre la tienda`, so the sticky gallery can remain beside the full detail content on desktop.
-- Lower recommendation sections remain below the main two-column detail area:
-  - `Artículos similares`
-  - `Más de este vendedor` or `Más de esta tienda`
-- Recommendation sections use the existing compact listing cards:
-  - `Artículos similares` reads approved listings only, excludes the current listing, prioritizes the same `instrument_type` when present or otherwise the same category, boosts same-brand results within that pool, and can fill remaining slots with same-brand listings. It shows up to 4 items.
-  - `Más de este vendedor` / `Más de esta tienda` reads approved listings only, excludes the current listing, uses `store_id` for stores and `whatsapp_phone` for individual sellers, shows up to 4 items, and is hidden when there are no results.
-- `Especificaciones completas` renders clean label/value rows. It includes base fields `Publicado`, `Condición`, `Categoría`, `Marca`, `Modelo`, `Ciudad`, and `Vendedor`/`Tienda`, followed by non-empty `attributes` values.
-- Attribute labels and option values reuse `lib/instrument-filters.ts` through `lib/listing-specs.ts`; raw JSON and snake_case keys should not be exposed to users.
-- Production Sprint 4: records visible client detail opens through the first-party event path; SSR, HEAD, prefetch, owner/admin opens, and ineligible inventory do not increment commercial views.
-- Uses a database-serialized rolling 30-minute identity/listing window instead of the old localStorage-only 24-hour rule. Accepted events increment the preserved historical `view_count` cache once; the compatibility view endpoint uses the same trusted writer.
-- Primary CTA opens WhatsApp using a prefilled Spanish message.
-- Sold detail shows `Vendido`, keeps the historical product information, and removes WhatsApp/contact actions.
-- Store listings include a secondary link to the store page.
-- Includes a safety/trust notice reminding users that Laria does not process payments, shipping, or guarantees.
-- Seller/store trust box:
-  - Individual listings show `Sobre el vendedor`, seller name when available, `Particular`, location, active approved listing count, visible-since date, WhatsApp contact action, and a short safety note.
-  - Store listings show `Sobre la tienda`, store name, verified badge when `stores.is_verified=true`, location, short store description when available, active approved listing count, visible-since date, WhatsApp contact action, and a link to the public store page.
-  - Listing counts use approved active listings from the same store or, for individuals, the same WhatsApp contact.
-- Production Sprint 6 shows only revealed, non-admin-hidden buyer-to-seller reviews for the correct Particular/store identity. Zero reviews show an honest empty state; no score is fabricated. Authenticated users may report a visible review. Checkout, delivery, payments, guarantees, and chat remain out of V1.
-- Local Sprint 8 adds the same restrained report action for the eligible public/sold listing itself. It requires authentication, a fixed reason, and optional detail; self-reporting and nonvisible targets fail without exposing private state.
-- Layout uses the shared `PageContainer` public width system.
-- Visual refresh keeps the same data and contact behavior while aligning the gallery, detail panels, seller trust box, specs, and recommendation cards with `docs/design-system.md`.
-
-## Store Pages
-
-Route: `/tiendas/[slug]`
-
-Public store pages show:
-- Banner.
-- Logo.
-- Store name.
-- Verified badge if applicable.
-- City/district.
-- Description.
-- WhatsApp button.
-- Approved listings from that store.
-- Production Sprint 6 visible verified-transaction review average/count and recent reviews for the store identity, never the Store Owner's personal identity.
-- Production Sprint 4: visible public store opens and actual WhatsApp click intents are recorded with canonical store ownership; pending/hidden stores are not ordinary public analytics targets.
-- Local Sprint 8 lets an authenticated nonowner report the active public store with the shared fixed-reason flow. Report data and reporter identity are never shown on the public store page or to the Store Owner.
-
-Layout uses the shared `PageContainer` public width system.
-
-Store products also appear in general listings search.
-
-## Account-owned Particular Listing Submission
-
-Routes:
-- `/vender`: form page.
-- `/publicar`: redirect to `/vender`.
-
-Current form fields:
-- Title.
-- Category.
-- Instrument type.
-- Supported dynamic attributes.
-- Brand.
-- Model.
-- Condition.
-- Price.
-- City and region for the item location.
-- Description.
-- 2–10 ordered photos.
-- Marketplace rules acceptance.
-
-Current behavior:
-- Requires a signed-in Particular account and preserves `/vender` as the login return path.
-- Uses the current profile for seller name, WhatsApp, city, and region; listing-level contact remains as a compatibility snapshot.
-- Supports adding, reordering, replacing, and removing photos, with 2–10 enforced.
-- Accepts JPEG, PNG, WebP.
-- Max 5 MB per photo.
-- Atomically inserts a `pending` individual listing with `owner_user_id=auth.uid()` and `created_by_source='self_service'`.
-- Uploads photos to `listing-photos`.
-- Inserts photo records in `listing_photos`.
-- Shows a success message saying an admin will review before publication.
-- Page wrapper uses `PageContainer`; the form content remains capped for readability.
-
-The signed/idempotent retry architecture remains in place. Listing tokens are account-bound, and authenticated uploads use `{auth.uid()}/{submissionId}/...` storage paths. Legacy anonymous listings remain readable through their historical contact fields but the anonymous listing-creation policy is removed.
-
-## Owned Listing Management
-
-Routes:
-- `/mi-cuenta/publicaciones` for Particular inventory.
-- `/mi-cuenta/tienda/inventario` for Store Owner inventory.
-- `/mi-cuenta/publicaciones/[id]/editar` for the shared owner editor.
-- `/api/listings/[id]/manage` for authenticated edit/lifecycle actions backed by trusted database RPCs.
-
-Current behavior:
-- Owners see all owned states plus moderation or administrative-hide reasons, pending-revision state, and allowed actions.
-- Rejected listings remain editable and expose `Enviar nuevamente`; the trusted publication RPC clears the prior rejection reason and returns the corrected row to the appropriate pending/direct-publication path.
-- Approved owners can hide; only owner-hidden listings can be restored. Admin-hidden rows stay blocked from owner restoration.
-- Marking sold is irreversible for the historical row and cancels a pending revision. `Relistar` creates a new linked copy with a new slug and keeps the old record intact.
-- Particular and normal-Tienda relists return to moderation; eligible Tienda Verificada copies can publish directly.
-- Price, description, location, and supported attributes apply immediately on approved Particular/normal-Tienda inventory. Title, category, instrument type, brand, model, condition, and photo changes create one pending revision while the old public version remains live. Further moderated edits amend that same versioned proposal, including its isolated photo set; reverted fields leave the proposal and an empty proposal is cancelled. Attributes that depend on a proposed instrument-type change stay inside that revision and are promoted atomically with the type.
-- A Tienda Verificada applies a complete valid edit directly. Revocation immediately returns later edits to revision moderation without altering already-approved inventory.
-- Verification does not auto-approve an older pending edit revision; it remains pending because the store-verification operation applies only to pending inventory listings. Future verified edits are evaluated directly at transaction time, and a later direct moderated/photo edit cancels an older pending proposal as superseded so it cannot overwrite newer live values.
-- Production Sprint 4 completes repeated photo amendments onto the existing pending revision: add/remove/replace/reorder/primary, restoration of the approved photo order while preserving other pending fields, and refreshed persisted form state after saving.
-- New edit uploads are owner/listing/attempt-scoped in the private `listing-edit-photos` bucket and use authorized `/api/listing-images/...` URLs. Pending/unattached bytes are not anonymous public bucket assets; existing legacy/live submission URLs remain compatible.
-- Signed edit attempts persist a request hash/result. Identical uncertain-response retries reuse the uploaded payload and do not increment the revision again; changed retries are rejected. Busy guards prevent duplicate submissions or photo mutations during a save.
-- Cleanup is server-bound and reference-checked under the listing lock, with retired-path claims preventing a check/delete race. Every live, sold/shared, and retained revision-history reference is protected; explicit cleanup failures remain retryable. Browser users cannot overwrite/delete historical objects. A new scheduled orphan sweeper is not implemented.
-
-## Store Registration
-
-Route: `/registrar-tienda`
-
-The route requires a separate Store Owner account. An authenticated Particular receives a safe explanation/sign-out path and is never converted. New Store Owners can register at `/registro/tienda` using the shared Supabase Auth infrastructure.
-
-Required application fields:
-- Public store name, RUC, razón social, business email, phone/WhatsApp, physical address, city/region, and contact person.
-
-Current behavior:
-- Binds the application to `auth.uid()` and preserves one effective store per owner.
-- Normalizes RUC and enforces uniqueness in Postgres.
-- Accepts optional description, district, logo, banner, physical-store photos, Instagram, Facebook, TikTok, and website.
-- Shows pending/active/rejected/hidden state, owner-visible rejection reason, and Tienda/Tienda Verificada trust state.
-- Owners can edit allowed business/profile fields, manage optional physical-store photos, and resubmit a corrected rejected application.
-- Pending and normal Tienda inventory enters moderation. Qualifying Tienda Verificada inventory publishes directly.
-- The database serializes the 50-item pending+approved inventory cap; the owner UI shows real capacity and a clear full-cap message.
-- Page wrapper uses `PageContainer`; the form content remains capped for readability.
-
-## Admin Panel
-
-Route: `/admin`
-
-Admin behavior:
-- The shared server layout verifies the current Supabase Auth user and `is_admin()` from trusted `app_metadata.role='admin'`; anonymous and nonadmin root/deep links are redirected before domain data is loaded.
-- `/admin` is a moderation-first workbench with stable URL-backed tabs for `Publicaciones`, `Cambios`, `Tiendas`, `Verificación`, `Reportes`, and `Reseñas`. Every tab remains visible, shows a canonical live actionable count, paginates bounded results, and has truthful empty/error state.
-- The workbench defaults to the first nonempty queue. Successful trusted actions refresh the item and count; failed/stale actions remain visible and never become optimistic success.
-- Persistent Admin navigation exposes deeper pages for publications, revisions, stores, users, reports, reviews, transactions and manual legacy linking. Search/status/filter/page state lives in the URL. Mobile retains all destinations in an accessible collapsed menu.
-- Existing invitation plus allowed listing/store editing remains available; protected status, verification, ownership, plan and Auth authority fields are not general edit fields.
-- Listing actions use trusted review RPCs: `Aprobar`, required-reason `Rechazar`, required-reason administrative `Ocultar`, and `Restaurar` where allowed.
-- Pending revisions show live/proposed fields, proposal version and photo context; stale decisions fail safely. Resolved revision history remains inspectable.
-- Store pages show full application/owner/trust context. Basic approval, rejection/hiding, verification, and revocation continue through trusted RPCs; verification remains atomic with qualifying pending inventory approval.
-- Revealed reviews retain mandatory-reason hide/restore only; Admin cannot rewrite rating/comment. Transaction pages are read-only operational context and cannot confirm, cancel, or edit a relationship.
-- Reports show individual reporter/target/reason/detail/history context only to Admin. Resolve and dismiss require a reason and close the report without automatically moderating its target; target action remains separate.
-- `Vinculación legacy` requires an explicit eligible listing, explicit Particular account, visible historical evidence, an audit note and confirmation. It links one null owner once; it never infers ownership from phone/email or permits reassignment.
-- Listing, revision, store, verification, report, review and legacy-link mutations have bounded Admin-only audit history backed by `admin_audit_actions`.
-
-## In-App Notifications
-
-- `/mi-cuenta/notificaciones` is available in both role-specific account menus with an accurate unread badge.
-- Typed notices cover listing approve/reject/admin hide, revision approve/reject, store approve/reject, verification/revocation and production Sprint 6 transaction confirmation/decline/cancel/verified/review-reveal events.
-- Notices are newest first, visually distinguish unread rows, link to the relevant listing/store account area, and can be marked read through an owner-constrained RPC.
-- This center remains canonical in-app history. Production Sprint 7 adds supplemental marketplace email jobs for supported events; Auth mail remains separate and no general marketing-email preferences are introduced.
-
-Admin visual refresh:
-- Uses a dark admin sidebar/header area and light operational workspace.
-- Uses white cards, subtle borders, dense readable tables, blue active states, and subtle status badges.
-- No placeholder operational counts or fake metrics are shown; the workbench counts come from canonical domain state.
-- The Sprint 8 rebuild preserves moderation, invite, and trusted authorization behavior while replacing the fragmented single panel with a shared shell and bounded pages.
-
-Admin invite behavior:
-- Admin can invite a seller or store owner by email.
-- Fields include email, full name, WhatsApp, account type, optional city/region, optional store name, and notes for fieldwork follow-up.
-- Invites are sent by `/api/admin/invite-user`, a trusted server route that verifies `is_admin()` before using the server-only Supabase service-role client.
-- Seller invites route through `/auth/callback?next=/registro/vendedor/invitacion`.
-- Store-owner invites route through `/auth/callback?next=/registro/tienda/invitacion`.
-- No temporary passwords are created.
-- Seller invite metadata stores the database-safe `account_type='seller'` and `invite_account_type='individual'`.
-- Store-owner invite metadata stores `account_type='store_owner'`.
-- Store-owner invites do not create or approve a store automatically; the user completes the existing store application after activation.
-- Supabase may still use one built-in invite email template, so seller/store-specific experience currently happens after the click.
-
-## Account Auth Plumbing
-
-Routes:
-- `/login`: email/password login plus magic-link login for existing users.
-- `/recuperar-contrasena`: sends a Supabase Auth recovery link.
-- `/restablecer-contrasena`: sets a new password after the recovery callback.
-- `/registro/vendedor`: public Particular signup for buying and selling; authenticated users return to the dashboard instead of re-entering profile data.
-- `/confirmacion-correo`: legacy standalone confirmation success page; current signup confirmation shows success inside `/mi-cuenta`.
-- `/registro/vendedor/invitacion`: invited seller profile setup.
-- `/registro/tienda/invitacion`: invited store-owner profile setup.
-- `/mi-cuenta`: protected role-aware account summary inside the shared account shell.
-- `/mi-cuenta/publicaciones` and `/mi-cuenta/publicar`: Particular owned-listing view and publication form.
-- `/mi-cuenta/tienda`, `/mi-cuenta/tienda/inventario`, and `/mi-cuenta/tienda/publicar`: Store Owner application/profile, inventory, and publication routes.
-- `/mi-cuenta/tienda/estadisticas`: real owner-only Store analytics with lifetime/7-day/30-day periods (production Sprint 4).
-- `/mi-cuenta/perfil`: edits the authenticated Particular or Store Owner contact profile.
-- `/mi-cuenta/seguridad`: authenticated password change.
-- `/auth/callback`: verifies Supabase signup, magic-link, recovery, and invite token hashes (and supports PKCE codes), then sets a server-readable app session on the redirect response.
-- `/logout`: signs out and redirects to `/login`.
-
-Behavior:
-- Magic links use `/auth/callback?next=...`.
-- Login-page magic links use `shouldCreateUser:false` so they do not accidentally create new users.
-- Individual seller signup creates a Supabase Auth user, stores onboarding metadata, and creates or updates the matching `profiles` row.
-- Before seller signup calls Supabase Auth, `/api/auth/check-email` performs a server-side duplicate-email precheck using the service-role Auth Admin API. If the email already exists, the form shows `Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo.` with a link to `/login`.
-- The product concept Particular maps to `profiles.account_type='seller'` in the current database schema.
-- Signup collects full name, email, WhatsApp, city, region, password, and marketplace rules acceptance.
-- If Supabase email confirmation is enabled, `/auth/callback` repairs an incomplete seller profile from Auth user metadata when needed, then redirects to `/mi-cuenta?confirmed=1`. The dashboard confirms verification explicitly and keeps any genuinely incomplete profile work inside the account experience.
-- Callback redirects only to safe same-site paths.
-- Production Sprint 4 maps Supabase `same_password` to `La nueva contraseña debe ser diferente de tu contraseña actual.` Unknown update errors remain generic; the existing password is never retrieved or manually compared. Secure callback/recovery/session behavior is preserved.
-- Intended invite next paths are `/registro/vendedor/invitacion` and `/registro/tienda/invitacion`.
-- Seller invite flow shows `Activa tu cuenta de vendedor`, completes missing profile fields, confirms the Particular account type, and continues to creating a first listing through `/vender`.
-- Store invite flow shows `Activa la cuenta de tu tienda`, completes store-owner contact profile fields, explains that admin approval is required, and continues to the store application form at `/registrar-tienda`.
-- `/registro/tienda` creates a separate Store Owner account, and `/registrar-tienda` creates/edits the owner-bound application. The auth callback repairs incomplete Store Owner metadata just as it does for Particular signup.
-- Invite pages require an authenticated session after `/auth/callback`; anonymous visitors are redirected to `/login` with the invite route preserved in `next`.
-- Invite pages use `account_type` metadata/profile type when available. If metadata is missing or mismatched, they show a safe recovery panel instead of silently changing account type.
-- Invite flows do not use temporary passwords.
-- Account and invite location forms use a fixed Peru region list and city suggestions with free-text city fallback. Region must normalize to one of: Amazonas, Áncash, Apurímac, Arequipa, Ayacucho, Cajamarca, Callao, Cusco, Huancavelica, Huánuco, Ica, Junín, La Libertad, Lambayeque, Lima, Loreto, Madre de Dios, Moquegua, Pasco, Piura, Puno, San Martín, Tacna, Tumbes, Ucayali.
-- Supabase Auth email template requirements are documented in `docs/auth-email-templates.md`; signup sends trusted `user_metadata.account_type` for conditional Particular/Tienda wording. Sprint 4 changes no hosted template or callback format.
-- Type-specific invite behavior is planned through `account_type` metadata plus `redirectTo`, not separate email infrastructure.
-- Middleware refreshes Supabase Auth cookies and protects `/mi-cuenta` and future `/mis-publicaciones` routes.
-- Sprint 3 lifecycle and Sprint 3.1 revisions remain implemented for both account types. Accepted Sprint 4 completes photo amendments and event-backed analytics; accepted production Sprint 5 adds Favorites/in-app price drops; accepted production Sprint 6 adds verified transactions and reviews. Production Sprint 7 adds saved searches and supplemental marketplace email without changing Auth mail.
-
-Account shell:
-- `app/mi-cuenta/layout.tsx` keeps role-appropriate navigation visible across account subpages: a persistent desktop sidebar and an accessible collapsed mobile menu with active-section state.
-- Particulars see Particular routes; Store Owners see store routes after an owner-bound store exists. `Estadísticas` remains real. Both account types have Favorites, `Compras`, Notificaciones and production Sprint 7 `Alertas`; employee management is not exposed as a fake link. `Compras` carries an authoritative pending-confirmation badge on desktop and mobile.
-- Particular summary aggregates all owned listings through one owner-scoped RPC; the recent-five list is only presentation. Both inventory tables show actual views/WhatsApp contacts, first-publication date, status, and sold metadata. Unavailable aggregates never become estimated zero.
-
-## First-party Marketplace Events and Analytics — Production Sprint 4
-
-- Events cover visible card impressions, detail/store opens, WhatsApp intentions, signed search/filter/zero-result context, and trusted submission/moderation/store transitions. Lifecycle writes run in the authoritative database transaction, not from a browser admin flag.
-- A signed random HttpOnly/SameSite=Lax first-party cookie lasts 24 hours. Authenticated actor IDs come from the server session; listing/store/seller attribution is resolved server/database-side. No raw IP, invasive fingerprint, WhatsApp content, password, or auth token is event payload data.
-- Raw event tables/recording RPC are service-only. Owner aggregate access is enforced in SQL; accounts cannot request another owner's commercial data or a browsable buyer directory.
-- Impressions/detail/store views use a rolling serialized 30-minute anti-refresh window and exclude owner/admin activity. Actual contact clicks remain distinct intents; replaying the same event ID does not duplicate them. Retryable client event batches are bounded and never gate public SSR.
-- Search receipts preserve the existing real server filter/result semantics; client-forged result counts or arbitrary metadata are rejected. Pagination is not a newly applied filter.
-- Lifetime views include the existing historical cache; no event history is fabricated. Seven/thirty-day views and contact counts come from recorded events. Active means current approved/public inventory; sold means current seller-marked state, not verified sales in a date window.
-- Store statistics include product impressions/views/contacts, public store visits/contacts, current active/sold counts, CTR (recorded views / impressions), and contact rate (contacts / recorded views). Ratios use one recorded-event period; zero denominator is `Sin datos`. Historical cache views are not silently used as a conversion denominator.
-- No revenue or fake transaction/review metrics. Production Sprint 6 adds only real buyer-confirmed transaction totals and contact-to-verified rate, explicitly distinct from payment, delivery and seller-marked sold state. The admin aggregate RPC remains groundwork, not the full analytics/moderation hub.
-
-## Frozen V1 Gaps and Post-V1 Exclusions
-
-Sprint 9 implements the last BUILD areas: category landing pages under `/instrumentos/<categoría>` backed by the real catalog, canonical/robots/sitemap/structured-data SEO, the Terms, Privacy, prohibited-items and safety pages with explicit no-payment/escrow/shipping/guarantee copy, and the frozen account navigation (`Perfil y seguridad`). The first Sprint 9 production gate failed on 2026-09-27; the remediated candidate then passed the automated production re-gate. Owner SEO/legal checks remain open; see `docs/sprint-9-production-release-gate.md`. Go-live dependencies are listed in `docs/go-live-checklist.md`. See `docs/functional-spec.md`.
-
-## Sprint 5 — deployed and owner-accepted
-
-- One global header includes logo, prominent brand search and trusted hydrated account controls on every route. Shared category/subtype links use the existing filter taxonomy; mobile menus preserve access without horizontal overflow. Account navigation remains nested and persistent.
-- Search submits the canonical `/listados?brand=...` filters. Only actual catalog search/filter interactions use the existing signed analytics receipt; typing or rendering a header does not count as a search.
-- Duplicate-RUC application rejection is recoverable by changing only RUC in the same form, keeping business fields and optional assets. Unknown/lost-response commits remain locked to their exact signed retry. Existing accessible notices focus and scroll into view.
-- Private Favorites support both account types on real home/catalog/recommendation/store cards and approved details. Anonymous actions preserve a safe login destination; sellers cannot favorite their own inventory. `/mi-cuenta/favoritos` shows 24 items/page, removable sold history and redacted unavailable entries; copied relists start without favorites.
-- Public live price decreases create one in-app notification per current favorite recipient per transition atomically. Unchanged/increased prices, pending proposals and nonpublic inventory do not alert. Unfavorite stops future alerts; refavorite does not send old drops. Notification links recheck current availability rather than exposing private data.
-- Particular and Store analytics show current favorites, selected-period additions/removals and favorite-add/view rate. Counts/rates are real grouped aggregates with no buyer directory. Sprint 7 email and alert delivery state is operational infrastructure, not seller demand, revenue or verified-sale analytics.
-
-## Sprint 6 — production deployed and owner-accepted
-
-- The global category control is an accessible desktop mega-menu/mobile accordion driven solely by the existing category and instrument-type taxonomy. Only one category branch is open; selection, route navigation, outside interaction and Escape close it.
-- Marking an owned listing sold routes the seller into `/mi-cuenta/transacciones/[listing-id]`. Only authenticated exact-listing WhatsApp contacts recorded no later than `sold_at` appear, with display name/time but no email or phone. A seller can cancel/change before confirmation or record an external/no-account sale.
-- The selected buyer receives an in-app link with exact listing/seller context and answers `Sí, lo compré` or `No, no fui yo`. Only yes creates one verified relationship; decline cannot be overridden and a different eligible buyer may be selected. The interface repeatedly limits verification to mutual recognition, not payment/delivery/product quality.
-- `/mi-cuenta/transacciones` shows the current user's relevant purchase/sale claim history, verified relationships, review window and own submitted state. Unrelated records remain unavailable.
-- Each verified relationship permits one final 1–5 review per direction until the database-owned ten-day deadline. Both reviews reveal together, or a single review reveals only after the deadline. Listing detail/store pages show only visible non-hidden seller/store reputation; buyer review history remains stored/aggregatable without a public buyer profile.
-- Visible reviews can be reported with fixed reason and optional detail. Admin can inspect revealed reviews and transaction linkage, then hide/restore with an audited reason; no rewrite action exists.
-
-## Sprint 7 — production deployed; exercised inbox paths accepted
-
-- Both account types use `Compras` as the persistent purchase/transaction destination. Pending buyer confirmations are grouped first in the center and reflected by a desktop/mobile badge calculated from pending transaction claims, never unread notices.
-- Authenticated users can create an Immediate or Daily alert from the real `/listados` filters. `/mi-cuenta/alertas` renders readable Spanish summaries and supports open, pause, resume and delete. Duplicate semantic searches fail clearly; anonymous creation preserves a safe login destination.
-- Matching uses normalized existing category, type, condition, brand, seller, price, location and advanced attribute semantics. Existing catalog inventory is baselined; only a first public transition after activation qualifies. Restoring the same listing does not repeat, while a relist is a new identity. Pause periods never backfill.
-- Immediate alerts create one durable job per alert/listing. Daily alerts create at most one useful digest per alert/Lima calendar day and never an empty message. The protected worker begins completed-day preparation after 08:00 Lima, replays a bounded seven-day window and sends bounded batches. During pre-go-live Vercel Hobby QA it is invoked manually; supported frequent 5–15 minute automatic scheduling is a mandatory go-live dependency.
-- The private marketplace outbox supplements, rather than replaces, Notifications. Deterministic dedupe, row-locked claims, provider idempotency, at most five attempts and bounded backoff keep domain transitions independent of Resend availability. Recipient and template context come only from trusted database state.
-- Spanish Laria templates cover supported listing/store moderation and verification events, transaction/review lifecycle events, authoritative favorite price drops, and search alerts. They use safe same-origin destinations, contain no tracking pixel, and do not imply payment, delivery or product guarantees.
-- Owner production inbox/link acceptance passed for `PDA-009`, `ALERT-003`, `ALERT-015`, and `MAIL-001`–`MAIL-007` on 2026-09-25. The natural daily digest check `ALERT-005` and desktop/mobile Compras usability check `TX-018` remain blocked; automated evidence for both is preserved.
-
-## Sprint 8 — local implementation only
-
-- The Admin landing page is now a moderation workbench with six canonical actionable queues and live counts. Deeper server-protected pages cover publications, revisions, stores, users, reports, reviews, read-only transactions, and manual legacy linking without making them all moderation tabs.
-- General authenticated reports reuse the Sprint 6 review-report history in one `reports` model. Eligible targets are public/sold listings, active stores and revealed reviews. Fixed reasons are `acoso`, `contenido_inapropiado`, `informacion_falsa`, `posible_estafa`, `articulo_prohibido`, `spam`, and `otro`; optional detail is bounded.
-- Raw reports, reporter identity and report counts are private. One open row per reporter/target is enforced by partial unique indexes under concurrency, while different reporters remain independent. Resolve/dismiss and target moderation are separate durable actions.
-- Privileged mutations append an actor/target/action/context record to `admin_audit_actions`; ordinary clients cannot read or write that table. Admin history readers are target-scoped and bounded.
-- Legacy ownership is Admin-manual only. A row-locked RPC accepts only an unowned legacy Particular listing plus a selected existing Particular profile, preserves listing/history/assets, and writes an audit note. It does not match or claim by phone/email and cannot run twice.
-- Admin domain queries are bounded, deterministically ordered and supported by status/filter/order indexes. No user directory secret, Auth token, arbitrary account mutation, transaction edit, or review rewrite is exposed.
-- Migration `20260923120000_sprint_8_admin_reports_legacy.sql` and the matching application are local-only until the separate Sprint 8 production release gate. Sprint 7 worker scheduling remains the unchanged pre-go-live dependency.
-
-Post-V1 unless a new product decision is explicit:
-- Payments.
-- Checkout.
-- Escrow.
-- Delivery.
-- Internal chat.
-- Subscription billing.
-- Commission logic.
-- Paid listing boosts and paid store packages.
-
-## Performance and submission reliability
-
-Catalog and store inventories have 24-item pages. Product images are resized responsively. Detail recommendations stream separately from the product. Failed submissions can be retried in the same open form without creating duplicates; records are finalized only after uploads finish. See `docs/performance.md`.
+## Account, favorites and notifications — main
+
+One Particular account buys and sells; Store Owner is a separate role, managing one store. Signup, confirmation/resend, password/magic-link login, recovery, password changes and profile editing retain safe return destinations. Particular signup asks for identity first; WhatsApp/city are required when publishing. Peruvian nine-digit mobile numbers normalize to country code 51.
+
+A visitor can save up to 100 favorites on the device. Signing in merges them into the account. Account favorites retain clear unavailable/sold history, notes and revocable share links. Buyers can follow stores and brands; the weekly digest is opt-in.
+
+Saved-search alerts preserve supported text and filters, including multiple cities/conditions. Users rename, pause, resume, delete and change frequency; daily is offered first. New alerts do not notify for old inventory, a restore does not create a new-listing match, and pause periods do not backfill. Price-drop alerts require at least 5%, at most once a day per listing. The public “Antes” badge has its own genuine-history rule: a qualifying drop from a price held at least seven days, shown for up to 30 days, cleared on increases. Restock and reservation-release watches end after the relevant news.
+
+The account notification center is private, paginated and supports mark-all-read. Optional email types have preferences and signed unsubscribe controls; authentication and transactional messages remain distinct. Push is opt-in per device, groups unread notices, suppresses stale/read ones, respects 22:00–08:00 Lima quiet hours and stops on logout. iPhone push needs the installed web app.
+
+## Publishing and account work — main
+
+The sell form has Fotos, Qué es, Estado y precio, Revisar y publicar. It requires an account, rules acceptance and 2–10 photos. Browser image preparation removes metadata, reduces size and handles HEIC; upload runs in the background. Instrument-specific guidance, brand suggestions, advisory text checks and the preview help the seller finish. A sound clip is optional and tap-to-play. Android's installed share target can open publication with photos; it is not general offline publication.
+
+Device drafts and account drafts preserve work; an account holds at most 20. Mis publicaciones supports status counts, search, sorting, price edits, bulk hide/restore, private previews and new drafts from duplicate/republicar. Approved price, description, location and detailed attributes apply immediately; title/category/type/brand/model/condition/photos require one amendable, versioned revision for Particular and normal stores while the live version stays public. Verified-store valid edits can apply directly.
+
+Pendientes brings confirmations, review deadlines, moderation reasons, drafts, alerts and availability questions to the account home. Estadísticas holds actual aggregates. Vacation mode leaves listings public with the return date and pauses contact. A Particular can mark a listing reserved for 1/2/3/5 days; it stays public and contactable, offers a release watch, then follows the seller-response/release rules. “Hacer una oferta” only composes a WhatsApp amount; main stores no negotiated offer.
+
+## Stores, inventory and imports — main; gated
+
+Stores apply with unique RUC, razón social, contact and location. Basic approval makes the page public; manual business verification separately permits direct publication. Changing an unsold store listing's contact follows the store's current number. Street address is private unless the store opts to show it.
+
+The default cupo is 50 pending/approved publications, with reasoned Admin overrides from 1 to 2,000. SKU rows do not consume publication slots. A lowered allowance hides nothing; new counted publications/restores fail gracefully. Paid plans remain off.
+
+Admin enables Inventario per store. Each SKU has merchant identity, pricing, stock, thresholds, optional catalog linkage and append-only stock history. Changes are serialized and retry-safe; corrections are linked entries. A SKU can control one listing: zero stock shows Agotado, removes normal public discovery, keeps the URL and moves it last on the storefront. Restocking restores availability without repeating old new-listing alerts. A controlled listing cannot use the ordinary sold action while linked.
+
+Inventory includes search, filters, saved views, bulk operations, exports, reorder support, variants, price campaigns and Mostrador by camera, scanner or typing. Counter sales may queue offline and synchronize safely; that does not make the rest of Laria an offline app. Purchase-request follow-up is operational bookkeeping, not proof of payment.
+
+CSV/XLSX import is preview-and-confirm, with bounded files/rows, remembered mapping, cell corrections, row exclusions, downloadable results, photo/ZIP assignment and optional bulk publication. Blank fields preserve values, absent SKUs are untouched, formulas never execute, and concurrent sales cause conflicts rather than overwritten stock. Files stay private with retention/cleanup. Publication reuses the same validation, moderation, photos and allowance as the ordinary form.
+
+## Assisted commerce — main; gated
+
+Verified stores may declare cash on pickup, Yape/Plin, POS or a payment link the store sends itself. Each method is reviewed; holder details stay private. Business-identity changes send approved methods back to review, and loss of verification suppresses public methods.
+
+Both `LARIA_ASSISTED_COMMERCE=1` and the database pilot switch are required, after legal review. Eligible listings use Solicitar compra with quantity capped by availability and 10, then open WhatsApp. No payment is processed, no checkout order or paid state is created, no provider payment link is shown on Laria, and the inquiry reserves no stock. A recorded merchant sale changes stock separately.
+
+## Confirmed transactions, reviews and moderation — main
+
+For listing sales, seller-selected buyers must have an authenticated exact-listing WhatsApp contact no later than the sold timestamp. External/no-account sales remain sold without verified reviews. The buyer can also initiate a purchase check after contact; verification still requires the seller's confirmation. Neither path exposes a user directory. Managed stock listings use their inventory flow.
+
+Confirmed transactions allow one immutable 1–5-star review per side in a database-owned ten-day window. Reviews reveal together when both submit or after the window ends, subject to moderation holds; review counts must not inflate reputation through repeated buyers. The buyer's seller review belongs to the Particular or store. Admin may hide/restore abusive content, never rewrite it.
+
+The moderation hub manages listing/store states, revisions, users, reports, reviews, transactions and one-time explicit legacy ownership linking. Reasons and audit records preserve privileged decisions. Closing a report is separate from acting on its target. Raw reports, contact identity and operational data remain private. Admin authority is verified on the server and in privileged SQL; current main includes stronger MFA, account anonymization, security headers, rate limiting, restricted public columns, retention and operational error/audit tools.
+
+## PR #54 — listing and selling tools
+
+These are built on the draft branch and require its unreleased schema.
+
+- **Condition:** Nuevo, Exhibición o caja abierta (stores only), Como nuevo, Excelente, Muy bueno, Bueno, Regular, Para reparar. Legacy values normalize across existing records, URLs, alerts and imports.
+- **Seller terms:** optional fixed/conversable price, pickup area, try-before-buy, Lima/province delivery and trade categories. Terms come from the seller. Fixed-price and reserved listings suppress Hacer una oferta.
+- **Combos:** a device-only per-seller bundle, published-price total, declared bundle discount and one WhatsApp message. No checkout; unavailable inventory and the assisted-purchase pilot follow their exclusions.
+- **Map:** list/map switch backed by OpenFreeMap. Opted-in stores place a pin; other results use approximate areas, and Particulars never expose a precise address. Accessible list fallback and external directions links; newest 300 results.
+- **Mi equipo:** a Particular's private gear, serials, purchase/warranty notes and confirmed purchases, with Vender esto. No estimated market value.
+- **Store offers/part payment:** opt-in verified stores receive a Particular's request; only the chosen store gets their WhatsApp. Estimates, inspection and payment stay outside Laria.
+- **Consignment:** store-owned publication identifies the arrangement; the instrument owner follows performance and sale status. The parties agree any commission; Laria charges none.
+- **Price tools:** floor-bound 5%/10% automatic steps every 7/14 days, plus expiring private prices for current favorites, at most once per listing per week. Private prices do not change the public price.
+- **Maintenance reminders:** opt-in strings/reeds/drumheads reminders with an easy stop; they do not estimate gear value or predict purchases.
+
+## PR #54 — trust, accounts and safety
+
+- **Seller pages and levels:** hideable, noindex Particular profiles with limited identity and real inventory/reputation. Destacado criteria include five distinct confirmed buyers, three visible reviews averaging 4.5, report history and unanswered-question limits. Nobody pays for the level.
+- **Buyer history:** an opt-in, revocable limited card and optional WhatsApp line; no purchase list, contact information or seller-review comments become public.
+- **Provenance:** an owner may link a resale to their earlier listing-based verified purchase; previous-owner identity stays private.
+- **Counter purchase QR:** one-use code expires after 24 hours; a signed-in customer's confirmation creates store reputation eligibility without a prior WhatsApp event. Stock movement alone still creates none. Own-store claims and repeat abuse are constrained.
+- **Review photos:** up to three buyer photos, public only after Admin approval and review visibility.
+- **Safer meetups:** opted-in active verified stores, city meeting-place suggestions, a share-to-someone message and checklists. No guarantee of safety; local place checks remain a launch task.
+- **Account controls:** remembered sessions/second-factor level, authenticator codes and recovery, session revocation, new-device email, secure email change and own-data JSON export. Particular deletion anonymizes while preserving shared transaction/review history; Admin/store closure uses the team.
+- **Two-step enforcement:** Admin and stores with approved payment methods have mandatory rules; an enrolled account's incomplete session must also be rejected by PostgREST and Storage. Anonymous browsing remains allowed.
+- **OAuth/help:** Google/Apple behind provider flags, help articles/search and a small question inbox. Google setup is recorded; Apple is deferred. Support contact appears only with configured number/hours.
+- **Stolen gear/copied photos:** private serial/report and perceptual-photo matches create Admin leads, never automatic public accusations or rejection. Price-anomaly detection waits for market-price data.
+
+## PR #54 — store floor and reach
+
+Stores gain merchant-stated warranty/exchange terms, estimated Por llegar dates, stock-linked arrival alerts, printable labels/posters and try-out requests. Try-outs require confirmation, reminders and bounded retention; they reserve time, not units. Interest-free installment offers require reviewed card methods and both assisted-commerce gates; interest-bearing offers are excluded.
+
+Sedes split stock across up to 20 active locations, support transfers/counts and preserve the selected counter location through offline sync. Buyers can see available location names and choose a pickup sentence; per-location quantities remain private. One map pin per store remains the current limit.
+
+**Comprobantes is deferred/off:** code connects a verified store's own Nubefact account for boletas/facturas after a counter sale. The activation key was removed at the owner's request. It needs new configuration and a demo-provider test before use. Laria does not issue the store's tax receipt; online invoices, credit notes and shipping documents are outside this build.
+
+Mercado Libre import reads selected active publications into the normal review/import flow, up to 100; credentials are incomplete. Social feeds are store opt-in. Google Shopping activation remains off and its marketplace/checkout eligibility is unresolved by a feed alone.
+
+Dealer authorization is document-reviewed and scoped to new instruments of that brand. Campaigns use genuine recorded 30-day price history, explicit end-price choice and no countdowns. The monthly demand report shows aggregated searches/alerts with a minimum five people and visible limitations, never a recommendation to stock an item.
+
+## PR #54 — discovery and services
+
+Andinos y tradicionales is the eleventh category; cajón stays in Percusión. Fabricante/Taller pages, made-to-order terms and handmade marks are merchant declarations. Artist verification concerns identity; the gear-use story remains the artist's statement. Gift pages, nine buying guides/checklists and dated filter-based collections use actual inventory.
+
+`/servicios` separates lessons, repairs/lutherie, rehearsal rooms, recording studios and event sound. Particulars/stores can offer one service per kind with their own profile, pricing unit, place, photos and contact. Services have separate moderation, reports, views/contact aggregates and confirmed-client reviews. They never enter the instrument catalog, item favorites/alerts or publication allowance.
+
+Service confirmation requires a recent authenticated contact and the other party's agreement; one client review is allowed within 30 days after confirmation. This is a separate workflow from two-way ten-day instrument reviews. A service with confirmed clients/reviews may be paused, not deleted to erase history. Laria does not schedule or guarantee the work.
+
+## Reliability, SEO and operational limits
+
+Public pages use bounded reads, responsive images, computed photo counts, stable 24-item pages, isolated optional sections and refreshable cached public data. Ownership, publication, uploads, stock and retries use authoritative database checks; service secrets remain server-only. Analytics use actual visible impressions, canonical contacts/search receipts and trusted lifecycle transitions; no WhatsApp message content or invasive fingerprinting.
+
+Category/listing/store metadata, structured data, robots and sitemaps use the canonical site origin. Sold, private/account/Admin, comparison, Descubrir and preview surfaces follow their indexing exclusions. Empty-category behavior and legacy redirects are covered by release evidence, not replaced by invented SEO content. Terms, Privacy, prohibited-item rules, safety guidance and Libro de Reclamaciones have their own legal/operational requirements.
+
+Vercel Pro schedules on current main replace the original manual Hobby-worker assumption. PR #54 adds feature jobs and database cron work; deployments must verify actual execution, not just configuration. Application updates do not apply Supabase migrations.
+
+The two AI helpers on main remain off without `LARIA_AI_HELPERS=1` and the server provider key. Pregúntale a tu tienda translates a question into existing store views without sending store records; Completar con IA offers individually accepted photo-based suggestions. Neither invents condition/price/specifications nor changes moderation or replaces catalog autofill/Jev. Per-account/store and site caps apply.
+
+## Deferred work and verification
+
+Protected payments, shipping booked by Laria, staff accounts, monetization, auctions, rentals, video and the other explicitly later ideas stay deferred. Catalog-dependent market prices, price guides, compatibility, Mi equipo valuations and price-based flags are not delivered by PR #54. The separate feature-ideas maybes remain undecided/deferred; the five Effortless maybes already on main must not be confused with them.
+
+Use the checks and local database/browser harnesses in [verification](documentation-status.md#verification), then the area-specific sources. This refresh does not rerun application, SQL, provider or production acceptance; it changes no runtime code, canonical acceptance cases or XLSX. The dated sprint/release files retain historical evidence, while this file replaces their stale implementation summaries.
