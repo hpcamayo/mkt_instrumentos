@@ -160,7 +160,7 @@ def main():
         deployment = json.loads(deployment_path.read_text())
         report["live_deployment_revision"] = deployment["git_sha"]
         report["live_deployment_observation"] = deployment
-        report["live_revision_scope"] = "Observed during the final run; earlier attempts may predate this deployment."
+        report["live_revision_scope"] = "Snapshot observed during the run; recorded attempts may span deployments."
     for identifier, case in cases.items():
         phases = []
         item = {"id": identifier}
