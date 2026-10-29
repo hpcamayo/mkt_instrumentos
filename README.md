@@ -1,122 +1,71 @@
-# Instrumentos Perú MVP
+# Laria
 
-Base inicial para un marketplace MVP de instrumentos musicales en Perú.
+Marketplace de instrumentos musicales y equipo de audio en Perú: [laria.audio](https://laria.audio). Los compradores descubren productos de particulares y tiendas y coordinan directamente por WhatsApp. La interfaz está en español y se diseña primero para teléfonos.
 
-El proyecto usa Next.js, TypeScript, Tailwind CSS y Supabase para listados, tiendas, formularios públicos, almacenamiento de imágenes y moderación básica.
+Laria usa **Next.js, React, TypeScript, Tailwind CSS y Supabase** (Auth, Postgres y Storage), con despliegues de aplicación en Vercel. El producto incluye cuentas, herramientas de venta, inventario para tiendas, retención de compradores, reputación y operación administrativa; ya superó el alcance del MVP inicial.
 
-## Alcance de Laria V1
+## Alcance y estado de V1
 
-La fuente canónica del comportamiento de producto es [`docs/functional-spec.md`](docs/functional-spec.md). El código y las migraciones describen el estado actual de implementación, que todavía no cubre todo el contrato V1.
+V1 comprende la base del marketplace y las ampliaciones aprobadas por el propietario. Esta documentación incorpora **[PR #54: Feature ideas: the approved ideas, built for review](https://github.com/hpcamayo/mkt_instrumentos/pull/54)** al contrato de producto, distinguiendo su implementación de su liberación.
 
-- Vendedores individuales publican instrumentos usados.
-- Tiendas pequeñas tienen páginas públicas.
-- Los productos de tiendas aparecen en la búsqueda general.
-- Compradores contactan vendedores por WhatsApp.
-- Toda la UI debe estar en español.
-- Diseño mobile-first.
+| Área | Alcance |
+| --- | --- |
+| Descubrimiento | Búsqueda por texto y filtros, categorías, tiendas, comparación, favoritos, alertas, recomendaciones en el dispositivo y Descubrir. |
+| Publicación | Cuentas Particular y Tienda, fotos, borradores, edición con revisión, disponibilidad, reservas, historial y republicación. |
+| Tiendas | Perfil público y verificación, cupo de publicaciones, inventario por SKU, Mostrador, importación de Excel/CSV y piloto de compra asistida con activación controlada. |
+| Confianza y operación | Confirmación mutua de compras, reseñas, preguntas públicas, reportes, moderación, analítica, correos y avisos. |
+| Ampliación de PR #54 | Mi equipo, ofertas y consignación, mapa, condiciones de venta, servicios separados, guías y colecciones, fabricantes/artistas, herramientas comerciales y de tienda, seguridad y control de datos. |
 
-V1 también requiere cuentas Particular y Tienda, propiedad de publicaciones, favoritos, alertas, analítica, reportes, moderación ampliada, verificación de transacciones originadas en Laria y reseñas bidireccionales asociadas exclusivamente a esas transacciones verificadas.
+**Estado al 28 de octubre de 2026:** PR #54 sigue abierto y en borrador. Sus 44 ideas construidas de las 60 aprobadas forman parte del alcance ampliado, pero sus 61 migraciones adicionales aún no se han aplicado a producción. La revisión legal y las verificaciones de liberación siguen pendientes. La configuración de un proveedor o un preview compilado no demuestra que una función esté operativa. El detalle y las fuentes están en [Estado de la documentación](docs/documentation-status.md).
 
-Fuera de V1:
+Laria no procesa ni custodia pagos, no ofrece escrow ni checkout propio, no gestiona envíos, no garantiza instrumentos o transacciones y no cobra comisiones ni suscripciones en este piloto. Mostrar los métodos de pago de una tienda, registrar sus ventas de mostrador o preparar un mensaje de compra no cambia esos límites. El chat privado sigue en WhatsApp.
 
-- Pagos
-- Checkout
-- Envíos
-- Escrow
-- Comisiones
-- Suscripciones
-- Chat interno
+## Documentación
 
-## Rediseño UX (rama `ux/redesign`)
+- [Especificación funcional](docs/functional-spec.md): contrato canónico de V1, incluidas las ampliaciones aprobadas y sus condiciones de activación.
+- [Funciones y estado](docs/features.md): qué hace cada área y dónde está implementada.
+- [Estado, fuentes y liberación](docs/documentation-status.md): referencias verificadas de main y PR #54, dependencias y límites de esta actualización.
+- [Roadmap](docs/roadmap.md): liberación del alcance aprobado y trabajo diferido.
+- [Sistema de diseño](docs/design-system.md): referencia visual canónica; [rediseño UX](docs/ux-redesign/README.md) conserva decisiones y evidencia histórica.
+- [Base de datos](docs/database.md), [arquitectura](docs/architecture.md) y [rendimiento](docs/performance.md): referencias técnicas; consultar también las fuentes actuales enlazadas en el estado de documentación.
+- [Registro de aceptación](acceptance/README.md): `acceptance/cases.tsv` es la fuente canónica; las propuestas de nuevas pruebas no son resultados de aceptación.
 
-El rediseño de la interfaz vive en la rama `ux/redesign` y se documenta en [`docs/ux-redesign/`](docs/ux-redesign/README.md). La referencia visual canónica es [`docs/design-system.md`](docs/design-system.md). Para una revisión externa independiente, empieza por [`docs/ux-redesign/review-guide.md`](docs/ux-redesign/review-guide.md): alcance, entorno local con Supabase local y cuentas de prueba, verificaciones y cómo reproducir la evidencia.
-
-## Estructura
-
-```txt
-app/
-  admin/
-  instrumentos/[slug]/
-  listados/
-  publicar/
-  registrar-tienda/
-  tiendas/[slug]/
-  vender/
-components/
-  admin-navigation.tsx
-  admin-workbench.tsx
-  admin-domain-view.tsx
-  content-report.tsx
-  listing-card.tsx
-  listing-filters.tsx
-  placeholder-page.tsx
-  sell-listing-form.tsx
-  site-footer.tsx
-  site-header.tsx
-  store-registration-form.tsx
-```
-
-## Primeros pasos
-
-Instala dependencias (pnpm; el lockfile está en el repositorio):
+## Desarrollo local
 
 ```bash
 pnpm install
-```
-
-Levanta el servidor local:
-
-```bash
+cp .env.example .env.local
 pnpm dev
 ```
 
-Verificaciones: `pnpm lint`, `pnpm typecheck`, `pnpm test` y `pnpm build`.
-
-Abre `http://localhost:3000`.
-
-## Variables de entorno
-
-Copia `.env.example` a `.env.local` y agrega las credenciales públicas de Supabase:
+Completa las variables de Supabase que declara `.env.example` y abre [localhost:3000](http://localhost:3000). Las credenciales de servicio y de proveedores son exclusivamente de servidor. No copies configuración de producción a pruebas locales.
 
 ```bash
-cp .env.example .env.local
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+python3 -B acceptance/validate.py
 ```
 
-Para usar `/admin`, el usuario autenticado debe tener `app_metadata.role = "admin"` en Supabase Auth.
+Estos comandos comprueban el checkout actual. Para revisar las funciones nuevas se necesita la rama y la base de datos correspondientes: una aplicación anterior con las migraciones de PR #54 no es una combinación compatible. Las suites SQL y de integración requieren un Supabase local preparado; las instrucciones actuales están enlazadas en [verificación](docs/documentation-status.md#verification).
 
-## Base de datos
+## Estructura
 
-Las migraciones viven en `supabase/migrations`.
+| Ruta | Responsabilidad |
+| --- | --- |
+| `app/` | Rutas públicas, cuenta, Admin y API de Next.js. |
+| `components/` | Flujos de producto y componentes compartidos; `components/ui/` contiene las primitivas visuales. |
+| `lib/` | Consultas, validación, autenticación, reglas compartidas e integraciones de servidor. |
+| `supabase/migrations/` | Evolución de esquema, funciones, permisos, RLS y trabajos de base de datos. |
+| `tests/` | Regresiones de aplicación, SQL e integración. |
+| `acceptance/` | Casos canónicos y validación TSV. |
+| `docs/` | Contrato, decisiones, guías de operación y evidencia de liberación. |
 
-La migración inicial crea:
+## Base de datos y datos de prueba
 
-- `stores`
-- `listings`
-- `listing_photos`
-- Enums de tipo de vendedor, estado de publicación, estado de tienda y plan de tienda.
-- Políticas RLS para lectura pública de contenido aprobado o activo, inserción pública como pendiente y actualización administrativa.
+El esquema ya incluye perfiles, propiedad de publicaciones y tiendas, revisiones, favoritos, alertas, notificaciones, eventos, transacciones verificadas y reseñas. Las ampliaciones de inventario, importación y las nuevas funciones tienen sus propias migraciones; no basta con ejecutar el esquema inicial.
 
-El esquema actual no incluye todavía favoritos, alertas, transacciones verificadas ni reseñas. Esto es una brecha de implementación del contrato V1, no una exclusión de producto. Pagos, checkout, envíos, suscripciones, comisiones y chat siguen fuera de V1.
+**Solo en un proyecto local desechable**, `supabase db reset` recrea la base con las migraciones y `supabase/seed.sql` del checkout. El seed es una muestra de desarrollo, no una copia ni un recuento del catálogo de producción. Nunca uses ese comando contra producción.
 
-## Datos de prueba
-
-El archivo `supabase/seed.sql` incluye datos locales para desarrollo:
-
-- 8 listados usados de vendedores individuales.
-- 3 tiendas.
-- 12 listados de tiendas.
-- Ciudades de Peru: Lima, Ayacucho, Huancayo y Arequipa.
-- Categorias: `guitars`, `basses`, `percussion` (tipos `drums` y `cymbals`), `microphones`, `pedals`, `amplifiers` y `audio` (tipo `audio_interface`). Las categorias `keyboards`, `winds` y `strings` existen desde el 12 Oct 2026 pero el seed aun no tiene listados en ellas.
-- Mezcla de registros `approved` y `pending`.
-
-Para recrear la base local con migraciones y seed:
-
-```bash
-supabase db reset
-```
-
-Para aplicar solo el seed sobre una base local ya creada:
-
-```bash
-psql "$DATABASE_URL" -f supabase/seed.sql
-```
+Vercel despliega la aplicación; no aplica automáticamente las migraciones de Supabase. La liberación de PR #54 exige coordinar aplicación y esquema según su plan de salida. Esta actualización documental no ejecuta migraciones, activa pilotos ni despliega código.

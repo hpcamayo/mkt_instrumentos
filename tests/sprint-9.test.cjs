@@ -217,6 +217,34 @@ test("listing metadata/structured data: canonical detail, sold history not index
   assert.deepEqual(JSON.parse(serialized), JSON.parse(JSON.stringify(jsonLd)));
 });
 
+test("Product image metadata uses indexable optimizer URLs, preserving sources, order and the photo limit", () => {
+  const sources = [
+    "https://cdn.example.test/foto.webp?version=2&name=front%20view",
+    "/fotos/segunda.jpg",
+    "https://cdn.example.test/tercera.jpg",
+    "https://cdn.example.test/cuarta.jpg",
+    "https://cdn.example.test/quinta.jpg",
+  ];
+  withEnv({ NEXT_PUBLIC_SITE_URL: "https://laria.audio/" }, () => {
+    const listing = {
+      ...baseListing,
+      listing_photos: ["", ...sources].map((image_url, sort_order) => ({ image_url, sort_order })),
+    };
+    const product = seo.buildListingJsonLd(listing);
+    assert.equal(product.image.length, 4);
+    for (const [index, image] of product.image.entries()) {
+      const url = new URL(image);
+      assert.equal(url.origin, "https://laria.audio");
+      assert.equal(url.pathname, "/_next/image");
+      assert.equal(url.searchParams.get("url"), sources[index]);
+      assert.equal(url.searchParams.get("w"), "1200");
+      assert.equal(url.searchParams.get("q"), "75");
+    }
+    // Missing photos must not create an invalid URL or a pretend product image.
+    assert.equal(seo.buildListingJsonLd({ ...listing, listing_photos: [] }).image, undefined);
+  });
+});
+
 test("store metadata is canonical and uses public store identity only", () => {
   const store = { name: "Tienda QA", slug: "tienda-qa", description: null, city: "Lima", district: "Miraflores", logo_url: null };
   const metadata = seo.buildStoreMetadata(store, 1);
