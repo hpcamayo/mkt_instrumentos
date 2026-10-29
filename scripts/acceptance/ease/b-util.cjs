@@ -83,6 +83,7 @@ async function photoLoaded(page) {
 
 // The photo's transform, the stage, the fitted photo and how far it may move at its scale.
 async function lightboxState(page) {
+  await photoLoaded(page);
   return page.evaluate(() => {
     const dialog = document.querySelector("dialog.lightbox");
     const layer = dialog?.querySelector(".lightbox-photo");

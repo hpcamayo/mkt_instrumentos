@@ -25,7 +25,7 @@ import {
 
 // Search (SKU, marca, modelo, nombre), filters in a sheet and the sort (design §13.1). Everything lives in the URL, so
 // a filtered view can be reloaded or shared with the same result and the server reads one page at a time. The list
-// follows the search box as the owner types (fix-06): a pause of SEARCH_DELAY_MS replaces the URL, so the browser
+// follows the search box as the owner types (fix-06): a pause of SEARCH_DELAY_MS pushes the URL, so the browser
 // history keeps one entry per search rather than one per letter. "Buscar" still submits at once.
 const SEARCH_DELAY_MS = 350;
 
@@ -34,6 +34,8 @@ export function InventoryToolbar({ filters }: { filters: InventoryFilters }) {
   const searchId = useId();
   const sortId = useId();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(filters.q);
+  useEffect(() => { setQuery(filters.q); }, [filters.q]);
   const filterButton = useRef<HTMLButtonElement>(null);
   const typing = useRef<ReturnType<typeof setTimeout> | null>(null);
   const applied = activeFilterCount(filters);
@@ -44,7 +46,7 @@ export function InventoryToolbar({ filters }: { filters: InventoryFilters }) {
     if (typing.current) clearTimeout(typing.current);
     const q = value.trim();
     if (q === filters.q) return;
-    typing.current = setTimeout(() => router.replace(inventoryHref({ ...filters, q }), { scroll: false }), SEARCH_DELAY_MS);
+    typing.current = setTimeout(() => router.push(inventoryHref({ ...filters, q }), { scroll: false }), SEARCH_DELAY_MS);
   }
 
   function dismiss() {
@@ -66,7 +68,7 @@ export function InventoryToolbar({ filters }: { filters: InventoryFilters }) {
           }}
         >
           <Field id={searchId} label="Buscar en tu inventario" labelClassName="sr-only" className="min-w-0 flex-1">
-            <Input name="q" type="search" data-inventory-search="" aria-keyshortcuts="/ Control+K Meta+K" defaultValue={filters.q} maxLength={100} placeholder="SKU, marca, modelo, nombre o código" onChange={(event) => searchAsYouType(event.target.value)} />
+            <Input name="q" type="search" data-inventory-search="" aria-keyshortcuts="/ Control+K Meta+K" value={query} maxLength={100} placeholder="SKU, marca, modelo, nombre o código" onChange={(event) => { setQuery(event.target.value); searchAsYouType(event.target.value); }} />
           </Field>
           <Button type="submit" variant="secondary" icon={<Search aria-hidden />}>Buscar</Button>
         </form>

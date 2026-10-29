@@ -84,8 +84,8 @@ test("each route gets its frame: header, strip, phone search and footer (N3–N5
   };
   for (const [pathname, expected] of Object.entries(expectations)) assert.deepEqual(shell.getShellLayout(pathname), expected, pathname);
   // The home gets the home header and no strip; every other public page the standard header.
-  assert.match(source("components/site-shell.tsx"), /\{layout\.header === "home" \? <HomeHeader \/> : <SiteHeader layout=\{layout\} \/>\}/);
-  assert.match(source("components/site-shell.tsx"), /\{layout\.strip !== "none" \? <GlobalCategories visibility=\{layout\.strip\} brands=\{menuBrands\} \/> : null\}/);
+  assert.match(source("components/site-shell.tsx"), /\{layout\.header === "home" \? <HomeHeader counts=\{menuCounts\} \/> : <SiteHeader layout=\{layout\} \/>\}/);
+  assert.match(source("components/site-shell.tsx"), /\{layout\.strip !== "none" \? <GlobalCategories visibility=\{layout\.strip\} brands=\{menuBrands\} counts=\{menuCounts\} \/> : null\}/);
   // Admin owns its <main>; everywhere else the shell renders the only one.
   assert.match(source("components/site-shell.tsx"), /if \(layout\.header === "none"\) return <>\{children\}<\/>;/);
   assert.match(source("components/site-shell.tsx"), /<main id="contenido" tabIndex=\{-1\}/);
@@ -300,7 +300,7 @@ test("home header: Categorías menu, Tiendas verificadas from 768 px, Cómo func
   assert.match(html.match(/<a href="\/vender" class="([^"]*)"/)[1], /border border-white\/40 bg-transparent text-surface/);
   assert.match(html, /href="\/login"[^>]*>.*Ingresar/);
   assert.match(renderHomeHeader({ account: { authenticated: true, name: "Lucía Prueba" } }), /aria-controls="menu-cuenta"/);
-  assert.match(source("components/site-header.tsx"), /\{menu\.open \? <HomeCategoryPanel panelRef=\{menu\.panelRef\} onChoose=\{\(\) => menu\.close\(\)\} \/> : null\}/);
+  assert.match(source("components/site-header.tsx"), /\{menu\.open \? <HomeCategoryPanel counts=\{counts\} panelRef=\{menu\.panelRef\} onChoose=\{\(\) => menu\.close\(\)\} \/> : null\}/);
 });
 
 test("the home Categorías panel: Todos los instrumentos, every category with its types, Tiendas verificadas (PUB-011–015 destinations)", () => {

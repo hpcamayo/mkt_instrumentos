@@ -204,4 +204,27 @@ do $$ begin
  if public.get_new_listing_counts(now() - interval '200 days') <> '{}'::jsonb then raise exception 'Old visits counted'; end if;
 end $$;
 reset role;
+-- EASE-028: anonymous snapshots use only a public pagination cursor. Hidden listings
+-- and private seller fields never enter the response, and a cursor does not repeat cards.
+set local role anon;
+select set_config('request.jwt.claims','{"role":"anon"}',true);
+do $$ declare page jsonb; card jsonb; cursor_id uuid := null; seen uuid[] := '{}'; rounds integer := 0; begin
+ loop
+  page := public.get_public_card_page(cursor_id);
+  if jsonb_array_length(page->'cards') > 100 then raise exception 'Unbounded public card page'; end if;
+  for card in select value from jsonb_array_elements(page->'cards') loop
+   if (card->>'id')::uuid = any(seen) then raise exception 'Repeated snapshot card'; end if;
+   if card ?| array['owner_user_id','whatsapp_phone','contact_name','email'] then raise exception 'Private field in snapshot'; end if;
+   if card->>'slug' = 'ux-hidden' then raise exception 'Hidden listing in snapshot'; end if;
+   seen := array_append(seen, (card->>'id')::uuid);
+  end loop;
+  cursor_id := (page->>'next')::uuid;
+  rounds := rounds + 1;
+  exit when cursor_id is null;
+  if rounds > 100 then raise exception 'Snapshot pagination did not terminate'; end if;
+ end loop;
+ if cardinality(seen) = 0 then raise exception 'Public snapshot unexpectedly empty'; end if;
+end $$;
+reset role;
+
 rollback;

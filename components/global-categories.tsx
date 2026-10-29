@@ -9,6 +9,7 @@ import { useStripCurrent } from "@/components/strip-current";
 import { useDisclosureGroup } from "@/components/use-disclosure";
 import { BRANDS_ANCHOR, categoryBrandHref } from "@/lib/category-nav";
 import { categoryMenus, currentStripKey, stripItems, type CategoryMenu } from "@/lib/shell";
+import type { ListingCounts } from "@/lib/catalog-brands";
 import { cn } from "@/lib/utils";
 import { catalogRefinementRel } from "@/lib/catalog-links";
 
@@ -21,28 +22,28 @@ import { catalogRefinementRel } from "@/lib/catalog-links";
 // (docs/ux-redesign/category-navigation.md); phones keep the compact list plus the first brands.
 type MenuBrands = Record<string, string[]>;
 
-export function GlobalCategories({ visibility, brands = {} }: { visibility: "all" | "wide"; brands?: MenuBrands }) {
+export function GlobalCategories({ visibility, brands = {}, counts = null }: { visibility: "all" | "wide"; brands?: MenuBrands; counts?: ListingCounts | null }) {
   return (
     <nav aria-label="Categorías" className={cn("border-b border-line-deco bg-surface", visibility === "wide" && "hidden md:block")}>
-      <Suspense fallback={<CategoryStrip current={null} brands={brands} />}>
-        <CurrentStrip brands={brands} />
+      <Suspense fallback={<CategoryStrip current={null} brands={brands} counts={counts} />}>
+        <CurrentStrip brands={brands} counts={counts} />
       </Suspense>
     </nav>
   );
 }
 
-function CurrentStrip({ brands }: { brands: MenuBrands }) {
+function CurrentStrip({ brands, counts }: { brands: MenuBrands; counts: ListingCounts | null }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const pageCurrent = useStripCurrent();
-  return <CategoryStrip current={pageCurrent ?? currentStripKey(pathname, params)} brands={brands} />;
+  return <CategoryStrip current={pageCurrent ?? currentStripKey(pathname, params)} brands={brands} counts={counts} />;
 }
 
 const ITEM = "inline-flex items-center whitespace-nowrap px-1 text-[14px] font-semibold leading-5 transition-colors duration-120 focus-visible:outline-offset-[-2px]";
 const UNDERLINE_CURRENT = "text-ink shadow-[inset_0_-3px_0_var(--accent)]";
 const QUIET = "text-ink-2 hover:text-ink md:text-ink";
 
-function CategoryStrip({ current, brands }: { current: string | null; brands: MenuBrands }) {
+function CategoryStrip({ current, brands, counts }: { current: string | null; brands: MenuBrands; counts: ListingCounts | null }) {
   const group = useDisclosureGroup("category-strip");
   const open = categoryMenus.find((menu) => menu.key === group.openKey) ?? null;
 
@@ -73,7 +74,7 @@ function CategoryStrip({ current, brands }: { current: string | null; brands: Me
                 ) : null}
                 {/* The panel follows its button in the markup, so Tab goes from the button into the panel. It is
                     positioned against the strip container, outside the list's scroll clipping. */}
-                {item.kind === "category" && open?.key === item.key ? <CategoryPanel menu={open} brands={brands[open.key]} onChoose={() => group.close()} /> : null}
+                {item.kind === "category" && open?.key === item.key ? <CategoryPanel menu={{ ...open, types: open.types.filter((type) => !counts || (counts.types[`${open.key}:${type.value}`] ?? 0) > 0) }} brands={brands[open.key]} onChoose={() => group.close()} /> : null}
                 {item.kind === "link" ? (
                   <Link href={item.href} aria-current={isCurrent ? "page" : undefined} className={cn(ITEM, isCurrent ? UNDERLINE_CURRENT : QUIET)}>
                     {item.label}

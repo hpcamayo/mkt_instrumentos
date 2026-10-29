@@ -21,7 +21,6 @@ import { aiHelpersEnabled } from "@/lib/ai/config";
 import { inventoryUnderstood, understoodFromParams } from "@/lib/ai/store-question";
 import { getStoreListingQuota } from "@/lib/store-allowance";
 import { buttonClasses } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import {
@@ -109,16 +108,8 @@ async function InventoryView({ summary, storeName, params, ask }: { summary: Inv
       <InventoryCategoryChips filters={filters} counts={categoryCounts} />
       {!page ? (
         <div className="p-5"><Notice tone="danger" role="alert">No se pudo cargar el inventario. Vuelve a intentarlo en unos minutos.</Notice></div>
-      ) : page.items.length ? (
-        <InventoryTable key={inventoryHref(filters, cursor)} items={page.items} canWrite={summary.can_write} total={page.total} filters={filters} listQuery={listQuery} />
-      ) : filtered || cursor ? (
-        <EmptyState className="rounded-none border-0" title="Ningún SKU coincide con la búsqueda" description="Prueba con otro SKU o nombre, o quita los filtros." actions={<Link href="/mi-cuenta/tienda/inventario" className={buttonClasses({ variant: "secondary" })}>Ver todo el inventario</Link>} />
       ) : (
-        <EmptyState
-          className="rounded-none border-0"
-          title="Aún no tienes SKU en Inventario"
-          description="Crea un SKU por cada instrumento o equipo que vendes y registra cuántas unidades tienes. También puedes controlar el stock de una publicación existente desde Publicaciones."
-        />
+        <InventoryTable key={inventoryHref(filters, cursor)} items={page.items} canWrite={summary.can_write} total={page.total} filters={filters} listQuery={listQuery} />
       )}
       <footer className="grid gap-3 border-t border-subtle p-5 t-meta">
         {page && page.total > 0 ? (

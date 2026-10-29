@@ -47,7 +47,8 @@ export function buildCategoryMetadata(landing: CategoryLandingPage, page: number
     alternates: { canonical },
     // Empty categories stay reachable but are not offered to search engines.
     ...(count && count > 0 ? {} : { robots: NOINDEX_FOLLOW_ROBOTS }),
-    openGraph: { ...OPEN_GRAPH_BASE, title: `${title} | ${SITE_NAME}`, description: landing.description, url: canonical },
+    openGraph: { ...OPEN_GRAPH_BASE, title: `${title} | ${SITE_NAME}`, description: landing.description, url: canonical, images: [{ url: `${path}/opengraph-image`, width: 1200, height: 630 }] },
+    twitter: { card: "summary_large_image", title: `${title} | ${SITE_NAME}`, description: landing.description, images: [`${path}/opengraph-image`] },
   };
 }
 

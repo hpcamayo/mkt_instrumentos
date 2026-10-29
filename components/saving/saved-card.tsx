@@ -35,7 +35,7 @@ export function SavedCard({
       ) : null}
       <h2 className="t-ui font-semibold text-ink">{heading}</h2>
       <div className="mt-2 grid gap-1">
-        {sold ? <StatusTag domain="listing" status="sold" /> : <Price value={price} />}
+        {sold ? <StatusTag domain="availability" status="sold" /> : <Price value={price} />}
         {!sold && previousPrice && price !== null ? (
           <p className="t-meta">
             Antes <span className="line-through">{formatPrice(previousPrice)}</span> → {formatPrice(price)}, desde que lo guardaste

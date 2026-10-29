@@ -121,11 +121,13 @@ module.exports = [
       await sheet.waitFor({ timeout: 8_000 }).catch(() => {});
       t.check(await sheet.count() === 1, "the safety sheet comes first for a purchase");
       await t.shot(page, "safety");
-      const popup = await x.popupOf(page, () => x.control(sheet, "Continuar a WhatsApp").click());
+      const contactResponse = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/contact" && response.request().method() === "POST", { timeout: 30_000 });
+      const popup = await x.popupOf(page, () => x.control(sheet, "Continuar con la solicitud").click());
       const text = t.whatsappText(popup.url());
       t.check(/wa\.me|whatsapp/.test(new URL(popup.url()).hostname) && text.includes("Cantidad: 3"), `WhatsApp opens with the quantity: "${text.replace(/\n/g, " | ")}"`);
       t.note('the message says "Cantidad: 3" (lib/payment-methods.ts buildPurchaseMessage), not the words "3 unidades"');
-      await h.sleep(1_000);
+      const response = await contactResponse;
+      t.check(response.ok(), `purchase contact response: ${response.status()}`);
       t.check(posts.length === 1, `the contact is recorded in the background (${posts.length} post)`);
       const events = h.sql(`select metadata from public.marketplace_events where listing_id = ${L(listing.id)} and event_type = 'whatsapp_contact' and created_at >= ${L(started)}::timestamptz`);
       t.check(events.length === 1 && events[0].metadata?.intent === "purchase", `one purchase contact (${JSON.stringify(events[0]?.metadata)})`);
@@ -264,11 +266,12 @@ module.exports = [
       const buyer = t.account({ kind: "buyer" });
       const seller = t.account({ kind: "particular" });
       const kept = t.listing(seller, { category: "winds", type: "winds", publishedDaysAgo: 3, title: `Saxo ${e.unique()} guardado` });
+      h.exec(`insert into public.saved_search_alerts (user_id, search_filters, search_hash, match_bucket, frequency)
+        values (${L(buyer.id)}, '{"category":"winds"}', encode(sha256(convert_to(${L(buyer.id)}, 'UTF8')), 'hex'), 'category:winds', 'daily')`);
       const fresh = [1, 2].map((n) => t.listing(seller, { category: "winds", type: "winds", title: `Flauta ${e.unique()} ${n}` }));
       h.exec(`update public.listings set published_at = now() - interval '10 minutes' where id in (${fresh.map((item) => L(item.id)).join(", ")})`);
       h.exec(`insert into public.favorites (user_id, listing_id) values (${L(buyer.id)}, ${L(kept.id)})`);
-      h.exec(`insert into public.saved_search_alerts (user_id, search_filters, search_hash, match_bucket, frequency)
-        values (${L(buyer.id)}, '{"category":"winds"}', encode(sha256(convert_to(${L(buyer.id)}, 'UTF8')), 'hex'), 'category:winds', 'daily')`);
+
       const since = Date.now() - 40 * 60_000;
       const page = await t.page({ as: buyer.email });
       await page.context().clearCookies({ name: "laria_visita_anterior" }).catch(() => {});
@@ -492,7 +495,7 @@ module.exports = [
       t.check(text.includes(store.name) && !/No se pudo|No pudimos cargar/.test(text) && /Av\. Prueba 123/.test(text), "Solicitudes reads the owner's own row, address included");
       await t.goto(page, "/mi-cuenta/tienda");
       const own = norm(await x.mainText(page));
-      t.check(own.includes(store.name) && own.includes(store.ruc), "the account pages read the owner's own row");
+      t.check(own.includes(store.name) && await page.getByLabel("RUC", { exact: true }).inputValue() === store.ruc, "the account pages read the owner's own row");
       await t.shot(page, "mi-tienda");
     },
   },

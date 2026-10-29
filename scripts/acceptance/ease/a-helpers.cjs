@@ -106,7 +106,7 @@ async function until(fn, { timeout = 15_000, every = 300 } = {}) {
   let value;
   do {
     value = await fn();
-    if (value) return value;
+    if (Array.isArray(value) ? value.length > 0 : value) return value;
     await h.sleep(every);
   } while (Date.now() < end);
   return value;

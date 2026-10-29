@@ -216,3 +216,22 @@ end of the steps, "Automated check: …"); the baseline column says BUILD; and t
 "(proposed)" marks, with EASE-160 to EASE-169 pointing to [listing.md](listing.md), which holds the listing media
 write-up. The integration's own cases are EASE-750 to EASE-766 (`integration-acceptance.tsv`); the maybes' are
 EASE-800 to EASE-882 ([maybes.md](maybes.md)).
+
+## PR #83 acceptance fixes (2026-10-29)
+
+The recovery run exposed 27 failures. The candidate fixes dialog focus after dismissal, inventory search history,
+Undo after archiving the last visible row, skipped-SKU names, category links and share cards, selected-chip contrast,
+owner follow controls, sold-item wording, feed Undo/navigation and trackpad zoom anchoring. Inventory bulk actions
+now sit above the table in normal document flow so they cannot cover row controls.
+
+Recently viewed history stays on the device: `/api/public-cards` pages through the same anonymous public snapshot
+for every visitor, with only a public cursor. The device filters and orders the cards locally. The snapshot uses the
+same visibility and field projection as `get_public_listing_cards`; no account, history, taste or comparison list is
+sent. Reading the full snapshot trades bandwidth for this privacy guarantee; larger catalogs may need a shared
+compressed snapshot. The new RPC and error-monitor route allowlist require the two added migrations at deployment.
+
+Acceptance checks also now wait for nonempty asynchronous results and loaded photo dimensions, create an alert
+before its matching publications, inspect filtered inventory rows separately from recent movements, read the RUC
+from its form field, use progressive sort links without JavaScript and wait for the purchase contact response.
+These corrections retain the original behavioral assertions. Live results identify the deployed revision separately
+from candidate results; local fixes do not establish that production has been deployed.

@@ -86,7 +86,7 @@ export function DescubrirContact({ listingId, slug, pricePen, source, className 
           }}
           onDismiss={() => {
             setSheet(false);
-            button.current?.focus({ preventScroll: true });
+            requestAnimationFrame(() => button.current?.focus({ preventScroll: true }));
           }}
         />
       ) : null}

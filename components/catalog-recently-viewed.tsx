@@ -57,7 +57,7 @@ function ViewedTile({ item, className }: { item: PublicListingCard; className?: 
         </Link>
       </h3>
       {item.availability === "sold" ? (
-        <StatusTag domain="listing" status="sold" className="mt-1 self-start" />
+        <StatusTag domain="availability" status="sold" className="mt-1 self-start" />
       ) : item.stock_state === "out_of_stock" ? (
         <StatusTag domain="stock" status="out_of_stock" className="mt-1 self-start" />
       ) : (

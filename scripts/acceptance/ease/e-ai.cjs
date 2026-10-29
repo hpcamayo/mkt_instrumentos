@@ -227,7 +227,7 @@ const checks = [
       const chips = (seen?.chips || []).map((chip) => chip.text);
       t.check(chips.some((text) => /Guitarras/.test(text)) && chips.some((text) => /Stock bajo/.test(text)) && chips.some((text) => /Orden/.test(text)), `with Guitarras, Stock bajo and the order as chips (${chips.join(" · ")})`);
       t.check(seen && /No hay un filtro por número de unidades\./.test(seen.text), "Así lo entendí says there is no filter by number of units");
-      const text = norm(await x.mainText(page));
+      const text = norm(await page.getByRole("table", { name: "SKU de tu inventario" }).innerText());
       const at = (item) => text.indexOf(item.merchant_sku);
       t.check(at(items.one) >= 0 && at(items.two) > at(items.one), "the least available first (1 unit, then 2)");
       t.check(at(items.pedal) < 0 && at(items.three) < 0, "only the guitars low on stock");

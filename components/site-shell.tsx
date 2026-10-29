@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { GlobalCategories } from "@/components/global-categories";
 import { HomeHeader, SiteHeader } from "@/components/site-header";
+import type { ListingCounts } from "@/lib/catalog-brands";
 import { getShellLayout } from "@/lib/shell";
 
 // Chooses the frame for the current route (lib/shell.ts). The footers are server-rendered and passed in, so
@@ -13,20 +14,22 @@ export function SiteShell({
   fullFooter,
   slimFooter,
   menuBrands = {},
+  menuCounts = null,
 }: {
   children: ReactNode;
   fullFooter: ReactNode;
   slimFooter: ReactNode;
   // Listing category → the brands its strip panel lists (lib/catalog-brands.ts, read by the root layout).
   menuBrands?: Record<string, string[]>;
+  menuCounts?: ListingCounts | null;
 }) {
   const layout = getShellLayout(usePathname());
   if (layout.header === "none") return <>{children}</>;
   return (
     <div className="flex min-h-screen flex-col">
       {/* Two components, not a prop: the home header and the standard header keep their own state and hooks. */}
-      {layout.header === "home" ? <HomeHeader /> : <SiteHeader layout={layout} />}
-      {layout.strip !== "none" ? <GlobalCategories visibility={layout.strip} brands={menuBrands} /> : null}
+      {layout.header === "home" ? <HomeHeader counts={menuCounts} /> : <SiteHeader layout={layout} />}
+      {layout.strip !== "none" ? <GlobalCategories visibility={layout.strip} brands={menuBrands} counts={menuCounts} /> : null}
       <main id="contenido" tabIndex={-1} className="flex-1">
         <RouteContent>{children}</RouteContent>
       </main>

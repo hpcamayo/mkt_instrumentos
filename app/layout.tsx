@@ -8,7 +8,7 @@ import { ErrorReporter } from "@/components/error-reporter";
 import { MarketplaceAccountProvider } from "@/components/marketplace-account-provider";
 import { NavigationFeedback } from "@/components/navigation-feedback";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
-import { getCatalogBrandsByCategory } from "@/lib/catalog-brands";
+import { getCatalogBrandsByCategory, getListingCounts } from "@/lib/catalog-brands";
 import { MENU_BRAND_COUNT } from "@/lib/category-nav";
 import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
 import {
@@ -76,7 +76,8 @@ export default async function RootLayout({
 }>) {
   // The strip's "Marcas" column: each category's leading brands with listings (shared aggregates, lib/catalog-brands.ts).
   // Optional: the layout waits at most the optional budget and renders the menus without brands when they are late.
-  const brands = await getCatalogBrandsByCategory(optionalReadSignal(getRequestReads().deadline));
+  const signal = optionalReadSignal(getRequestReads().deadline);
+  const [brands, menuCounts] = await Promise.all([getCatalogBrandsByCategory(signal), getListingCounts(signal)]);
   const menuBrands = Object.fromEntries(Object.entries(brands).map(([category, list]) => [category, list.slice(0, MENU_BRAND_COUNT).map((brand) => brand.name)]));
   return (
     <html lang="es" className={archivo.variable}>
@@ -84,7 +85,7 @@ export default async function RootLayout({
         <a href="#contenido" className="skip-link">Saltar al contenido</a>
         <MarketplaceAccountProvider>
           {/* One <main id="contenido"> per page: in the shell, or in app/admin/layout.tsx for Admin. */}
-          <SiteShell menuBrands={menuBrands} fullFooter={<SiteFooter variant="full" />} slimFooter={<SiteFooter variant="slim" />}>{children}</SiteShell>
+          <SiteShell menuBrands={menuBrands} menuCounts={menuCounts} fullFooter={<SiteFooter variant="full" />} slimFooter={<SiteFooter variant="slim" />}>{children}</SiteShell>
         </MarketplaceAccountProvider>
         {/* fast-01: the navigation bar and slow-page skeletons. It reads the search params, so it renders on the client. */}
         <Suspense fallback={null}>

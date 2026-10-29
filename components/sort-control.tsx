@@ -56,6 +56,7 @@ export function SortMenu({ filters, scope }: { filters: ListingFilters; scope: C
         {current.label}
         <ChevronDown aria-hidden className={cn("transition-transform duration-120", open && "rotate-180")} />
       </button>
+      <noscript><nav aria-label="Ordenar publicaciones"><SortOptions filters={filters} scope={scope} focusId="orden-boton" onChoose={() => {}} rowClassName="min-h-11 px-3 t-ui" /></nav></noscript>
       {open ? (
         <div ref={panelRef} id="menu-orden" className="surface-light menu-fade absolute right-0 top-full z-30 mt-1 w-56 rounded-panel border border-line-deco bg-surface py-1 shadow-level-1">
           <SortOptions filters={filters} scope={scope} focusId="orden-boton" onChoose={() => close()} rowClassName="min-h-9 px-3 t-ui" />
@@ -86,6 +87,7 @@ export function SortSheetButton({ filters, scope }: { filters: ListingFilters; s
         Ordenar
         <ChevronDown aria-hidden />
       </button>
+      <noscript><nav aria-label="Ordenar publicaciones"><SortOptions filters={filters} scope={scope} focusId="orden-boton" onChoose={() => {}} rowClassName="min-h-11 px-3 t-ui" /></nav></noscript>
       {open ? (
         <Sheet title="Ordenar" closeLabel="Cerrar orden" onDismiss={dismiss}>
           <SortOptions filters={filters} scope={scope} focusId="orden-boton-movil" onChoose={() => setOpen(false)} rowClassName="-mx-4 min-h-11 px-4 t-body" />

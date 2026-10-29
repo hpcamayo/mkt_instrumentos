@@ -400,7 +400,7 @@ cases.push({
     const phoneNoJs = await t.page({ phone: true, javaScript: false });
     await t.goto(phoneNoJs, base);
     await phoneNoJs.locator("#orden-boton-movil").click();
-    t.check(await phoneNoJs.getByRole("dialog", { name: "Ordenar" }).count() > 0, "on a phone without JavaScript, Ordenar opens the sheet");
+    t.check(await phoneNoJs.getByRole("link", { name: "Menor precio", exact: true }).isVisible(), "on a phone without JavaScript, sort links remain available");
     await t.shot(phoneNoJs, "phone-no-js-sort");
     const phone = await t.page({ phone: true });
     await t.goto(phone, base);
