@@ -517,7 +517,10 @@ module.exports = [
       t.check(!/¿Sigue disponible\?|¿Incluye|¿Acepta/.test(text), "without the quick questions");
       await h.sleep(800);
       t.check(posts.length === 1, `the contact is recorded (${posts.length} post to /api/contact)`);
-      const events = h.sql(`select source, metadata from public.marketplace_events where listing_id = ${L(listing.id)} and event_type = 'whatsapp_contact'`);
+      const events = await x.until(() => {
+        const rows = h.sql(`select source, metadata from public.marketplace_events where listing_id = ${L(listing.id)} and event_type = 'whatsapp_contact'`);
+        return rows.length ? rows : null;
+      }, { timeout: 15_000 }) || [];
       t.check(events.length === 1, `like the main button's (${JSON.stringify(events[0] || {})})`);
       await popup.close();
       // The offer sheet stays open behind WhatsApp; close it and make the offer again.

@@ -85,11 +85,16 @@ cases.push({
           heads.push(await detail.locator("h1").first().evaluate((h) => {
             let text = h.innerText;
             for (let n = h.nextElementSibling, i = 0; n && i < 2; n = n.nextElementSibling, i += 1) text += ` ${n.innerText}`;
-            return text;
+            return `${text} ${document.querySelector("nav[aria-label='Ruta de navegación']")?.innerText || ""}`;
           }));
           await detail.context().close();
         }
-        if (!heads.some((text) => /strat/i.test(text))) t.skip(`live: the complete public catalog (${total} listings) has no Stratocaster fixture required by this case`);
+        const missing = [];
+        if (!heads.some((text) => /strat/i.test(text))) missing.push("Stratocaster");
+        if (!heads.some((text) => /fender/i.test(text) && /strat/i.test(text))) missing.push("Fender Stratocaster");
+        if (!heads.some((text) => /\b(bajos?|bass)\b/i.test(text))) missing.push("Bajo");
+        if (!heads.some((text) => /caj[oó]n/i.test(text))) missing.push("Cajón");
+        if (missing.length) t.skip(`live: the complete public catalog (${total} listings) lacks required search fixtures: ${missing.join(", ")}`);
       }
     }
     const results = {};
