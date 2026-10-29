@@ -88,11 +88,17 @@ def audit_results(run):
                                      "role": row["role"], "state": row.get("name"),
                                      "rule": violation["id"], "impact": violation.get("impact"),
                                      "nodes": violation.get("nodes", [])})
+    expected = {(role, width) for role in ("visitor", "buyer", "seller", "store") for width in (390, 1366)}
+    complete = (len(pages) >= 100 and len(states) >= 27
+                and {(row["role"], row["width"]) for row in pages} == expected
+                and {(row["role"], row["width"]) for row in states} == expected
+                and not any(row.get("note") for row in states))
+    clean_status = "Pass" if complete else "Not Run"
     return {
         "EASE-710": {"status": "Not Run", "support": ["Partial focus sweep only; comparison tray, alert prompt and undo states remain unverified."]},
-        "EASE-711": {"status": "Fail" if any(v["rule"] == "target-size" for v in observations) else "Not Run",
+        "EASE-711": {"status": "Fail" if any(v["rule"] == "target-size" for v in observations) else clean_status,
                      "observations": [v for v in observations if v["rule"] == "target-size"]},
-        "EASE-713": {"status": "Fail" if observations else "Not Run", "observations": observations,
+        "EASE-713": {"status": "Fail" if observations else clean_status, "observations": observations,
                      "pages": len(pages), "states": len(states)},
     }
 
@@ -137,6 +143,7 @@ def main():
     parser.add_argument("run", type=Path)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--registry-only", help="Comma-separated IDs to update; the report still includes every observed case")
     parser.add_argument("--application-revision", default="not recorded", help="Source commit actually served by the local browser-test app")
     args = parser.parse_args()
     registry_path = ROOT / "acceptance/cases.tsv"
@@ -144,7 +151,10 @@ def main():
     rows = load_cases()
     changes = {}
     cases = {row["id"]: row for row in rows if row["id"].startswith("EASE-")}
-    paths = list((args.run / "local").glob("results-?.jsonl")) + list((args.run / "local").glob("reruns*.jsonl"))
+    paths = list((args.run / "local").glob("results-*.jsonl")) + list((args.run / "local").glob("reruns*.jsonl"))
+    selected = set(args.registry_only.split(",")) if args.registry_only else set(cases)
+    if selected - cases.keys():
+        raise ValueError(f"Unknown selected IDs: {sorted(selected - cases.keys())}")
     local = latest_records(paths, cases)
     live = latest_records([p for p in [args.run / "live/visitor.jsonl", args.run / "live/accounts.jsonl"] if p.exists()], cases)
     unit_log = (args.run / "local/unit-final.tap").read_text()
@@ -189,8 +199,9 @@ def main():
                 descriptions.append(f"accessibility audit: {item['audit']['status']}")
             day = max((case_day(phase["at"]) for phase in phases if phase.get("at")), default=datetime.now(ZoneInfo("America/Lima")).date().isoformat())
             evidence = f"{day} — {'; '.join(descriptions)}. {args.report.as_posix()} ({identifier})."
-            case["status"], case["evidence"] = status, evidence
-            changes[identifier] = (status, evidence)
+            if identifier in selected:
+                case["status"], case["evidence"] = status, evidence
+                changes[identifier] = (status, evidence)
         else:
             item["limitation"] = "No dedicated check in the recovered harness; no manual acceptance inferred."
         report["cases"].append(item)

@@ -1025,14 +1025,14 @@ module.exports = [
       const word = e.unique();
       const seller = t.account({ kind: "particular" });
       const today = t.listing(seller, { title: `Guitarra ${word} reservada hoy`, price: 900, photos: 2 });
-      const older = t.listing(seller, { title: `Bajo ${word} reservado antes`, price: 950, photos: 2, publishedDaysAgo: 3, category: "basses", type: "electric_bass" });
-      const many = e.particularListings(t, { count: 26, word, daysAgo: 10, seller, prices: Array.from({ length: 26 }, (_, n) => 400 + n * 10) });
+      const older = t.listing(seller, { title: `Guitarra ${word} reservada antes`, price: 950, photos: 2, publishedDaysAgo: 3 });
+      const many = e.particularListings(t, { count: 26, word, daysAgo: 1, seller, prices: Array.from({ length: 26 }, (_, n) => 400 + n * 10) });
       const lastByPrice = many.listings[25];
       for (const item of [today, older, lastByPrice]) e.reserve(t, seller, item.id, 2);
       const api = await e.catalogPage(t, NUEVO());
       t.check(api.body.reserved.includes(today.id), "the page route's first page says the new one is reserved");
       const later = await e.feedListings(t, NUEVO());
-      t.check(later.reserved.has(older.id), "and a later page says the older one is");
+      t.check(later.listings.findIndex((item) => item.id === older.id) >= 24 && later.reserved.has(older.id), "and a later page says the older one is (26 fillers precede it within the seven-day window)");
       for (const options of [{ phone: true }, { width: 1366 }]) {
         const width = options.phone ? 390 : 1366;
         const page = await t.page(options);

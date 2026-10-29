@@ -224,8 +224,8 @@ Undo after archiving the last visible row, skipped-SKU names, category links and
 owner follow controls, sold-item wording, feed Undo/navigation and trackpad zoom anchoring. Inventory bulk actions
 now sit above the table in normal document flow so they cannot cover row controls.
 
-Recently viewed history stays on the device: `/api/public-cards` pages through the same anonymous public snapshot
-for every visitor, with only a public cursor. The device filters and orders the cards locally. The snapshot uses the
+Recently viewed history and comparison choices stay on the device: `/api/public-cards` pages through the same anonymous public snapshot
+for every visitor, with only a public cursor. The device filters and orders the cards locally. Comparison links use a URL fragment, which is never sent with navigation or prefetch requests, and the comparison table uses the same public snapshot. The snapshot uses the
 same visibility and field projection as `get_public_listing_cards`; no account, history, taste or comparison list is
 sent. Reading the full snapshot trades bandwidth for this privacy guarantee; larger catalogs may need a shared
 compressed snapshot. The new RPC and error-monitor route allowlist require the two added migrations at deployment.

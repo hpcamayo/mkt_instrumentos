@@ -206,7 +206,14 @@ cases.push({
   live: true,
   run: async (t) => {
     const page = await t.page();
-    await t.goto(page, "/listados");
+    let route = "/listados";
+    if (!t.live) {
+      const seller = t.account({ kind: "particular" });
+      const word = `comp${t.tag()}`;
+      for (let n = 1; n <= 4; n++) t.listing(seller, { title: `Guitarra ${word} ${n}`, price: 500 + n * 100 });
+      route = `/listados?q=${word}`;
+    }
+    await t.goto(page, route);
     await a.settled(page);
     const cards = await a.resultCards(page);
     const boxes = page.locator("#resultados article input[type=checkbox]");
@@ -221,7 +228,8 @@ cases.push({
     await tray.getByRole("link", { name: "Comparar 3" }).click();
     await page.waitForURL((url) => url.pathname === "/comparar", { timeout: 30_000 });
     await page.waitForLoadState("load");
-    const p = a.params(page.url()).p?.split(",") || [];
+    const p = new URLSearchParams(new URL(page.url()).hash.slice(1)).get("p")?.split(",") || [];
+    await page.getByRole("table").waitFor({ timeout: 30_000 });
     t.check(a.sameSet(p, cards.slice(0, 3).map((c) => c.slug)), `/comparar opens with the three (${a.pathOf(page.url())})`);
     const columns = await page.locator("thead th[scope='col']").count();
     const differs = await page.locator("tbody th[scope='row']", { hasText: "Distinto" }).count();
@@ -254,7 +262,8 @@ cases.push({
     await t.shot(page, "pick");
     await compare.getByRole("link", { name: "Comparar 2" }).click();
     await page.waitForURL((url) => url.pathname === "/comparar", { timeout: 30_000 });
-    const p = a.params(page.url()).p?.split(",") || [];
+    const p = new URLSearchParams(new URL(page.url()).hash.slice(1)).get("p")?.split(",") || [];
+    await page.getByRole("table").waitFor({ timeout: 30_000 });
     t.check(a.sameSet(p, [saved[0].slug, saved[2].slug]) && (await page.locator("thead th[scope='col']").count()) === 3,
       `"Comparar favoritas" at 390 px opens /comparar with the two picked (${a.pathOf(page.url())})`);
     await t.shot(page, "comparar");
@@ -428,11 +437,14 @@ cases.push({
   live: true,
   timeout: 360_000,
   run: async (t) => {
+    let tasteRoute = "/listados?category=basses";
     if (!t.live) {
+      const word = `taste${t.tag()}`;
+      tasteRoute += `&q=${word}`;
       // Basses from three sellers, new enough for the home's pool.
       const made = [0, 1, 2].map(() => {
         const seller = t.account({ kind: "particular" });
-        return t.listing(seller, { title: `Bajo Ibanez SR ${a.word("zs")}`, category: "basses", type: "bass", brand: "Ibanez", model: "SR300", price: 1600 });
+        return t.listing(seller, { title: `Bajo Ibanez SR ${word} ${a.word("zs")}`, category: "basses", type: "bass", brand: "Ibanez", model: "SR300", price: 1600 });
       });
       t.check(await a.waitForHtml(t, "/", made[2].slug), "the home's pool has the new basses");
     }
@@ -440,7 +452,7 @@ cases.push({
     await t.goto(page, "/");
     const firstPool = await a.homePool(page);
     if (!firstPool?.some((item) => item.category === "basses")) t.skip("the home's newest listings have no bass to rank first");
-    const opened = await openFromResults(t, page, "/listados?category=basses", 3);
+    const opened = await openFromResults(t, page, tasteRoute, 3);
     t.check(opened.length === 3, `opened three basses (${opened.map((c) => c.slug).join(", ")})`);
     await t.goto(page, "/");
     const heading = page.locator("#para-ti-titulo");
@@ -531,6 +543,14 @@ cases.push({
     const older = t.listing(seller, { title: `Yamaha Revstar ${a.word("zo")}`, brand: "Yamaha", model: "Revstar", price: 3200, publishedDaysAgo: 1 });
     t.check(await a.waitForHtml(t, "/", fresh.slug), "the home's pool has the new listing");
     await t.goto(page, "/");
+    // ISR can serve different cached variants to Node's freshness probe and this browser.
+    // Wait for the controlled publication in the actual rendered feed, within its cache window.
+    const renderedFresh = await a.until(async () => {
+      if (await page.locator(`main article a[href="${fresh.path}"]`).count()) return true;
+      await page.reload({ waitUntil: "load" });
+      return false;
+    }, { timeout: 75_000, every: 5_000 });
+    t.check(renderedFresh, "the browser's home feed has refreshed to the controlled publication");
     const section = page.locator("section[aria-labelledby='nuevo-titulo']");
     const shownOk = await section.waitFor({ timeout: 15_000 }).then(() => true).catch(() => false);
     const pool = (await a.homePool(page)) || [];
@@ -570,6 +590,8 @@ cases.push({
     const cards = await a.resultCards(page);
     const compared = cards.slice(4, 6);
     for (const card of compared) await page.locator(`#resultados article:has(a[href='/instrumentos/${card.slug}']) input[type=checkbox]`).check();
+    await page.locator("aside[aria-label='Comparación']").getByRole("link", { name: "Comparar 2" }).hover();
+    await page.waitForTimeout(1000);
     await t.goto(page, "/");
     await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
     await page.waitForTimeout(1_500);

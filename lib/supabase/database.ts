@@ -10,6 +10,7 @@ type NullableArguments = {
   complete_public_page_changes: "p_deployment" | "p_nonce";
   confirm_store_import_mapping: "p_stale_stock" | "p_update_scope";
   finish_push_deliveries: "p_failure_code";
+  get_public_card_page: "p_after";
   place_store_import_photo: "p_row_number";
   record_app_error: "p_digest";
   request_store_admin_help: "p_message" | "p_requested_allowance";

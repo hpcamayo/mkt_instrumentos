@@ -20,6 +20,26 @@ class EaseUpdateTests(unittest.TestCase):
         self.assertEqual(fields[4], "Pass")
         self.assertEqual(fields[7], r"Observed\tvalue\nsecond line")
 
+    def test_clean_audit_requires_every_role_and_width_and_no_skipped_state(self):
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "local").mkdir()
+            pairs = [(role, width) for role in ("visitor", "buyer", "seller", "store") for width in (390, 1366)]
+            rows = [{"role": role, "width": width, "path": "/", "violations": []} for role, width in pairs]
+            (root / "local/a11y-pages.json").write_text(json.dumps((rows * 13)[:100]))
+            states = (rows * 4)[:27]
+            (root / "local/a11y-states.json").write_text(json.dumps(states))
+            self.assertEqual(ease.audit_results(root)["EASE-711"]["status"], "Pass")
+            self.assertEqual(ease.audit_results(root)["EASE-713"]["status"], "Pass")
+            states[0]["note"] = "ERROR navigation timed out"
+            (root / "local/a11y-states.json").write_text(json.dumps(states))
+            self.assertEqual(ease.audit_results(root)["EASE-713"]["status"], "Not Run")
+            states[0]["violations"] = [{"id": "target-size", "nodes": []}]
+            (root / "local/a11y-states.json").write_text(json.dumps(states))
+            self.assertEqual(ease.audit_results(root)["EASE-711"]["status"], "Fail")
+
     def test_live_failure_outweighs_local_pass_and_a_skip_does_not_erase_it(self):
         self.assertEqual(ease.conservative_status([{"status": "Pass"}, {"status": "Fail"}]), "Fail")
         self.assertEqual(ease.conservative_status([{"status": "Pass"}, {"status": "Not Run"}]), "Pass")
