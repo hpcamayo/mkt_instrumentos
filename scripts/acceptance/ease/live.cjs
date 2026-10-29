@@ -19,6 +19,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { execFile, execFileSync } = require("node:child_process");
 const { LocalOnly, LiveUnsafe } = require("./errors.cjs");
+const { assertScopedSql, isFavoriteRead, isUploadSetup } = require("./live-safety.cjs");
 
 const RUN = (process.env.LIVE_RUN || `r${Date.now().toString(36)}`).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 16);
 const PASSWORD = process.env.LIVE_PASSWORD || `Ease-${crypto.randomBytes(18).toString("base64url")}`;
@@ -79,8 +80,8 @@ function parse(out) {
 }
 // jsonb prints on one line, which the wrappers rely on (json_agg breaks lines between rows).
 const wrap = (query) => `select coalesce(jsonb_agg(q), '[]'::jsonb)::text as result from (${query}) q`;
-const rows = (query) => parse(run(wrap(query)));
-const rowsAsync = async (query) => parse(await runAsync(wrap(query)));
+const rows = (query) => { assertScopedSql(query); return parse(run(wrap(query))); };
+const rowsAsync = async (query) => { assertScopedSql(query); return parse(await runAsync(wrap(query))); };
 
 const RUN_USERS = `(select id from auth.users where email like ${literal(ANY_RUN)})`;
 const RUN_STORES = `(select id from public.stores where owner_user_id in ${RUN_USERS})`;
@@ -100,11 +101,14 @@ const ALERT_GUARD = `do $guard$ begin
 end $guard$`;
 
 function exec(statements) {
+  assertScopedSql(statements);
   run(`begin; select set_config('app.allow_listing_admin_fields', 'true', true); ${statements}; ${ALERT_GUARD}; commit;`);
 }
 // As a signed-in user, the way PostgREST runs a request. Admin claims belong to a test account of the run (an Admin
 // account is never made); a call that could publish is refused first if any test listing would match a real alert.
 function rowsAs(userId, query, { admin = false } = {}) {
+  assertScopedSql(query);
+  if (!userId) throw new LocalOnly("anonymous SQL permission probes are only exercised locally");
   const claims = userId
     ? { sub: userId, role: "authenticated", aal: "aal2", ...(admin ? { app_metadata: { role: "admin" } } : {}) }
     : { role: "anon" };
@@ -226,6 +230,7 @@ function paceSignInSync() {
 function rememberSignIn(email, response) {
   const request = response.request();
   const url = new URL(response.url());
+  if (!url.pathname.includes("/auth/v1/token")) return Promise.resolve();
   supabase.origin = supabase.origin || url.origin;
   supabase.apikey = supabase.apikey || request.headers().apikey || null;
   return response.json().then((body) => {
@@ -240,8 +245,13 @@ const savedSession = (email) => {
 };
 const saveSession = (email, state) => sessions.set(email, { state, at: Date.now() });
 
-function curl(args, input) {
-  return execFileSync("curl", ["-sS", "--max-time", "60", ...args], { input, encoding: input ? undefined : "utf8", maxBuffer: 16 << 20 });
+function curl(args, input, binary = false) {
+  try {
+    return execFileSync("curl", ["-sS", "--max-time", "60", ...args], { input, encoding: input || binary ? undefined : "utf8", maxBuffer: 16 << 20 });
+  } catch (error) {
+    // execFileSync's message includes argv, including Authorization headers. Never put that in evidence or logs.
+    throw new Error(`Auth/Storage HTTP request failed (${error.status || error.code || "network"}): ${String(error.stderr || "").slice(0, 250)}`);
+  }
 }
 function token(email) {
   const known = tokens.get(email);
@@ -279,6 +289,19 @@ function photoUrls(seller, howMany) {
   return urls;
 }
 
+// Fetch only this run's uploaded image bytes, so privacy/size checks can inspect real Storage without local disk assumptions.
+function photoBytes(bucket, name) {
+  if (!["listing-photos", "listing-edit-photos"].includes(bucket) || name.split("/").includes("..")) throw new LiveUnsafe("unsupported image path");
+  const [object] = rows(`select coalesce(owner_id, owner::text) as owner_id from storage.objects
+    where bucket_id = ${literal(bucket)} and name = ${literal(name)}`);
+  const owned = object && (object.owner_id
+    ? accounts.some((account) => account.id === object.owner_id)
+    : accounts.some((account) => name.startsWith(`${account.id}/`)));
+  if (!owned) throw new LiveUnsafe("image inspection only reads files owned by this run");
+  return curl(["-f", "-H", `Authorization: Bearer ${process.env.LIVE_STORAGE_SERVICE_ROLE_KEY}`,
+    "-H", `apikey: ${supabase.apikey}`, `${supabase.origin}/storage/v1/object/authenticated/${bucket}/${name.split("/").map(encodeURIComponent).join("/")}`], undefined, true);
+}
+
 // ------------------------------------------------------------------ the request guard
 const known = new Map(); // uuid or slug -> "ours" | "theirs"
 const INCIDENTAL = /^\/api\/(events|client-errors|csp-report)(\/|$)|\/view$|impression/i;
@@ -310,11 +333,16 @@ async function classify(ids, slugs) {
 async function guardRequest(request) {
   const method = request.method();
   if (["GET", "HEAD", "OPTIONS"].includes(method)) return null;
+  if (isFavoriteRead(request, new URL(process.env.BASE || "https://laria.audio").origin)) return null;
   const url = new URL(request.url());
   let pathname = url.pathname;
   try {
     pathname = decodeURIComponent(pathname);
   } catch {}
+  if ((/^\/api\/submissions(?:\/|$)/.test(pathname) && !isUploadSetup(request, new URL(process.env.BASE || "https://laria.audio").origin))
+    || /^\/api\/store\/imports(?:\/|$)/.test(pathname)) {
+    return { reason: "publication and import writes are exercised locally, where buyer alerts cannot escape", incidental: false };
+  }
   const type = request.headers()["content-type"] || "";
   const body = /^(image|audio|video)\//.test(type) ? "" : (request.postData() || "").slice(0, 500_000);
   if (/reclamac|complaints[-_]book/i.test(`${pathname} ${url.search}`) || /complaints_book/i.test(body.slice(0, 2000))) {
@@ -363,6 +391,9 @@ function cleanupSql(userIds, { withAccounts }) {
   const R = `(select id from public.transaction_reviews where reviewer_user_id in ${U} or subject_user_id in ${U} or subject_store_id in ${S})`;
   const C = `(select id from public.transaction_claims where listing_id in ${L} or store_id in ${S} or seller_user_id in ${U} or buyer_user_id in ${U})`;
   const steps = [
+    `select set_config('app.allow_listing_admin_fields', 'true', true)`,
+    `delete from public.notifications where user_id in ${U} or listing_id in ${L} or store_id in ${S}
+      or review_id in ${R} or claim_id in ${C} or transaction_id in (select id from public.verified_transactions where claim_id in ${C})`,
     `delete from public.reports where listing_id in ${L} or store_id in ${S} or reporter_user_id in ${U} or review_id in ${R}
       or question_id in (select id from public.listing_questions where listing_id in ${L} or asker_user_id in ${U})`,
     `delete from public.review_moderation_actions where review_id in ${R}`,
@@ -370,14 +401,22 @@ function cleanupSql(userIds, { withAccounts }) {
     `delete from public.purchase_checkins where listing_id in ${L} or store_id in ${S} or buyer_user_id in ${U} or seller_user_id in ${U} or claim_id in ${C}`,
     `delete from public.verified_transactions where claim_id in ${C} or listing_id in ${L} or store_id in ${S} or buyer_user_id in ${U} or seller_user_id in ${U}`,
     `delete from public.transaction_claims where id in ${C}`,
+    // These synthetic ledgers are append-only. Suppress their triggers only in this connection and only around
+    // the run-owned ledger deletes; restore normal FK/cascade behavior before deleting any parent rows.
+    `set local session_replication_role = replica`,
     `delete from public.store_stock_movements where store_id in ${S} and corrects_movement_id is not null`,
     `delete from public.store_stock_movements where store_id in ${S}`,
     `delete from public.store_inventory_changes where store_id in ${S}`,
+    `set local session_replication_role = origin`,
     `delete from public.store_inventory_items where store_id in ${S} or listing_id in ${L}`,
     `delete from public.store_import_sessions where store_id in ${S}`,
+    `delete from public.listing_revision_photos where revision_id in (select id from public.listing_revisions
+      where listing_id in ${L} or store_id in ${S} or owner_user_id in ${U})`,
     `delete from public.listing_revisions where listing_id in ${L} or store_id in ${S} or owner_user_id in ${U}`,
-    `delete from laria_private.marketplace_email_deliveries where listing_id in ${L} or store_id in ${S}`,
-    `update public.listings set relisted_from_listing_id = null where relisted_from_listing_id in ${L}`,
+    `delete from laria_private.marketplace_email_deliveries where listing_id in ${L} or store_id in ${S} or recipient_user_id in ${U}`,
+    `delete from public.marketplace_events where listing_id in ${L} or store_id in ${S}`,
+    `delete from laria_private.listing_impression_days where seller_user_id in ${U}`,
+    `update public.listings set relisted_from_listing_id = null where id in ${L} and relisted_from_listing_id in ${L}`,
     `delete from public.listings where id in ${L}`,
     `delete from public.stores where id in ${S}`,
   ];
@@ -413,46 +452,86 @@ async function afterCase(record) {
     record.problems.push(`reached people outside the run: ${touched.notices} notices, ${touched.emails} e-mails (${touched.sent} sent)`);
   }
   await runAsync(`begin; ${FENCE}; commit;`);
-  if (ids.length) await runAsync(cleanupSql(ids, { withAccounts: false }));
+  if (ids.length) {
+    const fixtures = await rowsAsync(`select id::text from public.stores where owner_user_id = any(array[${ids.map((id) => `${literal(id)}::uuid`).join(",")}])
+      union select id::text from public.listings where owner_user_id = any(array[${ids.map((id) => `${literal(id)}::uuid`).join(",")}])`);
+    await runAsync(cleanupSql(ids, { withAccounts: false }));
+    await removePhotos(ids, fixtures.map((row) => row.id));
+  }
 }
 
-// End of the run: the accounts and everything they made go, then the count of what is left (all zero).
+// Delete Storage objects through its API before deleting Auth users; deleting database rows alone leaves bytes behind.
+async function removePhotos(ids, fixtureIds = []) {
+  if (!ids.length) return { removed: 0 };
+  const ownedPath = `(^|/)(${[...ids, ...fixtureIds].join("|")})(/|$)`;
+  const objects = await rowsAsync(`select bucket_id, name, coalesce(owner_id, owner::text) as owner_id
+    from storage.objects where coalesce(owner_id, owner::text) = any(array[${ids.map(literal).join(",")}]::text[])
+      or name ~ ${literal(ownedPath)}`);
+  if (objects.some((object) => object.owner_id && !ids.includes(object.owner_id))) {
+    throw new Error("A test path has an object owned outside this run; cleanup refused it");
+  }
+  const groups = new Map();
+  for (const object of objects) {
+    const key = `${object.owner_id}:${object.bucket_id}`;
+    if (!groups.has(key)) groups.set(key, { userId: object.owner_id, bucket: object.bucket_id, paths: [] });
+    groups.get(key).paths.push(object.name);
+  }
+  let removed = 0;
+  for (const group of groups.values()) {
+    const owner = accounts.find((entry) => entry.id === group.userId);
+    if (!owner && !process.env.LIVE_STORAGE_SERVICE_ROLE_KEY) throw new Error("Storage object requires the run cleanup credential");
+    const access = process.env.LIVE_STORAGE_SERVICE_ROLE_KEY || token(owner.email);
+    const answer = String(curl(["-X", "DELETE", `${supabase.origin}/storage/v1/object/${group.bucket}`,
+      "-H", `Authorization: Bearer ${access}`, "-H", `apikey: ${supabase.apikey}`, "-H", "Content-Type: application/json",
+      "-w", "\n%{http_code}", "--data-binary", "@-"], JSON.stringify({ prefixes: group.paths })));
+    if (!/^2/.test(answer.trim().split("\n").pop())) throw new Error("Storage cleanup request was refused");
+    removed += group.paths.length;
+  }
+  const [left] = await rowsAsync(`select count(*)::int as n from storage.objects
+    where coalesce(owner_id, owner::text) = any(array[${ids.map(literal).join(",")}]::text[]) or name ~ ${literal(ownedPath)}`);
+  if (left.n) throw new Error(`Storage cleanup left ${left.n} objects; Auth accounts were retained for recovery`);
+  return { removed };
+}
+
+// End of the run: retain fixture IDs before deletion so cascade/set-null behavior cannot hide leftovers.
 async function finish() {
   if (fenceTimer) clearInterval(fenceTimer);
   await runAsync(`begin; ${FENCE}; commit;`);
-  const [mail] = await rowsAsync(`select coalesce(json_object_agg(status, n), '{}'::json) as statuses from (
-      select status, count(*)::int as n from laria_private.marketplace_email_deliveries where recipient_user_id in ${RUN_USERS} group by status) s`);
-  const ids = (await rowsAsync(`select id::text from auth.users where email like ${literal(THIS_RUN)}`)).map((row) => row.id);
-  // Photos go now while the seller's token is still good; the rest, named as the sell form names them, go with Storage's
-  // daily sweep once nothing points at them (supabase/migrations/20261114120000_launch_audit_privacy.sql).
-  const photos = { removed: 0, sweep: 0 };
-  for (const [email, paths] of uploads) {
-    const known = tokens.get(email);
-    if (!known || known.expires - Date.now() < 2 * 60_000) {
-      photos.sweep += paths.length;
-      continue;
-    }
-    try {
-      curl(["-X", "DELETE", `${supabase.origin}/storage/v1/object/listing-photos`, "-H", `Authorization: Bearer ${known.access}`,
-        "-H", `apikey: ${supabase.apikey}`, "-H", "Content-Type: application/json", "--data-binary", "@-"], JSON.stringify({ prefixes: paths }));
-      photos.removed += paths.length;
-    } catch (error) {
-      photos.sweep += paths.length;
-      console.log(`  photos of ${email} stay for the daily sweep: ${error.message.slice(0, 160)}`);
-    }
-  }
-  if (ids.length) await runAsync(cleanupSql(ids, { withAccounts: true }));
+  const users = await rowsAsync(`select id::text from auth.users where email like ${literal(THIS_RUN)}`);
+  const ids = users.map((row) => row.id);
+  return cleanupAccounts(ids);
+}
+
+async function cleanupAccounts(ids) {
+  if (!ids.length) return { run: RUN, accounts: 0, photos: { removed: 0 }, left: { accounts: 0, profiles: 0, listings: 0, stores: 0, storage: 0, emails: 0 } };
+  const list = ids.map((id) => `${literal(id)}::uuid`).join(",");
+  const fixtures = await rowsAsync(`select 'listing' as kind, id::text from public.listings where owner_user_id = any(array[${list}])
+    union all select 'store', id::text from public.stores where owner_user_id = any(array[${list}])`);
+  const listingIds = fixtures.filter((row) => row.kind === "listing").map((row) => `${literal(row.id)}::uuid`).join(",") || "null::uuid";
+  const storeIds = fixtures.filter((row) => row.kind === "store").map((row) => `${literal(row.id)}::uuid`).join(",") || "null::uuid";
+  await runAsync(cleanupSql(ids, { withAccounts: false }));
+  const fixtureIds = fixtures.map((row) => row.id);
+  const photos = await removePhotos(ids, fixtureIds);
+  await runAsync(cleanupSql(ids, { withAccounts: true }));
   const [left] = await rowsAsync(`select
-      (select count(*) from auth.users where email like ${literal(THIS_RUN)})::int as accounts,
-      (select count(*) from public.profiles p where p.id in (select id from auth.users where email like ${literal(THIS_RUN)}))::int as profiles,
-      (select count(*) from public.listings where owner_user_id in ${RUN_USERS})::int as listings,
-      (select count(*) from public.stores where owner_user_id in ${RUN_USERS})::int as stores`);
-  return { run: RUN, accounts: ids.length, emails: mail.statuses, photos, left };
+      (select count(*) from auth.users where id = any(array[${list}]))::int as accounts,
+      (select count(*) from public.profiles where id = any(array[${list}]))::int as profiles,
+      (select count(*) from public.listings where id = any(array[${listingIds}]) or owner_user_id = any(array[${list}]))::int as listings,
+      (select count(*) from public.stores where id = any(array[${storeIds}]) or owner_user_id = any(array[${list}]))::int as stores,
+      (select count(*) from storage.objects where coalesce(owner_id, owner::text) = any(array[${ids.map(literal).join(",")}]::text[])
+        or name ~ ${literal(`(^|/)(${[...ids, ...fixtureIds].join("|")})(/|$)`)} )::int as storage,
+      (select count(*) from laria_private.marketplace_email_deliveries where recipient_user_id = any(array[${list}]))::int as emails,
+      (select count(*) from public.store_stock_movements where store_id = any(array[${storeIds}]))::int as movements,
+      (select count(*) from public.store_inventory_changes where store_id = any(array[${storeIds}]))::int as inventory_changes`);
+  return { run: RUN, accounts: ids.length, photos, left };
 }
 
 // Before the first case: the database answers, the shape of Auth is known, the real alerts are counted (each would
 // stop the cases whose listings it matches) and nothing of an earlier run is left.
 function preflight() {
+  if (!supabase.origin || !supabase.apikey || !process.env.LIVE_STORAGE_SERVICE_ROLE_KEY) {
+    throw new Error("live run requires public Supabase settings and LIVE_STORAGE_SERVICE_ROLE_KEY for verified Storage cleanup");
+  }
   // The wrapper must run a call's statements in one session, in order, and print the last one.
   const [claim] = parse(run(`select set_config('request.jwt.claims', '{"sub":"preflight"}', false);
     select jsonb_build_array(current_setting('request.jwt.claims', true))::text as result;`));
@@ -468,12 +547,14 @@ function preflight() {
 // Recovery after a run that could not finish: every run's accounts and their data, whichever run made them.
 //   LIVE_DB=... node scripts/acceptance/ease/live.cjs --clean-up
 async function cleanupEveryRun() {
-  const ids = (await rowsAsync(`select id::text from auth.users where email like ${literal(ANY_RUN)}`)).map((row) => row.id);
-  if (ids.length) await runAsync(`begin; ${FENCE}; commit;`);
-  if (ids.length) await runAsync(cleanupSql(ids, { withAccounts: true }));
-  const [left] = await rowsAsync(`select (select count(*) from auth.users where email like ${literal(ANY_RUN)})::int as accounts`);
-  return { removed: ids.length, left };
+  const users = await rowsAsync(`select id::text, email from auth.users where email like ${literal(ANY_RUN)}`);
+  accounts.push(...users.filter((user) => !accounts.some((known) => known.id === user.id)));
+  if (users.length) await runAsync(`begin; ${FENCE}; commit;`);
+  const report = await cleanupAccounts(users.map((user) => user.id));
+  if (Object.values(report.left || {}).some(Boolean)) throw new Error(`Recovery left test data: ${JSON.stringify(report.left)}`);
+  return { removed: users.length, ...report };
 }
+
 if (require.main === module && process.argv.includes("--clean-up")) {
   cleanupEveryRun().then((report) => console.log(JSON.stringify(report)), (error) => {
     console.error(error.message);
@@ -482,6 +563,6 @@ if (require.main === module && process.argv.includes("--clean-up")) {
 }
 
 module.exports = {
-  RUN, PASSWORD, PHONE, rows, rowsAsync, exec, rowsAs, account, actorId, actorEmail, isActor, photoUrls, alertMatches,
+  RUN, PASSWORD, PHONE, rows, rowsAsync, exec, rowsAs, account, actorId, actorEmail, isActor, photoUrls, photoBytes, alertMatches,
   paceSignIn, rememberSignIn, savedSession, saveSession, guardRequest, startFence, beginCase, afterCase, finish, preflight,
 };

@@ -279,9 +279,8 @@ cases.push({
     await more.click();
     const added = page.locator("ul[aria-label^='Más resultados'] article :is(h2, h3) a[href^='/instrumentos/']");
     await a.until(async () => (await added.count()) === expectMore, { timeout: 20_000 });
-    t.check((await added.count()) === expectMore && page.url().endsWith("/listados"), `the next ${expectMore} load below, on the same page (${a.pathOf(page.url())})`);
+    t.check((await added.count()) === expectMore && page.url().endsWith("/listados"), `the next ${expectMore} load below, on the same page (actual ${await added.count()}, URL ${page.url()})`);
     const target = added.nth(Math.min(5, expectMore - 1));
-    const slug = (await target.getAttribute("href")).split("/").pop();
     await target.scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
     const scrollY = await page.evaluate(() => Math.round(window.scrollY));

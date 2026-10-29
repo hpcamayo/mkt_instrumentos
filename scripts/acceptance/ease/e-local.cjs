@@ -39,6 +39,7 @@ function attempt(userId, query, options) {
   try {
     return { ok: true, rows: rows(userId, query, options) };
   } catch (error) {
+    if (error instanceof h.LocalOnly || error instanceof h.LiveUnsafe) throw error;
     return { ok: false, error: errorLine(error) };
   }
 }
@@ -48,6 +49,7 @@ function attemptExec(statements) {
     h.exec(statements);
     return { ok: true };
   } catch (error) {
+    if (error instanceof h.LocalOnly || error instanceof h.LiveUnsafe) throw error;
     return { ok: false, error: errorLine(error) };
   }
 }

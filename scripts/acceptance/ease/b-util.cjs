@@ -33,7 +33,7 @@ function saveImage(t, label, buffer) {
 
 // Statements run in one session as postgres and rolled back. Lines the script prints as `ROW <json>` come back parsed.
 function rolledBack(statements) {
-  if (h.LIVE) throw new Error("rolledBack is local only");
+  if (h.LIVE) throw new h.LocalOnly("rolledBack is local only");
   const file = path.join(os.tmpdir(), `ease-b-${process.pid}-${Date.now()}.sql`);
   fs.writeFileSync(file, `\\set ON_ERROR_STOP 1\nbegin;\n${statements}\nrollback;\n`);
   try {
@@ -228,7 +228,7 @@ async function withServerKeys(fn) {
 // The product's own signer (lib/email/links.ts) with server A's key, as the e-mail worker would sign a link.
 // create and read are async (they run under withServerKeys).
 function emailLinks() {
-  if (h.LIVE) throw new Error("emailLinks is local only");
+  if (h.LIVE) throw new h.LocalOnly("emailLinks is local only");
   const links = requireProduct("lib/email/links.ts");
   return {
     create: (...args) => withServerKeys(() => links.createEmailLinkToken(...args)),
@@ -243,7 +243,7 @@ function emailLinks() {
 // (laria_private.marketplace_email_payload, read in a transaction that is rolled back), and its provider keeps the
 // messages instead of sending them. Nothing is claimed, sent or marked. Returns { result, messages, calls }.
 async function renderDeliveries(ids, { baseUrl = h.BASE } = {}) {
-  if (h.LIVE) throw new Error("renderDeliveries is local only");
+  if (h.LIVE) throw new h.LocalOnly("renderDeliveries is local only");
   if (!ids.length) return { result: null, messages: [], calls: [] };
   const list = ids.map(h.literal).join(", ");
   const payloads = rolledBack(`

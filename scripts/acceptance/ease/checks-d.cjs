@@ -3,7 +3,6 @@
 // signed out, and find their data on the page.
 "use strict";
 const fs = require("node:fs");
-const path = require("node:path");
 const d = require("./d-helpers.cjs");
 
 const L = (value) => (value === null || value === undefined ? "null" : `'${String(value).replace(/'/g, "''")}'`);
@@ -80,6 +79,7 @@ cases.push({
     const page = await t.page({ phone: true });
     await t.goto(page, "/tiendas");
     const nav = page.getByRole("navigation", { name: "Ciudades" });
+    if (t.live && (await d.directoryCards(page)).length < 2) t.skip("live: city filtering requires stores in at least two cities; fewer than two stores are public");
     t.check(await nav.isVisible(), "the city chips show");
     const chips = await nav.locator("a").evaluateAll((links) => links.map((a) => ({
       href: a.getAttribute("href"), text: a.innerText.replace(/\s+/g, " ").trim(), current: a.getAttribute("aria-current"), check: Boolean(a.querySelector("svg")),
@@ -502,6 +502,7 @@ cases.push({
       d.sqlAsRows(null, `select address from public.stores where id = ${L(store.id)}`);
       addressRead = "allowed";
     } catch (error) {
+      if (error instanceof t.LocalOnly || error instanceof t.LiveUnsafe) throw error;
       addressRead = /permission denied/.test(String(error.message)) ? "denied" : String(error.message).slice(0, 120);
     }
     t.check(addressRead === "denied", `the raw address column is closed to anonymous reads (${addressRead})`);
@@ -509,10 +510,6 @@ cases.push({
 });
 
 // ------------------------------------------------------------------ the owner's preview (shop-04)
-
-async function storeEvents(storeId) {
-  return Number(require("./harness.cjs").sql(`select count(*)::int as n from public.marketplace_events where store_id = ${L(storeId)}`)[0].n);
-}
 
 cases.push({
   id: "EASE-530",
@@ -719,6 +716,7 @@ cases.push({
         ${L(sheetEmail(t, "r"))}, false, null, 'servicio', null, 'Servicio', null, 'reclamo', 'corto', 'Revisar', true)`);
       refused = "accepted";
     } catch (error) {
+      if (error instanceof t.LocalOnly || error instanceof t.LiveUnsafe) throw error;
       refused = /COMPLAINT_INVALID/.test(String(error.message)) ? "COMPLAINT_INVALID" : String(error.message).slice(0, 160);
     }
     t.check(refused === "COMPLAINT_INVALID", `the database refuses an invalid sheet (${refused})`);
@@ -751,6 +749,7 @@ cases.push({
       d.sqlAsRows(user.id, "select id from public.complaints_book_entries");
       read = "allowed";
     } catch (error) {
+      if (error instanceof t.LocalOnly || error instanceof t.LiveUnsafe) throw error;
       read = /permission denied/.test(String(error.message)) ? "permission denied" : String(error.message).slice(0, 120);
     }
     t.check(read === "permission denied", `the user still cannot read the table (${read})`);
@@ -835,6 +834,7 @@ cases.push({
         d.sqlAsRows(null, `select * from public.submit_complaints_book_entry(${args})`);
         refusals.push(`${name}: accepted`);
       } catch (error) {
+        if (error instanceof t.LocalOnly || error instanceof t.LiveUnsafe) throw error;
         refusals.push(`${name}: ${/COMPLAINT_[A-Z_]+/.exec(String(error.message))?.[0] ?? String(error.message).slice(0, 80)}`);
       }
     }
@@ -955,6 +955,7 @@ cases.push({
       page(null, 1, 51);
       tooBig = "accepted";
     } catch (error) {
+      if (error instanceof t.LocalOnly || error instanceof t.LiveUnsafe) throw error;
       tooBig = /ADMIN_PAGINATION_INVALID/.test(String(error.message)) ? "ADMIN_PAGINATION_INVALID" : String(error.message).slice(-160);
     }
     t.check(tooBig === "ADMIN_PAGINATION_INVALID", `a page of 51 is refused (${tooBig})`);
@@ -1342,7 +1343,7 @@ cases.push({
     await fresh.getByLabel("Tiene variantes (calibres, colores, tallas)").check();
     const base = `CUE${t.tag().slice(-4).toUpperCase()}`;
     await fresh.locator("input[name='merchant_sku']").fill(base);
-    await fresh.getByLabel("Variantes").fill("10-46, 9-42\n11-49");
+    await fresh.getByLabel("Variantes", { exact: true }).fill("10-46, 9-42\n11-49");
     await fresh.locator("input[name='opening']").fill("5");
     await t.shot(page, "variants");
     await fresh.getByRole("button", { name: "Crear 3 SKU" }).click();
@@ -1498,7 +1499,7 @@ cases.push({
     t.check(page.url().includes("/inventario/precios"), "and Enter goes to the section");
     await t.goto(page, INV);
     const rowButtons = page.locator("tbody tr").filter({ hasText: item.merchant_sku });
-    t.check(await page.getByRole("button", { name: "Nuevo SKU" }).first().isVisible() && await page.getByRole("button", { name: "Buscar", exact: true }).isVisible()
+    t.check(await page.getByRole("button", { name: "Nuevo SKU" }).first().isVisible() && await page.getByRole("button", { name: "Buscar", exact: true }).first().isVisible()
       && await page.getByRole("button", { name: "Atajos de teclado" }).isVisible()
       && await rowButtons.getByRole("button", { name: "Registrar venta", exact: true }).count() === 1
       && await rowButtons.getByRole("button", { name: "Reponer stock", exact: true }).count() === 1 && await rowButtons.getByRole("button", { name: "Ajustar", exact: true }).count() === 1,

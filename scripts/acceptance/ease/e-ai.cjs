@@ -154,8 +154,8 @@ const checks = [
       }
       const seller = t.account({ kind: "particular" });
       const sell = await t.page({ as: seller.email });
-      const form = await sellWithPhotos(t, sell, 1);
-      t.check(await form.getByLabel("Marca", { exact: true }).count() === 1, "Publicar reaches Qué es with a photo");
+      const form = await sellWithPhotos(t, sell, 2);
+      t.check(await form.getByLabel("Marca", { exact: true }).count() === 1, "Publicar reaches Qué es with the required two photos");
       t.check(await sell.getByRole("button", { name: /Completar con IA/ }).count() === 0, "and shows no Completar con IA");
       await t.shot(sell, "publicar");
       for (const route of ["/api/store/ask", "/api/listing-assist"]) {
@@ -359,7 +359,7 @@ const checks = [
       x.ciAsserts(t, AI_TEST, ["fills one field, and", "fills only what is empty, never what the seller wrote or another instrument's name", "Reemplazar", "clash.held"]);
       const seller = t.account({ kind: "particular" });
       const page = await t.page({ as: seller.email });
-      const form = await sellWithPhotos(t, page, 1);
+      const form = await sellWithPhotos(t, page, 2);
       await form.getByLabel("Marca", { exact: true }).fill("Behringer");
       const region = await suggestions(page);
       const replace = region.getByRole("button", { name: "Reemplazar: Marca" });

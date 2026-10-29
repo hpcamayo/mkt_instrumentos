@@ -7,6 +7,19 @@ const x = require("./e-local.cjs");
 
 const NUEVO = () => `fotos=todas&desde=${e.sevenDayStart()}`;
 const results = (query) => `/descubrir?modo=resultados&${query}`;
+// Canonical functional-spec: sparse weeks widen to 30 Lima days, both in the feed and its end message.
+async function nuevoWindow(t) {
+  const weekly = await e.catalogPage(t, NUEVO());
+  t.check(weekly.status === 200, `the 7-day page answers ${weekly.status}`);
+  const days = weekly.status === 200 && weekly.body?.total < 12 ? 30 : 7;
+  const api = days === 7 ? weekly : await e.catalogPage(t, `fotos=todas&desde=${e.shiftDay(e.limaDay(), -29)}`);
+  if (days === 30) {
+    t.check(api.status === 200, `the sparse-week 30-day page answers ${api.status}`);
+    t.note("30-day fallback required by docs/functional-spec.md § Descubrir (fewer than 12 listings this week).");
+  }
+  return { api, days };
+}
+
 const DESC_TEST = "tests/maybes-descubrir.test.cjs";
 const sameParams = (a, b) => {
   const left = [...new URL(a, "http://x").searchParams].map(String).sort().join("&");
@@ -103,16 +116,16 @@ module.exports = [
       const bar = await e.barText(page);
       t.check(/^Lo nuevo · 1 de [\d,]+$/.test(bar), `the bar reads "${bar}"`);
       const shown = await e.screen(page);
-      const api = await e.catalogPage(t, NUEVO());
-      t.check(api.status === 200, `the 7-day page answers ${api.status}`);
+      const { api, days } = await nuevoWindow(t);
       const list = api.body?.listings || [];
       const at = list.findIndex((item) => item.slug === shown.slug);
       const newer = at > 0 ? list.slice(0, at) : [];
       t.check(at === 0 || (at > 0 && newer.every((item) => Date.parse(item.published_at) >= opened - 5_000)),
-        `the first screen is the newest listing of the 7 Lima days (position ${at + 1} in the page route's answer; ${newer.length} published since)`);
+        `the first screen is the newest listing of the ${days} Lima days (position ${at + 1} in the page route's answer; ${newer.length} published since)`);
       const total = (await e.counter(page))?.total;
-      t.check(api.body?.total >= 12 && Math.abs(total - api.body.total) <= newer.length, `the count ${total} is the window's ${api.body?.total}`);
-      t.check(/^Publicado (hoy|ayer|hace [2-6] días)$/.test(shown.published || ""), `the first screen says "${shown.published}"`);
+      t.check(typeof api.body?.total === "number" && api.body.total > 0 && Math.abs(total - api.body.total) <= newer.length, `the count ${total} is the window's ${api.body?.total}`);
+      const caption = days === 7 ? /^Publicado (hoy|ayer|hace [2-6] días)$/ : /^Publicado .+/;
+      t.check(caption.test(shown.published || "") && at >= 0 && Date.parse(list[at].published_at) >= limaMidnight(e.shiftDay(e.limaDay(), 1 - days)), `the first screen says "${shown.published}" within its ${days}-day window`);
       await t.shot(page, "first-screen");
       // The home's markup is the same for every visitor: with or without the visit cookies (and, locally, signed in).
       const strip = (html) => html.replace(/nonce="[^"]*"/g, "");
@@ -280,6 +293,7 @@ module.exports = [
       const { status, body } = await e.catalogPage(t, NUEVO());
       t.check(status === 200 && typeof body?.total === "number", `fotos=todas&desde answers ${status} with total ${body?.total}`);
       const listings = body?.listings || [];
+      if (t.live && status === 200 && !listings.length) t.skip("live: no listings in the seven-day window to verify multi-photo responses");
       t.check(listings.every((item) => (item.listing_photos || []).length <= 10), "at most 10 photos a listing");
       t.check(listings.every((item) => (item.listing_photos || []).every((photo, index, all) => index === 0 || all[index - 1].sort_order <= photo.sort_order)), "in their order");
       t.check(listings.every((item) => Date.parse(item.published_at) >= limaMidnight(e.sevenDayStart())), "published from the window's first day");
@@ -471,9 +485,10 @@ module.exports = [
       const page = await t.page({ phone: true });
       await open(t, page, "/descubrir");
       const total = (await e.counter(page))?.total;
+      const { days } = await nuevoWindow(t);
       const { screen: end } = await e.loadAll(page, { rounds: 40 });
       t.check(end.heading === "Viste todo lo nuevo", `Lo nuevo ends with "${end.heading}"`);
-      const line = /Las ([\d,]+) publicaciones de los últimos 7 días\./.exec(end.text);
+      const line = new RegExp(`Las ([\\d,]+) publicaciones de los últimos ${days} días\\.`).exec(end.text);
       t.check(line && Math.abs(e.num(line[1]) - total) <= 3, `"${line ? line[0] : end.text.slice(0, 120)}" (bar total ${total})`);
       t.check(await disabled(page, "Siguiente"), "Siguiente is disabled");
       const at = await e.slotIndex(page);

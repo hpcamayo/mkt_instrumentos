@@ -392,12 +392,12 @@ module.exports = [
       const form = page.locator("form").filter({ has: page.getByRole("navigation", { name: "Pasos para publicar" }) });
       await form.waitFor({ timeout: 30_000 });
       await form.getByRole("button", { name: "Guitarras", exact: true }).click();
-      const photos = require("node:fs").readdirSync("/tmp/laria-prototype/storage/listing-photos/descubrir").filter((name) => name.endsWith(".jpg")).slice(0, 1)
+      const photos = require("node:fs").readdirSync("/tmp/laria-prototype/storage/listing-photos/descubrir").filter((name) => name.endsWith(".jpg")).slice(0, 2)
         .map((name) => `/tmp/laria-prototype/storage/listing-photos/descubrir/${name}`);
       await page.locator("#venta-fotos").setInputFiles(photos);
       await x.until(async () => (await page.getByText(/Subiendo \d+%|Preparando…/).count()) === 0, { timeout: 60_000 });
       await form.getByRole("button", { name: "Continuar", exact: true }).click();
-      const attrs = async (scope) => Promise.all(["Marca", "Modelo"].map((label) => scope.getByLabel(label, { exact: true }).first().evaluate((input) => ({
+      const attrs = async (scope) => Promise.all(["Marca", "Modelo"].map((label) => scope.getByLabel(new RegExp(`^${label}`)).first().evaluate((input) => ({
         autocorrect: input.getAttribute("autocorrect"), spellcheck: input.getAttribute("spellcheck"), autocapitalize: input.getAttribute("autocapitalize"),
       }))));
       const sell = await attrs(form);
@@ -459,7 +459,11 @@ module.exports = [
       t.check(!/Completa tu perfil Particular/.test(await x.mainText(page)), "a new account with a name and an e-mail sees no profile notice");
       await t.goto(page, "/mi-cuenta/publicar");
       const text = norm(await x.mainText(page));
-      t.check(/WhatsApp/.test(text) && /Ciudad/.test(text), "Publicar asks for WhatsApp and city the first time");
+      t.check(/WhatsApp/.test(text) && /ubicación/.test(text) && /Completa tu perfil Particular/.test(text), "Publicar asks for the missing contact profile before publishing");
+      await page.getByRole("link", { name: "Completar perfil", exact: true }).click();
+      await page.getByRole("heading", { name: "Editar perfil" }).waitFor();
+      t.check(await page.locator('input[name="phone"]').count() === 1 && await page.getByLabel("Ciudad", { exact: true }).count() === 1,
+        "Completar perfil opens WhatsApp and city fields");
       await t.shot(page, "publicar");
       const seller = t.account({ kind: "particular" });
       t.listing(seller, {});
@@ -494,6 +498,7 @@ module.exports = [
   },
   {
     id: "EASE-764",
+    liveAccounts: false,
     timeout: 900_000,
     async run(t) {
       const result = await replay.run();

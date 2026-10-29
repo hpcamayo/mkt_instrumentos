@@ -11,6 +11,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const h = require("./harness.cjs");
 const { LocalOnly, LiveUnsafe } = require("./errors.cjs");
+const { readOnlyFetch, isFavoriteRead } = require("./live-safety.cjs");
+if (h.LIVE) globalThis.fetch = readOnlyFetch(globalThis.fetch, "Node fetch");
 
 const args = process.argv.slice(2);
 const files = args.filter((arg) => !arg.startsWith("--"));
@@ -35,11 +37,11 @@ function makeT(definition, browser) {
   const contexts = [];
   const record = { id: definition.id, status: null, checks: [], notes: [], shots: [], blocked: [], problems: [] };
   const t = {
+    ...h,
     id: definition.id,
     base,
     live: h.LIVE,
     demo: h.DEMO,
-    ...h,
     record,
     note: (text) => record.notes.push(String(text)),
     check(ok, message) {
@@ -79,6 +81,7 @@ function makeT(definition, browser) {
         ...(saved ? { storageState: saved } : {}),
       });
       contexts.push(context);
+      if (h.LIVE) context.request.fetch = readOnlyFetch(context.request.fetch, "Playwright API request");
       await context.route("**/*", async (route) => {
         const request = route.request();
         let url;
@@ -98,8 +101,11 @@ function makeT(definition, browser) {
             return route.abort("blockedbyclient");
           }
         } else if (h.LIVE) {
-          if (!["GET", "HEAD"].includes(request.method())) {
+          if (!["GET", "HEAD"].includes(request.method()) && !isFavoriteRead(request, origin)) {
             record.blocked.push(`${request.method()} ${url.pathname}`);
+            if (!/^\/api\/(events|client-errors|csp-report)(\/|$)|\/view$|impression/i.test(url.pathname)) {
+              record.liveUnsafe = `read-only live mode refused ${request.method()} ${url.pathname}`;
+            }
             return route.abort("blockedbyclient");
           }
         }
@@ -142,7 +148,7 @@ function makeT(definition, browser) {
       // Live: under Supabase's sign-in limit, and the tokens the browser gets are kept for photo uploads.
       if (h.LIVE_ACCOUNTS) await h.live.paceSignIn();
       const tokenAnswer = h.LIVE_ACCOUNTS
-        ? page.waitForResponse((response) => response.url().includes("/auth/v1/token") && response.ok(), { timeout: 30_000 }).catch(() => null)
+        ? page.waitForResponse((response) => (response.url().includes("/auth/v1/token") || new URL(response.url()).pathname === "/api/auth/login") && response.ok(), { timeout: 30_000 }).catch(() => null)
         : null;
       await page.getByRole("button", { name: "Ingresar", exact: true }).click();
       if (tokenAnswer) {
@@ -260,8 +266,16 @@ function makeT(definition, browser) {
     if (h.LIVE_ACCOUNTS) {
       await h.live.afterCase(record).catch((caught) => {
         record.problems.push(`clean-up: ${caught.message.slice(0, 300)}`);
+        record.status = "Blocked";
+        record.cleanupFailed = true;
+        process.exitCode = 1;
         console.log(`  CLEAN-UP FAILED ${caught.message.slice(0, 300)}`);
       });
+    }
+    if (record.touched?.notices || record.touched?.emails) {
+      record.status = "Blocked";
+      record.safetyFailed = true;
+      process.exitCode = 1;
     }
     if (!record.status) {
       record.status = error || record.checks.some((c) => !c.ok) || !record.checks.length ? "Fail" : "Pass";
@@ -271,6 +285,7 @@ function makeT(definition, browser) {
     fs.appendFileSync(RESULTS, `${JSON.stringify(record)}\n`);
     summary[record.status] += 1;
     console.log(`  => ${record.status} (${Math.round(record.ms / 1000)} s)`);
+    if (record.cleanupFailed || record.safetyFailed) break;
   }
   await browser.close();
   console.log(JSON.stringify(summary));

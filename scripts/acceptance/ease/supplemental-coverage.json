@@ -1,0 +1,346 @@
+{
+  "EASE-200": {
+    "browser": [
+      "EASE-100"
+    ],
+    "unit": [
+      {
+        "file": "tests/ux-effortless-accounts.test.cjs",
+        "name": "fix-01: Peruvian mobiles typed without +51 are stored and linked with the country code"
+      }
+    ]
+  },
+  "EASE-201": {
+    "phoneBackfill": true
+  },
+  "EASE-202": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-accounts.test.cjs",
+        "name": "fix-08: an unconfirmed e-mail says so and offers to resend the link"
+      }
+    ]
+  },
+  "EASE-209": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-accounts.test.cjs",
+        "name": "auth-01 / auth-02 / save-02 / save-03: passwords, a short sign-up, the way back and a page that says why"
+      }
+    ]
+  },
+  "EASE-213": {
+    "sql": [
+      "tests/ux-accounts-saving.sql"
+    ]
+  },
+  "EASE-214": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-accounts.test.cjs",
+        "name": "save-05: alerts save several values, have a name and say when they last matched"
+      }
+    ]
+  },
+  "EASE-215": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-accounts.test.cjs",
+        "name": "big-04 / save-01 / save-06: device saves, a pending intent used once, and repeated searches"
+      }
+    ]
+  },
+  "EASE-217": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-accounts.test.cjs",
+        "name": "save-07: one-click links are signed, expire, and cannot be changed"
+      }
+    ]
+  },
+  "EASE-218": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-accounts.test.cjs",
+        "name": "save-07: alert, price-drop and weekly e-mails carry photos, prices, a reason and the unsubscribe header"
+      }
+    ]
+  },
+  "EASE-219": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-accounts.test.cjs",
+        "name": "save-07: alert, price-drop and weekly e-mails carry photos, prices, a reason and the unsubscribe header"
+      }
+    ]
+  },
+  "EASE-221": {
+    "sql": [
+      "tests/ux-accounts-saving.sql"
+    ]
+  },
+  "EASE-224": {
+    "sql": [
+      "tests/ux-accounts-saving.sql"
+    ]
+  },
+  "EASE-225": {
+    "sql": [
+      "tests/ux-accounts-saving.sql"
+    ],
+    "browser": [
+      "EASE-758"
+    ]
+  },
+  "EASE-226": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-accounts.test.cjs",
+        "name": "auth-01 / auth-02 / save-02 / save-03: passwords, a short sign-up, the way back and a page that says why"
+      }
+    ]
+  },
+  "EASE-306": {
+    "sql": [
+      "tests/ux-effortless-selling.sql"
+    ]
+  },
+  "EASE-405": {
+    "sql": [
+      "tests/ux-my-listings.sql"
+    ]
+  },
+  "EASE-407": {
+    "unit": [
+      {
+        "file": "tests/ux-my-listings.test.cjs",
+        "name": "shop-02 store checklist ticks itself and shows payments only with the pilot"
+      }
+    ]
+  },
+  "EASE-412": {
+    "unit": [
+      {
+        "file": "tests/ux-my-listings.test.cjs",
+        "name": "rejection e-mails open the edit form; the five reminder e-mails render"
+      }
+    ]
+  },
+  "EASE-416": {
+    "unit": [
+      {
+        "file": "tests/ux-my-listings.test.cjs",
+        "name": "mine-01/02 the edit form opens on what to fix, in the sell-form order, with one send button"
+      }
+    ]
+  },
+  "EASE-417": {
+    "unit": [
+      {
+        "file": "tests/ux-my-listings.test.cjs",
+        "name": "rejection e-mails open the edit form; the five reminder e-mails render"
+      }
+    ]
+  },
+  "EASE-422": {
+    "sql": [
+      "tests/ux-my-listings.sql"
+    ]
+  },
+  "EASE-429": {
+    "unit": [
+      {
+        "file": "tests/ux-my-listings.test.cjs",
+        "name": "due labels count calendar days in Lima"
+      }
+    ]
+  },
+  "EASE-432": {
+    "sql": [
+      "tests/ux-my-listings.sql"
+    ]
+  },
+  "EASE-503": {
+    "unit": [
+      {
+        "file": "tests/ux-stores.test.cjs",
+        "name": "fix-09: the store invitation no longer says a store can't publish before approval"
+      }
+    ]
+  },
+  "EASE-504": {
+    "unit": [
+      {
+        "file": "tests/ux-stores.test.cjs",
+        "name": "shop-01: the application starts from what the invitation and the signup already said"
+      }
+    ]
+  },
+  "EASE-505": {
+    "unit": [
+      {
+        "file": "tests/ux-stores.test.cjs",
+        "name": "shop-03: Mi tienda splits the public profile from the company data and warns before a RUC change"
+      },
+      {
+        "file": "tests/ux-stores.test.cjs",
+        "name": "shop-03: a social field takes the handle or the link"
+      }
+    ]
+  },
+  "EASE-507": {
+    "sql": [
+      "tests/ux-stores-requests.sql"
+    ]
+  },
+  "EASE-508": {
+    "sql": [
+      "tests/ux-stores-requests.sql"
+    ]
+  },
+  "EASE-509": {
+    "unit": [
+      {
+        "file": "tests/ux-stores.test.cjs",
+        "name": "stock-22: an open import says when it expires, and can be discarded from the notice"
+      }
+    ]
+  },
+  "EASE-510": {
+    "sql": [
+      "tests/ux-stores-import.sql"
+    ]
+  },
+  "EASE-513": {
+    "sql": [
+      "tests/ux-stores-requests.sql"
+    ]
+  },
+  "EASE-529": {
+    "sql": [
+      "tests/ux-stores-storefront.sql"
+    ]
+  },
+  "EASE-606": {
+    "sql": [
+      "tests/ux-inventory.sql"
+    ]
+  },
+  "EASE-613": {
+    "sql": [
+      "tests/ux-inventory.sql"
+    ]
+  },
+  "EASE-700": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-speed.test.cjs",
+        "name": "the 500 page offers “Reintentar”, which refreshes the server payload and resets the boundary (fix-09)"
+      }
+    ]
+  },
+  "EASE-704": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-speed.test.cjs",
+        "name": "only taps that change Laria's page start the navigation feedback (fast-01)"
+      }
+    ]
+  },
+  "EASE-705": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-speed.test.cjs",
+        "name": "the feedback is one bar, one polite status and skeletons built from the Skeleton primitive (fast-01)"
+      }
+    ]
+  },
+  "EASE-708": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-speed.test.cjs",
+        "name": "data-saving images ask the same srcset for about 1.5 device pixels per CSS pixel (fast-03)"
+      }
+    ]
+  },
+  "EASE-717": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-speed.test.cjs",
+        "name": "shared photos come back once, in order, and stale shares are dropped (big-12)"
+      },
+      {
+        "file": "tests/ux-effortless-speed.test.cjs",
+        "name": "/compartir opens the right listing form, waits for sign-in and is never indexed (big-12)"
+      }
+    ]
+  },
+  "EASE-718": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-speed.test.cjs",
+        "name": "the installable app: manifest, icons and share target agree with the service worker (big-12)"
+      },
+      {
+        "file": "tests/ux-effortless-speed.test.cjs",
+        "name": "the service worker keeps up to 10 shared photos on the phone and opens /compartir (big-12)"
+      }
+    ]
+  },
+  "EASE-720": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-push.test.cjs",
+        "name": "one notice reads like its row in Notificaciones, with the listing's name; several become one (big-12)"
+      }
+    ]
+  },
+  "EASE-721": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-push.test.cjs",
+        "name": "the worker sends nothing from 22:00 to 08:00 in Lima and reports each person's outcome (big-12)"
+      }
+    ]
+  },
+  "EASE-722": {
+    "sql": [
+      "tests/ux-effortless-push.sql"
+    ]
+  },
+  "EASE-723": {
+    "sql": [
+      "tests/ux-effortless-push.sql"
+    ]
+  },
+  "EASE-724": {
+    "sql": [
+      "tests/ux-effortless-push.sql"
+    ]
+  },
+  "EASE-725": {
+    "sql": [
+      "tests/ux-effortless-push.sql"
+    ]
+  },
+  "EASE-726": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-push.test.cjs",
+        "name": "the push worker route needs CRON_SECRET and runs without keys in log mode (big-12)"
+      }
+    ]
+  },
+  "EASE-727": {
+    "unit": [
+      {
+        "file": "tests/ux-effortless-push.test.cjs",
+        "name": "push messages are encrypted for the browser exactly as RFC 8291 describes (big-12)"
+      },
+      {
+        "file": "tests/ux-effortless-push.test.cjs",
+        "name": "VAPID signs for the push service's origin with Laria's key pair, which must be whole and match (big-12)"
+      }
+    ]
+  }
+}

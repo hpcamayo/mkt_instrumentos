@@ -27,7 +27,40 @@ function stop() {
   if (fs.existsSync(path.join(DATA, "PG_VERSION")) && ready()) sh(`su postgres -c "${PGBIN}/pg_ctl -D '${DATA}' -m fast -w stop"`);
 }
 
+async function runDocker(image) {
+  const container = `laria-ease-replay-${process.pid}`;
+  const migrations = fs.readdirSync(path.join(REPO, "supabase/migrations")).filter((name) => name.endsWith(".sql")).sort();
+  const result = { ok: false, migrations: migrations.length, applied: 0, leftovers: [], cleaned: false, error: null, log: "" };
+  const sql = ["\\set ON_ERROR_STOP 1", "\\i /workspace/scripts/local-db/supabase-shim.sql"];
+  for (const name of migrations) sql.push("begin;", `\\i /workspace/supabase/migrations/${name}`, "commit;", `\\echo EASE-APPLIED ${name}`);
+  sql.push("\\echo EASE-SESSION-END", "select 'EASE-LEFTOVER function ' || proname from pg_proc where pronamespace = pg_my_temp_schema() union all select 'EASE-LEFTOVER relation ' || relname from pg_class where relnamespace = pg_my_temp_schema();");
+  const script = ["set -e", "initdb -D /tmp/ease-e-replay -U postgres --auth=trust -E UTF8 --locale=C.UTF-8 >/dev/null",
+    "pg_ctl -D /tmp/ease-e-replay -l /tmp/replay.log -o '-c shared_preload_libraries=pg_cron -c cron.database_name=postgres' -w start >/dev/null",
+    "psql -h 127.0.0.1 -U postgres -d postgres -X -q -At <<'EASE_SQL'", ...sql, "EASE_SQL"].join("\n");
+  try {
+    result.log = execFileSync("docker", ["run", "--rm", "--name", container, "--user", "postgres", "-i", "-v", `${REPO}:/workspace:ro`,
+      "--entrypoint", "bash", image, "-s"], { input: script, encoding: "utf8", maxBuffer: 64 << 20, timeout: 600_000, stdio: ["pipe", "pipe", "pipe"] });
+    result.applied = (result.log.match(/^EASE-APPLIED /gm) || []).length;
+    result.leftovers = result.log.match(/^EASE-LEFTOVER .+$/gm) || [];
+    result.ok = result.applied === migrations.length && result.log.includes("EASE-SESSION-END");
+  } catch (error) {
+    result.log = `${error.stdout || ""}${error.stderr || ""}`;
+    result.applied = (result.log.match(/^EASE-APPLIED /gm) || []).length;
+    result.error = (result.log.split("\n").find((line) => /ERROR|not found/.test(line)) || error.message).slice(0, 400);
+  } finally {
+    try { execFileSync("docker", ["rm", "-f", container], { stdio: "ignore" }); } catch {}
+    try { execFileSync("docker", ["inspect", container], { stdio: "ignore" }); } catch { result.cleaned = true; }
+  }
+  result.log = result.log.split("\n").filter((line) => !line.startsWith("EASE-APPLIED ")).join("\n").slice(-3000);
+  return result;
+}
+
 async function run() {
+  if (process.env.LIVE === "1") throw new Error("migration replay only runs locally");
+  if (process.env.E_REPLAY_IMAGE || process.env.LARIA_TEST_DB_CONTAINER) {
+    const image = process.env.E_REPLAY_IMAGE || execFileSync("docker", ["inspect", "--format", "{{.Config.Image}}", process.env.LARIA_TEST_DB_CONTAINER], { encoding: "utf8" }).trim();
+    return runDocker(image);
+  }
   const result = { ok: false, migrations: 0, applied: 0, leftovers: [], cleaned: false, error: null, log: "" };
   if (PORT === 54322 || !DATA.includes("ease-e-replay")) throw new Error("the replay only runs on its own scratch cluster");
   const migrations = fs.readdirSync(path.join(REPO, "supabase", "migrations")).filter((name) => name.endsWith(".sql")).sort();
@@ -92,6 +125,6 @@ if (require.main === module) {
   run().then((result) => {
     console.log(JSON.stringify({ ...result, log: undefined }, null, 2));
     console.log(result.log);
-    process.exit(result.ok ? 0 : 1);
+    process.exit(result.ok && !result.leftovers.length ? 0 : 1);
   });
 }

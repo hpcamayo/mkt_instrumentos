@@ -84,6 +84,14 @@ function sortedByName(names) {
 // in a subquery.
 function statementAs(userId, statement, { admin = false } = {}) {
   localOnly("statementAs");
+  if (!userId) {
+    const fn = /select\s+public\.([a-z_]+)\(/i.exec(statement)?.[1];
+    if (fn) {
+      const [privilege] = h.sql(`select coalesce(bool_or(has_function_privilege('anon', p.oid, 'execute')), false) as allowed
+        from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = ${L(fn)}`);
+      if (!privilege.allowed) return { ok: false, error: `permission denied for function ${fn} (verified from grants; direct denial covered by the isolated SQL suite)` };
+    }
+  }
   const { execFileSync } = require("node:child_process");
   const claims = userId
     ? { sub: userId, role: "authenticated", aal: "aal2", ...(admin ? { app_metadata: { role: "admin" } } : {}) }

@@ -76,7 +76,8 @@ async function paceCatalog() {
   for (;;) {
     const now = Date.now();
     pace.catalog = pace.catalog.filter((at) => now - at < 60_000);
-    if (pace.catalog.length < 20) {
+    const limit = Math.max(1, Math.min(20, Number(process.env.LIVE_CATALOG_LIMIT) || 20));
+    if (pace.catalog.length < limit) {
       pace.catalog.push(now);
       return;
     }
@@ -112,6 +113,14 @@ function sqlAs(userId, query, { admin = false } = {}) {
     ? { sub: userId, role: "authenticated", aal: "aal2", ...(admin ? { app_metadata: { role: "admin" } } : {}) }
     : { role: "anon" };
   const role = userId ? "authenticated" : "anon";
+  // The installed Supabase image can segfault when invoking a revoked function. Check the effective grant first;
+  // the separate disposable SQL run still executes the negative probes on plain PostgreSQL with the same migrations.
+  const functions = [...query.matchAll(/\b(public|laria_private)\.([a-z_]+)\s*\(/gi)];
+  for (const [, schema, name] of functions) {
+    const [privilege] = sql(`select coalesce(bool_or(has_function_privilege(${literal(role)}, p.oid, 'execute')), false) as allowed
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = ${literal(schema)} and p.proname = ${literal(name)}`);
+    if (!privilege.allowed) throw new Error(`permission denied for function ${schema}.${name} (verified from grants)`);
+  }
   const out = execFileSync("psql", [PG, "-At", "-v", "ON_ERROR_STOP=1", "-c",
     `begin; set local role ${role}; select set_config('request.jwt.claims', ${literal(JSON.stringify(claims))}, true); ` +
     `select coalesce(jsonb_agg(q), '[]'::jsonb) from (${query}) q; commit;`], { encoding: "utf8" });
@@ -135,11 +144,30 @@ function account({ kind = "buyer", name, phone, city = "Lima", region = "Lima" }
   const whatsapp = phone || `519${String(Math.floor(10_000_000 + Math.random() * 89_999_999))}`;
   if (kind !== "buyer") Object.assign(meta, { phone: whatsapp, city, region });
   const app = { provider: "email", providers: ["email"], ...(kind === "admin" ? { role: "admin" } : {}) };
-  exec(`insert into auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-      raw_app_meta_data, raw_user_meta_data, confirmation_token, recovery_token, created_at, updated_at)
-    values ('00000000-0000-0000-0000-000000000000', ${literal(id)}, 'authenticated', 'authenticated', ${literal(email)},
-      extensions.crypt(${literal(PASSWORD)}, extensions.gen_salt('bf')), now(), ${literal(JSON.stringify(app))},
-      ${literal(JSON.stringify(meta))}, '', '', now(), now())`);
+  // Real GoTrue expects empty token fields and an email identity, unlike the cloud gateway stand-in.
+  const columns = sql("select table_name, column_name, data_type, is_generated from information_schema.columns where table_schema = 'auth' and table_name in ('users', 'identities')");
+  const users = columns.filter((column) => column.table_name === "users" && column.is_generated !== "ALWAYS");
+  const identities = columns.filter((column) => column.table_name === "identities" && column.is_generated !== "ALWAYS");
+  const values = {
+    instance_id: literal("00000000-0000-0000-0000-000000000000"), id: literal(id), aud: "'authenticated'", role: "'authenticated'",
+    email: literal(email), encrypted_password: `extensions.crypt(${literal(PASSWORD)}, extensions.gen_salt('bf'))`,
+    email_confirmed_at: "now()", raw_app_meta_data: literal(JSON.stringify(app)), raw_user_meta_data: literal(JSON.stringify(meta)),
+    created_at: "now()", updated_at: "now()",
+  };
+  for (const column of users) {
+    if (!(column.column_name in values) && /^(character varying|text)$/.test(column.data_type)
+      && /(token|^email_change$|^phone_change$)/.test(column.column_name)) values[column.column_name] = "''";
+  }
+  const names = Object.keys(values).filter((name) => users.some((column) => column.column_name === name));
+  let statements = `insert into auth.users (${names.join(", ")}) values (${names.map((name) => values[name]).join(", ")})`;
+  if (identities.length) {
+    const identity = { id: literal(id), user_id: literal(id), provider_id: literal(id), provider: "'email'",
+      identity_data: literal(JSON.stringify({ sub: id, email, email_verified: true, phone_verified: false })),
+      last_sign_in_at: "now()", created_at: "now()", updated_at: "now()" };
+    const names = Object.keys(identity).filter((name) => identities.some((column) => column.column_name === name));
+    statements += `; insert into auth.identities (${names.join(", ")}) values (${names.map((name) => identity[name]).join(", ")})`;
+  }
+  exec(statements);
   return { id, email, name: fullName, phone: kind === "buyer" ? null : whatsapp, city };
 }
 

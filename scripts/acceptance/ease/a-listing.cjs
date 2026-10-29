@@ -45,6 +45,7 @@ function seedReviews(t, seller, buyer, ratings) {
 // Clicks the WhatsApp control and returns the tab it opened (WhatsApp is a stand-in page here).
 async function contactPopup(page, locator = a.contactLink(page)) {
   const [popup] = await Promise.all([page.waitForEvent("popup", { timeout: 10_000 }), locator.click()]);
+  await popup.waitForURL((url) => url.href !== "about:blank", { timeout: 10_000 });
   return popup;
 }
 
@@ -303,6 +304,8 @@ cases.push({
     } else {
       const finder = await t.page();
       await t.goto(finder, "/listados?category=pedals");
+      await a.settled(finder);
+      if ((await a.resultCount(finder)) < 2) t.skip("live: similar-ranking check requires several public pedal listings");
       const first = (await a.resultCards(finder))[0];
       if (!first) t.skip("no pedals on the live catalog");
       path = `/instrumentos/${first.slug}`;
@@ -514,6 +517,7 @@ cases.push({
 cases.push({
   id: "EASE-114",
   run: async (t) => {
+    if (t.live) t.skip("requires the local payments-pilot variant, which is off on laria.audio");
     const seller = t.account({ kind: "particular" });
     const listing = t.listing(seller, pedal({ title: `Pedal Boss preguntas ${a.word("zl")}`, price: 350 }));
     const page = await t.page();
@@ -580,6 +584,7 @@ cases.push({
   id: "EASE-116",
   timeout: 300_000,
   run: async (t) => {
+    if (t.live) t.skip("requires the local payments-pilot variant, which is off on laria.audio");
     const seller = t.account({ kind: "particular" });
     const expensive = t.listing(seller, { title: `Fender American Strat ${a.word("zc")}`, model: "American Professional II", price: 6500 });
     const expensive2 = t.listing(seller, { title: `Gibson Les Paul ${a.word("zc")}`, brand: "Gibson", model: "Les Paul Standard", price: 9800 });

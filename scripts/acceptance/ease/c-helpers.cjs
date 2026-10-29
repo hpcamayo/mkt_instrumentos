@@ -25,6 +25,7 @@ function attempt(userId, query, options) {
   try {
     return { ok: true, rows: rows(userId, query, options) };
   } catch (error) {
+    if (error instanceof h.LocalOnly || error instanceof h.LiveUnsafe) throw error;
     const text = `${error.stderr || ""}${error.message || ""}`;
     const line = text.split("\n").find((part) => /ERROR:/.test(part)) || text.split("\n")[0];
     return { ok: false, error: line.replace(/^.*ERROR:\s*/, "").trim() };
@@ -33,6 +34,7 @@ function attempt(userId, query, options) {
 
 // Statements and a final query in one transaction that is rolled back: nothing it does is kept. Returns the query's rows.
 function rolledBack(statements, query) {
+  if (h.LIVE) throw new h.LocalOnly("rolled-back fixture SQL only runs on the local stack");
   const out = execFileSync("psql", [h.PG, "-At", "-v", "ON_ERROR_STOP=1", "-c",
     `begin; select set_config('app.allow_listing_admin_fields', 'true', true); ${statements}; ` +
     `select coalesce(jsonb_agg(q), '[]'::jsonb) from (${query}) q; rollback;`], { encoding: "utf8" });
@@ -117,8 +119,28 @@ function samples(count, offset = 0) {
 
 // Objects a user uploaded (storage.objects, written by the local gateway), newest first.
 const objects = (userId, bucket, since = "-infinity") => h.sql(`select bucket_id, name, created_at, metadata from storage.objects
-  where owner = ${L(userId)} and bucket_id = ${L(bucket)} and created_at > ${L(since)}::timestamptz order by created_at desc`);
-const diskPath = (bucket, name) => path.join(STORAGE, bucket, name);
+  where coalesce(owner_id, owner::text) = ${L(userId)} and bucket_id = ${L(bucket)} and created_at > ${L(since)}::timestamptz order by created_at desc`);
+function diskPath(bucket, name) {
+  if (h.LIVE) {
+    const file = path.join(os.tmpdir(), "ease-owned-images", h.live.RUN, bucket, name);
+    const bytes = h.live.photoBytes(bucket, name);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, bytes);
+    return file;
+  }
+  const file = path.join(STORAGE, bucket, name);
+  if (!fs.existsSync(file)) {
+    const env = Object.fromEntries(fs.readFileSync(path.join(ROOT, ".env.local"), "utf8").split("\n").filter(Boolean).map((line) => {
+      const at = line.indexOf("="); return [line.slice(0, at), line.slice(at + 1)];
+    }));
+    const origin = new URL(env.NEXT_PUBLIC_SUPABASE_URL);
+    if (!["localhost", "127.0.0.1"].includes(origin.hostname)) throw new Error("image inspection requires a local Supabase");
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    execFileSync("curl", ["-fsS", "--max-time", "30", "-H", `Authorization: Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      `${origin.origin}/storage/v1/object/authenticated/${bucket}/${name.split("/").map(encodeURIComponent).join("/")}`, "-o", file]);
+  }
+  return file;
+}
 // The stored file of a public photo URL (…/storage/v1/object/public/<bucket>/<name>).
 function photoFile(url) {
   const match = /\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/.exec(url || "");
@@ -145,7 +167,7 @@ async function fillSell(page, { photos = samples(2), category = "Guitarras", typ
     if ((await chip.getAttribute("aria-pressed")) !== "true") await chip.click();
   }
   if (photos.length) await page.locator("#venta-fotos").setInputFiles(photos);
-  await waitUploads(page);
+  await waitUploads(page, 60_000, photos.length);
   if (stopAfter === 1) return;
   await continueStep(page);
   if (type) await chooseType(form, type);
@@ -170,11 +192,13 @@ async function chooseType(form, type) {
 }
 
 // Every photo shows Subida (or Reintentar after an error).
-async function waitUploads(page, timeout = 60_000) {
-  await until(async () => {
+async function waitUploads(page, timeout = 60_000, expected = 0) {
+  const complete = await until(async () => {
     const busy = await page.getByText(/Subiendo \d+%|Preparando…/).count();
-    return busy === 0;
+    const uploaded = await page.getByText("Subida", { exact: true }).count();
+    return busy === 0 && uploaded >= expected;
   }, { timeout });
+  if (!complete) throw new Error(`Photo uploads did not finish (${await page.getByText("Subida", { exact: true }).count()} of ${expected})`);
 }
 
 // Step 4: accept the rules and press Publicar; wait for the confirmation.

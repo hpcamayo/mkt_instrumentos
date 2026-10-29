@@ -2,7 +2,6 @@
 // home, Pendientes, the edit form, Mis publicaciones, vacation mode, transactions and statistics. Run with
 // scripts/acceptance/ease/run.cjs. Every case signs in with its own accounts, so none is marked live.
 "use strict";
-const fs = require("node:fs");
 const c = require("./c-helpers.cjs");
 
 const L = c.L;
@@ -449,7 +448,7 @@ cases.push({
   id: "EASE-302",
   run: async (t) => {
     const owner = t.account({ kind: "store_owner" });
-    const store = t.store(owner, { inventory: true });
+    t.store(owner, { inventory: true });
     const code = `C302${t.tag().slice(-4).toUpperCase()}`;
     const first = c.sku(owner, { merchant_sku: `${code}-A`, product_name: "Fender Player Telecaster", unit_price_pen: 3200 });
     const second = c.sku(owner, { merchant_sku: `${code}-B`, product_name: "Boss Katana 50", unit_price_pen: 1100 });
@@ -541,6 +540,13 @@ cases.push({
     const owner = t.account({ kind: "store_owner" });
     t.store(owner, { verified: true });
     const page = await t.page({ as: owner.email, permissions: ["clipboard-read", "clipboard-write"] });
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "share", { configurable: true, value: undefined });
+      Object.defineProperty(navigator, "clipboard", { configurable: true, value: {
+        writeText: async (text) => { window.__easeCopied = text; }, readText: async () => window.__easeCopied || "",
+      } });
+    });
+    t.note("Clipboard API simulated; the operating system clipboard is not exercised.");
     await t.goto(page, "/mi-cuenta/tienda/publicar");
     await c.fillSell(page, { brand: "Gretsch", model: "G2622 Streamliner", price: "3900",
       description: "Guitarra semihueca nueva, con garantía de la tienda y funda incluida en la compra." });

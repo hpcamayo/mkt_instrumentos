@@ -18,6 +18,7 @@ cases.push({
     const places = (data?.locations || []).filter((place) => place.count > 0).sort((x, y) => y.count - x.count);
     if (places.length < 2) t.skip("needs listings in two places or more");
     const most = places[0];
+    if (t.live && most.count < 12) t.skip("live: needs a city with at least 12 listings for the preserve-scroll branch");
     const fewest = places[places.length - 1];
 
     async function choose(city) {
@@ -72,6 +73,25 @@ cases.push({
     const page = await t.page();
     await t.goto(page, "/listados");
     await a.settled(page);
+    if (t.live) {
+      const total = await a.resultCount(page);
+      const catalog = await a.resultCards(page);
+      // Only infer absence after inspecting the complete public catalog, never from an empty search response.
+      if (total !== null && total <= 24 && catalog.length === total) {
+        const heads = [];
+        for (const card of catalog) {
+          const detail = await t.page();
+          await t.goto(detail, `/instrumentos/${card.slug}`);
+          heads.push(await detail.locator("h1").first().evaluate((h) => {
+            let text = h.innerText;
+            for (let n = h.nextElementSibling, i = 0; n && i < 2; n = n.nextElementSibling, i += 1) text += ` ${n.innerText}`;
+            return text;
+          }));
+          await detail.context().close();
+        }
+        if (!heads.some((text) => /strat/i.test(text))) t.skip(`live: the complete public catalog (${total} listings) has no Stratocaster fixture required by this case`);
+      }
+    }
     const results = {};
     for (const text of ["strato", "stratocaster", "cajon", "bass", "fender strato"]) {
       await a.headerSearch(page, text);
@@ -594,7 +614,7 @@ cases.push({
     const counts = all.category || {};
     const perCategory = {};
     const facetsOf = async (key) => (perCategory[key] ??= (counts[key] || 0) > 0 ? await a.facets(page, `category=${key}`) : null);
-    const buttons = await page.locator("button[aria-controls^='categoria-']").evaluateAll((items) => items.map((b) => ({ key: b.getAttribute("aria-controls").replace(/^categoria-/, ""), label: b.innerText.trim() })));
+    const buttons = await page.locator("button[aria-controls^='categoria-']:visible").evaluateAll((items) => items.map((b) => ({ key: b.getAttribute("aria-controls").replace(/^categoria-/, ""), label: b.innerText.trim() })));
     const landing = {};
     const emptyTypes = [];
     const emptyBrands = [];
@@ -602,7 +622,7 @@ cases.push({
     let brandLinks = 0;
     for (const button of buttons) {
       const key = button.key.replace(/-/g, "_");
-      await page.locator(`button[aria-controls='categoria-${button.key}']`).click();
+      await page.locator(`button[aria-controls='categoria-${button.key}']:visible`).click();
       const panel = page.locator(`#categoria-${button.key}`);
       await panel.waitFor();
       const links = await panel.locator("a").evaluateAll((items) => items.map((l) => ({ text: l.innerText.trim(), href: l.getAttribute("href") })));
@@ -627,7 +647,7 @@ cases.push({
       await page.keyboard.press("Escape");
       await page.waitForTimeout(150);
     }
-    await page.locator("button[aria-controls='categoria-guitars']").click();
+    await page.locator("button[aria-controls='categoria-guitars']:visible").click();
     await t.shot(page, "menu-guitars");
     await page.keyboard.press("Escape");
 
@@ -721,7 +741,6 @@ cases.push({
     await dialog.waitFor();
     const apply = dialog.getByRole("button", { name: /^(Ver [\d,]+ resultados?|Ver resultados|Sin resultados)$/ }).last();
     const label = async () => (await apply.innerText()).trim();
-    const fmt = (n) => n.toLocaleString("en-US");
     // Locally the scope is this check's own listings, so every number is exact. Live, the counts are shared for a minute
     // while the page counts fresh, so a listing published meanwhile may show in one and not yet in the other.
     const near = (n, expected) => (t.live ? Math.abs(n - expected) <= Math.max(3, Math.ceil(expected * 0.1)) : n === expected);
