@@ -89,7 +89,8 @@ function listingImages(listing: ListingDetailData) {
     .map((photo) => photo.image_url)
     .filter((url) => typeof url === "string" && url.length > 0)
     .slice(0, 4)
-    .map((url) => absoluteUrl(url));
+    // Raw Supabase objects send X-Robots-Tag: none. The gallery's existing optimizer serves indexable photos.
+    .map((url) => absoluteUrl(`/_next/image?url=${encodeURIComponent(url)}&w=1200&q=75`));
 }
 
 export function listingSummary(listing: ListingDetailData) {
