@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SignupConfirmation } from "@/components/signup-confirmation";
 import { LocationFields } from "@/components/location-fields";
 import { profileFieldErrors } from "@/lib/form-validation";
 import { checkEmailAvailability, signUpErrorFoundExistingAccount, signUpFoundExistingAccount } from "@/lib/auth/email-check";
@@ -28,6 +29,8 @@ export function StoreOwnerSignupForm() {
   const [validation, errorSummary] = useFormErrors("tienda-cuenta", "crear tu cuenta");
   const [state, setState] = useState<State>("checking");
   const [message, setMessage] = useState("");
+  const [sentTo, setSentTo] = useState("");
+  const submitting = useRef(false);
 
   useEffect(() => {
     const supabase = getSupabaseBrowserClient();
@@ -48,9 +51,22 @@ export function StoreOwnerSignupForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting.current || state === "checking" || state === "submitting" || state === "sent") return;
+    submitting.current = true;
+    try {
+      await createAccount(event.currentTarget);
+    } catch {
+      setState("error");
+      setMessage("No se pudo completar la solicitud. Revisa tu conexión e intenta nuevamente.");
+    } finally {
+      submitting.current = false;
+    }
+  }
+
+  async function createAccount(form: HTMLFormElement) {
     setState("submitting");
     setMessage("");
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const password = String(formData.get("password") ?? "");
     const profileInput = {
@@ -59,7 +75,7 @@ export function StoreOwnerSignupForm() {
       city: String(formData.get("city") ?? ""),
       region: String(formData.get("region") ?? ""),
     };
-    if (!validation.validate(event.currentTarget, profileFieldErrors(profileInput))) {
+    if (!validation.validate(form, profileFieldErrors(profileInput))) {
       setState("idle");
       return;
     }
@@ -139,8 +155,13 @@ export function StoreOwnerSignupForm() {
       router.refresh();
       return;
     }
+    setSentTo(email);
     setState("sent");
-    setMessage("Revisa tu correo para confirmar la cuenta de Tienda. El enlace te llevará a Mi cuenta.");
+    setMessage("Cuenta creada. Revisa tu correo para confirmar la cuenta de Tienda. El enlace te llevará a Mi cuenta.");
+  }
+
+  if (state === "sent") {
+    return <SignupConfirmation email={sentTo} message={message} />;
   }
 
   return (
@@ -159,7 +180,7 @@ export function StoreOwnerSignupForm() {
         <LocationFields idPrefix="tienda-cuenta" cityError={validation.errorFor("city")} regionError={validation.errorFor("region")} />
       </div>
       {message ? (
-        <Notice tone={state === "sent" ? "success" : "warning"}>{message}</Notice>
+        <Notice tone="warning">{message}</Notice>
       ) : null}
       <p className="t-meta">
         Al crear la cuenta aceptas los{" "}

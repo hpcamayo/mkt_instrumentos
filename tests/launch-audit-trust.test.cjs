@@ -503,6 +503,8 @@ test("A14 (AUTH-002): with Auth's autoconfirm on, Supabase's user_already_exists
 function signupHarness(file, name) {
   const state = [];
   let hookIndex = 0;
+  let mounted = false;
+  const effects = [];
   const calls = { signUps: [], fieldErrors: {} };
   // By default Supabase's answer for a new address: the account just made, with the data the form sent.
   let signUpAnswer = (input) => ({ data: { user: { id: "u-1", identities: [{ id: "i-1" }], user_metadata: { ...input.options.data, email: input.email } }, session: null }, error: null });
@@ -514,7 +516,11 @@ function signupHarness(file, name) {
         if (!(index in state)) state[index] = initial;
         return [state[index], (value) => { state[index] = typeof value === "function" ? value(state[index]) : value; }];
       },
-      useEffect() {},
+      useRef(initial) {
+        const index = hookIndex++;
+        return state[index] ??= { current: initial };
+      },
+      useEffect(effect) { if (!mounted) effects.push(effect); },
     },
     "next/link": { __esModule: true, default: () => null },
     "next/navigation": { useRouter: () => ({ push() {}, replace() {}, refresh() {} }), useSearchParams: () => new URLSearchParams("") },
@@ -540,7 +546,15 @@ function signupHarness(file, name) {
     "@/components/location-fields": { LocationFields: () => null },
     "@/components/auth/resend-confirmation": { ResendConfirmation: () => null },
   })[name];
-  const render = () => { hookIndex = 0; return component(); };
+  const render = () => {
+    hookIndex = 0;
+    const tree = component();
+    if (!mounted) {
+      mounted = true;
+      for (const effect of effects) effect();
+    }
+    return tree;
+  };
   const find = (node) => {
     if (!node || typeof node !== "object") return null;
     if (Array.isArray(node)) { for (const child of node) { const found = find(child); if (found) return found; } return null; }
@@ -551,11 +565,15 @@ function signupHarness(file, name) {
     signUpAnswers(answer) { signUpAnswer = answer; },
     async submit(email) {
       const fields = { fullName: "Ana Pérez", email, password: "clave-segura-2026", acceptedRules: "on", phone: "987654321", city: "Lima", region: "Lima" };
+      render();
+      await Promise.resolve();
       await render().props.onSubmit({ preventDefault() {}, currentTarget: { fields } });
     },
-    // The form's notice, as it reads.
+    // The confirmation replaces the form; errors still use its notice.
     message() {
-      const notice = find(render());
+      const tree = render();
+      if (tree.type?.name === "SignupConfirmation") return tree.props.message;
+      const notice = find(tree);
       const first = notice ? [notice.props.children].flat()[0] : null;
       return typeof first === "string" ? first : first?.props?.children ?? null;
     },
@@ -570,9 +588,9 @@ test("A28: a sign-up goes on to Supabase when the e-mail check can't answer, and
   globalThis.FormData = class { constructor(form) { this.fields = form.fields; } get(field) { return field in this.fields ? this.fields[field] : null; } };
   globalThis.window = { location: { origin: "https://laria.audio" } };
   const forms = [
-    { file: "components/seller-signup-form.tsx", name: "SellerSignupForm", type: "seller", other: "store_owner", sent: /^Revisa tu correo para confirmar tu cuenta\./,
+    { file: "components/seller-signup-form.tsx", name: "SellerSignupForm", type: "seller", other: "store_owner", sent: /^Cuenta creada\. Revisa tu correo para confirmar tu cuenta\./,
       exists: "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo." },
-    { file: "components/store-owner-signup-form.tsx", name: "StoreOwnerSignupForm", type: "store_owner", other: "seller", sent: /^Revisa tu correo para confirmar la cuenta de Tienda\./,
+    { file: "components/store-owner-signup-form.tsx", name: "StoreOwnerSignupForm", type: "store_owner", other: "seller", sent: /^Cuenta creada\. Revisa tu correo para confirmar la cuenta de Tienda\./,
       exists: "Ese correo ya está registrado. Usa un correo exclusivo para la Tienda." },
   ];
   try {
