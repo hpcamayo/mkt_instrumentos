@@ -231,7 +231,8 @@ module.exports = [
         return hidden.length === 2 && hidden.every((image) => image.complete && image.naturalWidth > 0);
       }, null, { timeout: 20_000 }).then(() => t.check(true, "the next and the previous photo are loaded hidden behind the current one"), () => t.check(false, "the next and previous photos were not both loaded"));
 
-      // On a slow network the next photo shows at once: it is already in the cache. Measured in an unrouted tab, because
+      // The current photo and its initially adjacent photos are already cached. Check both directions; a second
+      // forward step can reach an unseen photo still being prefetched on a slow connection. Use an unrouted tab, because
       // the harness's request routing turns the browser cache off.
       const plain = await u.plainPage(t);
       try {
@@ -245,7 +246,7 @@ module.exports = [
         const requested = [];
         plain.page.on("request", (request) => { if (/\/_next\/image|\.jpe?g/.test(request.url())) requested.push(request.url()); });
         const moves = [];
-        for (const key of ["ArrowRight", "ArrowRight", "ArrowLeft"]) {
+        for (const key of ["ArrowRight", "ArrowLeft", "ArrowLeft"]) {
           const before = (await u.lightboxState(plain.page)).src;
           const started = Date.now();
           await plain.page.keyboard.press(key);
@@ -257,7 +258,7 @@ module.exports = [
           await plain.page.waitForTimeout(250);
         }
         const shown = moves.length;
-        t.check(moves.every((ms) => ms !== null && ms < 300), `with 600 ms of network latency each of ${shown} moves shows its photo at once (${moves.map((ms) => `${ms} ms`).join(", ")})`);
+        t.check(moves.every((ms) => ms !== null && ms < 300), `with 600 ms of network latency each of ${shown} moves among the initially cached neighbours is instant (${moves.map((ms) => `${ms} ms`).join(", ")})`);
         t.note(`photo requests while moving on the slow network: ${requested.length} (the neighbours of the new photo)`);
       } finally {
         await plain.close();

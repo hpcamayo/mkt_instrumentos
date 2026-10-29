@@ -6,7 +6,7 @@
 set -euo pipefail
 sql="$(cat)"
 workdir=${SUPABASE_WORKDIR:-$(cd "$(dirname "$0")/../../.." && pwd)}
-supabase --workdir "$workdir" db query --linked --output json "$sql" | node -e '
+SUPABASE_TELEMETRY_DISABLED=true DO_NOT_TRACK=1 supabase --workdir "$workdir" db query --linked --output json "$sql" | node -e '
 let text = "";
 process.stdin.on("data", (chunk) => (text += chunk)).on("end", () => {
   let value;

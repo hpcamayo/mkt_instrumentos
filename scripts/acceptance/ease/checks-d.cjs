@@ -1346,11 +1346,21 @@ cases.push({
     await fresh.getByLabel("Variantes", { exact: true }).fill("10-46, 9-42\n11-49");
     await fresh.locator("input[name='opening']").fill("5");
     await t.shot(page, "variants");
+    const variantErrors = [];
+    const observeVariant = async (response) => {
+      if (new URL(response.url()).pathname === "/api/store/inventory" && !response.ok()) {
+        const body = await response.json().catch(() => ({}));
+        variantErrors.push(`${response.status()}: ${body.message || body.code || "sin detalle"}`);
+      }
+    };
+    page.on("response", observeVariant);
     await fresh.getByRole("button", { name: "Crear 3 SKU" }).click();
     const variants = await d.until(() => {
       const rows = t.sql(`select merchant_sku, variant_label, quantity_on_hand from public.store_inventory_items where store_id = ${L(store.id)} and merchant_sku like ${L(`${base}-%`)} order by merchant_sku`);
       return rows.length === 3 ? rows : null;
     }, { timeout: 15_000 });
+    page.off("response", observeVariant);
+    if (!variants) t.note(`Variant failures: ${variantErrors.join(" | ") || "no failed API response"}; form: ${(await fresh.innerText().catch(() => "closed")).slice(-1600)}`);
     t.check(variants && variants.every((row) => row.quantity_on_hand === 5) && ["10-46", "11-49", "9-42"].every((label) => variants.some((row) => row.variant_label === label && row.merchant_sku === `${base}-${label}`)),
       `variants create one SKU per line with a suffix: ${(variants || []).map((row) => row.merchant_sku).join(", ")}`);
   },
