@@ -192,7 +192,13 @@ def main():
         status = conservative_status(phases) if phases else case["status"]
         item["status"] = status
         if phases:
-            descriptions = [f"{name}: {item[name]['status']}" for name in ["local", "live"] if name in item]
+            revisions = {"local": report["local_application_revision"], "live": report["live_deployment_revision"]}
+            descriptions = []
+            for name in ["local", "live"]:
+                if name in item:
+                    revision = revisions[name]
+                    stamp = f" {revision[:7]}" if re.fullmatch(r"[0-9a-f]{7,40}", revision) else ""
+                    descriptions.append(f"{name}{stamp}: {item[name]['status']}")
             if "supplemental" in item:
                 descriptions.append("supporting unit/SQL checks: Pass")
             if "audit" in item:
