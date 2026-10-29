@@ -194,6 +194,14 @@ Use the neutral subject `Confirma tu cuenta en Laria`; the body supplies the cor
 
 The signup redirect includes the encoded destination `/mi-cuenta?confirmed=1`, so successful confirmation opens the dashboard with an explicit verified-email message.
 
+### Signup feedback in the app
+
+When signup succeeds without an active session, both `/registro/vendedor` and `/registro/tienda` replace the form with a confirmation starting “Cuenta creada. Revisa tu correo…”. It shows the submitted email, explains the next step and spam-folder check, and offers a login link. `PageNotice` gives the confirmation focus and scrolls it into view; the create-account button is removed, and concurrent submissions are ignored. Request failures keep the form available for retry. Immediate-session profile saves and account redirects stay unchanged.
+
+Particular signup preserves its safe `next` destination through the confirmation email, login link and existing “Reenviar enlace” control, including that control's cooldown. Email checks, duplicate-account detection, field validation and authentication rate limits keep their existing behavior.
+
+Verification: submit each account form with email confirmation enabled, including from the bottom of a 390 px mobile viewport. Confirm the notice becomes visible and focused, displays the submitted address, and leaves no create-account button. Check Particular signup with `next=/vender` and the resend control. Automated regressions are in `tests/signup-feedback.test.cjs`.
+
 ### Hosted production audit — 2026-09-13
 
 The production Supabase `Confirm signup` template was inspected and still uses the static subject `Confirma tu cuenta Particular en Laria` plus a Particular-only body. The application signup metadata is already correct: Particular sends `account_type='seller'` and Store Owner sends `account_type='store_owner'`. The carried-over defect is therefore hosted template configuration, not callback or signup code.
