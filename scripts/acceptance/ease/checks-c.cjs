@@ -112,7 +112,7 @@ cases.push({
       for (const label of await form.getByText(/^(Subiendo \d+%|Preparando…)$/).allInnerTexts().catch(() => [])) seen.add(label.trim());
       const values = await form.getByRole("progressbar", { name: "Subida de la foto" }).evaluateAll((nodes) => nodes.map((node) => Number(node.getAttribute("aria-valuenow"))));
       const partway = values.find((value) => value > 0 && value < 100);
-      return partway ? { values, partway } : null;
+      return partway && [...seen].some((label) => /Subiendo [1-9]\d?%/.test(label)) ? { values, partway } : null;
     }, { timeout: 30_000, every: 100 });
     t.check(Boolean(progress) && seen.has("Preparando…") && [...seen].some((label) => /Subiendo [1-9]\d?%/.test(label)),
       `each photo shows its progress while it uploads (seen: ${[...seen].join(", ")}; progress bars ${progress?.values?.join("/")})`);
@@ -210,9 +210,31 @@ cases.push({
     const row = drafts.locator("li").filter({ hasText: "Yamaha Pacifica 112V" });
     t.check(await row.count() === 1 && /2 fotos/.test(await row.innerText()), `Mis publicaciones lists the draft (${(await row.innerText().catch(() => "")).replace(/\s+/g, " ")})`);
     await t.shot(b, "mis-publicaciones");
+    let resuming = false;
+    let refusedResume = false;
+    if (!t.live) await b.route("**/api/submissions", async (route) => {
+      if (route.request().method() === "POST" && route.request().postDataJSON()?.action === "resume") {
+        resuming = true;
+        if (!refusedResume) {
+          refusedResume = true;
+          return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "No pudimos abrir el borrador." }) });
+        }
+        await t.sleep(2000);
+      }
+      await route.continue();
+    });
     await row.getByRole("link", { name: "Continuar" }).click();
     await b.waitForURL(/borrador=/);
     const form = c.sellForm(b);
+    if (!t.live) {
+      await b.getByRole("button", { name: "Volver a intentar", exact: true }).waitFor();
+      const [kept] = t.sql(`select jsonb_array_length(photos) as photos from public.listing_drafts where id = ${L(draft.id)}`);
+      t.check(await form.count() === 0 && kept.photos === 2, "a resume error preserves the saved draft and offers a retry instead of an empty form");
+      resuming = false;
+      await b.getByRole("button", { name: "Volver a intentar", exact: true }).click();
+      await c.until(() => resuming);
+      t.check(await form.count() === 0 && await b.getByRole("status").filter({ hasText: "Abriendo tu borrador" }).isVisible(), "the form waits for the saved draft before it becomes editable");
+    }
     await form.waitFor();
     await b.waitForTimeout(1000);
     const heading = (await form.getByRole("heading", { level: 2 }).first().innerText()).replace(/\s+/g, " ");

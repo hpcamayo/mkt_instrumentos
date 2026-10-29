@@ -235,3 +235,8 @@ before its matching publications, inspect filtered inventory rows separately fro
 from its form field, use progressive sort links without JavaScript and wait for the purchase contact response.
 These corrections retain the original behavioral assertions. Live results identify the deployed revision separately
 from candidate results; local fixes do not establish that production has been deployed.
+
+The live run also exposed a delayed account-draft resume: an empty editable form appeared before the saved data
+arrived, then jumped steps during interaction. The form now waits for restoration and offers a retry after a resume
+error without exposing a blank form that could replace the draft. EASE-305 injects a failed resume followed by a
+delayed successful response and verifies that the original photos and fields survive.
