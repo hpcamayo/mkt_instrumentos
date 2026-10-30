@@ -79,6 +79,11 @@ more.
 non-Admin factors (including a password change), recovery revocation of refresh tokens and issued API/Storage tokens,
 the service-contact authorization boundary, and anonymous help-ticket limits across different e-mail addresses.
 
+`tests/review-followup.integration.cjs` checks CSV and Excel stock exports for 200 items across six locations through
+the API's 1,000-row cap, identical and changed location-movement retries, and the actual account download for a counter
+purchase and private equipment. The SQL suites cover cross-feature export privacy and count retries; the database
+integration runner also checks both buyer-wide try-out limits with concurrent requests at different stores.
+
 ## What `cases.tsv` records
 
 The run of 27 Oct 2026 (GitHub Actions run 40574393086, commit 30e9c1f) passed every check. The 52 Automated cases

@@ -145,6 +145,64 @@ select pg_temp.check(not has_function_privilege('authenticated', 'public.service
   and has_function_privilege('service_role', 'public.service_delete_account(uuid)', 'execute'),
   'self-service deletion is the server''s');
 
+-- Export the same cross-feature fixtures before deleting them. Counter transactions have no listing and must
+-- survive that missing join; the first seller review stays double-blind until the buyer writes theirs.
+savepoint account_export_followup;
+insert into public.store_counter_sales(id,store_id,sale_key,lines,token_hash,created_by,expires_at,status,claimed_by,claimed_at)
+values ('e16a0000-0000-4000-8000-000000000001','e1610000-0000-4000-8000-000000000001','fap-counter-export',
+  '[{"name":"Equipo de mostrador","quantity":1}]',repeat('d',64),'e1600000-0000-4000-8000-000000000003',now()+interval '1 hour',
+  'claimed','e1600000-0000-4000-8000-000000000001',now());
+insert into public.verified_transactions(id,counter_sale_id,seller_user_id,store_id,buyer_user_id,seller_identity_type,sold_at,verified_at,review_deadline)
+values ('e16b0000-0000-4000-8000-000000000001','e16a0000-0000-4000-8000-000000000001','e1600000-0000-4000-8000-000000000003',
+  'e1610000-0000-4000-8000-000000000001','e1600000-0000-4000-8000-000000000001','store',now(),now(),now()+interval '10 days');
+insert into public.transaction_reviews(transaction_id,reviewer_user_id,subject_user_id,direction,rating,comment)
+values ('e16b0000-0000-4000-8000-000000000001','e1600000-0000-4000-8000-000000000003','e1600000-0000-4000-8000-000000000001',
+  'seller_to_buyer',5,'UNREVEALED-COUNTER-REVIEW');
+insert into public.service_reviews(booking_id,service_id,client_user_id,rating,comment,status,hidden_at,hidden_reason)
+values ('e1690000-0000-4000-8000-000000000003','e1680000-0000-4000-8000-000000000001','e1600000-0000-4000-8000-000000000009',
+  1,'HIDDEN-SERVICE-REVIEW','hidden',now(),'Oculta por moderación');
+insert into public.store_einvoice_settings(store_id,api_url,token_ciphertext,token_hint)
+values ('e1610000-0000-4000-8000-000000000001','https://api.nubefact.com/api/v1/fap-test-account',
+  'v1.NEVER_EXPORT_IV.NEVER_EXPORT_TAG.NEVER_EXPORT_TOKEN','Ab12');
+insert into public.listing_consignments(listing_id,store_id,invite_token_hash,invite_expires_at)
+values ('e1620000-0000-4000-8000-000000000002','e1610000-0000-4000-8000-000000000001',repeat('e',64),now()+interval '1 day');
+set local role authenticated;
+select pg_temp.claims('e1600000-0000-4000-8000-000000000001');
+do $$ declare e jsonb := public.export_my_data(); begin
+  perform pg_temp.check(e->'gear_items'->0->>'serial' = 'MX12345' and jsonb_array_length(e->'gear_items')=1, 'only owned gear, including serial');
+  perform pg_temp.check(jsonb_array_length(e->'gear_reminders')=1 and jsonb_array_length(e->'trade_requests')=2
+    and jsonb_array_length(e->'trade_offers')=1 and jsonb_array_length(e->'price_steps')=1
+    and jsonb_array_length(e->'private_offers')=2 and jsonb_array_length(e->'bundle_offers')=1, 'selling datasets are complete');
+  perform pg_temp.check(jsonb_array_length(e->'services')=1 and jsonb_array_length(e->'service_bookings')=3
+    and jsonb_array_length(e->'service_activity')=1 and jsonb_array_length(e->'tryouts')=2, 'service and booking datasets are complete');
+  perform pg_temp.check(jsonb_array_length(e->'purchases_and_sales')=1
+    and e->'purchases_and_sales'->0->>'origin'='counter' and e->'purchases_and_sales'->0->>'listing'='Equipo de mostrador',
+    'counter purchase snapshot included without a listing');
+  perform pg_temp.check(jsonb_array_length(e->'reviews_received')=0
+    and position('UNREVEALED-COUNTER-REVIEW' in e::text)=0, 'the other side cannot export an unrevealed review');
+  perform pg_temp.check(position('HIDDEN-SERVICE-REVIEW' in e::text)=0 and position('Su Les Paul' in e::text)=0
+    and position('51999996002' in e::text)=0 and position('cifrado' in e::text)=0, 'foreign content, contact and credentials stay out');
+  perform pg_temp.check(not exists(select 1 from jsonb_array_elements(e->'service_bookings') b
+    where b ?| array['client_user_id','provider_user_id']), 'no counterpart identity in bookings');
+end $$;
+reset role;
+insert into public.transaction_reviews(transaction_id,reviewer_user_id,subject_store_id,direction,rating,comment)
+values ('e16b0000-0000-4000-8000-000000000001','e1600000-0000-4000-8000-000000000001','e1610000-0000-4000-8000-000000000001',
+  'buyer_to_seller',5,'Mi reseña de compra en mostrador');
+set local role authenticated;
+select pg_temp.claims('e1600000-0000-4000-8000-000000000001');
+select pg_temp.check(jsonb_array_length(public.export_my_data()->'reviews_written')=1
+  and jsonb_array_length(public.export_my_data()->'reviews_received')=1, 'both counter reviews export once revealed');
+select pg_temp.claims('e1600000-0000-4000-8000-000000000003');
+do $$ declare e jsonb := public.export_my_data(); begin
+  perform pg_temp.check(jsonb_array_length(e->'purchases_and_sales')=1 and jsonb_array_length(e->'reviews_received')=1,
+    'the store owner exports the counter sale and its published review');
+  perform pg_temp.check(position('cifrado' in e::text)=0 and position('51999996001' in e::text)=0
+    and position('51999996002' in e::text)=0 and position('NEVER_EXPORT_TOKEN' in e::text)=0
+    and position(repeat('e',64) in e::text)=0, 'store export omits provider credentials, invite secrets and buyer contact details');
+end $$;
+rollback to savepoint account_export_followup;
+
 -- Admin anonymises the person (the hook used to accept the service role only).
 set local role authenticated;
 select pg_temp.claims('e1600000-0000-4000-8000-000000000009', true, 'aal2');

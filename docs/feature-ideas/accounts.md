@@ -6,6 +6,12 @@ Wider enforcement is deferred until paying users and a new owner-approved releas
 revokes all sessions; revoked JWTs are refused by the API and Storage. Apply
 `20261210120800_feat_pilot_security_fixes.sql` with the other PR migrations at the coordinated release.
 
+**Review follow-up (2026-10-30):** `20261210120900_feat_review_followup.sql` includes counter purchases and their
+reviews in the account download, plus owned equipment/reminders, trade and private offers, consignments, try-outs,
+services/bookings/reviews and feature settings. Received reviews still obey visibility rules. Other people's contact
+details, audience identities, invite secrets and provider credentials are excluded. Verification is recorded in
+[the follow-up note](review-followup-2026-10-30.md).
+
 
 Ideas safe-08 (two-step sign-in and devices), safe-09 (e-mail change, your data and deleting the account), buy-11
 (Google and Apple sign-in), safe-10 (help center), safe-02 (stolen-gear registry) and safe-05 (red flags at review

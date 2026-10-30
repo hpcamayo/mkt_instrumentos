@@ -135,6 +135,7 @@ TESTS=(
   "tests/transactions.integration.cjs"
   "tests/sprint-8-admin-reports.integration.cjs"
   "tests/pilot-security.integration.cjs"
+  "tests/review-followup.integration.cjs"
 )
 failed=()
 : > "$RESULTS/summary.txt"

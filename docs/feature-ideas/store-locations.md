@@ -1,5 +1,12 @@
 # Feature ideas: store-locations batch
 
+Review follow-up (2026-10-30): location stock reads paginate every item chunk, and CSV/Excel exports fail if the read
+is incomplete. `20261210120900_feat_review_followup.sql` records the original location movement inputs under the
+existing idempotency lock, so changed operations cannot replay as success. Identical count retries retain their
+original per-location target even after later stock changes. Older count movements with no saved original target
+fail closed on replay; this branch's migrations have not been applied to production. See
+[verification](review-followup-2026-10-30.md).
+
 Ideas run-02 ("Sedes": a store with several shops) and run-03 ("Boleta electrónica" from Mostrador). Henri marked
 both Yes on 2026-10-26. Wave 2. Branch `claude/project-thread-vqn8t0`, PR into `features/marketplace`.
 

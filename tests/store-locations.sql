@@ -208,6 +208,33 @@ select pg_temp.check((public.set_location_stock_counts(pg_temp.loc('Centro'), js
     jsonb_build_object('item_id', (pg_temp.item('SL-PUA')).id, 'quantity', 10)), 'qa-sl-counts-1')->>'replayed')::boolean,
   'a retried upload is replayed');
 
+-- A location replay must match the operation, not merely the location. Keep count targets stable even after
+-- another movement changes the location and the store-wide total.
+savepoint followup_replays;
+select pg_temp.owner_a();
+select pg_temp.expect_error(format($$select public.record_location_stock_movement(%L, %L, 'sale', 3, 'tienda_fisica', 'Mostrador', null, null, 'qa-sl-sale-centro')$$,
+  pg_temp.loc('Centro'), (pg_temp.item('SL-GTR')).id), 'IDEMPOTENCY_KEY_REUSED');
+select pg_temp.expect_error(format($$select public.record_location_stock_movement(%L, %L, 'sale', 2, 'tienda_fisica', 'Mostrador', null, null, 'qa-sl-sale-centro')$$,
+  pg_temp.loc('Centro'), (pg_temp.item('SL-CAB')).id), 'IDEMPOTENCY_KEY_REUSED');
+select pg_temp.expect_error(format($$select public.record_location_stock_movement(%L, %L, 'return', 2, 'tienda_fisica', 'Mostrador', null, null, 'qa-sl-sale-centro')$$,
+  pg_temp.loc('Centro'), (pg_temp.item('SL-GTR')).id), 'IDEMPOTENCY_KEY_REUSED');
+select pg_temp.expect_error(format($$select public.record_location_stock_movement(%L, %L, 'sale', 2, 'otro', 'Mostrador', null, null, 'qa-sl-sale-centro')$$,
+  pg_temp.loc('Centro'), (pg_temp.item('SL-GTR')).id), 'IDEMPOTENCY_KEY_REUSED');
+select pg_temp.expect_error(format($$select public.record_location_stock_movement(%L, %L, 'sale', 2, 'tienda_fisica', 'Otra referencia', null, null, 'qa-sl-sale-centro')$$,
+  pg_temp.loc('Centro'), (pg_temp.item('SL-GTR')).id), 'IDEMPOTENCY_KEY_REUSED');
+select pg_temp.expect_error(format($$select public.record_location_stock_movement(%L, %L, 'sale', 2, 'tienda_fisica', 'Mostrador', 'Otro motivo', null, 'qa-sl-sale-centro')$$,
+  pg_temp.loc('Centro'), (pg_temp.item('SL-GTR')).id), 'IDEMPOTENCY_KEY_REUSED');
+select pg_temp.expect_error(format($$select public.record_location_stock_movement(%L, %L, 'stock_count', 4, null, null, null, (pg_temp.item('SL-GTR')).version, 'qa-sl-count-centro')$$,
+  pg_temp.loc('Centro'), (pg_temp.item('SL-GTR')).id), 'IDEMPOTENCY_KEY_REUSED');
+select public.record_location_stock_movement(pg_temp.loc('Centro'), (pg_temp.item('SL-GTR')).id, 'restock', 1, null, null, null, null, 'qa-followup-restock');
+do $$ declare before integer := pg_temp.at('SL-GTR', 'Centro'); begin
+  perform pg_temp.check((public.record_location_stock_movement(pg_temp.loc('Centro'), (pg_temp.item('SL-GTR')).id,
+    'stock_count', 3, null, null, null, (pg_temp.item('SL-GTR')).version, 'qa-sl-count-centro')->>'replayed')::boolean,
+    'the original count target replays after another movement');
+  perform pg_temp.check(pg_temp.at('SL-GTR', 'Centro') = before, 'a count replay does not reset stock');
+end $$;
+rollback to savepoint followup_replays;
+
 -- ================================================================== public reads
 
 reset role;

@@ -22,21 +22,30 @@ export async function getOwnLocations(supabase: AnyClient): Promise<StoreLocatio
 export async function getLocationStock(supabase: AnyClient, storeId: string, itemIds: string[] | null): Promise<LocationStock[] | null> {
   const db = supabase as unknown as SupabaseClient;
   const rows: LocationStock[] = [];
+  const batches: (string[] | null)[] = [];
   if (itemIds) {
-    for (let start = 0; start < itemIds.length; start += 200) {
-      const { data, error } = await db.from("store_location_stock").select("location_id,item_id,quantity_on_hand")
-        .eq("store_id", storeId).in("item_id", itemIds.slice(start, start + 200));
+    const distinctIds = [...new Set(itemIds)];
+    for (let start = 0; start < distinctIds.length; start += 200) batches.push(distinctIds.slice(start, start + 200));
+  } else batches.push(null);
+  for (const ids of batches) {
+    let from = 0;
+    let total = 0;
+    do {
+      // One SKU can have 20 location rows. Even a 200-SKU chunk needs pagination; use the exact first-page count
+      // so a server-side row cap cannot turn a truncated response into a successful export with false zeroes.
+      let query = db.from("store_location_stock").select("location_id,item_id,quantity_on_hand", from === 0 ? { count: "exact" } : undefined)
+        .eq("store_id", storeId).order("item_id").order("location_id").range(from, from + 999);
+      if (ids) query = query.in("item_id", ids);
+      const { data, error, count } = await query;
       if (error) return null;
+      if (from === 0) {
+        if (count === null) return null;
+        total = count;
+      }
+      if (!data?.length && from < total) return null;
       rows.push(...((data ?? []) as LocationStock[]));
-    }
-    return rows;
-  }
-  for (let from = 0; from < 100_000; from += 1000) {
-    const { data, error } = await db.from("store_location_stock").select("location_id,item_id,quantity_on_hand")
-      .eq("store_id", storeId).order("item_id").order("location_id").range(from, from + 999);
-    if (error) return null;
-    rows.push(...((data ?? []) as LocationStock[]));
-    if (!data || data.length < 1000) break;
+      from += data?.length ?? 0;
+    } while (from < total);
   }
   return rows;
 }
