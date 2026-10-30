@@ -115,8 +115,9 @@ export function createCounterQueueFlusher({
     if (running) return running;
     running = (async () => {
       let sent = 0;
-      for (const sale of [...read()]) {
-        if (sale.error || !read().some((entry) => entry.key === sale.key && !entry.error)) continue;
+      for (;;) {
+        const sale = read().find((entry) => !entry.error);
+        if (!sale) break;
         const result = await send(sale);
         if (!result.ok && isConnectionFailure(result.code)) break;
         update((current) => current.flatMap((entry) => entry.key !== sale.key

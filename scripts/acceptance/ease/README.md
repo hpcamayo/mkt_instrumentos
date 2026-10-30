@@ -127,3 +127,10 @@ Native sharing, phone-camera selection, OS print previews, spoken screen-reader 
 intents, push delivery and legal sign-off retain explicit manual gates. Supplied-file/mock-OS portions are described
 in the records. A failed partial assertion remains Fail and is never hidden by a manual skip. The October 30 evidence
 and owner checklist are in `docs/acceptance/ease-2026-10-30/`.
+
+For a protected preview, run with the verified project's development OIDC token and set
+`EASE_VERCEL_OIDC_TOKEN` in memory. The harness applies it only to the preview origin, after the existing live guards.
+It forwards no token through redirects: protected requests use a zero-redirect fetch/fulfill, and browser redirects
+start fresh guarded requests. This follows [Playwright's documented header/redirect behavior](https://playwright.dev/docs/api/class-route#route-continue).
+Offline requests abort before that transport, so browser offline testing cannot accidentally send a sale through
+the API request client. Tokens are never logged or committed; no share link or protection-setting change is needed.

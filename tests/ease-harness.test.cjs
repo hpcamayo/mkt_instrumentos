@@ -89,3 +89,34 @@ test("structured CLI SQL errors preserve the business message without SQLSTATE o
     "RESERVATION_NOT_OWNED: No puedes administrar esta publicación.");
   assert.equal(structuredSqlError({ stderr: "network timeout" }), null);
 });
+
+
+// Preview authentication must preserve the write guard and never send its token through a redirect or offline replay.
+const { continueWithPreviewAccess } = require("../scripts/acceptance/ease/live-safety.cjs");
+function previewRoute(url, fails = false) {
+  const calls = [];
+  return { calls, request: () => ({ url: () => url, headers: () => ({ accept: "text/html" }) }),
+    continue: async () => calls.push(["continue"]), abort: async code => calls.push(["abort", code]),
+    fetch: async options => { calls.push(["fetch", options]); if (fails) throw new Error("secret in upstream log"); return { status: () => 302 }; },
+    fulfill: async options => calls.push(["fulfill", options]),
+  };
+}
+test("preview OIDC transport authenticates one origin without following redirects", async () => {
+  const route = previewRoute("https://branch.vercel.app/login");
+  await continueWithPreviewAccess(route, { origin: "https://branch.vercel.app", token: "test-oidc", offline: false });
+  assert.equal(route.calls[0][0], "fetch");
+  assert.equal(route.calls[0][1].maxRedirects, 0);
+  assert.equal(route.calls[0][1].headers["x-vercel-trusted-oidc-idp-token"], "test-oidc");
+  assert.equal(route.calls[1][0], "fulfill");
+  const outside = previewRoute("https://other.example/redirect");
+  await continueWithPreviewAccess(outside, { origin: "https://branch.vercel.app", token: "test-oidc", offline: false });
+  assert.deepEqual(outside.calls, [["continue"]]);
+});
+test("preview transport cannot send an offline sale or leak fetch error headers", async () => {
+  const route = previewRoute("https://branch.vercel.app/api/store/inventory");
+  await continueWithPreviewAccess(route, { origin: "https://branch.vercel.app", token: "test-oidc", offline: true });
+  assert.deepEqual(route.calls, [["abort", "internetdisconnected"]]);
+  const failed = previewRoute("https://branch.vercel.app/login", true);
+  await continueWithPreviewAccess(failed, { origin: "https://branch.vercel.app", token: "test-oidc", offline: false });
+  assert.deepEqual(failed.calls.at(-1), ["abort", "failed"]);
+});

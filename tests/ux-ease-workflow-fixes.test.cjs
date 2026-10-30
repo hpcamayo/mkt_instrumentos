@@ -18,9 +18,8 @@ test("offline replay coalesces overlapping runs and preserves a newer sale and i
   finish({ok:true,data:{}});
   await first;
   assert.deepEqual(queue.map(entry=>entry.key),["newer"]);
-  assert.deepEqual(calls,["first"]);
+  assert.deepEqual(calls,["first","newer"],"new arrivals replay immediately after the in-flight sale");
   assert.deepEqual(recorded,[1]);
-  await flush();
   assert.equal(queue[0].error,refusal.message);
   await flush();await flush();
   assert.deepEqual(calls,["first","newer"],"a refused sale is retained and not retried");
@@ -30,7 +29,7 @@ test("a late refusal cannot resurrect a discarded sale or erase another one",asy
   let queue=[sale("discarded")],finish;
   const flush=counter.createCounterQueueFlusher({
     read:()=>queue,update:change=>{queue=change(queue);},
-    send:()=>new Promise(resolve=>{finish=resolve;}),onRecorded:()=>{},
+    send:entry=>entry.key==="discarded"?new Promise(resolve=>{finish=resolve;}):Promise.resolve({ok:false,code:"NETWORK",message:"Sin conexión",detail:null}),onRecorded:()=>{},
   });
   const pending=flush();
   const kept=sale("keep");queue=[kept];
