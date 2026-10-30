@@ -1,0 +1,3 @@
+insert into public.catalog_categories(id,label_en,label_es,depth,laria_category) values ('instruments.guitars.ease','EASE guitars','Guitarras EASE',3,'guitars') on conflict(id) do nothing;
+insert into public.catalog_manufacturers(id,slug,canonical_name,normalized_name) values ('ea5e0311-0000-4000-8000-000000000001','ease-fender','Fender','fender') on conflict(id) do nothing;
+insert into public.catalog_products(id,manufacturer_id,canonical_model_name,normalized_model_name,model_key,category_id,identity_domain,confidence,verification_status) values ('ea5e0311-0000-4000-8000-000000000002','ea5e0311-0000-4000-8000-000000000001','EASE reference guitar','ease reference guitar','easereferenceguitar','instruments.guitars.ease','guitars',1,'VERIFIED') on conflict(id) do nothing;

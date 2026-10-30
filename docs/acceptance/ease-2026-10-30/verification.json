@@ -1,0 +1,45 @@
+{
+  "source_revision": "e0a659fb48ef0d0db0256ae9aee27a0a14b0a7be",
+  "unit": {
+    "passed": 889,
+    "failed": 0,
+    "skipped": 0
+  },
+  "sql": {
+    "migrations": 105,
+    "passed_suites": 18,
+    "failed_suites": 0,
+    "detail": "sql.json",
+    "schema_unchanged_between_initial_and_current_revisions": true
+  },
+  "eslint": {
+    "target": "remaining*.cjs, checks-f.cjs, coverage.cjs",
+    "errors": 0,
+    "warnings": 0
+  },
+  "coverage": {
+    "registered": 343,
+    "implemented": 293,
+    "groups": {
+      "a": 48,
+      "b": 20,
+      "c": 18,
+      "d": 37,
+      "e": 99,
+      "f": 71
+    },
+    "missing": 50
+  },
+  "limitations": [
+    "Physical OS sharing, camera, install, push and spoken screen-reader output require the manual checklist.",
+    "No application behavior, production flags, schema, migrations or deployment changed in this task.",
+    "Product inventory exports were exercised; the canonical acceptance workbook was not read or generated."
+  ],
+  "registry": {
+    "cases": 882,
+    "validation": "Pass",
+    "tests": 13,
+    "skipped": 2,
+    "skip_reason": "Dormant acceptance workbook checks"
+  }
+}

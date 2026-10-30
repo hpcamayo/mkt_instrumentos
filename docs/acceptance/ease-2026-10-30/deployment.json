@@ -1,0 +1,8 @@
+{
+  "url": "https://laria.audio",
+  "deployment_id": "dpl_GfoVXt7QB6xy4FSHhA4FEv1QDUkj",
+  "git_sha": "e0a659fb48ef0d0db0256ae9aee27a0a14b0a7be",
+  "state": "READY",
+  "target": "production",
+  "observed_at": "2026-10-30 05:18:46 UTC"
+}

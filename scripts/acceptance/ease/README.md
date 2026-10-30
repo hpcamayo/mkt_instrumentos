@@ -1,7 +1,7 @@
 # Effortless Laria acceptance checks (EASE)
 
-The registry contains **343 EASE IDs**. The recovered browser harness implements **222**: A 48, B 20, C 18,
-D 37 and E 99. `coverage.cjs` lists the missing 121 IDs; `--strict` fails while any are missing. Supporting
+The registry contains **343 EASE IDs**. The recovered browser harness implements **293**: A 48, B 20, C 18,
+D 37, E 99 and F 71. `coverage.cjs` lists the missing 50 IDs; `--strict` fails while any are missing. Supporting
 unit/SQL evidence covers some automated gaps. Manual and owner acceptance requires observed workflows.
 
 ## Local execution
@@ -20,7 +20,7 @@ fields. Optional pilot checks use `PILOT_BASE` with `LARIA_ASSISTED_COMMERCE=1`.
 ```sh
 node scripts/acceptance/ease/coverage.cjs
 node scripts/acceptance/ease/run.cjs scripts/acceptance/ease/checks-a.cjs --results=/tmp/ease/local/results-a.jsonl
-# Repeat for b, c, d, e. For one case, add --only=EASE-301.
+# Repeat for b, c, d, e, f. For one case, add --only=EASE-301.
 node --require ./tests/setup-alias.cjs --test --test-reporter=tap tests/*.test.cjs > /tmp/ease/local/unit-final.tap
 node scripts/acceptance/ease/sql-suites.cjs /tmp/ease/local/sql-final.json
 node scripts/prototype/a11y-audit.cjs /tmp/ease/local/a11y-pages.json
@@ -96,6 +96,34 @@ regenerated. The dated report records the exact scope and remaining gaps.
 
 Use `--registry-only=EASE-013,EASE-028,...` when reconciling a focused fix: the JSON report still contains every observed case, while unrelated TSV rows stay byte-for-byte unchanged. `results-*.jsonl` and `reruns*.jsonl` are reconciled by their recorded timestamps. Preserve earlier reports; identify the full-run application revision and any later scoped browser reruns separately.
 
-Clean accessibility evidence accepts EASE-711/713 only with the complete page/state sample, all four roles, both viewport sizes and no skipped states. EASE-710 still needs the remaining focus scenarios. The slow-network media probe measures the current photo and its initially cached adjacent photos in both directions; unseen photos continue loading through background prefetch.
+Clean accessibility evidence accepts EASE-711/713 only with the complete page/state sample, all four roles, both viewport sizes and no skipped states. The remaining focus scenarios now run in `remaining-speed.cjs`; EASE-710 remains Fail for observed overlay coverage. The slow-network media probe measures the current photo and its initially cached adjacent photos in both directions; unseen photos continue loading through background prefetch.
 
 When using a Docker wrapper instead of native `psql`, stream host temporary `-f` files into the container; their host paths do not exist there. The live database adapter disables CLI telemetry so an unrelated analytics request cannot delay cleanup verification.
+
+## Remaining 75 acceptance pass
+
+`remaining.cjs` selects the exact 75 cases left Not Run after the recovered suite. Group F registers its 71 new
+IDs; the four previously implemented native/manual cases stay registered in B/D. Run the full scoped entry point
+to include their partial checks and explicit manual gates:
+
+```sh
+node scripts/acceptance/ease/run.cjs scripts/acceptance/ease/remaining.cjs --results=/tmp/ease/remaining-local.jsonl
+scripts/acceptance/ease/live-run.sh both scripts/acceptance/ease/remaining.cjs
+```
+
+Use only an isolated local stack for reminder jobs, auth inbox actions, fault injection, Admin moderation, imports,
+final publication, complaint submissions and pilot checks. For brand suggestions, seed
+`fixtures/catalog-brands.sql` into that local database **before** starting the app; a cached empty catalog must be
+cleared only in the disposable app cache. The 8 KB HEIC fixture was generated from this repository's icon with
+`sips -s format heic public/icons/icon-512.png --out scripts/acceptance/ease/fixtures/sample.heic`; it exercises
+actual browser conversion and JPEG storage. Local auth checks read Mailpit at the Supabase API port plus three
+(default 54324; set `EASE_MAIL_URL` for another port).
+
+Navigation delay routes call `fallback()` so the context's live guard still applies. EASE-701 measures browser
+click-to-commit time; a live click at or above 100 ms cannot establish the fast branch. EASE-710 uses actual Tab
+traversal through the bulk bar, repeated-search prompt, comparison tray, Undo and listing contact at both widths.
+
+Native sharing, phone-camera selection, OS print previews, spoken screen-reader output, Android install/gallery
+intents, push delivery and legal sign-off retain explicit manual gates. Supplied-file/mock-OS portions are described
+in the records. A failed partial assertion remains Fail and is never hidden by a manual skip. The October 30 evidence
+and owner checklist are in `docs/acceptance/ease-2026-10-30/`.
