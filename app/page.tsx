@@ -9,7 +9,7 @@ import { JsonLd } from "@/components/json-ld";
 import { PageContainer } from "@/components/page-container";
 import { fetchHomeData, type HomeData } from "@/lib/home";
 import { pickHomeBanner } from "@/lib/home-banner";
-import { buildHomeMetadata, buildOrganizationJsonLd } from "@/lib/seo";
+import { buildHomeMetadata, buildOrganizationJsonLd, buildWebsiteJsonLd } from "@/lib/seo";
 import { renderPerRequestIfBuilding } from "@/lib/cache-build";
 import { getListingCounts } from "@/lib/catalog-brands";
 import { warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
@@ -47,6 +47,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={buildWebsiteJsonLd()} />
       <JsonLd data={buildOrganizationJsonLd()} />
       <HomeBanner banner={banner} />
       <PageContainer className="flex flex-col gap-8 pb-8 pt-4 md:gap-12 md:pb-12 md:pt-6">
