@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Suspense } from "react";
+import { Analytics } from "@vercel/analytics/next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteShell } from "@/components/site-shell";
 import "./globals.css";
@@ -94,6 +95,7 @@ export default async function RootLayout({
         <ServiceWorkerRegistration />
         {/* A13: browser errors no error page catches, counted for Admin > Errores. */}
         <ErrorReporter />
+        <Analytics />
       </body>
     </html>
   );
