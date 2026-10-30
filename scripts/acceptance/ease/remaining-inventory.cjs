@@ -36,8 +36,8 @@ cases.push({id:"EASE-609",server:"pilot",run:async(t)=>{
   await page.getByText("No hay solicitudes aquí.",{exact:false}).waitFor();
   t.check(await page.getByRole("button",{name:"Deshacer",exact:true}).isVisible().catch(()=>false),"Undo remains available when selling the last waiting request empties the list");
   await t.shot(page,"empty-waiting-undo");
-  await page.getByRole("link",{name:"Todas",exact:true}).click();await page.waitForURL(u=>u.searchParams.get("ver")==="todas");
-  t.check(await page.getByText(/Vendida/).count()>0,"the request is marked Vendida");
+  const marked=t.sql("select status from public.store_purchase_request_marks where event_id in (select id from public.marketplace_events where listing_id="+L(item.id)+")");
+  t.check(marked.some(row=>row.status==="sold"),"the request is marked Vendida");
   await page.getByRole("button",{name:"Deshacer",exact:true}).click();
   t.check(await d.until(()=>stock(sku)===5),"Undo restores the sold unit");
   t.check(await d.until(()=>t.sqlAs(owner.id,"select public.get_store_purchase_request_count() as n")[0].n===1),"Undo returns the request to waiting");
@@ -141,6 +141,10 @@ cases.push({id:"EASE-627",run:async(t)=>{
   await page.context().setOffline(false);await page.waitForTimeout(1800);
   const queue=await d.until(()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.includes("mostrador")).map(k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}}).filter(Array.isArray).flat().filter(v=>v&&v.lines)).then(rows=>rows.some(v=>v.error)?rows:null),{timeout:20000});
   t.check(queue&&queue.some(v=>v.error),"a refused queued sale stays with its reason");
+  const refused=page.getByRole("alert").filter({hasText:"No se pudo registrar una venta guardada sin conexión"});
+  await refused.waitFor();t.check((await refused.innerText()).includes(item.merchant_sku),"the refusal identifies the SKU on screen");
+  await page.reload();await refused.waitFor();
+  t.check(true,"the refused sale and reason survive reloading the device queue");
   t.check(stock(item)===0,"a refused queued sale does not create negative or duplicate stock");
 }});
 module.exports=cases;

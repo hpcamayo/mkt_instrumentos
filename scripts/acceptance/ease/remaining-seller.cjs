@@ -138,17 +138,21 @@ cases.push({id:"EASE-424",run:async(t)=>{
 }});
 cases.push({id:"EASE-425",run:async(t)=>{
   const owner=t.account({kind:"particular"}),item=t.listing(owner),page=await t.page({as:owner.email});
+  const visitor=await t.page();await t.goto(visitor,item.path);
+  await visitor.getByRole("link",{name:/WhatsApp/}).first().waitFor();
   await t.goto(page,"/mi-cuenta");await page.getByRole("button",{name:"Pausar publicaciones",exact:true}).click();
   const date=page.getByLabel("Vuelvo el");
   t.check(await date.getAttribute("min")!==await date.getAttribute("max"),"the date field bounds the permitted pause range");
   await page.locator('section[aria-labelledby="vacaciones-titulo"]').getByRole("button",{name:"Guardar",exact:true}).click();
   t.check(await until(()=>Boolean(listingRow(t,item.id).paused_until)),"the owner can pause all publications");
-  const visitor=await t.page();await t.goto(visitor,item.path);
-  t.check(await visitor.getByText(/Vuelve el/).count()>0,"the paused listing remains public with its return date");
+  await page.getByRole("button",{name:"Ya volví",exact:true}).waitFor();
+  await visitor.reload();
+  t.check(await visitor.getByText(/Vuelve el/).count()>0,"the warmed public listing immediately shows its return date");
   t.check(await visitor.getByRole("link",{name:/WhatsApp/}).count()===0,"the pause disables buyer contact");
   await page.getByRole("button",{name:"Ya volví",exact:true}).click();
   t.check(await until(()=>listingRow(t,item.id).paused_until===null),"Ya volví ends the pause");
-  t.check(await until(async()=>{await visitor.reload();await t.sleep(250);return await visitor.getByRole("link",{name:/WhatsApp/}).count()>0;},{timeout:45000,every:1500}),"contact returns after ending the pause");
+  await page.getByRole("button",{name:"Pausar publicaciones",exact:true}).waitFor();
+  t.check(await until(async()=>{await visitor.reload();await t.sleep(250);return await visitor.getByRole("link",{name:/WhatsApp/}).count()>0;},{timeout:15000,every:1000}),"contact returns after ending the pause");
   t.note("The fresh ux-my-listings SQL suite also covers date bounds and automatic expiry.");
 }});
 cases.push({id:"EASE-430",liveAccounts:false,run:async(t)=>{

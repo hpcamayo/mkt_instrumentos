@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
+import { refreshListingPages } from "@/lib/listing-page-refresh";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 const limaToday = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Lima" });
@@ -33,8 +34,12 @@ export function VacationMode({ pausedUntil }: { pausedUntil: string | null }) {
     setBusy(true);
     setError("");
     const { error: failure } = await supabase.rpc("set_owned_listings_pause", { p_until: until });
+    if (failure) {
+      setBusy(false);
+      return setError(failure.message.includes("LISTING_PAUSE_INVALID") ? "Elige una fecha entre mañana y los próximos 90 días." : "No pudimos guardar el cambio. Inténtalo de nuevo.");
+    }
+    await refreshListingPages({ owned: true });
     setBusy(false);
-    if (failure) return setError(failure.message.includes("LISTING_PAUSE_INVALID") ? "Elige una fecha entre mañana y los próximos 90 días." : "No pudimos guardar el cambio. Inténtalo de nuevo.");
     setOpen(false);
     router.refresh();
   }

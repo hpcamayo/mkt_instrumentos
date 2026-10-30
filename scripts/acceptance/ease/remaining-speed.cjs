@@ -103,7 +103,7 @@ async function focusSweep(t,page,label){
   await page.evaluate(()=>{document.activeElement?.blur();document.body.tabIndex=-1;document.body.focus();});
   const seen=new Set(),covered=[];
   for(let i=0;i<350;i++){
-    await page.keyboard.press("Tab");await t.sleep(8);
+    await page.keyboard.press("Tab");await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
     const result=await page.evaluate(()=>{
       const el=document.activeElement;if(!el||el===document.body)return{key:"body",covered:false};
       const key=el.tagName+"|"+(el.id||el.getAttribute("aria-label")||el.textContent||el.name||"")+"|"+[...document.querySelectorAll("a,button,input,select,textarea,summary")].indexOf(el);
@@ -116,7 +116,7 @@ async function focusSweep(t,page,label){
   t.check(covered.length===0,label+" keeps keyboard focus clear of its bottom bar");
   if(covered.length){t.note(JSON.stringify({label,covered}));await t.shot(page,label+"-covered");}
 }
-cases.push({id:"EASE-710",liveAccounts:false,timeout:240000,run:async(t)=>{
+cases.push({id:"EASE-710",timeout:240000,run:async(t)=>{
   const {owner}=d.inventoryStore();d.sku(owner,{merchant_sku:"FOCUS-"+t.tag(),product_name:"Enfoque EASE"},5);const seller=t.account({kind:"particular"}),item=t.listing(seller);
   for(const phone of [true,false]){
     const width=phone?390:1366,page=await t.page({phone,as:owner.email});

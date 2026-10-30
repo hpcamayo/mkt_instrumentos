@@ -313,7 +313,11 @@ figcaption {
    that puts <BarHeight variable="--bottom-bar-height" /> inside gives its measured height; 32 px covers a floating
    bar's offset from the edge. */
 html:has([data-bottom-bar]) {
-  scroll-padding-bottom: calc(var(--bottom-bar-height, 88px) + 32px + env(safe-area-inset-bottom));
+  scroll-padding-bottom: max(calc(var(--contact-bar-height, 0px) + 16px), calc(var(--bottom-bar-height, 88px) + 32px + env(safe-area-inset-bottom)));
+}
+/* Extra scrollable space lets the final controls and footer clear a floating bar too. */
+body:has([data-bottom-bar]) {
+  padding-bottom: max(var(--contact-bar-height, 0px), var(--bottom-bar-clearance, 0px));
 }
 html:has([data-top-bar]) {
   scroll-padding-top: 88px;

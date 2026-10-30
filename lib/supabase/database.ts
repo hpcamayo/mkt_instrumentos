@@ -68,6 +68,10 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
         : Name extends keyof NullableArguments
           ? WithNullableArguments<GeneratedFunctions[Name], NullableArguments[Name]>
           : GeneratedFunctions[Name];
+    } & {
+      // Staged RPC from 20261121130000_ease_transaction_confirmation.sql, verified against local generation.
+      // Keep production's generated snapshot intact until its next schema refresh.
+      claim_first_sale_notice: { Args: { p_transaction_id: string }; Returns: boolean };
     };
   };
 };

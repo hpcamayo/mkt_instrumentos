@@ -15,7 +15,8 @@ do $$ declare denied integer := 0; probe uuid := '70000000-0000-4000-8000-000000
   begin perform public.decide_purchase_checkin(probe, true); exception when insufficient_privilege then denied := denied + 1; end;
   begin perform public.get_account_pendientes(); exception when insufficient_privilege then denied := denied + 1; end;
   begin perform public.get_listing_statistics(30); exception when insufficient_privilege then denied := denied + 1; end;
-  if denied <> 10 then raise exception 'Anonymous my-listings RPC guard failed: %', denied; end if;
+  begin perform public.claim_first_sale_notice(probe); exception when insufficient_privilege then denied := denied + 1; end;
+  if denied <> 11 then raise exception 'Anonymous my-listings RPC guard failed: %', denied; end if;
 end $$;
 reset role;
 
@@ -182,6 +183,19 @@ do $$ declare report jsonb; result jsonb; buyers jsonb; detail jsonb; begin
   if public.get_transaction_detail((result->>'transaction_id')::uuid)->>'state' <> 'verified' then raise exception 'No verified transaction'; end if;
   -- A repeat returns the same decision.
   if public.decide_purchase_checkin((report->>'checkin_id')::uuid, true)->>'claim_id' <> result->>'claim_id' then raise exception 'Repeat decision changed'; end if;
+  -- EASE-428: a confirmed claim link exposes the same review flow as the transaction link.
+  perform set_config('test.ease_claim_reference', result->>'claim_id', true);
+  detail := public.get_transaction_detail((result->>'claim_id')::uuid);
+  if detail->>'transaction_id' is distinct from result->>'transaction_id'
+     or detail->>'review_deadline' is null or not (detail->>'review_window_open')::boolean then
+    raise exception 'Claim reference lost the verified transaction: %', detail;
+  end if;
+  if not public.claim_first_sale_notice((result->>'transaction_id')::uuid) then
+    raise exception 'First-sale notice was not claimed';
+  end if;
+  if public.claim_first_sale_notice((result->>'transaction_id')::uuid) then
+    raise exception 'First-sale notice repeated';
+  end if;
   -- trust-04: first verified sale; mine-09: last three digits only.
   detail := public.get_transaction_detail((result->>'transaction_id')::uuid);
   if (detail->>'seller_verified_sales')::int <> 1 then raise exception 'seller_verified_sales: %', detail->'seller_verified_sales'; end if;
@@ -195,6 +209,24 @@ do $$ begin
   if (public.get_transaction_detail((public.get_account_pendientes() #>> '{buyer,reviews_due,0,reference_id}')::uuid) ->> 'seller_verified_sales') is not null then
     raise exception 'Buyer sees the seller''s count';
   end if;
+  if public.get_transaction_detail(current_setting('test.ease_claim_reference')::uuid)->>'transaction_id' is null then
+    raise exception 'Buyer claim link has no review transaction';
+  end if;
+  begin
+    perform public.claim_first_sale_notice((public.get_transaction_detail(current_setting('test.ease_claim_reference')::uuid)->>'transaction_id')::uuid);
+    raise exception 'Buyer consumed the seller milestone';
+  exception when raise_exception then
+    if sqlerrm <> 'TRANSACTION_NOT_ACCESSIBLE' then raise; end if;
+  end;
+end $$;
+select set_config('request.jwt.claims','{"sub":"71000000-0000-4000-8000-000000000003","role":"authenticated"}',true);
+do $$ begin
+  begin
+    perform public.get_transaction_detail(current_setting('test.ease_claim_reference')::uuid);
+    raise exception 'A stranger opened the confirmed claim';
+  exception when raise_exception then
+    if sqlerrm <> 'TRANSACTION_NOT_ACCESSIBLE' then raise; end if;
+  end;
 end $$;
 reset role;
 

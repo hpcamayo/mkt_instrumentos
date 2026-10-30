@@ -37,6 +37,20 @@ export function TransactionDetailView({
   // and the flag keeps the closing panel above the review form until the page is left (trust-04). A later visit
   // shows the plain review section.
   const [justConfirmed, setJustConfirmed] = useState(false);
+  const [milestoneFor, setMilestoneFor] = useState<string | null>(null);
+  const milestoneRequest = useRef<{ id: string; promise: Promise<boolean> } | null>(null);
+  useEffect(() => {
+    const id = detail.transaction_id;
+    if (!supabase || !id || detail.role !== "seller" || detail.seller_verified_sales !== 1) return;
+    // Share the request across effect replay, so Strict Mode cannot consume and then hide the notice.
+    if (milestoneRequest.current?.id !== id) {
+      milestoneRequest.current = { id, promise: Promise.resolve(supabase.rpc("claim_first_sale_notice", { p_transaction_id: id }))
+        .then(({ data, error }) => !error && data === true) };
+    }
+    let active = true;
+    void milestoneRequest.current.promise.then((show) => { if (active && show) setMilestoneFor(id); });
+    return () => { active = false; };
+  }, [supabase, detail.role, detail.seller_verified_sales, detail.transaction_id]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [messageKind, setMessageKind] = useState<"success" | "error">("success");
@@ -151,7 +165,7 @@ export function TransactionDetailView({
         </section>
       ) : null}
 
-      {detail.role === "seller" && detail.state === "verified" && detail.seller_verified_sales === 1 ? (
+      {detail.role === "seller" && detail.state === "verified" && detail.seller_verified_sales === 1 && milestoneFor === detail.transaction_id ? (
         <Notice tone="success" role="note" title="Tu primera venta verificada en Laria">
           <p className="mt-1">El comprador y tú reconocen esta venta. No confirma pago, entrega ni la condición del equipo.</p>
         </Notice>
