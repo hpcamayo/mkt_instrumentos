@@ -1,0 +1,129 @@
+{
+  "batches": [
+    {
+      "log": "baseline-627.log",
+      "run": "rmvujdt8r",
+      "accounts": 3,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    },
+    {
+      "log": "preview-fixed.log",
+      "run": "rmvul5cen",
+      "accounts": 6,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    },
+    {
+      "log": "preview-reconnect-final.log",
+      "run": "rmvuz0z0e",
+      "accounts": 3,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    },
+    {
+      "log": "reconnect-probe.log",
+      "run": "rmvuz3s9f",
+      "accounts": 3,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    },
+    {
+      "log": "preview-queue-insertion-final.log",
+      "run": "rmvuz9snc",
+      "accounts": 3,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    }
+  ],
+  "interrupted_run_recovery": {
+    "removed": 3,
+    "run": "rmvuywpz9",
+    "accounts": 3,
+    "photos": {
+      "removed": 0
+    },
+    "left": {
+      "emails": 0,
+      "stores": 0,
+      "storage": 0,
+      "accounts": 0,
+      "listings": 0,
+      "profiles": 0,
+      "movements": 0,
+      "inventory_changes": 0
+    }
+  },
+  "accounts_removed": 21,
+  "independent_final_cleanup": {
+    "removed": 0,
+    "run": "rmvuzbext",
+    "accounts": 0,
+    "photos": {
+      "removed": 0
+    },
+    "left": {
+      "accounts": 0,
+      "profiles": 0,
+      "listings": 0,
+      "stores": 0,
+      "storage": 0,
+      "emails": 0
+    }
+  }
+}

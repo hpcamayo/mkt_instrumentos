@@ -96,7 +96,7 @@ regenerated. The dated report records the exact scope and remaining gaps.
 
 Use `--registry-only=EASE-013,EASE-028,...` when reconciling a focused fix: the JSON report still contains every observed case, while unrelated TSV rows stay byte-for-byte unchanged. `results-*.jsonl` and `reruns*.jsonl` are reconciled by their recorded timestamps. Preserve earlier reports; identify the full-run application revision and any later scoped browser reruns separately.
 
-Clean accessibility evidence accepts EASE-711/713 only with the complete page/state sample, all four roles, both viewport sizes and no skipped states. The remaining focus scenarios now run in `remaining-speed.cjs`; EASE-710 remains Fail for observed overlay coverage. The slow-network media probe measures the current photo and its initially cached adjacent photos in both directions; unseen photos continue loading through background prefetch.
+Clean accessibility evidence accepts EASE-711/713 only with the complete page/state sample, all four roles, both viewport sizes and no skipped states. The remaining focus scenarios run in `remaining-speed.cjs`; the corrected EASE-710 overlay checks and their local/preview evidence are recorded in `docs/acceptance/ease-remaining-fixes-2026-10-30/`. The slow-network media probe measures the current photo and its initially cached adjacent photos in both directions; unseen photos continue loading through background prefetch.
 
 When using a Docker wrapper instead of native `psql`, stream host temporary `-f` files into the container; their host paths do not exist there. The live database adapter disables CLI telemetry so an unrelated analytics request cannot delay cleanup verification.
 
@@ -134,3 +134,5 @@ It forwards no token through redirects: protected requests use a zero-redirect f
 start fresh guarded requests. This follows [Playwright's documented header/redirect behavior](https://playwright.dev/docs/api/class-route#route-continue).
 Offline requests abort before that transport, so browser offline testing cannot accidentally send a sale through
 the API request client. Tokens are never logged or committed; no share link or protection-setting change is needed.
+
+The deterministic local offline regression is `offline-reconnect-race.cjs`. It runs EASE-627 with only the second offline request rejection delayed until after reconnect, exercising a late queue insertion. Run it separately from `remaining.cjs`; hosted account runs exclude it.

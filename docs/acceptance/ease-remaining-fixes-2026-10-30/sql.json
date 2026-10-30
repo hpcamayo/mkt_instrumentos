@@ -1,0 +1,97 @@
+{
+  "image": "public.ecr.aws/supabase/postgres:17.6.1.106",
+  "migrations": 106,
+  "phoneBackfill": true,
+  "suites": [
+    {
+      "file": "tests/maybes-ai.sql",
+      "status": "Pass",
+      "sha256": "1f4493212cc0ea3d2f7d203c34b59fba86ce07520b058251ddcd93cbe0e63753"
+    },
+    {
+      "file": "tests/maybes-reservado.sql",
+      "status": "Pass",
+      "sha256": "6cc5fc1d8e74189899ff16fa5e3ab1e9730c0f11b51fc078179cc3a9e491449a"
+    },
+    {
+      "file": "tests/ux-accounts-phone.sql",
+      "status": "Pass",
+      "sha256": "9c7b962816ba15ebfb386b653f84d4128fb0ebd084bedc2c0fc1b88c7ae39803"
+    },
+    {
+      "file": "tests/ux-accounts-saving.sql",
+      "status": "Pass",
+      "sha256": "1184ebd6e73b3dce82dc074f03da2bf77d17c09ac76a773a1edf9e5e6758f2dc"
+    },
+    {
+      "file": "tests/ux-effortless-integration.sql",
+      "status": "Pass",
+      "sha256": "fae653d335056b73a8a4eccc5e09d0dcc59deb755daa73316029034146af13ee"
+    },
+    {
+      "file": "tests/ux-effortless-push.sql",
+      "status": "Pass",
+      "sha256": "83d01ec4948d78f4a904c478332409cfb8fdda918a6508e0fbfceb0665caff14"
+    },
+    {
+      "file": "tests/ux-effortless-selling.sql",
+      "status": "Pass",
+      "sha256": "7c9cdafef39510d8946d6981cd324e92b8d7c86d1857c6342a24eb7bf3b0b85c"
+    },
+    {
+      "file": "tests/ux-find-search.sql",
+      "status": "Pass",
+      "sha256": "c0d526499b393fcca61f1a0655a7d30c2cd6308db345c3493ccf1ae8539b1690"
+    },
+    {
+      "file": "tests/ux-inventory-fixes.sql",
+      "status": "Pass",
+      "sha256": "76d7dab45aee986c6c23d309752ae01b96c9ecc34b510c428459ce934c4155e3"
+    },
+    {
+      "file": "tests/ux-inventory.sql",
+      "status": "Pass",
+      "sha256": "92767fd8eeb9ee451e3c2a55767b51e7b50267f1ab95be6e4e291fea7b65cbcf"
+    },
+    {
+      "file": "tests/ux-listing-contact.sql",
+      "status": "Pass",
+      "sha256": "700a1209ec38fec3ef9ff0448bbd03cc7d6d9ec620d6265391ec7841f44a85bf"
+    },
+    {
+      "file": "tests/ux-listing-page.sql",
+      "status": "Pass",
+      "sha256": "1e488df6ce9223f1501fc2b9aec9d4b41d78aee14f4da3ab88b7e3d3a021c432"
+    },
+    {
+      "file": "tests/ux-listing-questions.sql",
+      "status": "Pass",
+      "sha256": "e80bdd3fa34a5d1127f459e6e2ff1ba6cc81504d64223f68557abc7093f9acd7"
+    },
+    {
+      "file": "tests/ux-my-listings.sql",
+      "status": "Pass",
+      "sha256": "c3adb8cd8f88c2eb7cb14d1369752109aa2c2601ffafd161fbc00143b82dcbe9"
+    },
+    {
+      "file": "tests/ux-stores-complaints.sql",
+      "status": "Pass",
+      "sha256": "da9ad4c86408353840d03c6680f0ca308b17d90f21ff8aedda9cf20163e70d32"
+    },
+    {
+      "file": "tests/ux-stores-import.sql",
+      "status": "Pass",
+      "sha256": "a1c51ec8f21a3481af77b6eab4a3c425b2d30d7f1108c4200e09394b0d38428d"
+    },
+    {
+      "file": "tests/ux-stores-requests.sql",
+      "status": "Pass",
+      "sha256": "051abb8be5a0d43e8e337410b32802fd954710dfdf4aa24f7ecba16351154b51"
+    },
+    {
+      "file": "tests/ux-stores-storefront.sql",
+      "status": "Pass",
+      "sha256": "80b7cbe6f84191649baf4ce707bb1c46c53ad4e112dfbb072f2867d5bd85d4e7"
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 # Remaining 75 EASE cases — 30 October 2026
 
+Historical snapshot. The [five-case fix follow-up](../ease-remaining-fixes-2026-10-30/README.md) records later local/preview verification and the remaining hosted migration gate.
+
 **60 Pass · 5 Fail · 10 Not Run (owner/manual).** All 75 received local checks or an explicit manual gate; live portions ran for 44: 34 Pass, 3 Fail and 7 Not Run. The canonical acceptance source remains [acceptance/cases.tsv](../../../acceptance/cases.tsv). This directory stores the evidence snapshot.
 
 Only the original 75 rows’ status and evidence changed. EASE totals are now **328 Pass / 5 Fail / 10 Not Run**. Overall registry totals are **713 Pass / 5 Fail / 163 Not Run / 1 previously Blocked**. No unrelated acceptance state changed.
