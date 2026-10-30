@@ -52,6 +52,24 @@ test("connection failure leaves the sale and idempotency key for the next replay
   assert.deepEqual(keys,["same-key","same-key"]);assert.deepEqual(queue,[]);
 });
 
+test("a reconnect during an in-flight network failure wakes the same replay immediately",async()=>{
+  let queue=[sale("same-key")],finish;
+  const keys=[],recorded=[];
+  const flush=counter.createCounterQueueFlusher({
+    read:()=>queue,update:change=>{queue=change(queue);},
+    send:entry=>{
+      keys.push(entry.key);
+      return keys.length===1?new Promise(resolve=>{finish=resolve;}):Promise.resolve({ok:true,data:{}});
+    },onRecorded:count=>recorded.push(count),
+  });
+  const pending=flush();
+  assert.equal(flush(),pending,"the reconnect shares the active replay");
+  finish({ok:false,code:"NETWORK",message:"Sin conexión",detail:null});
+  await pending;
+  assert.deepEqual(keys,["same-key","same-key"]);
+  assert.deepEqual(queue,[]);assert.deepEqual(recorded,[1]);
+});
+
 function loadRoute(mocks){
   const Module=require("node:module"),ts=require("typescript"),filename=path.resolve("app/api/listings/refresh/route.ts");
   const compiled=ts.transpileModule(fs.readFileSync(filename,"utf8"),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;

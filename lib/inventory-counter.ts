@@ -111,20 +111,28 @@ export function createCounterQueueFlusher({
   onRecorded: (count: number) => void;
 }) {
   let running: Promise<void> | null = null;
+  let rerunRequested = false;
   return function flush(): Promise<void> {
-    if (running) return running;
+    if (running) {
+      // An online event can arrive while a request from the previous connection is still failing.
+      rerunRequested = true;
+      return running;
+    }
     running = (async () => {
       let sent = 0;
-      for (;;) {
-        const sale = read().find((entry) => !entry.error);
-        if (!sale) break;
-        const result = await send(sale);
-        if (!result.ok && isConnectionFailure(result.code)) break;
-        update((current) => current.flatMap((entry) => entry.key !== sale.key
-          ? [entry]
-          : result.ok ? [] : [{ ...entry, error: result.message }]));
-        if (result.ok) sent += 1;
-      }
+      do {
+        rerunRequested = false;
+        for (;;) {
+          const sale = read().find((entry) => !entry.error);
+          if (!sale) break;
+          const result = await send(sale);
+          if (!result.ok && isConnectionFailure(result.code)) break;
+          update((current) => current.flatMap((entry) => entry.key !== sale.key
+            ? [entry]
+            : result.ok ? [] : [{ ...entry, error: result.message }]));
+          if (result.ok) sent += 1;
+        }
+      } while (rerunRequested);
       if (sent) onRecorded(sent);
     })().finally(() => { running = null; });
     return running;

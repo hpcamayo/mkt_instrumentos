@@ -57,6 +57,8 @@ create table if not exists laria_private.seller_first_sale_notices (
   transaction_id uuid not null references public.verified_transactions(id) on delete cascade,
   seen_at timestamptz not null default now()
 );
+create index if not exists seller_first_sale_notices_transaction_id_idx
+  on laria_private.seller_first_sale_notices(transaction_id);
 alter table laria_private.seller_first_sale_notices enable row level security;
 revoke all on laria_private.seller_first_sale_notices from public, anon, authenticated;
 

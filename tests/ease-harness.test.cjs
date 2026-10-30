@@ -119,4 +119,7 @@ test("preview transport cannot send an offline sale or leak fetch error headers"
   const failed = previewRoute("https://branch.vercel.app/login", true);
   await continueWithPreviewAccess(failed, { origin: "https://branch.vercel.app", token: "test-oidc", offline: false });
   assert.deepEqual(failed.calls.at(-1), ["abort", "failed"]);
+  failed.abort = async () => { throw new Error("Route is already handled!"); };
+  await assert.doesNotReject(() => continueWithPreviewAccess(failed,
+    { origin: "https://branch.vercel.app", token: "test-oidc", offline: false }));
 });

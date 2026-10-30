@@ -72,7 +72,7 @@ async function continueWithPreviewAccess(route, { origin, token, offline }) {
     return await route.fulfill({ response });
   } catch {
     // Playwright fetch errors can include request headers; never put the token in a log.
-    return route.abort("failed");
+    return route.abort("failed").catch(() => undefined);
   }
 }
 
