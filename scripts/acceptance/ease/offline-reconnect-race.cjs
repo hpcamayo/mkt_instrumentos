@@ -3,7 +3,7 @@
 const base=require("./remaining-inventory.cjs").find(x=>x.id==="EASE-627");
 module.exports=[{...base,liveAccounts:false,run:async(t)=>{
  const original=t.page;
- await base.run({...t,page:async(...args)=>{
+ await base.run({...t,offlineRejectionAfterReconnect:true,page:async(...args)=>{
   const page=await original(...args);
   await page.addInitScript(()=>{
    let offlineSales=0;const nativeFetch=window.fetch;

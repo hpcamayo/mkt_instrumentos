@@ -136,7 +136,16 @@ cases.push({id:"EASE-627",run:async(t)=>{
   t.check(await d.until(()=>stock(item)===1,{timeout:20000}),"reconnection records the waiting sale");
   await page.evaluate(()=>window.dispatchEvent(new Event("online")));await page.waitForTimeout(700);
   t.check(stock(item)===1,"a repeated reconnect does not record the sale twice");
+  const queuedSales=()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith("laria:mostrador:cola:")).flatMap(k=>{try{return JSON.parse(localStorage.getItem(k))||[];}catch{return [];}}));
+  const previousKeys=new Set((await queuedSales()).map(sale=>sale.key));
   await page.context().setOffline(true);await scan(page,item.merchant_sku);await page.getByRole("button",{name:/^Registrar venta \(/}).click();
+  // A routed browser request can still be rejecting after click returns. Establish the queued-sale precondition
+  // before reconnecting; the separate local fault-injection regression deliberately exercises the reverse order.
+  if(!t.offlineRejectionAfterReconnect){
+    const stored=await d.until(()=>queuedSales().then(rows=>rows.some(sale=>!previousKeys.has(sale.key)&&sale.lines?.some(line=>line.item_id===item.id))),{timeout:20000});
+    t.check(stored,"the second offline sale is persisted before reconnecting");
+    if(!stored)return;
+  }
   d.move(owner,item.id,"sale",1,"tienda_fisica");
   await page.context().setOffline(false);await page.waitForTimeout(1800);
   const queue=await d.until(()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.includes("mostrador")).map(k=>{try{return JSON.parse(localStorage.getItem(k));}catch{return null;}}).filter(Array.isArray).flat().filter(v=>v&&v.lines)).then(rows=>rows.some(v=>v.error)?rows:null),{timeout:20000});
