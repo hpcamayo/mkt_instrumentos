@@ -144,6 +144,8 @@ export function Counter({ storeId }: { storeId: string }) {
     const units = cartUnits(cart);
     if (!result.ok && isConnectionFailure(result.code)) {
       updateQueue((current) => current.some((entry) => entry.key === sale.key) ? current : [...current, sale]);
+      // The reconnect event may precede this request's network rejection and queue insertion.
+      if (navigator.onLine) void flush();
       setCart([]);
       setSaleKey(newRequestKey("mostrador"));
       setNotice({ kind: "success", message: `Sin conexión: la venta de ${numbers.format(units)} ${units === 1 ? "unidad" : "unidades"} quedó guardada en este equipo y se registrará sola al volver la conexión.` });
