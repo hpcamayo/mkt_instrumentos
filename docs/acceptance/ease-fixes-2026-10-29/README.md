@@ -1,5 +1,7 @@
 # EASE regression fixes — 29 October 2026
 
+Post-release follow-up: PR #83 and both migrations are now live. The [production acceptance report](../ease-production-2026-10-29/README.md) records the targeted rerun, cleanup and updated registry; the candidate/old-production snapshot below remains historical evidence.
+
 All 27 failures from the [previous report](../ease-2026-10-29/README.md) have passing candidate evidence. The final runtime matches code revision `bac6e3d` across 592 files. The full run used `0063533`; comparison/privacy and draft changes received scoped reruns on later builds. Source hashes and the exact lineage are in [verification.json](verification.json).
 
 The live run exercised **laria.audio at `12e1d73`**, independently verified at its start and end. That production revision predates these fixes. Its remaining failures are retained in the canonical registry; local candidate success does not establish production acceptance.
