@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getAuthCallbackDestination,
   getAuthCallbackErrorUrl,
+  getConfirmationRecoveryUrl,
   parseEmailOtpType,
 } from "@/lib/auth/callback";
 import { TOO_MANY_LINK_OPENS, isAuthRateLimited } from "@/lib/auth/limits";
@@ -86,6 +87,9 @@ export async function GET(request: NextRequest) {
   if (exchangeError) {
     const limited = isAuthRateLimited(exchangeError);
     if (limited) console.warn("auth-callback-rate-limited", exchangeError.code ?? exchangeError.status);
+    if (!limited && exchangeError.code === "otp_expired" && (type === "email" || type === "signup")) {
+      return NextResponse.redirect(getConfirmationRecoveryUrl(origin, next));
+    }
     response = NextResponse.redirect(
       getAuthCallbackErrorUrl(
         origin,

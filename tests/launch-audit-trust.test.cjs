@@ -314,7 +314,16 @@ test("A16: the e-mail link callback limits each visitor, checks links under thei
     assert.equal(limited.error, TOO_MANY_LINK_OPENS);
     assert.deepEqual(warnings, [["auth-callback-rate-limited", "over_request_rate_limit"]]);
   });
-  assert.equal((await run({ error: { status: 403, code: "otp_expired" } })).error, "No se pudo confirmar la sesión.");
+  for (const type of ["email", "signup"]) {
+    const expired = await run({ error: { status: 403, code: "otp_expired" }, query: `token_hash=abc123&type=${type}&next=%2Fvender` });
+    assert.equal(expired.location.pathname, "/confirmacion-correo");
+    assert.equal(expired.location.searchParams.get("next"), "/vender");
+    assert.equal(expired.response.headers.get("set-cookie"), null);
+    assert.deepEqual(expired.ssr.created[0].calls.map(([name]) => name), ["verifyOtp"]);
+  }
+  const unsafe = await run({ error: { status: 403, code: "otp_expired" }, query: "token_hash=abc123&type=email&next=https://evil.example" });
+  assert.equal(unsafe.location.searchParams.get("next"), "/mi-cuenta");
+  assert.equal((await run({ error: { status: 403, code: "otp_expired" }, query: "token_hash=abc123&type=magiclink" })).error, "No se pudo confirmar la sesión.");
   assert.equal((await run({ error: { status: 403, code: "otp_expired" }, query: "token_hash=abc123&type=recovery" })).error,
     "El enlace de recuperación no es válido o ya venció.");
 

@@ -77,7 +77,7 @@ export function LoginForm() {
         // Supabase checks the password before the confirmation, so this answer does not reveal unconfirmed accounts.
         if (isEmailNotConfirmedError(error)) {
           setUnconfirmedEmail(email);
-          setMessage("Te enviamos un enlace al registrarte. Ábrelo para activar tu cuenta y vuelve a ingresar.");
+          setMessage("Abre el correo más reciente de Laria y pulsa «Confirmar mi correo» para activar tu cuenta. Si pediste otro enlace, los anteriores dejan de funcionar.");
           return;
         }
         if (isAuthRateLimited(error)) {

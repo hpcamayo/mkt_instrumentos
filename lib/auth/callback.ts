@@ -29,3 +29,9 @@ export function getAuthCallbackErrorUrl(origin: string, message: string) {
   url.searchParams.set("error", message);
   return url;
 }
+
+export function getConfirmationRecoveryUrl(origin: string, next: string | null) {
+  const url = new URL("/confirmacion-correo", origin);
+  url.searchParams.set("next", getSafeAuthRedirect(next));
+  return url;
+}
