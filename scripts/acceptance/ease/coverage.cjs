@@ -5,7 +5,7 @@ const root = path.resolve(__dirname, "../../..");
 const ids = fs.readFileSync(path.join(root, "acceptance/cases.tsv"), "utf8").split("\n").filter((line) => line.startsWith("EASE-")).map((line) => line.split("\t")[0]);
 const seen = new Set();
 const groups = {};
-for (const group of "abcde") {
+for (const group of "abcdef") {
   const cases = require(`./checks-${group}.cjs`);
   groups[group] = cases.length;
   for (const entry of cases) {

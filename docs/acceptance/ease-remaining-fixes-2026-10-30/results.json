@@ -1,0 +1,627 @@
+{
+  "scope": [
+    "EASE-425",
+    "EASE-428",
+    "EASE-609",
+    "EASE-627",
+    "EASE-710"
+  ],
+  "application_revision": "009eefb1a597c068284d585a1d70696990b97851",
+  "summary": {
+    "Pass": 4,
+    "Blocked": 1
+  },
+  "local_summary": {
+    "Pass": 65,
+    "Not Run": 10
+  },
+  "preview_summary": {
+    "Pass": 3,
+    "Blocked": 1,
+    "Not Run": 1
+  },
+  "manual_ids": [
+    "EASE-164",
+    "EASE-166",
+    "EASE-546",
+    "EASE-549",
+    "EASE-512",
+    "EASE-703",
+    "EASE-712",
+    "EASE-714",
+    "EASE-716",
+    "EASE-719"
+  ],
+  "provenance": {
+    "full_local_75": "Working tree incorporated in 78cac8d; other four fixes unchanged by replay-only revisions.",
+    "final_local_627_and_delayed_rejection": "009eefb1a597c068284d585a1d70696990b97851",
+    "preview_425_710": "78cac8d5af7b5d885ccb72a11587db9a138a7689",
+    "preview_627": "009eefb1a597c068284d585a1d70696990b97851",
+    "preview_deployment": "dpl_Cv7gBP9quvdrv5hiY8qZxEm7npth",
+    "production": "Unchanged e0a659fb48ef0d0db0256ae9aee27a0a14b0a7be; initial failed baseline remains historical."
+  },
+  "rules": [
+    "Local and hosted outcomes are reported separately. EASE-428 remains Blocked because the hosted database lacks the new migration, despite full local workflow passing.",
+    "No hosted migration, production deployment or pilot activation occurred.",
+    "No owner/native/legal case was accepted from code or emulation."
+  ],
+  "cases": [
+    {
+      "id": "EASE-425",
+      "status": "Pass",
+      "local": {
+        "id": "EASE-425",
+        "status": "Pass",
+        "checks": [
+          {
+            "ok": true,
+            "message": "the date field bounds the permitted pause range"
+          },
+          {
+            "ok": true,
+            "message": "the owner can pause all publications"
+          },
+          {
+            "ok": true,
+            "message": "the warmed public listing immediately shows its return date"
+          },
+          {
+            "ok": true,
+            "message": "the pause disables buyer contact"
+          },
+          {
+            "ok": true,
+            "message": "Ya volví ends the pause"
+          },
+          {
+            "ok": true,
+            "message": "contact returns after ending the pause"
+          }
+        ],
+        "notes": [
+          "The fresh ux-my-listings SQL suite also covers date bounds and automatic expiry."
+        ],
+        "shots": [],
+        "blocked": [],
+        "problems": [],
+        "base": "http://localhost:3300",
+        "live": false,
+        "at": "2026-10-30T06:11:22.703Z",
+        "ms": 3412
+      },
+      "live": {
+        "id": "EASE-425",
+        "status": "Pass",
+        "checks": [
+          {
+            "ok": true,
+            "message": "the date field bounds the permitted pause range"
+          },
+          {
+            "ok": true,
+            "message": "the owner can pause all publications"
+          },
+          {
+            "ok": true,
+            "message": "the warmed public listing immediately shows its return date"
+          },
+          {
+            "ok": true,
+            "message": "the pause disables buyer contact"
+          },
+          {
+            "ok": true,
+            "message": "Ya volví ends the pause"
+          },
+          {
+            "ok": true,
+            "message": "contact returns after ending the pause"
+          }
+        ],
+        "notes": [
+          "The fresh ux-my-listings SQL suite also covers date bounds and automatic expiry."
+        ],
+        "shots": [],
+        "blocked": [],
+        "problems": [
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/login?next=%2Fmi-cuenta Connecting to 'https://vercel.com/sso-api?url=https%3A%2F%2Fmkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app%2Flogin%3Fnext%3D%252Fvender&nonce=[redacted] violates the following Content Security Policy directive: \"connect-src 'self' ",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/login?next=%2Fmi-cuenta Failed to fetch RSC payload for https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/vender. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/_next/static/chunks/6370-3a3292a910ce0217.js?dpl=",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/instrumentos/fender-player-stratocaster-lou0-5lou1 Connecting to 'https://vercel.com/sso-api?url=https%3A%2F%2Fmkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app%2Flogin%3Fnext%3D%252Fvender&nonce=[redacted] violates the following Content Security Policy directive: \"connect-src 'self' ",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/instrumentos/fender-player-stratocaster-lou0-5lou1 Failed to fetch RSC payload for https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/vender. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/_next/static/chunks/6370-3a3292a910ce0217.js?dpl=",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/instrumentos/fender-player-stratocaster-lou0-5lou1 Connecting to 'https://vercel.com/sso-api?url=https%3A%2F%2Fmkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app%2Flogin%3Fnext%3D%252Fvender&nonce=[redacted] violates the following Content Security Policy directive: \"connect-src 'self' ",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/instrumentos/fender-player-stratocaster-lou0-5lou1 Failed to fetch RSC payload for https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/vender. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/_next/static/chunks/6370-3a3292a910ce0217.js?dpl=",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/instrumentos/fender-player-stratocaster-lou0-5lou1 Connecting to 'https://vercel.com/sso-api?url=https%3A%2F%2Fmkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app%2Flogin%3Fnext%3D%252Fvender&nonce=[redacted] violates the following Content Security Policy directive: \"connect-src 'self' ",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/instrumentos/fender-player-stratocaster-lou0-5lou1 Failed to fetch RSC payload for https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/vender. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/_next/static/chunks/6370-3a3292a910ce0217.js?dpl="
+        ],
+        "base": "https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app",
+        "live": true,
+        "at": "2026-10-30T06:23:00.349Z",
+        "ms": 29551
+      },
+      "release_gate": "Production deployment of this branch is pending."
+    },
+    {
+      "id": "EASE-428",
+      "status": "Blocked",
+      "local": {
+        "id": "EASE-428",
+        "status": "Pass",
+        "checks": [
+          {
+            "ok": true,
+            "message": "the warm closing panel leads directly into the review"
+          },
+          {
+            "ok": true,
+            "message": "the first visit claims the seller milestone"
+          },
+          {
+            "ok": true,
+            "message": "the first verified sale shows the seller milestone"
+          },
+          {
+            "ok": true,
+            "message": "a reload does not claim the milestone again"
+          },
+          {
+            "ok": true,
+            "message": "the milestone appears only once"
+          },
+          {
+            "ok": true,
+            "message": "another device does not repeat the seller milestone"
+          }
+        ],
+        "notes": [],
+        "shots": [],
+        "blocked": [],
+        "problems": [],
+        "base": "http://localhost:3300",
+        "live": false,
+        "at": "2026-10-30T06:12:10.024Z",
+        "ms": 5065
+      },
+      "live": {
+        "id": "EASE-428",
+        "status": "Blocked",
+        "checks": [],
+        "notes": [
+          "Shared database lacks 20261121130000_ease_transaction_confirmation.sql; full local claim/milestone workflow passed with that migration."
+        ],
+        "shots": [],
+        "blocked": [],
+        "problems": [],
+        "base": "https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app",
+        "live": true,
+        "at": "2026-10-30T06:23:29.905Z",
+        "ms": 1448
+      },
+      "release_gate": "Apply 20261121130000_ease_transaction_confirmation.sql and rerun hosted confirmation/milestone checks."
+    },
+    {
+      "id": "EASE-609",
+      "status": "Pass",
+      "local": {
+        "id": "EASE-609",
+        "status": "Pass",
+        "checks": [
+          {
+            "ok": true,
+            "message": "opening the confirmation does not change stock"
+          },
+          {
+            "ok": true,
+            "message": "one confirmed unit is deducted"
+          },
+          {
+            "ok": true,
+            "message": "the sale channel is WhatsApp / Laria"
+          },
+          {
+            "ok": true,
+            "message": "Undo remains available when selling the last waiting request empties the list"
+          },
+          {
+            "ok": true,
+            "message": "the request is marked Vendida"
+          },
+          {
+            "ok": true,
+            "message": "Undo restores the sold unit"
+          },
+          {
+            "ok": true,
+            "message": "Undo returns the request to waiting"
+          }
+        ],
+        "notes": [],
+        "shots": [
+          "/tmp/laria-ease/fix-5/local/screens/EASE-609-empty-waiting-undo.png"
+        ],
+        "blocked": [],
+        "problems": [],
+        "base": "http://localhost:3302",
+        "live": false,
+        "at": "2026-10-30T06:12:17.640Z",
+        "ms": 3731
+      },
+      "live": {
+        "id": "EASE-609",
+        "status": "Not Run",
+        "notes": [
+          "Assisted-commerce pilot remains disabled on hosted deployments; verified locally with PILOT_BASE."
+        ]
+      },
+      "release_gate": "Production deployment of this branch is pending."
+    },
+    {
+      "id": "EASE-627",
+      "status": "Pass",
+      "local": {
+        "id": "EASE-627",
+        "status": "Pass",
+        "checks": [
+          {
+            "ok": true,
+            "message": "an offline sale waits without changing server stock"
+          },
+          {
+            "ok": true,
+            "message": "the queued sale is visible"
+          },
+          {
+            "ok": true,
+            "message": "reconnection records the waiting sale"
+          },
+          {
+            "ok": true,
+            "message": "a repeated reconnect does not record the sale twice"
+          },
+          {
+            "ok": true,
+            "message": "a refused queued sale stays with its reason"
+          },
+          {
+            "ok": true,
+            "message": "the refusal identifies the SKU on screen"
+          },
+          {
+            "ok": true,
+            "message": "the refused sale and reason survive reloading the device queue"
+          },
+          {
+            "ok": true,
+            "message": "a refused queued sale does not create negative or duplicate stock"
+          }
+        ],
+        "notes": [],
+        "shots": [],
+        "blocked": [],
+        "problems": [
+          "pageerror http://localhost:3300/mi-cuenta/tienda/inventario/mostrador Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+          "console http://localhost:3300/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console http://localhost:3300/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console http://localhost:3300/mi-cuenta/tienda/inventario/mostrador Failed to load resource: the server responded with a status of 400 (Bad Request)",
+          "pageerror http://localhost:3300/mi-cuenta/tienda/inventario/mostrador Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+        ],
+        "base": "http://localhost:3300",
+        "live": false,
+        "at": "2026-10-30T12:57:08.923Z",
+        "ms": 6149
+      },
+      "live": {
+        "id": "EASE-627",
+        "status": "Pass",
+        "checks": [
+          {
+            "ok": true,
+            "message": "an offline sale waits without changing server stock"
+          },
+          {
+            "ok": true,
+            "message": "the queued sale is visible"
+          },
+          {
+            "ok": true,
+            "message": "reconnection records the waiting sale"
+          },
+          {
+            "ok": true,
+            "message": "a repeated reconnect does not record the sale twice"
+          },
+          {
+            "ok": true,
+            "message": "a refused queued sale stays with its reason"
+          },
+          {
+            "ok": true,
+            "message": "the refusal identifies the SKU on screen"
+          },
+          {
+            "ok": true,
+            "message": "the refused sale and reason survive reloading the device queue"
+          },
+          {
+            "ok": true,
+            "message": "a refused queued sale does not create negative or duplicate stock"
+          }
+        ],
+        "notes": [],
+        "shots": [],
+        "blocked": [],
+        "problems": [
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/login?next=%2Fmi-cuenta Connecting to 'https://vercel.com/sso-api?url=https%3A%2F%2Fmkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app%2Flogin%3Fnext%3D%252Fvender&nonce=[redacted] violates the following Content Security Policy directive: \"connect-src 'self' ",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/login?next=%2Fmi-cuenta Failed to fetch RSC payload for https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/vender. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/_next/static/chunks/6370-f15ede117dde6144.js?dpl=",
+          "pageerror https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to fetch RSC payload for https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/favoritos. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/_next/static/chunks/6370-f15ede117dd",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to fetch RSC payload for https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/alertas. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/_next/static/chunks/6370-f15ede117dde6",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to fetch RSC payload for https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/notificaciones. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/_next/static/chunks/6370-f15ede",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to fetch RSC payload for https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/transacciones. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/_next/static/chunks/6370-f15ede1",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to fetch RSC payload for https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/perfil. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/_next/static/chunks/6370-f15ede117dde61",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to fetch RSC payload for https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/consejos-de-seguridad. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/_next/static/chunks/6370-f15ede117",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to fetch RSC payload for https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/terminos. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/_next/static/chunks/6370-f15ede117dde6144.js?dp",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to fetch RSC payload for https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/privacidad. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/_next/static/chunks/6370-f15ede117dde6144.js?",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to fetch RSC payload for https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/libro-de-reclamaciones. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/_next/static/chunks/6370-f15ede11",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+          "console https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Failed to load resource: the server responded with a status of 400 (Bad Request)",
+          "pageerror https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app/mi-cuenta/tienda/inventario/mostrador Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings."
+        ],
+        "base": "https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app",
+        "live": true,
+        "at": "2026-10-30T12:58:21.478Z",
+        "ms": 30756
+      },
+      "release_gate": "Production deployment of this branch is pending."
+    },
+    {
+      "id": "EASE-710",
+      "status": "Pass",
+      "local": {
+        "id": "EASE-710",
+        "status": "Pass",
+        "checks": [
+          {
+            "ok": true,
+            "message": "390 inventory bulk traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "390 inventory bulk keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "390 repeated-search prompt traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "390 repeated-search prompt keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "390 Undo notice traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "390 Undo notice keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "390 listing contact traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "390 listing contact keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "phone footer ends above the fixed contact bar"
+          },
+          {
+            "ok": true,
+            "message": "1366 inventory bulk traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "1366 inventory bulk keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "1366 repeated-search prompt traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "1366 repeated-search prompt keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "1366 comparison tray traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "1366 comparison tray keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "1366 Undo notice traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "1366 Undo notice keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "1366 listing contact traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "1366 listing contact keeps keyboard focus clear of its bottom bar"
+          }
+        ],
+        "notes": [
+          "phone footer geometry {\"footer\":722.515625,\"bar\":743}"
+        ],
+        "shots": [
+          "/tmp/laria-ease/fix-5/local/screens/EASE-710-inventory-focus-390.png",
+          "/tmp/laria-ease/fix-5/local/screens/EASE-710-phone-footer-contact.png",
+          "/tmp/laria-ease/fix-5/local/screens/EASE-710-inventory-focus-1366.png"
+        ],
+        "blocked": [],
+        "problems": [
+          "console http://localhost:3300/listados?category=guitars Failed to load resource: the server responded with a status of 404 (Not Found)"
+        ],
+        "base": "http://localhost:3300",
+        "live": false,
+        "at": "2026-10-30T06:14:12.066Z",
+        "ms": 32744
+      },
+      "live": {
+        "id": "EASE-710",
+        "status": "Pass",
+        "checks": [
+          {
+            "ok": true,
+            "message": "390 inventory bulk traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "390 inventory bulk keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "390 repeated-search prompt traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "390 repeated-search prompt keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "390 Undo notice traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "390 Undo notice keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "390 listing contact traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "390 listing contact keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "phone footer ends above the fixed contact bar"
+          },
+          {
+            "ok": true,
+            "message": "1366 inventory bulk traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "1366 inventory bulk keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "1366 repeated-search prompt traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "1366 repeated-search prompt keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "1366 comparison tray traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "1366 comparison tray keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "1366 Undo notice traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "1366 Undo notice keeps keyboard focus clear of its bottom bar"
+          },
+          {
+            "ok": true,
+            "message": "1366 listing contact traversed actual keyboard focus stops"
+          },
+          {
+            "ok": true,
+            "message": "1366 listing contact keeps keyboard focus clear of its bottom bar"
+          }
+        ],
+        "notes": [
+          "phone footer geometry {\"footer\":722.515625,\"bar\":743}"
+        ],
+        "shots": [
+          "/tmp/laria-ease/fix-5/live/screens-preview/EASE-710-inventory-focus-390.png",
+          "/tmp/laria-ease/fix-5/live/screens-preview/EASE-710-phone-footer-contact.png",
+          "/tmp/laria-ease/fix-5/live/screens-preview/EASE-710-inventory-focus-1366.png"
+        ],
+        "blocked": [
+          "POST /api/events names someone else's 95e5660b-9ec9-4a8e-822a-510b943951dd",
+          "POST /api/events names someone else's 95e5660b-9ec9-4a8e-822a-510b943951dd",
+          "POST /api/events names someone else's 95e5660b-9ec9-4a8e-822a-510b943951dd",
+          "POST /api/events names someone else's 95e5660b-9ec9-4a8e-822a-510b943951dd",
+          "POST /api/events names someone else's f33cc199-144a-44a5-98c3-a811d616eff9, 9c065a3c-fb63-4980-9bc4-7576c339d811",
+          "POST /api/events names someone else's f33cc199-144a-44a5-98c3-a811d616eff9, 9c065a3c-fb63-4980-9bc4-7576c339d811",
+          "POST /api/events names someone else's 9c065a3c-fb63-4980-9bc4-7576c339d811, 95e5660b-9ec9-4a8e-822a-510b943951dd",
+          "POST /api/events names someone else's 9c065a3c-fb63-4980-9bc4-7576c339d811, 95e5660b-9ec9-4a8e-822a-510b943951dd",
+          "POST /api/events names someone else's 55f89634-2117-434c-ac15-06235bb65a9e",
+          "POST /api/events names someone else's 55f89634-2117-434c-ac15-06235bb65a9e",
+          "POST /api/events names someone else's 4d76af72-0b89-4da7-8585-c9c16a45bc6e, 95e5660b-9ec9-4a8e-822a-510b943951dd",
+          "POST /api/events names someone else's 4d76af72-0b89-4da7-8585-c9c16a45bc6e, 95e5660b-9ec9-4a8e-822a-510b943951dd",
+          "POST /api/events names someone else's 62166db0-b1fd-4b18-b647-98c2d13666ee, 95e5660b-9ec9-4a8e-822a-510b943951dd",
+          "POST /api/events names someone else's 62166db0-b1fd-4b18-b647-98c2d13666ee, 95e5660b-9ec9-4a8e-822a-510b943951dd",
+          "POST /api/events names someone else's 95e5660b-9ec9-4a8e-822a-510b943951dd, 62166db0-b1fd-4b18-b647-98c2d13666ee",
+          "POST /api/events names someone else's 95e5660b-9ec9-4a8e-822a-510b943951dd, 62166db0-b1fd-4b18-b647-98c2d13666ee",
+          "POST /api/events names someone else's 55f89634-2117-434c-ac15-06235bb65a9e, f33cc199-144a-44a5-98c3-a811d616eff9",
+          "POST /api/events names someone else's 55f89634-2117-434c-ac15-06235bb65a9e, f33cc199-144a-44a5-98c3-a811d616eff9"
+        ],
+        "problems": [
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/login?next=%2Fmi-cuenta Connecting to 'https://vercel.com/sso-api?url=https%3A%2F%2Fmkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app%2Flogin%3Fnext%3D%252Fvender&nonce=[redacted] violates the following Content Security Policy directive: \"connect-src 'self' ",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/login?next=%2Fmi-cuenta Failed to fetch RSC payload for https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/vender. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/_next/static/chunks/6370-3a3292a910ce0217.js?dpl=",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/login?next=%2Fmi-cuenta Connecting to 'https://vercel.com/sso-api?url=https%3A%2F%2Fmkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app%2Flogin%3Fnext%3D%252Fvender&nonce=[redacted] violates the following Content Security Policy directive: \"connect-src 'self' ",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/login?next=%2Fmi-cuenta Failed to fetch RSC payload for https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/vender. Falling back to browser navigation. TypeError: Failed to fetch\n    at y (https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/_next/static/chunks/6370-3a3292a910ce0217.js?dpl=",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/instrumentos/fender-player-stratocaster-hsmb-7hsmc Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/instrumentos/fender-player-stratocaster-hsmb-7hsmc Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/instrumentos/fender-player-stratocaster-hsmb-7hsmc Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/instrumentos/fender-player-stratocaster-hsmb-7hsmc Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=pedals Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=pedals Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app/listados?category=guitars Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "base": "https://mkt-instrumentos-7c3c41men-henri-camayos-projects.vercel.app",
+        "live": true,
+        "at": "2026-10-30T06:24:23.460Z",
+        "ms": 88905
+      },
+      "release_gate": "Production deployment of this branch is pending."
+    }
+  ]
+}

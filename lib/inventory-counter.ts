@@ -96,3 +96,45 @@ export function writeJson(storage: Pick<Storage, "setItem"> | null, key: string,
     // A full or blocked storage only loses the offline copy; the screen keeps working online.
   }
 }
+
+// Only one replay may run at a time. Each response updates the latest queue, so a slow request cannot erase
+// a sale added (or a refusal recorded) while it was in flight.
+export function createCounterQueueFlusher({
+  read,
+  update,
+  send,
+  onRecorded,
+}: {
+  read: () => QueuedSale[];
+  update: (change: (current: QueuedSale[]) => QueuedSale[]) => void;
+  send: (sale: QueuedSale) => Promise<import("./inventory-client").InventoryActionResult>;
+  onRecorded: (count: number) => void;
+}) {
+  let running: Promise<void> | null = null;
+  let rerunRequested = false;
+  return function flush(): Promise<void> {
+    if (running) {
+      // An online event can arrive while a request from the previous connection is still failing.
+      rerunRequested = true;
+      return running;
+    }
+    running = (async () => {
+      let sent = 0;
+      do {
+        rerunRequested = false;
+        for (;;) {
+          const sale = read().find((entry) => !entry.error);
+          if (!sale) break;
+          const result = await send(sale);
+          if (!result.ok && isConnectionFailure(result.code)) break;
+          update((current) => current.flatMap((entry) => entry.key !== sale.key
+            ? [entry]
+            : result.ok ? [] : [{ ...entry, error: result.message }]));
+          if (result.ok) sent += 1;
+        }
+      } while (rerunRequested);
+      if (sent) onRecorded(sent);
+    })().finally(() => { running = null; });
+    return running;
+  };
+}

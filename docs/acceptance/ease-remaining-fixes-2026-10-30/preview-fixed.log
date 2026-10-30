@@ -1,0 +1,46 @@
+Retrieving project…
+Downloading `development` Environment Variables
+preflight {"run":"rmvul5cen","alerts":2,"buckets":{"type:bass":1,"type:drums":1},"version":"17.11","leftovers":0}
+EASE-425 (live)
+  ok   the date field bounds the permitted pause range
+  ok   the owner can pause all publications
+  ok   the warmed public listing immediately shows its return date
+  ok   the pause disables buyer contact
+  ok   Ya volví ends the pause
+  ok   contact returns after ending the pause
+  => Pass (30 s)
+EASE-428 (live)
+  => Blocked (1 s)
+EASE-627 (live)
+  ok   an offline sale waits without changing server stock
+  ok   the queued sale is visible
+  ok   reconnection records the waiting sale
+  ok   a repeated reconnect does not record the sale twice
+  FAIL a refused queued sale stays with its reason
+  ok   the refusal identifies the SKU on screen
+  ok   the refused sale and reason survive reloading the device queue
+  ok   a refused queued sale does not create negative or duplicate stock
+  => Fail (52 s)
+EASE-710 (live)
+  ok   390 inventory bulk traversed actual keyboard focus stops
+  ok   390 inventory bulk keeps keyboard focus clear of its bottom bar
+  ok   390 repeated-search prompt traversed actual keyboard focus stops
+  ok   390 repeated-search prompt keeps keyboard focus clear of its bottom bar
+  ok   390 Undo notice traversed actual keyboard focus stops
+  ok   390 Undo notice keeps keyboard focus clear of its bottom bar
+  ok   390 listing contact traversed actual keyboard focus stops
+  ok   390 listing contact keeps keyboard focus clear of its bottom bar
+  ok   phone footer ends above the fixed contact bar
+  ok   1366 inventory bulk traversed actual keyboard focus stops
+  ok   1366 inventory bulk keeps keyboard focus clear of its bottom bar
+  ok   1366 repeated-search prompt traversed actual keyboard focus stops
+  ok   1366 repeated-search prompt keeps keyboard focus clear of its bottom bar
+  ok   1366 comparison tray traversed actual keyboard focus stops
+  ok   1366 comparison tray keeps keyboard focus clear of its bottom bar
+  ok   1366 Undo notice traversed actual keyboard focus stops
+  ok   1366 Undo notice keeps keyboard focus clear of its bottom bar
+  ok   1366 listing contact traversed actual keyboard focus stops
+  ok   1366 listing contact keeps keyboard focus clear of its bottom bar
+  => Pass (89 s)
+{"Pass":2,"Fail":1,"Not Run":0,"Blocked":1}
+clean-up {"run":"rmvul5cen","accounts":6,"photos":{"removed":0},"left":{"emails":0,"stores":0,"storage":0,"accounts":0,"listings":0,"profiles":0,"movements":0,"inventory_changes":0}}

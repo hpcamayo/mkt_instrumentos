@@ -1,0 +1,78 @@
+{
+  "revision": "009eefb1a597c068284d585a1d70696990b97851",
+  "unit_tests": {
+    "passed": 898,
+    "failed": 0,
+    "log_sha256": "1afe8a84a0feafb2cdf87c461f2e0d04e6dda4d6c1c3ff2e0e4cebc7d92b6dec"
+  },
+  "local_75": {
+    "Pass": 65,
+    "Not Run": 10
+  },
+  "delayed_offline_rejection": {
+    "before": "Fail, late queue waited for the timer",
+    "after": "Pass, immediate replay after enqueue; unchanged 20-second refusal threshold"
+  },
+  "sql": {
+    "companion_suites": 18,
+    "migrations": 106,
+    "foreign_key_index_audit": "Pass after adding the private transaction FK index",
+    "ci_sql_suites": 50
+  },
+  "types": "Pass",
+  "lint": "Pass",
+  "build": "Pass in CI; local build also succeeds, but separate lint uses explicit pnpm dependency resolution for temporary symlinked checkout.",
+  "ci": [
+    {
+      "bucket": "pass",
+      "link": "https://vercel.com/github",
+      "name": "Vercel Preview Comments",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/hpcamayo/mkt_instrumentos/actions/runs/41059101894/job/124074010711",
+      "name": "Release-gate cases on a full local stack",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/hpcamayo/mkt_instrumentos/actions/runs/41059101829/job/124074009961",
+      "name": "Migrations, SQL suites and database integration tests",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://github.com/hpcamayo/mkt_instrumentos/actions/runs/41059101829/job/124074010162",
+      "name": "Tests, types, lint and build",
+      "state": "SUCCESS"
+    },
+    {
+      "bucket": "pass",
+      "link": "https://vercel.com/henri-camayos-projects/mkt-instrumentos/Cv7gBP9quvdrv5hiY8qZxEm7npth",
+      "name": "Vercel",
+      "state": "SUCCESS"
+    }
+  ],
+  "console_limitations": [
+    "Mostrador emits pre-existing React hydration error #418, also present in the original e0a659f evidence. Assertions, refusal UI and persistence pass; this run does not establish a clean browser console.",
+    "Offline errors, intentional stock-refusal HTTP 400s and incidental live analytics guard blocks are retained in raw records."
+  ],
+  "registry": {
+    "cases": 882,
+    "valid": true,
+    "tests_run": 13,
+    "tests_skipped": 2,
+    "changed_ids": [
+      "EASE-425",
+      "EASE-428",
+      "EASE-609",
+      "EASE-627",
+      "EASE-710"
+    ],
+    "columns": [
+      5,
+      8
+    ]
+  }
+}

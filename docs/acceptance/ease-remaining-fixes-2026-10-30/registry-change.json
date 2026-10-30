@@ -1,0 +1,35 @@
+{
+  "changed_ids": [
+    "EASE-425",
+    "EASE-428",
+    "EASE-609",
+    "EASE-627",
+    "EASE-710"
+  ],
+  "columns": [
+    5,
+    8
+  ],
+  "overall": {
+    "Pass": 717,
+    "Not Run": 163,
+    "Blocked": 2
+  },
+  "ease": {
+    "Pass": 332,
+    "Not Run": 10,
+    "Blocked": 1
+  },
+  "manual_ids_unchanged": [
+    "EASE-164",
+    "EASE-166",
+    "EASE-546",
+    "EASE-549",
+    "EASE-512",
+    "EASE-703",
+    "EASE-712",
+    "EASE-714",
+    "EASE-716",
+    "EASE-719"
+  ]
+}

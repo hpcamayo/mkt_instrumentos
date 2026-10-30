@@ -62,45 +62,43 @@ export function PurchaseRequestList({ requests, canWrite }: { requests: Purchase
     router.refresh();
   }
 
-  if (!requests.length) {
-    return <p className="t-body text-ink-2">No hay solicitudes aquí. Cuando un comprador toque «Solicitar compra» en una de tus publicaciones, la verás en esta lista.</p>;
-  }
-
   return (
     <div className="grid gap-3">
       {notice ? <UndoNotice notice={notice} onChange={setNotice} /> : null}
-      <ul className="divide-y divide-subtle rounded-panel border border-subtle bg-white">
-        {requests.map((request) => (
-          <li key={request.id} className="grid gap-2 p-4 md:grid-cols-[1fr_auto] md:items-start md:gap-x-6">
-            <div className="min-w-0">
-              <p className="t-meta">{formatDateTime(request.created_at)} · <span className="font-semibold text-ink">{STATUS_LABELS[request.status]}</span>{request.status === "sold" && request.quantity ? ` (${numbers.format(request.quantity)} ${request.quantity === 1 ? "unidad" : "unidades"})` : ""}</p>
-              <Link href={`/instrumentos/${request.listing_slug}`} className="link mt-1 block font-semibold">{request.listing_title}</Link>
-              <p className="t-meta">
-                {request.item ? `SKU ${request.item.merchant_sku} · Disponible ${numbers.format(request.item.quantity_available)}` : "Sin SKU en Inventario"}
-                {request.listing_price_pen !== null ? <> · <Price value={request.listing_price_pen} size="inline" /></> : null}
-              </p>
-              <p className="t-meta">{request.signed_in ? `${request.buyer_name ?? "Comprador"} · con cuenta en Laria` : "Visitante sin cuenta"}</p>
-            </div>
-            {canWrite ? (
-              <div className="flex flex-wrap gap-x-4 gap-y-2 md:justify-end">
-                {request.status !== "sold" && request.item && request.item.inventory_status === "active" && request.item.quantity_available > 0 ? (
-                  <Button size="sm" variant="secondary" aria-haspopup="dialog" onClick={() => setSelling(request)}>Vendido</Button>
-                ) : null}
-                {request.status === "waiting" ? (
-                  <>
-                    <button type="button" className="link font-semibold" disabled={busy === request.id} onClick={() => mark(request, "answered")}>Atendida</button>
-                    <button type="button" className="link font-semibold" disabled={busy === request.id} onClick={() => mark(request, "not_sold")}>No se vendió</button>
-                  </>
-                ) : request.status !== "sold" ? (
-                  <button type="button" className="link font-semibold" disabled={busy === request.id} onClick={() => mark(request, null)}>Volver a Por atender</button>
-                ) : request.item ? (
-                  <Link href={`/mi-cuenta/tienda/inventario/${request.item.id}`} className="link font-semibold">Ver en Inventario</Link>
-                ) : null}
+      {!requests.length ? <p className="t-body text-ink-2">No hay solicitudes aquí. Cuando un comprador toque «Solicitar compra» en una de tus publicaciones, la verás en esta lista.</p> : (
+        <ul className="divide-y divide-subtle rounded-panel border border-subtle bg-white">
+          {requests.map((request) => (
+            <li key={request.id} className="grid gap-2 p-4 md:grid-cols-[1fr_auto] md:items-start md:gap-x-6">
+              <div className="min-w-0">
+                <p className="t-meta">{formatDateTime(request.created_at)} · <span className="font-semibold text-ink">{STATUS_LABELS[request.status]}</span>{request.status === "sold" && request.quantity ? ` (${numbers.format(request.quantity)} ${request.quantity === 1 ? "unidad" : "unidades"})` : ""}</p>
+                <Link href={`/instrumentos/${request.listing_slug}`} className="link mt-1 block font-semibold">{request.listing_title}</Link>
+                <p className="t-meta">
+                  {request.item ? `SKU ${request.item.merchant_sku} · Disponible ${numbers.format(request.item.quantity_available)}` : "Sin SKU en Inventario"}
+                  {request.listing_price_pen !== null ? <> · <Price value={request.listing_price_pen} size="inline" /></> : null}
+                </p>
+                <p className="t-meta">{request.signed_in ? `${request.buyer_name ?? "Comprador"} · con cuenta en Laria` : "Visitante sin cuenta"}</p>
               </div>
-            ) : null}
-          </li>
-        ))}
-      </ul>
+              {canWrite ? (
+                <div className="flex flex-wrap gap-x-4 gap-y-2 md:justify-end">
+                  {request.status !== "sold" && request.item && request.item.inventory_status === "active" && request.item.quantity_available > 0 ? (
+                    <Button size="sm" variant="secondary" aria-haspopup="dialog" onClick={() => setSelling(request)}>Vendido</Button>
+                  ) : null}
+                  {request.status === "waiting" ? (
+                    <>
+                      <button type="button" className="link font-semibold" disabled={busy === request.id} onClick={() => mark(request, "answered")}>Atendida</button>
+                      <button type="button" className="link font-semibold" disabled={busy === request.id} onClick={() => mark(request, "not_sold")}>No se vendió</button>
+                    </>
+                  ) : request.status !== "sold" ? (
+                    <button type="button" className="link font-semibold" disabled={busy === request.id} onClick={() => mark(request, null)}>Volver a Por atender</button>
+                  ) : request.item ? (
+                    <Link href={`/mi-cuenta/tienda/inventario/${request.item.id}`} className="link font-semibold">Ver en Inventario</Link>
+                  ) : null}
+                </div>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
       {selling ? <SaleSheet request={selling} onClose={() => setSelling(null)} onDone={(next) => { setSelling(null); setNotice(next); router.refresh(); }} /> : null}
     </div>
   );

@@ -54,4 +54,26 @@ function structuredSqlError(error) {
   }
   return null;
 }
-module.exports = { readOnlyFetch, assertScopedSql, isFavoriteRead, isUploadSetup, structuredSqlError };
+
+
+// Called only after the live ownership/read-only guards. Keep the token off browser requests: continue({headers})
+// also forwards overrides through redirects. A zero-redirect fetch followed by fulfill authenticates this one
+// origin; a browser redirect starts a fresh, guarded request without inheriting the token.
+async function continueWithPreviewAccess(route, { origin, token, offline }) {
+  const request = route.request();
+  if (!token || new URL(request.url()).origin !== origin) return route.continue();
+  // APIRequestContext fetch is outside Chromium's offline emulation.
+  if (offline) return route.abort("internetdisconnected");
+  try {
+    const response = await route.fetch({
+      headers: { ...request.headers(), "x-vercel-trusted-oidc-idp-token": token },
+      maxRedirects: 0,
+    });
+    return await route.fulfill({ response });
+  } catch {
+    // Playwright fetch errors can include request headers; never put the token in a log.
+    return route.abort("failed").catch(() => undefined);
+  }
+}
+
+module.exports = { readOnlyFetch, assertScopedSql, isFavoriteRead, isUploadSetup, structuredSqlError, continueWithPreviewAccess };

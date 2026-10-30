@@ -1,0 +1,15 @@
+{
+  "production": {
+    "domain": "laria.audio",
+    "deployment_id": "dpl_GfoVXt7QB6xy4FSHhA4FEv1QDUkj",
+    "revision": "e0a659fb48ef0d0db0256ae9aee27a0a14b0a7be",
+    "state": "READY"
+  },
+  "preview": {
+    "url": "https://mkt-instrumentos-qcj3vx5ql-henri-camayos-projects.vercel.app",
+    "deployment_id": "dpl_Cv7gBP9quvdrv5hiY8qZxEm7npth",
+    "revision": "009eefb1a597c068284d585a1d70696990b97851",
+    "state": "READY"
+  },
+  "changed_production": false
+}

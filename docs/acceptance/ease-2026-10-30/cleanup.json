@@ -1,0 +1,72 @@
+{
+  "batch_accounts_removed": 61,
+  "batches": [
+    {
+      "run": "rmvugruq0",
+      "accounts": 12,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    },
+    {
+      "run": "rmvuhxhs7",
+      "accounts": 40,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    },
+    {
+      "run": "rmvuigs3q",
+      "accounts": 9,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    }
+  ],
+  "independent_final": {
+    "removed": 0,
+    "run": "rmvuipmwn",
+    "accounts": 0,
+    "photos": {
+      "removed": 0
+    },
+    "left": {
+      "accounts": 0,
+      "profiles": 0,
+      "listings": 0,
+      "stores": 0,
+      "storage": 0,
+      "emails": 0
+    }
+  }
+}

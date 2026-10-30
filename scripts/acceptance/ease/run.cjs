@@ -11,7 +11,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const h = require("./harness.cjs");
 const { LocalOnly, LiveUnsafe } = require("./errors.cjs");
-const { readOnlyFetch, isFavoriteRead } = require("./live-safety.cjs");
+const { readOnlyFetch, isFavoriteRead, continueWithPreviewAccess } = require("./live-safety.cjs");
 if (h.LIVE) globalThis.fetch = readOnlyFetch(globalThis.fetch, "Node fetch");
 
 const args = process.argv.slice(2);
@@ -81,6 +81,13 @@ function makeT(definition, browser) {
         ...(saved ? { storageState: saved } : {}),
       });
       contexts.push(context);
+      const previewToken = h.LIVE && new URL(origin).hostname.endsWith(".vercel.app")
+        ? process.env.EASE_VERCEL_OIDC_TOKEN : undefined;
+      let previewOffline = false;
+      if (previewToken) {
+        const setOffline = context.setOffline.bind(context);
+        context.setOffline = async (value) => { await setOffline(value); previewOffline = value; };
+      }
       if (h.LIVE) context.request.fetch = readOnlyFetch(context.request.fetch, "Playwright API request");
       await context.route("**/*", async (route) => {
         const request = route.request();
@@ -112,7 +119,7 @@ function makeT(definition, browser) {
         if (h.LIVE) {
           if (url.origin === origin && /^\/(listados|api\/catalog)(\/|$)/.test(url.pathname)) await h.paceCatalog();
         }
-        return route.continue();
+        return continueWithPreviewAccess(route, { origin, token: previewToken, offline: previewOffline });
       });
       if (offline) await context.setOffline(true);
       const page = await context.newPage();

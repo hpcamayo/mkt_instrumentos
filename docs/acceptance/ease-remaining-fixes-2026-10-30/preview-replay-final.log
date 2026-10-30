@@ -1,0 +1,22 @@
+Retrieving project…
+Downloading `development` Environment Variables
+preflight {"run":"rmvulju3s","alerts":2,"buckets":{"type:bass":1,"type:drums":1},"version":"17.11","leftovers":0}
+EASE-627 (live)
+  ok   an offline sale waits without changing server stock
+  ok   the queued sale is visible
+  ok   reconnection records the waiting sale
+  ok   a repeated reconnect does not record the sale twice
+  FAIL a refused queued sale stays with its reason
+  ok   the refusal identifies the SKU on screen
+  ok   the refused sale and reason survive reloading the device queue
+  ok   a refused queued sale does not create negative or duplicate stock
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+Route is already handled!
+    at continueWithPreviewAccess (/private<local-app>/scripts/acceptance/ease/live-safety.cjs:75:18) {
+  name: 'Error'
+}
+
+Node.js v24.15.0
