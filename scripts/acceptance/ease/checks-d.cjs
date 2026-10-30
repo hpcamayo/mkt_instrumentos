@@ -328,6 +328,9 @@ cases.push({
     let slug;
     let brand = "Boss";
     let outOfStock = null;
+    const publicCards = new Map();
+    const visibleSlugs = (page) => page.locator("#publicaciones a[href^='/instrumentos/']").evaluateAll((links) =>
+      [...new Set(links.map((link) => new URL(link.href).pathname.replace("/instrumentos/", "")))]);
     if (!t.live) {
       const made = filterStore(t);
       slug = made.store.slug;
@@ -339,9 +342,22 @@ cases.push({
       if (!card) t.skip("no store on the site");
       slug = card.href.replace("/tiendas/", "");
       await t.goto(probe, card.href);
-      const titles = await probe.locator("#publicaciones h3").allInnerTexts();
-      brand = titles[0]?.split(/\s+/)[0];
-      if (!brand) t.skip("the store has no listings");
+      // Titles are seller-written: "bateria mapex" has brand "mapex", not "bateria".
+      // Read the same anonymous snapshot as the app, then choose a visible store product's actual brand.
+      let after = null;
+      const cursors = new Set();
+      do {
+        const response = await probe.request.get(t.url(`/api/public-cards${after ? `?after=${encodeURIComponent(after)}` : ""}`));
+        if (!response.ok()) throw new Error(`public brand fixture returned ${response.status()}`);
+        const snapshot = await response.json();
+        for (const product of snapshot.cards) publicCards.set(product.slug, product);
+        after = snapshot.next;
+        if (after && cursors.has(after)) throw new Error("public brand fixture repeated a page");
+        if (after) cursors.add(after);
+      } while (after);
+      const slugs = await visibleSlugs(probe);
+      brand = slugs.map((item) => publicCards.get(item)).find((item) => item?.stores?.slug === slug && item.brand?.trim())?.brand;
+      if (!brand) t.skip("the store has no visible product with a public brand");
     }
     const base = `/tiendas/${slug}`;
     for (const javaScript of [true, false]) {
@@ -354,7 +370,12 @@ cases.push({
       await page.waitForURL((url) => url.searchParams.get("brand") === brand, { timeout: 20_000 });
       await page.waitForLoadState("load");
       const titles = await page.locator("#publicaciones h3").allInnerTexts();
-      t.check(titles.length > 0 && titles.every((title) => title.toLowerCase().includes(brand.toLowerCase()) || !t.live), `${label}: the brand box finds ${titles.length} ${brand} listings in the store`);
+      const slugs = t.live ? await visibleSlugs(page) : [];
+      const matches = t.live ? slugs.length > 0 && slugs.every((item) => {
+        const product = publicCards.get(item);
+        return product?.stores?.slug === slug && product.brand?.toLowerCase().includes(brand.toLowerCase());
+      }) : titles.length > 0;
+      t.check(matches, `${label}: the brand box finds ${t.live ? slugs.length : titles.length} ${brand} listings in the store`);
       const applied = page.getByRole("link", { name: new RegExp(`Quitar filtro: Marca: ${brand}`, "i") });
       t.check(await applied.count() === 1 && await page.getByRole("link", { name: "Limpiar todo" }).count() === 1, `${label}: the brand shows as a removable chip with Limpiar todo`);
       const { robots } = d.headTags(await page.content());
