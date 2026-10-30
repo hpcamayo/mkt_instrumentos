@@ -1,0 +1,55 @@
+{
+  "accounts_removed": 61,
+  "batches": [
+    {
+      "run": "rmvv05v4a",
+      "accounts": 58,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    },
+    {
+      "run": "rmvv1sz87",
+      "accounts": 3,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    }
+  ],
+  "independent_final_cleanup": {
+    "removed": 0,
+    "run": "rmvv1vtyl",
+    "accounts": 0,
+    "photos": {
+      "removed": 0
+    },
+    "left": {
+      "accounts": 0,
+      "profiles": 0,
+      "listings": 0,
+      "stores": 0,
+      "storage": 0,
+      "emails": 0
+    }
+  }
+}

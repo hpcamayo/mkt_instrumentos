@@ -1,5 +1,12 @@
 # Feature ideas: setup for Henri
 
+**Pilot update (2026-10-30):** the owner now limits two-step verification to Admin. This supersedes the original
+optional-account/store-payment requirements below. Non-Admin enrollment and prompts are disabled during the pilot.
+Wider enforcement is deferred until paying users and a new owner-approved release. Admin recovery explicitly
+revokes all sessions; revoked JWTs are refused by the API and Storage. Apply
+`20261210120800_feat_pilot_security_fixes.sql` with the other PR migrations at the coordinated release.
+
+
 What the feature-ideas build needs outside the code, collected from every batch's write-up. Nothing here is set
 anywhere yet, and nothing has to be set before the merge to main: each feature without its setting stays off or says
 so on its page.

@@ -1,0 +1,346 @@
+{
+  "local_application_revision": "ba05b79842eb81178926425ab79a012659d4a797",
+  "live_url": "https://laria.audio",
+  "live_deployment_revision": "22332d5c7c50e7ce7840c9c2749600742366b8a6",
+  "live_deployment_observation": {
+    "checked_at": "2026-10-29 05:20:25 UTC",
+    "alias": "laria.audio",
+    "deployment_id": "dpl_6KUom6EsNbGwpqboCBrimnQNQ3wm",
+    "url": "mkt-instrumentos-ozynpf8eh-henri-camayos-projects.vercel.app",
+    "ready_state": "READY",
+    "target": "production",
+    "git_sha": "22332d5c7c50e7ce7840c9c2749600742366b8a6",
+    "git_ref": "main",
+    "git_message": "Merge pull request #81 from hpcamayo/codex/expanded-v1-documentation\n\ndocs: update expanded V1 scope and PR #54 feature status",
+    "database_migrations": {
+      "count": 103,
+      "latest": "20261120900000"
+    }
+  },
+  "unit": {
+    "tests": 872,
+    "passed": 872,
+    "failed": 0
+  },
+  "lint": "Pass (zero warnings)",
+  "typecheck": "Pass",
+  "production_build": "Pass",
+  "prospective_merge": {
+    "main_revision": "12e1d73b2622cefd1cff6c82bf19a969c3b28877",
+    "harness_revision": "7dedab91e0866db77a9947a52d5e6a74a60cfe69",
+    "unit_tests": 887,
+    "passed": 887,
+    "failed": 0
+  },
+  "registry_tests": {
+    "tests": 12,
+    "skipped_dormant_xlsx": 2,
+    "failures": 0
+  },
+  "sql": {
+    "image": "public.ecr.aws/supabase/postgres:17.6.1.106",
+    "migrations": 103,
+    "phoneBackfill": true,
+    "suites": [
+      {
+        "file": "tests/maybes-ai.sql",
+        "status": "Pass",
+        "sha256": "1f4493212cc0ea3d2f7d203c34b59fba86ce07520b058251ddcd93cbe0e63753"
+      },
+      {
+        "file": "tests/maybes-reservado.sql",
+        "status": "Pass",
+        "sha256": "6cc5fc1d8e74189899ff16fa5e3ab1e9730c0f11b51fc078179cc3a9e491449a"
+      },
+      {
+        "file": "tests/ux-accounts-phone.sql",
+        "status": "Pass",
+        "sha256": "9c7b962816ba15ebfb386b653f84d4128fb0ebd084bedc2c0fc1b88c7ae39803"
+      },
+      {
+        "file": "tests/ux-accounts-saving.sql",
+        "status": "Pass",
+        "sha256": "4ba40802efd5832527f86b55fabf4ec96d51126a8392a656c601f7c88c8e1e9d"
+      },
+      {
+        "file": "tests/ux-effortless-integration.sql",
+        "status": "Pass",
+        "sha256": "fae653d335056b73a8a4eccc5e09d0dcc59deb755daa73316029034146af13ee"
+      },
+      {
+        "file": "tests/ux-effortless-push.sql",
+        "status": "Pass",
+        "sha256": "83d01ec4948d78f4a904c478332409cfb8fdda918a6508e0fbfceb0665caff14"
+      },
+      {
+        "file": "tests/ux-effortless-selling.sql",
+        "status": "Pass",
+        "sha256": "7c9cdafef39510d8946d6981cd324e92b8d7c86d1857c6342a24eb7bf3b0b85c"
+      },
+      {
+        "file": "tests/ux-find-search.sql",
+        "status": "Pass",
+        "sha256": "c0d526499b393fcca61f1a0655a7d30c2cd6308db345c3493ccf1ae8539b1690"
+      },
+      {
+        "file": "tests/ux-inventory-fixes.sql",
+        "status": "Pass",
+        "sha256": "76d7dab45aee986c6c23d309752ae01b96c9ecc34b510c428459ce934c4155e3"
+      },
+      {
+        "file": "tests/ux-inventory.sql",
+        "status": "Pass",
+        "sha256": "92767fd8eeb9ee451e3c2a55767b51e7b50267f1ab95be6e4e291fea7b65cbcf"
+      },
+      {
+        "file": "tests/ux-listing-contact.sql",
+        "status": "Pass",
+        "sha256": "700a1209ec38fec3ef9ff0448bbd03cc7d6d9ec620d6265391ec7841f44a85bf"
+      },
+      {
+        "file": "tests/ux-listing-page.sql",
+        "status": "Pass",
+        "sha256": "1e488df6ce9223f1501fc2b9aec9d4b41d78aee14f4da3ab88b7e3d3a021c432"
+      },
+      {
+        "file": "tests/ux-listing-questions.sql",
+        "status": "Pass",
+        "sha256": "e80bdd3fa34a5d1127f459e6e2ff1ba6cc81504d64223f68557abc7093f9acd7"
+      },
+      {
+        "file": "tests/ux-my-listings.sql",
+        "status": "Pass",
+        "sha256": "92678aa1a702ca808989a2f868d6e645936b244ae200fe1f54574ca834786412"
+      },
+      {
+        "file": "tests/ux-stores-complaints.sql",
+        "status": "Pass",
+        "sha256": "da9ad4c86408353840d03c6680f0ca308b17d90f21ff8aedda9cf20163e70d32"
+      },
+      {
+        "file": "tests/ux-stores-import.sql",
+        "status": "Pass",
+        "sha256": "a1c51ec8f21a3481af77b6eab4a3c425b2d30d7f1108c4200e09394b0d38428d"
+      },
+      {
+        "file": "tests/ux-stores-requests.sql",
+        "status": "Pass",
+        "sha256": "051abb8be5a0d43e8e337410b32802fd954710dfdf4aa24f7ecba16351154b51"
+      },
+      {
+        "file": "tests/ux-stores-storefront.sql",
+        "status": "Pass",
+        "sha256": "80b7cbe6f84191649baf4ce707bb1c46c53ad4e112dfbb072f2867d5bd85d4e7"
+      }
+    ]
+  },
+  "coverage": {
+    "registered": 343,
+    "implemented": 222,
+    "groups": {
+      "a": 48,
+      "b": 20,
+      "c": 18,
+      "d": 37,
+      "e": 99
+    },
+    "missing": [
+      "EASE-200",
+      "EASE-201",
+      "EASE-202",
+      "EASE-203",
+      "EASE-204",
+      "EASE-205",
+      "EASE-206",
+      "EASE-207",
+      "EASE-208",
+      "EASE-209",
+      "EASE-210",
+      "EASE-211",
+      "EASE-212",
+      "EASE-213",
+      "EASE-214",
+      "EASE-215",
+      "EASE-216",
+      "EASE-217",
+      "EASE-218",
+      "EASE-219",
+      "EASE-220",
+      "EASE-221",
+      "EASE-222",
+      "EASE-223",
+      "EASE-224",
+      "EASE-225",
+      "EASE-226",
+      "EASE-227",
+      "EASE-228",
+      "EASE-306",
+      "EASE-307",
+      "EASE-311",
+      "EASE-400",
+      "EASE-401",
+      "EASE-402",
+      "EASE-403",
+      "EASE-404",
+      "EASE-405",
+      "EASE-406",
+      "EASE-407",
+      "EASE-408",
+      "EASE-409",
+      "EASE-410",
+      "EASE-411",
+      "EASE-412",
+      "EASE-413",
+      "EASE-414",
+      "EASE-415",
+      "EASE-416",
+      "EASE-417",
+      "EASE-418",
+      "EASE-419",
+      "EASE-420",
+      "EASE-421",
+      "EASE-422",
+      "EASE-423",
+      "EASE-424",
+      "EASE-425",
+      "EASE-426",
+      "EASE-427",
+      "EASE-428",
+      "EASE-429",
+      "EASE-430",
+      "EASE-431",
+      "EASE-432",
+      "EASE-500",
+      "EASE-501",
+      "EASE-502",
+      "EASE-503",
+      "EASE-504",
+      "EASE-505",
+      "EASE-506",
+      "EASE-507",
+      "EASE-508",
+      "EASE-509",
+      "EASE-510",
+      "EASE-511",
+      "EASE-512",
+      "EASE-513",
+      "EASE-529",
+      "EASE-606",
+      "EASE-608",
+      "EASE-609",
+      "EASE-611",
+      "EASE-613",
+      "EASE-614",
+      "EASE-615",
+      "EASE-616",
+      "EASE-619",
+      "EASE-620",
+      "EASE-625",
+      "EASE-626",
+      "EASE-627",
+      "EASE-700",
+      "EASE-701",
+      "EASE-702",
+      "EASE-703",
+      "EASE-704",
+      "EASE-705",
+      "EASE-706",
+      "EASE-707",
+      "EASE-708",
+      "EASE-709",
+      "EASE-710",
+      "EASE-711",
+      "EASE-712",
+      "EASE-713",
+      "EASE-714",
+      "EASE-715",
+      "EASE-716",
+      "EASE-717",
+      "EASE-718",
+      "EASE-719",
+      "EASE-720",
+      "EASE-721",
+      "EASE-722",
+      "EASE-723",
+      "EASE-724",
+      "EASE-725",
+      "EASE-726",
+      "EASE-727"
+    ]
+  },
+  "local_verdicts": {
+    "Pass": 199,
+    "Fail": 19,
+    "Not Run": 4
+  },
+  "live_verdicts": {
+    "Not Run": 65,
+    "Pass": 128,
+    "Fail": 16
+  },
+  "live_cleanup": {
+    "run": "rmvtk3mn1",
+    "accounts": 2,
+    "photos": {
+      "removed": 0
+    },
+    "left": {
+      "emails": 0,
+      "stores": 0,
+      "storage": 0,
+      "accounts": 0,
+      "listings": 0,
+      "profiles": 0,
+      "movements": 0,
+      "inventory_changes": 0
+    }
+  },
+  "independent_final_cleanup": {
+    "removed": 0,
+    "run": "rmvtk5ndi",
+    "accounts": 0,
+    "photos": {
+      "removed": 0
+    },
+    "left": {
+      "accounts": 0,
+      "profiles": 0,
+      "listings": 0,
+      "stores": 0,
+      "storage": 0,
+      "emails": 0
+    }
+  },
+  "local_live_mode_rehearsal": {
+    "run": "rmvstlrx4",
+    "accounts": 3,
+    "photos": {
+      "removed": 0
+    },
+    "left": {
+      "emails": 0,
+      "stores": 0,
+      "storage": 0,
+      "accounts": 0,
+      "listings": 0,
+      "profiles": 0,
+      "movements": 0,
+      "inventory_changes": 0
+    }
+  },
+  "live_safety_smoke": {
+    "run": "rmvso0cow",
+    "accounts": 6,
+    "photos": {
+      "removed": 0
+    },
+    "left": {
+      "emails": 0,
+      "stores": 0,
+      "storage": 0,
+      "accounts": 0,
+      "listings": 0,
+      "profiles": 0
+    }
+  }
+}

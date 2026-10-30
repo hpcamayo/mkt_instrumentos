@@ -106,9 +106,13 @@ test("A27: the site reads only its own profile through the public API key", () =
 
 test("A27: card queries read public_listings, and the free-text search returns its rows", () => {
   assert.match(read("lib/catalog.ts"), /supabase\.from\("public_listings"\)\.select\(select, options\)/);
-  for (const file of ["lib/home.ts", "app/comparar/page.tsx", "app/tiendas/[slug]/page.tsx"]) {
+  for (const file of ["lib/home.ts", "app/tiendas/[slug]/page.tsx"]) {
     assert.match(read(file), /\.from\("public_listings"\)/, file);
   }
+  assert.match(read("components/compare-listings.tsx"), /loadPublicListingSnapshot/);
+  assert.doesNotMatch(read("app/comparar/page.tsx"), /supabase|searchParams/);
+  assert.match(read("app/api/public-cards/route.ts"), /createPublicReadClient/);
+  assert.doesNotMatch(read("app/api/public-cards/route.ts"), /AdminClient|auth\.getUser/);
   const page = read("app/instrumentos/[slug]/page.tsx");
   assert.equal([...page.matchAll(/\.from\("public_listings"\)/g)].length, 2, "similar listings and more from the seller");
   const sql = read("supabase/migrations/20261114130000_launch_audit_contact_reads.sql");

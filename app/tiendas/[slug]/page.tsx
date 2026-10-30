@@ -409,7 +409,7 @@ function StoreView({
       {preview ? null : <StoreVisitTelemetry storeId={store.id} />}
       {store.is_verified && !preview ? <StripCurrent value="verified_stores" /> : null}
       {isOwner ? <StoreOwnerNotice status={status} /> : null}
-      <StoreHeader store={store} total={storeTotal} rating={rating} location={location} preview={preview} trust={trustMarks} />
+      <StoreHeader store={store} total={storeTotal} rating={rating} location={location} preview={preview} isOwner={isOwner} trust={trustMarks} />
       <StoreSectionLinks total={storeTotal} reviews={reputation ? reputation.review_count : null} />
       <PageContainer as="section" className="grid gap-10 pb-12 pt-6 lg:gap-14 lg:pt-8">
         <CatalogNavigation>

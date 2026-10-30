@@ -52,6 +52,7 @@ export function StoreHeader({
   rating,
   location,
   preview = false,
+  isOwner = false,
   trust,
 }: {
   store: StoreHeaderData;
@@ -62,6 +63,7 @@ export function StoreHeader({
   rating: { average: number; count: number } | null;
   location?: PublicStoreLocation;
   preview?: boolean;
+  isOwner?: boolean;
 }) {
   const place = [store.district, store.city, store.region && store.region !== store.city ? store.region : null].filter(Boolean).join(", ");
   const since = formatMonthYear(store.created_at);
@@ -88,7 +90,7 @@ export function StoreHeader({
               {trust}
               {store.description ? <p className="mt-3 max-w-[68ch] t-body text-ink-2">{store.description}</p> : null}
               {/* Accounts batch, save-12. Not in the owner's preview: a store that is not public cannot be followed. */}
-              {preview ? null : <div className="mt-3"><FollowButton storeId={store.id} label={store.name} /></div>}
+              {preview || isOwner ? null : <div className="mt-3"><FollowButton storeId={store.id} label={store.name} /></div>}
               <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 t-ui text-ink [&>li+li]:before:mr-3 [&>li+li]:before:text-ink-3 [&>li+li]:before:content-['·']">
                 {rating ? <li><RatingFigure rating={rating} /></li> : null}
                 {total !== null ? <li>{listingCountLabel(total)}</li> : null}

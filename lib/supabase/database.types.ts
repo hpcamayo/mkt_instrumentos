@@ -8293,6 +8293,10 @@ export type Database = {
       }
       check_two_step_request: { Args: never; Returns: undefined }
       claim_counter_purchase: { Args: { p_token: string }; Returns: Json }
+      claim_first_sale_notice: {
+        Args: { p_transaction_id: string }
+        Returns: boolean
+      }
       claim_listing_photo_cleanup: {
         Args: {
           p_bucket: string
@@ -9104,6 +9108,7 @@ export type Database = {
         Returns: Json
       }
       get_public_campaigns: { Args: never; Returns: Json }
+      get_public_card_page: { Args: { p_after?: string }; Returns: Json }
       get_public_listing_cards: {
         Args: { p_ids?: string[]; p_slugs?: string[] }
         Returns: Json
@@ -10153,6 +10158,10 @@ export type Database = {
         Returns: Json
       }
       service_delete_account: { Args: { p_user_id: string }; Returns: Json }
+      service_finish_two_step_recovery: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       service_listings_fingerprint_state: {
         Args: { p_listing_ids: string[] }
         Returns: Json
@@ -10160,6 +10169,18 @@ export type Database = {
       service_photo_is_unused: { Args: { p_name: string }; Returns: boolean }
       service_record_listing_fingerprints: {
         Args: { p_items: Json; p_listing_id: string }
+        Returns: Json
+      }
+      service_submit_help_ticket: {
+        Args: {
+          p_client_hash: string
+          p_email: string
+          p_message: string
+          p_name: string
+          p_page_path?: string
+          p_topic: string
+          p_user_id?: string
+        }
         Returns: Json
       }
       set_bundle_offer: {

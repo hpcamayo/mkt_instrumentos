@@ -168,6 +168,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
   const [showPage, setShowPage] = useState(false);
   const [restore, setRestore] = useState<LocalDraft | null>(null);
   const [ready, setReady] = useState(false);
+  const [resumeError, setResumeError] = useState<string | null>(null);
   const [onServer, setOnServer] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [success, setSuccess] = useState<Success | null>(null);
@@ -216,7 +217,8 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
           if (cancelled) return;
           apply(draftFromServer(serverDraft, capability));
         } catch (error) {
-          setMessage({ kind: "error", text: error instanceof Error ? error.message : "No pudimos abrir el borrador." });
+          if (cancelled) return;
+          setResumeError(error instanceof Error ? error.message : "No pudimos abrir el borrador.");
         }
         setReady(true);
         return;
@@ -355,7 +357,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
   }), [values, photos, clip, onServer, inventorySku]);
 
   useEffect(() => {
-    if (!ready || success) return;
+    if (!ready || success || resumeError) return;
     const draft = snapshot();
     const local = window.setTimeout(() => {
       if (!hasContent(draft, baseValues)) return;
@@ -367,7 +369,7 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
       if (remote) window.clearTimeout(remote);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshot, ready, success]);
+  }, [snapshot, ready, success, resumeError]);
 
   // Leaving while photos are still uploading would lose them; everything else is already saved.
   useEffect(() => {
@@ -783,6 +785,20 @@ export function SellListingForm({ ownerId, profile, store, inventorySku: initial
         onAnother={() => startOver(initialValues({ profile, store, storeDefaults }))}
       />
     );
+  }
+
+  // Do not expose an empty, editable form while the account draft's capability is
+  // loading. Otherwise a late response can replace the seller's changes or step.
+  if (resumeError) {
+    return (
+      <div className="grid gap-4 rounded-panel border border-subtle bg-white p-5 sm:p-6">
+        <PageNotice kind="error" message={resumeError} />
+        <Button type="button" variant="secondary" onClick={() => window.location.reload()}>Volver a intentar</Button>
+      </div>
+    );
+  }
+  if (serverDraft && !ready) {
+    return <div aria-busy="true" className="rounded-panel border border-subtle bg-white p-5 sm:p-6"><p role="status" className="t-body text-ink-2">Abriendo tu borrador…</p></div>;
   }
 
   if (restore) {

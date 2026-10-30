@@ -3,9 +3,7 @@
 export type StatusTone = "neutral" | "accent" | "warning" | "danger" | "solid" | "line";
 export type StatusIcon = "draft" | "review" | "check" | "reject" | "hidden" | "sold" | "archive" | "pause" | "stockout" | "low";
 export type StatusEntry = { label: string; tone: StatusTone; icon?: StatusIcon };
-export type StatusDomain = "listing" | "revision" | "store" | "claim" | "transaction" | "report" | "review" | "alert" | "stock" | "inventory" | "payment"
-  // feature-ideas services (bet-02)
-  | "service" | "service_booking";
+export type StatusDomain = "listing" | "revision" | "store" | "claim" | "transaction" | "report" | "review" | "alert" | "stock" | "inventory" | "payment" | "availability" | "service" | "service_booking";
 
 const LISTING: Record<string, StatusEntry> = {
   draft: { label: "Borrador", tone: "line", icon: "draft" },
@@ -116,6 +114,7 @@ const SERVICE_BOOKING: Record<string, StatusEntry> = {
 };
 
 const DICTIONARY: Record<StatusDomain, Record<string, StatusEntry>> = {
+  availability: { sold: { label: "Vendido", tone: "solid", icon: "sold" } },
   listing: LISTING,
   revision: REVISION,
   store: STORE,

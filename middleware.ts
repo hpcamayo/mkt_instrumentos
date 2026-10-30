@@ -5,7 +5,7 @@ import { isProtectedAccountPath } from "@/lib/auth/protected-paths";
 import { REMEMBER_COOKIE, remembersSession, withRememberChoice } from "@/lib/auth/remember";
 import { twoStepRedirectPath } from "@/lib/auth/two-step-gate";
 import { isRefusedCrossSiteApiWrite } from "@/lib/same-origin";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 import { blocksCatalogCrawler, blocksFilteredCatalogCrawler, isCatalogDataPath } from "@/lib/catalog-crawlers";
 import { parseCatalogRequest, searchParamsRecord } from "@/lib/catalog-request";
 

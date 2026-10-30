@@ -141,7 +141,7 @@ test("the catalog read is server-only, read-only, cached and fails soft", () => 
   assert.match(reader, /key: "catalog-brands-by-category-v3",\s*revalidateSeconds: REVALIDATE_SECONDS,\s*load: loadCatalogBrands/);
   assert.match(reader, /return listings \? brandsWithListings\(catalog \?\? \{\}, listings\) : \(catalog \?\? \{\}\);/);
   // The layout waits for the brands at most the optional budget (docs/operations/catalog-performance.md).
-  assert.match(source("app/layout.tsx"), /const brands = await getCatalogBrandsByCategory\(optionalReadSignal\(getRequestReads\(\)\.deadline\)\);/);
+  assert.match(source("app/layout.tsx"), /Promise\.all\(\[getCatalogBrandsByCategory\(signal\), getListingCounts\(signal\)\]\)/);
 });
 
 function loadPanel() {
@@ -185,7 +185,7 @@ test("the strip panel shows subtypes per type and the leading brands with Ver to
 
 test("the landing lists every subtype and every catalog brand under Explora", () => {
   const landing = source("components/category-landing.tsx");
-  assert.match(landing, /<CategoryExplore landing=\{landing\} brands=\{brands\} \/>/);
+  assert.match(landing, /<CategoryExplore landing=\{landing\} brands=\{brands\} counts=\{counts\} \/>/);
   assert.match(landing, /<h2 id="explora" className="t-section text-ink">Explora \{label\}<\/h2>/);
   assert.match(landing, /<div id=\{BRANDS_ANCHOR\}/);
   assert.match(landing, /brandsAlphabetical\(brands\)\.map/);

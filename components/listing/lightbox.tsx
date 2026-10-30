@@ -63,6 +63,7 @@ export function Lightbox({
   const [index, setIndex] = useState(start);
   const [zoom, setZoomState] = useState<Zoom>(IDENTITY);
   const zoomRef = useRef<Zoom>(IDENTITY);
+  const wheelAnchor = useRef<{ zoom: Zoom; at: Point; time: number } | null>(null);
   // Buttons, keys and double taps glide (not under reduced motion, see .lightbox-photo); pinch and drag follow the
   // fingers without delay.
   const [animate, setAnimate] = useState(false);
@@ -75,6 +76,7 @@ export function Lightbox({
   const zoomed = zoom.scale > MIN_ZOOM;
 
   function setZoom(next: Zoom, glide: boolean, announce = false) {
+    wheelAnchor.current = null;
     zoomRef.current = next;
     setAnimate(glide);
     setZoomState(next);
@@ -83,6 +85,7 @@ export function Lightbox({
   }
 
   const move = (step: number) => {
+    wheelAnchor.current = null;
     natural.current = null;
     zoomRef.current = IDENTITY;
     setZoomState(IDENTITY);
@@ -133,7 +136,13 @@ export function Lightbox({
       const at = { x: event.clientX - rect.left - rect.width / 2, y: event.clientY - rect.top - rect.height / 2 };
       const delta = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaY;
       const current = zoomRef.current;
-      const next = zoomAt(current, wheelScale(current.scale, delta, event.ctrlKey), at, size, fittedSize(size, natural.current));
+      // One trackpad gesture keeps its original anchor. Clamping intermediate frames
+      // must not discard that anchor while the photo is still narrower than the stage.
+      const previous = wheelAnchor.current;
+      const anchor = previous && event.timeStamp - previous.time < 200 && Math.hypot(at.x - previous.at.x, at.y - previous.at.y) < 2
+        ? previous : { zoom: current, at, time: event.timeStamp };
+      wheelAnchor.current = { ...anchor, time: event.timeStamp };
+      const next = zoomAt(anchor.zoom, wheelScale(current.scale, delta, event.ctrlKey), anchor.at, size, fittedSize(size, natural.current));
       zoomRef.current = next;
       setAnimate(false);
       setZoomState(next);

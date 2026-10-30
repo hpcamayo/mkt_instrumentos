@@ -9,6 +9,6 @@ export async function POST(request: NextRequest) {
   const client = await accountClient(request);
   if ("response" in client) return client.response;
   const response = NextResponse.json({ ok: true }, { headers: NO_STORE });
-  await recordSignInDevice(client.supabase, request, response);
+  await recordSignInDevice(client.supabase, request, response, client.user);
   return response;
 }

@@ -8,7 +8,7 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const fixture = "http://127.0.0.1:43135";
 const local = /^http:\/\/(127\.0\.0\.1|localhost):\d+$/;
-const inventoryPaths = new Set(["/rest/v1/listings", "/rest/v1/public_listings"]);
+const inventoryPaths = new Set(["/rest/v1/listings", "/rest/v1/public_listings", "/rest/v1/rpc/catalog_search"]);
 
 if (process.argv[2] === "fixture") {
   let requests = [];
@@ -43,14 +43,23 @@ if (process.argv[2] === "fixture") {
     let data = [];
     let count = 0;
     let delay = 0;
+    let status = 200;
     if (inventoryPaths.has(url.pathname)) {
-      count = 100;
+      count = delays.count ?? 100;
       delay = delays.core;
       const offset = Number(url.searchParams.get("offset") || 0);
       const limit = Math.min(24, Number(url.searchParams.get("limit") || 24));
+      trace.offset = offset;
       data = Array.from({ length: Math.max(0, Math.min(limit, count - offset)) }, (_, i) => ({
         ...row, id: `6b1f4f8e-1111-4c43-9d49-${String(offset + i + 1).padStart(12, "0")}`, slug: `microfono-prueba-${offset + i + 1}`,
       }));
+      if (delays.inventoryStatus) {
+        status = delays.inventoryStatus;
+        data = { code: "PGRST000", message: "Database unavailable", details: null, hint: null };
+      } else if (offset > 0 && offset >= count) {
+        status = 416;
+        data = { code: "PGRST103", message: "Requested range not satisfiable", details: `An offset of ${offset} was requested, but there are only ${count} rows.`, hint: null };
+      }
     } else if (url.pathname === "/rest/v1/rpc/catalog_facets") { data = facets; delay = delays.facets; }
     else if (url.pathname === "/rest/v1/rpc/catalog_type_counts") {
       data = [{ category: "microphones", instrument_type: "microphones", listings: 100 }, { category: "guitars", instrument_type: "electric_guitar", listings: 100 }];
@@ -58,7 +67,9 @@ if (process.argv[2] === "fixture") {
     } else if (url.pathname === "/rest/v1/rpc/catalog_brand_counts") data = [{ category: "microphones", brand: "Shure", listings: 100 }];
     const timer = setTimeout(() => {
       trace.finish = Date.now();
-      res.setHeader("content-range", count ? `0-${Math.min(23, count - 1)}/${count}` : "*/0");
+      trace.status = status;
+      res.statusCode = status;
+      res.setHeader("content-range", status === 416 ? `*/${count}` : count ? `0-${Math.min(23, count - 1)}/${count}` : "*/0");
       res.end(req.method === "HEAD" ? "" : JSON.stringify(data));
     }, delay);
     res.on("close", () => clearTimeout(timer));

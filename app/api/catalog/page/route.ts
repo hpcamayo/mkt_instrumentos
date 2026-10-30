@@ -28,6 +28,14 @@ export async function GET(request: NextRequest) {
   const { data, count, error } = await (descubrir
     ? fetchDescubrirPage(supabase, filters, page, { photos: params.get("fotos") === "todas" ? DESCUBRIR_PHOTOS : 1, publishedSince: since ? limaMidnight(since) : undefined })
     : fetchCatalogPage(supabase, filters, page));
+  // Inventory can shrink between pages. PostgREST's range error ends this page without a retry/count read;
+  // its failed response has no reliable total, and must not cache an empty page over newly published inventory.
+  if (page > 1 && error?.code === "PGRST103") {
+    return NextResponse.json(
+      { listings: [], total: null, reserved: [] },
+      { headers: { "cache-control": "private, no-store" } },
+    );
+  }
   if (error) return NextResponse.json({ listings: [], reserved: [] }, { status: 502 });
   const reserved = await reservedCardIds(data ?? [], deadline);
   return NextResponse.json(

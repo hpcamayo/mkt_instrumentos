@@ -17,9 +17,13 @@ const RECENT_MS = 10 * 60 * 1000;
 // within the minute (app/api/internal/public-pages/refresh).
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
+  const allOwned = body?.owned === true;
   const listingIds = readIds(body?.listings);
   const revisionIds = readIds(body?.revisions);
-  if (!listingIds || !revisionIds || !listingIds.length && !revisionIds.length || listingIds.length + revisionIds.length > MAX_IDS) {
+  if (!listingIds || !revisionIds
+    || (!allOwned && !listingIds.length && !revisionIds.length)
+    || listingIds.length + revisionIds.length > MAX_IDS
+    || (allOwned && (listingIds.length > 0 || revisionIds.length > 0))) {
     return failure("Solicitud inválida.", 400);
   }
 
@@ -30,6 +34,22 @@ export async function POST(request: Request) {
   if (!userData.user) return failure("Ingresa a tu cuenta.", 401);
   // safe-08: the reads below use the service role, so a session that still owes its code stops here.
   if (await sessionOwesTwoStep(supabase)) return failure(TWO_STEP_OWED_MESSAGE, 403);
+
+  // Vacation mode changes every owned listing. Derive ownership from Auth, never from a supplied user id,
+  // and paginate so Particular accounts with more than the API's row limit do not keep stale public pages.
+  if (allOwned) {
+    const slugs: string[] = [];
+    const cutoff = new Date(Date.now() - RECENT_MS).toISOString();
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await admin.from("listings").select("slug")
+        .eq("owner_user_id", userData.user.id).gte("updated_at", cutoff).order("id").range(offset, offset + 999);
+      if (error) return failure("No se pudo actualizar la publicación.", 503);
+      slugs.push(...(data ?? []).map((listing) => listing.slug));
+      if (!data || data.length < 1000) break;
+    }
+    dropListingPages(slugs);
+    return NextResponse.json({ refreshed: slugs.length });
+  }
 
   const ids = new Set(listingIds);
   if (revisionIds.length) {

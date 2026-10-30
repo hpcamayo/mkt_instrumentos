@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { SignupConfirmation } from "@/components/signup-confirmation";
 import {
   INDIVIDUAL_SELLER_ACCOUNT_TYPE,
   upsertBasicSellerProfile,
@@ -39,6 +40,7 @@ export function SellerSignupForm() {
   const [state, setState] = useState<FormState>("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [sentTo, setSentTo] = useState("");
+  const submitting = useRef(false);
   useEffect(() => {
     let isMounted = true;
 
@@ -75,15 +77,28 @@ export function SellerSignupForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting.current || state === "loading" || state === "submitting" || state === "sent") return;
+    submitting.current = true;
+    try {
+      await createAccount(event.currentTarget);
+    } catch {
+      setState("error");
+      setMessage("No se pudo completar la solicitud. Revisa tu conexión e intenta nuevamente.");
+    } finally {
+      submitting.current = false;
+    }
+  }
+
+  async function createAccount(form: HTMLFormElement) {
     setState("submitting");
     setMessage(null);
 
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData(form);
     const fullName = String(formData.get("fullName") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim().toLowerCase();
     const password = String(formData.get("password") ?? "");
     const acceptedRules = formData.get("acceptedRules") === "on";
-    if (!validation.validate(event.currentTarget, {
+    if (!validation.validate(form, {
       ...(!fullName ? { fullName: "Ingresa tu nombre completo." } : {}),
       ...(password.length < PASSWORD_MIN_LENGTH ? { password: `Usa al menos ${PASSWORD_MIN_LENGTH} caracteres.` } : {}),
       ...(!acceptedRules ? { acceptedRules: "Debes aceptar las reglas del marketplace para continuar." } : {}),
@@ -179,8 +194,20 @@ export function SellerSignupForm() {
     setState("sent");
     setMessage(
       destination
-        ? "Revisa tu correo para confirmar tu cuenta. El enlace te traerá de vuelta a donde estabas."
-        : "Revisa tu correo para confirmar tu cuenta. El enlace te llevará directamente a Mi cuenta.",
+        ? "Cuenta creada. Revisa tu correo para confirmar tu cuenta. El enlace te traerá de vuelta a donde estabas."
+        : "Cuenta creada. Revisa tu correo para confirmar tu cuenta. El enlace te llevará directamente a Mi cuenta.",
+    );
+  }
+
+  if (state === "sent" && message) {
+    return (
+      <SignupConfirmation
+        email={sentTo}
+        message={message}
+        loginHref={destination ? `/login?next=${encodeURIComponent(destination)}` : "/login"}
+      >
+        <ResendConfirmation email={sentTo} next={confirmedPath} />
+      </SignupConfirmation>
     );
   }
 
@@ -226,14 +253,8 @@ export function SellerSignupForm() {
       {validation.errorFor("acceptedRules") ? <p id="signup-rules-error" className="t-ui font-semibold text-danger">{validation.errorFor("acceptedRules")}</p> : null}
 
       {message ? (
-        <Notice tone={state === "sent" ? "success" : "warning"}>
+        <Notice tone="warning">
           <p>{message}</p>
-          {state === "sent" && sentTo ? (
-            <>
-              <p className="mt-1 t-meta">¿No te llegó? Revisa la carpeta de spam o pide otro enlace.</p>
-              <ResendConfirmation email={sentTo} next={confirmedPath} />
-            </>
-          ) : null}
           {state === "duplicate" ? (
             <Link className="mt-2 inline-flex" href={destination ? `/login?next=${encodeURIComponent(destination)}` : "/login"}>
               Ir a ingresar

@@ -137,6 +137,27 @@ robots privacy and untouched discovery. After building against `scripts/perf/cat
 `tests/catalog-routing-http.cjs` against the same app. The former verifies zero upstream calls on blocked requests and
 real-user access to the same URLs and API pagination; the latter retains the broader existing crawl/SEO checks.
 
+### Exhausted catalog API pages
+
+`/api/catalog/page` returns 200 with `{ listings: [], total: null, reserved: [] }` when a validated page greater than
+one receives PostgREST's `PGRST103` range error. This covers inventory shrinking between requests in both the catalog
+and Descubrir. The failed upstream response does not supply a reliable total; the route does not issue a count query,
+retry the read, restart from page one or look up reservation badges. This recovered empty response uses
+`private, no-store`, so a newly published listing can appear on the next read. Successful reads keep their existing
+totals, badges and 30-second public cache policy. A first-page range error and every other database/network error
+remain failures. Numbered HTML pagination retains its existing redirect handling.
+
+Mobile load-more counts the cards actually returned, stops at a short/empty page and stops restoring saved pages at
+that point too. An exhausted response without a total does not invent a new total or advance the displayed count by
+24. Valid totals, reservation badges, filter state and the existing error/retry message are retained.
+
+`tests/catalog-page.test.cjs` drives the actual query builder/read client through HTTP error parsing and checks the
+one-read budget, catalog/search/Descubrir filters and genuine failures. After building against the local fixture,
+run `node tests/catalog-page-http.cjs http://127.0.0.1:43137 http://127.0.0.1:43135`, then the Amzn and catalog-routing
+HTTP suites above. The fixture can return real 416 responses with five rows or a full final page, and verifies that
+restricted crawlers still cause zero upstream reads. This changes no SEO rules, middleware policy or V1 acceptance
+status. `tests/catalog-load-more.test.cjs` checks actual card counts, termination and saved-page restoration.
+
 ## Budgets
 
 | Budget | Value | Covers |

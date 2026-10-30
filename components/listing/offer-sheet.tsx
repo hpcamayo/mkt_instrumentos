@@ -39,7 +39,7 @@ export function OfferButton({ listingId, href, listing, safety, className }: { l
           safety={safety}
           onDismiss={() => {
             setOpen(false);
-            opener.current?.focus();
+            requestAnimationFrame(() => opener.current?.focus());
           }}
         />
       ) : null}

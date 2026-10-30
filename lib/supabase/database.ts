@@ -10,6 +10,7 @@ type NullableArguments = {
   complete_public_page_changes: "p_deployment" | "p_nonce";
   confirm_store_import_mapping: "p_stale_stock" | "p_update_scope";
   finish_push_deliveries: "p_failure_code";
+  get_public_card_page: "p_after";
   place_store_import_photo: "p_row_number";
   record_app_error: "p_digest";
   request_store_admin_help: "p_message" | "p_requested_allowance";
@@ -22,6 +23,7 @@ type NullableArguments = {
   set_listing_serial: "p_serial";
   set_own_store_map_pin: "p_latitude" | "p_longitude";
   submit_help_ticket: "p_client_hash" | "p_email" | "p_page_path";
+  service_submit_help_ticket: "p_email" | "p_user_id" | "p_page_path";
   submit_stolen_gear_report: "p_model" | "p_police_station" | "p_serial";
 };
 

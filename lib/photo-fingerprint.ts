@@ -2,7 +2,7 @@ import "server-only";
 
 import sharp from "sharp";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 
 // Feature ideas, accounts batch (safe-05 photo copies, safe-02 stolen-gear photos): a 64-bit difference hash of a photo,
 // computed here with sharp (no outside service). The picture is turned to grey and shrunk to 9×8; each bit says

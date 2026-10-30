@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     },
     ...(forwarded ? { global: { headers: forwarded.headers } } : {}),
   });
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
   // Supabase checks the password before the confirmation, so this answer does not reveal unconfirmed accounts.
   if (isEmailNotConfirmedError(error)) {
     return NextResponse.json(
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
   }
   const marker = rememberMarker(remember, request.nextUrl.protocol === "https:");
   response.cookies.set(marker.name, marker.value, marker.options);
-  await recordSignInDevice(supabase, request, response);
+  await recordSignInDevice(supabase, request, response, authData?.user);
 
   return response;
 }

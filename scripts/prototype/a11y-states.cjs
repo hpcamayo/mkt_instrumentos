@@ -27,7 +27,7 @@ function axePath() {
 }
 
 async function login(page, email) {
-  await page.goto(`${BASE}/login?next=${encodeURIComponent("/mi-cuenta")}`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/login?next=${encodeURIComponent("/mi-cuenta")}`, { waitUntil: "load" });
   await page.getByLabel("Correo", { exact: true }).fill(email);
   await page.getByLabel("Contraseña", { exact: true }).fill("laria-demo-2026");
   await page.getByRole("button", { name: "Ingresar", exact: true }).click();
@@ -167,7 +167,7 @@ const ACCOUNTS = { buyer: "comprador@laria.test", seller: "particular@laria.test
       let violations = [];
       let focus = null;
       try {
-        await page.goto(BASE + step.path, { waitUntil: "networkidle", timeout: 30000 });
+        await page.goto(BASE + step.path, { waitUntil: "load", timeout: 30000 });
         note = await step.act(page, context);
         violations = await axe(page, AXE);
         if (step.focus) focus = await focusClear(page);

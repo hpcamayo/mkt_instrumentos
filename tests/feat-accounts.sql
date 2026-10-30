@@ -163,10 +163,9 @@ values ('f8200000-0000-4000-8000-000000000001', 'yape_plin', 'approved', 'Dueña
 set local role authenticated;
 select pg_temp.as_user('f8100000-0000-4000-8000-000000000001');
 do $$ begin
-  perform pg_temp.check((public.my_two_step_requirement()->>'required')::boolean
-    and public.my_two_step_requirement()->>'reason' = 'store', 'store requirement not reported');
-  perform pg_temp.expect_error($q$update public.stores set whatsapp_phone = '51999996012' where id = 'f8200000-0000-4000-8000-000000000001'$q$, 'TWO_STEP_REQUIRED');
-  perform pg_temp.expect_error($q$update public.stores set name = 'Otra Tienda' where id = 'f8200000-0000-4000-8000-000000000001'$q$, 'TWO_STEP_REQUIRED');
+  perform pg_temp.check(not (public.my_two_step_requirement()->>'required')::boolean, 'pilot store must not need two-step');
+  update public.stores set whatsapp_phone = '51999996012' where id = 'f8200000-0000-4000-8000-000000000001';
+  update public.stores set name = 'Otra Tienda' where id = 'f8200000-0000-4000-8000-000000000001';
   -- Other columns are not guarded.
   update public.stores set description = 'Tienda de prueba con descripción.' where id = 'f8200000-0000-4000-8000-000000000001';
 end $$;
@@ -190,18 +189,18 @@ select set_config('request.jwt.claims', '', true);
 
 -- Recovery codes: only on a second-factor session; each works once; five wrong tries lock for a while.
 set local role authenticated;
-select pg_temp.as_user('f8100000-0000-4000-8000-000000000001', 'aal1');
+select set_config('request.jwt.claims', '{"sub":"f8100000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal1","app_metadata":{"role":"admin"}}', true);
 do $$ begin
   perform pg_temp.expect_error('select public.create_my_recovery_codes()', 'TWO_STEP_REQUIRED');
 end $$;
-select pg_temp.as_user('f8100000-0000-4000-8000-000000000001', 'aal2');
+select pg_temp.as_admin();
 do $$ declare codes text[]; begin
   codes := public.create_my_recovery_codes();
   perform pg_temp.check(cardinality(codes) = 10 and codes[1] ~ '^[2-9A-HJ-NP-Z]{4}-[2-9A-HJ-NP-Z]{4}$', 'codes malformed: ' || codes::text);
   perform set_config('qa.code', codes[1], true);
   perform set_config('qa.code2', codes[2], true);
 end $$;
-select pg_temp.as_user('f8100000-0000-4000-8000-000000000001', 'aal1');
+select set_config('request.jwt.claims', '{"sub":"f8100000-0000-4000-8000-000000000099","role":"authenticated","aal":"aal1","app_metadata":{"role":"admin"}}', true);
 do $$ begin
   perform pg_temp.check(public.use_my_recovery_code(lower(replace(current_setting('qa.code'), '-', ' '))), 'valid code refused');
   perform pg_temp.check(not public.use_my_recovery_code(current_setting('qa.code')), 'used code accepted twice');
@@ -215,24 +214,31 @@ do $$ begin
 end $$;
 reset role;
 do $$ begin
-  perform pg_temp.check(pg_temp.emails('account_two_step_reset', 'f8100000-0000-4000-8000-000000000001') = 1, 'reset e-mail missing');
+  perform pg_temp.check(pg_temp.emails('account_two_step_reset', 'f8100000-0000-4000-8000-000000000099') = 1, 'reset e-mail missing');
 end $$;
 
 -- ================================================================== safe-10
 
+set local role service_role;
+select pg_temp.as_service();
+do $$ declare ticket jsonb; begin
+  ticket := public.service_submit_help_ticket('Visitante', 'Visita@Example.invalid', 'comprar', '¿Cómo sé si un vendedor es confiable?', repeat('d', 64), null, '/ayuda');
+  perform pg_temp.check(ticket->>'code' ~ '^AY-[0-9A-F]{8}$', 'ticket code malformed');
+  perform pg_temp.expect_error($q$select public.service_submit_help_ticket('V', 'x@example.invalid', 'comprar', 'Mensaje largo de prueba', repeat('d', 64))$q$, 'HELP_TICKET_INVALID');
+  perform pg_temp.expect_error($q$select public.service_submit_help_ticket('Visitante', 'x@example.invalid', 'inventado', 'Mensaje largo de prueba', repeat('d', 64))$q$, 'HELP_TICKET_INVALID');
+  perform pg_temp.expect_error($q$select public.service_submit_help_ticket('Visitante', 'no-es-correo', 'comprar', 'Mensaje largo de prueba', repeat('d', 64))$q$, 'HELP_TICKET_INVALID');
+  perform public.service_submit_help_ticket('Visitante', 'visita@example.invalid', 'otro', 'Segunda pregunta de prueba', repeat('d', 64));
+  perform public.service_submit_help_ticket('Visitante', 'visita@example.invalid', 'otro', 'Tercera pregunta de prueba', repeat('d', 64));
+  perform public.service_submit_help_ticket('Visitante', 'visita@example.invalid', 'otro', 'Cuarta pregunta de prueba', repeat('d', 64));
+  perform public.service_submit_help_ticket('Visitante', 'visita@example.invalid', 'otro', 'Quinta pregunta de prueba', repeat('d', 64));
+  perform pg_temp.expect_error($q$select public.service_submit_help_ticket('Visitante', 'visita@example.invalid', 'otro', 'Sexta pregunta de prueba', repeat('d', 64))$q$, 'HELP_TICKET_RATE_LIMITED');
+
+end $$;
+reset role;
 set local role anon;
 select pg_temp.as_anon();
-do $$ declare ticket jsonb; begin
-  ticket := public.submit_help_ticket('Visitante', 'Visita@Example.invalid', 'comprar', '¿Cómo sé si un vendedor es confiable?', '/ayuda', repeat('d', 64));
-  perform pg_temp.check(ticket->>'code' ~ '^AY-[0-9A-F]{8}$', 'ticket code malformed');
-  perform pg_temp.expect_error($q$select public.submit_help_ticket('V', 'x@example.invalid', 'comprar', 'Mensaje largo de prueba')$q$, 'HELP_TICKET_INVALID');
-  perform pg_temp.expect_error($q$select public.submit_help_ticket('Visitante', 'x@example.invalid', 'inventado', 'Mensaje largo de prueba')$q$, 'HELP_TICKET_INVALID');
-  perform pg_temp.expect_error($q$select public.submit_help_ticket('Visitante', 'no-es-correo', 'comprar', 'Mensaje largo de prueba')$q$, 'HELP_TICKET_INVALID');
-  perform public.submit_help_ticket('Visitante', 'visita@example.invalid', 'otro', 'Segunda pregunta de prueba');
-  perform public.submit_help_ticket('Visitante', 'visita@example.invalid', 'otro', 'Tercera pregunta de prueba');
-  perform public.submit_help_ticket('Visitante', 'visita@example.invalid', 'otro', 'Cuarta pregunta de prueba');
-  perform public.submit_help_ticket('Visitante', 'visita@example.invalid', 'otro', 'Quinta pregunta de prueba');
-  perform pg_temp.expect_error($q$select public.submit_help_ticket('Visitante', 'visita@example.invalid', 'otro', 'Sexta pregunta de prueba')$q$, 'HELP_TICKET_RATE_LIMITED');
+do $$ begin
+  perform pg_temp.expect_error($q$select public.submit_help_ticket('Visitante', 'direct@example.invalid', 'otro', 'Consulta directa sin servidor')$q$, 'permission denied');
   perform pg_temp.expect_error('select * from public.help_tickets', 'permission denied');
   perform pg_temp.expect_error('select public.my_help_tickets()', 'permission denied');
 end $$;

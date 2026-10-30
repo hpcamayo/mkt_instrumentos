@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, CameraOff, Minus, Plus, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from "react";
 import { undoMovements } from "@/components/inventory/stock-action-sheet";
 import { UndoNotice, type InventoryNotice } from "@/components/inventory/undo-notice";
 import { CounterPurchaseOffer } from "@/components/trust/counter-purchase-code";
@@ -10,7 +10,7 @@ import { Field, Input, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { Price } from "@/components/ui/price";
 import {
-  INDEX_KEY, QUEUE_KEY, addToCart, cartTotal, cartUnits, isConnectionFailure, matchCode, readJson, saleRequest, writeJson,
+  INDEX_KEY, QUEUE_KEY, addToCart, cartTotal, cartUnits, createCounterQueueFlusher, isConnectionFailure, matchCode, readJson, saleRequest, writeJson,
   type CartLine, type CounterItem, type QueuedSale,
 } from "@/lib/inventory-counter";
 import { EMPTY_RECEIPT, ReceiptFields, ReceiptOutcome, receiptRequest, receiptTotal, type ReceiptDraft } from "@/components/einvoice/counter-receipt";
@@ -90,51 +90,49 @@ export function Counter({ storeId, storeName = "la tienda", locations = [], loca
     setLoaded(cached.length ? "offline" : "failed");
   }, [storeId]);
 
-  const saveQueue = useCallback((next: QueuedSale[]) => {
+  const queueMemory = useRef<{ storeId: string; entries: QueuedSale[] }>({ storeId, entries: [] });
+  const readQueue = useCallback(() => readJson<QueuedSale[]>(storage(), QUEUE_KEY(storeId),
+    queueMemory.current.storeId === storeId ? queueMemory.current.entries : []), [storeId]);
+  const updateQueue = useCallback((change: (current: QueuedSale[]) => QueuedSale[]) => {
+    const next = change(readQueue());
+    queueMemory.current = { storeId, entries: next };
     setQueue(next);
     writeJson(storage(), QUEUE_KEY(storeId), next);
-  }, [storeId]);
+  }, [readQueue, storeId]);
 
-  // Sends waiting sales in order, each with its own key. Stops at the first connection failure.
-  const flush = useCallback(async () => {
-    const waiting = readJson<QueuedSale[]>(storage(), QUEUE_KEY(storeId), []);
-    let remaining = [...waiting];
-    let sent = 0;
-    for (const sale of waiting) {
-      if (sale.error) continue;
+  const flush = useMemo(() => createCounterQueueFlusher({
+    read: readQueue,
+    update: updateQueue,
+    send: async (sale) => {
       const result = await inventoryAction(saleRequest(sale));
-      if (!result.ok && isConnectionFailure(result.code)) break;
-      remaining = remaining.flatMap((entry) => (entry.key !== sale.key ? [entry] : result.ok ? [] : [{ ...entry, error: result.message }]));
-      if (result.ok) sent += 1;
-      // run-03: the comprobante that waited with the sale. A failure stays in Comprobantes, ready to retry.
       if (result.ok && sale.receipt) {
         const issued = await issueReceipt(sale.key, sale.receipt);
         if (issued.ok) setLastReceipt(issued.data.receipt);
         else setReceiptNote(`La venta que esperaba conexión se registró, pero su comprobante no: ${issued.message}`);
       }
-    }
-    saveQueue(remaining);
-    if (sent) {
+      return result;
+    },
+    onRecorded: (sent) => {
       setNotice({ kind: "success", message: `${sent === 1 ? "Se registró la venta" : `Se registraron ${sent} ventas`} que esperaban conexión.` });
-      loadIndex();
-    }
-  }, [loadIndex, saveQueue, storeId]);
+      void loadIndex();
+    },
+  }), [readQueue, updateQueue, loadIndex]);
 
   useEffect(() => {
     const saved = readJson<string>(storage(), COUNTER_LOCATION_KEY(storeId), "");
     if (saved && locations.some((location) => location.id === saved)) setLocationId(saved);
-    // Only on first load: the list of locations comes with the page.
+    // The location list comes with the page; restore the device's choice only on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId]);
 
   useEffect(() => {
-    setQueue(readJson<QueuedSale[]>(storage(), QUEUE_KEY(storeId), []));
+    updateQueue((current) => current);
     loadIndex().then(() => flush());
     const onOnline = () => flush();
     window.addEventListener("online", onOnline);
     const timer = setInterval(() => { if (navigator.onLine) flush(); }, RETRY_MS);
     return () => { window.removeEventListener("online", onOnline); clearInterval(timer); };
-  }, [flush, loadIndex, storeId]);
+  }, [flush, loadIndex, updateQueue]);
 
   // Units already promised by waiting sales are not available again.
   const pending = new Map<string, number>();
@@ -206,7 +204,9 @@ export function Counter({ storeId, storeName = "la tienda", locations = [], loca
     setBusy(false);
     const units = cartUnits(cart);
     if (!result.ok && isConnectionFailure(result.code)) {
-      saveQueue([...queue, sale]);
+      updateQueue((current) => current.some((entry) => entry.key === sale.key) ? current : [...current, sale]);
+      // The reconnect event may precede this request's network rejection and queue insertion.
+      if (navigator.onLine) void flush();
       setCart([]);
       setReceiptDraft(EMPTY_RECEIPT);
       setSaleKey(newRequestKey("mostrador"));
@@ -359,7 +359,7 @@ export function Counter({ storeId, storeName = "la tienda", locations = [], loca
         {refused.map((sale) => (
           <Notice key={sale.key} tone="danger" role="alert">
             No se pudo registrar una venta guardada sin conexión ({sale.lines.map((line) => `${line.merchant_sku} × ${line.quantity}`).join(", ")}): {sale.error}{" "}
-            <button type="button" className="link font-semibold" onClick={() => saveQueue(queue.filter((entry) => entry.key !== sale.key))}>Descartar</button>
+            <button type="button" className="link font-semibold" onClick={() => updateQueue((current) => current.filter((entry) => entry.key !== sale.key))}>Descartar</button>
           </Notice>
         ))}
       </section>

@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { getAssurance, twoStepPath } from "@/lib/auth/two-step";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
-// Two-step sign-in (an authenticator-app code) for every account that turns it on, required for Admin (launch audit
-// A15) and for a store owner once the store has an approved payment method (safe-08, accounts batch).
+// During the pilot, only Admin uses two-step sign-in (launch audit A15). Store owners, Particulars and service
+// providers do not enroll or receive a code prompt. Re-enabling it for other accounts needs a new release decision.
 // The code step and the setup live on /mi-cuenta/seguridad (components/auth/two-step-setup.tsx). A session keeps its
 // level while it lasts, so with "Mantener sesión iniciada" the code is asked only on a new device or after signing out.
 // The pure helpers live in lib/auth/two-step.ts so middleware and the browser can use them too.

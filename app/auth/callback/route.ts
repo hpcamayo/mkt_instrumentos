@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getAuthCallbackDestination,
   getAuthCallbackErrorUrl,
+  getConfirmationRecoveryUrl,
   parseEmailOtpType,
 } from "@/lib/auth/callback";
 import { TOO_MANY_LINK_OPENS, isAuthRateLimited } from "@/lib/auth/limits";
@@ -91,6 +92,9 @@ export async function GET(request: NextRequest) {
   if (exchangeError) {
     const limited = isAuthRateLimited(exchangeError);
     if (limited) console.warn("auth-callback-rate-limited", exchangeError.code ?? exchangeError.status);
+    if (!limited && exchangeError.code === "otp_expired" && (type === "email" || type === "signup")) {
+      return NextResponse.redirect(getConfirmationRecoveryUrl(origin, next));
+    }
     response = NextResponse.redirect(
       getAuthCallbackErrorUrl(
         origin,
@@ -152,6 +156,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  if (type === "recovery" && data.user?.app_metadata?.role !== "admin" && data.user?.factors?.length) {
+    const { retirePilotNonAdminFactors } = await import("@/lib/auth/pilot-two-step");
+    await retirePilotNonAdminFactors(data.user);
+  }
+
   if (data.user && type !== "recovery") {
     // safe-08 (accounts batch): remember the choice, note the device, and finish with the code when the account has one.
     const marker = rememberMarker(remember, requestUrl.protocol === "https:");
@@ -162,7 +171,7 @@ export async function GET(request: NextRequest) {
       response.cookies.getAll().forEach((cookie) => codeStep.cookies.set(cookie));
       response = codeStep;
     }
-    await recordSignInDevice(supabase, request, response);
+    await recordSignInDevice(supabase, request, response, data.user);
   }
 
   return response;

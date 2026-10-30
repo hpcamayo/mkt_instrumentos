@@ -385,7 +385,7 @@ function digits(value) {
     return `Supabase answered with the account without identities, as production does; one account, name and password unchanged; the form says "Este correo ya está registrado. Ingresa con tu cuenta o usa otro correo."`;
   });
 
-  await check("AUTH-004", "an expired, used or invalid sign-up link goes to sign-in with a message, sets no session and leaves an open one alone", async () => {
+  await check("AUTH-004", "an expired, used or invalid sign-up link offers recovery and sign-in, sets no session and leaves an open one alone", async () => {
     const signUpLink = async (email, name) => {
       const link = await service.auth.admin.generateLink({ type: "signup", email, password: `Qa-${randomUUID()}`, options: { data: { account_type: "seller", full_name: name } } });
       assert.equal(link.error, null, link.error?.message);
@@ -403,14 +403,18 @@ function digits(value) {
       const response = await app(callback(hash), { cookie: sellerCookie });
       assert.equal(response.status, 307);
       const target = location(response);
-      assert.equal(target.pathname, "/login");
-      assert.equal(target.searchParams.get("error"), "No se pudo confirmar la sesión.");
+      assert.equal(target.pathname, "/confirmacion-correo");
+      assert.equal(target.searchParams.get("next"), "/mi-cuenta?confirmed=1");
       assert.equal(response.headers.getSetCookie().length, 0, "a refused link changed cookies");
+      const recovery = await pageText(`${target.pathname}${target.search}`);
+      assert.match(recovery, /El enlace de confirmación ya no es válido/);
+      assert.match(recovery, /Reenviar enlace/);
+      assert.match(recovery, /Ya confirmé mi correo: ingresar/);
     }
     const lateUser = await service.auth.admin.getUserById(late.user.id);
     assert.equal(lateUser.data.user.email_confirmed_at ?? null, null, "the expired link confirmed the address");
     assert.equal((await app("/mi-cuenta", { cookie: sellerCookie })).status, 200, "the session that was open was lost");
-    return "\"No se pudo confirmar la sesión.\" on /login for each; the expired link's address stays unconfirmed";
+    return "Recovery and sign-in offered for each refused link; no session cookies changed; the expired link's address stays unconfirmed";
   });
 
   await check("AUTH-008", "a sign-in link for an unknown address creates no account", async () => {
@@ -675,10 +679,10 @@ function digits(value) {
   });
 
   // LIST-008 asks for a category without instrument types. Since the marketplace categories (migration 20261022120000)
-  // every category has its types plus "Otro", so the case can't run as written; this shows the closest thing, a seller
-  // who doesn't know the type picks "Otro" and leaves the characteristics out. It prints a NOTE, never a PASS: whether
-  // that settles the case is the owner's call.
-  try {
+  // every category has its types plus "Otro", so the case can't run as written; it runs as the closest thing, a seller
+  // who doesn't know the type picks "Otro" and leaves the characteristics out. The owner accepted that as the case on
+  // 28 Oct 2026.
+  await check("LIST-008", "a pedal sent with \"Otro\" and no characteristics is accepted", async () => {
     const options = getInstrumentTypeOptions("pedals").map((option) => option.value);
     assert.deepEqual(options, ["pedals", "other"]);
     const submission = await startSubmission(sellerCookie, sellerClient);
@@ -687,10 +691,8 @@ function digits(value) {
     created.listings.push(submission.id);
     pedals = await listing(submission.id, "id,slug,status,instrument_type");
     assert.equal(pedals.status, "pending");
-    console.log("NOTE LIST-008 every category has instrument types; a pedal sent with \"Otro\" and no characteristics was accepted (owner to confirm the case)");
-  } catch (error) {
-    report(`FAIL LIST-008 a pedal sent with "Otro" and no characteristics: ${error.message}`);
-  }
+    return "every category has its types plus \"Otro\"; the pedal waits for review";
+  });
 
   await check("LIST-010", "a listing without the optional characteristics publishes", async () => {
     const submission = await startSubmission(sellerCookie, sellerClient);

@@ -8,6 +8,7 @@ import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
 import { deviceLabel } from "@/lib/auth/devices";
+import { retirePilotNonAdminFactors } from "@/lib/auth/pilot-two-step";
 import { getAssurance } from "@/lib/auth/mfa";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 
@@ -16,13 +17,14 @@ export const metadata = { title: "Seguridad" };
 // safe-08 and safe-09 (feature ideas, accounts batch): two-step sign-in, the devices with an open session, the sign-in
 // e-mail and the password. A session that still owes its authenticator code sees only the code step.
 
-type Requirement = { required?: boolean; reason?: "store" | "admin" | null; recovery_codes_left?: number };
+type Requirement = { required?: boolean; reason?: "admin" | null; recovery_codes_left?: number };
 
 const lastActive = new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "America/Lima" });
 
 export default async function SecurityPage({ searchParams }: { searchParams: Promise<{ paso?: string; next?: string; correo?: string }> }) {
   const params = await searchParams;
   const { supabase, user } = await getAccountContext();
+  await retirePilotNonAdminFactors(user);
   const next = params.next ? getSafeAuthRedirect(params.next, "") || null : null;
   const assurance = supabase ? await getAssurance(supabase) : null;
 
@@ -45,7 +47,7 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
     hasFactor: Boolean(assurance?.hasFactor),
     aal: assurance?.currentLevel === "aal2" ? "aal2" : "aal1",
     required: requirement.required === true,
-    reason: requirement.reason === "store" || requirement.reason === "admin" ? requirement.reason : null,
+    reason: requirement.reason === "admin" ? "admin" : null,
     recoveryCodesLeft: Number(requirement.recovery_codes_left) || 0,
   };
   const sessions: DeviceSession[] = (sessionRows ?? []).map((row) => {
@@ -66,9 +68,11 @@ export default async function SecurityPage({ searchParams }: { searchParams: Pro
       <div className="grid max-w-2xl gap-5">
         <PageHeader title="Seguridad" meta="Cómo ingresas a Laria y desde qué dispositivos." />
         {confirmedEmail ? <Notice tone="success"><p>Listo: desde ahora ingresas con {user.email}.</p></Notice> : null}
-        <Section id="dos-pasos" title="Verificación en dos pasos">
-          <TwoStepSetup state={state} next={next} startSetup={params.paso === "activar"} />
-        </Section>
+        {user.app_metadata?.role === "admin" ? (
+          <Section id="dos-pasos" title="Verificación en dos pasos">
+            <TwoStepSetup state={state} next={next} startSetup={params.paso === "activar"} />
+          </Section>
+        ) : null}
         <Section id="dispositivos" title="Dispositivos con sesión iniciada" meta="Si no reconoces uno, cierra su sesión y cambia tu contraseña.">
           <DeviceSessions sessions={sessions} />
         </Section>

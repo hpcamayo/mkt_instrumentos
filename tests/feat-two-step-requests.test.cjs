@@ -18,7 +18,7 @@ test("safe-08: the pre-request check lets through exactly the calls of signing i
   // routes, and "No tengo mi teléfono".
   assert.match(read("lib/auth/complete-session.ts"), /\.rpc\("my_two_step_owed"\)/);
   assert.match(read("app/mi-cuenta/seguridad/page.tsx"), /\.rpc\("my_two_step_requirement"\)/);
-  assert.match(read("lib/auth/two-step-gate.ts"), /\.rpc\("my_two_step_requirement"\)/);
+  assert.match(read("lib/auth/two-step-gate.ts"), /claims\.app_metadata\?\.role !== "admin"/);
   assert.match(read("lib/auth/devices.ts"), /\.rpc\("record_sign_in_device"/);
   assert.match(read("app/api/account/two-step/recovery/route.ts"), /\.rpc\("use_my_recovery_code"/);
   assert.match(migration, /^alter role authenticator set pgrst\.db_pre_request = 'public\.check_two_step_request';$/m);
@@ -48,13 +48,15 @@ const SERVICE_ROLE_USES = {
   "app/api/admin/invite-user/route.ts": "Admin: is_admin() needs aal2",
   "app/api/admin/listing-flags/route.ts": "Admin: is_admin() needs aal2",
   "app/api/contact/route.ts": "a public listing's contact for anyone; reads nothing of the account",
-  "app/api/services/events/route.ts": "records a view or contact; reads nothing of the account",
+  "app/api/services/events/route.ts": "guarded",
+  "app/api/help/tickets/route.ts": "guarded",
   "lib/marketplace-events-server.ts": "records events; reads nothing of the account",
   "app/instrumentos/[slug]/page.tsx": "the public listing page",
   "lib/share-image.tsx": "public share images",
   "app/api/auth/check-email/route.ts": "before signing in",
   "app/api/email/unsubscribe/route.ts": "a signed e-mail link, no session",
   "lib/rate-limit.ts": "counters only",
+  "lib/auth/pilot-two-step.ts": "retires only non-Admin factors of an Auth.getUser-verified account during the pilot",
   "app/api/health/route.ts": "no session",
   "lib/email/marketplace-email.ts": "jobs (CRON_SECRET)",
   "lib/listing-photo-cleanup.ts": "jobs and routes above, after their checks",

@@ -1,0 +1,1704 @@
+{
+  "generated_at": "2026-10-29T19:35:04.048662-05:00",
+  "scope": "Exactly the 13 live failures remaining before PR #83 was merged. No new local execution.",
+  "release": {
+    "mergeCommit": {
+      "oid": "e78fff1a5e64431f136797bb81d109f0c6be7415"
+    },
+    "mergedAt": "2026-10-30T00:20:05Z",
+    "state": "MERGED",
+    "url": "https://github.com/hpcamayo/mkt_instrumentos/pull/83"
+  },
+  "migration_verification": {
+    "project": "hswkjandadscduodejig",
+    "migration_source": "945a0495bf150e1841643a2b5978ed634673726b",
+    "migrations": [
+      {
+        "file": "20261121110000_recently_viewed_privacy.sql",
+        "sha256": "55418a63a68b5bc4cae4d6b17adfff69345aae6af9084950231148eb81905bb9"
+      },
+      {
+        "file": "20261121120000_ease_public_card_routes.sql",
+        "sha256": "82525f860450e131181c0c30c8528f75b87b6efd1b34d9f778f86563fefe7eb9"
+      }
+    ],
+    "verification": {
+      "project": "hswkjandadscduodejig",
+      "migration_versions": [
+        "20261121110000",
+        "20261121120000"
+      ],
+      "migration_count": 105,
+      "public_card_function": true,
+      "anon_execute": true,
+      "authenticated_execute": true,
+      "security_definer": true,
+      "public_cards_route": true,
+      "category_image_routes": 10,
+      "page_card_count": 19,
+      "private_key_count": 0,
+      "checked_at": "2026-10-30T00:19:54.263475+00:00"
+    }
+  },
+  "live_deployment_start": {
+    "url": "https://laria.audio",
+    "deployment_id": "dpl_7qWP1u5DKu1R9wgxMZnpakZNoW5p",
+    "git_sha": "e78fff1a5e64431f136797bb81d109f0c6be7415",
+    "target": "production",
+    "state": "READY",
+    "observed_at": "2026-10-30T00:22:48.158Z"
+  },
+  "live_deployment_end": {
+    "url": "https://laria.audio",
+    "deployment_id": "dpl_7qWP1u5DKu1R9wgxMZnpakZNoW5p",
+    "git_sha": "e78fff1a5e64431f136797bb81d109f0c6be7415",
+    "target": "production",
+    "state": "READY",
+    "observed_at": "2026-10-30T00:33:52.086Z"
+  },
+  "local_evidence_source": {
+    "report": "docs/acceptance/ease-fixes-2026-10-29/results.json",
+    "sha256": "649187a55a4bb68f5fadcf4bf3a26874495a722c3d52f4fe3adb670c2b06c109",
+    "lineage": "docs/acceptance/ease-fixes-2026-10-29/verification.json",
+    "reported_application_revision": "bac6e3d38611dea58daab0096628c81abb0c0b65"
+  },
+  "cleanup": {
+    "batch": {
+      "run": "rmvu8dj8z",
+      "accounts": 9,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "emails": 0,
+        "stores": 0,
+        "storage": 0,
+        "accounts": 0,
+        "listings": 0,
+        "profiles": 0,
+        "movements": 0,
+        "inventory_changes": 0
+      }
+    },
+    "independent_final": {
+      "removed": 0,
+      "run": "rmvu8nws1",
+      "accounts": 0,
+      "photos": {
+        "removed": 0
+      },
+      "left": {
+        "accounts": 0,
+        "profiles": 0,
+        "listings": 0,
+        "stores": 0,
+        "storage": 0,
+        "emails": 0
+      }
+    }
+  },
+  "cases": [
+    {
+      "id": "EASE-013",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T15:58:38.221Z",
+        "checks": 5,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "the menus' 17 brand links each have listings"
+          },
+          {
+            "ok": true,
+            "message": "the menus' 10 type links each have listings"
+          },
+          {
+            "ok": true,
+            "message": "the home's Categorías panel links each have listings"
+          },
+          {
+            "ok": true,
+            "message": "the home's category chips are the 7 categories with listings (Guitarras5\npublicaciones, Bajos3\npublicaciones, Percusión4\npublicaciones, Pedales3\npublicaciones, Amplificadores3\npublicaciones, Micrófonos3\npublicaciones, Audio2\npublicaciones; empty: keyboards, winds, strings)"
+          },
+          {
+            "ok": true,
+            "message": "landing type chips, other categories, brands and type links each have listings"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [
+          "home Categorías panel: 19 links",
+          "/instrumentos/guitarras: 2 type chips, 6 other categories, 3 brands, 2 Explora type links",
+          "/instrumentos/bajos: 0 type chips, 6 other categories, 2 brands, 0 Explora type links",
+          "/instrumentos/percusion: 3 type chips, 6 other categories, 3 brands, 3 Explora type links",
+          "/instrumentos/pedales: 0 type chips, 6 other categories, 3 brands, 0 Explora type links",
+          "/instrumentos/amplificadores: 0 type chips, 6 other categories, 2 brands, 0 Explora type links",
+          "/instrumentos/microfonos: 0 type chips, 6 other categories, 2 brands, 0 Explora type links",
+          "/instrumentos/audio: 0 type chips, 6 other categories, 2 brands, 0 Explora type links"
+        ],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:22:52.081Z",
+        "checks": 5,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "the menus' 13 brand links each have listings"
+          },
+          {
+            "ok": true,
+            "message": "the menus' 8 type links each have listings"
+          },
+          {
+            "ok": true,
+            "message": "the home's Categorías panel links each have listings"
+          },
+          {
+            "ok": true,
+            "message": "the home's category chips are the 5 categories with listings (Guitarras7\npublicaciones, Teclados y pianos1\npublicación, Percusión2\npublicaciones, Cuerdas1\npublicación, Micrófonos2\npublicaciones; empty: basses, winds, pedals, amplifiers, audio)"
+          },
+          {
+            "ok": true,
+            "message": "landing type chips, other categories, brands and type links each have listings"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [
+          "home Categorías panel: 15 links",
+          "/instrumentos/guitarras: 2 type chips, 4 other categories, 7 brands, 2 Explora type links",
+          "/instrumentos/teclados: 0 type chips, 4 other categories, 1 brands, 0 Explora type links",
+          "/instrumentos/percusion: 0 type chips, 4 other categories, 2 brands, 0 Explora type links",
+          "/instrumentos/cuerdas: 0 type chips, 4 other categories, 1 brands, 0 Explora type links",
+          "/instrumentos/microfonos: 0 type chips, 4 other categories, 2 brands, 0 Explora type links"
+        ],
+        "inconclusive_guard": null,
+        "problems": [
+          "console https://laria.audio/listados Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "pageerror https://laria.audio/ Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+          "console https://laria.audio/ Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/instrumentos/guitarras Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/instrumentos/teclados Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/instrumentos/percusion Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/instrumentos/cuerdas Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/instrumentos/microfonos Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-028",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:30:46.283Z",
+        "checks": 5,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "taste, comparison and recently viewed are kept on the device"
+          },
+          {
+            "ok": true,
+            "message": "no request carries the taste (121 requests checked)"
+          },
+          {
+            "ok": true,
+            "message": "no request carries the comparison"
+          },
+          {
+            "ok": true,
+            "message": "no request carries recently viewed listings"
+          },
+          {
+            "ok": true,
+            "message": "the home's 48 listings carry only a 12-character seller key, no owner id"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:23:18.379Z",
+        "checks": 5,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "taste, comparison and recently viewed are kept on the device"
+          },
+          {
+            "ok": true,
+            "message": "no request carries the taste (82 requests checked)"
+          },
+          {
+            "ok": true,
+            "message": "no request carries the comparison"
+          },
+          {
+            "ok": true,
+            "message": "no request carries recently viewed listings"
+          },
+          {
+            "ok": true,
+            "message": "the home's 13 listings carry only a 12-character seller key, no owner id"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [
+          "console https://laria.audio/listados Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/listados Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/instrumentos/guitarra-electrica-jet-jt-350-bsc-95e5660b-9ec9-4a8e-822a-510b943951dd Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/instrumentos/violin-starsun-4-4-con-estuche-y-accesorios-4d76af72-0b89-4da7-8585-c9c16a45bc6e Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/listados Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "pageerror https://laria.audio/ Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+          "console https://laria.audio/ Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-168",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:04:28.901Z",
+        "checks": 6,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "/: og:image /opengraph-image answers 200, 1200x630 (meta 1200x630)"
+          },
+          {
+            "ok": true,
+            "message": "/listados: og:image /opengraph-image answers 200, 1200x630 (meta 1200x630)"
+          },
+          {
+            "ok": true,
+            "message": "/terminos: og:image /opengraph-image answers 200, 1200x630 (meta 1200x630)"
+          },
+          {
+            "ok": true,
+            "message": "/instrumentos/guitarras: og:image /instrumentos/guitarras/opengraph-image answers 200, 1200x630 (meta 1200x630)"
+          },
+          {
+            "ok": true,
+            "message": "/, /listados and /terminos share the Laria card (/opengraph-image)"
+          },
+          {
+            "ok": true,
+            "message": "the category has its own card (/instrumentos/guitarras/opengraph-image)"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [
+          "the cards' text (the Laria card; Guitarras en Laria) is checked by looking at the saved images"
+        ],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:23:31.441Z",
+        "checks": 6,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "/: og:image /opengraph-image answers 200, 1200x630 (meta 1200x630)"
+          },
+          {
+            "ok": true,
+            "message": "/listados: og:image /opengraph-image answers 200, 1200x630 (meta 1200x630)"
+          },
+          {
+            "ok": true,
+            "message": "/terminos: og:image /opengraph-image answers 200, 1200x630 (meta 1200x630)"
+          },
+          {
+            "ok": true,
+            "message": "/instrumentos/guitarras: og:image /instrumentos/guitarras/opengraph-image answers 200, 1200x630 (meta 1200x630)"
+          },
+          {
+            "ok": true,
+            "message": "/, /listados and /terminos share the Laria card (/opengraph-image)"
+          },
+          {
+            "ok": true,
+            "message": "the category has its own card (/instrumentos/guitarras/opengraph-image)"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [
+          "the cards' text (the Laria card; Guitarras en Laria) is checked by looking at the saved images"
+        ],
+        "inconclusive_guard": null,
+        "problems": [
+          "pageerror https://laria.audio/ Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+          "console https://laria.audio/ Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/listados Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/instrumentos/guitarras Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-305",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T19:55:03.428Z",
+        "checks": 10,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "Guardar borrador says the draft is saved to the account"
+          },
+          {
+            "ok": true,
+            "message": "the account has the draft with its 2 photos ({\"id\":\"c52b12df-75e3-4002-b1d0-d06abad56975\",\"photos\":2,\"title\":\"Yamaha Pacifica 112V\"})"
+          },
+          {
+            "ok": true,
+            "message": "Mis publicaciones lists the draft (Borrador: Yamaha Pacifica 112V Borrador · 2 fotos · editado el 29 oct. Continuar)"
+          },
+          {
+            "ok": true,
+            "message": "a resume error preserves the saved draft and offers a retry instead of an empty form"
+          },
+          {
+            "ok": true,
+            "message": "the form waits for the saved draft before it becomes editable"
+          },
+          {
+            "ok": true,
+            "message": "Continuar in the other browser opens the draft with its photos (3 Estado y precio; 2 photos, 2 loaded)"
+          },
+          {
+            "ok": true,
+            "message": "and its brand and model"
+          },
+          {
+            "ok": true,
+            "message": "publishing from the other browser sent it (Yamaha Pacifica 112V, pending)"
+          },
+          {
+            "ok": true,
+            "message": "publishing removed the draft (0 left)"
+          },
+          {
+            "ok": true,
+            "message": "Mis publicaciones no longer lists it"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [
+          "console http://localhost:3360/mi-cuenta/publicar?borrador=c52b12df-75e3-4002-b1d0-d06abad56975 Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        ],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Not Run",
+        "at": "2026-10-30T00:25:26.638Z",
+        "checks": 5,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "Guardar borrador says the draft is saved to the account"
+          },
+          {
+            "ok": true,
+            "message": "the account has the draft with its 2 photos ({\"id\":\"657af9cb-bd40-4296-a518-88052942f964\",\"title\":\"Yamaha Pacifica 112V\",\"photos\":2})"
+          },
+          {
+            "ok": true,
+            "message": "Mis publicaciones lists the draft (Borrador: Yamaha Pacifica 112V Borrador · 2 fotos · editado el 29 oct. Continuar)"
+          },
+          {
+            "ok": true,
+            "message": "Continuar in the other browser opens the draft with its photos (3 Estado y precio; 2 photos, 2 loaded)"
+          },
+          {
+            "ok": true,
+            "message": "and its brand and model"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [
+          "live: stopped, publication and import writes are exercised locally, where buyer alerts cannot escape"
+        ],
+        "inconclusive_guard": "publication and import writes are exercised locally, where buyer alerts cannot escape",
+        "problems": [
+          "console https://laria.audio/mi-cuenta/publicar?borrador=657af9cb-bd40-4296-a518-88052942f964 Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-526",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:07:31.004Z",
+        "checks": 21,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "with JavaScript: the brand box finds 3 Boss listings in the store"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the brand shows as a removable chip with Limpiar todo"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the filtered URL is noindex, follow"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the sort menu opens"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: sorting keeps the brand (/tiendas/filtros-musica-3wau-8taw?brand=Boss&sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: in-stock listings by lowest price (301, 302, 300)"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the out-of-stock listing stays last though it is cheaper than others"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: Limpiar todo removes the brand (/tiendas/filtros-musica-3wau-8taw?sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: no results shows Ver todas sus publicaciones"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the brand box finds 3 Boss listings in the store"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the brand shows as a removable chip with Limpiar todo"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the filtered URL is noindex, follow"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the sort menu opens"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: sorting keeps the brand (/tiendas/filtros-musica-3wau-8taw?brand=Boss&sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: in-stock listings by lowest price (301, 302, 300)"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the out-of-stock listing stays last though it is cheaper than others"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: Limpiar todo removes the brand (/tiendas/filtros-musica-3wau-8taw?sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: no results shows Ver todas sus publicaciones"
+          },
+          {
+            "ok": true,
+            "message": "on a phone without JavaScript, sort links remain available"
+          },
+          {
+            "ok": true,
+            "message": "on a phone, Ordenar opens a sheet"
+          },
+          {
+            "ok": true,
+            "message": "the sheet's choice applies at once (?sort=price_desc)"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:33:17.600Z",
+        "checks": 17,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "with JavaScript: the brand box finds 1 mapex listings in the store"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the brand shows as a removable chip with Limpiar todo"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the filtered URL is noindex, follow"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the sort menu opens"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: sorting keeps the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?brand=mapex&sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: Limpiar todo removes the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: no results shows Ver todas sus publicaciones"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the brand box finds 1 mapex listings in the store"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the brand shows as a removable chip with Limpiar todo"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the filtered URL is noindex, follow"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the sort menu opens"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: sorting keeps the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?brand=mapex&sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: Limpiar todo removes the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: no results shows Ver todas sus publicaciones"
+          },
+          {
+            "ok": true,
+            "message": "on a phone without JavaScript, sort links remain available"
+          },
+          {
+            "ok": true,
+            "message": "on a phone, Ordenar opens a sheet"
+          },
+          {
+            "ok": true,
+            "message": "the sheet's choice applies at once (?sort=price_desc)"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4 Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4 Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?brand=zzqx Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4 Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?sort=price_desc Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-601",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:08:17.320Z",
+        "checks": 3,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "the previous search “cuerdas” shows the strings"
+          },
+          {
+            "ok": true,
+            "message": "after a short pause the table shows the matches without pressing Buscar"
+          },
+          {
+            "ok": true,
+            "message": "Back returns to the previous search “cuerdas” (it went to /mi-cuenta/tienda/inventario?q=cuerdas)"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [
+          "history entries added while typing: 1"
+        ],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:26:56.983Z",
+        "checks": 3,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "the previous search “cuerdas” shows the strings"
+          },
+          {
+            "ok": true,
+            "message": "after a short pause the table shows the matches without pressing Buscar"
+          },
+          {
+            "ok": true,
+            "message": "Back returns to the previous search “cuerdas” (it went to /mi-cuenta/tienda/inventario?q=cuerdas)"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [
+          "history entries added while typing: 1"
+        ],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-607",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:08:49.390Z",
+        "checks": 11,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "Umbral de stock bajo: applied to the 10 SKU (not the unticked one) with Deshacer"
+          },
+          {
+            "ok": true,
+            "message": "Umbral de stock bajo: Deshacer restores every SKU of the batch"
+          },
+          {
+            "ok": true,
+            "message": "Cambiar precios: applied to the 10 SKU (not the unticked one) with Deshacer"
+          },
+          {
+            "ok": true,
+            "message": "Cambiar precios: Deshacer restores every SKU of the batch"
+          },
+          {
+            "ok": true,
+            "message": "Categoría: applied to the 10 SKU (not the unticked one) with Deshacer"
+          },
+          {
+            "ok": true,
+            "message": "Categoría: Deshacer restores every SKU of the batch"
+          },
+          {
+            "ok": true,
+            "message": "Ajustar stock: applied to the 10 SKU (not the unticked one) with Deshacer"
+          },
+          {
+            "ok": true,
+            "message": "Ajustar stock: Deshacer restores every SKU of the batch"
+          },
+          {
+            "ok": true,
+            "message": "Archivar: applied to the 10 SKU (not the unticked one) with Deshacer"
+          },
+          {
+            "ok": true,
+            "message": "Archivar: Deshacer restores every SKU of the batch"
+          },
+          {
+            "ok": true,
+            "message": "when Archivar empties the list on screen, Deshacer stays (page shows: “Ningún SKU coincide con la búsqueda” and no notice)"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:27:25.671Z",
+        "checks": 11,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "Umbral de stock bajo: applied to the 10 SKU (not the unticked one) with Deshacer"
+          },
+          {
+            "ok": true,
+            "message": "Umbral de stock bajo: Deshacer restores every SKU of the batch"
+          },
+          {
+            "ok": true,
+            "message": "Cambiar precios: applied to the 10 SKU (not the unticked one) with Deshacer"
+          },
+          {
+            "ok": true,
+            "message": "Cambiar precios: Deshacer restores every SKU of the batch"
+          },
+          {
+            "ok": true,
+            "message": "Categoría: applied to the 10 SKU (not the unticked one) with Deshacer"
+          },
+          {
+            "ok": true,
+            "message": "Categoría: Deshacer restores every SKU of the batch"
+          },
+          {
+            "ok": true,
+            "message": "Ajustar stock: applied to the 10 SKU (not the unticked one) with Deshacer"
+          },
+          {
+            "ok": true,
+            "message": "Ajustar stock: Deshacer restores every SKU of the batch"
+          },
+          {
+            "ok": true,
+            "message": "Archivar: applied to the 10 SKU (not the unticked one) with Deshacer"
+          },
+          {
+            "ok": true,
+            "message": "Archivar: Deshacer restores every SKU of the batch"
+          },
+          {
+            "ok": true,
+            "message": "when Archivar empties the list on screen, Deshacer stays (page shows: “Ningún SKU coincide con la búsqueda” and no notice)"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-618",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:09:21.778Z",
+        "checks": 7,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "selecting the page selects its 50 SKU"
+          },
+          {
+            "ok": true,
+            "message": "the banner and the bar count the 55 matches"
+          },
+          {
+            "ok": true,
+            "message": "the export reaches all 55 (55 rows)"
+          },
+          {
+            "ok": true,
+            "message": "the action reached every match: 54 archived"
+          },
+          {
+            "ok": true,
+            "message": "the notice gives the reason the others did not change: “54 SKU archivados. No cambiaron COIFKGS-PUB (tienen una publicación publicada o en revisión).”"
+          },
+          {
+            "ok": true,
+            "message": "the skipped SKU is listed by name (COIFKGS-PUB) in “54 SKU archivados. No cambiaron COIFKGS-PUB (tienen una publicación publicada o en revisión).”"
+          },
+          {
+            "ok": true,
+            "message": "Deshacer brings all 54 back"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:29:01.751Z",
+        "checks": 7,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "selecting the page selects its 50 SKU"
+          },
+          {
+            "ok": true,
+            "message": "the banner and the bar count the 55 matches"
+          },
+          {
+            "ok": true,
+            "message": "the export reaches all 55 (55 rows)"
+          },
+          {
+            "ok": true,
+            "message": "the action reached every match: 54 archived"
+          },
+          {
+            "ok": true,
+            "message": "the notice gives the reason the others did not change: “54 SKU archivados. No cambiaron COIG2GP-PUB (tienen una publicación publicada o en revisión).”"
+          },
+          {
+            "ok": true,
+            "message": "the skipped SKU is listed by name (COIG2GP-PUB) in “54 SKU archivados. No cambiaron COIG2GP-PUB (tienen una publicación publicada o en revisión).”"
+          },
+          {
+            "ok": true,
+            "message": "Deshacer brings all 54 back"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-756",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:31:13.302Z",
+        "checks": 14,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "tests/ux-effortless-integration.test.cjs asserts \"one Vistos recientemente, kept in lib/device-saves.ts and drawn from today's cards\""
+          },
+          {
+            "ok": true,
+            "message": "the home: newest first, the removed one gone (teclado-zqtrfwk7b-3-fx1mf, guitarra-zqtrfwk7b-1-fwq4d)"
+          },
+          {
+            "ok": true,
+            "message": "the home: with its title and today's price"
+          },
+          {
+            "ok": true,
+            "message": "the home: the sold one says Vendido"
+          },
+          {
+            "ok": true,
+            "message": "the catalog: newest first, the removed one gone (teclado-zqtrfwk7b-3-fx1mf, guitarra-zqtrfwk7b-1-fwq4d)"
+          },
+          {
+            "ok": true,
+            "message": "the catalog: with its title and today's price"
+          },
+          {
+            "ok": true,
+            "message": "the catalog: the sold one says Vendido"
+          },
+          {
+            "ok": true,
+            "message": "the not-found page: newest first, the removed one gone (teclado-zqtrfwk7b-3-fx1mf, guitarra-zqtrfwk7b-1-fwq4d)"
+          },
+          {
+            "ok": true,
+            "message": "the not-found page: with its title and today's price"
+          },
+          {
+            "ok": true,
+            "message": "the not-found page: the sold one says Vendido"
+          },
+          {
+            "ok": true,
+            "message": "Favoritos: newest first, the removed one gone (teclado-zqtrfwk7b-3-fx1mf, guitarra-zqtrfwk7b-1-fwq4d)"
+          },
+          {
+            "ok": true,
+            "message": "Favoritos: with its title and today's price"
+          },
+          {
+            "ok": true,
+            "message": "Favoritos: the sold one says Vendido"
+          },
+          {
+            "ok": true,
+            "message": "Borrar empties it"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [
+          "console http://localhost:3350/instrumentos/no-existe-zqtrfwk7b Failed to load resource: the server responded with a status of 404 (Not Found)"
+        ],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:31:23.553Z",
+        "checks": 14,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "tests/ux-effortless-integration.test.cjs asserts \"one Vistos recientemente, kept in lib/device-saves.ts and drawn from today's cards\""
+          },
+          {
+            "ok": true,
+            "message": "the home: newest first, the removed one gone (teclado-zq8leoy2b-3-l0a2e, guitarra-zq8leoy2b-1-fbn2c)"
+          },
+          {
+            "ok": true,
+            "message": "the home: with its title and today's price"
+          },
+          {
+            "ok": true,
+            "message": "the home: the sold one says Vendido"
+          },
+          {
+            "ok": true,
+            "message": "the catalog: newest first, the removed one gone (teclado-zq8leoy2b-3-l0a2e, guitarra-zq8leoy2b-1-fbn2c)"
+          },
+          {
+            "ok": true,
+            "message": "the catalog: with its title and today's price"
+          },
+          {
+            "ok": true,
+            "message": "the catalog: the sold one says Vendido"
+          },
+          {
+            "ok": true,
+            "message": "the not-found page: newest first, the removed one gone (teclado-zq8leoy2b-3-l0a2e, guitarra-zq8leoy2b-1-fbn2c)"
+          },
+          {
+            "ok": true,
+            "message": "the not-found page: with its title and today's price"
+          },
+          {
+            "ok": true,
+            "message": "the not-found page: the sold one says Vendido"
+          },
+          {
+            "ok": true,
+            "message": "Favoritos: newest first, the removed one gone (teclado-zq8leoy2b-3-l0a2e, guitarra-zq8leoy2b-1-fbn2c)"
+          },
+          {
+            "ok": true,
+            "message": "Favoritos: with its title and today's price"
+          },
+          {
+            "ok": true,
+            "message": "Favoritos: the sold one says Vendido"
+          },
+          {
+            "ok": true,
+            "message": "Borrar empties it"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [
+          "pageerror https://laria.audio/ Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+          "console https://laria.audio/ Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/ Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/listados Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/listados Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/instrumentos/no-existe-zq8leoy2b Failed to load resource: the server responded with a status of 404 ()",
+          "console https://laria.audio/listados Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-829",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:13:10.732Z",
+        "checks": 14,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "390 px: a bottom sheet (324+520 of 844)"
+          },
+          {
+            "ok": true,
+            "message": "390 px: no horizontal scroll"
+          },
+          {
+            "ok": true,
+            "message": "390 px: the amount chips are pressed buttons (false → true)"
+          },
+          {
+            "ok": true,
+            "message": "390 px: every control is at least 24 px"
+          },
+          {
+            "ok": true,
+            "message": "390 px: Esc returns focus to Hacer una oferta (focus on button \"Hacer una oferta\")"
+          },
+          {
+            "ok": true,
+            "message": "390 px: Cerrar returns focus to Hacer una oferta (focus on button \"Hacer una oferta\")"
+          },
+          {
+            "ok": true,
+            "message": "390 px: Tab stays in the sheet"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: a centered dialog (395,225 576x450)"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: no horizontal scroll"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: the amount chips are pressed buttons (false → true)"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: every control is at least 24 px"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: Esc returns focus to Hacer una oferta (focus on button \"Hacer una oferta\")"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: Cerrar returns focus to Hacer una oferta (focus on button \"Hacer una oferta\")"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: Tab stays in the sheet"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:32:08.212Z",
+        "checks": 14,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "390 px: a bottom sheet (324+520 of 844)"
+          },
+          {
+            "ok": true,
+            "message": "390 px: no horizontal scroll"
+          },
+          {
+            "ok": true,
+            "message": "390 px: the amount chips are pressed buttons (false → true)"
+          },
+          {
+            "ok": true,
+            "message": "390 px: every control is at least 24 px"
+          },
+          {
+            "ok": true,
+            "message": "390 px: Esc returns focus to Hacer una oferta (focus on button \"Hacer una oferta\")"
+          },
+          {
+            "ok": true,
+            "message": "390 px: Cerrar returns focus to Hacer una oferta (focus on button \"Hacer una oferta\")"
+          },
+          {
+            "ok": true,
+            "message": "390 px: Tab stays in the sheet"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: a centered dialog (395,225 576x450)"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: no horizontal scroll"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: the amount chips are pressed buttons (false → true)"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: every control is at least 24 px"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: Esc returns focus to Hacer una oferta (focus on button \"Hacer una oferta\")"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: Cerrar returns focus to Hacer una oferta (focus on button \"Hacer una oferta\")"
+          },
+          {
+            "ok": true,
+            "message": "1366 px: Tab stays in the sheet"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-845",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:14:14.281Z",
+        "checks": 8,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "the notice: \"Listo, no volverás a ver “Guitarra zqqsp8tpn 1” en Descubrir. Deshacer\""
+          },
+          {
+            "ok": true,
+            "message": "the listing leaves the feed at once"
+          },
+          {
+            "ok": true,
+            "message": "the home still shows it"
+          },
+          {
+            "ok": true,
+            "message": "the catalog still shows it"
+          },
+          {
+            "ok": true,
+            "message": "another browser still shows it in Descubrir"
+          },
+          {
+            "ok": true,
+            "message": "Deshacer puts it back in the feed"
+          },
+          {
+            "ok": true,
+            "message": "and in view"
+          },
+          {
+            "ok": true,
+            "message": "after a reload it stays out of Descubrir"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:24:33.162Z",
+        "checks": 8,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "the notice: \"Listo, no volverás a ver “Guitarra eléctrica jet Jt-350 BSC” en Descubrir. Deshacer\""
+          },
+          {
+            "ok": true,
+            "message": "the listing leaves the feed at once"
+          },
+          {
+            "ok": true,
+            "message": "the home still shows it"
+          },
+          {
+            "ok": true,
+            "message": "the catalog still shows it"
+          },
+          {
+            "ok": true,
+            "message": "another browser still shows it in Descubrir"
+          },
+          {
+            "ok": true,
+            "message": "Deshacer puts it back in the feed"
+          },
+          {
+            "ok": true,
+            "message": "and in view"
+          },
+          {
+            "ok": true,
+            "message": "after a reload it stays out of Descubrir"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [
+          "pageerror https://laria.audio/ Minified React error #418; visit https://react.dev/errors/418?args[]=HTML&args[]= for the full message or use the non-minified dev environment for full errors and additional helpful warnings.",
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-850",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:14:57.782Z",
+        "checks": 5,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "from S/ 1,000 the safety sheet opens first"
+          },
+          {
+            "ok": true,
+            "message": "Volver closes it and focus returns to WhatsApp (WhatsApp)"
+          },
+          {
+            "ok": true,
+            "message": "Continuar a WhatsApp opens WhatsApp"
+          },
+          {
+            "ok": true,
+            "message": "the same listing opens WhatsApp without the sheet"
+          },
+          {
+            "ok": true,
+            "message": "and another listing over S/ 1,000 too: not again in this browser"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:32:27.263Z",
+        "checks": 5,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "from S/ 1,000 the safety sheet opens first"
+          },
+          {
+            "ok": true,
+            "message": "Volver closes it and focus returns to WhatsApp (WhatsApp)"
+          },
+          {
+            "ok": true,
+            "message": "Continuar a WhatsApp opens WhatsApp"
+          },
+          {
+            "ok": true,
+            "message": "the same listing opens WhatsApp without the sheet"
+          },
+          {
+            "ok": true,
+            "message": "and another listing over S/ 1,000 too: not again in this browser"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      }
+    },
+    {
+      "id": "EASE-854",
+      "previous_registry_status": "Fail",
+      "status": "Pass",
+      "local_previous_run": {
+        "status": "Pass",
+        "at": "2026-10-29T16:15:13.067Z",
+        "checks": 5,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "↓ puts focus on the new screen's heading (H2#descubrir-c54f5cad-559e-4832-b444-4054408c2345)"
+          },
+          {
+            "ok": true,
+            "message": "a polite announcement: \"2 de 253: Guitarra zqqv2hwrq 1\""
+          },
+          {
+            "ok": true,
+            "message": "the bar's Siguiente puts focus on the new screen's heading (focus is on H2 \"Bajo zqquzufrm 2\")"
+          },
+          {
+            "ok": true,
+            "message": "screens out of view are inert"
+          },
+          {
+            "ok": true,
+            "message": "a stop is announced by its title"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [],
+        "outside_recipients": null
+      },
+      "live": {
+        "status": "Pass",
+        "at": "2026-10-30T00:24:52.743Z",
+        "checks": 4,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "↓ puts focus on the new screen's heading (H2#descubrir-4d76af72-0b89-4da7-8585-c9c16a45bc6e)"
+          },
+          {
+            "ok": true,
+            "message": "a polite announcement: \"2 de 11: Violín Starsun 4/4 Con Estuche Y Accesorios\""
+          },
+          {
+            "ok": true,
+            "message": "the bar's Siguiente puts focus on the new screen's heading (focus is on H2 \"Teclado Casio Ctk-3500 Negro 61 Teclas, Estuche Y Accesorios\")"
+          },
+          {
+            "ok": true,
+            "message": "screens out of view are inert"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/descubrir Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "outside_recipients": null
+      }
+    }
+  ],
+  "probe_correction": {
+    "file": "scripts/acceptance/ease/checks-d.cjs",
+    "sha256": "223ad8515241a57faf11d5def39ff93a2ae96c7ea362fb55adb770b3b54711e4",
+    "reason": "The original probe guessed brand bateria from the seller-written title bateria mapex. The public brand is mapex. Empty-state headings were also counted as products. Use public brand data and actual product links.",
+    "attempts": [
+      {
+        "status": "Fail",
+        "at": "2026-10-30T00:24:06.937Z",
+        "checks": 17,
+        "assertions": [
+          {
+            "ok": false,
+            "message": "with JavaScript: the brand box finds 1 bateria listings in the store"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the brand shows as a removable chip with Limpiar todo"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the filtered URL is noindex, follow"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the sort menu opens"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: sorting keeps the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?brand=bateria&sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: Limpiar todo removes the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: no results shows Ver todas sus publicaciones"
+          },
+          {
+            "ok": false,
+            "message": "without JavaScript: the brand box finds 1 bateria listings in the store"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the brand shows as a removable chip with Limpiar todo"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the filtered URL is noindex, follow"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the sort menu opens"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: sorting keeps the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?brand=bateria&sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: Limpiar todo removes the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: no results shows Ver todas sus publicaciones"
+          },
+          {
+            "ok": true,
+            "message": "on a phone without JavaScript, sort links remain available"
+          },
+          {
+            "ok": true,
+            "message": "on a phone, Ordenar opens a sheet"
+          },
+          {
+            "ok": true,
+            "message": "the sheet's choice applies at once (?sort=price_desc)"
+          }
+        ],
+        "failed_checks": [
+          "with JavaScript: the brand box finds 1 bateria listings in the store",
+          "without JavaScript: the brand box finds 1 bateria listings in the store"
+        ],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4 Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4 Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?brand=zzqx Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4 Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?sort=price_desc Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "outside_recipients": null
+      },
+      {
+        "status": "Pass",
+        "at": "2026-10-30T00:33:17.600Z",
+        "checks": 17,
+        "assertions": [
+          {
+            "ok": true,
+            "message": "with JavaScript: the brand box finds 1 mapex listings in the store"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the brand shows as a removable chip with Limpiar todo"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the filtered URL is noindex, follow"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: the sort menu opens"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: sorting keeps the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?brand=mapex&sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: Limpiar todo removes the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "with JavaScript: no results shows Ver todas sus publicaciones"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the brand box finds 1 mapex listings in the store"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the brand shows as a removable chip with Limpiar todo"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the filtered URL is noindex, follow"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: the sort menu opens"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: sorting keeps the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?brand=mapex&sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: Limpiar todo removes the brand (/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?sort=price_asc)"
+          },
+          {
+            "ok": true,
+            "message": "without JavaScript: no results shows Ver todas sus publicaciones"
+          },
+          {
+            "ok": true,
+            "message": "on a phone without JavaScript, sort links remain available"
+          },
+          {
+            "ok": true,
+            "message": "on a phone, Ordenar opens a sheet"
+          },
+          {
+            "ok": true,
+            "message": "the sheet's choice applies at once (?sort=price_desc)"
+          }
+        ],
+        "failed_checks": [],
+        "error": null,
+        "notes": [],
+        "inconclusive_guard": null,
+        "problems": [
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4 Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4 Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?brand=zzqx Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4 Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector",
+          "console https://laria.audio/tiendas/paul-camayo-ba6d2339-1b32-41b2-a848-03ac100957a4?sort=price_desc Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+        ],
+        "outside_recipients": null
+      }
+    ]
+  },
+  "visual_inspection": {
+    "case": "EASE-168",
+    "result": "Generic card reads Laria, El mercado de instrumentos del Perú, contact via WhatsApp; the category card reads Guitarras en Laria. Both are legible and unclipped at 1200x630.",
+    "images": [
+      {
+        "file": "og-home.png",
+        "sha256": "e5580a37669d0e089d4b7803cbe098ed45f6f932bd1d44109749ea8af91ae88e"
+      },
+      {
+        "file": "og-guitarras.png",
+        "sha256": "8f1642ed8f25f39eeb9cc8d1e5ccb4b92c79dd4d893c84703c8c2b85e6152d79"
+      }
+    ]
+  },
+  "merged_commit_ci": [
+    {
+      "conclusion": "success",
+      "databaseId": 40979081033,
+      "name": "Uptime",
+      "status": "completed",
+      "url": "https://github.com/hpcamayo/mkt_instrumentos/actions/runs/40979081033"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 40979033741,
+      "name": "CI",
+      "status": "completed",
+      "url": "https://github.com/hpcamayo/mkt_instrumentos/actions/runs/40979033741"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 40979033816,
+      "name": "Acceptance",
+      "status": "completed",
+      "url": "https://github.com/hpcamayo/mkt_instrumentos/actions/runs/40979033816"
+    }
+  ],
+  "runtime_observation": {
+    "deployment_id": "dpl_7qWP1u5DKu1R9wgxMZnpakZNoW5p",
+    "level": "error",
+    "since": "2026-10-30T00:22:48Z",
+    "record_limit": 100,
+    "returned_records": 0,
+    "method": "Explicit project and team CLI fallback; connector build-log endpoint lacked team access. This is a bounded log observation, not a full production reliability claim."
+  },
+  "live_counts": {
+    "Not Run": 1,
+    "Pass": 12
+  },
+  "case_counts": {
+    "Pass": 13
+  },
+  "registry_counts": {
+    "Pass": 653,
+    "Not Run": 228,
+    "Blocked": 1
+  },
+  "ease_registry_counts": {
+    "Pass": 268,
+    "Not Run": 75
+  }
+}

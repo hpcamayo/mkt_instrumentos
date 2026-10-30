@@ -1,0 +1,260 @@
+preflight {"run":"rmvv05v4a","alerts":2,"buckets":{"type:bass":1,"type:drums":1},"version":"17.11","leftovers":0}
+EASE-428 (live)
+  ok   the warm closing panel leads directly into the review
+  ok   the first visit claims the seller milestone
+  ok   the first verified sale shows the seller milestone
+  ok   a reload does not claim the milestone again
+  ok   the milestone appears only once
+  ok   another device does not repeat the seller milestone
+  => Pass (39 s)
+EASE-425 (live)
+  ok   the date field bounds the permitted pause range
+  ok   the owner can pause all publications
+  ok   the warmed public listing immediately shows its return date
+  ok   the pause disables buyer contact
+  ok   Ya volví ends the pause
+  ok   contact returns after ending the pause
+  => Pass (29 s)
+EASE-627 (live)
+  ok   an offline sale waits without changing server stock
+  ok   the queued sale is visible
+  ok   reconnection records the waiting sale
+  ok   a repeated reconnect does not record the sale twice
+  FAIL a refused queued sale stays with its reason
+  ERROR locator.waitFor: Timeout 30000ms exceeded.
+Call log:
+  - waiting for getByRole('alert').filter({ hasText: 'No se pudo registrar una venta guardada sin conexión' }) to be visible
+
+  => Fail (78 s)
+EASE-710 (live)
+  ok   390 inventory bulk traversed actual keyboard focus stops
+  ok   390 inventory bulk keeps keyboard focus clear of its bottom bar
+  ok   390 repeated-search prompt traversed actual keyboard focus stops
+  ok   390 repeated-search prompt keeps keyboard focus clear of its bottom bar
+  ok   390 Undo notice traversed actual keyboard focus stops
+  ok   390 Undo notice keeps keyboard focus clear of its bottom bar
+  ok   390 listing contact traversed actual keyboard focus stops
+  ok   390 listing contact keeps keyboard focus clear of its bottom bar
+  ok   phone footer ends above the fixed contact bar
+  ok   1366 inventory bulk traversed actual keyboard focus stops
+  ok   1366 inventory bulk keeps keyboard focus clear of its bottom bar
+  ok   1366 repeated-search prompt traversed actual keyboard focus stops
+  ok   1366 repeated-search prompt keeps keyboard focus clear of its bottom bar
+  ok   1366 comparison tray traversed actual keyboard focus stops
+  ok   1366 comparison tray keeps keyboard focus clear of its bottom bar
+  ok   1366 Undo notice traversed actual keyboard focus stops
+  ok   1366 Undo notice keeps keyboard focus clear of its bottom bar
+  ok   1366 listing contact traversed actual keyboard focus stops
+  ok   1366 listing contact keeps keyboard focus clear of its bottom bar
+  => Pass (86 s)
+EASE-204 (live)
+  ok   sign-in merges the device favorite into this account
+  ok   the merge notice gives the count
+  ok   the merged device list is cleared
+  ok   the favorite appears in a separate browser
+  => Pass (25 s)
+EASE-206 (live)
+  ok   the sign-in link preserves the intended search
+  ok   returning from sign-in creates exactly one alert
+  ok   reload does not replay the consumed alert intent
+  => Pass (16 s)
+EASE-207 (live)
+  ok   report sign-in keeps the same target
+  ok   returning from sign-in opens the report form for the same listing
+  ok   the target listing remains visible
+  => Pass (19 s)
+EASE-212 (live)
+  ok   daily is the initial frequency
+  ok   name and instant frequency persist
+  ok   the saved alert name survives reload
+  => Pass (17 s)
+EASE-220 (live)
+  ok   Bajas de precio de mis favoritos saves the selected setting
+  ok   Resumen semanal de lo que sigo saves the selected setting
+  ok   the confirmed action pauses all alerts
+  => Pass (17 s)
+EASE-222 (live)
+  ok   the available favorite offers WhatsApp
+  ok   the sold favorite offers similar available listings
+  ok   the sold favorite offers a similar alert
+  => Pass (20 s)
+EASE-223 (live)
+  ok   the first notification page contains 50 rows
+  ok   the price-drop notification names the listing
+  ok   the remaining notifications appear on page two
+  ok   mark all read updates all pages
+  => Pass (22 s)
+EASE-311 (live)
+  ok   the chosen guitar category supplies catalog brand suggestions
+  ok   a catalog suggestion can be used as the brand
+  => Pass (15 s)
+EASE-400 (live)
+  ok   account home opens with Pendientes
+  ok   rejection and unfinished draft are actionable on the home
+  ok   the rejection precedes the lower-urgency draft
+  ok   metrics do not replace the to-do home
+  => Pass (23 s)
+EASE-401 (live)
+  ok   a fresh account shows Estás al día
+  ok   the empty state explains future pending items
+  => Pass (12 s)
+EASE-403 (live)
+  ok   the answer is not preselected
+  ok   yes records the buyer answer
+  ok   no records the answer and stops asking
+  ok   an answered negative check does not reappear
+  ok   the positive answer notifies the seller once
+  => Pass (60 s)
+EASE-404 (live)
+  ok   denying the report creates no sale
+  ok   the denied listing stays approved
+  ok   confirmation is required before marking the listing sold
+  ok   confirming the buyer report marks it sold
+  ok   one verified transaction is created and opened
+  => Pass (45 s)
+EASE-408 (live)
+  ok   yes records a fresh availability confirmation
+  ok   the first publication date is preserved
+  ok   lowering the price also confirms availability
+  ok   sold opens the buyer-selection flow
+  ok   the public listing shows the dated availability confirmation
+  => Pass (55 s)
+EASE-410 (live)
+  ok   a recent signed-in contact sees the purchase question
+  ok   anonymous visitors see no purchase question
+  ok   a buyer who never contacted the listing sees no question
+  => Pass (26 s)
+EASE-413 (live)
+  ok   rejection reasons appear as two unticked checklist choices
+  ok   no reason is pre-ticked
+  ok   the moderator note is shown
+  ok   affected fields are marked Revisar
+  => Pass (19 s)
+EASE-415 (live)
+  ok   the edit form distinguishes immediate and moderated fields
+  ok   an immediate edit has a live publication explanation
+  ok   changing the title explains the review path
+  => Pass (15 s)
+EASE-424 (live)
+  ok   pending preview is readable by its owner
+  ok   pending preview is noindex
+  ok   pending preview is not found for another account
+  ok   hidden preview is readable by its owner
+  ok   hidden preview is noindex
+  ok   hidden preview is not found for another account
+  ok   draft preview is readable by its owner
+  ok   draft preview is noindex
+  ok   draft preview is not found for another account
+  ok   rejected preview is readable by its owner
+  ok   rejected preview is noindex
+  ok   rejected preview is not found for another account
+  => Pass (53 s)
+EASE-414 (live)
+  ok   rejected has one save-and-send button
+  ok   rejected sends for review even with unchanged fields
+  ok   draft has one save-and-send button
+  ok   draft sends for review even with unchanged fields
+  ok   a verified store's save-and-publish button publishes the draft
+  => Pass (46 s)
+EASE-420 (live)
+  ok   inline price editing persists
+  ok   all three selected listings hide in one action
+  ok   the result reports the changed count
+  ok   Undo restores the selected listings
+  => Pass (72 s)
+EASE-421 (live)
+  ok   hide applies immediately
+  ok   hide uses Undo instead of a confirmation
+  ok   Undo restores the listing
+  ok   marking sold keeps its confirmation
+  ok   cancelling sold leaves the listing active
+  => Pass (47 s)
+EASE-423 (live)
+  ok   Duplicar opens a new draft identity
+  ok   Duplicar copies the text and price
+  ok   Duplicar copies both photos
+  ok   Duplicar preserves the original
+  ok   Republicar opens a new draft identity
+  ok   Republicar copies the text and price
+  ok   Republicar copies both photos
+  ok   Republicar preserves the original
+  => Pass (53 s)
+EASE-426 (live)
+  ok   both recognizable buyers are offered with no preselection
+  ok   buyer cards show names and only the last three WhatsApp digits
+  ok   cards show contact date and the buyer report
+  => Pass (25 s)
+EASE-427 (live)
+  ok   five labelled stars have no default rating
+  ok   keyboard arrows select the next radio star
+  ok   the comment field sits below the rating
+  ok   the comment follows the rating visually
+  => Pass (24 s)
+EASE-614 (live)
+  ok   the suggested quantity uses corrected 30-day sales and available stock
+  ok   a sold-out SKU is suggested at least one unit
+  ok   the reorder page shows the low-stock SKU
+  ok   Descargar Excel contains the header and both reorder rows
+  ok   Descargar CSV contains the header and both reorder rows
+  => Pass (32 s)
+EASE-615 (live)
+  ok   the preview changes no stock
+  ok   unknown, duplicate, formula, nonnumeric and archived rows are identified
+  ok   valid rows are added as one batch
+  ok   later duplicate rows, formulas and nonnumeric quantities are skipped
+  ok   Undo restores both valid rows
+  => Pass (48 s)
+EASE-616 (live)
+  ok   sold-out interest ranks the more-favorited listing first
+  ok   the section reports aggregate interest
+  ok   the section is absent in a filtered view
+  ok   the section is absent after the first page
+  => Pass (49 s)
+EASE-626 (live)
+  ok   the counter never adds beyond available stock
+  ok   one counter sale deducts both SKU quantities
+  ok   one sale movement is recorded per SKU
+  ok   Undo restores the complete counter sale
+  => Pass (37 s)
+EASE-619 (live)
+  ok   preview includes CAMP-0-16oamvv0uc573w
+  ok   preview includes CAMP-1-16oamvv0udme3y
+  ok   preview includes CAMP-2-16oamvv0uf0840
+  ok   preview includes CAMP-3-16oamvv0ugyx42
+  ok   preview includes CAMP-4-16oamvv0ujhd44
+  ok   preview includes CAMP-5-16oamvv0ulra46
+  ok   preview includes CAMP-6-16oamvv0un5748
+  ok   preview includes CAMP-7-16oamvv0up4f4a
+  ok   preview includes CAMP-8-16oamvv0ur244c
+  ok   preview includes CAMP-9-16oamvv0ut434e
+  ok   preview writes no prices
+  ok   the campaign reduces every selected price and rounds to 9
+  ok   revert restores unchanged campaign prices
+  ok   revert preserves the manual price change
+  ok   repeating a revert replays its result
+  => Pass (141 s)
+EASE-620 (live)
+  ok   xlsx export preserves exactly the filtered view and order
+  ok   csv export preserves exactly the filtered view and order
+  ok   xlsx export preserves exactly the filtered view and order
+  ok   publication export adds the listing's public fields
+  => Pass (32 s)
+EASE-706 (live)
+  ok   catalog images created after navigation scale their sizes to 1.5x on a 2x phone
+  ok   the reduced-data lightbox image actually loads
+  ok   new lightbox images use the same responsive srcset at reduced density
+  => Pass (20 s)
+EASE-709 (live)
+  ok   thumbnail selects the second photo
+  ok   gallery next button selects the third photo
+  ok   lightbox next button changes the photo
+  ok   lightbox previous button changes it back
+  ok   zoom-in enables zoom-out
+  ok   move-after swaps the actual photo order
+  ok   move-before restores the original order
+  => Pass (22 s)
+EASE-719 (live)
+  ok   first visit and opening notifications never request notification permission
+  => Not Run (14 s)
+{"Pass":34,"Fail":1,"Not Run":1,"Blocked":0}
+clean-up {"run":"rmvv05v4a","accounts":58,"photos":{"removed":0},"left":{"emails":0,"stores":0,"storage":0,"accounts":0,"listings":0,"profiles":0,"movements":0,"inventory_changes":0}}

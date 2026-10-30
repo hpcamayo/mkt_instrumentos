@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { isUuid } from "@/lib/marketplace-event-payload";
-import { getMarketplaceActor, getMarketplaceSession, sameOriginEventRequest } from "@/lib/marketplace-events-server";
+import { getMarketplaceSession, sameOriginEventRequest } from "@/lib/marketplace-events-server";
+import { sessionOwesTwoStep } from "@/lib/auth/complete-session";
+import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import { servicesDb } from "@/lib/services-db";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 
@@ -20,7 +22,11 @@ export async function POST(request: Request) {
   const admin = getSupabaseAdminClient();
   if (!admin) return reply(503, { recorded: false }, requestId);
   try {
-    const [actorId, sessionId] = await Promise.all([getMarketplaceActor(), getMarketplaceSession()]);
+    const supabase = await getSupabaseServerClient();
+    if (!supabase) return reply(503, { recorded: false }, requestId);
+    const [{ data: auth }, sessionId] = await Promise.all([supabase.auth.getUser(), getMarketplaceSession()]);
+    const actorId = auth.user?.id ?? null;
+    if (actorId && await sessionOwesTwoStep(supabase)) return reply(403, { recorded: false }, requestId);
     const { data, error } = await servicesDb(admin).rpc("record_service_event", {
       p_event_id: body.eventId,
       p_service_id: body.serviceId,

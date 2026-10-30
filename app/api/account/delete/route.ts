@@ -5,7 +5,7 @@ import { DEVICE_COOKIE } from "@/lib/auth/devices";
 import { REMEMBER_COOKIE } from "@/lib/auth/remember";
 import { PUSH_DEVICE_COOKIE } from "@/lib/push/device";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 
 type DeletionCheck = { allowed?: boolean; blocker?: string | null; has_password?: boolean };
 

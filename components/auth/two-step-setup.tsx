@@ -18,7 +18,7 @@ export type TwoStepState = {
   hasFactor: boolean;
   aal: "aal1" | "aal2";
   required: boolean;
-  reason: "store" | "admin" | null;
+  reason: "admin" | null;
   recoveryCodesLeft: number;
 };
 
@@ -40,7 +40,6 @@ export function TwoStepSetup({ state, next, startSetup = false }: { state: TwoSt
 }
 
 function requirementText(reason: TwoStepState["reason"]) {
-  if (reason === "store") return "Tu tienda tiene medios de pago aprobados, así que la verificación en dos pasos es obligatoria para entrar a Mi tienda y cambiar sus datos de contacto o de pago.";
   if (reason === "admin") return "Las cuentas de Admin necesitan la verificación en dos pasos.";
   return null;
 }

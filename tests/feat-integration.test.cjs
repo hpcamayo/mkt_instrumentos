@@ -20,17 +20,17 @@ test("safe-08 with A16: the browser sign-in keeps «Mantener sesión iniciada» 
 
   const route = source("app/api/account/sessions/device/route.ts");
   assert.match(route, /const client = await accountClient\(request\);/);
-  assert.match(route, /await recordSignInDevice\(client\.supabase, request, response\);/);
+  assert.match(route, /await recordSignInDevice\(client\.supabase, request, response, client\.user\);/);
 
   // The server sign-ins keep the choice, the device and the code step, with main's limits and forwarded address.
   const login = source("app/api/auth/login/route.ts");
   assert.match(login, /if \(!\(await allowRequest\(RATE_LIMITS\.login, request\)\)\) return failure\(TOO_MANY_ATTEMPTS, 429\);/);
   assert.match(login, /createServerClient<Database>\(supabaseUrl, forwarded\?\.key \?\? supabaseAnonKey,/);
   assert.match(login, /response\.cookies\.set\(name, value, withRememberChoice\(options, remember\)\);/);
-  assert.match(login, /await recordSignInDevice\(supabase, request, response\);/);
+  assert.match(login, /await recordSignInDevice\(supabase, request, response, authData\?\.user\);/);
   const callback = source("app/auth/callback/route.ts");
   assert.match(callback, /response\.cookies\.set\(name, value, withRememberChoice\(options, remember\)\),/);
-  assert.match(callback, /await recordSignInDevice\(supabase, request, response\);/);
+  assert.match(callback, /await recordSignInDevice\(supabase, request, response, data\.user\);/);
 });
 
 test("safe-08 with A15: one two-step component serves the security page and the password forms", () => {

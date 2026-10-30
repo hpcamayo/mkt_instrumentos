@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 const RESTORE_KEY = "laria:ver-mas";
 type Restore = { href: string; pages: number; scrollY: number; at: number };
 // talk-06: a page of cards and the ones among them that say "Reservado".
-type LoadedPage = { listings: ListingCardData[]; reserved: string[] };
+type LoadedPage = { listings: ListingCardData[]; total: number | null; reserved: string[] };
 
 // FIND 15 (Effortless Laria): on phones, "Ver 24 más" loads the next page under the current one instead of a numbered
 // page that reloads and starts at the top. The numbered pages stay in the page for search engines and wider screens
@@ -25,15 +25,19 @@ export function CatalogLoadMore({ filters, page, total }: { filters: ListingFilt
   const restored = useRef(false);
   const pages = Math.ceil(total / LISTINGS_PAGE_SIZE);
   const lastLoaded = page + extra.length;
-  const remaining = Math.max(0, total - lastLoaded * LISTINGS_PAGE_SIZE);
+  const lastPage = extra.at(-1);
+  const resultTotal = lastPage ? lastPage.total : total;
+  const shown = Math.min(resultTotal ?? Infinity, page * LISTINGS_PAGE_SIZE + extra.reduce((count, loaded) => count + loaded.listings.length, 0));
+  const exhausted = lastPage !== undefined && lastPage.listings.length < LISTINGS_PAGE_SIZE;
+  const remaining = exhausted ? 0 : Math.max(0, (resultTotal ?? total) - lastLoaded * LISTINGS_PAGE_SIZE);
 
   async function load(target: number) {
     const params = catalogSearchParams(filters);
     params.set("page", String(target));
     const response = await fetch(`/api/catalog/page?${params}`, { headers: { accept: "application/json" } });
     if (!response.ok) throw new Error(String(response.status));
-    const body = (await response.json()) as { listings?: ListingCardData[]; reserved?: string[] };
-    return { listings: body.listings ?? [], reserved: Array.isArray(body.reserved) ? body.reserved : [] };
+    const body = (await response.json()) as { listings?: ListingCardData[]; total?: number | null; reserved?: string[] };
+    return { listings: body.listings ?? [], total: typeof body.total === "number" ? body.total : null, reserved: Array.isArray(body.reserved) ? body.reserved : [] };
   }
 
   async function more() {
@@ -57,7 +61,11 @@ export function CatalogLoadMore({ filters, page, total }: { filters: ListingFilt
     (async () => {
       try {
         const loaded: LoadedPage[] = [];
-        for (let target = page + 1; target <= saved.pages; target += 1) loaded.push(await load(target));
+        for (let target = page + 1; target <= saved.pages; target += 1) {
+          const next = await load(target);
+          loaded.push(next);
+          if (next.listings.length < LISTINGS_PAGE_SIZE) break;
+        }
         setExtra(loaded);
         requestAnimationFrame(() => window.scrollTo({ top: saved.scrollY, behavior: "instant" as ScrollBehavior }));
       } catch {
@@ -78,7 +86,7 @@ export function CatalogLoadMore({ filters, page, total }: { filters: ListingFilt
   return (
     <div className="md:hidden" onClickCapture={rememberPlace}>
       {extra.length > 0 ? (
-        <ul className={cn(LISTING_GRID, "mt-6")} aria-label={`Más resultados, hasta ${formatNumber(Math.min(total, lastLoaded * LISTINGS_PAGE_SIZE))}`}>
+        <ul className={cn(LISTING_GRID, "mt-6")} aria-label={`Más resultados, hasta ${formatNumber(shown)}`}>
           {extra.flatMap((loaded) => loaded.listings.map((listing) => (
             <li key={listing.id} className="min-w-0">
               <ListingCard listing={listing} sizes={LISTING_GRID_SIZES} reserved={loaded.reserved.includes(listing.id)} />
@@ -88,7 +96,7 @@ export function CatalogLoadMore({ filters, page, total }: { filters: ListingFilt
       ) : null}
       <div className="mt-6 flex flex-col items-center gap-2">
         <p className="t-meta" role="status">
-          Mostrando {formatNumber(Math.min(total, lastLoaded * LISTINGS_PAGE_SIZE))} de {formatNumber(total)}
+          Mostrando {formatNumber(shown)}{resultTotal === null ? null : <> de {formatNumber(resultTotal)}</>}
         </p>
         {remaining > 0 ? (
           <Button variant="secondary" block onClick={more} disabled={state === "loading"}>

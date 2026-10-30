@@ -194,6 +194,22 @@ Use the neutral subject `Confirma tu cuenta en Laria`; the body supplies the cor
 
 The signup redirect includes the encoded destination `/mi-cuenta?confirmed=1`, so successful confirmation opens the dashboard with an explicit verified-email message.
 
+### Signup feedback in the app
+
+When signup succeeds without an active session, both `/registro/vendedor` and `/registro/tienda` replace the form with a confirmation starting “Cuenta creada. Revisa tu correo…”. It shows the submitted email, explains the next step and spam-folder check, and offers a login link. `PageNotice` gives the confirmation focus and scrolls it into view; the create-account button is removed, and concurrent submissions are ignored. Request failures keep the form available for retry. Immediate-session profile saves and account redirects stay unchanged.
+
+Particular signup preserves its safe `next` destination through the confirmation email, login link and existing “Reenviar enlace” control, including that control's cooldown. Email checks, duplicate-account detection, field validation and authentication rate limits keep their existing behavior.
+
+Verification: submit each account form with email confirmation enabled, including from the bottom of a 390 px mobile viewport. Confirm the notice becomes visible and focused, displays the submitted address, and leaves no create-account button. Check Particular signup with `next=/vender` and the resend control. Automated regressions are in `tests/signup-feedback.test.cjs`.
+
+### Expired confirmation recovery — 2026-10-29
+
+A production report showed a resend followed 30 seconds later by a rejected verification (`otp_expired`, “One-time token not found”), followed by repeated unconfirmed password logins. This is consistent with opening an older email after requesting a replacement; the original email was unavailable, so the precise link cannot be confirmed. A temporary-account reproduction generated a replacement confirmation token: the old token returned to login without confirming the account, while the latest token established cookies and confirmed it. Temporary accounts were removed.
+
+Expired `email`/`signup` tokens now open `/confirmacion-correo` with the safe intended destination preserved. Without a confirmed session that page explains the failure and offers the existing resend flow without asking for a password. It claims success only for a confirmed session. Login and resend feedback explicitly say to open the latest email and press “Confirmar mi correo”; resends keep their 60-second wait and also reject concurrent calls. Rate-limit, recovery, magic-link and successful callback behavior remain unchanged. Generic resend feedback does not disclose whether an account exists.
+
+Verification: `tests/confirmation-recovery.test.cjs` and the callback regression in `tests/launch-audit-trust.test.cjs`. Manually replace a temporary account's confirmation link, open the older link, request a replacement on the recovery page and open the newest email. Confirm the intended destination and authenticated session. No owner acceptance status is inferred from these automated checks.
+
 ### Hosted production audit — 2026-09-13
 
 The production Supabase `Confirm signup` template was inspected and still uses the static subject `Confirma tu cuenta Particular en Laria` plus a Particular-only body. The application signup metadata is already correct: Particular sends `account_type='seller'` and Store Owner sends `account_type='store_owner'`. The carried-over defect is therefore hosted template configuration, not callback or signup code.

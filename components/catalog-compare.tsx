@@ -7,15 +7,12 @@ import { BarHeight } from "@/components/ui/bar-height";
 import { buttonClasses } from "@/components/ui/button";
 import { COMPARE_KEY, COMPARE_LIMIT, DEVICE_EVENT, readStore, rememberable, writeStore, type RememberedListing } from "@/lib/catalog-device";
 import type { ListingCardData } from "@/lib/listings";
+import { compareHref } from "@/lib/catalog-compare";
 import { cn } from "@/lib/utils";
 
 // FIND 12 (Effortless Laria): compare up to three listings side by side. Desktop catalog cards carry a "Comparar" tick
 // and a tray gathers the choice; on phones, the comparison starts from the favorites (CompareFromFavorites). The
 // choice stays on this device; the comparison page (/comparar) reads only public listings.
-
-export function compareHref(slugs: readonly string[]) {
-  return `/comparar?${new URLSearchParams({ p: slugs.join(",") })}`;
-}
 
 function useCompareList() {
   const [list, setList] = useState<RememberedListing[]>([]);

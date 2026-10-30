@@ -5,7 +5,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { getAssurance } from "@/lib/auth/mfa";
 import { sameOriginEventRequest } from "@/lib/marketplace-events-server";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
-import type { Database } from "@/lib/supabase/database.types";
+import type { Database } from "@/lib/supabase/database";
 
 // Feature ideas, accounts batch: the account routes (sessions, two-step recovery, e-mail, data, deletion) share these.
 

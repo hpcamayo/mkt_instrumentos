@@ -256,14 +256,8 @@ select pg_temp.check(pg_temp.cuotas('cuotas-cara') = 12, 'installments not back 
 
 -- ------------------------------------------------------------------ changes, rejection, disabling, withdrawal
 
--- safe-08: with an approved payment method, a first-step session cannot change the installments.
+-- Pilot decision: even approved payment methods do not require a second step for the store owner.
 select pg_temp.as_first_step('owner_a');
-do $$ begin
-  perform pg_temp.expect_error($q$select public.set_store_installments(6, '{}', null, null, true)$q$, 'TWO_STEP_REQUIRED');
-  perform pg_temp.expect_error($q$select public.withdraw_store_installments()$q$, 'TWO_STEP_REQUIRED');
-end $$;
-
-select pg_temp.as_user('owner_a');
 do $$ declare result jsonb; begin
   result := public.set_store_installments(6, '{}', null, null, true);
   perform pg_temp.check(result ->> 'status' = 'pending_review' and (result ->> 'revision')::integer = 3 and result -> 'cards' = '[]',

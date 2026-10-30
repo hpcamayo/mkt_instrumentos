@@ -270,6 +270,7 @@ export function DescubrirFeed({ mode, filters, title, exit, today, now, since: i
 
   const restore = () => {
     if (!undo) return;
+    jumpTo.current = { id: undo.id, pages };
     setHidden(setListingHidden(undo.id, false));
     setUndo(null);
     focusNext.current = true;
@@ -369,7 +370,7 @@ export function DescubrirFeed({ mode, filters, title, exit, today, now, since: i
           variant="onDark"
           aria-disabled={atStart ? "true" : undefined}
           aria-keyshortcuts="ArrowUp"
-          onClick={() => (atStart ? undefined : go(position - 1, false))}
+          onClick={() => (atStart ? undefined : go(position - 1, true))}
           className="aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
         />
         <IconButton
@@ -378,7 +379,7 @@ export function DescubrirFeed({ mode, filters, title, exit, today, now, since: i
           variant="onDark"
           aria-disabled={atEnd ? "true" : undefined}
           aria-keyshortcuts="ArrowDown"
-          onClick={() => (atEnd ? undefined : go(position + 1, false))}
+          onClick={() => (atEnd ? undefined : go(position + 1, true))}
           className="aria-disabled:cursor-not-allowed aria-disabled:opacity-40"
         />
       </div>

@@ -325,6 +325,12 @@ Added by `20260918120000_sprint_6_transactions_reviews.sql`; applied locally and
 - `get_admin_review_queue()` returns bounded transaction linkage plus revealed review/report context; an unpaired pre-deadline review is not disclosed to the admin UI. `moderate_review()` allows only hide/restore with a mandatory reason and cannot rewrite stars or comments.
 - Notifications add typed claim/transaction targets for confirmation requests, decline/cancel, verification and paired-review reveal. Existing owner RLS and read-state behavior remain unchanged.
 
+EASE follow-up in PR #86 (`20261121130000_ease_transaction_confirmation.sql`, applied to production on 2026-10-30; [production verification](acceptance/ease-production-86-2026-10-30/README.md)):
+
+- `get_transaction_detail` resolves a verified transaction from a claim ID as well as a transaction/listing ID, preserving participant checks and review visibility.
+- `laria_private.seller_first_sale_notices` records one claimed notice per seller account. It has no browser table grants and cascades with the seller/transaction.
+- `claim_first_sale_notice(transaction_id)` is authenticated, seller-only and atomic. The client calls it when the transaction view mounts, so server prefetch cannot consume the notice. Reloads, other devices and concurrent visits cannot claim it again. This notice grants no review or reputation privileges.
+
 ### `public.notifications`
 
 Purpose: reusable in-app account notices for important moderation and store trust-state transitions without coupling core product state to email delivery.
@@ -691,7 +697,9 @@ brand list (`lib/catalog-brands.ts`, read-only, on branch `ux/catalog-category-n
   - `detail_status`, `missing_attributes`, `untrusted_attributes`: whether a product is detailed enough to autofill;
   - `variant_attributes`: attributes that differ between variants, so they are filled only from the variant a listing
     names.
-- **Matching:** `catalog_lookup(query, manufacturer_hint, max_results)` returns ranked candidates.
+- **Matching:** `catalog_lookup(query, manufacturer_hint, max_results)` returns ranked candidates. Its fuzzy (trigram)
+  stage compares at most 16 identity phrases of two to four words, without the noise words and with phrases that hold a
+  digit first; exact aliases, token sets, model codes and SKUs still read the whole title (`20261114192000`).
   `catalog_match(query, manufacturer_hint)` decides MATCH / FAMILY / CONFLICTING / INSUFFICIENT with a tier (AUTO /
   REVIEW / INSUFFICIENT). `catalog_jev_inputs(query, manufacturer_hint)` is Jev's one-row contract. Helpers:
   `catalog_normalize()`, `catalog_compact()`; vocabulary table `catalog_lookup_terms`.

@@ -11,7 +11,7 @@ end $$;
 create function pg_temp.claims(p_role text, p_sub text, p_aal text) returns void language plpgsql as $$
 begin
   perform set_config('request.jwt.claims',
-    jsonb_strip_nulls(jsonb_build_object('role', p_role, 'sub', p_sub, 'aal', p_aal))::text, true);
+    jsonb_strip_nulls(jsonb_build_object('role', p_role, 'sub', p_sub, 'aal', p_aal, 'app_metadata', case when p_sub = 'f9200000-0000-4000-8000-000000000001' then jsonb_build_object('role','admin') else '{}'::jsonb end))::text, true);
 end $$;
 -- What PostgREST's pre-request check answers for a request to p_path: null when it lets the request through.
 create function pg_temp.refusal(p_path text) returns text language plpgsql as $$

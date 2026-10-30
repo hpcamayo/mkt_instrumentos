@@ -1,5 +1,12 @@
 # Feature ideas: accounts batch
 
+**Pilot update (2026-10-30):** the owner now limits two-step verification to Admin. This supersedes the original
+optional-account/store-payment requirements below. Non-Admin enrollment and prompts are disabled during the pilot.
+Wider enforcement is deferred until paying users and a new owner-approved release. Admin recovery explicitly
+revokes all sessions; revoked JWTs are refused by the API and Storage. Apply
+`20261210120800_feat_pilot_security_fixes.sql` with the other PR migrations at the coordinated release.
+
+
 Ideas safe-08 (two-step sign-in and devices), safe-09 (e-mail change, your data and deleting the account), buy-11
 (Google and Apple sign-in), safe-10 (help center), safe-02 (stolen-gear registry) and safe-05 (red flags at review
 time, the photo-copy rule only). All six were marked Yes by Henri on 2026-10-26. Branch
@@ -85,11 +92,11 @@ sessions".
 `app/api/account/sessions/everywhere/route.ts`, `app/api/account/two-step/recovery/route.ts`, `middleware.ts`,
 `lib/supabase/{browser,server}-client.ts`, the first migration.
 
-**How to test.** Sign in as `comprador@laria.test`, turn the app on in Seguridad (the local stand-in shows "QR local";
+**How to test.** Sign in with a local Admin account, turn the app on in Seguridad (the local stand-in shows "QR local";
 type the key into an authenticator app or use `scripts/prototype/two-step.cjs`), close the browser and come back: no
 code. Sign in from a second browser: the code is asked once. Close that browser's session from the first one and
 reload the second: it is signed out. Untick "Mantener sesión iniciada" and check that the `sb-…-auth-token` cookies
-have no expiry. Sign in as `demo-tienda@laria.test` and open Mi tienda: it asks to turn the app on.
+have no expiry. Sign in as `demo-tienda@laria.test` and open Mi tienda: it opens without a code or enrollment prompt during the pilot.
 
 - **FD-accounts-1.** The code is asked only on a new device or after signing out, and a session keeps its
   second-factor level for its whole life (Henri's requirement). "Mantener sesión iniciada" is ticked by default because

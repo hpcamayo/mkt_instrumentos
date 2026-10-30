@@ -128,7 +128,7 @@ export async function CategoryLanding({
         }
         after={
           <>
-          <CategoryExplore landing={landing} brands={brands} />
+          <CategoryExplore landing={landing} brands={brands} counts={counts} />
           <div className="mt-12 grid gap-8 border-t border-line-deco pt-8 lg:grid-cols-2">
             <section aria-labelledby="otras-categorias">
               <h2 id="otras-categorias" className="t-section text-ink">Otras categorías</h2>
@@ -158,8 +158,9 @@ export async function CategoryLanding({
 // "Explora <categoría>": every type's subtypes and every catalog brand of the category, as chips into the catalog
 // (docs/ux-redesign/category-navigation.md). The strip panel shows the same subtypes from 768 px and the leading
 // brands; phones reach the full tree here.
-function CategoryExplore({ landing, brands }: { landing: CategoryLandingPage; brands: readonly CategoryBrand[] }) {
+function CategoryExplore({ landing, brands, counts }: { landing: CategoryLandingPage; brands: readonly CategoryBrand[]; counts: Awaited<ReturnType<typeof getListingCounts>> }) {
   const types = getInstrumentTypeOptions(landing.category)
+    .filter((type) => !counts || (counts.types[`${landing.category}:${type.value}`] ?? 0) > 0)
     .map((type) => ({ ...type, subtypes: subtypeLinks(landing.category, type.value) }))
     .filter((type) => type.subtypes.length > 0);
   if (types.length === 0 && brands.length === 0) return null;

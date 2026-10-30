@@ -181,4 +181,3 @@ function BarcodeGlyph({ barcode }: { barcode: NonNullable<ReturnType<typeof layo
     </g>
   );
 }
-

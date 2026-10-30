@@ -137,7 +137,10 @@ test("FIND 09, FIND 12: neighbours, compare slugs", () => {
   assert.deepEqual(device.neighbours(trail, "b"), { index: 1, total: 3, previous: "a", next: "c" });
   assert.deepEqual(device.neighbours(trail, "a"), { index: 0, total: 3, previous: null, next: "b" });
   assert.equal(device.neighbours(trail, "z"), null);
-  const { compareSlugs } = require("@/lib/catalog-compare");
+  const { compareSlugs, compareHref } = require("@/lib/catalog-compare");
+  const comparison = new URL(compareHref(["guitarra-a", "guitarra-b"]), "https://laria.audio");
+  assert.equal(comparison.search, "", "comparison choices never enter the request query");
+  assert.deepEqual(compareSlugs(new URLSearchParams(comparison.hash.slice(1)).get("p")), ["guitarra-a", "guitarra-b"]);
   assert.deepEqual(compareSlugs("a-b,c,a-b,../x,d,e"), ["a-b", "c", "d"]);
   assert.deepEqual(compareSlugs(undefined), []);
 });

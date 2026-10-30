@@ -402,9 +402,9 @@ per-store advisory lock, and `admin_set_store_listing_allowance` takes the same 
 Why: two publishes (form, import chunks, restore) cannot pass the limit together, and a lowered allowance is never read
 stale.
 
-## Effortless Laria: proposed decisions (2026-10-19)
+## Effortless Laria decisions (2026-10-19)
 
-These are the decisions taken while building the owner-approved UX ideas of the Effortless Laria program, and they remain proposals until the owner reviews the combined prototype. Each line gives the decision in short; the batch write-up in `docs/ux-effortless/` has the reasoning, files and limits. Where a decision replaces an earlier owner decision, its line says which.
+These are the decisions taken while building the owner-approved UX ideas of the Effortless Laria program. The owner reviewed the combined prototype on 2026-10-20, accepting one by one the decisions that change earlier ones (marked superseded in `docs/ux-redesign/decisions.md`); the build has been live since 2026-10-23, and on 2026-10-28 the owner confirmed UXD-integration-11 and the program's acceptance cases. Each line gives the decision in short; the batch write-up in `docs/ux-effortless/` has the reasoning, files and limits. Where a decision replaces an earlier owner decision, its line says which.
 
 ### Find and browse (find)
 
@@ -563,7 +563,7 @@ Detail: [docs/ux-effortless/integration.md](ux-effortless/integration.md).
 - UXD-integration-8: One module, `lib/notifications.ts`, names each notice and picks its page for both the notifications list and push, so a push reads and opens like its row and a new type is added in one place (big-12).
 - UXD-integration-9: "Vistos recientemente" is one list on the device (every listing page opened, drawn from today's public cards on the home, the catalog, the not-found page and Favoritos), and "your last visit" is one cookie with one rule for the home, Favoritos and Alertas (FIND 11, big-04, save-04).
 - UXD-integration-10: What the accounts batch left for the others is in place: the home shows what a signed-in person follows above "Para ti" (save-12); every price field is the shared "S/ 1,250" input and brand and model are never autocorrected (auth-03); both store forms use the +51 WhatsApp field and the store sign-up has the password eye (auth-01, auth-03); and the account home asks to complete the profile only once the person has publications, since Publicar asks the first time (auth-02).
-- UXD-integration-11: A store's street address appears only where the store chose to show it (list-12): the "Tienda verificada" explainer (trust-03) keeps RUC and razón social and otherwise says the address was checked, with its district and city.
+- UXD-integration-11: A store's street address appears only where the store chose to show it (list-12): the "Tienda verificada" explainer (trust-03) keeps RUC and razón social and otherwise says the address was checked, with its district and city. Accepted by the owner on 2026-10-20 and confirmed on 2026-10-28.
 
 ### Speed, install and push (speed)
 
@@ -585,7 +585,7 @@ Detail: [docs/ux-effortless/speed.md](ux-effortless/speed.md).
 
 ### The five maybes (2026-10-28)
 
-Built after the owner's "go ahead" (2026-10-27) on the five ideas left as maybes: big-02, big-07, stock-24, talk-06 and talk-07. Proposed until the owner reviews them. Detail: [docs/ux-effortless/maybes.md](ux-effortless/maybes.md), [maybes-reservado.md](ux-effortless/maybes-reservado.md), [maybes-descubrir.md](ux-effortless/maybes-descubrir.md) and [maybes-ai.md](ux-effortless/maybes-ai.md).
+Built after the owner's "go ahead" (2026-10-27) on the five ideas left as maybes: big-02, big-07, stock-24, talk-06 and talk-07. The owner merged them on 2026-10-28 (PR #74, live the same day) and accepted their acceptance cases; the AI helpers stay off until the owner chooses to turn them on. Detail: [docs/ux-effortless/maybes.md](ux-effortless/maybes.md), [maybes-reservado.md](ux-effortless/maybes-reservado.md), [maybes-descubrir.md](ux-effortless/maybes-descubrir.md) and [maybes-ai.md](ux-effortless/maybes-ai.md).
 
 - UXD-maybes-reservado-1: A Particular can mark a published listing "Reservado" for 1, 2, 3 or 5 days; it stays public and contactable, and stores hold units through Inventario instead (talk-06).
 - UXD-maybes-reservado-2: Reservations live in their own table, reachable only through functions; the public reads running periods of published Particular listings, and who a listing was held for is never recorded (talk-06).
@@ -827,3 +827,14 @@ Detail: [docs/feature-ideas/build-plan.md](feature-ideas/build-plan.md) and the 
 - FD-integration-5: The Terms and Privacy lines for the batches that listed points without writing them are drafted in one component (`components/legal/feature-ideas-legal.tsx`) and reviewed together with the others ([docs/feature-ideas/legal-review.md](feature-ideas/legal-review.md)).
 - FD-integration-6: "Hacer una oferta" (talk-07, on main since the five maybes) is not offered on a listing whose seller marked the price "Precio fijo" (sell-07): an offer button would contradict the seller's own word. "Precio conversable" and no mode keep it.
 - FD-integration-7: The buyer's track record line (safe-07) also goes into an offer's WhatsApp message, like every other message to a seller (FD-deal-trust-13); an offer leaves out only the quick questions.
+
+## Pilot security scope — owner decision, 2026-10-30
+
+Two-step verification applies only to Admin during the pilot. This supersedes FD-accounts-2 and the store-owner
+second-step dependency in FD-store-floor-22. Particulars, store owners (including approved payment methods) and
+service providers have no enrollment control or code prompt. Wider two-step verification is deferred until Laria
+gains paying users and the owner authorizes a coordinated UI/Auth/database release; no payment-status switch turns
+it on automatically. Admin recovery must revoke every session and all remaining recovery codes before completion.
+The PR #54 review follow-up also closes the service-contact bypass, serializes counter-confirmation caps and routes
+anonymous help submissions through a trusted server limiter. No production migration or PR merge is authorized by
+this code change.

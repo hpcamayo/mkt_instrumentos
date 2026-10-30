@@ -12,7 +12,9 @@ cd "$(dirname "$0")/../.."
 REPO="$PWD"
 mkdir -p "${1:-acceptance-results}"
 RESULTS="$(cd "${1:-acceptance-results}" && pwd)"
-BASE=http://localhost:3100
+APP_PORT="${LARIA_TEST_APP_PORT:-3100}"
+[[ "$APP_PORT" =~ ^[0-9]+$ ]] && [ "$APP_PORT" -ge 1024 ] && [ "$APP_PORT" -le 65535 ] || { echo "Invalid test application port." >&2; exit 1; }
+BASE="http://localhost:$APP_PORT"
 PROJECT_ID=laria_acceptance
 DB_CONTAINER="supabase_db_$PROJECT_ID"
 
@@ -32,9 +34,9 @@ if [ -n "$(docker ps -aq --filter "label=$project_label")$(docker volume ls -q -
   exit 1
 fi
 # The API, database and e-mail ports of scripts/acceptance/supabase-config.toml.
-for port in 55321 55322 55324; do
+for port in 55321 55322 55324 "$APP_PORT"; do
   if (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
-    echo "Port $port is taken; the acceptance stack needs 55321, 55322 and 55324." >&2
+    echo "Port $port is taken; the acceptance stack needs 55321, 55322, 55324 and application port $APP_PORT." >&2
     exit 1
   fi
 done
@@ -50,7 +52,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-cp scripts/acceptance/supabase-config.toml supabase/config.toml
+LARIA_TEST_BASE="$BASE" node -e '
+  const fs = require("node:fs");
+  fs.writeFileSync("supabase/config.toml", fs.readFileSync("scripts/acceptance/supabase-config.toml", "utf8")
+    .replaceAll("http://localhost:3100", process.env.LARIA_TEST_BASE));
+'
 # The CLI pulls its images in parallel, and a registry sometimes refuses them (toomanyrequests, or public.ecr.aws's data
 # limit for the address), on some runs every try. The same images are on Docker Hub, ghcr.io and public.ecr.aws, so
 # each try takes them from the next of these in turn, starting with the one SUPABASE_INTERNAL_IMAGE_REGISTRY names (the
@@ -97,7 +103,7 @@ supabase status -o json 2>/dev/null | CRON_SECRET="$CRON_SECRET" BASE="$BASE" no
 
 echo "== Building the app"
 pnpm build > "$RESULTS/build.log" 2>&1 || { tail -40 "$RESULTS/build.log"; exit 1; }
-pnpm start -p 3100 > "$RESULTS/app.log" 2>&1 &
+pnpm start -p "$APP_PORT" > "$RESULTS/app.log" 2>&1 &
 APP_PID=$!
 for _ in $(seq 1 60); do
   if curl -fsS -o /dev/null "$BASE/terminos"; then break; fi
@@ -128,6 +134,7 @@ TESTS=(
   "tests/alerts.integration.cjs"
   "tests/transactions.integration.cjs"
   "tests/sprint-8-admin-reports.integration.cjs"
+  "tests/pilot-security.integration.cjs"
 )
 failed=()
 : > "$RESULTS/summary.txt"

@@ -1,0 +1,56 @@
+{
+  "changes": [
+    {
+      "id": "EASE-425",
+      "columns": [
+        8
+      ]
+    },
+    {
+      "id": "EASE-428",
+      "columns": [
+        5,
+        8
+      ]
+    },
+    {
+      "id": "EASE-609",
+      "columns": [
+        8
+      ]
+    },
+    {
+      "id": "EASE-627",
+      "columns": [
+        8
+      ]
+    },
+    {
+      "id": "EASE-710",
+      "columns": [
+        8
+      ]
+    }
+  ],
+  "overall": {
+    "Pass": 718,
+    "Not Run": 163,
+    "Blocked": 1
+  },
+  "ease": {
+    "Pass": 333,
+    "Not Run": 10
+  },
+  "manual_ids_unchanged": [
+    "EASE-164",
+    "EASE-166",
+    "EASE-512",
+    "EASE-546",
+    "EASE-549",
+    "EASE-703",
+    "EASE-712",
+    "EASE-714",
+    "EASE-716",
+    "EASE-719"
+  ]
+}

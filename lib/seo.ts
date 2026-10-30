@@ -48,7 +48,8 @@ export function buildCategoryMetadata(landing: CategoryLandingPage, page: number
     alternates: { canonical },
     // Empty categories stay reachable but are not offered to search engines.
     ...(count && count > 0 ? {} : { robots: NOINDEX_FOLLOW_ROBOTS }),
-    openGraph: { ...OPEN_GRAPH_BASE, title: `${title} | ${SITE_NAME}`, description: landing.description, url: canonical },
+    openGraph: { ...OPEN_GRAPH_BASE, title: `${title} | ${SITE_NAME}`, description: landing.description, url: canonical, images: [{ url: `${path}/opengraph-image`, width: 1200, height: 630 }] },
+    twitter: { card: "summary_large_image", title: `${title} | ${SITE_NAME}`, description: landing.description, images: [`${path}/opengraph-image`] },
   };
 }
 
@@ -90,7 +91,8 @@ function listingImages(listing: ListingDetailData) {
     .map((photo) => photo.image_url)
     .filter((url) => typeof url === "string" && url.length > 0)
     .slice(0, 4)
-    .map((url) => absoluteUrl(url));
+    // Raw Supabase objects send X-Robots-Tag: none. The gallery's existing optimizer serves indexable photos.
+    .map((url) => absoluteUrl(`/_next/image?url=${encodeURIComponent(url)}&w=1200&q=75`));
 }
 
 export function listingSummary(listing: ListingDetailData) {
