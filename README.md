@@ -28,6 +28,7 @@ Laria no procesa ni custodia pagos, no ofrece escrow ni checkout propio, no gest
 - [Roadmap](docs/roadmap.md): liberación del alcance aprobado y trabajo diferido.
 - [Sistema de diseño](docs/design-system.md): referencia visual canónica; [rediseño UX](docs/ux-redesign/README.md) conserva decisiones y evidencia histórica.
 - [Base de datos](docs/database.md), [arquitectura](docs/architecture.md) y [rendimiento](docs/performance.md): referencias técnicas; consultar también las fuentes actuales enlazadas en el estado de documentación.
+- [Vercel Web Analytics](docs/operations/web-analytics.md): integración, activación y comprobación de visitas.
 - [Registro de aceptación](acceptance/README.md): `acceptance/cases.tsv` es la fuente canónica; las propuestas de nuevas pruebas no son resultados de aceptación.
 
 ## Desarrollo local

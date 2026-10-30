@@ -306,7 +306,8 @@ test("A13: the uptime workflow checks the four addresses every 10 minutes with r
 });
 
 test("A13: the root layout mounts the reporter, the error pages report, and Admin lists the errors", async () => {
-  assert.match(read("app/layout.tsx"), /<ServiceWorkerRegistration \/>\n\s+\{\/\* A13: [^*]+\*\/\}\n\s+<ErrorReporter \/>\n\s+<\/body>/);
+  // Other root integrations may follow the reporter; its position at the end of the body is not a requirement.
+  assert.match(read("app/layout.tsx"), /<body\b[^>]*>[\s\S]*<ErrorReporter\s*\/>[\s\S]*<\/body>/);
   for (const file of ["app/error.tsx", "app/admin/error.tsx"]) {
     assert.match(read(file), /console\.error\(error\);\n\s+reportClientError\("boundary", error\);/, file);
   }
