@@ -59,7 +59,7 @@ const ACCOUNTS = { buyer: "comprador@laria.test", seller: "particular@laria.test
 const WIDTHS = [[390, 844, true], [1366, 900, false]];
 
 async function login(page, email) {
-  await page.goto(`${BASE}/login?next=${encodeURIComponent("/mi-cuenta")}`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/login?next=${encodeURIComponent("/mi-cuenta")}`, { waitUntil: "load" });
   await page.getByLabel("Correo", { exact: true }).fill(email);
   await page.getByLabel("Contraseña", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Ingresar", exact: true }).click();
@@ -67,7 +67,7 @@ async function login(page, email) {
 }
 
 async function skuPages(page) {
-  await page.goto(`${BASE}/mi-cuenta/tienda/inventario`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/mi-cuenta/tienda/inventario`, { waitUntil: "load" });
   const hrefs = await page.$$eval("a[href]", (links) => links.map((link) => link.getAttribute("href")));
   return [...new Set(hrefs.filter((href) => /^\/mi-cuenta\/tienda\/inventario\/[0-9a-f-]{36}$/.test(href ?? "")))];
 }
@@ -99,7 +99,7 @@ async function skuPages(page) {
         let finalUrl = null;
         let axe = null;
         try {
-          const response = await page.goto(BASE + target, { waitUntil: "networkidle", timeout: 30000 });
+          const response = await page.goto(BASE + target, { waitUntil: "load", timeout: 30000 });
           status = response ? response.status() : null;
           finalUrl = page.url().replace(BASE, "");
           await page.waitForTimeout(400);

@@ -16,6 +16,7 @@ import { CountBadge } from "@/components/ui/tag";
 import { accountRoleLabel, getAccountNavigationItems, getSellEntry } from "@/lib/account-navigation";
 import { CATALOG_PATH, VERIFIED_STORES_PATH, categoryMenus, type ShellLayout } from "@/lib/shell";
 import { initials } from "@/lib/ui/initials";
+import type { ListingCounts } from "@/lib/catalog-brands";
 import { cn } from "@/lib/utils";
 
 // "Vender" looks 36 px tall (N1); on phones its target grows to 44 px without changing its look.
@@ -98,7 +99,7 @@ export function SiteHeader({ layout }: { layout: ShellLayout }) {
 // search row: the banner has the search.
 const HOME_ITEM = "inline-flex h-11 items-center whitespace-nowrap rounded-control px-2 text-[14px] font-semibold leading-5 text-surface transition-colors duration-120 hover:bg-white/10";
 
-export function HomeHeader() {
+export function HomeHeader({ counts = null }: { counts?: ListingCounts | null }) {
   const account = useMarketplaceAccount();
   const sell = getSellEntry(account);
   const menu = useDisclosure("home-categories");
@@ -123,7 +124,7 @@ export function HomeHeader() {
             <ChevronDown aria-hidden="true" className={cn("h-3.5 w-3.5 shrink-0", menu.open && "rotate-180")} />
           </button>
           {/* Rendered only while open, right after its button, so Tab goes from the button into the panel. */}
-          {menu.open ? <HomeCategoryPanel panelRef={menu.panelRef} onChoose={() => menu.close()} /> : null}
+          {menu.open ? <HomeCategoryPanel counts={counts} panelRef={menu.panelRef} onChoose={() => menu.close()} /> : null}
           <Link href={VERIFIED_STORES_PATH} className={cn(HOME_ITEM, "hidden md:inline-flex")}>Tiendas verificadas</Link>
           <Link href="#como-funciona" className={cn(HOME_ITEM, "hidden lg:inline-flex")}>Cómo funciona</Link>
         </nav>
@@ -144,7 +145,7 @@ export function HomeHeader() {
 // 44 px rows, the types indented, scrolling inside the panel.
 const PANEL_ROW = "-mx-2 flex min-h-11 items-center rounded-control px-2 t-ui transition-colors duration-120 hover:bg-canvas md:min-h-9";
 
-function HomeCategoryPanel({ panelRef, onChoose }: { panelRef: Ref<HTMLDivElement>; onChoose: () => void }) {
+function HomeCategoryPanel({ panelRef, onChoose, counts }: { panelRef: Ref<HTMLDivElement>; onChoose: () => void; counts: ListingCounts | null }) {
   return (
     <div
       ref={panelRef}
@@ -154,11 +155,11 @@ function HomeCategoryPanel({ panelRef, onChoose }: { panelRef: Ref<HTMLDivElemen
       <PageContainer className="py-2 md:py-6">
         <Link href={CATALOG_PATH} onClick={onChoose} className={cn(PANEL_ROW, "font-semibold")}>Todos los instrumentos</Link>
         <ul className="mt-2 grid border-y border-subtle py-2 md:mt-3 md:grid-cols-4 md:gap-x-8 md:gap-y-5 md:py-5">
-          {categoryMenus.map((category) => (
+          {categoryMenus.filter((category) => !counts || (counts.categories[category.key] ?? 0) > 0).map((category) => (
             <li key={category.key}>
               <Link href={category.href} onClick={onChoose} className={cn(PANEL_ROW, "font-semibold")}>{category.label}</Link>
               <ul>
-                {category.types.map((type) => (
+                {category.types.filter((type) => !counts || (counts.types[`${category.key}:${type.value}`] ?? 0) > 0).map((type) => (
                   <li key={type.value}>
                     <Link href={type.href} rel={catalogRefinementRel(type.href)} onClick={onChoose} className={cn(PANEL_ROW, "pl-6 text-ink-2 hover:text-ink md:pl-2")}>{type.label}</Link>
                   </li>

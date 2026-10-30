@@ -10,10 +10,10 @@ import {
 } from "@/components/inventory/bulk-actions";
 import { StockActionSheet, undoMovements, type StockActionItem, type StockActionType } from "@/components/inventory/stock-action-sheet";
 import { UndoNotice, type InventoryNotice, type UndoAction } from "@/components/inventory/undo-notice";
-import { BarHeight } from "@/components/ui/bar-height";
 import { buttonClasses } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Price } from "@/components/ui/price";
 import { StatusTag } from "@/components/ui/tag";
 import { INVENTORY_BULK_LIMIT } from "@/lib/inventory-actions";
@@ -259,33 +259,9 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
           )}
         </div>
       ) : null}
-      <DataTable
-        caption="SKU de tu inventario"
-        columns={columns}
-        rows={items}
-        rowKey={(item) => item.id}
-        onRowShortcut={rowShortcut}
-        selection={{
-          selected,
-          rowLabel: (item) => `Seleccionar ${item.merchant_sku}`,
-          onToggle: (id) => {
-            setMatching(null);
-            setSelected((current) => {
-              const next = new Set(current);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-            });
-          },
-          onToggleAll: (select) => {
-            setMatching(null);
-            setSelected(select ? new Set(items.map((item) => item.id)) : new Set());
-          },
-        }}
-      />
+      {!items.length ? <EmptyState className="rounded-none border-0" title={filters?.q || filters?.stock !== "all" || listQuery ? "Ningún SKU coincide con la búsqueda" : "Aún no tienes SKU en Inventario"} description="Crea un SKU o quita los filtros para ver todo tu inventario." /> : null}
       {selectedCount ? (
-        <div role="region" aria-label="Acciones para los SKU seleccionados" data-bottom-bar className="sticky bottom-0 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line-strong bg-surface px-4 py-3 shadow-[0_-4px_12px_rgb(5_6_8/0.08)]">
-          <BarHeight variable="--bottom-bar-height" />
+        <div role="region" aria-label="Acciones para los SKU seleccionados" className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line-strong bg-surface px-4 py-3">
           <p className="t-ui font-semibold text-ink" aria-live="polite">{numbers.format(selectedCount)} SKU seleccionados</p>
           {canWrite ? (
             archivedView ? (
@@ -318,6 +294,30 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
           <button type="button" className={buttonClasses({ variant: "quiet", className: "ml-auto" })} onClick={clearSelection}>Quitar selección</button>
         </div>
       ) : null}
+      <DataTable
+        caption="SKU de tu inventario"
+        columns={columns}
+        rows={items}
+        rowKey={(item) => item.id}
+        onRowShortcut={rowShortcut}
+        selection={{
+          selected,
+          rowLabel: (item) => `Seleccionar ${item.merchant_sku}`,
+          onToggle: (id) => {
+            setMatching(null);
+            setSelected((current) => {
+              const next = new Set(current);
+              if (next.has(id)) next.delete(id);
+              else next.add(id);
+              return next;
+            });
+          },
+          onToggleAll: (select) => {
+            setMatching(null);
+            setSelected(select ? new Set(items.map((item) => item.id)) : new Set());
+          },
+        }}
+      />
       {stockAction ? (
         <StockActionSheet item={stockAction.item} initialType={stockAction.type} onClose={closeStock} onDone={(message, undo) => done(message, undo)} />
       ) : null}
@@ -334,7 +334,7 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
 }
 
 // fast-04: row and bar actions are text links at least 24 px tall, so a tap never lands on the neighbour.
-const ROW_LINK = "link inline-flex min-h-6 items-center font-semibold";
+const ROW_LINK = "link inline-flex min-h-11 items-center font-semibold md:min-h-6";
 
 function RowButton({ children, disabled, onClick }: { children: React.ReactNode; disabled?: boolean; onClick: (event: React.MouseEvent<HTMLButtonElement>) => void }) {
   return (

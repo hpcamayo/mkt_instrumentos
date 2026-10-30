@@ -416,3 +416,6 @@ select pg_temp.find_fix('laria_private.listing_matches_saved_search(public.listi
     and (not (p_filters ? 'query') or public.listing_matches_query(
       public.listing_search_text(p_listing.title, p_listing.brand, p_listing.model, p_listing.category, p_listing.instrument_type),
       p_filters->>'query'))$new$);
+
+-- The migration also replays in one session: leave no temporary rewrite helper behind.
+drop function pg_temp.find_fix(regprocedure, text[]);

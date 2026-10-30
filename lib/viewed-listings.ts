@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { loadPublicListingSnapshot } from "@/lib/public-listing-snapshot";
 import { DEVICE_SAVES_EVENT, getViewed } from "@/lib/device-saves";
 import { parsePublicListingCards, type PublicListingCard } from "@/lib/favorites";
 
-// Public cards for favorites saved on this device (ids) and listings it opened (slugs), in no particular order.
+// Favorites may sync with an account. Recently viewed history uses the anonymous public snapshot below.
 export async function loadListingCards(ids: string[], slugs: string[]): Promise<PublicListingCard[]> {
   if (!ids.length && !slugs.length) return [];
   const response = await fetch("/api/favorites", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cards", ids, slugs }) });
@@ -27,10 +28,10 @@ export function useViewedListings(): PublicListingCard[] | null {
         setCards([]);
         return;
       }
-      loadListingCards([], slugs)
+      loadPublicListingSnapshot()
         .then((found) => {
           if (!active || loaded !== key) return;
-          const bySlug = new Map(found.map((card) => [card.slug, card]));
+          const bySlug = new Map(parsePublicListingCards(found).map((card) => [card.slug, card]));
           setCards(slugs.map((slug) => bySlug.get(slug)).filter((card): card is PublicListingCard => Boolean(card)));
         })
         .catch(() => {

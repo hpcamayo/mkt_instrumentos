@@ -317,9 +317,9 @@ const SKIP_REASONS: Record<string, string> = {
 };
 
 function skippedSummary(skipped: BulkActionResult["skipped"]) {
-  const groups = new Map<string, number>();
-  for (const entry of skipped) groups.set(entry.reason, (groups.get(entry.reason) ?? 0) + 1);
-  return [...groups].map(([reason, count]) => `${numbers.format(count)} ${SKIP_REASONS[reason] ?? "no aplican"}`).join("; ");
+  const groups = new Map<string, string[]>();
+  for (const entry of skipped) groups.set(entry.reason, [...(groups.get(entry.reason) ?? []), entry.merchant_sku]);
+  return [...groups].map(([reason, skus]) => `${skus.join(", ")} (${SKIP_REASONS[reason] ?? "no aplican"})`).join("; ");
 }
 
 export function BulkLifecycleSheet({ target, action, onClose, onDone }: SheetProps & { action: keyof typeof LIFECYCLE }) {

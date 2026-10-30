@@ -9,7 +9,7 @@ function chipClasses(state: "default" | "selected" | "applied", className?: stri
   return cn(
     "inline-flex h-10 max-w-full shrink-0 items-center gap-1.5 rounded-control px-3 text-[14px] font-semibold leading-5 text-ink transition-colors duration-120 [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
     state === "default" && "border border-line-strong bg-surface hover:bg-canvas",
-    state === "selected" && "bg-accent hover:bg-accent/85",
+    state === "selected" && "bg-accent hover:bg-accent/85 [&_.t-meta]:text-ink",
     state === "applied" && "bg-accent-tint hover:bg-accent/30",
     className,
   );

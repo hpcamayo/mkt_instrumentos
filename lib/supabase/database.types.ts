@@ -5214,6 +5214,7 @@ export type Database = {
         }
       }
       get_pending_buyer_confirmation_count: { Args: never; Returns: number }
+      get_public_card_page: { Args: { p_after?: string }; Returns: Json }
       get_public_listing_cards: {
         Args: { p_ids?: string[]; p_slugs?: string[] }
         Returns: Json

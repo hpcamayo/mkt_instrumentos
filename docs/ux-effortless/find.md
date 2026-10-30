@@ -142,7 +142,8 @@ UXD-find-n; the integrator moves them into `docs/decisions.md`. Proposed accepta
 
 - **What changed.** Desktop cards carry a "Comparar" checkbox (up to three); a tray gathers them and opens `/comparar`
   (noindex), a table with price, the spec table rows, location and "Distinto" on rows that differ. Phones compare from
-  "Mis favoritos" ("Comparar favoritas").
+  "Mis favoritos" ("Comparar favoritas"). The choice lives in the URL fragment, which navigation and prefetch never
+  send to the server; the table matches the common public snapshot on this device.
 - **Files.** `components/catalog-compare.tsx`, `lib/catalog-compare.ts`, `app/comparar/page.tsx`,
   `app/mi-cuenta/favoritos/page.tsx` (one line, accounts batch's file).
 

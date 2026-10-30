@@ -801,8 +801,8 @@ All in Spanish, composed from `components/ui/` and `lib/ui/status.ts`, one yello
 - Columns per brief §8. Stock column shows "Disponible 7 · En tienda 7" (reserved appears only once reservations
   exist).
 - Row actions: Registrar venta, Reponer stock, Ajustar, Editar, Ver publicación, Ocultar.
-- Bulk bar: ajustar precio, umbral de stock bajo, ocultar, ajustar stock, exportar. Bulk confirmations list the
-  affected SKUs.
+- Bulk bar above the table, in document flow so it never covers row controls: ajustar precio, umbral de stock bajo,
+  ocultar, ajustar stock, exportar. Bulk confirmations list the affected SKUs.
 - The current listing management table remains reachable as "Publicaciones" for listings not linked to inventory.
 
 ### 13.2 Item page (`/mi-cuenta/tienda/inventario/[itemId]`)
