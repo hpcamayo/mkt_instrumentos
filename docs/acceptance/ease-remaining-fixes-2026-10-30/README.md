@@ -1,5 +1,7 @@
 # Five EASE workflow fixes — 30 October 2026
 
+Historical snapshot. The [production release follow-up](../ease-production-86-2026-10-30/README.md) records the applied migration, deployed PR #86 and subsequent live verification.
+
 All five corrected workflows pass locally. The full remaining-75 local run is **65 Pass / 10 Not Run**, followed by focused offline-replay reruns on the final code. Hosted preview results are **3 Pass / 1 Blocked / 1 Not Run**. The canonical five-case outcome is **4 Pass / 1 Blocked**: EASE-428 retains its hosted migration gate. This is branch verification; production rollout is pending.
 
 | Case | Corrected behavior and observed verification | Hosted result |

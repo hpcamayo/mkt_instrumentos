@@ -1,0 +1,17 @@
+{
+  "target": "production",
+  "domain": "laria.audio",
+  "deployment_id": "dpl_HTKPXeSf8ybZ6YN54x2y68E6hLXH",
+  "revision": "80730ea73cfeff8d611224de959c610bb0e7dc49",
+  "state": "READY",
+  "url": "https://mkt-instrumentos-17dq0b4u6-henri-camayos-projects.vercel.app",
+  "aliases": [
+    "laria.audio",
+    "laria.pro",
+    "www.laria.pro",
+    "www.laria.audio",
+    "mkt-instrumentos.vercel.app",
+    "mkt-instrumentos-henri-camayos-projects.vercel.app"
+  ],
+  "verified_at": "2026-10-30T13:23:08.659Z"
+}

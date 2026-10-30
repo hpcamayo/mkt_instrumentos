@@ -1,0 +1,14 @@
+preflight {"run":"rmvv1sz87","alerts":2,"buckets":{"type:bass":1,"type:drums":1},"version":"17.11","leftovers":0}
+EASE-627 (live)
+  ok   an offline sale waits without changing server stock
+  ok   the queued sale is visible
+  ok   reconnection records the waiting sale
+  ok   a repeated reconnect does not record the sale twice
+  ok   the second offline sale is persisted before reconnecting
+  ok   a refused queued sale stays with its reason
+  ok   the refusal identifies the SKU on screen
+  ok   the refused sale and reason survive reloading the device queue
+  ok   a refused queued sale does not create negative or duplicate stock
+  => Pass (32 s)
+{"Pass":1,"Fail":0,"Not Run":0,"Blocked":0}
+clean-up {"run":"rmvv1sz87","accounts":3,"photos":{"removed":0},"left":{"emails":0,"stores":0,"storage":0,"accounts":0,"listings":0,"profiles":0,"movements":0,"inventory_changes":0}}
