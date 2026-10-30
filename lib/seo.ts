@@ -214,6 +214,16 @@ export function buildStoreJsonLd(store: StoreSeoData) {
   };
 }
 
+// Google uses WebSite on the homepage to identify the preferred search-result site name.
+export function buildWebsiteJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: absoluteUrl("/"),
+  };
+}
+
 export function buildOrganizationJsonLd() {
   return {
     "@context": "https://schema.org",
