@@ -1,0 +1,45 @@
+{
+  "unit_tests": {
+    "passed": 898,
+    "source": "Merged application CI, see ci.json"
+  },
+  "sql_suites": 50,
+  "database_migrations": 106,
+  "ci": "CI and full-stack acceptance passed on merge commit",
+  "harness_regressions": {
+    "local_cases": 2,
+    "passed": 2,
+    "targeted_unit_tests": 17,
+    "lint": "Pass"
+  },
+  "health_before": "ok",
+  "health_after": "ok",
+  "runtime_error_scan": {
+    "deployment": "dpl_HTKPXeSf8ybZ6YN54x2y68E6hLXH",
+    "since": "1h",
+    "records": 0
+  },
+  "configured_vercel_drains": 0,
+  "existing_uptime_workflow": [
+    {
+      "conclusion": "success",
+      "createdAt": "2026-10-30T14:13:06Z",
+      "databaseId": 41069905247,
+      "name": "Uptime",
+      "status": "completed",
+      "url": "https://github.com/hpcamayo/mkt_instrumentos/actions/runs/41069905247"
+    }
+  ],
+  "limitations": [
+    "Ten owner/device/legal cases remain Not Run; native output is not accepted from emulation.",
+    "EASE-609 assisted-commerce flow remains verified locally only; production pilot was not activated.",
+    "Pre-existing Mostrador hydration error #418 and intentional offline/HTTP 400 errors remain in raw records."
+  ],
+  "registry": {
+    "valid": true,
+    "cases": 882,
+    "tests_run": 13,
+    "tests_skipped": 2,
+    "only_status_change": "EASE-428: Blocked to Pass"
+  }
+}

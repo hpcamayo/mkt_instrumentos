@@ -1,0 +1,74 @@
+EASE-203 (live)
+  ok   saving a visitor favorite never asks for sign-in
+  ok   the heart is pressed
+  ok   the favorite persists on this device
+  => Pass (8 s)
+EASE-205 (live)
+  ok   the confirmation does not clear anything before acceptance
+  ok   confirmation clears favorites, viewed/hidden items and visit cookies: {"keys":[],"cookies":[]}
+  => Pass (8 s)
+EASE-210 (live)
+  ok   sign-in explains the favorite intent with the listing title
+  ok   the listing photo loads on the reason panel
+  => Pass (6 s)
+EASE-701 (live)
+  ok   a delayed page change shows the bar after the 100 ms threshold
+  ok   the bar completes and returns to idle on arrival
+  => Not Run (6 s)
+EASE-707 (live)
+  ok   desktop data saver performs no listing-page request on view, hover or scroll
+  ok   phone data saver performs no listing-page request on view, hover or scroll
+  => Pass (6 s)
+EASE-715 (live)
+  ok   no app-owned install dialog on / at 1366
+  ok   no install action appears on /
+  ok   no app-owned install dialog on /listados at 1366
+  ok   no install action appears on /listados
+  ok   no app-owned install dialog on /tiendas at 1366
+  ok   no install action appears on /tiendas
+  ok   no app-owned install dialog on /vender at 1366
+  ok   no install action appears on /vender
+  ok   the app never invokes the installation prompt
+  ok   no app-owned install dialog on / at 390
+  ok   no install action appears on /
+  ok   no app-owned install dialog on /listados at 390
+  ok   no install action appears on /listados
+  ok   no app-owned install dialog on /tiendas at 390
+  ok   no install action appears on /tiendas
+  ok   no app-owned install dialog on /vender at 390
+  ok   no install action appears on /vender
+  ok   the app never invokes the installation prompt
+  => Pass (22 s)
+EASE-164 (live)
+  ok   with a share sheet, Compartir is one button, not a menu
+  ok   the sheet gets the title (Guitarra eléctrica jet Jt-350 BSC)
+  ok   the sheet gets "<título> a <precio> en Laria" (Guitarra eléctrica jet Jt-350 BSC a S/ 848 en Laria)
+  ok   the sheet gets the listing link (https://laria.audio/instrumentos/guitarra-electrica-jet-jt-350-bsc-95e5660b-9ec9-4a8e-822a-510b943951dd)
+  ok   no fallback menu opens with a share sheet
+  => Not Run (7 s)
+EASE-166 (live)
+  ok   a phone that can share files gets Compartir imagen
+  ok   it shares laria-guitarra-electrica-jet-jt-350-bsc-95e5660b-9ec9-4a8e-822a-510b943951dd.png (image/png)
+  ok   the shared image is 1080x1920 (1080x1920)
+  ok   with the text and the link (Guitarra eléctrica jet Jt-350 BSC a S/ 848 en Laria https://laria.audio/instrumentos/guitarra-electrica-jet-jt-350-bsc-95e5660b-9ec9-4a8e-822a-510b943951dd)
+  => Not Run (8 s)
+EASE-703 (live)
+  ok   the delayed navigation exposes exactly one loading status
+  ok   the status is polite rather than assertive
+  ok   the status clears when the new page commits
+  => Not Run (3 s)
+EASE-714 (live)
+  ok   the deployment serves its manifest
+  ok   the manifest requests standalone Laria presentation
+  ok   both long-press shortcuts are declared
+  ok   the declared 192x192 icon is served
+  ok   the declared 512x512 icon is served
+  ok   the declared 512x512 icon is served
+  => Not Run (1 s)
+EASE-716 (live)
+  ok   the deployment serves its manifest
+  ok   the installed-app photo share target is declared
+  ok   the share target accepts photos including HEIC
+  ok   the share landing page renders
+  => Not Run (4 s)
+{"Pass":5,"Fail":0,"Not Run":6,"Blocked":0}

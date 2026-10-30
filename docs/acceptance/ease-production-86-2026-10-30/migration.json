@@ -1,0 +1,12 @@
+{
+  "project_ref": "hswkjandadscduodejig",
+  "migration_installed": true,
+  "milestone_function": true,
+  "notice_table": true,
+  "transaction_index": true,
+  "anonymous_execute": false,
+  "authenticated_execute": true,
+  "rls_enabled": true,
+  "browser_table_grants": false,
+  "observed_at": "2026-10-30T13:19:40.021014+00:00"
+}
