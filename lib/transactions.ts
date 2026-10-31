@@ -21,16 +21,19 @@ export type EligibleBuyer = {
   reported_purchase: boolean;
 };
 
+// deal-trust (reach-11): a purchase confirmed with a store's counter code has no claim and no listing (claim_id,
+// listing_id and slug null, attribution_type "counter"), and carries the store's slug.
 export type TransactionCenterItem = {
   reference_id: string;
-  claim_id: string;
+  claim_id: string | null;
   transaction_id: string | null;
-  listing_id: string;
+  listing_id: string | null;
   title: string;
-  slug: string;
+  slug: string | null;
   sold_at: string;
   status: TransactionState;
-  attribution_type: "laria" | "external";
+  attribution_type: "laria" | "external" | "counter";
+  store_slug?: string | null;
   role: TransactionRole;
   seller_name: string;
   buyer_name: string | null;
@@ -51,11 +54,16 @@ export type TransactionReview = {
   held_at?: string | null;
 };
 
+// deal-trust (reach-11): origin "counter" is a counter purchase (get_counter_transaction_detail): no listing, the
+// store's slug and the sale's lines instead.
 export type TransactionDetail = {
   reference_id: string;
-  listing_id: string;
+  listing_id: string | null;
   listing_title: string;
-  listing_slug: string;
+  listing_slug: string | null;
+  origin?: "counter";
+  store_slug?: string | null;
+  lines?: Array<{ name: string; quantity: number }>;
   sold_at: string;
   role: TransactionRole;
   state: TransactionState;
@@ -85,6 +93,8 @@ export type PublicReputation = {
     comment: string | null;
     submitted_at: string;
     reviewer_name: string | null;
+    // deal-trust (safe-06): approved review photos.
+    photos?: Array<{ id: string }>;
   }>;
 };
 
@@ -94,11 +104,12 @@ export function parseTransactionCenter(value: unknown): TransactionCenterItem[] 
 }
 
 export function parseTransactionDetail(value: unknown): TransactionDetail | null {
+  const counter = isRecord(value) && value.origin === "counter";
   if (!isRecord(value)
     || !isString(value.reference_id)
-    || !isString(value.listing_id)
+    || !(counter ? value.listing_id === null : isString(value.listing_id))
     || !isString(value.listing_title)
-    || !isString(value.listing_slug)
+    || !(counter ? value.listing_slug === null && isString(value.store_slug) && isLines(value.lines) : isString(value.listing_slug))
     || !isDate(value.sold_at)
     || !isRole(value.role)
     || !isState(value.state)
@@ -205,16 +216,17 @@ const states = new Set<TransactionState>(["unattributed", "pending", "confirmed"
 const emptyReputation: PublicReputation = { review_count: 0, average_rating: null, items: [] };
 
 function isTransactionCenterItem(value: unknown): value is TransactionCenterItem {
+  const counter = isRecord(value) && value.attribution_type === "counter";
   return isRecord(value)
     && isString(value.reference_id)
-    && isString(value.claim_id)
+    && (counter ? value.claim_id === null && isString(value.transaction_id) : isString(value.claim_id))
     && nullableString(value.transaction_id)
-    && isString(value.listing_id)
+    && (counter ? value.listing_id === null : isString(value.listing_id))
     && isString(value.title)
-    && isString(value.slug)
+    && (counter ? value.slug === null && isString(value.store_slug) : isString(value.slug))
     && isDate(value.sold_at)
     && isState(value.status)
-    && (value.attribution_type === "laria" || value.attribution_type === "external")
+    && (value.attribution_type === "laria" || value.attribution_type === "external" || counter)
     && isRole(value.role)
     && isString(value.seller_name)
     && nullableString(value.buyer_name)
@@ -222,6 +234,10 @@ function isTransactionCenterItem(value: unknown): value is TransactionCenterItem
     && nullableDate(value.review_deadline)
     && typeof value.own_review_submitted === "boolean"
     && typeof value.reviews_revealed === "boolean";
+}
+
+function isLines(value: unknown) {
+  return Array.isArray(value) && value.every((line) => isRecord(line) && isString(line.name) && Number.isInteger(line.quantity) && Number(line.quantity) > 0);
 }
 
 function isReview(value: unknown): value is TransactionReview {

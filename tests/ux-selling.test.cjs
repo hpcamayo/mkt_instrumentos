@@ -75,12 +75,13 @@ test("the confirmation states the review email only when the listing goes to rev
   assert.doesNotMatch(direct.next, /correo/);
 });
 
-test("condition cards keep the stored values and add a definition to each", () => {
-  const { conditionOptions } = load("lib/listings.ts");
-  const choices = sellForm.conditionChoices(conditionOptions);
-  assert.deepEqual(choices.map((choice) => choice.value), ["Nuevo", "Usado - buen estado", "Usado - con detalles"]);
-  assert.deepEqual(choices.map((choice) => choice.label), ["Nuevo", "Usado · buen estado", "Usado · con detalles"]);
+test("condition cards: the scale's steps, each with a definition; open box only for stores (sell-10)", () => {
+  const { conditionOptions, particularConditionOptions } = load("lib/listings.ts");
+  const choices = sellForm.conditionChoices(particularConditionOptions);
+  assert.deepEqual(choices.map((choice) => choice.value), ["Nuevo", "Como nuevo", "Excelente", "Muy bueno", "Bueno", "Regular", "Para reparar"]);
+  assert.deepEqual(choices.map((choice) => choice.label), choices.map((choice) => choice.value));
   for (const choice of choices) assert.ok(choice.description.length > 10, choice.value);
+  assert.deepEqual(sellForm.conditionChoices(conditionOptions).map((choice) => choice.value).slice(0, 2), ["Nuevo", "Exhibición o caja abierta"]);
 });
 
 test("the submission reports each photo upload and the final step, and still works without a callback", async () => {
@@ -206,7 +207,8 @@ test("attribute labels read in Spanish where musicians say it in Spanish; values
 
 test("the edit page shows the condition cards and keeps its save flow", () => {
   const edit = source("components/listing-edit-form.tsx");
-  assert.match(edit, /<ConditionCards id="editar-condition" name="condition"[^>]*defaultValue=\{listing\.condition \?\? ""\}/);
+  // sell-10: the scale (stores also see open box), with an old value shown on today's scale.
+  assert.match(edit, /<ConditionCards id="editar-condition" name="condition"[^>]*options=\{conditionChoices\(isStore \? conditionOptions : particularConditionOptions\)\}[^>]*defaultValue=\{currentCondition\(listing\.condition\) \?\? ""\}/);
   assert.match(edit, /changedValues\(values, listing, \["title", "category", "instrument_type", "brand", "model", "condition"\]\)/);
   assert.match(edit, /Guardar cambios/);
 });

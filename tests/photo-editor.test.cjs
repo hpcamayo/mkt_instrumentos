@@ -108,7 +108,10 @@ function editorHarness({ photos = existingPhotos(), livePhotos = photos, listing
     "@/components/location-fields": { LocationFields: () => null },
     // FIX 02 re-encodes in the browser; the harness has no canvas, so photos pass through unchanged.
     "@/components/selling/prepare-photo": { MAX_SOURCE_PHOTO_BYTES: 40 * 1024 * 1024, prepareListingPhoto: async (photo) => ({ file: photo }) },
-    "@/lib/listings": { categoryOptions: [], conditionOptions: [] },
+    "@/lib/listings": { categoryOptions: [], conditionOptions: [], particularConditionOptions: [] },
+    // listing-details: the sale terms sections render on their own; this harness walks the form's own elements.
+    "@/components/listing-details/detail-fields": { ListingDetailFields: () => null },
+    "@/components/listing-details/sale-terms-fields": { PriceModeField: () => null, SALE_TERMS_KEY: "sale_terms" },
     "@/lib/supabase/browser-client": { getSupabaseBrowserClient: () => ({ storage: {
       from(bucket) {
         calls.buckets.push(bucket);

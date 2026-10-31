@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { TOO_MANY_EMAILS, isAuthRateLimited } from "@/lib/auth/limits";
 import { getSafeAuthRedirect } from "@/lib/auth/redirects";
-import { TwoStepVerification } from "@/components/auth/two-step-verification";
+import { TwoStepCode } from "@/components/auth/two-step-setup";
 import { PageNotice } from "@/components/page-notice";
 import { useFormErrors } from "@/components/use-form-errors";
 import { getPasswordUpdateErrorMessage, getPasswordValidationMessage, PASSWORD_MIN_LENGTH } from "@/lib/auth/password";
@@ -113,7 +113,7 @@ export function PasswordUpdateForm({ mode }: { mode: "reset" | "change" }) {
     return (
       <div className="mt-6 grid gap-1">
         <p className="t-body text-ink-2">Tu cuenta tiene la verificación en dos pasos activa. Antes de crear tu nueva contraseña, escribe el código de tu app.</p>
-        <TwoStepVerification next={codeNext} framed={false} />
+        <TwoStepCode next={codeNext} />
       </div>
     );
   }

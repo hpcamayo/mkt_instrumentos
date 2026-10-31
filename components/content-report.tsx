@@ -8,7 +8,8 @@ import { useEffect, useRef, useState } from "react";
 import { useMarketplaceAccount } from "@/components/marketplace-account-provider";
 import { savePendingIntent, takePendingIntent } from "@/lib/device-saves";
 
-export type ReportTarget = "listing" | "store" | "review" | "question";
+// feature-ideas services (bet-02): "service" and "service_review" go to their own queue (submit_service_report).
+export type ReportTarget = "listing" | "store" | "review" | "question" | "service" | "service_review";
 
 // The form and its Supabase client load on the first press (UX-4 L15), never with the page.
 const ContentReportForm = dynamic(() => import("@/components/content-report-form"), {

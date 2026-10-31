@@ -9,6 +9,8 @@ import { InventoryShortcuts } from "@/components/inventory/inventory-shortcuts";
 import { InventoryViews } from "@/components/inventory/inventory-views";
 import { InventorySummaryTiles } from "@/components/inventory/inventory-summary";
 import { InventoryTable } from "@/components/inventory/inventory-table";
+import { breakdownText, locationBreakdown } from "@/lib/store-locations";
+import { getLocationStock, getOwnLocations } from "@/lib/store-locations-server";
 import { InventoryToolbar } from "@/components/inventory/inventory-toolbar";
 import { NewSkuButton } from "@/components/inventory/inventory-actions";
 import {
@@ -75,6 +77,12 @@ async function InventoryView({ summary, storeName, params, ask }: { summary: Inv
       getInventoryViews(supabase), cursor || activeFilterCount(filters) || filters.q ? Promise.resolve([]) : getOutOfStockDemand(supabase),
     ])
     : [null, null, null, [], []];
+  // store-locations, run-02: units per location under each SKU's stock.
+  const locations = supabase && page ? await getOwnLocations(supabase) : [];
+  const locationStock = locations.length && supabase && page?.items.length ? (await getLocationStock(supabase, page.items[0].store_id, page.items.map((item) => item.id))) ?? [] : [];
+  const locationLines = locations.length >= 2 && page
+    ? Object.fromEntries(page.items.map((item) => [item.id, breakdownText(locationBreakdown(locations, locationStock, item.id))]))
+    : undefined;
   const filtered = activeFilterCount(filters) > 0 || Boolean(filters.q);
   // stock-19: SKU pages keep the list they were opened from, for Anterior/Siguiente and the way back.
   const listQuery = inventoryHref(filters, cursor).split("?")[1] ?? "";
@@ -109,7 +117,7 @@ async function InventoryView({ summary, storeName, params, ask }: { summary: Inv
       {!page ? (
         <div className="p-5"><Notice tone="danger" role="alert">No se pudo cargar el inventario. Vuelve a intentarlo en unos minutos.</Notice></div>
       ) : (
-        <InventoryTable key={inventoryHref(filters, cursor)} items={page.items} canWrite={summary.can_write} total={page.total} filters={filters} listQuery={listQuery} />
+        <InventoryTable key={inventoryHref(filters, cursor)} items={page.items} canWrite={summary.can_write} total={page.total} filters={filters} listQuery={listQuery} locationLines={locationLines} />
       )}
       <footer className="grid gap-3 border-t border-subtle p-5 t-meta">
         {page && page.total > 0 ? (
@@ -148,6 +156,8 @@ async function InventoryView({ summary, storeName, params, ask }: { summary: Inv
           <p className="flex flex-wrap gap-x-4 gap-y-2">
             <Link href={REORDER_HREF} className="link font-semibold">Reposición</Link>
             <Link href={PRICES_HREF} className="link font-semibold">Precios</Link>
+            {/* store-floor, reach-10 */}
+            <Link href="/mi-cuenta/tienda/etiquetas" className="link font-semibold">Etiquetas</Link>
             {summary.can_write ? <InventorySettingsButton preferences={summary.preferences ?? null} /> : null}
             <InventoryShortcuts />
           </p>

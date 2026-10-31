@@ -34,9 +34,11 @@ $$;
 create function pg_temp.audits(p_action text, p_store uuid) returns bigint language sql security definer as $$
   select count(*) from public.admin_audit_actions where action = p_action and target_type = 'store' and target_id = p_store
 $$;
+-- Since safe-08 (feature ideas, accounts batch) a store with an approved payment method needs a second-factor session
+-- to change its methods, so the owners here act on one (aal2); tests/feat-accounts.sql covers the first-step refusal.
 create function pg_temp.as_user(p_name text) returns void language plpgsql as $$
 begin
-  perform set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.id(p_name), 'role', 'authenticated')::text, true);
+  perform set_config('request.jwt.claims', jsonb_build_object('sub', pg_temp.id(p_name), 'role', 'authenticated', 'aal', 'aal2')::text, true);
 end $$;
 create function pg_temp.as_admin() returns void language plpgsql as $$
 begin
@@ -74,7 +76,7 @@ insert into public.listings (id,slug,title,seller_type,status,category,instrumen
  ('b7300000-0000-4000-8000-000000000001','pay1-l1','Guitarra Pago uno','store','approved','guitars','electric_guitar','QA','Uno','Nuevo',1000,'Lima','Lima','Contacto A','51999997001','Descripción de publicación válida con más de cuarenta caracteres.','b7100000-0000-4000-8000-000000000001','b7200000-0000-4000-8000-000000000001','self_service',now()),
  ('b7300000-0000-4000-8000-000000000002','pay1-l2','Guitarra Pago dos','store','approved','guitars','electric_guitar','QA','Dos','Nuevo',1200,'Lima','Lima','Contacto A','51999997001','Descripción de publicación válida con más de cuarenta caracteres.','b7100000-0000-4000-8000-000000000001','b7200000-0000-4000-8000-000000000001','self_service',now()),
  ('b7300000-0000-4000-8000-000000000003','pay1-lb','Guitarra Pago tienda B','store','approved','guitars','electric_guitar','QA','Tres','Nuevo',500,'Lima','Lima','Contacto B','51999997002','Descripción de publicación válida con más de cuarenta caracteres.','b7100000-0000-4000-8000-000000000002','b7200000-0000-4000-8000-000000000002','self_service',now()),
- ('b7300000-0000-4000-8000-000000000004','pay1-lp','Guitarra Pago particular','individual','approved','guitars','electric_guitar','QA','Cuatro','Usado',700,'Lima','Lima','Particular Pago','51999997003','Descripción de publicación válida con más de cuarenta caracteres.','b7100000-0000-4000-8000-000000000003',null,'self_service',now()),
+ ('b7300000-0000-4000-8000-000000000004','pay1-lp','Guitarra Pago particular','individual','approved','guitars','electric_guitar','QA','Cuatro','Bueno',700,'Lima','Lima','Particular Pago','51999997003','Descripción de publicación válida con más de cuarenta caracteres.','b7100000-0000-4000-8000-000000000003',null,'self_service',now()),
  ('b7300000-0000-4000-8000-000000000005','pay1-lpending','Guitarra Pago en revisión','store','pending','guitars','electric_guitar','QA','Cinco','Nuevo',900,'Lima','Lima','Contacto A','51999997001','Descripción de publicación válida con más de cuarenta caracteres.','b7100000-0000-4000-8000-000000000001','b7200000-0000-4000-8000-000000000001','self_service',now());
 
 insert into public.listing_photos (listing_id, image_url, sort_order)

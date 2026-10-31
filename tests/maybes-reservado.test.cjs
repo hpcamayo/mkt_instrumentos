@@ -472,7 +472,8 @@ test("talk-06 and talk-07: the listing page, the account pages and the migration
   assert.match(page, /if \(listing\.status !== "approved" \|\| listing\.seller_type !== "individual" \|\| listing\.store_id\) return null;/);
   assert.match(page, /readReservedListings\(supabase, \[listing\.id\], optionalReadSignal\(getRequestReads\(\)\.deadline\)\)\.catch\(\(\) => null\)/);
   assert.match(page, /const reservedUntil = !isSold && reservation && isReservationRunning\(reservation, now\) \? reservation\.reserved_until : null;/);
-  assert.match(page, /const offer = !isSold && !purchase && !reservedUntil && listing\.seller_type === "individual" && listing\.price_pen !== null && listing\.price_pen > 0;/);
+  // Feature ideas (FD-integration-6): no offer on a listing the seller marked "Precio fijo" (sell-07).
+  assert.match(page, /const offer = !isSold && !purchase && !reservedUntil && listing\.seller_type === "individual" && listing\.price_pen !== null\n\s+&& listing\.price_pen > 0 && listing\.price_mode !== "fixed";/);
   assert.match(page, /buildWhatsAppUrl\(listing, \{ reserved: Boolean\(reservedUntil\) \}\)/);
   // While reserved, neither "sigue disponible" nor the quiet-listing note.
   assert.match(page, /\{reservedUntil \? null : availabilityConfirmed \? \(/);
@@ -515,5 +516,7 @@ test("talk-06 and talk-07: the listing page, the account pages and the migration
   }
   // A13's lists are replaced whole by the integration migration, never here.
   assert.doesNotMatch(migration, /function laria_private\.app_error_(route_patterns|own_messages|messages)\(/);
-  assert.doesNotMatch(source("lib/supabase/database.types.ts"), /listing_reservations|get_reserved_listings/);
+  // Main kept the generated types to production's schema while these migrations waited. features/marketplace generates
+  // them from every migration it carries (docs/database.md, scripts/local-db/gen-types.sh), so there they are typed.
+  assert.match(source("lib/supabase/database.types.ts"), /\n      get_reserved_listings: \{/);
 });

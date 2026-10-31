@@ -20,4 +20,3 @@ export async function loadPublicListingSnapshot(): Promise<PublicSnapshotCard[]>
   } while (after);
   return cards;
 }
-

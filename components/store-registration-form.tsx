@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useState } from "react";
 import { LocationFields } from "@/components/location-fields";
+import { StorePinField } from "@/components/map/store-pin-field";
 import { useFormErrors } from "@/components/use-form-errors";
 import { storeFieldErrors } from "@/lib/form-validation";
 import { PageNotice } from "@/components/page-notice";
@@ -52,6 +53,9 @@ export type StoreApplication = {
   // list-12: the address is shown publicly only when the store says so; opening hours are free text.
   show_address?: boolean | null;
   opening_hours?: string | null;
+  // listing-details buy-08: the shop's pin for the catalog's map (components/map/store-pin-field.tsx).
+  map_latitude?: number | null;
+  map_longitude?: number | null;
   status: "pending" | "active" | "hidden" | "rejected";
   is_verified: boolean;
   rejection_reason: string | null;
@@ -312,6 +316,7 @@ export function StoreRegistrationForm({
           label="Mostrar mi dirección en la página de la tienda"
           description="Con un enlace “Cómo llegar”, para quien quiera probar el instrumento en persona. Puedes quitarla cuando quieras."
         />
+        {store ? <StorePinField storeId={store.id} pin={store.map_latitude != null && store.map_longitude != null ? { latitude: store.map_latitude, longitude: store.map_longitude } : null} district={store.district} city={store.city} region={store.region} /> : null}
       </FormSection>
 
       <Button type="submit" block className="sm:w-auto sm:justify-self-start" loading={state === "submitting"} loadingLabel="Guardando…">{store ? "Guardar datos de la tienda" : "Enviar solicitud de tienda"}</Button>

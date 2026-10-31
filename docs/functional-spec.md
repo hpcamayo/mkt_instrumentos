@@ -555,11 +555,16 @@ unchanged.
 - **Staying signed in.** "Mantener sesión iniciada" on the sign-in page: the session survives
   closing the browser and lasts while it is used (Supabase's 400-day cookies, no session time-box), preserving the second-factor level for at least 30 days when the hosted session settings permit it. Unticked, the
   session ends with the browser. It applies to password, e-mail link and Google or Apple sign-in.
-- **Two-step sign-in.** Optional, with an authenticator app (no SMS) and ten one-time recovery codes. The code is asked
-  on sign-in on a browser that is not signed in (a new device or after signing out); the session keeps
-  its second step for its whole life. Required for Admin and for a store owner whose store has an approved payment
-  method (to open Mi tienda and to change the store's contact details or payment methods). Using a recovery code
-  removes the app, closes every session and sends an e-mail. For an enrolled account, a password-only session must also be refused by PostgREST and Storage until the second step is satisfied; hiding account pages alone is insufficient. Anonymous catalog access remains public.
+- **Two-step sign-in — Admin only during the pilot (owner decision, 2026-10-30).** Admin must use an authenticator
+  app (no SMS), with ten one-time recovery codes. Particulars, store owners and service providers have no enrollment
+  control or code prompt during the pilot, including stores with approved payment methods. Older non-Admin factors
+  are retired at the next sign-in or visit to Seguridad so Auth does not block password/email changes. Admin's password-only
+  sessions with an enrolled factor are refused by PostgREST, Storage and routes that act through the service role
+  until the code is entered. Anonymous browsing and contact remain public. Recovery revokes every session before
+  removing the app, invalidates the other recovery codes and sends an email; old access tokens are refused at the
+  API/Storage boundary and old refresh tokens cannot renew. Admin must sign in and enroll again. Wider two-step
+  verification is deferred until Laria gains paying users and the owner explicitly authorizes its return; it must
+  be released with matching UI, Auth and database checks rather than being activated automatically by payment status.
 - **Devices.** Seguridad lists the account's sessions by browser and last activity, closes one or all of them, and a
   sign-in from a browser the account has not used before sends one e-mail.
 - **E-mail change** from Seguridad through Supabase's confirmation link; the old address works until it is confirmed.
@@ -707,7 +712,7 @@ Approval, rejection, relevant store-status changes, and other important lifecycl
 
 Main includes Admin second-factor protection, reasoned account anonymization, restricted public listing/contact columns, same-origin request checks, bounded rate limits and retention/cleanup. Admin authority must be checked server-side and inside privileged database functions. Ordinary owners cannot browse raw buyer/report identities or bypass publication and stock invariants. Sensitive credentials stay server-only.
 
-PR #54 extends anonymization to its new personal records and enforces an enrolled account's second step at PostgREST and Storage, not only page navigation. Anonymous public inventory remains readable. The account-data export contains only the requester's data, never unrelated reporter/buyer identity or provider secrets. Shared transaction/review history and legally retained records must survive anonymization in the documented form.
+PR #54 extends anonymization to its new personal records and enforces Admin's second step at PostgREST and Storage, not only page navigation. During the pilot, non-Admin accounts use ordinary sign-in; see the 2026-10-30 decision above. Revoked account sessions must not keep API/Storage access through previously issued tokens. Anonymous public inventory remains readable. The account-data export contains only the requester's data, never unrelated reporter/buyer identity or provider secrets. Shared transaction/review history and legally retained records must survive anonymization in the documented form.
 
 Operational error lists/counts, audit history, email backlog controls, typed database clients and scheduled cleanup are part of the maintained implementation. Job configuration must be verified against actual execution. Consult the [source and release record](documentation-status.md), rather than historical manual-worker assumptions.
 

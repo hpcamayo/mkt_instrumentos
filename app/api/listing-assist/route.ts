@@ -12,6 +12,7 @@ import {
   parseListingSuggestion,
 } from "@/lib/ai/listing-assist";
 import { allowAiCall, recordAiRequest, type AiOutcome } from "@/lib/ai/usage";
+import { sessionOwesTwoStep, TWO_STEP_OWED_MESSAGE } from "@/lib/auth/complete-session";
 import { readBodyWithLimit } from "@/lib/request-body";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
@@ -61,6 +62,8 @@ export async function POST(request: Request) {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user;
   if (!user) return failure(401, "AUTH_REQUIRED", "Ingresa a tu cuenta.");
+  // safe-08 (feature ideas): a session that still owes its authenticator code gets nothing here, before any AI call.
+  if (await sessionOwesTwoStep(supabase)) return failure(403, "TWO_STEP_REQUIRED", TWO_STEP_OWED_MESSAGE);
 
   const allowance = await allowAiCall("listing_assist", user.id);
   if (allowance === "limited") return failure(429, "AI_LIMIT", `Ya usaste las ${AI_LIMITS.listingAssist.limit} ayudas de hoy. ${LIMIT_RESET}`);

@@ -49,6 +49,9 @@ export async function prepareDueWeeklyFollowEmails(client: MarketplaceEmailQueue
 export function emailLinkAction(payload: MarketplaceEmailPayload): { action: EmailLinkAction; alert?: string } | null {
   if (payload.event_type === "listing_price_drop") return { action: "no_price_drops" };
   if (payload.event_type === "follow_weekly") return { action: "no_follow_digest" };
+  // Feature ideas, selling-tools batch: a private offer follows the price-drop choice; reminders stop in one click.
+  if (payload.event_type === "listing_private_offer") return { action: "no_price_drops" };
+  if (payload.event_type === "gear_reminder_due") return { action: "no_gear_reminders" };
   if ((payload.event_type === "search_alert_immediate" || payload.event_type === "search_alert_daily") && payload.search_alert) return { action: "pause_alert", alert: payload.search_alert.id };
   return null;
 }

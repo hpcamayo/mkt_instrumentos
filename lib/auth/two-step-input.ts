@@ -1,6 +1,6 @@
 import { TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
 
-// Launch audit A15: the authenticator code as typed on the security page (components/auth/two-step-verification.tsx).
+// Launch audit A15: the authenticator code as typed in the code step and the setup (components/auth/two-step-setup.tsx).
 
 // Six digits, spaces allowed (apps show "123 456").
 export function readTwoStepCode(value: unknown) {

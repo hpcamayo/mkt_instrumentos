@@ -9,6 +9,7 @@ import {
   storeQuestionSystemPrompt,
 } from "@/lib/ai/store-question";
 import { allowAiCall, recordAiRequest, type AiOutcome } from "@/lib/ai/usage";
+import { sessionOwesTwoStep, TWO_STEP_OWED_MESSAGE } from "@/lib/auth/complete-session";
 import { readBodyWithLimit } from "@/lib/request-body";
 import { getInventorySummary } from "@/lib/store-inventory";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData.user;
   if (!user) return failure(401, "AUTH_REQUIRED", "Ingresa a tu cuenta.");
+  // safe-08 (feature ideas): a session that still owes its authenticator code gets nothing here, before any AI call.
+  if (await sessionOwesTwoStep(supabase)) return failure(403, "TWO_STEP_REQUIRED", TWO_STEP_OWED_MESSAGE);
   const { data: store } = await supabase.rpc("get_own_store").select("id").maybeSingle();
   const summary = store ? await getInventorySummary(supabase) : null;
   if (!store || !summary?.inventory_enabled) {

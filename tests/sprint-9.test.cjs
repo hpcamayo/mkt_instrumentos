@@ -304,12 +304,14 @@ function fakeSupabase({ counts, stores, listings: rows }) {
             const category = state.filters.find(([column]) => column === "category")?.[1];
             return resolve({ count: counts[category] ?? 0, error: null });
           }
-          const all = table === "stores" ? stores : rows;
+          const all = table === "stores" ? stores : table === "collections" ? [] : rows;
           return resolve({ data: all.slice(state.range[0], state.range[1] + 1), error: null });
         },
       };
       return builder;
     },
+    // feature-ideas services (bet-02): no public services here.
+    rpc: async () => ({ data: [], error: null }),
   };
 }
 
@@ -445,9 +447,9 @@ test("public footer, forms and navigation link to legal/safety pages and categor
 test("account navigation follows the frozen IA on desktop and mobile with precise active states", () => {
   const navigation = load("lib/account-navigation.ts");
   const particular = navigation.getAccountNavigationItems("seller", false);
-  assert.deepEqual(particular.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(particular.map((item) => item.label), ["Resumen", "Mis publicaciones", "Publicar", "Mi equipo", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   const store = navigation.getAccountNavigationItems("store_owner", true);
-  assert.deepEqual(store.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(store.map((item) => item.label), ["Resumen", "Mi tienda", "Inventario", "Publicar", "Pruebas", "Ofertas", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   for (const items of [particular, store, navigation.getAccountNavigationItems("store_owner", false)]) {
     const hrefs = items.map((item) => item.href);
     assert.equal(new Set(hrefs).size, hrefs.length);

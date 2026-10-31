@@ -72,7 +72,7 @@ function formHarness({ mode = "reset", error = null, session = { user: { id: "qa
     "@/lib/auth/password": password,
     "@/lib/auth/redirects": redirects,
     "@/components/page-notice": { PageNotice: () => null },
-    "@/components/auth/two-step-verification": { TwoStepVerification: function TwoStepVerification() { return null; } },
+    "@/components/auth/two-step-setup": { TwoStepCode: function TwoStepCode() { return null; } },
     "@/lib/supabase/browser-client": {
       getSupabaseBrowserClient: () => ({ auth: {
         getSession: async () => { calls.sessions++; return { data: { session } }; },
@@ -94,11 +94,11 @@ function formHarness({ mode = "reset", error = null, session = { user: { id: "qa
       if (leaveFirst) cleanups.forEach((cleanup) => cleanup?.());
       await new Promise((resolve) => setImmediate(resolve));
     },
-    // The code step's TwoStepVerification props, or null while the form shows.
+    // The code step's TwoStepCode props, or null while the form shows.
     codeStep() {
       const view = render();
       if (view.type === "form") return null;
-      const step = [view.props.children].flat().find((child) => child?.type?.name === "TwoStepVerification");
+      const step = [view.props.children].flat().find((child) => child?.type?.name === "TwoStepCode");
       return step ? step.props : "missing";
     },
     async submit(value = "new-password", confirmation = value) {
@@ -191,7 +191,7 @@ test("with an authenticator app, the reset page asks for the code before the new
   const form = formHarness({ level: { currentLevel: "aal1", nextLevel: "aal2" } });
   assert.equal(form.codeStep(), null);
   await form.load();
-  assert.deepEqual(form.codeStep(), { next: "/restablecer-contrasena?paso=nueva", framed: false });
+  assert.deepEqual(form.codeStep(), { next: "/restablecer-contrasena?paso=nueva" });
   assert.deepEqual(form.calls.updates, []);
 });
 
@@ -212,7 +212,7 @@ for (const mode of ["reset", "change"]) {
     const form = formHarness({ mode, error: { code: "insufficient_aal", message: "AAL2 session is required to update email or password when MFA is enabled." } });
     await form.submit();
     assert.deepEqual(form.calls.updates, [{ password: "new-password" }]);
-    assert.deepEqual(form.codeStep(), { next: "/restablecer-contrasena?paso=nueva", framed: false });
+    assert.deepEqual(form.codeStep(), { next: "/restablecer-contrasena?paso=nueva" });
     assert.deepEqual(form.calls.destinations, []);
     assert.equal(form.calls.refreshes, 0);
   });

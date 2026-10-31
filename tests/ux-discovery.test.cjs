@@ -107,7 +107,7 @@ test("the card photo is square with the favourite and the photo count over it; t
 test("the card caption: title, price, the real condition with the type's key attributes, then city and seller words (Q3)", () => {
   const html = renderCard();
   assert.match(html, /S\/\s?1,800/);
-  assert.match(html, /<p class="truncate t-meta">Usado · buen estado · Shell pack · 22&quot;<\/p>/);
+  assert.match(html, /<p class="truncate t-meta">Muy bueno · Shell pack · 22&quot;<\/p>/);
   assert.match(html, /<span class="min-w-0 truncate">Arequipa<\/span><span aria-hidden="true">·<\/span><span class="shrink-0">Particular<\/span><\/p>/);
   const store = (verified) => renderCard({ listing: listing({ seller_type: "store", stores: { name: "Tienda QA", slug: "tienda-qa", status: "active", is_verified: verified } }) });
   assert.match(store(false), /<span class="shrink-0">Tienda<\/span><\/p>/);
@@ -136,19 +136,20 @@ test("the showcase tile (vitrina, UX-3b): bordered box, square photo, the ink pr
 
 test("the spec line names up to two key attributes per type, with units, and skips missing ones (Q3 A)", () => {
   const { getCardSpecLine } = load("lib/listing-specs.ts");
-  const line = (instrument_type, attributes, condition = "Usado - buen estado") => getCardSpecLine({ instrument_type, attributes, condition });
-  assert.equal(line("electric_guitar", { pickups: ["sss", "single_coil"], strings: "6" }), "Usado · buen estado · SSS, Single coil");
-  assert.equal(line("electric_guitar", { pickups: ["hh"], strings: "7" }), "Usado · buen estado · HH · 7 cuerdas");
-  assert.equal(line("acoustic_guitar", { acoustic_type: "electro_acoustic", body_shape: "dreadnought" }), "Usado · buen estado · Electroacústica · Dreadnought");
-  assert.equal(line("bass", { strings: "5", bass_type: "jazz_bass" }), "Usado · buen estado · 5 cuerdas · Jazz Bass");
+  const line = (instrument_type, attributes, condition = "Muy bueno") => getCardSpecLine({ instrument_type, attributes, condition });
+  assert.equal(line("electric_guitar", { pickups: ["sss", "single_coil"], strings: "6" }), "Muy bueno · SSS, Single coil");
+  assert.equal(line("electric_guitar", { pickups: ["hh"], strings: "7" }), "Muy bueno · HH · 7 cuerdas");
+  assert.equal(line("acoustic_guitar", { acoustic_type: "electro_acoustic", body_shape: "dreadnought" }), "Muy bueno · Electroacústica · Dreadnought");
+  assert.equal(line("bass", { strings: "5", bass_type: "jazz_bass" }), "Muy bueno · 5 cuerdas · Jazz Bass");
   assert.equal(line("drums", { configuration: "complete", kick_size: "20" }, "Nuevo"), "Nuevo · Completa · 20\"");
-  assert.equal(line("cymbals", { cymbal_type: "crash", size: "16" }), "Usado · buen estado · Crash · 16\"");
-  assert.equal(line("microphones", { microphone_type: "dynamic", polar_pattern: "cardioid" }), "Usado · buen estado · Dinámico · Cardioide");
-  assert.equal(line("audio_interface", { inputs: "2", connection: "usb_c" }), "Usado · buen estado · 2 entradas · USB-C");
-  assert.equal(line("pedals", { pedal_type: "delay", format: "compact" }), "Usado · buen estado · Delay · Compacto");
-  assert.equal(line("amplifiers", { technology: "tube", power: "16_50w", amplifier_type: "combo" }), "Usado · buen estado · Tubos · 16–50W");
-  assert.equal(line("amplifiers", {}), "Usado · buen estado");
-  assert.equal(line("other", { anything: "x" }, "Usado - con detalles"), "Usado · con detalles");
+  assert.equal(line("cymbals", { cymbal_type: "crash", size: "16" }), "Muy bueno · Crash · 16\"");
+  assert.equal(line("microphones", { microphone_type: "dynamic", polar_pattern: "cardioid" }), "Muy bueno · Dinámico · Cardioide");
+  assert.equal(line("audio_interface", { inputs: "2", connection: "usb_c" }), "Muy bueno · 2 entradas · USB-C");
+  assert.equal(line("pedals", { pedal_type: "delay", format: "compact" }), "Muy bueno · Delay · Compacto");
+  assert.equal(line("amplifiers", { technology: "tube", power: "16_50w", amplifier_type: "combo" }), "Muy bueno · Tubos · 16–50W");
+  assert.equal(line("amplifiers", {}), "Muy bueno");
+  // sell-10: an old value a cached page still carries reads as its step.
+  assert.equal(line("other", { anything: "x" }, "Usado - con detalles"), "Bueno");
   assert.equal(line(null, null, null), "");
 });
 
@@ -161,7 +162,10 @@ const parse = (query) => parseListingFilters(Object.fromEntries([...new URLSearc
 const href = (query, scope) => catalog.catalogHref(parse(query), scope);
 
 test("F11: condition and location repeat, parse in URL order without repeats, and one value keeps today's URL", () => {
-  assert.deepEqual(parse("condition=Nuevo&condition=Usado+-+buen+estado&condition=Nuevo").conditions, ["Nuevo", "Usado - buen estado"]);
+  assert.deepEqual(parse("condition=Nuevo&condition=Muy+bueno&condition=Nuevo").conditions, ["Nuevo", "Muy bueno"]);
+  // sell-10: an old link's condition reads as the steps it covered; an unknown value is dropped.
+  assert.deepEqual(parse("condition=Nuevo&condition=Usado+-+buen+estado").conditions, ["Nuevo", "Exhibición o caja abierta", "Como nuevo", "Excelente", "Muy bueno"]);
+  assert.deepEqual(parse("condition=Usado").conditions, []);
   assert.deepEqual(parse("location=Lima&location=Arequipa").cities, ["Lima", "Arequipa"]);
   assert.deepEqual(parse("city=Cusco").cities, ["Cusco"], "the legacy city parameter still reads");
   assert.deepEqual(parse("location=&condition=").conditions, []);
@@ -172,7 +176,8 @@ test("F11: condition and location repeat, parse in URL order without repeats, an
     "/listados?location=Lima",
     "/listados?seller_type=verified_store",
     "/listados?category=guitars&instrument_type=electric_guitar",
-    "/listados?category=guitars&location=Lima&condition=Usado+-+buen+estado&brand=Fender&seller_type=individual&instrument_type=electric_guitar&min_price=1000&max_price=3000&sort=price_asc&body_type=solid_body&pickups=hss&pickups=sss",
+    "/listados?category=guitars&location=Lima&condition=Muy+bueno&brand=Fender&seller_type=individual&instrument_type=electric_guitar&min_price=1000&max_price=3000&sort=price_asc&body_type=solid_body&pickups=hss&pickups=sss",
+    "/listados?category=guitars&opciones=envia-provincia&opciones=se-puede-probar",
   ]) assert.equal(href(url.split("?")[1] ?? ""), url);
   // The alert path of a one-value search is unchanged too.
   const { listingFiltersToSearchAlert, searchAlertPath } = load("lib/search-alerts.ts");
@@ -193,10 +198,14 @@ test("F11: one value is queried with eq, several with in; the rest of the catalo
   assert.ok(!calls.some((call) => call[0] === "in"));
   calls.length = 0;
   await fetchCatalogPage({ from: () => builder }, parse("condition=Nuevo&condition=Usado+-+con+detalles&location=Lima&location=Arequipa"), 2);
-  assert.deepEqual(calls.filter((call) => call[0] === "in"), [["in", "city", ["Lima", "Arequipa"]], ["in", "condition", ["Nuevo", "Usado - con detalles"]]]);
+  assert.deepEqual(calls.filter((call) => call[0] === "in"), [["in", "city", ["Lima", "Arequipa"]], ["in", "condition", ["Nuevo", "Bueno", "Regular", "Para reparar"]]]);
   assert.ok(!calls.some((call) => call[0] === "eq" && (call[1] === "city" || call[1] === "condition")));
   assert.ok(calls.some((call) => call[0] === "eq" && call[1] === "status" && call[2] === "approved"));
   assert.ok(calls.some((call) => call[0] === "range" && call[1] === 24 && call[2] === 47));
+  // listing-details: the yes/no filters are one "contains" on the flags the database keeps.
+  calls.length = 0;
+  await fetchCatalogPage({ from: () => builder }, parse("opciones=se-puede-probar&opciones=envia-provincia&opciones=nada"), 1);
+  assert.deepEqual(calls.filter((call) => call[0] === "contains"), [["contains", "listing_flags", ["envia_provincia", "se_puede_probar"]]]);
 });
 
 test("F11: several values survive pagination, the landing's forwarding and the SEO normalization", () => {
@@ -230,21 +239,23 @@ test("F11: each value is its own chip, and removing one keeps the others; sort i
 test("filter URLs: each option sets or clears its value; landings lead to /listados?category=…", () => {
   const facets = (query, scope) => catalog.catalogFacets(parse(query), scope);
   const option = (filters, key, value, scope) => catalog.catalogHref(catalog.withFacetValue(parse(filters), key, value), scope);
-  assert.deepEqual(facets("").map((facet) => facet.title), ["Categoría", "Condición", "Precio", "Ubicación", "Vendedor", "Marca"]);
-  assert.deepEqual(facets("category=guitars").map((facet) => facet.title), ["Tipo", "Condición", "Precio", "Ubicación", "Vendedor", "Marca"]);
-  assert.deepEqual(facets("category=guitars&instrument_type=acoustic_guitar").slice(6).map((facet) => facet.title), ["Tipo", "Cuerpo", "Cuerdas", "Mano", "Incluye preamp"]);
+  assert.deepEqual(facets("").map((facet) => facet.title), ["Categoría", "Condición", "Precio", "Ubicación", "Compra y entrega", "Vendedor", "Marca"]);
+  assert.deepEqual(facets("category=guitars").map((facet) => facet.title), ["Tipo", "Condición", "Precio", "Ubicación", "Compra y entrega", "Vendedor", "Marca"]);
+  assert.deepEqual(facets("category=guitars&instrument_type=acoustic_guitar").slice(7).map((facet) => facet.title), ["Tipo", "Cuerpo", "Cuerdas", "Mano", "Incluye preamp"]);
   // A single-type category shows its attributes at once; the type facet is absent.
-  assert.deepEqual(facets("category=winds").map((facet) => facet.title), ["Condición", "Precio", "Ubicación", "Vendedor", "Marca", "Tipo"]);
+  assert.deepEqual(facets("category=winds").map((facet) => facet.title), ["Condición", "Precio", "Ubicación", "Compra y entrega", "Vendedor", "Marca", "Tipo"]);
   // Percussion has several types (drums, cymbals, hand percussion): the type comes first, then each type's
   // attributes; short values are chips.
-  assert.deepEqual(facets("category=percussion").map((facet) => facet.title), ["Tipo", "Condición", "Precio", "Ubicación", "Vendedor", "Marca"]);
+  assert.deepEqual(facets("category=percussion").map((facet) => facet.title), ["Tipo", "Condición", "Precio", "Ubicación", "Compra y entrega", "Vendedor", "Marca"]);
   const drums = facets("category=percussion&instrument_type=drums");
-  assert.deepEqual(drums.slice(6).map((facet) => facet.title), ["Tipo", "Configuración", "Número de piezas", "Material", "Incluye hardware", "Incluye platillos", "Medida de bombo"]);
+  assert.deepEqual(drums.slice(7).map((facet) => facet.title), ["Tipo", "Configuración", "Número de piezas", "Material", "Incluye hardware", "Incluye platillos", "Medida de bombo"]);
   assert.equal(drums.find((facet) => facet.key === "kick_size").chips, true);
   assert.deepEqual(drums.find((facet) => facet.key === "pieces").options.map((item) => item.label), ["4 piezas", "5 piezas", "6 piezas", "7+ piezas"]);
   // Several-value facets toggle, in option order whatever the click order.
-  assert.equal(option("condition=Usado+-+con+detalles", "condition", "Nuevo"), "/listados?condition=Nuevo&condition=Usado+-+con+detalles");
-  assert.equal(option("condition=Nuevo&condition=Usado+-+con+detalles", "condition", "Nuevo"), "/listados?condition=Usado+-+con+detalles");
+  assert.equal(option("condition=Bueno", "condition", "Nuevo"), "/listados?condition=Nuevo&condition=Bueno");
+  assert.equal(option("condition=Nuevo&condition=Bueno", "condition", "Nuevo"), "/listados?condition=Bueno");
+  assert.equal(option("opciones=acepta-cambios", "opciones", "envia_provincia"), "/listados?opciones=envia-provincia&opciones=acepta-cambios");
+  assert.equal(option("opciones=acepta-cambios", "opciones", "acepta_cambios"), "/listados");
   assert.equal(option("location=Cusco", "location", "Lima"), "/listados?location=Cusco&location=Lima");
   // One-value facets set or clear; a new category or type clears what depends on it; page always resets.
   assert.equal(option("seller_type=store&page=3", "seller_type", "individual"), "/listados?seller_type=individual");
@@ -320,7 +331,7 @@ test("the desktop sidebar: live option links with aria-current, small GET forms 
   assert.match(html, /<h2 id="filtro-condition-titulo" class="t-ui font-semibold text-ink">Condición<\/h2>/);
   // A chosen checkbox row removes its value; the others add theirs; the chosen radio row is "Todos" when none is set.
   assert.match(html, /<a href="\/listados\?category=guitars&amp;sort=price_asc" id="filtro-condition-Nuevo" rel="nofollow" aria-current="true"[^>]*><span aria-hidden="true" class="[^"]*rounded-\[3px\][^"]*bg-ink"><svg/);
-  assert.match(html, /<a href="\/listados\?category=guitars&amp;condition=Nuevo&amp;condition=Usado\+-\+buen\+estado&amp;sort=price_asc" id="filtro-condition-Usado---buen-estado" rel="nofollow" class=/);
+  assert.match(html, /<a href="\/listados\?category=guitars&amp;condition=Nuevo&amp;condition=Muy\+bueno&amp;sort=price_asc" id="filtro-condition-Muy-bueno" rel="nofollow" class=/);
   assert.match(html, /<a href="\/listados\?category=guitars&amp;condition=Nuevo&amp;sort=price_asc" id="filtro-seller_type-todos" rel="nofollow" aria-current="true"[^>]*><span aria-hidden="true" class="[^"]*rounded-full border-ink"><span class="h-2 w-2 rounded-full bg-ink">/);
   // Price and brand are GET forms to /listados with every other filter as hidden fields.
   const price = html.match(/<form class="mt-2" action="\/listados" method="get">([\s\S]*?)<\/form>/)[1];

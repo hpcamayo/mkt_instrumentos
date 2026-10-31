@@ -56,7 +56,8 @@ test("filter links remain nofollow", () => {
 test("malformed conditions are removed without losing real repeated conditions", () => {
   const params = { category: "microphones", condition: ["Nuevo", "Nuevoµphone_type=dynamic", "Usado - buen estado"] };
   assert.equal(hasRejectedFilterValues(params), true);
-  assert.deepEqual(parseListingFilters(params).conditions, ["Nuevo", "Usado - buen estado"]);
+  // sell-10 (feature ideas): an old condition in a link stays valid and reads as its part of the new scale.
+  assert.deepEqual(parseListingFilters(params).conditions, ["Nuevo", "Exhibición o caja abierta", "Como nuevo", "Excelente", "Muy bueno"]);
   assert.equal(hasRejectedFilterValues({ condition: [...conditionOptions] }), false);
 });
 
@@ -175,7 +176,8 @@ test("the page passes normalized filter state to pagination, retry and return-to
   const { route } = loadCatalogRoute();
   const tree = await route.default({ searchParams: Promise.resolve({ category: "microphones", condition: ["Nuevo", "Usado - buen estado"], location: ["Lima", "Cusco"], page: "2", utm_source: "email", "µphone_type": "dynamic", _rsc: "abc" }) });
   const view = tree.props.children.find((child) => child?.props?.params);
-  assert.deepEqual(view.props.params, { category: ["microphones"], location: ["Lima", "Cusco"], condition: ["Nuevo", "Usado - buen estado"] });
+  // sell-10 (feature ideas): an old condition in a link is carried forward as its part of the new scale.
+  assert.deepEqual(view.props.params, { category: ["microphones"], location: ["Lima", "Cusco"], condition: ["Nuevo", "Exhibición o caja abierta", "Como nuevo", "Excelente", "Muy bueno"] });
   const retry = new URL(view.props.retryHref, "https://laria.audio");
   assert.equal(retry.searchParams.get("page"), "2");
   for (const key of ["utm_source", "µphone_type", "_rsc"]) assert.equal(retry.searchParams.has(key), false);

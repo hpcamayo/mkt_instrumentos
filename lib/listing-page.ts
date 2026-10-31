@@ -170,7 +170,8 @@ export function isNewMember(memberSince: string | null | undefined, now: number)
 }
 
 // list-06: the review page (get_public_review_page): the total, the count per star and one page of reviews.
-export type ReviewItem = { id: string; rating: number; comment: string | null; submitted_at: string; reviewer_name: string | null };
+// photos (deal-trust, safe-06): the review's approved photos, by id (served by /api/review-photos/[id]).
+export type ReviewItem = { id: string; rating: number; comment: string | null; submitted_at: string; reviewer_name: string | null; photos?: Array<{ id: string }> };
 export type ReviewPage = { reviewCount: number; breakdown: Record<1 | 2 | 3 | 4 | 5, number>; items: ReviewItem[] };
 
 export function readReviewPage(value: unknown): ReviewPage | null {

@@ -1,6 +1,8 @@
 // Effortless Laria, inventory batch, big-10: the counter's pure parts (matching a code, the cart, the offline queue),
 // unit-tested in tests/ux-inventory.test.cjs. components/inventory/counter.tsx holds the screen.
 
+import type { ReceiptRequest } from "@/lib/einvoice/nubefact";
+
 export type CounterItem = {
   id: string;
   merchant_sku: string;
@@ -22,6 +24,9 @@ export type QueuedSale = {
   created_at: string;
   // Set when the server refused the sale (not a connection problem): it stays until the owner removes it.
   error?: string;
+  // store-locations: the location the units come from (run-02) and the comprobante to issue after it (run-03).
+  location_id?: string;
+  receipt?: ReceiptRequest;
 };
 
 function fold(value: string) {
@@ -70,6 +75,13 @@ export function cartTotal(cart: CartLine[]) {
 // The bulk operations for one sale (apply_bulk_stock_operations): one line per SKU.
 export function saleOperations(sale: Pick<QueuedSale, "channel" | "lines">) {
   return sale.lines.map((line) => ({ item_id: line.item_id, type: "sale", quantity: line.quantity, channel: sale.channel, reference: "Mostrador" }));
+}
+
+// store-locations (run-02): a sale at a location goes through apply_location_bulk_stock_operations.
+export function saleRequest(sale: Pick<QueuedSale, "key" | "channel" | "lines" | "location_id">) {
+  return sale.location_id
+    ? { action: "location_bulk_stock", location_id: sale.location_id, key: sale.key, operations: saleOperations(sale) }
+    : { action: "bulk_stock", key: sale.key, operations: saleOperations(sale) };
 }
 
 // Codes that mean "keep it and retry later" versus "the server said no".

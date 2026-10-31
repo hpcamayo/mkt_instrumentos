@@ -15,22 +15,27 @@ export type Assurance = {
   hasFactor: boolean;
 };
 
-// Reads the levels from the session itself (no network call), so middleware can use it on every request.
+// Reads session levels and verified role claims. Middleware only calls this for Admin during the pilot.
 export async function getAssurance(supabase: SupabaseClient<Database>): Promise<Assurance> {
-  const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const [{ data }, { data: claims }] = await Promise.all([
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+    supabase.auth.getClaims(),
+  ]);
+  // Pilot decision: only Admin uses two-step sign-in. The database enforces the same scope.
+  const enabled = claims?.claims?.app_metadata?.role === "admin";
   const currentLevel = data?.currentLevel === "aal2" ? "aal2" : data?.currentLevel === "aal1" ? "aal1" : null;
   const nextLevel = data?.nextLevel === "aal2" ? "aal2" : data?.nextLevel === "aal1" ? "aal1" : null;
   return {
     currentLevel,
     nextLevel,
-    needsCode: currentLevel === "aal1" && nextLevel === "aal2",
-    hasFactor: nextLevel === "aal2",
+    needsCode: enabled && currentLevel === "aal1" && nextLevel === "aal2",
+    hasFactor: enabled && nextLevel === "aal2",
   };
 }
 
 export type TwoStepStep = "codigo" | "activar";
 
-export function twoStepPath(step: TwoStepStep, next: string, reason?: "tienda" | "admin") {
+export function twoStepPath(step: TwoStepStep, next: string, reason?: "admin") {
   const params = new URLSearchParams({ paso: step, next: getSafeAuthRedirect(next) });
   if (reason) params.set("motivo", reason);
   return `${SECURITY_PATH}?${params.toString()}`;

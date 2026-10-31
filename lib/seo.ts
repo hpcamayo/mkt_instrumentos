@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { CategoryLandingPage } from "@/lib/category-pages";
 import { activeCatalogFilterKeys, catalogIndexing, catalogParamValues as values } from "@/lib/catalog-indexing";
+import { conditionSchemaOrg } from "@/lib/listing-condition";
 export { catalogFilterKeys } from "@/lib/catalog-indexing";
 import {
   formatPrice,
@@ -157,7 +158,8 @@ export function buildListingJsonLd(listing: ListingDetailData) {
                 : isOutOfStock(listing)
                   ? "https://schema.org/OutOfStock"
                   : "https://schema.org/InStock",
-            itemCondition: listing.condition === "Nuevo" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
+            // sell-10: "Para reparar" is DamagedCondition; open box is sold as used (lib/listing-condition.ts).
+            itemCondition: conditionSchemaOrg(listing.condition),
             // Individual sellers are not named in structured data; stores are public businesses.
             ...(store ? { seller: { "@type": "Organization", name: store.name } } : {}),
           },

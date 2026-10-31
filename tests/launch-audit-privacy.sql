@@ -41,7 +41,10 @@ alter table auth.users add column email_change varchar(255) default '', add colu
 create table auth.identities (id uuid primary key default gen_random_uuid(), user_id uuid not null, identity_data jsonb);
 create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid not null);
 create table auth.refresh_tokens (id bigserial primary key, user_id varchar(255), token varchar(255));
-create table auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid not null);
+-- status as Supabase Auth has it: features/marketplace's second-step check (20261210120700) reads it on every Storage
+-- request. Unverified, so no fixture session here owes an authenticator code.
+create table auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid not null,
+  status text not null default 'unverified');
 create table auth.one_time_tokens (id uuid primary key default gen_random_uuid(), user_id uuid not null);
 create table auth.flow_state (id uuid primary key default gen_random_uuid(), user_id uuid);
 create table auth.audit_log_entries (id uuid primary key default gen_random_uuid(), payload json);
@@ -368,6 +371,8 @@ insert into public.marketplace_events (event_type, listing_id, seller_user_id, a
 -- The features branch's own data comes through its hook, when it exists.
 create temp table feature_calls (user_id uuid) on commit drop;
 grant insert on feature_calls to public;
+-- features/marketplace has its own (tests/feat-account-privacy.sql); the rollback at the end brings it back.
+drop function if exists laria_private.anonymize_account_feature_data(uuid);
 create function laria_private.anonymize_account_feature_data(p_user_id uuid) returns jsonb language plpgsql as $$
 begin
   insert into feature_calls values (p_user_id);

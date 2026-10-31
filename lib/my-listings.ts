@@ -243,6 +243,8 @@ export type RowActions = {
   select: boolean;
   attribute: boolean;
   controlStock: boolean;
+  // Feature ideas, selling-tools batch: "Herramientas de venta" (price steps, private offer, part payment, consignment).
+  tools: boolean;
   // talk-06: "Reservar" a Particular's published listing, or change, end or answer its period.
   reserve: boolean;
 };
@@ -274,6 +276,7 @@ export function rowActions(listing: Pick<ManagedListing, "status" | "hidden_sour
     select: status === "approved" || ownerHidden,
     attribute: status === "sold",
     controlStock: !stockManaged && canControlStock && edit,
+    tools: status === "approved" || status === "pending" || ownerHidden,
     reserve: canReserve && status === "approved" && !stockManaged,
   };
 }

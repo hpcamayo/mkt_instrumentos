@@ -1,9 +1,11 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { notFound, redirect } from "next/navigation";
+import { StoreInstallments, type OwnerInstallmentOffer } from "@/components/payment/store-installments-form";
 import { StorePaymentMethods, type OwnerPaymentMethod } from "@/components/payment/store-payment-methods-form";
 import { Notice } from "@/components/ui/notice";
 import { PageHeader } from "@/components/ui/page-header";
 import { getAccountContext } from "@/lib/account-context";
-import { assistedCommerceEnabled, isPaymentMethod } from "@/lib/payment-methods";
+import { assistedCommerceEnabled, CARD_PAYMENT_METHODS, isPaymentMethod } from "@/lib/payment-methods";
 
 export const metadata = { title: "Pagos" };
 
@@ -15,11 +17,22 @@ export default async function StorePaymentsPage() {
   if (profile?.account_type !== "store_owner") redirect("/mi-cuenta");
   if (!store || !supabase) redirect("/mi-cuenta/tienda");
 
-  const { data, error } = await supabase
-    .from("store_payment_methods")
-    .select("method,status,holder_name,provider_label,owner_note,review_reason")
-    .eq("store_id", store.id);
+  const [{ data, error }, installments] = await Promise.all([
+    supabase
+      .from("store_payment_methods")
+      .select("method,status,holder_name,provider_label,owner_note,review_reason")
+      .eq("store_id", store.id),
+    // store-floor, buy-09: the store's interest-free installments.
+    (supabase as unknown as SupabaseClient)
+      .from("store_installment_offers")
+      .select("max_installments,cards,min_price_pen,owner_note,status,review_reason")
+      .eq("store_id", store.id)
+      .maybeSingle(),
+  ]);
   const methods = (data ?? []).filter((row) => isPaymentMethod(row.method)) as OwnerPaymentMethod[];
+  const cardMethods = methods.filter((row) => CARD_PAYMENT_METHODS.includes(row.method));
+  const cardMethod = cardMethods.some((row) => row.status === "approved") ? "approved"
+    : cardMethods.some((row) => row.status === "pending_review") ? "pending" : "none";
   const verified = store.status === "active" && store.is_verified === true;
 
   return (
@@ -39,12 +52,18 @@ export default async function StorePaymentsPage() {
       ) : (
         <StorePaymentMethods methods={methods} canEdit={verified} />
       )}
+      {error ? null : installments.error ? (
+        <Notice tone="danger">No pudimos cargar tus cuotas sin intereses. Intenta nuevamente.</Notice>
+      ) : (
+        <StoreInstallments offer={(installments.data ?? null) as OwnerInstallmentOffer | null} cardMethod={cardMethod} canEdit={verified} />
+      )}
       <section aria-labelledby="pagos-como-funciona" className="grid gap-3 rounded-panel bg-canvas p-5 sm:p-6">
         <h2 id="pagos-como-funciona" className="t-section text-ink">Cómo funciona «Solicitar compra»</h2>
         <ul className="grid max-w-[68ch] list-disc gap-1.5 pl-5 t-body text-ink">
           <li>Con al menos un medio aprobado, tus publicaciones con unidades disponibles muestran «Solicitar compra» y los medios que aceptas.</li>
           <li>El comprador te escribe por WhatsApp con el nombre del equipo, su SKU y la cantidad.</li>
           <li>Tú confirmas la disponibilidad, el pago, el comprobante y la entrega. Si usas un enlace de pago, lo envías en esa conversación: Laria no lo muestra.</li>
+          <li>Si ofreces cuotas sin intereses, tus publicaciones muestran cuánto sería cada cuota. Las cobra tu proveedor de tarjetas, como siempre.</li>
           <li>Laria no procesa pagos ni recibe dinero.</li>
         </ul>
       </section>

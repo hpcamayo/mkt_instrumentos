@@ -84,7 +84,8 @@ test("search and navigation serialization discard unknown keys while retaining s
   const kept = new URLSearchParams(keptSearchFields("/listados", input));
   for (const params of [navigation, kept]) {
     for (const key of ["utm_source", "µphone_type", "_rsc", "page"]) assert.equal(params.has(key), false, key);
-    assert.deepEqual(params.getAll("condition"), ["Nuevo", "Usado - buen estado"]);
+    // sell-10 (feature ideas): the old condition is serialized as its part of the new scale.
+    assert.deepEqual(params.getAll("condition"), ["Nuevo", "Exhibición o caja abierta", "Como nuevo", "Excelente", "Muy bueno"]);
     assert.deepEqual(params.getAll("location"), ["Lima", "Cusco"]);
     assert.deepEqual(params.getAll("use_case"), ["voice", "instrument"]);
     assert.equal(params.get("sort"), "price_asc");

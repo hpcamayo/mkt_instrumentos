@@ -92,8 +92,11 @@ test("catalog categories map to the marketplace categories by their dotted id, l
     "pro_audio.monitoring.headphones": "audio",
   };
   for (const [id, category] of Object.entries(cases)) assert.equal(marketplaceCategoryOf(id), category, id);
+  // disc-04: the folk instruments other than the cajón are the Andean category.
+  assert.equal(marketplaceCategoryOf("instruments.folk.charango"), "andean");
+  assert.equal(marketplaceCategoryOf("instruments.folk.cajon"), "percussion");
   // No marketplace category covers these, and a prefix only matches whole id segments.
-  for (const id of ["dj.controllers", "studio.samplers", "accessories.tuners", "instruments.folk.charango", "instruments", "instruments.bassoon", "pro_audiox"]) {
+  for (const id of ["dj.controllers", "studio.samplers", "accessories.tuners", "instruments", "instruments.bassoon", "pro_audiox"]) {
     assert.equal(marketplaceCategoryOf(id), null, id);
   }
 });

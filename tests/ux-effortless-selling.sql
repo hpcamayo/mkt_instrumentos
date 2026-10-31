@@ -212,7 +212,7 @@ do $$ begin
   insert into public.store_listing_defaults (store_id, condition, description_footer)
   values (pg_temp.id('store_a'), 'Nuevo', 'Garantía de 6 meses en tienda.');
   perform pg_temp.expect_error(format($q$insert into public.store_listing_defaults (store_id, condition) values (%L, 'Nuevo')$q$, pg_temp.id('store_b')), 'row-level security');
-  perform pg_temp.expect_error(format($q$update public.store_listing_defaults set condition = 'Como nuevo' where store_id = %L$q$, pg_temp.id('store_a')), 'check constraint');
+  perform pg_temp.expect_error(format($q$update public.store_listing_defaults set condition = 'Casi nuevo' where store_id = %L$q$, pg_temp.id('store_a')), 'check constraint');
   perform pg_temp.expect_error(format($q$update public.store_listing_defaults set description_footer = repeat('x', 1001) where store_id = %L$q$, pg_temp.id('store_a')), 'check constraint');
 end $$;
 select pg_temp.as_user('owner_b');
@@ -242,7 +242,7 @@ do $$ declare result jsonb; begin
   result := public.update_inventory_listing_details(pg_temp.id('item1'),
     '{"brand":"Fender","model":"Jazz Bass","condition":"Usado - buen estado","category":"basses","price_pen":1,"condition_bad":"x","instrument_type":"Bass!"}');
   perform pg_temp.check((result->>'changed')::boolean, 'details not saved');
-  perform pg_temp.check((pg_temp.item('item1')).listing_details = '{"brand":"Fender","model":"Jazz Bass","condition":"Usado - buen estado"}'::jsonb,
+  perform pg_temp.check((pg_temp.item('item1')).listing_details = '{"brand":"Fender","model":"Jazz Bass","condition":"Muy bueno"}'::jsonb,
     'details not sanitized: ' || (pg_temp.item('item1')).listing_details::text);
   perform pg_temp.check((pg_temp.item('item1')).category = 'basses', 'category not set from details');
   result := public.update_inventory_listing_details(pg_temp.id('item1'), '{"brand":"Fender","model":"Jazz Bass","condition":"Usado - buen estado","category":"basses"}');

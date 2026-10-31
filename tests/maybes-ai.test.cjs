@@ -260,7 +260,8 @@ test("stock-24: the answer's schema is the site's own lists, and anything outsid
   assert.deepEqual(schema.properties.inventory.properties.stock.enum, inventory.STOCK_FILTERS.map((entry) => entry.value));
   assert.deepEqual(schema.properties.inventory.properties.sort.enum, inventory.SORTS.map((entry) => entry.value));
   assert.deepEqual(schema.properties.inventory.properties.category.enum,
-    ["", "guitars", "basses", "keyboards", "percussion", "winds", "strings", "pedals", "amplifiers", "microphones", "audio", "none"]);
+    // Feature ideas, discovery batch: the eleventh category, Andinos y tradicionales.
+    ["", "guitars", "basses", "keyboards", "percussion", "winds", "strings", "pedals", "amplifiers", "microphones", "audio", "andean", "none"]);
   assert.match(storeQuestion.storeQuestionSystemPrompt(), /never see the store's data/);
 
   const { parseStoreAnswer, storeAnswerHref } = storeQuestion;
@@ -323,10 +324,14 @@ test("stock-24: \"Así lo entendí\" shows each filter as a chip that removes it
   for (const text of Object.values(STORE_GAP_TEXT)) assert.ok(text.endsWith(".") && text.length < 90, text);
 });
 
-function storeRoute({ enabled = true, user = { id: "u-1" }, store = { id: "s-1" }, inventoryEnabled = true, allowance = "allowed", client, records = [], allowCalls = [] } = {}) {
+// Feature ideas (safe-08): both routes ask whether the session still owes its authenticator code (owesCode).
+const completeSession = (owesCode) => ({ sessionOwesTwoStep: async () => owesCode, TWO_STEP_OWED_MESSAGE: "Ingresa el código de tu app de autenticación para continuar." });
+
+function storeRoute({ enabled = true, user = { id: "u-1" }, store = { id: "s-1" }, inventoryEnabled = true, allowance = "allowed", client, records = [], allowCalls = [], owesCode = false } = {}) {
   const real = claude();
   return loadModule("app/api/store/ask/route.ts", {
     "next/server": nextServer,
+    "@/lib/auth/complete-session": completeSession(owesCode),
     "@/lib/ai/claude": { callStructured: real.callStructured, getAiClient: async () => client ?? null },
     "@/lib/ai/config": { ...config(), aiHelpersEnabled: () => enabled, aiModel: () => "claude-opus-5-5" },
     "@/lib/ai/usage": {
@@ -391,6 +396,7 @@ test("stock-24: /api/store/ask refuses before any AI call when it is off, the ac
     [{}, "", 400, "AI_QUESTION_INVALID"],
     [{}, "x".repeat(201), 400, "AI_QUESTION_INVALID"],
     [{ user: null }, "¿Qué tengo agotado?", 401, "AUTH_REQUIRED"],
+    [{ owesCode: true }, "¿Qué tengo agotado?", 403, "TWO_STEP_REQUIRED"],
     [{ store: null }, "¿Qué tengo agotado?", 403, "AI_STORE_REQUIRED"],
     [{ inventoryEnabled: false }, "¿Qué tengo agotado?", 403, "AI_STORE_REQUIRED"],
     [{ allowance: "limited" }, "¿Qué tengo agotado?", 429, "AI_LIMIT"],
@@ -431,10 +437,11 @@ const SUGGESTION = {
   confidence: "high",
 };
 
-function assistRoute({ enabled = true, user = { id: "u-2" }, allowance = "allowed", client, records = [], allowCalls = [] } = {}) {
+function assistRoute({ enabled = true, user = { id: "u-2" }, allowance = "allowed", client, records = [], allowCalls = [], owesCode = false } = {}) {
   const real = claude();
   return loadModule("app/api/listing-assist/route.ts", {
     "next/server": nextServer,
+    "@/lib/auth/complete-session": completeSession(owesCode),
     "@/lib/ai/claude": { callStructured: real.callStructured, getAiClient: async () => client ?? null },
     "@/lib/ai/config": { ...config(), aiHelpersEnabled: () => enabled, aiModel: () => "claude-haiku-5-5" },
     "@/lib/ai/usage": {
@@ -488,6 +495,7 @@ test("big-07: /api/listing-assist refuses anything but one to four small JPEGs, 
     [{}, JSON.stringify({ photos: [jpeg(800, 600, 620 * 1024)] }), 400, "AI_PHOTOS_INVALID"],
     [{}, "no es JSON", 400, "AI_PHOTOS_INVALID"],
     [{ user: null }, JSON.stringify({ photos: [jpeg(800, 600)] }), 401, "AUTH_REQUIRED"],
+    [{ owesCode: true }, JSON.stringify({ photos: [jpeg(800, 600)] }), 403, "TWO_STEP_REQUIRED"],
     [{ allowance: "limited" }, JSON.stringify({ photos: [jpeg(800, 600)] }), 429, "AI_LIMIT"],
     [{ allowance: "site_limited" }, JSON.stringify({ photos: [jpeg(800, 600)] }), 429, "AI_SITE_LIMIT"],
     [{ allowance: "unavailable" }, JSON.stringify({ photos: [jpeg(800, 600)] }), 503, "AI_UNAVAILABLE"],
@@ -512,7 +520,8 @@ test("big-07: the suggestion's schema and checks: the registries, the form's siz
   assert.equal(schema.additionalProperties, false);
   assert.deepEqual([...schema.required].sort(), Object.keys(schema.properties).sort());
   assert.doesNotMatch(JSON.stringify(schema), /minLength|maxLength|minimum|maximum|maxItems|condition|price/);
-  assert.deepEqual(schema.properties.category.enum, ["", "guitars", "basses", "keyboards", "percussion", "winds", "strings", "pedals", "amplifiers", "microphones", "audio"]);
+  // Feature ideas, discovery batch: the eleventh category, Andinos y tradicionales.
+  assert.deepEqual(schema.properties.category.enum, ["", "guitars", "basses", "keyboards", "percussion", "winds", "strings", "pedals", "amplifiers", "microphones", "audio", "andean"]);
   assert.ok(schema.properties.instrument_type.enum.includes("electric_guitar") && schema.properties.instrument_type.enum.includes("audio_interface"));
   const prompt = listingAssistSystemPrompt();
   assert.match(prompt, /guitars \(Guitarras\): electric_guitar \(Guitarras eléctricas\), acoustic_guitar \(Guitarras acústicas\), other \(Otro\)/);

@@ -101,11 +101,11 @@ test("nothing in the shell is sticky (N3) and there is no bottom bar (N4)", () =
 
 test("the category strip lists Instrumentos, the categories in taxonomy order and Tiendas verificadas (G1, find-13)", () => {
   assert.deepEqual(shell.stripItems.map((item) => item.label), [
-    "Instrumentos", "Guitarras", "Bajos", "Teclados", "Percusión", "Vientos", "Cuerdas", "Pedales", "Amplificadores", "Micrófonos", "Audio", "Tiendas verificadas",
+    "Instrumentos", "Guitarras", "Bajos", "Teclados", "Percusión", "Vientos", "Cuerdas", "Pedales", "Amplificadores", "Micrófonos", "Audio", "Andinos", "Tiendas verificadas",
   ]);
   // The strip shortens "Teclados y pianos" so ten categories fit one row at 1280 px; the menu keeps the full label.
   assert.equal(shell.categoryMenus.find((menu) => menu.key === "keyboards").label, "Teclados y pianos");
-  assert.deepEqual(shell.stripItems.map((item) => item.kind), ["link", ...Array(10).fill("category"), "link"]);
+  assert.deepEqual(shell.stripItems.map((item) => item.kind), ["link", ...Array(11).fill("category"), "link"]);
   assert.equal(shell.stripItems[0].href, "/listados");
   // find-13 replaces N7: "Tiendas verificadas" opens the stores directory instead of the catalog filtered to verified
   // stores (that filter still marks the item, since it shows the same listings as the directory's second tab).
@@ -157,7 +157,7 @@ test("strip categories are menu buttons; Instrumentos and Tiendas verificadas st
   assert.match(html, /<nav aria-label="Categorías"/);
   // Ten disclosure buttons, all closed, each pointing at its panel; the current category keeps the blue underline.
   const buttons = [...html.matchAll(/<button type="button" aria-expanded="false" aria-controls="(categoria-[^"]+)"[^>]*>([^<]+)/g)];
-  assert.deepEqual(buttons.map((match) => match[2]), ["Guitarras", "Bajos", "Teclados", "Percusión", "Vientos", "Cuerdas", "Pedales", "Amplificadores", "Micrófonos", "Audio"]);
+  assert.deepEqual(buttons.map((match) => match[2]), ["Guitarras", "Bajos", "Teclados", "Percusión", "Vientos", "Cuerdas", "Pedales", "Amplificadores", "Micrófonos", "Audio", "Andinos"]);
   assert.match(html, /aria-controls="categoria-percussion" aria-current="true" class="[^"]*shadow-\[inset_0_-3px_0_var\(--accent\)\]/);
   assert.doesNotMatch(html, /categoria-percussion"[^>]*hidden|id="categoria-/, "panels render only when open");
   // Catalog destinations are client links again once the transition stall is fixed (UX-3 Q1 A).
@@ -202,7 +202,7 @@ test("Admin reaches the same destinations from its own navigation, without the p
   const html = renderToStaticMarkup(React.createElement(CategoryAccordion));
   assert.match(html, /<button id="[^"]+-categorias-boton" type="button" aria-expanded="false" aria-controls="[^"]+-categorias"[^>]*>Explorar categorías/);
   assert.match(html, /<ul id="[^"]+-categorias" hidden=""/);
-  assert.equal((html.match(/aria-expanded="false"/g) ?? []).length, 11, "the entry and ten categories");
+  assert.equal((html.match(/aria-expanded="false"/g) ?? []).length, 12, "the entry and eleven categories");
   for (const href of ["/listados", "/tiendas", "/instrumentos/guitarras", "/listados?category=guitars&amp;instrument_type=electric_guitar"]) assert.ok(html.includes(`href="${href}"`), href);
   // Nested in the phone "Menú": the accordion marks its Esc handled so the outer menu stays open (both listen on document).
   assert.match(source("components/category-accordion.tsx"), /event\.key !== "Escape" \|\| !open\) return;[\s\S]*?event\.preventDefault\(\);\s*event\.stopPropagation\(\);/);
@@ -248,7 +248,7 @@ test("header: bell, avatar and an account menu with the rail's sections, counts,
   const menu = html.slice(html.indexOf('id="menu-cuenta"'));
   assert.match(menu, /^id="menu-cuenta" hidden=""/);
   const labels = [...menu.matchAll(/<a href="([^"]+)"[^>]*><span[^>]*>([^<]+)<\/span>/g)].map((match) => match[2]);
-  assert.deepEqual(labels, ["Resumen", "Mis publicaciones", "Publicar", "Estadísticas", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
+  assert.deepEqual(labels, ["Resumen", "Mis publicaciones", "Publicar", "Mi equipo", "Estadísticas", "Servicios", "Favoritos", "Alertas", "Notificaciones", "Compras y ventas", "Perfil y seguridad"]);
   assert.match(menu, /3 notificaciones sin leer/);
   assert.match(menu, /1 compras requieren tu confirmación/);
   assert.match(menu, /href="\/admin"[^>]*>Admin</);
@@ -303,11 +303,11 @@ test("home header: Categorías menu, Tiendas verificadas from 768 px, Cómo func
   assert.match(source("components/site-header.tsx"), /\{menu\.open \? <HomeCategoryPanel counts=\{counts\} panelRef=\{menu\.panelRef\} onChoose=\{\(\) => menu\.close\(\)\} \/> : null\}/);
 });
 
-test("the home Categorías panel: Todos los instrumentos, every category with its types, Tiendas verificadas (PUB-011–015 destinations)", () => {
+test("the home Categorías panel: Todos los instrumentos, every category with its types, Tiendas verificadas (PUB-011–015 destinations) and Servicios para músicos", () => {
   const html = renderHomeHeader({ open: true });
   assert.match(html, /aria-expanded="true" aria-controls="menu-categorias"/);
   // The panel follows its button in the markup, so Tab goes from the button into it.
-  const panel = html.slice(html.indexOf('<div id="menu-categorias"'), html.indexOf("Tiendas verificadas</a></div></div>") + 35);
+  const panel = html.slice(html.indexOf('<div id="menu-categorias"'), html.indexOf("Servicios para músicos</a></div></div>") + 38);
   assert.ok(html.indexOf('aria-controls="menu-categorias"') < html.indexOf('id="menu-categorias"'));
   assert.ok(html.indexOf('id="menu-categorias"') < html.indexOf('href="#como-funciona"'));
   assert.match(panel, /^<div id="menu-categorias" class="surface-light menu-fade absolute inset-x-0 top-full z-40 max-h-\[calc\(100dvh-56px\)\] overflow-y-auto[^"]*shadow-level-1[^"]*md:max-h-none md:overflow-visible">/);
@@ -319,6 +319,8 @@ test("the home Categorías panel: Todos los instrumentos, every category with it
     ...shell.categoryMenus.flatMap((menu) => [[menu.label, menu.href], ...menu.types.map((type) => [type.label, type.href])]),
     // find-13: the stores directory (was N7's filtered catalog).
     ["Tiendas verificadas", "/tiendas"],
+    // feature-ideas services (bet-02): its own section, after the stores.
+    ["Servicios para músicos", "/servicios"],
   ];
   assert.deepEqual(links.map((link) => [link.label, link.href]), expected);
   // Every destination is a client link; 44 px rows on phones, 36 px from 768 px; types indented on phones.
@@ -394,7 +396,8 @@ test("footers: full on the home with four columns, slim everywhere else (N5)", (
   for (const href of full.matchAll(/href="([^"]+)"/g)) assert.doesNotMatch(href[1], /como-funciona|consejos-para-vender/);
   const slim = renderToStaticMarkup(React.createElement(SiteFooter, { variant: "slim" }));
   assert.match(slim, /© 2026 Laria · No cobramos comisiones ni procesamos pagos\./);
-  assert.deepEqual([...slim.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1]), ["/consejos-de-seguridad", "/terminos", "/privacidad", "/libro-de-reclamaciones"]);
+  // Feature ideas, accounts batch (safe-10): the help center comes first.
+  assert.deepEqual([...slim.matchAll(/<a href="([^"]+)"/g)].map((match) => match[1]), ["/ayuda", "/consejos-de-seguridad", "/terminos", "/privacidad", "/libro-de-reclamaciones"]);
 });
 
 test("404 and 500 share one body: title, one line, the search and two links", () => {

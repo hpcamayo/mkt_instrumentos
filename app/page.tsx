@@ -5,13 +5,17 @@ import { HomeFollowedArrivals } from "@/components/home/home-followed";
 import { HomeForYou } from "@/components/home/home-for-you";
 import { CategoryTiles, HowItWorks, PriceDropsSection, SellBlock, VerifiedStoresSection } from "@/components/home/home-sections";
 import { RecentListings } from "@/components/home/home-empty";
+import { CollectionsStrip } from "@/components/discovery/collections-strip";
+import { HomeServicesTeaser } from "@/components/services/service-entry-points";
 import { JsonLd } from "@/components/json-ld";
 import { PageContainer } from "@/components/page-container";
+import { getCurrentCollections } from "@/lib/discovery/data";
 import { fetchHomeData, type HomeData } from "@/lib/home";
 import { pickHomeBanner } from "@/lib/home-banner";
 import { buildHomeMetadata, buildOrganizationJsonLd, buildWebsiteJsonLd } from "@/lib/seo";
 import { renderPerRequestIfBuilding } from "@/lib/cache-build";
 import { getListingCounts } from "@/lib/catalog-brands";
+import { getServiceKindCounts } from "@/lib/services-counts";
 import { warnMissingSupabaseEnv } from "@/lib/supabase/public-client";
 import { getRequestReads, optionalReadSignal } from "@/lib/supabase/public-read-client";
 
@@ -37,9 +41,14 @@ export default async function HomePage() {
   const banner = pickHomeBanner();
   const { supabase, deadline } = getRequestReads();
   if (!supabase) warnMissingSupabaseEnv();
-  const { pool, priceDrops, total, categoryCounts, stores } = supabase
-    ? await fetchHomeData(supabase, getListingCounts(optionalReadSignal(deadline)))
-    : UNAVAILABLE;
+  const [{ pool, priceDrops, total, categoryCounts, stores }, collections, serviceCounts] = supabase
+    ? await Promise.all([
+        fetchHomeData(supabase, getListingCounts(optionalReadSignal(deadline))),
+        getCurrentCollections(),
+        // feature-ideas services (bet-02): the counts for the services teaser, shared for five minutes.
+        getServiceKindCounts(optionalReadSignal(deadline)),
+      ])
+    : [UNAVAILABLE, null, null];
   if (supabase && !pool) {
     await renderPerRequestIfBuilding("/");
     throw new Error("The home feed could not be read.");
@@ -52,9 +61,12 @@ export default async function HomePage() {
       <HomeBanner banner={banner} />
       <PageContainer className="flex flex-col gap-8 pb-8 pt-4 md:gap-12 md:pb-12 md:pt-6">
         <CategoryTiles counts={categoryCounts} />
+        <HomeServicesTeaser counts={serviceCounts} />
         <HomeFollowedArrivals />
         {pool?.length ? <HomeForYou pool={pool} total={total} /> : pool ? <RecentListings /> : null}
         {priceDrops?.length ? <PriceDropsSection listings={priceDrops} /> : null}
+        {/* disc-03 and buy-05 (docs/feature-ideas/discovery.md): the current collections and the gift finder. */}
+        <CollectionsStrip collections={collections} />
         <RecentlyViewed />
         <HowItWorks />
         {stores?.length ? <VerifiedStoresSection stores={stores} /> : null}

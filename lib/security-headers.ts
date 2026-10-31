@@ -20,7 +20,11 @@ export type SecurityHeaderEnv = {
 };
 
 // Hosts other features need, per directive. Add a host here, never in next.config.ts.
-const EXTRA_SOURCES: Partial<Record<string, string[]>> = {};
+const EXTRA_SOURCES: Partial<Record<string, string[]>> = {
+  // Feature ideas, listing-details (buy-08): the map's style, tiles, glyphs and sprites (components/map/maplibre.ts).
+  "connect-src": ["https://tiles.openfreemap.org"],
+  "img-src": ["https://tiles.openfreemap.org"],
+};
 
 function originOf(url?: string) {
   if (!url) return null;

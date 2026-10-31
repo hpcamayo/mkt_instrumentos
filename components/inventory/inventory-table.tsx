@@ -9,6 +9,7 @@ import {
   type BulkItem, type BulkTarget,
 } from "@/components/inventory/bulk-actions";
 import { StockActionSheet, undoMovements, type StockActionItem, type StockActionType } from "@/components/inventory/stock-action-sheet";
+import { BulkArrivalSheet } from "@/components/store-floor/arrival-control";
 import { UndoNotice, type InventoryNotice, type UndoAction } from "@/components/inventory/undo-notice";
 import { buttonClasses } from "@/components/ui/button";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -17,6 +18,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Price } from "@/components/ui/price";
 import { StatusTag } from "@/components/ui/tag";
 import { INVENTORY_BULK_LIMIT } from "@/lib/inventory-actions";
+import { arrivalTag } from "@/lib/store-floor/arrivals";
 import { inventoryAction, newRequestKey } from "@/lib/inventory-client";
 import {
   exportViewHref, formatDateTime, inventoryStatusKey, numbers, stockLine, type InventoryFilters, type InventoryItem,
@@ -27,12 +29,13 @@ import {
 // Effortless Laria, inventory batch: −1/+1 on each row (stock-02), "Deshacer" after every change (stock-03), selecting
 // every SKU that matches (stock-14), more bulk actions, and v/r/a on the focused row (stock-18).
 
-type BulkKind = "price" | "threshold" | "stock" | "hide" | "category" | "archive" | "unarchive" | "restore";
+type BulkKind = "price" | "threshold" | "stock" | "hide" | "category" | "archive" | "unarchive" | "restore" | "arrival";
 
 // The stepper's sale is a counter sale; the sheet stays for any other channel, a count or a note.
 const STEPPER_CHANNEL = "tienda_fisica";
 
-export function InventoryTable({ items, canWrite, total, filters, listQuery = "" }: { items: InventoryItem[]; canWrite: boolean; total?: number; filters?: InventoryFilters; listQuery?: string }) {
+// store-locations (run-02): `locationLines` is "Miraflores 3 · Centro 1" per SKU id, for stores with sedes.
+export function InventoryTable({ items, canWrite, total, filters, listQuery = "", locationLines }: { items: InventoryItem[]; canWrite: boolean; total?: number; filters?: InventoryFilters; listQuery?: string; locationLines?: Record<string, string> }) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   // stock-14: every id of the view (up to the bulk limit), when the owner asked for all that match.
@@ -183,7 +186,9 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
       cell: (item) => (
         <div className="grid justify-items-end gap-1 md:justify-items-start">
           <StatusTag domain="inventory" status={inventoryStatusKey(item)} />
+          {item.expected_arrival_on ? <span className="whitespace-nowrap t-meta font-semibold text-ink">{arrivalTag(item.expected_arrival_on)}</span> : null}
           <span className="whitespace-nowrap t-meta tabular-nums">{stockLine(item)}</span>
+          {locationLines?.[item.id] ? <span className="t-meta tabular-nums">{locationLines[item.id]}</span> : null}
           {canWrite && item.inventory_status === "active" ? (
             <span className="flex items-center gap-2" role="group" aria-label={`Cambiar el stock de ${item.merchant_sku} en una unidad`}>
               <StepButton disabled={busyId === item.id || item.quantity_available < 1} label={`Registrar venta de 1 unidad de ${item.merchant_sku}`} onClick={() => step(item, "sale")}>−1</StepButton>
@@ -272,6 +277,8 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
                 <RowButton onClick={(event) => setBulk({ kind: "threshold", opener: event.currentTarget })}>Umbral de stock bajo</RowButton>
                 <RowButton onClick={(event) => setBulk({ kind: "category", opener: event.currentTarget })}>Categoría</RowButton>
                 {!matching ? <RowButton onClick={(event) => setBulk({ kind: "stock", opener: event.currentTarget })}>Ajustar stock</RowButton> : null}
+                {/* store-floor, reach-08: like Ajustar stock, only rows the owner ticked. */}
+                {!matching ? <RowButton onClick={(event) => setBulk({ kind: "arrival", opener: event.currentTarget })}>Por llegar</RowButton> : null}
                 <RowButton onClick={(event) => setBulk({ kind: "hide", opener: event.currentTarget })}>Ocultar</RowButton>
                 <RowButton onClick={(event) => setBulk({ kind: "restore", opener: event.currentTarget })}>Volver a publicar</RowButton>
                 <RowButton onClick={(event) => setBulk({ kind: "archive", opener: event.currentTarget })}>Archivar</RowButton>
@@ -279,6 +286,10 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
                 {!matching ? <PublishSelectedButton itemIds={selectedItems.filter((item) => !item.listing && item.inventory_status === "active").map((item) => item.id)} className={`${ROW_LINK} disabled:cursor-not-allowed disabled:opacity-50`} /> : null}
               </>
             )
+          ) : null}
+          {/* store-floor, reach-10: price labels for the selection (the labels page reads "all that match" from the view). */}
+          {!archivedView ? (
+            <Link href={matching ? `/mi-cuenta/tienda/etiquetas?lista=${encodeURIComponent(listQuery)}` : `/mi-cuenta/tienda/etiquetas?ids=${selectedItems.map((item) => item.id).join(",")}`} className={ROW_LINK}>Imprimir etiquetas</Link>
           ) : null}
           {matching && filters ? (
             <>
@@ -326,6 +337,7 @@ export function InventoryTable({ items, canWrite, total, filters, listQuery = ""
       {bulk?.kind === "category" ? <BulkCategorySheet target={target} onClose={closeBulk} onDone={(message, undo) => done(message, undo, true)} /> : null}
       {bulk?.kind === "stock" ? <BulkStockSheet target={target} onClose={closeBulk} onDone={(message, undo) => done(message, undo, true)} /> : null}
       {bulk?.kind === "hide" ? <BulkHideSheet target={target} onClose={closeBulk} onDone={(message, undo) => done(message, undo, true)} /> : null}
+      {bulk?.kind === "arrival" ? <BulkArrivalSheet items={bulkItems} onClose={closeBulk} onDone={(message) => done(message, undefined, true)} /> : null}
       {bulk?.kind === "archive" || bulk?.kind === "unarchive" || bulk?.kind === "restore" ? (
         <BulkLifecycleSheet action={bulk.kind} target={target} onClose={closeBulk} onDone={(message, undo) => done(message, undo, true)} />
       ) : null}

@@ -1,11 +1,16 @@
 import { instrumentFilterGroups } from "@/lib/instrument-filters";
 import { listingContactMessage } from "@/lib/contact-message";
+import { CONDITION_VALUES, PARTICULAR_CONDITION_VALUES, currentCondition, expandConditionSearch } from "@/lib/listing-condition";
+import { hasUnknownListingOption, parseListingOptions } from "@/lib/listing-flags";
 import { resolveContactPhone, whatsAppUrl } from "@/lib/seller-contact";
+import type { ListingSaleTerms } from "@/lib/sale-terms";
+import type { ListingStoreTerms } from "@/lib/store-floor/warranty";
 
 export { resolveContactPhone, resolveParticularSeller, whatsAppNumber } from "@/lib/seller-contact";
 
-// The ten marketplace categories (owner decision, 12 Oct 2026; docs/ux-redesign/category-restructure.md), in menu
-// order. Baterías and Platillos became types of Percusión, and Interfaces de audio a type of Audio.
+// The marketplace categories (owner decision, 12 Oct 2026; docs/ux-redesign/category-restructure.md), in menu
+// order. Baterías and Platillos became types of Percusión, and Interfaces de audio a type of Audio. The eleventh,
+// Andinos y tradicionales, came with disc-04 (Henri, 26 Oct 2026; docs/feature-ideas/discovery.md).
 export const categoryOptions = [
   { value: "guitars", label: "Guitarras" },
   { value: "basses", label: "Bajos" },
@@ -17,6 +22,7 @@ export const categoryOptions = [
   { value: "amplifiers", label: "Amplificadores" },
   { value: "microphones", label: "Micrófonos" },
   { value: "audio", label: "Audio" },
+  { value: "andean", label: "Andinos y tradicionales" },
 ] as const;
 
 // Category values retired on 12 Oct 2026 → the category and type they became. Old links, bookmarks and alert e-mails
@@ -29,11 +35,10 @@ export const legacyCategories: Readonly<Record<string, { category: string; instr
 
 export const cityOptions = ["Lima", "Ayacucho", "Huancayo", "Arequipa"] as const;
 
-export const conditionOptions = [
-  "Nuevo",
-  "Usado - buen estado",
-  "Usado - con detalles",
-] as const;
+// sell-10: the condition scale (lib/listing-condition.ts), best to worst. "Exhibición o caja abierta" is for stores
+// only; a Particular chooses from particularConditionOptions.
+export const conditionOptions = CONDITION_VALUES;
+export const particularConditionOptions = PARTICULAR_CONDITION_VALUES;
 
 export const sellerTypeOptions = [
   { value: "individual", label: "Particular" },
@@ -75,6 +80,9 @@ export type ListingFilters = {
   minPrice?: number;
   maxPrice?: number;
   advanced: Record<string, string | string[] | number | boolean>;
+  // listing-details: yes/no filters ("Envía a provincia", ...), all of them must hold (lib/listing-flags.ts). Optional,
+  // so filters built elsewhere without it mean "none".
+  options?: string[];
   sort: ListingSort;
 };
 
@@ -120,14 +128,22 @@ export type ListingCardData = {
   photo_count?: number;
   // Null unless a store links the listing to an inventory item (STORE-1a).
   stock_state?: StockState | null;
+  // store-floor, reach-08: "Por llegar", the date the store expects units while the listing is out of stock.
+  restock_expected_on?: string | null;
   // list-05: a real price drop, kept by the database (listings_track_content_change); shown for 30 days.
   previous_price_pen?: number | null;
   price_dropped_at?: string | null;
+  // listing-details: the yes/no facts kept by the database (lib/listing-flags.ts) and sell-07's price mode.
+  listing_flags?: string[] | null;
+  price_mode?: PriceMode | null;
+  // store-floor, buy-09: the store's interest-free installments for this price, while the payments pilot is on.
+  installments_max?: number | null;
   stores: StoreSummary | StoreSummary[] | null;
   listing_photos: ListingPhotoData[];
 };
 
 export type StockState = "in_stock" | "out_of_stock";
+export type PriceMode = "fixed" | "negotiable";
 
 // PostgREST filter for discovery (catalog, home, sitemap, related strips): a listing without inventory, or one with
 // units available. An approved listing at zero stock stays reachable at its URL and on its store page (design §5.2).
@@ -137,7 +153,7 @@ export function isOutOfStock(listing: { stock_state?: StockState | null }) {
   return listing.stock_state === "out_of_stock";
 }
 
-export type ListingDetailData = ListingCardData & {
+export type ListingDetailData = ListingCardData & ListingSaleTerms & {
   status: "approved" | "sold";
   // list-04: when the seller last changed what a buyer reads (never a view count).
   content_changed_at?: string | null;
@@ -151,11 +167,11 @@ export type ListingDetailData = ListingCardData & {
   // mine-08: when the seller last answered "Sí, sigue disponible".
   availability_confirmed_at?: string | null;
   profiles: ParticularProfileSummary | ParticularProfileSummary[] | null;
-};
+} & ListingStoreTerms;
 
-// "Usado - buen estado" reads "Usado · buen estado" on cards, filters and chips; the stored value is unchanged.
+// The condition as people read it. An old value a cached page or an old link still carries reads as its step.
 export function getConditionLabel(condition: string) {
-  return condition.split(" - ").join(" · ");
+  return currentCondition(condition);
 }
 
 export function getCategoryLabel(category: string) {
@@ -296,8 +312,12 @@ function readListingFilters(
   const category = legacy?.category ?? accept(readString("category"), (value) => knownCategories.has(value));
   const brand = accept(readString("brand"), isFreeTextValue);
   const conditions = readList("condition");
-  const acceptedConditions = conditions.filter((value) => knownConditions.has(value));
+  // sell-10: the old values stay valid in links (they expand to their part of the scale); anything else is rejected.
+  const acceptedConditions = conditions.filter((value) => knownConditions.has(value) || expandConditionSearch([value]).length > 0);
   if (acceptedConditions.length !== conditions.length) rejected = true;
+
+  const optionValues = readList("opciones");
+  if (hasUnknownListingOption(optionValues)) rejected = true;
 
   const q = readString("q")?.replace(/\s+/g, " ").trim().slice(0, 200);
 
@@ -305,13 +325,15 @@ function readListingFilters(
     ...(q ? { q } : {}),
     category: category || undefined,
     cities: locations.length ? locations : legacyCities,
-    conditions: acceptedConditions,
+    // sell-10: an old condition in a link reads as its part of the new scale.
+    conditions: expandConditionSearch(acceptedConditions),
     brand: brand || undefined,
     sellerType: (sellerType || undefined) as ListingFilters["sellerType"],
     instrumentType: instrumentType || undefined,
     minPrice: readNumber("min_price"),
     maxPrice: readNumber("max_price"),
     advanced,
+    options: parseListingOptions(optionValues),
     sort: (sort || "newest") as ListingSort,
   };
   return { filters, rejected };

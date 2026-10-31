@@ -1,4 +1,6 @@
 import { instrumentFilterGroups, type InstrumentFilterConfig } from "@/lib/instrument-filters";
+import { conditionSetLabel } from "@/lib/listing-condition";
+import { flagSlug, listingFlagLabel } from "@/lib/listing-flags";
 import {
   categoryOptions,
   sellerTypeOptions,
@@ -22,6 +24,8 @@ export type SearchAlertFilters = {
   min_price?: number;
   max_price?: number;
   advanced?: Record<string, string | string[] | number | boolean>;
+  // listing-details: yes/no filters, all of them (lib/listing-flags.ts).
+  options?: string[];
 };
 
 export type SavedSearchAlert = {
@@ -56,6 +60,7 @@ export function listingFiltersToSearchAlert(filters: ListingFilters): SearchAler
   if (filters.minPrice !== undefined) normalized.min_price = filters.minPrice;
   if (filters.maxPrice !== undefined) normalized.max_price = filters.maxPrice;
   if (Object.keys(filters.advanced).length) normalized.advanced = filters.advanced;
+  if (filters.options?.length) normalized.options = [...filters.options];
   return normalized;
 }
 
@@ -73,6 +78,7 @@ export function searchAlertPath(filters: SearchAlertFilters) {
   for (const [key, value] of Object.entries(filters.advanced ?? {})) {
     for (const item of Array.isArray(value) ? value : [value]) params.append(key, String(item));
   }
+  for (const flag of filters.options ?? []) params.append("opciones", flagSlug(flag));
   return params.size ? `/listados?${params.toString()}` : "/listados";
 }
 
@@ -83,7 +89,9 @@ export function searchAlertSummary(filters: SearchAlertFilters) {
   pushLabel(parts, instrumentFilterGroups, filters.instrument_type, "instrumentType");
   if (filters.brand) parts.push(`Marca: ${filters.brand}`);
   if (filters.location) parts.push(asList(filters.location).join(" o "));
-  if (filters.condition) parts.push(asList(filters.condition).join(" o "));
+  // sell-10: an alert saved before the scale covers several steps ("Como nuevo a Muy bueno, o caja abierta").
+  if (filters.condition) parts.push(conditionSetLabel(asList(filters.condition)));
+  for (const flag of filters.options ?? []) parts.push(listingFlagLabel(flag) ?? flag);
   pushLabel(parts, sellerTypeOptions, filters.seller_type);
   if (filters.min_price !== undefined || filters.max_price !== undefined) {
     const low = filters.min_price === undefined ? "sin mínimo" : `S/ ${formatNumber(filters.min_price)}`;
@@ -152,7 +160,7 @@ export function searchAlertFiltersAsJson(filters: SearchAlertFilters): Json {
 
 export function parseSearchAlertFilters(value: unknown): SearchAlertFilters | null {
   if (!isRecord(value)) return null;
-  const allowed = new Set(["query", "category", "location", "condition", "brand", "seller_type", "instrument_type", "min_price", "max_price", "advanced"]);
+  const allowed = new Set(["query", "category", "location", "condition", "brand", "seller_type", "instrument_type", "min_price", "max_price", "advanced", "options"]);
   if (Object.keys(value).some((key) => !allowed.has(key))) return null;
   for (const key of ["query", "category", "brand", "instrument_type"] as const) {
     if (value[key] !== undefined && typeof value[key] !== "string") return null;
@@ -166,6 +174,7 @@ export function parseSearchAlertFilters(value: unknown): SearchAlertFilters | nu
     if (value[key] !== undefined && (typeof value[key] !== "number" || !Number.isFinite(value[key]) || value[key] < 0)) return null;
   }
   if (value.advanced !== undefined && !isRecord(value.advanced)) return null;
+  if (value.options !== undefined && !(Array.isArray(value.options) && value.options.length <= 20 && value.options.every((entry) => typeof entry === "string"))) return null;
   return value as SearchAlertFilters;
 }
 

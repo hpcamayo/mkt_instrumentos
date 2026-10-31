@@ -97,21 +97,23 @@ test("A15: the header keeps the Admin link before the code, and private photos o
 
 test("A15: any account that owes its code sees only the code step; Admin accounts always get the section, first for the setup", () => {
   const page = read("app/mi-cuenta/seguridad/page.tsx");
-  assert.match(page, /const admin = user\?\.app_metadata\?\.role === "admin";/);
   // Every signed-in account's level is read, so one that stopped being Admin with its app still set can finish signing in.
-  assert.match(page, /const supabase = user \? await getSupabaseServerClient\(\) : null;\n\s+const assurance = supabase \? await getAssurance\(supabase\) : null;/);
-  assert.match(page, /if \(assurance\?\.needsCode\) \{[\s\S]*?<TwoStepVerification next=\{next\} framed=\{false\} \/>/);
-  assert.match(page, /const twoStep = admin \|\| assurance\?\.hasFactor \? <TwoStepVerification next=\{next\} \/> : null;/);
-  assert.match(page, /const setupFirst = admin && params\.paso === "activar";/);
+  assert.match(page, /const assurance = supabase \? await getAssurance\(supabase\) : null;/);
+  assert.match(page, /if \(assurance\?\.needsCode\) \{[\s\S]*?<TwoStepCode next=\{next\} \/>/);
+  // Feature ideas (accounts batch, safe-08): one two-step section for every account. my_two_step_requirement marks it
+  // required for Admin (and for a store with approved payment methods), and ?paso=activar starts the setup.
+  assert.match(page, /supabase\.rpc\("my_two_step_requirement"\)/);
+  assert.match(page, /<Section id="dos-pasos" title="Verificación en dos pasos">\s*<TwoStepSetup state=\{state\} next=\{next\} startSetup=\{params\.paso === "activar"\} \/>/);
   // Only addresses on this site come back.
   assert.match(page, /const next = params\.next \? getSafeAuthRedirect\(params\.next, ""\) \|\| null : null;/);
-  const section = read("components/auth/two-step-verification.tsx");
+  const section = read("components/auth/two-step-setup.tsx");
   // A setup left halfway is replaced, so the QR code always matches the factor being verified.
-  assert.match(section, /if \(factor\.factor_type === "totp" && factor\.status !== "verified"\) await supabase\.auth\.mfa\.unenroll\(\{ factorId: factor\.id \}\);/);
-  assert.match(section, /supabase\.auth\.mfa\.challengeAndVerify\(\{ factorId, code \}\)/);
-  assert.match(section, /level\.data\.currentLevel === "aal2"/);
+  assert.match(section, /if \(factor\.status !== "verified"\) await supabase\.auth\.mfa\.unenroll\(\{ factorId: factor\.id \}\);/);
+  assert.match(section, /supabase\.auth\.mfa\.challengeAndVerify\(\{ factorId: factor\.id, code \}\)/);
+  assert.match(section, /const code = readTwoStepCode\(new FormData\(event\.currentTarget\)\.get\("code"\)\);/);
+  assert.match(section, /return setError\(twoStepErrorMessage\(verifyError\)\);/);
   // A full load afterwards, so the page that asked for the code reads the new session.
-  assert.match(section, /if \(next\) \{\n[^\n]*\n\s*window\.location\.assign\(next\);/);
+  assert.match(section, /window\.location\.assign\(destination \?\? "\/mi-cuenta"\);/);
   // Signing in with the password goes to the code step when the account has an app.
   assert.match(read("components/login-form.tsx"), /level\?\.currentLevel === "aal1" && level\.nextLevel === "aal2" \? twoStepPath\("codigo", nextPath\) : nextPath/);
 });
@@ -122,7 +124,7 @@ test("A15: with an authenticator app, a recovery link asks for the code before t
   // link opens one without it: the form asks for the code first, then loads the same page again.
   assert.match(form, /supabase\.auth\.mfa\.getAuthenticatorAssuranceLevel\(\)\.then\(\(\{ data \}\) => \{\n\s+if \(active && data\?\.currentLevel === "aal1" && data\.nextLevel === "aal2"\) setCodeNext\(currentAddress\(\)\);/);
   assert.match(form, /if \(error\.code === "insufficient_aal"\) return setCodeNext\(currentAddress\(\)\);/);
-  assert.match(form, /if \(codeNext\) \{[\s\S]*?<TwoStepVerification next=\{codeNext\} framed=\{false\} \/>/);
+  assert.match(form, /if \(codeNext\) \{[\s\S]*?<TwoStepCode next=\{codeNext\} \/>/);
   assert.match(form, /function currentAddress\(\) \{\n\s+return window\.location\.pathname \+ window\.location\.search;/);
   // The recovery link lands on the form that does this.
   assert.match(read("app/restablecer-contrasena/page.tsx"), /<PasswordUpdateForm mode="reset" \/>/);
@@ -165,6 +167,7 @@ function fakeSsr(behaviour) {
       createServerClient: (url, key, options) => {
         const client = { key, options, calls: [] };
         client.auth = {
+          getClaims: async () => ({ data: { claims: { app_metadata: {} } } }),
           verifyOtp: async (args) => {
             client.calls.push(["verifyOtp", args]);
             if (!behaviour.error) options.cookies.setAll([{ name: "sb-example-auth-token", value: "new-session", options: {} }]);
@@ -174,7 +177,11 @@ function fakeSsr(behaviour) {
           getUser: async () => { client.calls.push(["getUser"]); return { data: { user: { id: "u1", user_metadata: {} } } }; },
           resend: async (args) => { client.calls.push(["resend", args]); return { error: behaviour.error ?? null }; },
           signInWithPassword: async (args) => { client.calls.push(["signInWithPassword", args]); return { error: behaviour.error ?? null }; },
+          // Feature ideas (accounts batch, safe-08): after a sign-in the routes read the level for the code step and
+          // record the browser; neither is what these tests count.
+          mfa: { getAuthenticatorAssuranceLevel: async () => ({ data: { currentLevel: "aal1", nextLevel: "aal1" }, error: null }) },
         };
+        client.rpc = async () => ({ data: null, error: null });
         created.push(client);
         return client;
       },

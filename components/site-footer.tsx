@@ -11,28 +11,41 @@ type FooterLink = { href: string; label: string };
 
 // Footers link only to pages that exist (docs/ux-redesign/ux-2-shell.md).
 const legal = (href: string) => legalPages.find((page) => page.href === href)!;
+const servicesLink: FooterLink = { href: "/servicios", label: "Servicios para músicos" };
 const exploreLinks: FooterLink[] = [
   { href: CATALOG_PATH, label: "Instrumentos" },
   { href: categoryLandingPath("guitars"), label: "Guitarras" },
   { href: categoryLandingPath("percussion"), label: "Percusión" },
   { href: categoryLandingPath("pedals"), label: "Pedales" },
   { href: VERIFIED_STORES_PATH, label: "Tiendas verificadas" },
+  // discovery batch (docs/feature-ideas/discovery.md)
+  { href: "/hecho-en-peru", label: "Hecho en Perú" },
+  { href: "/regalos", label: "Para regalar" },
+  { href: "/guias", label: "Guías de compra" },
+  // feature-ideas services (bet-02): its own section, apart from the instruments.
+  servicesLink,
 ];
 // /registrar-tienda sends a signed-out visitor to /registro/tienda and tells a signed-in Particular that a
 // store needs its own account.
 const sellLinks: FooterLink[] = [
   { href: "/vender", label: "Publicar un instrumento" },
   { href: "/registrar-tienda", label: "Registrar mi tienda" },
+  // feature-ideas services (bet-02)
+  { href: "/mi-cuenta/servicios/nuevo", label: "Ofrecer un servicio" },
 ];
 // EASE trust-05: the Libro de Reclamaciones is linked from every footer (a text link; Indecopi practice also shows the
 // book's icon, pending legal review).
 const complaintsBook: FooterLink = { href: COMPLAINTS_BOOK_PATH, label: COMPLAINTS_BOOK_LABEL };
-const helpLinks: FooterLink[] = [...["/consejos-de-seguridad", "/articulos-prohibidos", "/terminos", "/privacidad"].map(legal), complaintsBook];
+// Feature ideas, accounts batch (safe-10): the help center.
+const helpCenter: FooterLink = { href: "/ayuda", label: "Centro de ayuda" };
+const helpLinks: FooterLink[] = [helpCenter, ...["/consejos-de-seguridad", "/articulos-prohibidos", "/terminos", "/privacidad"].map(legal), complaintsBook];
 const phoneLinks: FooterLink[] = [
-  exploreLinks[0], sellLinks[1], legal("/terminos"),
+  exploreLinks[0], sellLinks[1], legal("/terminos"), helpCenter,
   legal("/consejos-de-seguridad"), legal("/articulos-prohibidos"), legal("/privacidad"), complaintsBook,
+  // feature-ideas services (bet-02): the eighth cell of the 2 × 4 grid.
+  servicesLink,
 ];
-const slimLinks: FooterLink[] = [...["/consejos-de-seguridad", "/terminos", "/privacidad"].map(legal), complaintsBook];
+const slimLinks: FooterLink[] = [{ ...helpCenter, label: "Ayuda" }, ...["/consejos-de-seguridad", "/terminos", "/privacidad"].map(legal), complaintsBook];
 
 const PROMISE = "No cobramos comisiones ni procesamos pagos.";
 // The footer's small print: 12 px on phones so the promise line fits one line at 390 px, 13 px from 640 px.

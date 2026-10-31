@@ -1,3 +1,4 @@
+import { sessionOwesTwoStep } from "@/lib/auth/complete-session";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 
@@ -18,6 +19,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
     const supabase = await getSupabaseServerClient();
     const { data } = supabase ? await supabase.auth.getUser() : { data: null };
     if (!data?.user) return missing();
+    // safe-08: the file comes with the service role, so a session that still owes its code gets nothing private.
+    if (await sessionOwesTwoStep(supabase!)) return missing();
     // Admin only with the authenticator code entered (launch audit A15): public.is_admin() checks the session.
     const isAdmin = data.user.app_metadata?.role === "admin" && (await supabase!.rpc("is_admin")).data === true;
     if (!isAdmin && !rows.some((listing) => listing!.owner_user_id === data.user.id)) {

@@ -127,7 +127,8 @@ begin
   if result->>'mode' <> 'revision' or revision_id is null then raise exception 'REV-011 mixed edit did not create revision'; end if;
   if (select price_pen from public.listings where id='43000000-0000-4000-8000-000000000001') <> 900 then raise exception 'REV-001 immediate price did not apply'; end if;
   if (select title from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Título público original' then raise exception 'Pending title leaked to live row'; end if;
-  if (select condition from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Usado - buen estado' then raise exception 'Pending condition leaked to live row'; end if;
+  -- 'Usado - buen estado' is stored as 'Muy bueno' since the condition scale (20261202120000).
+  if (select condition from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Muy bueno' then raise exception 'Pending condition leaked to live row'; end if;
   if (select image_url from public.listing_photos where listing_id='43000000-0000-4000-8000-000000000001' order by sort_order limit 1) like '%-1.jpg' then raise exception 'Pending photo order leaked to live row'; end if;
   if not public.listing_is_public('43000000-0000-4000-8000-000000000001') then raise exception 'Pending revision removed the approved live version'; end if;
   result := public.update_owned_listing('43000000-0000-4000-8000-000000000001','{}','{"model":"Segundo cambio"}',null);
@@ -157,7 +158,7 @@ do $$ declare revision_id uuid; revision_version integer; begin
   select id, version into revision_id, revision_version from public.listing_revisions where listing_id='43000000-0000-4000-8000-000000000001' and status='pending';
   perform public.review_listing_revision(revision_id,'approve',revision_version,null);
   if (select title from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Título propuesto' then raise exception 'REV-012 title patch failed'; end if;
-  if (select condition from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Usado - con detalles' then raise exception 'Approved condition revision was not promoted'; end if;
+  if (select condition from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Bueno' then raise exception 'Approved condition revision was not promoted'; end if;
   if (select price_pen from public.listings where id='43000000-0000-4000-8000-000000000001') <> 875 then raise exception 'Revision approval overwrote later immediate price'; end if;
   if (select image_url from public.listing_photos where listing_id='43000000-0000-4000-8000-000000000001' order by sort_order limit 1) <> 'https://example.invalid/43000000-0000-4000-8000-000000000001-1.jpg' then raise exception 'Approved photos were not applied'; end if;
   if (select status <> 'hidden' or hidden_source <> 'owner' from public.listings where id='43000000-0000-4000-8000-000000000001') then raise exception 'Revision approval undid owner hide'; end if;
@@ -195,7 +196,7 @@ do $$ declare revision_id uuid; denied boolean := false; begin
   if not denied then raise exception 'REV-013 revision rejection without reason succeeded'; end if;
   perform public.review_listing_revision(revision_id,'reject',1,'El modelo no coincide con las fotos');
   if (select model from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Segundo cambio' then raise exception 'Rejected revision mutated live row'; end if;
-  if (select condition from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Usado - con detalles' then raise exception 'Rejected condition revision mutated live row'; end if;
+  if (select condition from public.listings where id='43000000-0000-4000-8000-000000000001') <> 'Bueno' then raise exception 'Rejected condition revision mutated live row'; end if;
 end $$;
 
 -- Normal Tienda revisions; verified Tienda edits directly; revocation affects future edits.
@@ -213,7 +214,7 @@ do $$ declare revision_id uuid; begin
   if revision_id is null then raise exception 'Store verification auto-resolved an existing edit revision'; end if;
   perform public.review_listing('43000000-0000-4000-8000-000000000003','hide','Revisión administrativa de inventario');
   perform public.review_listing_revision(revision_id,'approve',1,null);
-  if (select status <> 'hidden' or hidden_source <> 'admin' or title <> 'Normal propuesto' or condition <> 'Usado - buen estado' from public.listings where id='43000000-0000-4000-8000-000000000003') then
+  if (select status <> 'hidden' or hidden_source <> 'admin' or title <> 'Normal propuesto' or condition <> 'Muy bueno' from public.listings where id='43000000-0000-4000-8000-000000000003') then
     raise exception 'Revision approval undid an administrative hide';
   end if;
   perform public.set_store_verification('42000000-0000-4000-8000-000000000003',false);
@@ -222,7 +223,7 @@ end $$;
 select set_config('request.jwt.claims','{"sub":"41000000-0000-4000-8000-000000000004","role":"authenticated"}',true);
 do $$ declare result jsonb; begin
   result := public.update_owned_listing('43000000-0000-4000-8000-000000000004','{}','{"title":"Verificada directa","condition":"Usado - con detalles"}',null);
-  if result->>'mode' <> 'direct' or (select title <> 'Verificada directa' or condition <> 'Usado - con detalles' from public.listings where id='43000000-0000-4000-8000-000000000004') then
+  if result->>'mode' <> 'direct' or (select title <> 'Verificada directa' or condition <> 'Bueno' from public.listings where id='43000000-0000-4000-8000-000000000004') then
     raise exception 'REV-016 verified Tienda did not edit directly';
   end if;
 end $$;

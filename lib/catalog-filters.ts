@@ -17,6 +17,8 @@ import {
   type ListingSort,
 } from "@/lib/listings";
 import type { CatalogFacetData } from "@/lib/catalog-facets";
+import { conditionSetLabel } from "@/lib/listing-condition";
+import { flagSlug, listingFlagFilters, listingFlagLabel, toggleListingOption } from "@/lib/listing-flags";
 import { locationZones, zoneOfLocation } from "@/lib/location";
 import { formatPrice } from "@/lib/price";
 
@@ -61,6 +63,8 @@ export function catalogSearchParams(filters: ListingFilters) {
   for (const [key, value] of Object.entries(filters.advanced)) {
     for (const item of Array.isArray(value) ? value : [value]) add(key, String(item));
   }
+  // listing-details: the yes/no filters last, so every earlier URL is unchanged.
+  for (const flag of filters.options ?? []) add("opciones", flagSlug(flag));
   return params;
 }
 
@@ -73,7 +77,7 @@ export function catalogHref(filters: ListingFilters, scope: CatalogScope = {}) {
 
 // No filter at all: the plain catalog, or the landing with its category. The text search is a filter too (its chip).
 export function clearedFilters(scope: CatalogScope = {}): ListingFilters {
-  return { category: scope.landing?.category, cities: [], conditions: [], advanced: {}, sort: "newest" };
+  return { category: scope.landing?.category, cities: [], conditions: [], advanced: {}, options: [], sort: "newest" };
 }
 
 // Places sort alphabetically, so a choice of several always gives the same URL (FIND 05 lists the cities that have
@@ -112,6 +116,8 @@ export function withFacetValue(filters: ListingFilters, key: string, value: stri
       return { ...next, cities: toggle(filters.cities, value, placeOrder([...cityOptions, ...filters.cities, ...(value ? [value] : [])])) };
     case "seller_type":
       return { ...next, sellerType: isSellerType(value) ? value : undefined };
+    case OPTIONS_KEY:
+      return { ...next, options: toggleListingOption(filters.options ?? [], value) };
     default: {
       const filter = attributeConfig(filters, key);
       const values = filter?.type === "multiselect" ? toggle(asList(filters.advanced[key]), value, (filter.options ?? []).map((option) => option.value)) : value === null ? [] : [value];
@@ -156,6 +162,10 @@ export function parsePriceInput(value: string) {
   const number = Number(text);
   return Number.isSafeInteger(number) ? number : undefined;
 }
+
+// listing-details: the facet of yes/no filters ("Envía a provincia", "Se puede probar", "Acepta cambios"), "all of".
+export const OPTIONS_KEY = "opciones";
+export const OPTIONS_TITLE = "Compra y entrega";
 
 // count: how many results choosing the option gives (FIND 07), when the counts loaded. zone: the location's zone.
 export type FacetOption = { value: string; label: string; count?: number; zone?: string };
@@ -215,9 +225,14 @@ export function catalogFacets(filters: ListingFilters, scope: CatalogScope = {},
   if (filters.category && specificTypes(filters.category).length > 1) {
     choice({ key: "instrument_type", title: "Tipo", multiple: false, allLabel: "Todos", options: counted(data?.instrument_type, getInstrumentTypeOptions(filters.category)), selected: filters.instrumentType ? [filters.instrumentType] : [] });
   }
-  choice({ key: "condition", title: "Condición", multiple: true, options: counted(data?.condition, conditionOptions.map((value) => ({ value, label: getConditionLabel(value) }))), selected: filters.conditions });
+  // sell-10: eight steps; with the counts, only those that have results (and any chosen one) are offered.
+  const conditions = counted(data?.condition, conditionOptions.map((value) => ({ value, label: getConditionLabel(value) })));
+  choice({ key: "condition", title: "Condición", multiple: true, options: data ? conditions.filter((option) => option.count || filters.conditions.includes(option.value)) : conditions, selected: filters.conditions });
   facets.push({ kind: "price", title: "Precio", ...(data ? { spread: data.price } : {}) });
   choice({ key: "location", title: "Ubicación", multiple: true, ...locationOptions(filters, data), selected: filters.cities });
+  // store-floor: a flag marked onlyWhenListed ("Acepta cuotas") is offered only when results carry it, or it is chosen.
+  const flagOptions = listingFlagFilters.filter(({ flag, onlyWhenListed }) => !onlyWhenListed || (filters.options ?? []).includes(flag) || (data?.options?.[flag] ?? 0) > 0);
+  choice({ key: OPTIONS_KEY, title: OPTIONS_TITLE, multiple: true, options: counted(data?.options, flagOptions.map(({ flag, label }) => ({ value: flag, label }))), selected: filters.options ?? [] });
   choice({ key: "seller_type", title: "Vendedor", multiple: false, allLabel: "Todos", options: counted(data?.seller_type, sellerTypeOptions.map(({ value, label }) => ({ value, label }))), selected: filters.sellerType ? [filters.sellerType] : [] });
   facets.push({ kind: "brand", title: "Marca", ...(data ? { brands: data.brands } : {}) });
   for (const filter of attributeGroup(filters)?.filters ?? []) {
@@ -276,14 +291,22 @@ export function appliedFilters(filters: ListingFilters, scope: CatalogScope = {}
     const label = getInstrumentFilterGroup(filters.instrumentType)?.label ?? filters.instrumentType;
     add("instrument_type", "Tipo", label, { ...filters, instrumentType: undefined });
   }
-  for (const condition of filters.conditions) {
-    add(`condition:${condition}`, "Condición", getConditionLabel(condition), { ...filters, conditions: filters.conditions.filter((item) => item !== condition) });
+  // sell-10: three or more steps (an old "Usado - buen estado" link, the phrase "usado") read as one chip.
+  if (filters.conditions.length >= 3) {
+    add("condition", "Condición", conditionSetLabel(filters.conditions), { ...filters, conditions: [] });
+  } else {
+    for (const condition of filters.conditions) {
+      add(`condition:${condition}`, "Condición", getConditionLabel(condition), { ...filters, conditions: filters.conditions.filter((item) => item !== condition) });
+    }
   }
   if (filters.minPrice !== undefined || filters.maxPrice !== undefined) {
     add("price", "Precio", priceRangeLabel(filters.minPrice, filters.maxPrice), withPrice(filters, undefined, undefined));
   }
   for (const city of filters.cities) {
     add(`location:${city}`, "Ubicación", city, { ...filters, cities: filters.cities.filter((item) => item !== city) });
+  }
+  for (const flag of filters.options ?? []) {
+    add(`${OPTIONS_KEY}:${flag}`, OPTIONS_TITLE, listingFlagLabel(flag) ?? flag, { ...filters, options: (filters.options ?? []).filter((item) => item !== flag) });
   }
   if (filters.sellerType) {
     add("seller_type", "Vendedor", sellerTypeOptions.find((option) => option.value === filters.sellerType)?.label ?? filters.sellerType, { ...filters, sellerType: undefined });

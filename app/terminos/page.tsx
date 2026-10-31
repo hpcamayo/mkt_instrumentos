@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { TermsAssistedCommerceSection } from "@/components/legal/assisted-commerce-legal";
+import { TermsServicesSection } from "@/components/legal/services-legal";
+import { TermsFeatureToolsSection } from "@/components/legal/feature-ideas-legal"; // feature ideas: pending legal review
 import { LegalContact, LegalPage, LegalSection, MarketplaceLimitations } from "@/components/legal-page";
 import { DEFAULT_OG_IMAGES, OPEN_GRAPH_BASE } from "@/lib/site";
 
@@ -42,6 +44,8 @@ export default function TermsPage() {
           <li>Las publicaciones de Particulares y de Tiendas no verificadas se revisan antes de mostrarse. Algunos cambios en publicaciones aprobadas (por ejemplo título, categoría, marca, modelo, estado o fotos) también se revisan.</li>
           <li>Laria puede rechazar u ocultar una publicación que incumpla estas reglas; en ese caso indicará el motivo al propietario.</li>
           <li>Cuando vendas un artículo, márcalo como vendido. La publicación vendida se conserva como historial y no se reactiva.</li>
+          {/* discovery batch (disc-04): pending legal review, docs/feature-ideas/discovery.md */}
+          <li>Una tienda Fabricante o Taller puede publicar un instrumento que se hace a pedido. Sigue siendo un artículo concreto, con su precio y sus fotos, y la publicación indica en cuántas semanas estará listo. El plazo, el adelanto y lo que pasa si no se cumple los acuerdan comprador y tienda, fuera de Laria.</li>
         </ul>
       </LegalSection>
 
@@ -50,6 +54,10 @@ export default function TermsPage() {
           <li><strong>Tienda</strong>: la tienda pasó una aprobación básica de Laria y su página puede ser pública.</li>
           <li><strong>Tienda Verificada</strong>: Laria revisó manualmente datos comerciales como RUC, razón social y datos de contacto. No es una verificación automática ante SUNAT ni una garantía sobre los productos o las transacciones de la tienda.</li>
           <li>Cada tienda gratuita puede tener hasta 50 publicaciones activas o en revisión al mismo tiempo.</li>
+          {/* discovery batch (disc-04, disc-05, buy-05): pending legal review, docs/feature-ideas/discovery.md */}
+          <li><strong>Fabricante</strong> o <strong>Taller</strong>: lo declara la propia tienda, junto con la ciudad donde hace sus instrumentos. Laria no verifica cómo ni dónde se hizo cada instrumento y puede ocultar esa declaración si no es cierta.</li>
+          <li><strong>Artista verificado</strong>: Laria comprobó la identidad del músico que publica. Lo que cuenta sobre cómo usó el equipo es su palabra, no una verificación de Laria.</li>
+          <li>Si una tienda indica que acepta cambios de regalos, el plazo y las condiciones son suyos.</li>
         </ul>
       </LegalSection>
 
@@ -64,6 +72,10 @@ export default function TermsPage() {
           <li>Laria revisa algunas reseñas de compradores antes de mostrarlas, por ejemplo las primeras de cada vendedor o las de cuentas recién creadas, y no muestra las que no corresponden a una compra real.</li>
         </ul>
       </LegalSection>
+
+      <TermsServicesSection />
+
+      <TermsFeatureToolsSection />
 
       <LegalSection title="6. Conducta no permitida">
         <ul>

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { MarketplaceImage as Image } from "@/components/marketplace-image";
 import { PageContainer } from "@/components/page-container";
@@ -52,8 +53,11 @@ export function StoreHeader({
   location,
   preview = false,
   isOwner = false,
+  trust,
 }: {
   store: StoreHeaderData;
+  // deal-trust: «Tienda destacada» and «Punto seguro Laria» (components/trust/listing-trust StoreTrustMarks).
+  trust?: ReactNode;
   // The exact count of published listings; null when the query failed.
   total: number | null;
   rating: { average: number; count: number } | null;
@@ -83,6 +87,7 @@ export function StoreHeader({
                 {place ? <span className="t-ui text-ink-2">{place}</span> : null}
               </div>
               {location ? <StoreVisitLines location={location} className="mt-2" /> : null}
+              {trust}
               {store.description ? <p className="mt-3 max-w-[68ch] t-body text-ink-2">{store.description}</p> : null}
               {/* Accounts batch, save-12. Not in the owner's preview: a store that is not public cannot be followed. */}
               {preview || isOwner ? null : <div className="mt-3"><FollowButton storeId={store.id} label={store.name} /></div>}

@@ -10,6 +10,7 @@
 const { chromium } = require("playwright-core");
 const fs = require("node:fs");
 const path = require("node:path");
+const twoStep = require("./two-step.cjs"); // feature ideas, accounts batch (safe-08)
 
 const BASE = process.env.BASE || "http://localhost:3000";
 const CHROMIUM = process.env.CHROMIUM || "/opt/pw-browsers/chromium";
@@ -55,6 +56,13 @@ const PAGES = {
     "/mi-cuenta/tienda/pagos", "/mi-cuenta/tienda/estadisticas", "/mi-cuenta/publicaciones", "/tiendas/laria-demo-musica",
   ],
 };
+// store-floor (docs/feature-ideas/store-floor.md): Con garantía, Por llegar, try-outs, warranty, labels and poster.
+PAGES.visitor.push("/listados?opciones=con-garantia", "/instrumentos/demo-fender-player-strat-3ts");
+PAGES.buyer.push("/mi-cuenta/pruebas", "/instrumentos/demo-fender-player-strat-3ts", "/instrumentos/demo-boss-tu-3");
+PAGES.store.push("/mi-cuenta/tienda/garantia", "/mi-cuenta/tienda/pruebas", "/mi-cuenta/tienda/pruebas/horario",
+  "/mi-cuenta/tienda/etiquetas", "/mi-cuenta/tienda/etiquetas/cartel", "/mi-cuenta/tienda/inventario?stock=out");
+// store-floor, buy-09 "Cuotas": the filter (the listing page, the store page and Pagos are above).
+PAGES.visitor.push("/listados?opciones=acepta-cuotas");
 const ACCOUNTS = { buyer: "comprador@laria.test", seller: "particular@laria.test", store: "demo-tienda@laria.test" };
 const WIDTHS = [[390, 844, true], [1366, 900, false]];
 
@@ -64,6 +72,10 @@ async function login(page, email) {
   await page.getByLabel("Contraseña", { exact: true }).fill(PASSWORD);
   await page.getByRole("button", { name: "Ingresar", exact: true }).click();
   await page.waitForURL((url) => url.pathname.startsWith("/mi-cuenta"), { timeout: 20000 });
+  // Feature ideas, accounts batch (safe-08): the code step after the password, and the app turned on where Mi tienda
+  // requires it (the demo store has approved payment methods).
+  await twoStep.answer(page, email);
+  if (email.startsWith("demo-tienda@")) await twoStep.enable(page, BASE, email);
 }
 
 async function skuPages(page) {

@@ -40,6 +40,8 @@ export type InventoryItem = {
   last_movement_at: string | null;
   created_at: string;
   updated_at: string;
+  // store-floor, reach-08: the date the store expects units ("Por llegar"), only while none are available.
+  expected_arrival_on?: string | null;
   stock_level: StockLevel;
   listing: InventoryListing | null;
 };
@@ -338,6 +340,7 @@ export const CHANGE_LABELS: Record<string, string> = {
   unlink: "Publicación desvinculada",
   archive: "SKU archivado",
   unarchive: "SKU reactivado",
+  arrival: "Fecha estimada de llegada",
 };
 
 // "Disponible 7 · En tienda 7"; reserved units appear only once reservations exist (D-4).

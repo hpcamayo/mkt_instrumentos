@@ -5,7 +5,9 @@ import {
   isInstrumentTypeValid,
   sanitizeListingAttributes,
 } from "@/lib/listing-submission";
-import { categoryOptions, conditionOptions } from "@/lib/listings";
+import { categoryOptions } from "@/lib/listings";
+import { currentCondition, isValidCondition } from "@/lib/listing-condition";
+import { checkListingDetails, detailWriterError, type ListingDetails } from "@/lib/listing-details";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin-client";
@@ -137,6 +139,7 @@ export async function POST(request: Request) {
   const input = body.fields;
   if (!input || typeof input !== "object" || Array.isArray(input))
     return failure("Datos inválidos.");
+  let details: ListingDetails = {};
   const fields: Record<string, unknown> = {};
   const isListing = kind === "listing" || kind === "store_listing";
   const names =
@@ -186,9 +189,12 @@ export async function POST(request: Request) {
         ? await getListingAccount()
         : await getStoreOwnerAccount(true);
     if (!account.ok) return failure(account.message, account.status);
+    // sell-10: an old value (a form opened before the scale, an old app) maps to its step, as the database does.
+    fields.condition = currentCondition(String(fields.condition));
     if (
       !categoryOptions.some((option) => option.value === fields.category) ||
-      !conditionOptions.some((value) => value === fields.condition) ||
+      // sell-10: the scale; "Exhibición o caja abierta" only for a store.
+      !isValidCondition(String(fields.condition), kind === "store_listing") ||
       !normalizePeruRegion(String(fields.region))
     )
       return failure("Revisa la categoría, condición y ubicación.");
@@ -231,6 +237,10 @@ export async function POST(request: Request) {
       }
     }
     fields.marketplace_rules_accepted = true;
+    // listing-details: sale terms and other batches' fields (lib/listing-details.ts), stored with the listing.
+    const checked = checkListingDetails(body.details, { isStore: kind === "store_listing" });
+    if (!checked.ok) return failure(checked.message);
+    details = checked.details;
   } else {
     const region = normalizePeruRegion(String(fields.region));
     if (!region) return failure("Selecciona una región válida.");
@@ -306,18 +316,33 @@ export async function POST(request: Request) {
       return failure("Revisa las imágenes opcionales de la tienda.");
     }
   }
-  const { error } = await client.rpc("complete_public_submission", {
-    p_id: id,
-    p_kind: kind,
-    p_fields: fields as Json,
-    p_photos: photos,
-  });
+  // A listing goes through complete_listing_submission (20261202120100): the same insert, plus its details in the same
+  // transaction, before saved alerts look at it.
+  const { error } = isListing
+    ? await client.rpc("complete_listing_submission", {
+        p_id: id,
+        p_kind: kind,
+        p_fields: fields as Json,
+        p_photos: photos,
+        p_details: details as Json,
+      })
+    : await client.rpc("complete_public_submission", {
+        p_id: id,
+        p_kind: kind,
+        p_fields: fields as Json,
+        p_photos: photos,
+      });
   if (error?.message.includes("stores_ruc_unique_idx"))
     return failure("Este RUC ya está registrado en Laria.", 409);
   if (error?.message.includes("stores_owner_user_unique_idx"))
     return failure("Esta cuenta ya tiene una solicitud de tienda.", 409);
   if (error?.message.includes("STORE_INVENTORY_LIMIT_REACHED"))
     return failure(listingLimitMessage(error.message), 409);
+  // listing-details: a detail writer's refusal (sale terms, discovery's maker marks) in the seller's words.
+  const detailProblem = detailWriterError(error?.message);
+  if (detailProblem) return failure(detailProblem);
+  if (error?.message.includes("LISTING_CONDITION_INVALID"))
+    return failure("Elige una condición de la escala.");
   // Launch audit A18: a photo the daily sweep removed meanwhile (laria_private.guard_upload_attachment).
   if (error?.message.includes("UPLOAD_REMOVED"))
     return failure("Una de las fotos ya no está guardada en Laria. Quítala y vuelve a subirla.", 409);

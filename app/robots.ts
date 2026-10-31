@@ -11,7 +11,9 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: [{
       userAgent: "*",
-      allow: "/",
+      // Feature ideas, store-reach batch (reach-02): Google Merchant Center and Meta read robots.txt before fetching a
+      // product feed; the longer Allow wins over "Disallow: /api/".
+      allow: ["/", "/api/feeds/"],
       disallow: privatePaths,
     }, {
       userAgent: [...LIMITED_CATALOG_CRAWLERS],

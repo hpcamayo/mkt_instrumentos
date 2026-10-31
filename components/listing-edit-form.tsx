@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { LocationFields } from "@/components/location-fields";
 import { PageNotice } from "@/components/page-notice";
 import { ConditionCards, FormSection } from "@/components/selling/choice-fields";
+import { ListingDetailFields } from "@/components/listing-details/detail-fields";
+import { PriceModeField, SALE_TERMS_KEY } from "@/components/listing-details/sale-terms-fields";
 import { MAX_SOURCE_PHOTO_BYTES, prepareListingPhoto } from "@/components/selling/prepare-photo";
 import { getInstrumentFilterGroup } from "@/lib/instrument-filters";
 import {
@@ -15,9 +17,12 @@ import {
   getInstrumentTypeOptions,
   type ListingSubmissionAttributes,
 } from "@/lib/listing-submission";
-import { categoryOptions, conditionOptions } from "@/lib/listings";
+import { currentCondition } from "@/lib/listing-condition";
+import { checkListingDetails } from "@/lib/listing-details";
+import { categoryOptions, conditionOptions, particularConditionOptions } from "@/lib/listings";
 import { normalizePeruRegion } from "@/lib/location";
 import { parseWholeSolPrice } from "@/lib/price";
+import { readSaleTerms, saleTermsFromListing, type ListingSaleTerms } from "@/lib/sale-terms";
 import { conditionChoices, validateSellDraft } from "@/lib/sell-form";
 import { useFormErrors } from "@/components/use-form-errors";
 import { returnLabel } from "@/lib/listing-return";
@@ -30,6 +35,7 @@ import { PriceInput } from "@/components/ui/price-input";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
 import { Textarea } from "@/components/ui/textarea";
+import { ListingSerialField } from "@/components/stolen-gear/listing-serial-field";
 
 type ExistingPhoto = {
   id: string;
@@ -38,8 +44,9 @@ type ExistingPhoto = {
   sort_order: number;
 };
 
-type EditableListing = {
+type EditableListing = ListingSaleTerms & {
   id: string;
+  store_id?: string | null;
   title: string;
   status: string;
   category: string;
@@ -105,6 +112,11 @@ export function ListingEditForm({
   const photosRef = useRef(photos);
   const busyRef = useRef(false);
   const attemptRef = useRef<EditAttempt | null>(null);
+  // listing-details: sale terms and other batches' fields, saved at once through the "details" action.
+  const isStore = Boolean(listing.store_id);
+  const savedDetails = useMemo<Record<string, unknown>>(() => ({ [SALE_TERMS_KEY]: saleTermsFromListing(listing) }), [listing]);
+  const [details, setDetails] = useState(savedDetails);
+  const [detailError, setDetailError] = useState<{ key?: string; field?: string; message: string } | null>(null);
 
   useEffect(() => {
     photosRef.current = photos;
@@ -155,7 +167,7 @@ export function ListingEditForm({
         ? "Como Tienda verificada, tus cambios se aplican directamente."
         : hasPendingRevision
           ? "Ya tienes cambios en revisión. Puedes seguir ajustando título, categoría, tipo, marca, modelo, condición o fotos; se actualizarán esos mismos cambios sin modificar la versión pública."
-          : "Precio, descripción, ubicación y características se actualizan ahora. Título, categoría, tipo, marca, modelo, condición y fotos requieren revisión; la versión pública actual no cambia mientras tanto."
+          : "Precio, descripción, ubicación, características, entrega y cambios se actualizan ahora. Título, categoría, tipo, marca, modelo, condición y fotos requieren revisión; la versión pública actual no cambia mientras tanto."
       : "Los cambios se guardan directamente porque esta publicación todavía no es una versión pública aprobada.";
 
   function showMessage(nextState: "success" | "error", value: string) {
@@ -284,8 +296,12 @@ export function ListingEditForm({
       price: read(formData, "price_pen"), priceValue: values.price_pen,
       city: values.city, region: read(formData, "region"), regionValue: values.region,
       description: values.description, acceptedRules: true,
+      details, isStore,
     });
-    if (!validation.validate(event.currentTarget, Object.fromEntries(errors.map((error) => [error.field, error.message])))) {
+    // A detail's error belongs to its input (named `editar-<field>` in components/listing-details).
+    const detailProblem = errors.find((error) => error.field === "details");
+    setDetailError(detailProblem ? { key: detailProblem.key, field: detailProblem.target, message: detailProblem.message } : null);
+    if (!validation.validate(event.currentTarget, Object.fromEntries(errors.map((error) => [error.target ? `editar-${error.target}` : error.field, error.message])))) {
       setMessage("");
       setState("idle");
       return;
@@ -293,15 +309,24 @@ export function ListingEditForm({
 
     const immediate = changedValues(values, listing, ["price_pen", "description", "city", "region", "attributes"]);
     const moderated = changedValues(values, listing, ["title", "category", "instrument_type", "brand", "model", "condition"]);
+    const checkedDetails = checkListingDetails(details, { isStore });
+    const checkedSaved = checkListingDetails(savedDetails, { isStore });
+    const detailsChanged = checkedDetails.ok && JSON.stringify(checkedDetails.details) !== JSON.stringify(checkedSaved.ok ? checkedSaved.details : null);
     const unchanged = !Object.keys(immediate).length && !Object.keys(moderated).length && !photosChanged;
-    if (unchanged && !sendsForReview) {
+    if (unchanged && !detailsChanged && !sendsForReview) {
       return showMessage("error", "No hay cambios para guardar.");
     }
     if (unchanged) {
       busyRef.current = true;
       setBusy(true);
-      setProgress(isVerifiedStore ? "Publicando…" : "Enviando a revisión…");
+      setProgress(sendsForReview ? (isVerifiedStore ? "Publicando…" : "Enviando a revisión…") : "Guardando los cambios…");
       try {
+        if (detailsChanged && checkedDetails.ok) await saveDetails(checkedDetails.details);
+        if (!sendsForReview) {
+          showMessage("success", "Los cambios se guardaron correctamente.");
+          router.refresh();
+          return;
+        }
         await submitForReview();
       } catch (error) {
         showMessage("error", error instanceof Error ? error.message : "No se pudo enviar la publicación.");
@@ -368,6 +393,7 @@ export function ListingEditForm({
       attempt.prepared = true;
       finalizationStarted = true;
       setProgress("Guardando los cambios…");
+      if (detailsChanged && checkedDetails.ok) await saveDetails(checkedDetails.details);
       const response = await fetch(`/api/listings/${listing.id}/manage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -412,6 +438,23 @@ export function ListingEditForm({
       setBusy(false);
       setProgress("");
     }
+  }
+
+  async function saveDetails(payload: Record<string, unknown>) {
+    const response = await fetch(`/api/listings/${listing.id}/manage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "details", details: payload }),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(result?.message ?? "No se pudo guardar la entrega y los cambios. Intenta nuevamente.");
+  }
+
+  function setDetail(key: string, value: unknown) {
+    setDetails((current) => ({ ...current, [key]: value }));
+    setDetailError(null);
+    setState("idle");
+    setMessage("");
   }
 
   async function submitForReview() {
@@ -473,8 +516,9 @@ export function ListingEditForm({
 
       <FormSection id="editar-condicion" title="Condición y precio">
         {flagged.has("condition") || showsReviewSplit ? <div className="-mb-2">{fieldTag("condition")}</div> : null}
-        <ConditionCards id="editar-condition" name="condition" legend="Condición" options={conditionChoices(conditionOptions)} defaultValue={listing.condition ?? ""} error={validation.errorFor("condition")} />
+        <ConditionCards id="editar-condition" name="condition" legend="Condición" options={conditionChoices(isStore ? conditionOptions : particularConditionOptions)} defaultValue={currentCondition(listing.condition) ?? ""} error={validation.errorFor("condition")} />
         <Field id="editar-price_pen" label={labelWith("Precio en soles", "price_pen")} error={validation.errorFor("price_pen")} className="sm:max-w-xs"><PriceInput name="price_pen" required defaultValue={listing.price_pen} /></Field>
+        <PriceModeField idPrefix="editar" value={readSaleTerms(details[SALE_TERMS_KEY]).price_mode} onChange={(mode) => setDetail(SALE_TERMS_KEY, { ...readSaleTerms(details[SALE_TERMS_KEY]), price_mode: mode })} />
       </FormSection>
 
       <FormSection id="editar-ubicacion" title="Ubicación" hint={showsReviewSplit ? "Se publica al instante." : undefined}>
@@ -493,6 +537,9 @@ export function ListingEditForm({
           {attributeGroup.filters.map((filter) => <AttributeField key={filter.key} filter={filter} value={listing.attributes?.[filter.key]} />)}
         </fieldset>
       ) : null}
+      <ListingDetailFields idPrefix="editar" heading="h2" details={details} onChange={setDetail} error={detailError} isStore={isStore} />
+      {/* Feature ideas, accounts batch (safe-02): the private serial number, saved on its own. */}
+      <ListingSerialField listingId={listing.id} />
       </fieldset>
       {busy ? <p role="status" aria-live="polite" className="t-ui font-semibold text-ink-2">{progress}</p> : null}
       {showsReviewSplit && (pendingKinds.immediate || pendingKinds.moderated) ? (

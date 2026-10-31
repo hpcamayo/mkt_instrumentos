@@ -66,7 +66,8 @@ const storeIds = [];
     assert.equal(edit.error, null);
     assert.equal(edit.data.mode, "revision");
     const before = await service.from("listings").select("title,condition,price_pen,status").eq("id", liveId).single();
-    assert.deepEqual(before.data, { title: "Publicación Sprint 3", condition: "Usado - buen estado", price_pen: 1100, status: "approved" });
+    // sell-10 (features/marketplace): the old condition values are stored as their step on the scale.
+    assert.deepEqual(before.data, { title: "Publicación Sprint 3", condition: "Muy bueno", price_pen: 1100, status: "approved" });
 
     const revision = await service.from("listing_revisions").select("id,status").eq("listing_id", liveId).single();
     assert.equal(revision.data.status, "pending");
@@ -77,7 +78,7 @@ const storeIds = [];
       p_expected_version: 1,
     })).error, null);
     const after = await service.from("listings").select("title,condition,price_pen,status").eq("id", liveId).single();
-    assert.deepEqual(after.data, { title: "Título propuesto de integración", condition: "Usado - con detalles", price_pen: 1100, status: "approved" });
+    assert.deepEqual(after.data, { title: "Título propuesto de integración", condition: "Bueno", price_pen: 1100, status: "approved" });
     // Admin's approval reaches the cached pages through the refresh job, which runs every minute in production.
     const approvedTitle = (html) => /Título propuesto de integración/.test(html);
     const approvedDetailHtml = await pageOnceRefreshed(base, `/instrumentos/${exactPriceApi.data.slug}`, approvedTitle, "the approved title");

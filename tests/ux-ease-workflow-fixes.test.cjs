@@ -98,6 +98,7 @@ function refreshFixture(){
     "next/server":{NextResponse:{json:(body,options={})=>new Response(JSON.stringify(body),options)}},
     "@/lib/supabase/server-client":{getSupabaseServerClient:async()=>({auth:{getUser:async()=>({data:{user:signedIn?{id:signedIn}:null}})}})},
     "@/lib/supabase/admin-client":{getSupabaseAdminClient:()=>admin},
+    "@/lib/auth/complete-session":{sessionOwesTwoStep:async()=>false},
     "@/lib/listing-cache":{dropListingPages:slugs=>cleared.push(...slugs)},
   });
   return{owner,queries,cleared,signOut:()=>{signedIn=null;},failSecond:()=>{failedPage=1000;},

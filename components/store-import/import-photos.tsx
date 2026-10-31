@@ -10,6 +10,7 @@ import { ErrorSummary } from "@/components/ui/error-summary";
 import { Field, FileInput, Select } from "@/components/ui/field";
 import { Notice } from "@/components/ui/notice";
 import { Tag } from "@/components/ui/tag";
+import { MercadoLibrePhotos } from "@/components/store-reach/mercadolibre-photos";
 import {
   PHOTO_MAX_FILE_BYTES,
   PHOTO_MAX_FILES,
@@ -218,6 +219,8 @@ export function ImportPhotos({ sessionId, onBack, onContinue, continueLabel = "C
           {intro ?? "Opcional. Cada SKU necesita de 2 a 10 fotos para publicarse; el inventario se importa igual sin ellas."}
         </p>
       </div>
+      {/* Feature ideas, store-reach batch (reach-01): photos of an import made from Mercado Libre. */}
+      <MercadoLibrePhotos sessionId={sessionId} onCopied={load} />
       {onContinue && view.rows.length > 10 ? (
         <div className="flex flex-wrap gap-3">
           <Button onClick={onContinue} disabled={Boolean(progress)}>{continueLabel}</Button>

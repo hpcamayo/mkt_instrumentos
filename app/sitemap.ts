@@ -1,11 +1,16 @@
 import type { MetadataRoute } from "next";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { categoryLandingPages } from "@/lib/category-pages";
+import { collectionPath } from "@/lib/discovery/collections";
+import { discoverySitemapPaths } from "@/lib/discovery/sitemap";
 import { legalPages } from "@/lib/legal-pages";
 import { DISCOVERABLE_STOCK_FILTER } from "@/lib/listings";
 import { renderPerRequestIfBuilding } from "@/lib/cache-build";
 import { absoluteUrl, isIndexableDeployment } from "@/lib/site";
 import { READ_BUDGETS, createDeadline } from "@/lib/request-deadline";
 import { createPublicReadClient } from "@/lib/supabase/public-read-client";
+import { SERVICE_CATEGORIES, serviceCategoryPath } from "@/lib/services";
+import { servicesDb } from "@/lib/services-db";
 
 // Launch audit A19: built at most once an hour instead of on every crawler request. A failed read throws, so the cache
 // keeps the last full sitemap rather than an hour of a partial one (during the deploy, lib/cache-build.ts).
@@ -15,6 +20,7 @@ export const revalidate = 3600;
 const BATCH_SIZE = 1000;
 const MAX_LISTINGS = 20000;
 const MAX_STORES = 2000;
+const MAX_SERVICES = 5000;
 
 type Entry = MetadataRoute.Sitemap[number];
 
@@ -32,6 +38,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...categoryLandingPages.map((landing): Entry => ({
       url: absoluteUrl(`/instrumentos/${landing.slug}`), changeFrequency: "daily", priority: 0.8,
     })),
+    // discovery batch: the gift finder, guides, Hecho en Perú and artists (collections are added with the stores).
+    ...discoverySitemapPaths().map((path): Entry => ({ url: absoluteUrl(path), changeFrequency: "weekly", priority: 0.5 })),
   ];
 
   // Each batch gets the core budget, all of them 20 s together.
@@ -66,6 +74,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       entries.push({ url: absoluteUrl(`/instrumentos/${listing.slug}`), lastModified: listing.updated_at, changeFrequency: "weekly", priority: 0.7 });
     }
     if (data.length < BATCH_SIZE) break;
+  }
+
+  // feature-ideas services (bet-02): the services section, its five category pages and every public service.
+  entries.push(
+    { url: absoluteUrl("/servicios"), changeFrequency: "daily", priority: 0.6 },
+    ...SERVICE_CATEGORIES.map((category): Entry => ({ url: absoluteUrl(serviceCategoryPath(category)), changeFrequency: "daily", priority: 0.5 })),
+  );
+  // Like the batches above, a failed read throws (launch audit A19).
+  for (let offset = 0; offset < MAX_SERVICES; offset += BATCH_SIZE) {
+    const { data, error } = await servicesDb(supabase).rpc("get_public_service_paths", { p_offset: offset, p_limit: BATCH_SIZE });
+    if (error || !Array.isArray(data)) return readFailed("services", error);
+    for (const service of data as { path: string; updated_at: string }[]) {
+      entries.push({ url: absoluteUrl(service.path), lastModified: service.updated_at, changeFrequency: "weekly", priority: 0.5 });
+    }
+    if (data.length < BATCH_SIZE) break;
+  }
+
+  // disc-03: the collections inside their dates (RLS leaves the rest out).
+  const { data: collections, error: collectionsError } = await (supabase as unknown as SupabaseClient)
+    .from("collections").select("slug,updated_at").order("slug").range(0, 99);
+  if (collectionsError || !collections) return readFailed("collections", collectionsError);
+  for (const collection of collections as { slug: string; updated_at: string }[]) {
+    entries.push({ url: absoluteUrl(collectionPath(collection.slug)), lastModified: collection.updated_at, changeFrequency: "weekly", priority: 0.5 });
   }
 
   return entries;

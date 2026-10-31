@@ -7,12 +7,14 @@ import { getSafeAuthRedirect } from "@/lib/auth/redirects";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { useFormErrors } from "@/components/use-form-errors";
 import { Button, buttonClasses } from "@/components/ui/button";
-import { Field, Input } from "@/components/ui/field";
+import { Checkbox, Field, Input } from "@/components/ui/field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Notice } from "@/components/ui/notice";
 import { ResendConfirmation } from "@/components/auth/resend-confirmation";
+import { OAuthButtons, oauthProvidersEnabled } from "@/components/auth/oauth-buttons";
 import { isEmailNotConfirmedError } from "@/lib/auth/confirmation";
 import { TOO_MANY_ATTEMPTS, TOO_MANY_EMAILS, isAuthRateLimited } from "@/lib/auth/limits";
+import { rememberMarker, serializeCookie } from "@/lib/auth/remember";
 import { twoStepPath } from "@/lib/auth/two-step";
 
 type FormState = "idle" | "submitting" | "sent" | "error";
@@ -29,6 +31,9 @@ export function LoginForm() {
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   // auth-01: after a failed password, offer the e-mail link for the address already typed.
   const [failedEmail, setFailedEmail] = useState<string | null>(null);
+  // safe-08 (accounts batch): "Mantener sesión iniciada". Ticked, the session (and its second step) lasts until the
+  // person signs out; unticked, it ends when the browser closes.
+  const [remember, setRemember] = useState(true);
   const nextPath = useMemo(
     () => getSafeAuthRedirect(searchParams.get("next")),
     [searchParams],
@@ -71,6 +76,10 @@ export function LoginForm() {
         setMessage("No se pudo iniciar sesión.");
         return;
       }
+      // safe-08: the "Mantener sesión iniciada" marker goes first, because the browser client reads it when it writes
+      // the session cookies.
+      const marker = rememberMarker(remember, window.location.protocol === "https:");
+      document.cookie = serializeCookie(marker.name, marker.value, marker.options);
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setState("error");
@@ -89,6 +98,9 @@ export function LoginForm() {
         return;
       }
 
+      // safe-08: the server records this browser (its identifier cookie is httpOnly) and e-mails about a new one. It
+      // never holds up the sign-in.
+      await fetch("/api/account/sessions/device", { method: "POST", credentials: "include" }).catch(() => null);
       // Launch audit A15: an account with an authenticator app finishes signing in with its code.
       const { data: level } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       window.location.assign(level?.currentLevel === "aal1" && level.nextLevel === "aal2" ? twoStepPath("codigo", nextPath) : nextPath);
@@ -108,7 +120,7 @@ export function LoginForm() {
 
     const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
       nextPath,
-    )}`;
+    )}${remember ? "" : "&recordar=0"}`;
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -196,6 +208,14 @@ export function LoginForm() {
           </Notice>
         ) : null}
 
+        <Checkbox
+          name="remember"
+          checked={remember}
+          onChange={(event) => setRemember(event.currentTarget.checked)}
+          label="Mantener sesión iniciada"
+          description="Desmárcalo en una computadora compartida: la sesión se cerrará al cerrar el navegador."
+        />
+
         <Button
           type="submit"
           block
@@ -210,6 +230,13 @@ export function LoginForm() {
           </Link>
         ) : null}
       </form>
+
+      {/* buy-11 (accounts batch): Google and Apple, once switched on. */}
+      {oauthProvidersEnabled() ? (
+        <div className="space-y-3 border-t border-subtle pt-4">
+          <OAuthButtons next={nextPath} remember={remember} />
+        </div>
+      ) : null}
 
       {/* save-02, save-03: creating an account is an equal choice, and it keeps the way back. */}
       <div className="space-y-3 border-t border-subtle pt-4 t-ui text-ink-2">

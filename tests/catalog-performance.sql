@@ -191,7 +191,8 @@ select ('9f100000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
   case when n % 17 = 0 then null when n % 23 = 0 then '  ' else
     (array['Fender', 'fender ', 'Ibanez', 'Shure', 'Boss', 'Marshall', 'Yamaha', 'Gibson', 'Focusrite', '% Rara_'])[1 + n % 10] end,
   nullif((array['Stratocaster', 'Telecaster', 'SM58', 'DS-1', 'Les Paul', 'Scarlett 2i2', 'PSR', ''])[1 + n % 8], ''),
-  (array['Nuevo', 'Usado - como nuevo', 'Usado - buen estado', 'Usado - con detalles'])[1 + n % 4],
+  -- The condition scale of 20261202120000 (sell-10).
+  (array['Nuevo', 'Como nuevo', 'Muy bueno', 'Bueno'])[1 + n % 4],
   case when n % 19 = 0 then null else 100 + (n * 37) % 4900 end,
   (array['Lima', 'Lima', 'Arequipa', 'Cusco', 'Trujillo', 'Chimbote', 'Iquitos'])[1 + n % 7], 'Peru',
   '5199100' || lpad(n::text, 4, '0'), now() - (n || ' hours')::interval,
@@ -280,7 +281,7 @@ begin
       ('{"category": "guitars", "instrument_type": "electric_guitar", "advanced": {"pickups": "hh"}}', '{pickups,strings}'),
       ('{"advanced": {"connection": ["xlr"], "microphone_type": "dynamic"}}', '{connection,microphone_type,pickups}'),
       ('{"advanced": {"connection": "usb"}}', '{connection}'),
-      ('{"cities": ["Lima", "Arequipa"], "conditions": ["Nuevo", "Usado - buen estado"]}', '{}'),
+      ('{"cities": ["Lima", "Arequipa"], "conditions": ["Nuevo", "Muy bueno"]}', '{}'),
       ('{"brand": "fen", "min_price": 500, "max_price": 3000}', '{}'),
       ('{"brand": "%"}', '{}'),
       ('{"brand": "rara_"}', '{}'),
@@ -297,9 +298,9 @@ begin
       old_facets := catalog_perf_old.catalog_facets(f.filters, q, f.keys);
       new_facets := public.catalog_facets(f.filters, q, f.keys);
       -- The previous brand list cut at 30 without a tie-break; the new one breaks ties by name. Same counts, and every
-      -- listed brand with its previous count.
-      if (old_facets - 'brands') is distinct from (new_facets - 'brands') then
-        raise exception 'catalog_facets(%, %) differs: % against %', f.filters, q, old_facets - 'brands', new_facets - 'brands';
+      -- listed brand with its previous count. "options" is new (20261202120400, listing flags).
+      if (old_facets - 'brands') is distinct from (new_facets - 'brands' - 'options') then
+        raise exception 'catalog_facets(%, %) differs: % against %', f.filters, q, old_facets - 'brands', new_facets - 'brands' - 'options';
       end if;
       if (select array_agg((b->>'count')::int order by (b->>'count')::int desc) from jsonb_array_elements(old_facets->'brands') b)
          is distinct from (select array_agg((b->>'count')::int order by (b->>'count')::int desc) from jsonb_array_elements(new_facets->'brands') b) then

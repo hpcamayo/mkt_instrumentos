@@ -1,0 +1,337 @@
+{
+ "safe-01": {
+  "v": "maybe",
+  "note": "next wave. im thinking of charging perticular sellers a fee when the item is over 500 or 1000 soles. not defined yet.",
+  "at": "2026-10-26T16:39:26.852Z"
+ },
+ "safe-02": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:39:35.650Z"
+ },
+ "safe-03": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:40:07.633Z"
+ },
+ "safe-04": {
+  "v": "maybe",
+  "note": "def Yes but later. i have to look for partners first.",
+  "at": "2026-10-26T16:40:50.602Z"
+ },
+ "safe-05": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:40:55.331Z"
+ },
+ "safe-06": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:41:02.849Z"
+ },
+ "safe-07": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:41:18.764Z"
+ },
+ "safe-08": {
+  "v": "yes",
+  "note": "yes but i dont want the seller to be inputting their token everytime they open their account. the 'keep me logged in' option must work 100%;",
+  "at": "2026-10-26T16:42:34.178Z"
+ },
+ "safe-09": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:41:59.832Z"
+ },
+ "safe-10": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:42:43.682Z"
+ },
+ "safe-11": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:42:52.131Z"
+ },
+ "buy-01": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:43:04.931Z"
+ },
+ "buy-02": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:43:08.015Z"
+ },
+ "buy-03": {
+  "v": "maybe",
+  "note": "",
+  "at": "2026-10-26T16:43:23.731Z"
+ },
+ "buy-04": {
+  "v": "maybe",
+  "note": "",
+  "at": "2026-10-26T16:43:40.864Z"
+ },
+ "buy-05": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:43:49.948Z"
+ },
+ "buy-06": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:44:02.614Z"
+ },
+ "buy-07": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:44:09.480Z"
+ },
+ "buy-08": {
+  "v": "yes",
+  "note": "i want this. there are def free map tile providers. we dont need laria to give directions, a simple link to google maps or waze would suffice.",
+  "at": "2026-10-26T16:45:15.157Z"
+ },
+ "buy-09": {
+  "v": "yes",
+  "note": "next wave",
+  "at": "2026-10-26T16:45:25.763Z"
+ },
+ "buy-10": {
+  "v": "maybe",
+  "note": "later.",
+  "at": "2026-10-26T16:45:48.916Z"
+ },
+ "buy-11": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:45:50.997Z"
+ },
+ "sell-01": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:46:01.296Z"
+ },
+ "sell-02": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:46:07.247Z"
+ },
+ "sell-03": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:46:15.896Z"
+ },
+ "sell-04": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:46:27.064Z"
+ },
+ "sell-05": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:46:32.780Z"
+ },
+ "sell-06": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:46:37.580Z"
+ },
+ "sell-07": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:46:40.396Z"
+ },
+ "sell-08": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:46:42.680Z"
+ },
+ "sell-09": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:47:03.214Z"
+ },
+ "sell-10": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:47:22.213Z"
+ },
+ "reach-01": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:47:30.113Z"
+ },
+ "reach-02": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:47:46.430Z"
+ },
+ "reach-03": {
+  "v": "maybe",
+  "note": "",
+  "at": "2026-10-26T16:48:18.280Z"
+ },
+ "reach-04": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:48:25.830Z"
+ },
+ "reach-05": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:48:33.364Z"
+ },
+ "reach-06": {
+  "v": "yes",
+  "note": "incredible, market IQ reports for sellers is perhaps the best idea yet.\n\nwe should be very strict and clear here though. dont suggest stores to just stock up on the most searched items, we have to explain the limitations of our recommendation model and stats.",
+  "at": "2026-10-26T16:50:18.066Z"
+ },
+ "reach-07": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:50:19.546Z"
+ },
+ "reach-08": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:50:23.796Z"
+ },
+ "reach-09": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:50:27.246Z"
+ },
+ "reach-10": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:50:32.946Z"
+ },
+ "reach-11": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:50:38.179Z"
+ },
+ "run-01": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:51:06.731Z"
+ },
+ "run-02": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:51:10.046Z"
+ },
+ "run-03": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:51:12.996Z"
+ },
+ "run-04": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:51:23.429Z"
+ },
+ "money-01": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:51:50.123Z"
+ },
+ "money-02": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:52:19.529Z"
+ },
+ "disc-01": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:52:26.945Z"
+ },
+ "disc-02": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:52:43.029Z"
+ },
+ "disc-03": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:52:47.628Z"
+ },
+ "disc-04": {
+  "v": "yes",
+  "note": "perhaps we should have some features for stores who are direct manufacturers. this would work wonders for traditional peruvian instruments like quenas or tinyas. right now there is no dedicated category for those (there should be) ",
+  "at": "2026-10-26T16:54:21.444Z"
+ },
+ "disc-05": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:54:24.278Z"
+ },
+ "disc-06": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:54:40.597Z"
+ },
+ "disc-07": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:55:01.389Z"
+ },
+ "disc-08": {
+  "v": "yes",
+  "note": "",
+  "at": "2026-10-26T16:55:05.935Z"
+ },
+ "bet-01": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:55:19.379Z"
+ },
+ "bet-02": {
+  "v": "yes",
+  "note": "love this. we shouldnt mix service listings with items though. ",
+  "at": "2026-10-26T16:56:00.991Z"
+ },
+ "bet-03": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:56:23.592Z"
+ },
+ "bet-04": {
+  "v": "maybe",
+  "note": "",
+  "at": "2026-10-26T16:56:29.374Z"
+ },
+ "bet-05": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:56:52.397Z"
+ },
+ "bet-06": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:57:03.172Z"
+ },
+ "bet-07": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:57:17.734Z"
+ },
+ "bet-08": {
+  "v": "yes",
+  "note": "later",
+  "at": "2026-10-26T16:57:41.261Z"
+ },
+ "earn-01": {
+  "v": "yes",
+  "note": "later. no charging in the pilot yet.",
+  "at": "2026-10-26T16:58:30.531Z"
+ },
+ "earn-02": {
+  "v": "yes",
+  "note": "later. no charging yet.",
+  "at": "2026-10-26T16:58:48.767Z"
+ }
+}

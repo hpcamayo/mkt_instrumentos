@@ -20,7 +20,8 @@ which:
    `supabase/seed.sql`. Auth is set like production where the cases depend on it: e-mail confirmation on, passwords
    of 8 characters or more, authenticator codes (Admin's pages and functions need them since A06 and A15).
 2. Writes `.env.local` from `supabase status` with a new `CRON_SECRET`, builds the app and starts the production
-   build on `http://localhost:3100`.
+   build on `http://localhost:3100` (or the unused port in `LARIA_TEST_APP_PORT`). The run refuses an occupied app
+   port before starting the stack, so it cannot accidentally test another local app.
 3. Runs the tests below one after another. The app's per-visitor limits start from zero for each file.
 4. Lists every `PASS <case>` line in `cases.txt` and every `NOTE <case>` line (a case only the owner can settle) in
    `notes.txt`, both shown in the run's summary. The logs (the stack's start, each test, the build, the
@@ -74,6 +75,15 @@ refresh job, as production's cron does every minute (`tests/support/page-refresh
 Effortless Laria's price alert rule (save-08): a listing alerts at most once in 24 hours, and only for a drop of 5% or
 more.
 
+`tests/pilot-security.integration.cjs` also runs here. It checks Admin-only two-step sign-in, retirement of legacy
+non-Admin factors (including a password change), recovery revocation of refresh tokens and issued API/Storage tokens,
+the service-contact authorization boundary, and anonymous help-ticket limits across different e-mail addresses.
+
+`tests/review-followup.integration.cjs` checks CSV and Excel stock exports for 200 items across six locations through
+the API's 1,000-row cap, identical and changed location-movement retries, and the actual account download for a counter
+purchase and private equipment. The SQL suites cover cross-feature export privacy and count retries; the database
+integration runner also checks both buyer-wide try-out limits with concurrent requests at different stores.
+
 ## What `cases.tsv` records
 
 The run of 27 Oct 2026 (GitHub Actions run 40574393086, commit 30e9c1f) passed every check. The 52 Automated cases
@@ -108,6 +118,10 @@ cd ../mkt_instrumentos-acceptance
 pnpm install --frozen-lockfile
 bash scripts/acceptance/full-stack.sh /tmp/laria-acceptance
 ```
+
+If another app uses port 3100, set an unused port, for example
+`LARIA_TEST_APP_PORT=32154 bash scripts/acceptance/full-stack.sh /tmp/laria-acceptance`. The temporary Auth redirect
+URLs use that same port.
 
 Its stack is a project of its own, `laria_acceptance`, on its own ports (55321 for the API, 55322 for the database,
 55324 for the e-mail viewer). The CLI names containers and data volumes after the project, so the run never reuses,

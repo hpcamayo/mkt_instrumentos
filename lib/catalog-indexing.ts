@@ -7,6 +7,8 @@ type SearchParams = Record<string, string | string[] | undefined>;
 export const catalogFilterKeys: ReadonlySet<string> = new Set([
   "q", "category", "location", "city", "condition", "brand", "seller_type", "instrument_type",
   "min_price", "max_price", "sort",
+  // listing-details (features/marketplace): "Envía a provincia", "Se puede probar", "Acepta cambios" (lib/listing-flags.ts).
+  "opciones",
   ...instrumentFilterGroups.flatMap((group) => group.filters.map((filter) => filter.key)),
 ]);
 

@@ -13,7 +13,7 @@ URL="postgresql://postgres@127.0.0.1:${LARIA_PGPORT:-54322}/postgres"
 
 # Left out because they need the running app and the Supabase API: the Acceptance workflow runs them on a full local
 # stack (docs/acceptance/full-stack.md, docs/operations/ci.md).
-APP_TESTS=(acceptance-release-gate alerts analytics favorites listing-lifecycle photos sprint-3-1 sprint-8-admin-reports
+APP_TESTS=(acceptance-release-gate alerts analytics favorites listing-lifecycle photos pilot-security review-followup sprint-3-1 sprint-8-admin-reports
   submissions transactions)
 # Left out because `setup-local-db.sh test` runs it.
 RUN_ELSEWHERE=(store-ops-concurrency)

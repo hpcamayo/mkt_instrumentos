@@ -1,7 +1,9 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { StoreLocationsSection } from "@/components/store-locations/store-locations-section";
 import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import type { Metadata } from "next";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 import { CatalogLink, CatalogNavigation, CatalogResults } from "@/components/catalog-navigation";
 import { JsonLd } from "@/components/json-ld";
 import { ListingCard } from "@/components/listing-card";
@@ -11,17 +13,25 @@ import { PageContainer } from "@/components/page-container";
 import { Pagination } from "@/components/pagination";
 import { AcceptedPaymentMethods } from "@/components/payment/accepted-payment-methods";
 import { StoreHeader, type StoreHeaderData } from "@/components/store/store-header";
+import { StoreDiscoverySection } from "@/components/discovery/store-discovery-section";
 import { StoreListingFilters, StoreSortMenu } from "@/components/store/store-listing-filters";
 import { StoreOwnerNotice } from "@/components/store/store-owner-notice";
 import { StoreAboutSection, StoreSectionLinks, type StoreAbout } from "@/components/store/store-sections";
 import { StripCurrent } from "@/components/strip-current";
+import { StoreTrustMarks } from "@/components/trust/listing-trust";
 import { buttonClasses } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Notice, NoticeIcon, noticeClassName } from "@/components/ui/notice";
 import { getCurrentUser } from "@/lib/auth/session";
 import type { CatalogScope } from "@/lib/catalog-filters";
 import { DISCOVERABLE_STOCK_FILTER, type ListingCardData, type ListingFilters } from "@/lib/listings";
-import { assistedCommerceEnabled, readPublicPaymentMethods, type PublicPaymentMethod } from "@/lib/payment-methods";
+import {
+  assistedCommerceEnabled,
+  readInstallmentOffer,
+  readPublicPaymentMethods,
+  type InstallmentOffer,
+  type PublicPaymentMethod,
+} from "@/lib/payment-methods";
 import { LISTINGS_PAGE_SIZE, getPageRedirect, pageHref, parsePage } from "@/lib/pagination";
 import { buildStoreJsonLd, buildStoreMetadata } from "@/lib/seo";
 import { NOINDEX_FOLLOW_ROBOTS, NOINDEX_ROBOTS } from "@/lib/site";
@@ -41,6 +51,7 @@ import { warnMissingSupabaseEnv, type getPublicSupabaseClient } from "@/lib/supa
 import { getRequestReads } from "@/lib/supabase/public-read-client";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import { readPublicReputation, type PublicReputation } from "@/lib/transactions";
+import { StoreDealerBrandsSlot } from "@/components/store-reach/dealer-marks";
 
 export const dynamic = "force-dynamic";
 // A hard stop well past the read budgets (lib/request-deadline.ts), far below Vercel's 300 s default.
@@ -89,6 +100,7 @@ const STORE_LISTING_SELECT = `
   region,
   seller_type,
   stock_state,
+  restock_expected_on,
   created_at,
   stores (
     name,
@@ -142,7 +154,8 @@ type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClien
 function storeListingsQuery(supabase: PublicSupabaseClient, storeId: string, filters: ListingFilters, outOfStock: boolean, countOnly = false) {
   let query = supabase
     .from("public_listings")
-    .select(STORE_LISTING_SELECT, countOnly ? { count: "exact", head: true } : undefined)
+    // store-floor, buy-09: the cards' installments line, while the payments pilot is on (lib/catalog.ts).
+    .select(assistedCommerceEnabled() ? STORE_LISTING_SELECT.replace("restock_expected_on,", "restock_expected_on,\n  installments_max,") : STORE_LISTING_SELECT, countOnly ? { count: "exact", head: true } : undefined)
     .eq("status", "approved")
     .eq("store_id", storeId);
   if (filters.category) query = query.eq("category", filters.category);
@@ -306,6 +319,10 @@ export default async function StorePage({
   const paymentMethods = !preview && assistedCommerceEnabled() && store.is_verified
     ? readPublicPaymentMethods((await supabase.rpc("get_store_payment_methods", { p_store_id: store.id })).data)
     : [];
+  // store-floor, buy-09: the store's interest-free installments, shown with its methods.
+  const installments = paymentMethods.length
+    ? readInstallmentOffer((await (supabase as unknown as SupabaseClient).rpc("get_store_installment_offer", { p_store_id: store.id })).data)
+    : null;
   // list-12: the address reaches the page only through publicStoreLocation (public_address is null unless the store
   // agreed to show it); the rest of the row goes on without it.
   const location = publicStoreLocation(store);
@@ -329,6 +346,7 @@ export default async function StorePage({
       hasError={Boolean(error)}
       reputation={reputation}
       paymentMethods={paymentMethods}
+      installments={installments}
     />
     </>
   );
@@ -355,6 +373,7 @@ function StoreView({
   hasError,
   reputation,
   paymentMethods,
+  installments,
 }: {
   store: StoreData;
   status: StoreStatus;
@@ -372,6 +391,7 @@ function StoreView({
   hasError: boolean;
   reputation: PublicReputation | null;
   paymentMethods: PublicPaymentMethod[];
+  installments: InstallmentOffer | null;
 }) {
   const rating =
     reputation && reputation.review_count > 0 && reputation.average_rating !== null
@@ -382,12 +402,14 @@ function StoreView({
   const filtered = storeFiltersActive(filters);
   // The controls show once there is something to narrow, and stay while a filter is on (so it can be removed).
   const showControls = filtered || (storeTotal ?? total ?? 0) > 0;
+  // deal-trust: «Tienda destacada» and «Punto seguro Laria», streamed; not in the owner's preview.
+  const trustMarks = preview ? null : <Suspense fallback={null}><StoreTrustMarks storeId={store.id} /></Suspense>;
   return (
     <>
       {preview ? null : <StoreVisitTelemetry storeId={store.id} />}
       {store.is_verified && !preview ? <StripCurrent value="verified_stores" /> : null}
       {isOwner ? <StoreOwnerNotice status={status} /> : null}
-      <StoreHeader store={store} total={storeTotal} rating={rating} location={location} preview={preview} isOwner={isOwner} />
+      <StoreHeader store={store} total={storeTotal} rating={rating} location={location} preview={preview} isOwner={isOwner} trust={trustMarks} />
       <StoreSectionLinks total={storeTotal} reviews={reputation ? reputation.review_count : null} />
       <PageContainer as="section" className="grid gap-10 pb-12 pt-6 lg:gap-14 lg:pt-8">
         <CatalogNavigation>
@@ -447,7 +469,12 @@ function StoreView({
           <ReputationSection reputation={reputation} title={`Reseñas de ${store.name}`} className="min-w-0" />
           <div className="grid min-w-0 content-start gap-6">
             <StoreAboutSection store={store} location={location} preview={preview} className="min-w-0" />
-            <AcceptedPaymentMethods methods={paymentMethods} />
+            {/* discovery batch (disc-04, buy-05): the maker's story and the gift exchange policy */}
+            <StoreDiscoverySection storeId={store.id} />
+            {/* store-locations (run-02): the store's sedes */}
+            <StoreLocationsSection storeId={store.id} />
+            {preview ? null : <StoreDealerBrandsSlot storeId={store.id} />}{/* Feature ideas, store-reach batch (reach-04). */}
+            <AcceptedPaymentMethods methods={paymentMethods} installments={installments} />
           </div>
         </div>
       </PageContainer>

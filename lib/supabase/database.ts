@@ -17,6 +17,14 @@ type NullableArguments = {
   set_owned_listings_pause: "p_until";
   set_store_import_rows_decision: "p_row_numbers";
   submit_complaints_book_entry: "p_claimed_amount" | "p_guardian_name" | "p_listing_slug";
+  // Feature ideas (features/marketplace).
+  request_store_receipt_void: "p_reason";
+  set_bundle_offer: "p_discount_percent" | "p_store_id";
+  set_listing_serial: "p_serial";
+  set_own_store_map_pin: "p_latitude" | "p_longitude";
+  submit_help_ticket: "p_client_hash" | "p_email" | "p_page_path";
+  service_submit_help_ticket: "p_email" | "p_user_id" | "p_page_path";
+  submit_stolen_gear_report: "p_model" | "p_police_station" | "p_serial";
 };
 
 // Inventario's actions (lib/inventory-actions.ts) pass a request's values on as they came, null where one is missing or
@@ -26,7 +34,9 @@ export type InventoryActionFunction =
   | "apply_bulk_stock_operations"
   | "apply_inventory_bulk_action"
   | "apply_inventory_price_campaign"
+  | "apply_location_bulk_stock_operations"
   | "archive_inventory_item"
+  | "archive_store_location"
   | "change_inventory_sku"
   | "create_inventory_item"
   | "delete_inventory_view"
@@ -37,14 +47,20 @@ export type InventoryActionFunction =
   | "mark_store_purchase_request"
   | "preview_inventory_price_bulk"
   | "preview_inventory_price_campaign"
+  | "record_location_stock_movement"
   | "record_purchase_request_sale"
   | "record_stock_movement"
   | "revert_inventory_price_campaign"
   | "save_inventory_view"
+  | "save_store_location"
+  | "set_inventory_arrival"
   | "set_inventory_item_category"
   | "set_inventory_preferences"
   | "set_inventory_price_bulk"
   | "set_inventory_threshold_bulk"
+  | "set_location_stock_counts"
+  | "set_primary_store_location"
+  | "transfer_location_stock"
   | "unarchive_inventory_item"
   | "undo_inventory_batch"
   | "undo_stock_movements"
@@ -68,10 +84,6 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
         : Name extends keyof NullableArguments
           ? WithNullableArguments<GeneratedFunctions[Name], NullableArguments[Name]>
           : GeneratedFunctions[Name];
-    } & {
-      // Staged RPC from 20261121130000_ease_transaction_confirmation.sql, verified against local generation.
-      // Keep production's generated snapshot intact until its next schema refresh.
-      claim_first_sale_notice: { Args: { p_transaction_id: string }; Returns: boolean };
     };
   };
 };

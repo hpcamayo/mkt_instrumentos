@@ -15,6 +15,9 @@ import {
   upsertSellerProfile,
   upsertStoreOwnerProfile,
 } from "@/lib/auth/profile";
+import { recordSignInDevice } from "@/lib/auth/devices";
+import { getAssurance, twoStepPath } from "@/lib/auth/mfa";
+import { rememberMarker, remembersSession, withRememberChoice } from "@/lib/auth/remember";
 import { RATE_LIMITS, allowRequest } from "@/lib/rate-limit";
 import type { Database } from "@/lib/supabase/database";
 import { visitorAuthKey } from "@/lib/supabase/visitor-auth";
@@ -30,6 +33,8 @@ export async function GET(request: NextRequest) {
     requestUrl.searchParams.get("next"),
   );
   const origin = requestUrl.origin;
+  // safe-08 (accounts batch): the sign-in page passes recordar=0 when "Mantener sesión iniciada" was unticked.
+  const remember = remembersSession(requestUrl.searchParams.get("recordar"));
 
   if (providerError) {
     return NextResponse.redirect(
@@ -68,7 +73,7 @@ export async function GET(request: NextRequest) {
         request.cookies.set(name, value),
       );
       cookiesToSet.forEach(({ name, value, options }) =>
-        response.cookies.set(name, value, options),
+        response.cookies.set(name, value, withRememberChoice(options, remember)),
       );
     },
   };
@@ -107,6 +112,7 @@ export async function GET(request: NextRequest) {
   const supabase = forwarded ? createServerClient<Database>(supabaseUrl, supabaseAnonKey, { cookies }) : verifier;
   const { data } = await supabase.auth.getUser();
   const metadata = data.user?.user_metadata;
+  const provider = data.user?.app_metadata?.provider;
 
   if (data.user && metadata?.account_type === INDIVIDUAL_SELLER_ACCOUNT_TYPE) {
     const { data: profile } = await supabase
@@ -140,6 +146,32 @@ export async function GET(request: NextRequest) {
         region: String(metadata.region ?? ""),
       });
     }
+  } else if (data.user && (provider === "google" || provider === "apple")) {
+    // buy-11 (accounts batch): a first sign-in with Google or Apple creates the same name-only profile as the sign-up
+    // form; the provider has already confirmed the address.
+    await upsertBasicSellerProfile(
+      supabase,
+      data.user.id,
+      String(metadata?.full_name ?? metadata?.name ?? data.user.email?.split("@")[0] ?? "Cuenta Laria"),
+    );
+  }
+
+  if (type === "recovery" && data.user?.app_metadata?.role !== "admin" && data.user?.factors?.length) {
+    const { retirePilotNonAdminFactors } = await import("@/lib/auth/pilot-two-step");
+    await retirePilotNonAdminFactors(data.user);
+  }
+
+  if (data.user && type !== "recovery") {
+    // safe-08 (accounts batch): remember the choice, note the device, and finish with the code when the account has one.
+    const marker = rememberMarker(remember, requestUrl.protocol === "https:");
+    response.cookies.set(marker.name, marker.value, marker.options);
+    const assurance = await getAssurance(supabase);
+    if (assurance.needsCode) {
+      const codeStep = NextResponse.redirect(new URL(twoStepPath("codigo", next), origin));
+      response.cookies.getAll().forEach((cookie) => codeStep.cookies.set(cookie));
+      response = codeStep;
+    }
+    await recordSignInDevice(supabase, request, response, data.user);
   }
 
   return response;

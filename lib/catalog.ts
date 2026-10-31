@@ -1,5 +1,7 @@
+import { MAP_LISTING_LIMIT, type MapListing } from "@/lib/catalog-map";
 import { LISTINGS_PAGE_SIZE } from "@/lib/pagination";
 import { DISCOVERABLE_STOCK_FILTER, type ListingCardData, type ListingFilters } from "@/lib/listings";
+import { assistedCommerceEnabled } from "@/lib/payment-methods";
 import type { getPublicSupabaseClient } from "@/lib/supabase/public-client";
 
 // The plain public client and the deadline-bound read client (lib/supabase/public-read-client.ts) are the same type.
@@ -9,7 +11,8 @@ type PublicSupabaseClient = NonNullable<ReturnType<typeof getPublicSupabaseClien
 // result selects (the free-text search runs through public.catalog_search); previous_price_pen and price_dropped_at
 // give the "Antes S/" line (list-05, lib/listing-page.ts visiblePreviousPrice). Cards read public.public_listings, a
 // listing's public columns: the computed fields (photo_count and the sort fields) read the whole row, which the
-// public API key may not read on listings itself (launch audit A27, docs/database.md).
+// public API key may not read on listings itself (launch audit A27, docs/database.md). listing_flags is there for the yes/no
+// filters on the search's results, price_mode for the card's "Precio conversable" (listing-details).
 const CARD_COLUMNS = `
         id,
         title,
@@ -32,6 +35,8 @@ const CARD_COLUMNS = `
         status,
         stock_state,
         store_id,
+        listing_flags,
+        price_mode,
       `;
 const STORE_AND_PHOTO_COLUMNS = ` (
           name,
@@ -50,8 +55,10 @@ const STORE_AND_PHOTO_COLUMNS = ` (
         )
       `;
 
+// store-floor, buy-09: installments_max gives the card's "o 12 cuotas sin intereses de S/ …", asked for only while the
+// payments pilot is on in this deployment (the database keeps it null while its own switch is off).
 export function catalogCardSelect(storeRelation: "stores" | "stores!inner" = "stores") {
-  return CARD_COLUMNS + storeRelation + STORE_AND_PHOTO_COLUMNS;
+  return CARD_COLUMNS + (assistedCommerceEnabled() ? "installments_max,\n" : "") + storeRelation + STORE_AND_PHOTO_COLUMNS;
 }
 
 // The listings a search starts from: every listing, or those matching the free-text query (BIG 03).
@@ -78,6 +85,8 @@ function applyFilters<Q extends { eq: any; in: any; or: any; ilike: any; gte: an
   if (filters.minPrice !== undefined) result = result.gte("price_pen", filters.minPrice);
   if (filters.maxPrice !== undefined) result = result.lte("price_pen", filters.maxPrice);
   for (const [key, value] of Object.entries(filters.advanced)) result = result.contains("attributes", { [key]: value });
+  // listing-details: every yes/no filter chosen ("all of"), on the flags the database keeps (GIN-indexed).
+  if (filters.options?.length) result = result.contains("listing_flags", filters.options);
   return result;
 }
 
@@ -135,4 +144,55 @@ export async function countCatalog(supabase: PublicSupabaseClient, filters: List
   const query = applyFilters(source(supabase, filters, select, { count: "exact", head: true }), filters);
   const { count, error } = await (signal ? query.abortSignal(signal) : query);
   return error ? null : count;
+}
+
+// buy-08 "Ver en mapa": the newest results that match, with only what the map and its list show (lib/catalog-map.ts),
+// up to MAP_LISTING_LIMIT. The store's map pin columns are public only while the store shows its address.
+const MAP_COLUMNS = `
+        id,
+        title,
+        slug,
+        price_pen,
+        condition,
+        city,
+        region,
+        seller_type,
+        status,
+        stock_state,
+        store_id,
+        listing_flags,
+        published_at,
+        created_at,
+      `;
+const MAP_STORE_AND_PHOTO = ` (
+          name,
+          slug,
+          is_verified,
+          district,
+          city,
+          region,
+          public_address,
+          public_map_latitude,
+          public_map_longitude
+        ),
+        listing_photos (
+          image_url,
+          sort_order
+        )
+      `;
+
+export type CatalogMapRow = Omit<MapListing, "photo" | "store"> & {
+  stores: MapListing["store"] | NonNullable<MapListing["store"]>[];
+  listing_photos: { image_url: string; sort_order: number }[] | null;
+};
+
+export async function fetchCatalogMap(supabase: PublicSupabaseClient, filters: ListingFilters, limit = MAP_LISTING_LIMIT, signal?: AbortSignal) {
+  const storeRelation = filters.sellerType === "verified_store" ? "stores!inner" : "stores";
+  let query = applyFilters(source(supabase, filters, MAP_COLUMNS + storeRelation + MAP_STORE_AND_PHOTO, { count: "exact" }), filters)
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .order("sort_order", { foreignTable: "listing_photos", ascending: true })
+    .limit(1, { foreignTable: "listing_photos" });
+  if (signal) query = query.abortSignal(signal);
+  return query.order("id").range(0, limit - 1).returns<CatalogMapRow[]>();
 }

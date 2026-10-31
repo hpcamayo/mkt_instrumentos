@@ -1,7 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import { EMAIL_NOT_CONFIRMED, isEmailNotConfirmedError } from "@/lib/auth/confirmation";
+import { recordSignInDevice } from "@/lib/auth/devices";
 import { TOO_MANY_ATTEMPTS, isAuthRateLimited } from "@/lib/auth/limits";
+import { getAssurance } from "@/lib/auth/mfa";
+import { rememberMarker, withRememberChoice } from "@/lib/auth/remember";
 import { RATE_LIMITS, allowRequest } from "@/lib/rate-limit";
 import type { Database } from "@/lib/supabase/database";
 import { visitorAuthKey } from "@/lib/supabase/visitor-auth";
@@ -23,25 +26,28 @@ export async function POST(request: NextRequest) {
       : "";
   const password =
     body && typeof body.password === "string" ? body.password : "";
+  // safe-08: "Mantener sesión iniciada" (ticked unless the person unticks it).
+  const remember = !(body && body.remember === false);
   if (!email || !password) {
     return failure("Ingresa tu correo y contraseña.", 400);
   }
   if (!(await allowRequest(RATE_LIMITS.login, request))) return failure(TOO_MANY_ATTEMPTS, 429);
 
-  const response = NextResponse.json({ ok: true });
+  const sessionCookies: { name: string; value: string; options: Parameters<typeof withRememberChoice>[0] }[] = [];
   const forwarded = visitorAuthKey(request);
   const supabase = createServerClient<Database>(supabaseUrl, forwarded?.key ?? supabaseAnonKey, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (values) => {
         for (const { name, value, options } of values) {
-          response.cookies.set(name, value, options);
+          request.cookies.set(name, value);
+          sessionCookies.push({ name, value, options });
         }
       },
     },
     ...(forwarded ? { global: { headers: forwarded.headers } } : {}),
   });
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
   // Supabase checks the password before the confirmation, so this answer does not reveal unconfirmed accounts.
   if (isEmailNotConfirmedError(error)) {
     return NextResponse.json(
@@ -56,6 +62,16 @@ export async function POST(request: NextRequest) {
       401,
     );
   }
+
+  // safe-08: an account with an authenticator app finishes signing in with its code.
+  const assurance = await getAssurance(supabase);
+  const response = NextResponse.json({ ok: true, needsCode: assurance.needsCode });
+  for (const { name, value, options } of sessionCookies) {
+    response.cookies.set(name, value, withRememberChoice(options, remember));
+  }
+  const marker = rememberMarker(remember, request.nextUrl.protocol === "https:");
+  response.cookies.set(marker.name, marker.value, marker.options);
+  await recordSignInDevice(supabase, request, response, authData?.user);
 
   return response;
 }

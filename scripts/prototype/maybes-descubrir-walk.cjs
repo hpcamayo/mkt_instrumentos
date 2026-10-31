@@ -162,8 +162,9 @@ async function phone(browser) {
   now = await waitHeading(page, now.heading);
   check("swipe down goes back", now.heading === first, now.heading);
 
-  // The Telecaster: photos sideways.
-  now = await nextUntil(page, /Telecaster/);
+  // The Telecaster: photos sideways. The seed's own Telecaster, by its full colour: the feature-ideas seeds add Telecasters
+  // of their own, without photos, and they can come first in the feed.
+  now = await nextUntil(page, /Telecaster Butterscotch Blonde/);
   check("reached the Fender Telecaster", /Telecaster/.test(now.heading ?? ""), now.bar);
   await page.waitForTimeout(600);
   await shot(page, "big-02-listing-390");
@@ -306,7 +307,7 @@ async function desktop(browser) {
   await axe(page, "1366 descubrir first screen");
 
   // The keyboard: ↓ moves on and focus follows.
-  let now = await nextUntil(page, /Telecaster/, 40, "key");
+  let now = await nextUntil(page, /Telecaster Butterscotch Blonde/, 40, "key");
   check("arrow keys move between listings", /Telecaster/.test(now.heading ?? ""), now.bar);
   check("keyboard focus lands on the listing's heading", /^h2#descubrir-/.test(now.focus ?? ""), now.focus);
   await page.waitForTimeout(500);

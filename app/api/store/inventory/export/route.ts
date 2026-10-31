@@ -4,6 +4,8 @@ import { INVENTORY_BULK_LIMIT } from "@/lib/inventory-actions";
 import { writeXlsx } from "@/lib/spreadsheet/xlsx-write";
 import { UUID } from "@/lib/store-inventory";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
+import { stockColumn } from "@/lib/store-locations";
+import { getLocationStock, getOwnLocations } from "@/lib/store-locations-server";
 
 // GET /api/store/inventory/export?format=csv|xlsx[&ids=…|&vista=…][&publicacion=1] (design §7.8). Reads the caller's
 // own store through RLS, explicitly filtered by that store so an Admin session (which RLS lets read every store) still
@@ -105,8 +107,18 @@ export async function GET(request: Request) {
 
   const exportItems = items.map((item) => ({ ...item, listing: item.listing_id ? listings.get(item.listing_id) ?? null : null }));
   const base = exportRows(exportItems);
-  const rows = withListing ? base.map((row, index) => [...row, ...listingColumns(exportItems[index])]) : base;
-  const columnHeaders = exportHeaders(withListing);
+  let rows = withListing ? base.map((row, index) => [...row, ...listingColumns(exportItems[index])]) : base;
+  let columnHeaders = exportHeaders(withListing);
+  // store-locations, run-02: one "Stock <sede>" column per location, last, so the file still imports back (the import
+  // ignores them) and the same columns can be uploaded on Sedes → Stock por sede.
+  const locations = await getOwnLocations(supabase);
+  if (locations.length) {
+    const stock = await getLocationStock(supabase, store.id, items.length > 2000 ? null : items.map((item) => item.id));
+    if (!stock) return exportFailed("location stock", { message: "location stock" });
+    const byKey = new Map(stock.map((row) => [`${row.item_id}:${row.location_id}`, row.quantity_on_hand]));
+    rows = rows.map((row, index) => [...row, ...locations.map((location) => byKey.get(`${items[index].id}:${location.id}`) ?? 0)]);
+    columnHeaders = [...columnHeaders, ...locations.map((location) => stockColumn(location.name))];
+  }
   const filename = exportFilename(store.slug, format);
   const headers = {
     "Content-Disposition": `attachment; filename="${filename}"`,

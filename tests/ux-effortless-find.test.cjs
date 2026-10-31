@@ -40,7 +40,10 @@ test("BIG 03: phrases become filters, idempotently, keeping the visitor's spelli
   const { applySearchPhrase, foldText } = require("@/lib/catalog-query");
   const href = (query) => catalog.catalogHref(applySearchPhrase(parse(query)).filters);
   assert.equal(href("q=bajo 5 cuerdas menos de 2000 en Lima"), "/listados?category=basses&location=Lima&instrument_type=bass&max_price=2000&strings=5");
-  assert.equal(href("q=Fender Stratocaster usada en Arequipa"), "/listados?q=Fender+Stratocaster&location=Arequipa&condition=Usado+-+buen+estado&condition=Usado+-+con+detalles");
+  // sell-10: "usada" is every step but Nuevo; "seminuevo" the top two; listing-details: "con envío a provincia".
+  assert.equal(href("q=Fender Stratocaster usada en Arequipa"), "/listados?q=Fender+Stratocaster&location=Arequipa&condition=Exhibici%C3%B3n+o+caja+abierta&condition=Como+nuevo&condition=Excelente&condition=Muy+bueno&condition=Bueno&condition=Regular&condition=Para+reparar");
+  assert.equal(href("q=bajo seminuevo con envío a provincia"), "/listados?category=basses&condition=Como+nuevo&condition=Excelente&opciones=envia-provincia");
+  assert.deepEqual(catalog.appliedFilters(applySearchPhrase(parse("q=pedal usado")).filters).map((chip) => chip.text), ["Pedales", "Usado, cualquier estado"]);
   assert.equal(href("q=guitarra eléctrica entre 500 y 1.500 soles"), "/listados?category=guitars&instrument_type=electric_guitar&min_price=500&max_price=1500");
   assert.equal(href("q=amplificador hasta 2k tienda verificada"), "/listados?category=amplifiers&seller_type=verified_store&max_price=2000");
   assert.equal(href("q=cajón más de 300"), "/listados?category=percussion&instrument_type=hand_percussion&min_price=300");
@@ -63,12 +66,15 @@ test("FIND 07, FIND 08: facet counts, data-driven places and zones, price shortc
   assert.deepEqual(priceShortcuts({ min: 100, max: 5000, low: 480, high: 1530, count: 2 }, format), [], "too few prices");
   assert.equal(readCatalogFacets({ nope: 1 }), null);
   const data = readCatalogFacets({
-    total: 9, category: { guitars: 9 }, instrument_type: {}, condition: { Nuevo: 6, "Usado - buen estado": 3 }, seller_type: { individual: 2, store: 7, verified_store: 5 },
+    total: 9, category: { guitars: 9 }, instrument_type: {}, condition: { Nuevo: 6, "Muy bueno": 3 }, seller_type: { individual: 2, store: 7, verified_store: 5 }, options: { envia_provincia: 4 },
     locations: [{ city: "Lima", region: "Lima", count: 5 }, { city: "Callao", region: "Callao", count: 1 }, { city: "Cusco", region: "Cusco", count: 3 }], brands: [{ brand: "Fender", count: 4 }], price: { min: 300, max: 4000, low: 600, high: 1200, count: 9 }, advanced: {},
   });
   const facets = catalog.catalogFacets(parse("category=guitars"), {}, {}, data);
   const condition = facets.find((facet) => facet.key === "condition");
-  assert.deepEqual(condition.options.map((option) => [option.value, option.count]), [["Nuevo", 6], ["Usado - buen estado", 3], ["Usado - con detalles", 0]]);
+  // sell-10: only the steps that have results.
+  assert.deepEqual(condition.options.map((option) => [option.value, option.count]), [["Nuevo", 6], ["Muy bueno", 3]]);
+  const options = facets.find((facet) => facet.key === "opciones");
+  assert.deepEqual(options.options.map((option) => [option.value, option.count]), [["envia_provincia", 4], ["se_puede_probar", 0], ["acepta_cambios", 0], ["con_garantia", 0]]);
   const location = facets.find((facet) => facet.key === "location");
   assert.deepEqual(location.options.map((option) => option.value), ["Lima", "Callao", "Cusco"], "the places that have listings, by zone, largest first");
   const lima = location.zones.find((zone) => zone.label === "Lima y Callao");

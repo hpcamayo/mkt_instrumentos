@@ -212,6 +212,10 @@ async function renderHome(data, random = 0, cacheBuild = { renderPerRequestIfBui
     "@/lib/supabase/public-read-client": { getRequestReads: () => ({ supabase: {}, deadline: {} }), optionalReadSignal: () => undefined },
     "@/lib/catalog-brands": { getListingCounts: async () => null },
     "@/lib/home": { ...home, fetchHomeData: async () => data },
+    // The discovery batch's collections row (docs/feature-ideas/discovery.md); none here, so only the gift card shows.
+    "@/lib/discovery/data": { getCurrentCollections: async () => null },
+    // feature-ideas services (bet-02): no services here, so the teaser stays out (tests/services.test.cjs renders it).
+    "@/lib/services-counts": { getServiceKindCounts: async () => null },
     // Signed-in only, read after load (save-12, UXD-integration-10): nothing in the server render.
     "@/components/home/home-followed": { HomeFollowedArrivals: () => null },
   });
@@ -227,7 +231,7 @@ const FULL = {
   pool: Array.from({ length: 14 }, (_, index) => ({ ...listing(`f${index}`, "guitars", `2026-04-${String(28 - index).padStart(2, "0")}T00:00:00Z`), seller_key: `k${index % 3}` })),
   priceDrops: [listing("d1", "basses", "2026-04-20T00:00:00Z")],
   total: 262,
-  categoryCounts: { guitars: 86, basses: 21, keyboards: 7, percussion: 39, winds: 1, strings: 0, pedals: 45, amplifiers: 19, microphones: 24, audio: 12 },
+  categoryCounts: { guitars: 86, basses: 21, keyboards: 7, percussion: 39, winds: 1, strings: 0, pedals: 45, amplifiers: 19, microphones: 24, audio: 12, andean: 0 },
   stores: [
     { id: "s1", name: "Casa Musical Grau", slug: "casa-musical-grau", city: "Lima", district: "Cercado", logo_url: null },
     { id: "s2", name: "Andes Sonido", slug: "andes-sonido", city: "Huancayo", district: null, logo_url: null },
@@ -238,7 +242,7 @@ const headings = (html) => [...html.matchAll(/<h2 [^>]*>([^<]+)<\/h2>/g)].map((m
 test("the home: banner, category chips, then instruments right away, then the decided sections; one h1 (BIG 01)", async () => {
   const { html, preloads } = await renderHome(FULL, 0.99);
   // Before the device is read (and without JavaScript) "Para ti" is the plain newest first.
-  assert.deepEqual(headings(html), ["Categorías", "Lo más nuevo", "Bajaron de precio", "Cómo funciona Laria", "Tiendas verificadas", "¿Tienes equipo que ya no usas?"]);
+  assert.deepEqual(headings(html), ["Categorías", "Lo más nuevo", "Bajaron de precio", "Ideas para buscar", "Cómo funciona Laria", "Tiendas verificadas", "¿Tienes equipo que ya no usas?"]);
   assert.equal((html.match(/<h1[ >]/g) ?? []).length, 1);
   assert.match(html, /<script type="application\/ld\+json">\{"@context":"https:\/\/schema.org","@type":"Organization"/);
   assert.match(html, /data-banner="guitarra-amplificador"/);
@@ -303,7 +307,7 @@ test("states: failed listing queries leave their sections out; an empty marketpl
   const noCounts = (await renderHome({ ...FULL, total: null })).html;
   assert.match(noCounts, /<a href="\/listados" class="[^"]*">Ver todo el catálogo<\/a>/);
   const empty = (await renderHome({ pool: [], priceDrops: [], total: 0, categoryCounts: {}, stores: [] })).html;
-  assert.deepEqual(headings(empty), ["Categorías", "Recién publicados", "Cómo funciona Laria", "¿Tienes equipo que ya no usas?"]);
+  assert.deepEqual(headings(empty), ["Categorías", "Recién publicados", "Ideas para buscar", "Cómo funciona Laria", "¿Tienes equipo que ya no usas?"]);
   assert.match(empty, /<h3 class="t-section text-ink">Aún no hay publicaciones<\/h3>[\s\S]*Las primeras publicaciones aparecerán aquí\.[\s\S]*<a href="\/vender"[^>]*>Publicar un instrumento<\/a>/);
 });
 

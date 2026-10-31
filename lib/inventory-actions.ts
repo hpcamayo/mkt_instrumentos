@@ -178,6 +178,54 @@ export function inventoryCall(body: InventoryActionBody): InventoryCall | null {
       return uuid(body.event_id) && key(body.key)
         ? { fn: "record_purchase_request_sale", args: { p_event_id: uuid(body.event_id), p_quantity: integer(body.quantity), p_expected_version: integer(body.expected_version), p_idempotency_key: key(body.key) } }
         : null;
+    // store-floor, reach-08 "Por llegar": a date (YYYY-MM-DD) or null for up to 200 SKU.
+    case "arrival":
+      return uuids(body.item_ids) && (body.expected_on === null || (typeof body.expected_on === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.expected_on)))
+        ? { fn: "set_inventory_arrival", args: { p_item_ids: uuids(body.item_ids), p_expected_on: body.expected_on } }
+        : null;
+    // store-locations, run-02 "Sedes" (docs/feature-ideas/store-locations.md).
+    case "location_save": {
+      const fields = object(body.fields);
+      return fields && (body.location_id === null || body.location_id === undefined || uuid(body.location_id))
+        ? { fn: "save_store_location", args: { p_location_id: uuid(body.location_id), p_fields: fields } }
+        : null;
+    }
+    case "location_primary":
+      return uuid(body.location_id) ? { fn: "set_primary_store_location", args: { p_location_id: uuid(body.location_id) } } : null;
+    case "location_archive":
+      return uuid(body.location_id) && key(body.key) && (body.move_to === null || body.move_to === undefined || uuid(body.move_to))
+        ? { fn: "archive_store_location", args: { p_location_id: uuid(body.location_id), p_move_to: uuid(body.move_to), p_idempotency_key: key(body.key) } }
+        : null;
+    case "location_transfer":
+      return uuid(body.item_id) && uuid(body.from) && uuid(body.to) && key(body.key)
+        ? { fn: "transfer_location_stock", args: { p_item_id: uuid(body.item_id), p_from: uuid(body.from), p_to: uuid(body.to), p_quantity: integer(body.quantity), p_reason: text(body.reason, 400), p_idempotency_key: key(body.key) } }
+        : null;
+    case "location_movement":
+      return uuid(body.location_id) && uuid(body.item_id) && key(body.key) && typeof body.type === "string"
+        ? {
+            fn: "record_location_stock_movement",
+            args: {
+              p_location_id: uuid(body.location_id),
+              p_item_id: uuid(body.item_id),
+              p_type: text(body.type, 40),
+              p_quantity: integer(body.quantity),
+              p_channel: text(body.channel, 40),
+              p_reference: text(body.reference, 200),
+              p_reason: text(body.reason, 400),
+              p_expected_version: integer(body.expected_version),
+              p_idempotency_key: key(body.key),
+            },
+          }
+        : null;
+    case "location_bulk_stock":
+      return uuid(body.location_id) && Array.isArray(body.operations) && body.operations.length <= 200 && key(body.key)
+        ? { fn: "apply_location_bulk_stock_operations", args: { p_location_id: uuid(body.location_id), p_operations: body.operations, p_batch_key: key(body.key) } }
+        : null;
+    case "location_counts":
+      return uuid(body.location_id) && Array.isArray(body.counts) && body.counts.length <= 200 && key(body.key)
+        ? { fn: "set_location_stock_counts", args: { p_location_id: uuid(body.location_id), p_counts: body.counts, p_batch_key: key(body.key) } }
+        : null;
+    // /store-locations
     default:
       return null;
   }

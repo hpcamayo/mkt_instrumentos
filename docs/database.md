@@ -42,7 +42,7 @@ Older Laria business docs describe the intended model in product language. The c
 
 Migration files and the live Supabase schema are the source of truth for current implementation only. The functional specification wins for required V1 behavior. Product names should become schema names only through an explicit migration and app update.
 
-`lib/supabase/database.types.ts` is generated from production's schema with `pnpm db:types` (the Supabase CLI, signed in to the project) and is never edited by hand: generate it again once a migration is applied to production, and commit it with the code that uses the change. A branch whose migrations aren't in production yet can generate it from a local stack that has them (`supabase gen types typescript --local --schema public,graphql_public`). Every client is typed with `lib/supabase/database.ts`, which takes the generated types and lets the function arguments the app passes null to accept it, since PostgreSQL doesn't record which arguments do: a list of arguments by function, and every argument of the Inventario actions (`lib/inventory-actions.ts`), whose functions answer a missing value with their own message. A call to a function or table that isn't in the generated types fails the typecheck. The PostgREST computed photo-count field uses explicit query result types because the SDK select parser does not infer computed columns.
+`lib/supabase/database.types.ts` is generated from production's schema with `pnpm db:types` (the Supabase CLI, signed in to the project) and is never edited by hand: generate it again once a migration is applied to production, and commit it with the code that uses the change. A branch whose migrations aren't in production yet can generate it from a local stack that has them (`supabase gen types typescript --local --schema public,graphql_public`), or without Docker from the database `scripts/local-db/setup-local-db.sh` builds (`scripts/local-db/gen-types.sh`, the same generator). Every client is typed with `lib/supabase/database.ts`, which takes the generated types and lets the function arguments the app passes null to accept it, since PostgreSQL doesn't record which arguments do: a list of arguments by function, and every argument of the Inventario actions (`lib/inventory-actions.ts`), whose functions answer a missing value with their own message. A call to a function or table that isn't in the generated types fails the typecheck. The PostgREST computed photo-count field uses explicit query result types because the SDK select parser does not infer computed columns.
 
 ### `public.profiles`
 
@@ -1280,6 +1280,593 @@ Migration `20261109120000_ux_effortless_integration.sql` (not applied to any hos
 - `20261104120100` and `20261104120200` drop their helper `pg_temp.selling_fix`, so every migration also applies in
   one database session, as the Supabase CLI runs them.
 <!-- /ux-effortless:integration -->
+
+<!-- feature-ideas:store-floor -->
+## Feature ideas: store floor (arrivals, warranty and returns, try-outs)
+
+Migrations `20261206120000`–`20261206120400` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/store-floor.md`. Suites: `tests/store-floor.sql`, `tests/store-installments.sql`. No shared
+function is redefined.
+
+- `public.store_warranty_policies` (pk store_id, condition_group new|open_box|used; warranty_months 0–60,
+  warranty_provider store|brand (only with months), returns_days 0–30, returns_note 1–100 (only with days)): public for
+  active stores, owner always; written through `set_store_warranty_policy(text, jsonb)`, which re-applies the policy
+  to the store's unsold listings of that group (listings locked in id order).
+- `public.listings` gains `warranty_months`, `warranty_provider`, `returns_days`, `returns_note` and
+  `store_terms_source` (store_policy|listing), store listings only. The BEFORE trigger `listings_a_store_terms`
+  (`laria_private.apply_store_terms`) fills them from the policy on insert, on a condition change and when the source is
+  reset; `set_listing_store_terms(uuid, jsonb)` gives one listing its own terms (null returns it to the policy).
+  `laria_private.listing_condition_group(text)` maps the condition scale to the three groups.
+- Listing flag `con_garantia` (sort 40) in `laria_private.listing_flag_filters`, appended by the trigger
+  `listings_flags_store_floor` when `warranty_months > 0`.
+- `public.store_inventory_items.expected_arrival_on` and `public.listings.restock_expected_on` (date): set through
+  `set_inventory_arrival(uuid[], date)` (up to 200 SKUs, today to a year ahead in Lima, SKUs with units skipped; locks
+  listings then SKUs in id order). Triggers clear both when units arrive or the SKU is archived or unlinked
+  (`clear_arrival_on_stock`, `sync_restock_estimate`, `push_arrival_to_listing`). Change type `arrival` in
+  `store_inventory_changes`; notice type `store_arrival_estimate_passed`.
+- `public.store_tryout_settings` (store_id pk; enabled (default false, needs hours), weekly_hours jsonb ISO weekday →
+  up to two `["HH:MM","HH:MM"]` ranges, slot_minutes 15|30|45|60|90, capacity 1–5, min_notice_hours 1–72,
+  max_days_ahead 1–30, note 1–200): public for active stores, owner always; written through
+  `set_store_tryout_settings(jsonb)`.
+- `public.store_tryouts` (store, listing (set null on delete), listing_title, buyer_user_id, buyer_name, buyer_phone,
+  buyer_note, starts_at, ends_at, status requested|confirmed|declined|cancelled|expired, cancelled_by, store_reason,
+  request_key unique per buyer, decided_at, cancelled_at, reminded_at): readable by the buyer and the store's owner
+  only; no direct writes. Functions: `get_listing_tryout_slots(uuid)` (anon), `request_store_tryout(…)` (bookings of a
+  store serialized on its settings row; limits 1 open per listing, 3 open, 10 a day), `cancel_my_tryout(uuid)`,
+  `respond_store_tryout(uuid, text, text)` (confirm|decline|cancel).
+- Notice and e-mail types `store_tryout_requested`, `store_tryout_cancelled`, `listing_tryout_confirmed`,
+  `listing_tryout_declined`, `listing_tryout_cancelled`, `listing_tryout_reminder` (through
+  `laria_private.ux_extend_text_check`).
+- `public.run_store_floor_daily()` (service_role): `laria_private.expire_arrival_estimates()` then
+  `laria_private.run_tryout_daily()` (expire unanswered requests, one reminder for today and tomorrow, delete try-outs
+  90 days past). Idempotent.
+- buy-09, `20261206120400`: `public.store_installment_offers` (pk store_id; max_installments 2–36, cards text[] from
+  `laria_private.installment_card_options()`, min_price_pen, owner_note, status
+  pending_review|approved|rejected|disabled|withdrawn, revision, reviewed_by/at, review_reason) and the append-only
+  `public.store_installment_offer_changes`; owner and Admin read only, safe-08's second step for owner writes.
+  Functions: `set_store_installments(integer, text[], integer, text, boolean)` (pilot on, verified store, a card method
+  proposed or approved, p_interest_free true), `withdraw_store_installments()`, `admin_review_store_installments(uuid,
+  text, text, integer)` (audited `store_installments_<state>`), `get_admin_store_installment_offers(text, integer,
+  integer)`, `get_store_installment_offer(uuid)` (anon; null unless public through
+  `laria_private.public_installment_offer`: pilot on, approved, store active and verified, an approved card method).
+- `public.listings.installments_max` (smallint 2–36): the public offer's count for a store listing at or above its
+  minimum price, set by the BEFORE trigger `listings_a_store_installments` whenever written;
+  `laria_private.refresh_store_installments(uuid)` recomputes a store's unsold listings (locked in id order), called by
+  the owner and Admin functions and by triggers on `store_payment_methods` (status), `stores` (status, is_verified) and
+  `laria_private.assisted_commerce_settings` (pilot_enabled). Listing flag `acepta_cuotas` (sort 50), appended by its
+  own trigger `listings_flags_store_floor_installments`.
+<!-- /feature-ideas:store-floor -->
+
+<!-- feature-ideas:listing-details -->
+## Feature ideas: listing details (conditions, sale terms, combos, map)
+
+Migrations `20261202120000`–`20261202120800` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/listing-details.md`. Suite: `tests/feat-listing-details.sql`.
+
+### The condition scale (sell-10, `20261202120000`)
+
+- `listings.condition` takes one step of a scale: Nuevo, Como nuevo, Excelente, Muy bueno, Bueno, Regular, Para
+  reparar, and "Exhibición o caja abierta" for a store listing only. `public.listing_condition_is_valid(text, boolean)`
+  is the rule (the boolean says "store"); the trigger `listings_check_condition` applies it on insert and whenever the
+  condition or seller type changes (`LISTING_CONDITION_INVALID`). Test fixtures must use a step ("Bueno", not
+  "Usado").
+- An old value written by any path is mapped, not refused: Usado - buen estado → Muy bueno, Usado - con detalles →
+  Bueno (`laria_private.current_condition`). A search's old value stands for the steps it covered
+  (`laria_private.condition_search_values`, `laria_private.expand_search_conditions`), so saved alerts and old links
+  keep finding what they found. The migration relabelled listings (without touching "Actualizado"), revisions, drafts,
+  SKU details, store defaults and saved alerts.
+
+### Listing flags: the yes/no filters (`20261202120100`)
+
+- `listings.listing_flags text[]` (GIN-indexed) holds the yes/no facts a buyer can filter on. It is derived, never
+  written: `listings_flags_a_reset` (BEFORE INSERT OR UPDATE) empties it, then each batch's `listings_flags_<batch>`
+  trigger appends its own flags from its own columns. A client value is always overwritten. Keep `listing_flags` out of
+  every column grant.
+- Trigger order: Postgres fires a table's BEFORE triggers in name order. A flags trigger must be named
+  `listings_flags_<batch>` (after `listings_flags_a_reset`), fire on `insert or update` with no column list (the reset
+  runs on every update), and only append.
+- `laria_private.listing_flag_filters(flag, label, sort_order)` lists the flags a search may ask for. Saved searches
+  take an `options` key (registered flags, "all of"); `catalog_facets` reads `options` from its filters and returns an
+  `options` object with each flag's count. The site's copy is `lib/listing-flags.ts`; its URL parameter is `opciones`.
+- Flags today: `envia_provincia`, `se_puede_probar`, `acepta_cambios` (listing-details); `con_garantia` (store-floor,
+  `20261206120300`).
+- **Adding a flag:** insert its row into `laria_private.listing_flag_filters`; add a `listings_flags_<batch>` trigger
+  function that does `new.listing_flags := array_append(new.listing_flags, '<flag>')` when the batch's column says so;
+  add one entry in the marked block of `lib/listing-flags.ts`. No shared function changes.
+
+### Listing detail writers: extra listing fields (`20261202120100`)
+
+- A listing's extra fields arrive as one JSON object keyed by the owning batch (`sale_terms` here). Each key has a row in
+  `laria_private.listing_detail_writers(key, writer, copier, owner_batch, note)`: `writer(listing_id uuid, value jsonb)`
+  checks and stores that part; `copier(source_id uuid, target_id uuid)`, when set, carries it to a duplicate or a
+  relisted copy. Both run as the definer after the caller's checks, in key order. An unknown key is refused
+  (`LISTING_DETAILS_INVALID`).
+- `public.complete_listing_submission(p_id, p_kind, p_fields, p_photos, p_details)` (service role): calls
+  `complete_public_submission` unchanged, applies the details only when the listing is new (a retry returns it
+  untouched), and defers the saved-search capture (`laria.defer_alert_capture`) until the details are stored, so an
+  alert on a flag finds a store listing that goes public at once. `app/api/submissions` calls it for listings.
+- `public.update_owned_listing_details(p_listing_id, p_details)` (authenticated): the owner, on a listing that is not
+  sold, archived or hidden by Admin (the same errors as `apply_owned_listing_edit`). Details are not moderated, so each
+  writer refuses what moderation would (contact details in free text).
+- `public.copy_owned_listing` calls `laria_private.copy_listing_details` (patched in `20261202120300`).
+- **Adding a field:** add the columns and their checks in your migration; write `laria_private.write_<field>(uuid, jsonb)`
+  (and a copier if a copy should keep it); insert its row into `laria_private.listing_detail_writers`; add the same key
+  to the marked block of `lib/listing-details.ts` (the routes run that check first); build the input as your own
+  component and place it in the sell and edit forms with a one-line import.
+
+### Sale terms (sell-07, buy-02, sell-06; `20261202120200`)
+
+- Listing columns, every one the seller's word: `price_mode` (fixed | negotiable | null), `delivery_pickup` and
+  `pickup_area` (a district, never an address), `can_try`, `lima_delivery` (buyer | seller | agree), `ships_provinces`,
+  `shipping_carriers` (shalom, olva, other), `shipping_payment` (origin | destination), `accepts_trades`, `trade_wants`
+  (≤ 200 characters) and `trade_categories`. Checks keep dependent values with their switch;
+  `listings_check_sale_terms` refuses contact details in the two free-text fields.
+- `trade_categories` are the catalog's own (`20261202120800`): `laria_private.trade_categories_are_valid(text[])` accepts
+  a category when `public.listing_taxonomy_is_valid(category, 'other')` does, so a category added later (discovery's
+  `andean`) needs no change here; at most 12. The constraint `listings_trade_categories_check` calls it as whoever
+  writes the row, so `anon`, `authenticated` and `service_role` hold EXECUTE on it (it reads nothing, and
+  `laria_private` is not an API schema). The writer's own check was patched to the same rule.
+- Writer `laria_private.write_listing_sale_terms` (key `sale_terms`): a key that is absent keeps its value.
+  `listings_ux_sale_terms_changed` (named after `listings_track_content_change`, which resets the date) moves
+  `content_changed_at`, so a change shows as "Actualizado".
+
+### Maker marks in the sell form (`20261202120700`)
+
+- Writer key `maker` (owner batch discovery): `laria_private.write_listing_maker_details(uuid, jsonb)` takes
+  `handmade`, `made_to_order_weeks` and `artist_note` and stores them in discovery's `listing_maker_details`
+  (`20261207120400`). It checks the listing's own seller (`laria_private.listing_seller_user`), since it runs inside
+  `complete_listing_submission` with no `auth.uid()`, and raises discovery's errors for the cases
+  `set_listing_maker_details` refuses. Discovery's table, rules and RPC are unchanged; its edit form still uses the RPC.
+- Copier `laria_private.copy_listing_maker_details`: a duplicate or relisted copy keeps "Hecho a mano" and "a pedido"
+  while the store still shows its maker profile; the artist note is not copied.
+
+### Shared functions changed (`20261202120300`, `20261202120400`)
+
+- Find-and-replace patches: `laria_private.normalize_saved_search` (new conditions, old values expanded, `options`;
+  STABLE now, as it reads the flag registry), `laria_private.listing_matches_saved_search` (`options`),
+  `laria_private.record_marketplace_event_service` (search events may carry `options`),
+  `laria_private.sanitize_listing_details` and `public.set_store_import_row_publish_fields` (the scale),
+  `public.copy_owned_listing` (details copied).
+- `public.catalog_facets` rebuilt whole with `ok_options` and the `options` counts.
+
+### Combos (buy-01, `20261202120500`)
+
+- `public.seller_bundle_offers`: one declared discount (5–30 %, from 2–5 items) per Particular (`owner_user_id`) or
+  store (`store_id`). Public read; written only through `public.set_bundle_offer(p_store_id, p_discount_percent,
+  p_min_items)` (null store: the caller's own; null discount removes it).
+- `public.listing_companions(listing_id, companion_id, sort_order)`: up to 6 listings of the same store, read while both
+  are public (and by the store owner). Written through `public.set_listing_companions(p_listing_id, p_companion_ids)`.
+- The buyer's combo list itself is kept on the device only.
+
+### Store map pins (buy-08, `20261202120600`)
+
+- `stores.map_latitude`, `stores.map_longitude` (Peru's bounding box, both or neither) are private.
+  `public_map_latitude` and `public_map_longitude` are generated: the pin while `show_address` is true, else null; only
+  they are granted to `anon` and `authenticated`. Written through `public.set_own_store_map_pin(p_store_id, lat, lng)`.
+<!-- /feature-ideas:listing-details -->
+
+## Feature ideas: discovery batch
+
+Migrations `20261207120000`–`20261207120400` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/discovery.md`. Suite: `tests/feat-discovery.sql`.
+
+- Category `andean` / type `andean_instrument` / attribute `andean_type`: `listing_taxonomy_is_valid`,
+  `listing_attribute_keys_are_valid` and `listing_search_text` are each redefined alone in their own migration (the
+  trigram index is rebuilt); `laria_private.normalize_saved_search` is patched in place (its live definition gains
+  `'andean'` and `'andean_type'`, and the migration fails if the lists moved).
+- `public.store_maker_profiles` (store_id pk; kind fabricante|taller, craft_city, story, since_year, hidden_*):
+  owner and Admin read; writes through `set_store_maker_profile` and `admin_set_maker_hidden` (audited).
+- `public.listing_maker_details` (listing_id pk; handmade, made_to_order_weeks 1–26, artist_note 3–140): read by those
+  who can manage the listing; written through `set_listing_maker_details` (makers for the first two, verified artists
+  for the note).
+- `public.store_gift_policies` (store_id pk; exchange_days 3–60, note): public for active stores, owner and Admin
+  always; written through `set_store_gift_policy`.
+- `public.artist_profiles` (user_id pk; slug, display_name, story, https link_url, verified_*, revoked_at): self and
+  Admin read; written through `admin_save_artist_profile` / `admin_revoke_artist_profile` (audited, target type
+  `artist`).
+- `public.collections` (slug, title, intro, sets jsonb of 1–4 `{label, query}`, starts_on, ends_on, published,
+  sort_order): public while published and inside its dates (Lima), Admin always; written through
+  `admin_save_collection` / `admin_delete_collection` (audited, target type `collection`). Six starter rows seeded.
+- Public reads (definer, `anon` and `authenticated`), each returning only public listings and visible makers or
+  artists: `get_listing_marks(uuid[])`, `get_public_makers(int)`, `get_store_maker_profile(uuid)`,
+  `get_public_artists(int)`, `get_gift_exchange_stores(int)`.
+
+## Feature ideas: store-reach batch
+
+Migrations `20261205120000`–`20261205160000` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/store-reach.md`. Suites: `tests/store-reach-{demand,feeds,dealers,campaigns,mercadolibre}.sql`. No
+existing function is redefined; `laria_private.reach_caller_store(p_active)` is the batch's caller-store helper.
+
+- `public.demand_reports` (month pk, period, threshold ≥ 5, totals ≥ threshold or null) and
+  `public.demand_report_rows` (month, section brand|query|type|no_results|alert, position, filters, city, people ≥
+  threshold, active and store counts): no grants; read through `get_demand_report(p_month)` (active store owners and
+  Admin). Built by `laria_private.build_demand_report(month)` from `marketplace_events` `search` rows and active
+  `saved_search_alerts`; pg_cron `demand-report-monthly` (`30 10 * * *`) builds last month once and keeps 13 months.
+- `public.store_feed_settings` (store_id pk, enabled, enabled_at): read and written through `get_store_feed_settings` and
+  `set_store_feed_enabled`; feeds read
+  `get_store_feed_header(slug)` and `get_feed_items(slug, after, limit)` (anon), public publications only.
+- `public.store_dealer_authorizations` (store_id, brand, brand_key, status awaiting_document|pending|approved|rejected|
+  revoked|withdrawn, document_* in private bucket `store-dealer-documents`, valid_until, review fields, revision): no
+  grants. Owner RPCs `request_dealer_authorization_upload`, `withdraw_dealer_authorization`,
+  `get_store_dealer_authorizations`; service-role `complete_dealer_authorization_upload`; Admin
+  `admin_get_dealer_authorizations`, `admin_get_dealer_document`, `admin_review_dealer_authorization` (audited, target
+  type `dealer_authorization`); public `get_active_dealer_authorizations()`. Upload policy through `dealer_document_upload_allowed(name)`.
+- `public.listing_price_history` (listing_id, price_pen, valid_from, valid_to, source created|change|campaign; one open
+  row per listing): written by the trigger `laria_private.record_listing_price_history` on `listings` (change time,
+  never before the open row began). `public.laria_campaigns` (slug, name, dates ≤ 30 days, min_discount_pct 5–70,
+  status draft|published|cancelled, revision) and `public.laria_campaign_entries` (campaign, listing, store,
+  campaign/reference/before prices, after_campaign restore|keep, status scheduled|live|ended|withdrawn|ineligible|
+  removed): no grants; store RPCs `get_store_campaigns`, `get_campaign_listing_options`, `join_campaign`,
+  `withdraw_campaign_entry`; Admin `admin_get_campaigns`, `admin_get_campaign`, `admin_save_campaign`,
+  `admin_set_campaign_status`, `admin_remove_campaign_entry` (audited, target types `campaign`, `campaign_entry`);
+  public `get_public_campaigns`, `get_public_campaign`, `get_live_campaign_marks`. pg_cron `laria-campaigns`
+  (`*/10 * * * *`) runs `run_campaign_job` (lock order listing, then entry).
+- `public.store_mercadolibre_connections` (store_id pk, ml_user_id, nickname, encrypted tokens, expires_at, scope) and
+  `public.store_mercadolibre_import_photos` (session, store, sku, sort_order 1–10, mlstatic https source_url, status
+  pending|working|done|failed, asset_id): no grants. Owner RPCs `get_mercadolibre_connection`,
+  `disconnect_mercadolibre`, `record_mercadolibre_import_photos`, `claim_mercadolibre_import_photos`,
+  `finish_mercadolibre_import_photo`, `get_mercadolibre_import_photos`; service-role `save_mercadolibre_connection`,
+  `get_mercadolibre_tokens`, `update_mercadolibre_tokens` (compare-and-swap).
+- New values in text checks: notification event types `store_dealer_approved|rejected|revoked`,
+  `store_campaign_entry_ineligible|removed`.
+## Feature ideas: services for musicians (migration `20261208120000_feat_services.sql`)
+
+Proposed with the services batch (`docs/feature-ideas/services.md`); not applied to any hosted database.
+
+- **Tables** (RLS on, every grant revoked; written and read only through `SECURITY DEFINER` RPCs):
+  `public.services` (one per owner and kind; `status` pending, approved, rejected, paused or hidden;
+  `needs_recheck`; `version` for Admin decisions), `public.service_events` (views and WhatsApp contacts, keyed by a
+  client event id), `public.service_bookings` (requested by provider or client; pending, confirmed, declined,
+  cancelled or expired; one open or confirmed per service and client), `public.service_reviews` (one per confirmed
+  booking and per client and service; visible or hidden with a reason) and `public.service_reports` (service or
+  service review, one open per reporter and target).
+- **Storage.** Public bucket `service-photos` (5 MB, JPEG, PNG, WebP). Owners insert and read only
+  `<uid>/<uuid>.<ext>` in their folder and delete only photos no service uses (`public.service_photo_is_unused`).
+- **RPCs.** Owner: `save_service`, `set_service_paused`, `delete_service`, `get_my_services`, `get_my_service`,
+  `get_service_booking_candidates`, `request_service_booking`, `claim_service_booking`, `respond_service_booking`,
+  `cancel_service_booking`, `get_my_service_bookings`, `submit_service_review`, `submit_service_report`. Public:
+  `get_public_services`, `get_service_directory_counts`, `get_public_service`, `get_service_reviews`,
+  `get_service_viewer_state`, `get_public_service_paths`. Service role: `record_service_event`. Admin:
+  `get_admin_service_counts`, `get_admin_service_queue`, `admin_review_service`, `admin_moderate_service_review`,
+  `admin_close_service_report`. Errors are `SERVICE_CODE: mensaje` (P0001).
+- **Shared registries** (additive): `notifications.service_id` and seven `service_*` event types, with an appended
+  branch in `notifications_target_check`; five e-mail types and the context keys `service_title` and `service_path`;
+  Admin audit target types `service`, `service_review`, `service_report`.
+- **Tests.** `tests/feat-services.sql`.
+
+<!-- feature-ideas:deal-trust -->
+## Feature ideas: deal-trust batch
+
+Migrations `20261203100000`–`20261203100500` and the patches `20261203110000`–`20261203110600` (not applied to any
+hosted database). Write-up: `docs/feature-ideas/deal-trust.md`. Suite: `tests/feat-deal-trust.sql`.
+
+### Helpers for extending shared objects (`20261203100000`)
+
+- `laria_private.extend_or_check(p_table regclass, p_constraint text, p_branch text)`: rebuilds a check constraint as
+  `(<current definition>) or (<branch>)`. The branch is first normalized through a scratch `not valid` constraint, and
+  nothing happens if the normalized branch is already in the definition, so it is safe to run again. Raises if the
+  constraint does not exist. Used for `notifications_target_check` (`seller_level_*` notices have no listing or store).
+- `laria_private.patch_function_text(p_function regprocedure, p_old text[], p_new text[])`: reads the live definition
+  with `pg_get_functiondef`, replaces each `p_old[i]` with `p_new[i]` and executes the result (a complete
+  `create or replace`, so owner and grants stay). It raises unless each old piece occurs exactly once, so a patch
+  written against an older body stops the migration instead of overwriting another batch's change. Each use is alone in
+  its own migration: `submit_transaction_review` and `publish_held_review` (counter purchases notify
+  `store_counter_review_revealed`),
+  `get_reputation` and `get_public_review_page` (items gain `photos`), `get_admin_domain_page`,
+  `get_admin_moderation_queue` and `get_account_pendientes` (left join to `listings`, counter purchases titled by the
+  store).
+- `laria_private.trust_notify_once(key, user, type, message, store, transaction)`: one in-app/push notice per key (the
+  `ux_reminders_sent` ledger, prefix `trust:`), no e-mail. Eight `notifications.event_type` values:
+  `store_counter_purchase_confirmed`, `store_counter_review_revealed`, `store_counter_review_reminder`,
+  `store_level_earned`, `store_level_lapsed`, `store_safe_spot_disabled`, `seller_level_earned`, `seller_level_lapsed`.
+
+### Counter purchases (reach-11, `20261203100100`)
+
+- `public.store_counter_sales` (store_id, sale_key = the Mostrador batch key, `lines` snapshot, `token_hash` SHA-256 of
+  the code, status open|claimed|cancelled, `expires_at` ≤ created + 24 h, claimed_by/at, cancelled_at) and
+  `public.store_counter_sale_movements(movement_id pk → store_stock_movements, sale_id)`. No grants to `anon` or
+  `authenticated`.
+- `verified_transactions.claim_id` and `listing_id` are now nullable; new `counter_sale_id` (unique). Check
+  `verified_transactions_origin_check`: either a listing transaction (claim and listing set) or a counter purchase
+  (counter_sale_id set, claim and listing null, `seller_identity_type = 'store'`). Readers that join `listings` must
+  left-join.
+- Trigger `store_stock_movements_counter_sale_guard`: undoing a movement of an open sale cancels its code; of a claimed
+  sale is refused.
+- RPCs (definer): store owner `create_counter_purchase_code(sale_key)` (replaces an open code),
+  `cancel_counter_purchase_code(id)`, `get_counter_purchase_code_status(id)`; anyone `get_counter_purchase(token)`;
+  signed in `claim_counter_purchase(token)` (own store refused, 1 per store per customer a day, 5 a day),
+  `get_counter_transaction_center()`, `get_counter_transaction_detail(id)`; Admin `get_admin_counter_purchases(page,
+  size)`.
+
+### Review photos (safe-06, `20261203100200`)
+
+- Bucket `review-photos` (private, 5 MB, JPEG/PNG/WebP). Insert policy through
+  `public.review_photo_upload_allowed(name)`: `<auth.uid()>/<transaction>/<uuid>.jpg` of the caller's own purchase
+  while its review window is open, at most twelve objects per purchase. Files are read only by
+  `app/api/review-photos/[id]` with the service role after `get_review_photo_object(id)` says `public` (approved, review
+  visible) or `private` (the reviewer or Admin).
+- `public.transaction_review_photos` (review_id, storage_path unique, sort_order 0–2, status pending|approved|hidden,
+  moderated_at/by, moderation_reason). No direct grants.
+- RPCs: `attach_review_photos(review_id, paths[])` (buyer-to-seller reviews only, a day after sending, idempotent),
+  `get_my_review_photos(transaction_id)`, Admin `get_admin_review_photo_queue(status, page, size)` and
+  `moderate_review_photo(id, status, reason)` (audited `review_photo_*`), service role `list_orphan_review_photos(limit)`
+  (unattached uploads older than two days; the job route deletes them through the Storage API).
+
+### Seller pages, levels and buyer track records (sell-09, sell-08, safe-07, `20261203100300`)
+
+- `public.seller_pages` (user_id pk, slug `<first name>-<6 hex>`, hidden). Created by trigger `listings_seller_page`
+  with a Particular's first approved or sold listing, and backfilled. Reads: `get_seller_page(slug)` (anyone; null when
+  hidden), `get_my_seller_page()`, `set_my_seller_page_hidden(bool)`.
+- `public.seller_levels` (subject_user_id or subject_store_id, qualified_since, facts jsonb, computed_at).
+  `laria_private.seller_level_facts` and `seller_level_meets` hold the criteria (5 verified sales, 3 visible buyer
+  reviews averaging ≥ 4.5, no report resolved as upheld in 90 days, no visible question unanswered between 7 and 90 days
+  old, store active). `laria_private.refresh_seller_levels()` (nightly) grants and lifts it and notifies once a day per
+  change. `get_my_seller_levels()` shows the caller's facts.
+- `public.buyer_track_records` (user_id pk, enabled, token 24 hex, a new one each time it is enabled). RPCs
+  `get_my_track_record()`, `set_my_track_record(bool)`, `get_buyer_card(token)` (anyone; null when off; first name,
+  member since, verified purchases, average of the ratings sellers gave and their count).
+
+### Provenance (safe-11, `20261203100400`)
+
+- `public.listing_provenance` (listing_id pk, transaction_id unique, linked_by, linked_at). RPCs
+  `get_my_provenance_options(transaction_id)`, `link_listing_provenance(transaction_id, listing_id)`,
+  `unlink_listing_provenance(listing_id)`; the buyer's own listing-based purchase and their own publication only.
+  `laria_private.listing_provenance_json` follows earlier links (at most ten) for the owner count.
+
+### Safe spots, page reads and the nightly job (safe-03, `20261203100500`)
+
+- `public.store_safe_spots` (store_id pk, enabled, note ≤ 200 without phones or links, admin_disabled_at/by/reason).
+  `laria_private.safe_spot_missing(store)` lists what keeps a store out (active, verified, address shown) and is checked
+  on every read. RPCs: `get_my_safe_spot()`, `set_my_safe_spot(enabled, note)`, `get_safe_meetup_spots(city, region,
+  limit)` (anyone), Admin `get_admin_safe_spots()` and `admin_set_safe_spot(store, allowed, reason)` (audited, notifies
+  the store).
+- Page reads (anyone): `get_listing_trust(listing_id)` (seller page slug, level, provenance, the store's safe spot, the
+  meetup city and region) and `get_store_trust(store_id)`.
+- `public.run_deal_trust_nightly()` (service role only) → `laria_private.run_deal_trust_nightly()`: levels and
+  `send_counter_review_reminders()`. No pg_cron job; `GET /api/internal/jobs/deal-trust` with `CRON_SECRET` runs it
+  daily.
+<!-- /feature-ideas:deal-trust -->
+
+## Feature ideas: accounts batch (migrations `20261201120000`–`20261201120500`)
+
+Proposed with the accounts batch (`docs/feature-ideas/accounts.md`); not applied to any hosted database. Suite:
+`tests/feat-accounts.sql`. Every new table has RLS on and no direct grants unless noted; reads and writes go through
+`SECURITY DEFINER` functions. Nothing existing is redefined.
+
+- **Shared e-mail registry.** `marketplace_email_deliveries_event_type_check` gains `account_new_device`,
+  `account_two_step_reset`, `help_ticket_answered`, `stolen_report_match`; `marketplace_email_context_check` gains
+  `device`, `signed_in_at`, `ticket_code`, `answer`, `report_code`, `item` (read from the live constraint first).
+- **Two-step (safe-08).** Supabase's `auth.mfa_factors` and `auth.sessions` are read through dynamic SQL (absent tables
+  read as "none"). `laria_private.user_has_verified_factor`, `laria_private.store_two_step_required` (an approved
+  payment method), `laria_private.assert_two_step_session` and `public.my_two_step_requirement()`. Triggers
+  `stores_require_two_step` and `store_payment_methods_require_two_step` refuse contact and payment-method changes from
+  an aal1 session when the code is required (`TWO_STEP_REQUIRED`).
+- `public.account_devices` (user_id, device_hash = SHA-256 of the browser cookie, label, last_session_id, first and
+  last seen): written by `record_sign_in_device` (sends `account_new_device` for a new browser after the first, ten a
+  day at most). `list_my_sessions()`, `revoke_my_session(uuid)`, `prepare_sign_out_everywhere()`.
+- `laria_private.account_recovery_codes` (bcrypt hashes, used_at) and `laria_private.account_recovery_attempts`:
+  `create_my_recovery_codes()` (aal2 when a factor exists) and `use_my_recovery_code(text)` (5 tries per 15 minutes;
+  the server then deletes the factors and sessions and sends `account_two_step_reset`).
+- **Your data (safe-09).** `export_my_data()`, `my_account_deletion_check()` and `laria_private.account_deletion_blocker`.
+  Deleting the account: `service_delete_account(uuid)` and the branch's anonymising hook, below under "Feature ideas:
+  integration" (`20261210120400`).
+- **Help tickets (safe-10).** `public.help_tickets` (code `AY-XXXXXXXX`, user_id or name and e-mail, topic, message,
+  client_hash, status abierto/respondido/cerrado, answer, answered_by): `submit_help_ticket` (5 per e-mail and per account
+  a day, 10 per client hash an hour), `my_help_tickets`, `admin_help_tickets`, `admin_answer_help_ticket` (sends
+  `help_ticket_answered` to account holders), `admin_set_help_ticket_status`.
+- **Photo hashes and red flags (safe-05).** `public.listing_photo_fingerprints` (listing_id, photo_key, sort_order,
+  owner_key, dhash bit(64)), `laria_private.listing_fingerprint_checks` (photo set last hashed) and
+  `public.listing_red_flags` (listing_id, kind `photo_copy`, matched_listing_id, detail, status open/confirmed/dismissed,
+  review fields).
+  Service role: `listings_needing_fingerprints`, `service_record_listing_fingerprints` (flags pairs of different owners
+  within 5 bits, ignoring near-flat hashes), `service_listings_fingerprint_state`. Admin: `admin_listing_red_flags`,
+  `admin_red_flags`, `admin_review_red_flag`.
+- **Stolen gear (safe-02).** `public.stolen_gear_reports` (code `RB-…`, reporter, brand, model, serial_raw/serial_norm,
+  description, stolen_on, place, police report and station, status active/recovered/withdrawn/rejected),
+  `public.stolen_gear_report_photos` (storage_path, dhash), private serials `public.listing_serials` (one per listing)
+  and `public.inventory_item_serials` (many per SKU), and `public.stolen_report_matches` (source
+  listing/inventory/gear/photo, ref, detail, status pending/confirmed/dismissed). Private bucket `stolen-gear-photos`
+  (5 MB, JPEG/PNG/WebP; owner-folder insert, read and delete). Matching triggers on serials, reports and listing photo
+  hashes; `laria_private.flag_serial_against_stolen_reports(serial, source, ref, owner default null)` is the entry point
+  for other features (Mi equipo). RPCs: `submit_stolen_gear_report`, `my_stolen_reports`, `set_my_stolen_report_status`,
+  `set/get_listing_serial`, `set/get_inventory_item_serials`, `admin_stolen_matches`, `admin_review_stolen_match`
+  (confirming sends `stolen_report_match`), `admin_stolen_reports`, `admin_set_stolen_report_status`.
+
+<!-- feature-ideas:selling-tools -->
+## Feature ideas: selling tools (Mi equipo, store offers, consignment, price steps, private offers, reminders)
+
+Migrations `20261204120000`–`20261204120700` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/selling-tools.md`. Suite: `tests/feat-selling-tools.sql`. No shared function is redefined; direct
+writes to every table below are revoked and go through definer functions. Errors read `CODE: Mensaje en español.`.
+
+- **Registry (`20261204120000`).** Notification types `listing_price_step`, `listing_private_offer`,
+  `listing_consignment_update`, `store_trade_request`, `store_trade_update`, `gear_trade_offer`, `gear_trade_update`,
+  `gear_reminder_due`; e-mail types `listing_private_offer`, `listing_consignment_update`, `store_trade_request`,
+  `store_trade_update`, `gear_trade_offer`, `gear_reminder_due`; the e-mail context key `selling`; a `gear_%` branch on
+  `notifications_target_check` (no listing or store needed), added by `laria_private.feat_add_check_branch` (idempotent:
+  wraps the live check in `(old) or (branch)`). Helpers `laria_private.selling_notify(user, type, message, listing,
+  store) → uuid` and `laria_private.selling_own_store_id()`.
+- **`gear_items` (`20261204120100`).** A Particular's own gear: `user_id`, `source` (manual | purchase),
+  `transaction_id` (unique), `source_listing_id`, taxonomy, `brand`, `model`, `title`, `attributes`, `serial` and the
+  generated `serial_key` (upper-case alphanumerics, for stolen-gear matching), `purchased_on`, `warranty_until`, `note`,
+  `sale_listing_id`. Owner reads only. `save_gear_item(p_id, p_fields)`, `delete_gear_item(p_id)`,
+  `start_gear_sale(p_id) → {draft_id} | {listing_id, status}` (a `listing_drafts` row with the sell form's keys). The
+  trigger `verified_transactions_add_to_gear` adds a confirmed purchase to a Particular buyer's list once. 200 items
+  per person.
+- **`gear_reminders`.** One per gear item (buy-06): `kind` (strings | reeds | drumheads, from
+  `public.gear_reminder_kind(type)`), `every_months` 1–12, `last_changed_on`, `next_due_on`, `last_sent_on`.
+  `set_gear_reminder`, `mark_gear_reminder_done`, `stop_gear_reminder`; `stop_gear_reminders_by_link(user)` (service
+  role, for the e-mail's one-click link).
+- **`store_trade_settings` (`20261204120200`).** One row per store: `buys_used` and `buy_categories` (guitars, basses,
+  amplifiers, pedals, keyboards), `consignment`, `part_payment` (the default for its listings), `consumables`
+  (strings, reeds, drumheads), `note`. All off by default; public for active stores. `set_store_trade_settings(p_fields)`
+  (buying and consignment need a verified store). `listings.accepts_part_payment boolean` (null follows the store),
+  `listing_accepts_part_payment(id)` and `set_listing_part_payment(id, value)`.
+- **`trade_requests` and `trade_offers`.** A Particular's request (`kind` sell | part_payment) with 2–6 photos in the
+  private bucket `trade-photos` (`<user>/<request>/<n>.jpg`, jpeg, 5 MB; the insert policy uses
+  `trade_photo_folder_is_free`), `offers_until` (24 h, or 72 h for part payment), `decide_until` (+3 days, or +7),
+  `status` (open, accepted, completed, not_completed, withdrawn, expired), the accepted offer, `drop_off_by` (+5 days)
+  and the person's `contact_phone`, shared only with the chosen store. One offer per store and request (sent,
+  accepted, declined, withdrawn). Reads go through `get_my_trade_requests`, `get_my_trade_request`,
+  `get_store_trade_inbox`, `get_store_trade_request`; writes through `create_trade_request` (rate limits, contact
+  details refused, condition from the listing scale), `accept_trade_offer`, `withdraw_trade_request`,
+  `save_trade_offer`, `withdraw_trade_offer`, `close_trade_request`. Who sees a request:
+  `laria_private.trade_store_qualifies` (active, verified, same region, category bought) or the listing's store for
+  part payment. `count_trade_stores(category, region)`, `count_trade_stores_by_category(region)`,
+  `can_view_trade_photo(path)`.
+- **`listing_consignments` (`20261204120300`).** `listing_id`, `store_id`, `owner_user_id`, `status` (invited, active,
+  sold, ended), `invite_token_hash` (sha256 of a 64-hex secret), `invite_expires_at` (7 days); one open row per
+  listing. `create_consignment_invite`, `get_consignment_invite`, `accept_consignment_invite` (Particular),
+  `end_consignment`, `get_listing_consignment` (public label), `get_my_consignments` (views, contacts, saves),
+  `get_store_listing_consignment`. Trigger `listings_selling_consignment_close` (after update of status): sold closes it
+  and e-mails the owner, archived ends it.
+- **`listing_price_steps` (`20261204120400`).** One rule per listing: `floor_pen`, `step_percent` 5 | 10,
+  `interval_days` 7 | 14, `only_without_contacts`, `status` (active, paused, finished), `finished_reason`,
+  `start_price_pen`, `steps_taken`, `next_step_at`, `last_step_at`. `public.listing_price_step_next(price, floor,
+  pct)` is the rounding (whole soles, down). `set_listing_price_steps`, `pause_listing_price_steps`,
+  `delete_listing_price_steps`. The job lowers the price through the usual price change (so `listing_price_drop`
+  alerts follow).
+- **`listing_private_offers` and recipients (`20261204120500`).** One private price per listing per 7 days, valid 1–7
+  days, sent to the people who saved it (never the owner or the store owner); the e-mail is skipped when
+  `email_preferences.price_drop_emails` is false. `get_private_offer_audience`, `send_private_offer`,
+  `cancel_private_offer`, `get_my_private_offer`, `get_listing_selling_tools(uuid[])` (owner's tags) and
+  `get_listing_selling_public(id)` (the listing page's consignment label, part payment and the viewer's offer).
+- **Jobs (`20261204120600`).** `public.run_selling_job(p_job, p_limit)`, service role only: `price-steps`,
+  `gear-reminders` (dedupe `gear_reminder:<gear>:<due>`), `trade-offers` (expiry, stale accepted requests, and the
+  `orphan_photos` list the route removes from Storage: unsent after 2 days, closed more than 90 days ago).
+- **Part payment as a listing detail (`20261204120700`).** Key `part_payment` in `laria_private.listing_detail_writers`
+  with `laria_private.write_listing_part_payment(uuid, jsonb)` (true, false or null; store listings only) and
+  `laria_private.copy_listing_part_payment(uuid, uuid)`.
+<!-- /feature-ideas:selling-tools -->
+
+<!-- feature-ideas:integration -->
+## Feature ideas: integration (migrations `20261210120000`–`20261210120700`)
+
+Wiring between batches, written by the integrator (not applied to any hosted database).
+
+- **Mi equipo serials in the stolen-gear matching (`20261210120000`).** The trigger `gear_items_flag_stolen` (after insert
+  or update of `serial` on `public.gear_items`) calls `laria_private.flag_serial_against_stolen_reports(serial, 'gear',
+  id, user_id)` when `serial_key` is set or changes, so a reporter's own gear never matches. The item's owner is never
+  told; a match stays when the item or its serial changes later.
+- **New reports scan Mi equipo (`20261210120100`).** Redefines `laria_private.match_new_stolen_report` (accounts batch):
+  the same listing and SKU scans plus one over `gear_items.serial_key`.
+- **Admin's view (`20261210120200`).** Redefines `public.admin_stolen_matches` (accounts batch) with `gear_item`
+  (`title`, and `sale_listing_id` when the item became a pending, live or hidden listing through "Vender esto"); never
+  the owner. `null` once the owner removed the item.
+- **The cached pages' record of changes for the branch's tables (`20261210120300`).** Main's page refresh (below,
+  "Launch audit: public page refresh") for the fifteen tables the branch adds that the cached listing page and home
+  read: `listing_maker_details`, `store_maker_profiles`, `artist_profiles` (`public.get_listing_marks`),
+  `store_locations`, `store_location_stock` (`public.get_listing_locations`), `seller_levels`, `seller_pages`,
+  `store_safe_spots`, `listing_provenance` (`public.get_listing_trust`), `store_tryout_settings`,
+  `seller_bundle_offers`, `listing_companions`, `store_installment_offers` (while the payments pilot is on),
+  `transaction_review_photos` and `collections`. Each gets `<table>_public_page_changes_insert|update|delete`
+  (statement-level, with transition tables; `seller_pages` no insert trigger, since a page is made with its owner's
+  first approved listing, which records itself), all running `laria_private.mark_feature_page_changes()`: a statement
+  leaves one row in `laria_private.public_page_changes` when a part a page shows left or entered the table's rows.
+  `laria_private.feature_page_part(table, row)` says what that part is, or null when no page shows the row (its
+  listing isn't shown, its store isn't active (`laria_private.store_is_shown`), its photo isn't approved, its
+  collection isn't published): for instance whether a location holds the item (not how many units), the level's
+  `qualified_since` (not the daily job's `computed_at` and `facts`), whether the store takes try-outs (not its hours).
+  `public.claim_public_page_changes` also adds a row when a published collection's first day starts or its last day
+  ends (midnight in Lima) since the previous look. Shown as of the page's last rebuild, unrecorded: the dealer and
+  campaign marks and the services counts (shared caches of their own, the first two cleared by Admin's decisions with
+  `revalidateTag`) and a listing's previous owners (from `public.verified_transactions`). The first statement takes
+  the fifteen tables' locks at once with `nowait`, like main's (`PAGE_REFRESH_TABLES_BUSY` after 30 seconds);
+  `tests/launch-audit-page-refresh-locks.integration.cjs` replays a writer holding each of them against it too.
+- **Anonymising an account clears the branch's data (`20261210120400`).** `laria_private.anonymize_account_feature_data(uuid)`
+  is the hook main's `laria_private.anonymize_account_core` calls (below, "Launch audit: privacy"), for the self-service
+  deletion and for Admin's `public.admin_anonymize_account` alike; no API role runs it, and its counts land under
+  `features`. It removes sign-in devices, recovery codes and attempts, help tickets, stolen-gear reports (their photos
+  queued in `laria_private.upload_removals` for the daily uploads sweep), serials and photo fingerprints of the
+  account's listings, `gear_items` (and `gear_reminders`), `listing_price_steps`, private offers made and received,
+  the person's `seller_bundle_offers`, `artist_profiles`, `seller_pages`, `seller_levels` and `buyer_track_records`. It
+  withdraws open or accepted `trade_requests` (offers closed, stores told, as `withdraw_trade_request` does) and clears
+  every request's `contact_phone`; cancels upcoming `store_tryouts` (the store told, as `cancel_my_tryout` does) and
+  clears every try-out's buyer name ("Cuenta eliminada"), phone (`''`) and note; hides the person's `services`
+  ("Cuenta eliminada", no WhatsApp: `services_whatsapp_check` allows `''` only on a hidden service, and
+  `store_tryouts_buyer_phone_check` allows `''`); cancels pending `service_bookings` either side; unlinks
+  `service_events`; and deletes a Mercado Libre connection the person made for a store that is not active. Verified
+  sales, reviews and their photos, service reviews and reports, counter purchases and consignments stay.
+  `public.service_delete_account(uuid)` (service role; the server re-checked the password) refuses an Admin or a store
+  owner (`DELETE_BLOCKED_ADMIN|STORE`) and returns `laria_private.anonymize_account(p_user_id, 'self_service')`.
+- **The branch's listing columns are public (`20261210120500`).** Launch audit A27 reads a listing through column
+  grants and `public.public_listings` (below, "Launch audit: phone numbers and contacts"). The branch's twenty listing
+  columns (`listing_flags`, `price_mode`, the sale terms, delivery and pickup area, trades and part payment, warranty
+  and returns, `store_terms_source`, `restock_expected_on`, `installments_max`) get the same grant to anon and
+  authenticated and their place at the end of `public.public_listings`, after main's columns and in the same order. A
+  listing column the branch adds later is private until it is added to both.
+- **Held reviews and counted buyers (launch audit A17, below "Launch audit: confirmed buyers and held reviews").** A
+  buyer's review held for Admin shows nowhere on the branch's pages either: they read reviews through
+  `laria_private.review_is_visible`, and review photos through it too (`get_review_photo_object`).
+  `public.get_counter_transaction_detail` gains `counterpart_review_held` as `get_transaction_detail` does, and its
+  `own_review` carries `held_at`; `public.get_admin_review_photo_queue` items gain `review_held`;
+  `public.export_my_data` leaves a held review out of `reviews_received`. The seller page (`get_seller_page`) and the
+  level (`laria_private.seller_level_facts`) count buyers with `laria_private.counted_buyers`, under the key
+  `verified_sales`, like the seller card. When Admin publishes a held review of a counter purchase and both reviews are
+  in, `publish_held_review` sends `store_counter_review_revealed` (patch `20261203110600`). These are edits of the
+  deal-trust and accounts batches' own migrations plus that patch.
+- **The branch's e-mails under the daily limit (`20261210120600`, launch audit A25, below "Launch audit: e-mail
+  backlog").** Recreates `laria_private.email_max_age` and `laria_private.email_priority` with main's cases unchanged
+  (the five maybes' `listing_released`, two days and priority 2, and `listing_reservation_ended`, three days and
+  priority 1, among them) and these added: a sign-in from a new device and the try-out e-mails (requested, confirmed, declined, cancelled, the
+  reminder the day before) are dropped after a day; a private offer to the people who saved a listing after two days,
+  with the alerts' priority (2, optional like a price drop); the Mi equipo reminder after three days, with the
+  reminders' priority (1), as is the try-out reminder. The branch's other e-mails are an account's own business (help
+  answers, consignments, trades, offers, services, a stolen-gear match) and keep the default: a week, priority 0.
+- **The second sign-in step guards the API (`20261210120700`, safe-08).** A signed-in session at `aal1` whose account
+  has a verified authenticator factor owes its code (`laria_private.two_step_owed()`, one lookup of
+  `auth.mfa_factors`, only for `aal1`). Such a session gets `TWO_STEP_REQUIRED` (42501) from every PostgREST request,
+  through PostgREST's pre-request function `public.check_two_step_request()` (set with `alter role authenticator set
+  pgrst.db_pre_request`; anon and authenticated may execute it, since it runs as the request's role), except
+  `/rpc/my_two_step_owed`, `/rpc/my_two_step_requirement`, `/rpc/record_sign_in_device` and
+  `/rpc/use_my_recovery_code`; and from Storage, through the restrictive policy "Second sign-in step" on
+  `storage.objects` (every action, `authenticated`). `public.my_two_step_owed()` (authenticated) answers it for the
+  routes that act with the service role, the two AI routes (`/api/store/ask`, `/api/listing-assist`) among them,
+  before any AI call. Visitors, the service role, accounts without a factor and `aal2` sessions are
+  untouched. Rollback: `alter role authenticator reset pgrst.db_pre_request; notify pgrst, 'reload config';`, then
+  drop the policy and the three functions.
+- Tests: `tests/feat-integration.sql` (also the e-mail rules), `tests/feat-two-step-requests.sql`,
+  `tests/feat-page-refresh.sql`, `tests/feat-account-privacy.sql`, `tests/feat-deal-trust.sql` (held reviews, Admin
+  publishing, counted buyers); `tests/feat-integration.test.cjs` checks the grant, the view's order and the cards'
+  columns; `tests/feat-two-step-requests.test.cjs` the allowed calls and every use of the service role.
+<!-- /feature-ideas:integration -->
+
+<!-- feature-ideas:store-locations -->
+## Feature ideas: store locations and receipts
+
+Migrations `20261209120000`–`20261209120100` (not applied to any hosted database). Write-up:
+`docs/feature-ideas/store-locations.md`. Suites: `tests/store-locations.sql`, `tests/store-receipts.sql`. No shared
+function is redefined.
+
+- `public.store_locations` (store, name, region, city, district, address, show_address, generated public_address,
+  opening_hours, pickup_enabled, is_primary (one per store), position, archived_at; names unique among active): owner
+  reads directly; public data only through `get_public_store_locations(uuid)` and `get_listing_locations(uuid)` (names,
+  only with two or more active sedes). Written through `save_store_location(uuid, jsonb)` (the first sede becomes main
+  and receives all units; limit 20), `set_primary_store_location(uuid)` and `archive_store_location(uuid, uuid, text)`.
+- `public.store_location_stock` (pk location_id, item_id; store_id; quantity_on_hand ≥ 0): the split of
+  `store_inventory_items.quantity_on_hand`, which stays the total. Owner read only.
+- `public.store_stock_movements` gains `location_id` (when one sede changed) and `location_split` (jsonb). The BEFORE
+  INSERT trigger `laria_private.allocate_stock_movement` fills them: the sede in the transaction setting
+  `laria.stock_location`, else the reverse of the corrected movement, else main for increases and main-then-position
+  for decreases (`laria_private.add_location_stock` raises `STORE_LOCATION_STOCK_SHORT`).
+- Deferred constraint triggers (`laria_private.check_location_stock_total`) on items and sede stock check at commit
+  that the split adds up to the total.
+- `public.store_stock_transfers` (append-only; store, item, from, to, quantity, reason, idempotency key and
+  fingerprint): `transfer_location_stock(uuid, uuid, uuid, integer, text, text)`.
+- `record_location_stock_movement(…)`, `apply_location_bulk_stock_operations(uuid, jsonb, text)` (batch key bound to
+  the sede in `laria_private.store_location_batch_keys`) and `set_location_stock_counts(uuid, jsonb, text)` (≤ 200
+  counts) set `laria.stock_location` and call the existing stock functions.
+- `public.store_einvoice_settings` (pk store; provider nubefact, api_url `https://api.nubefact.com/api/v1/…`,
+  token_ciphertext `v1.<iv>.<tag>.<data>` (AES-256-GCM, service role only), token_hint, boleta/factura series and next
+  numbers, igv_affectation, email_customer, checked_at): `get_einvoice_settings()` (never the token),
+  `save_einvoice_settings(jsonb)` (verified stores; numbers never go back), `disconnect_einvoice()`.
+- `public.store_receipts` (store, kind boleta|factura, series, number unique per series, status
+  pending|accepted|rejected|error|void_pending|voided, sale_key unique per store, location, customer fields, lines
+  jsonb, igv_affectation, total_cents, issue_date, attempts, https links, SUNAT result, error, void fields): owner and
+  Admin read. `prepare_store_receipt(jsonb)` (validates the sale and the customer, takes the number under the settings
+  row lock, replays per sale), `request_store_receipt_void(uuid, text)` (7 days),
+  `record_store_receipt_result(uuid, jsonb)` (service_role only; never downgrades accepted or voided).
+<!-- /feature-ideas:store-locations -->
 
 <!-- launch-audit:monitoring -->
 ## Launch audit: error counts and health

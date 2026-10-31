@@ -407,12 +407,14 @@ test("A19: a failed read is never cached; during the deploy the page is rendered
 
   // The sitemap: a failed batch throws instead of caching a partial list for an hour.
   const building = [];
-  const batches = { stores: [{ data: [{ id: "s1", slug: "casa-grau", updated_at: "2026-10-01" }], error: null }], listings: [] };
+  const batches = { stores: [{ data: [{ id: "s1", slug: "casa-grau", updated_at: "2026-10-01" }], error: null }], listings: [], collections: [], services: [] };
   const client = {
     from: (table) => {
       const builder = { select: () => builder, eq: () => builder, or: () => builder, order: () => builder, range: async () => batches[table].shift() };
       return builder;
     },
+    // feature-ideas services (bet-02) and discovery (disc-03) add the services and the collections.
+    rpc: async () => batches.services.shift(),
   };
   const { default: sitemap } = loadModule("app/sitemap.ts", {
     "@/lib/cache-build": { renderPerRequestIfBuilding: async (page) => { building.push(page); } },
@@ -426,10 +428,22 @@ test("A19: a failed read is never cached; during the deploy the page is rendered
   batches.listings.push({ data: null, error: { message: "canceling statement due to statement timeout" } });
   await assert.rejects(sitemap(), /The sitemap's listings could not be read: canceling statement/);
   assert.deepEqual(building, ["/sitemap.xml"]);
+  // The services and the collections throw on a failed read too (feature ideas, after A19).
+  for (const failing of ["services", "collections"]) {
+    batches.stores.push({ data: [], error: null });
+    batches.listings.push({ data: [], error: null });
+    batches.services.push(failing === "services" ? { data: null, error: { message: "timeout" } } : { data: [], error: null });
+    if (failing === "collections") batches.collections.push({ data: null, error: { message: "timeout" } });
+    await assert.rejects(sitemap(), new RegExp(`The sitemap's ${failing} could not be read: timeout`));
+  }
   batches.stores.push({ data: [], error: null });
   batches.listings.push({ data: [{ id: "l1", slug: "fender-1", updated_at: "2026-10-02" }], error: null });
+  batches.services.push({ data: [{ path: "/servicios/luthier/taller-ayacucho", updated_at: "2026-10-03" }], error: null });
+  batches.collections.push({ data: [{ slug: "andino", updated_at: "2026-10-04" }], error: null });
   const entries = await sitemap();
   assert.ok(entries.some((entry) => entry.url === "https://laria.audio/instrumentos/fender-1"));
+  assert.ok(entries.some((entry) => entry.url === "https://laria.audio/servicios/luthier/taller-ayacucho"));
+  assert.ok(entries.some((entry) => entry.url === "https://laria.audio/colecciones/andino"));
 
   // A listing-id address whose lookup fails throws too, instead of caching a 404 (the main read already does).
   assert.match(read("app/instrumentos/[slug]/page.tsx"),
@@ -467,19 +481,21 @@ test("A19: an owner's change to price, status or details drops the listing's pag
   for (const body of [
     { action: "hide" }, { action: "restore" }, { action: "sold" }, { action: "price", price_pen: "2300" }, { action: "resubmit" },
     { action: "edit", immediate: { price_pen: "2200", description: "Guitarra en muy buen estado, con estuche, cuerdas nuevas y correa." }, moderated: {} },
+    // Feature ideas, listing-details: the sale terms and the companions show on the page too.
+    { action: "details", details: {} }, { action: "companions", companionIds: [] },
   ]) {
     const response = await post(body);
     assert.equal(response.status, 200, `${body.action}: ${await response.clone().text()}`);
   }
-  assert.deepEqual(rpcs, ["set_owned_listing_lifecycle", "set_owned_listing_lifecycle", "set_owned_listing_lifecycle", "set_owned_listing_price", "submit_listing_for_publication", "update_owned_listing"]);
-  assert.deepEqual(refreshed, Array(6).fill("fender-stratocaster-1b2c"));
+  assert.deepEqual(rpcs, ["set_owned_listing_lifecycle", "set_owned_listing_lifecycle", "set_owned_listing_lifecycle", "set_owned_listing_price", "submit_listing_for_publication", "update_owned_listing", "update_owned_listing_details", "set_listing_companions"]);
+  assert.deepEqual(refreshed, Array(8).fill("fender-stratocaster-1b2c"));
 
   // A copy is a new draft, not a change to this page.
   assert.equal((await post({ action: "duplicate" })).status, 200);
   rpcError = { message: "LISTING_PRICE_INVALID" };
   assert.equal((await post({ action: "price", price_pen: "2300" })).status, 409);
   assert.equal((await post({ action: "hide" })).status, 409);
-  assert.equal(refreshed.length, 6);
+  assert.equal(refreshed.length, 8);
 });
 
 test("A19: the browser's refresh call drops only the pages of listings its caller owns, or any for Admin, that just changed", async () => {
@@ -502,11 +518,16 @@ test("A19: the browser's refresh call drops only the pages of listings its calle
   };
   let signedIn = owner;
   let adminChecks = 0;
+  // features/marketplace (safe-08): a session that still owes its authenticator code is refused before any read.
+  let owesCode = false;
   const refreshed = [];
   const admin = { from: (table) => ({ select: () => ({ in: async (_column, ids) => ({ data: ids.map((id) => rows[table][id]).filter(Boolean), error: null }) }) }) };
   const server = {
     auth: { getUser: async () => ({ data: { user: signedIn ? { id: signedIn } : null }, error: null }) },
-    rpc: async (name) => { assert.equal(name, "is_admin"); adminChecks += 1; return { data: signedIn === adminUser, error: null }; },
+    rpc: async (name) => {
+      if (name === "my_two_step_owed") return { data: owesCode, error: null };
+      assert.equal(name, "is_admin"); adminChecks += 1; return { data: signedIn === adminUser, error: null };
+    },
   };
   const route = loadModule("app/api/listings/refresh/route.ts", {
     "next/server": nextServer,
@@ -538,6 +559,9 @@ test("A19: the browser's refresh call drops only the pages of listings its calle
   signedIn = null;
   assert.equal((await post({ listings: [mine] })).status, 401);
   signedIn = owner;
+  owesCode = true;
+  assert.equal((await post({ listings: [mine] })).status, 403);
+  owesCode = false;
   for (const body of [{}, { listings: [] }, { listings: "x" }, { listings: ["not-an-id"] }, { listings: [mine], revisions: [1] }, { listings: Array.from({ length: 101 }, () => crypto.randomUUID()) }]) {
     assert.equal((await post(body)).status, 400, JSON.stringify(body).slice(0, 60));
   }

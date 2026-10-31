@@ -73,9 +73,9 @@ export const VERIFIED_STORES_PATH = STORES_PATH;
 // "link" items go straight to their page; "category" items open that category's menu.
 export type StripItem = { key: string; label: string; href: string; kind: "link" | "category" };
 
-// Shorter strip labels, so ten categories still fit one row at 1280 px; the panel, the landing and every other place
-// keep the full label.
-const stripLabels: Record<string, string> = { keyboards: "Teclados" };
+// Shorter strip labels, so the categories fit the row; the panel, the landing and every other place keep the full
+// label. Since disc-04 added the eleventh category, the row scrolls sideways below about 1366 px.
+const stripLabels: Record<string, string> = { keyboards: "Teclados", andean: "Andinos" };
 
 // "Instrumentos" first, the categories in taxonomy order, "Tiendas verificadas" last (at the right on desktop).
 export const stripItems: readonly StripItem[] = [

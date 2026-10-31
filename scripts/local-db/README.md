@@ -16,6 +16,8 @@ bash scripts/local-db/setup-local-db.sh test      # every tests/*.sql, then the 
 bash scripts/local-db/safeupdate/build.sh         # once: the pg_safeupdate stand-in tests/api-safeupdate needs
 bash scripts/local-db/run-db-integration.sh       # every database-only tests/*.integration.cjs
 bash scripts/local-db/setup-local-db.sh start     # after the container restarts
+bash scripts/local-db/gen-types.sh > lib/supabase/database.types.ts.tmp \
+  && mv lib/supabase/database.types.ts.tmp lib/supabase/database.types.ts   # the app's types, from this database
 ```
 
 - Connect with `psql -h 127.0.0.1 -p 54322 -U postgres` (trust auth, no password). That is the address local Supabase
@@ -31,6 +33,9 @@ bash scripts/local-db/setup-local-db.sh start     # after the container restarts
   on a listed one that is gone, on a left-out app test that names a database URL, when it finds no database test,
   when neither safeupdate nor the stand-in loads, on a test that prints a line starting with `SKIP`, and on one that
   prints no line starting with `PASS`.
+- `gen-types.sh` runs the generator `pnpm db:types` runs (Supabase's postgres-meta) against this database, for a branch
+  whose migrations aren't in production yet; on main's migrations it writes the committed file byte for byte. The first
+  run downloads the generator from the npm registry.
 - The same files are in the project's shared folder (`/mnt/project-files/store-operations/local-db-setup/`) for
   sessions that work on an older branch; this copy is the one CI uses.
 

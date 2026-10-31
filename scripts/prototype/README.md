@@ -81,6 +81,49 @@ more than the stack:
 - **E-mails** (alerts, price drops, reminders) are logged, as before (`MARKETPLACE_EMAIL_PROVIDER=log`); the e-mail
   worker is started the same way, at `/api/internal/email/process`.
 
+## Servicios para músicos (feature ideas, bet-02)
+
+`scripts/prototype/services-seed.sql` (loaded by `start-docker-free.sh seed`, or by hand after `demo-seed.sql`) adds
+five services and two accounts, `estudio@laria.test` and `sonido@laria.test`. Look at `/servicios`, a service page,
+Mi cuenta › Servicios as `particular@laria.test` (a lesson with a review) or `comprador@laria.test` (a confirmation to
+answer and a review to write), and Admin › Servicios as `admin@laria.test` (one new service, one with changes, one
+report). Details: `docs/feature-ideas/services.md`.
+
+## Deal-trust (feature ideas)
+
+`scripts/prototype/deal-trust-seed.sql` (`docs/feature-ideas/deal-trust.md`) gives the demo accounts five verified
+sales of `particular@laria.test` (their seller page and «Vendedor destacado»), reviews with one approved photo, a
+resale by `comprador@laria.test` linked to its purchase («Historial en Laria»), comprador's buyer card at
+`/comprador/a1b2c3d4e5f60718293a4b5c`, and the demo store as a «Punto seguro Laria». Load it after the demo seed, then
+copy the review photo's file into the local Storage folder:
+
+```sh
+psql "postgresql://postgres@127.0.0.1:54322/postgres" -f scripts/prototype/deal-trust-seed.sql
+install -D scripts/prototype/demo-photos/FEN-MUSTLT25__01.jpg \
+  /tmp/laria-prototype/storage/review-photos/d0000000-0000-4000-8000-000000000003/d8200000-0000-4000-8000-000000000003/d8400000-0000-4000-8000-000000000001.jpg
+```
+
+The Mostrador code (Mi tienda > Inventario > Mostrador, then "Mostrar código al cliente" after a sale) can be confirmed
+by `comprador@laria.test` or `particular@laria.test`, once per store a day each. `scripts/prototype/a11y-deal-trust.cjs`
+runs axe-core on the new pages and sheets (same setup as below). The levels and reminders run with
+`curl -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/internal/jobs/deal-trust`.
+
+## Feature ideas, all batches together
+
+`start-docker-free.sh seed` loads every batch seed after the demo seed (services, discovery, deal-trust,
+selling-tools, store-floor, store-reach and store-locations), copies deal-trust's review photo into the local Storage
+folder, and writes a local-only `LARIA_EINVOICE_KEY` into a new `.env.local` (the key store-locations' seed sealed the
+demo Nubefact token with). With an older `.env.local`, add that line by hand or delete the file before seeding.
+`demo-tienda@laria.test` and `admin@laria.test` must turn on two-step sign-in; `two-step.cjs` does it for scripts.
+
+`feature-ideas-tour.cjs` takes one screenshot of every new or changed screen of the program, as the role that sees
+it, at 390 px (and 1366 px where the layout changes), and writes JPEGs plus `manifest.json`
+(`docs/feature-ideas/build-plan.md` lists the ideas):
+
+```sh
+node scripts/prototype/feature-ideas-tour.cjs /tmp/laria-prototype/feature-ideas-tour
+```
+
 ## Accessibility checks
 
 Two Playwright scripts run axe-core (WCAG 2.0 to 2.2, A and AA) against the running prototype at 390 px and 1366 px,
