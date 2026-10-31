@@ -61,6 +61,68 @@ async function account(kind='seller') {
   }
   console.log('PASS identical location movements replay once; changed item, quantity, type, reference and reason are refused');
 
+  // Actual service RPCs plus the production connection function, with a single-use provider stand-in.
+  const Module=require('node:module'),load=Module._load;
+  let transientSaveErrors=0,saveCalls=0;
+  const tokenDb={rpc:async(name,args)=>{
+    if(name==='finish_mercadolibre_refresh') {
+      saveCalls++;
+      if(transientSaveErrors-->0)return {data:null,error:{message:'Simulated temporary save failure'}};
+    }
+    return admin.rpc(name,args);
+  }};
+  Module._load=function(request,...rest){
+    if(request==='server-only')return {};
+    if(request==='@/lib/supabase/admin-client')return {getSupabaseAdminClient:()=>tokenDb};
+    return load.call(this,request,...rest);
+  };
+  const {ownerConnection}=require('../lib/mercadolibre/server.ts');
+  const {encryptToken,decryptToken}=require('../lib/mercadolibre/crypto.ts');
+  const mlConfig={key:Buffer.alloc(32,9),clientId:'test',clientSecret:'test',redirectUri:'https://example.invalid/callback'};
+  const seedTokens=async()=>ok(await admin.rpc('save_mercadolibre_connection',{
+    p_owner_user_id:owner.id,p_ml_user_id:1234,p_nickname:'QA',p_access_token_enc:encryptToken(mlConfig.key,store,'old-access'),
+    p_refresh_token_enc:encryptToken(mlConfig.key,store,'old-refresh'),p_expires_at:new Date(Date.now()-1000).toISOString(),p_scope:'read',
+  }),'seed provider connection');
+  let providerCalls=0,consumed=false;
+  const provider=async(_url,init)=>{
+    providerCalls++;
+    assert.equal(new URLSearchParams(init.body).get('refresh_token'),'old-refresh');
+    if(consumed)return new Response('{"error":"invalid_grant"}',{status:400});consumed=true;
+    await new Promise(resolve=>setTimeout(resolve,100));
+    return Response.json({access_token:'new-access',refresh_token:'new-refresh',user_id:1234,expires_in:21600});
+  };
+  await seedTokens();
+  const connections=await Promise.all([ownerConnection(mlConfig,owner.id,provider),ownerConnection(mlConfig,owner.id,provider)]);
+  assert.deepEqual(connections.map(c=>c.accessToken),['new-access','new-access']);assert.equal(providerCalls,1);
+  let tokens=ok(await admin.rpc('get_mercadolibre_tokens',{p_owner_user_id:owner.id}),'read tokens');
+  assert.equal(decryptToken(mlConfig.key,store,tokens.refresh_token_enc),'new-refresh');
+  await seedTokens();consumed=false;providerCalls=0;saveCalls=0;transientSaveErrors=1;
+  assert.equal((await ownerConnection(mlConfig,owner.id,provider)).accessToken,'new-access');
+  assert.equal(saveCalls,2);assert.equal(providerCalls,1);
+  tokens=ok(await admin.rpc('get_mercadolibre_tokens',{p_owner_user_id:owner.id}),'persisted retry');
+  assert.equal(decryptToken(mlConfig.key,store,tokens.refresh_token_enc),'new-refresh');
+  const denied=await owner.client.rpc('claim_mercadolibre_refresh',{p_store_id:store,p_previous_access_token_enc:tokens.access_token_enc,p_claim_id:randomUUID()});
+  assert.ok(denied.error,'a normal owner cannot claim or read provider secrets');
+  console.log('PASS production ML refresh coordinates concurrent workers through real service RPCs and retries a failed token save');
+
+  // Mostrador needs an authoritative per-location snapshot, including when a queued write was already committed.
+  const counterItem=ok(await owner.client.rpc('create_inventory_item',{p_fields:{merchant_sku:'FINAL-REPLAY',product_name:'Equipo para cola',unit_price_pen:100},p_opening_quantity:2,p_idempotency_key:'final-replay-create'}),'counter item').item.id;
+  ok(await owner.client.rpc('transfer_location_stock',{p_item_id:counterItem,p_from:locations[0],p_to:locations[1],p_quantity:1,p_reason:'Prueba local',p_idempotency_key:'final-replay-transfer'}),'split stock');
+  async function counterAction(body) {
+    const response=await fetch(base+'/api/store/inventory',{method:'POST',headers:{Cookie:owner.cookie(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+    assert.equal(response.status,200);const answer=await response.json();assert.equal(answer.ok,true);return answer.data;
+  }
+  let index=await counterAction({action:'counter_index'});
+  assert.equal(index.location_stock[locations[0]][counterItem],1);assert.equal(index.location_stock[locations[1]][counterItem],1);
+  const counterSale={action:'location_bulk_stock',location_id:locations[0],key:'final-replay-sale',operations:[{item_id:counterItem,type:'sale',quantity:1,channel:'tienda_fisica',reference:'Mostrador'}]};
+  await counterAction(counterSale); // Its successful response could be lost before the browser removes the queue entry.
+  await counterAction(counterSale); // The next replay must refresh actual stock, never subtract from a stale snapshot.
+  index=await counterAction({action:'counter_index'});
+  assert.equal(index.location_stock[locations[0]][counterItem],0);assert.equal(index.location_stock[locations[1]][counterItem],1);
+  assert.equal(index.items.find(item=>item.id===counterItem).quantity_available,1);
+  assert.ok(!JSON.stringify(index).includes(other.id));
+  console.log('PASS counter snapshot refresh retains location stock after an idempotent offline-sale replay');
+
   const gear=ok(await buyer.client.rpc('save_gear_item',{p_id:null,p_fields:{category:'guitars',instrument_type:'electric_guitar',brand:'Marca QA',model:'Modelo QA',serial:'FOLLOWUP-OWN-SERIAL'}}),'gear');
   ok(await other.client.rpc('save_gear_item',{p_id:null,p_fields:{category:'guitars',instrument_type:'electric_guitar',brand:'Marca privada',serial:'FOREIGN-SERIAL-NEVER-EXPORT'}}),'foreign gear');
   const sale=randomUUID(),token=randomUUID().replaceAll('-','');
@@ -79,7 +141,7 @@ async function account(kind='seller') {
     await db.query('rollback');
     if(store) {
       await db.query('begin');await db.query("set local session_replication_role='replica'");
-      for(const table of ['laria_private.store_location_movement_requests','public.store_stock_movements','public.store_inventory_changes'])await db.query(`delete from ${table} where store_id=$1`,[store]);
+      for(const table of ['laria_private.store_location_movement_requests','public.store_stock_transfers','public.store_stock_movements','public.store_inventory_changes'])await db.query(`delete from ${table} where store_id=$1`,[store]);
       await db.query('delete from public.verified_transactions where buyer_user_id=any($1::uuid[])',[users]);
       await db.query('delete from public.store_counter_sales where store_id=$1',[store]);
       await db.query('commit');

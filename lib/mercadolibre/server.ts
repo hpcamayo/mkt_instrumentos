@@ -39,36 +39,105 @@ type Db = SupabaseClient;
 
 export type Connection = { storeId: string; userId: number; accessToken: string };
 
-// The owner's connection with a usable access token, refreshing it when it is about to expire. Null when not connected.
+type TokenRow = { store_id: string; ml_user_id: number; access_token_enc: string; refresh_token_enc: string | null; expires_at: string };
+type PendingRefresh = {
+  p_store_id: string; p_previous_access_token_enc: string; p_claim_id: string;
+  p_access_token_enc: string; p_refresh_token_enc: string; p_expires_at: string;
+};
+// A failed save retains only ciphertext on this worker, for a later retry without consuming the provider token twice.
+// The database lease, not this map, coordinates workers. Process termination during a provider/DB outage still
+// requires reconnection: no local transaction can atomically commit a third-party token rotation.
+const pendingRefreshes = new Map<string, PendingRefresh>();
+const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const connectionUnavailable = () => new MercadoLibreError("MERCADOLIBRE_UNAVAILABLE", "No pudimos actualizar tu conexión. Intenta de nuevo en unos minutos.", 503);
+
+async function saveRefresh(db: Db, pending: PendingRefresh): Promise<boolean> {
+  // Reuse identical ciphertext on every attempt: the database recognizes a committed save with a lost response.
+  for (const delay of [0, 100, 300, 900]) {
+    if (delay) await pause(delay);
+    try {
+      const { data, error } = await db.rpc("finish_mercadolibre_refresh", pending);
+      if (!error && typeof data === "boolean") return data;
+    } catch { /* A network rejection has the same retry semantics as a returned database error. */ }
+  }
+  throw connectionUnavailable();
+}
+
+function usableConnection(config: MercadoLibreConfig, row: TokenRow, encrypted = row.access_token_enc): Connection {
+  const accessToken = decryptToken(config.key, row.store_id, encrypted);
+  if (!accessToken) throw new MercadoLibreError("MERCADOLIBRE_AUTH", "Vuelve a conectar tu cuenta de Mercado Libre.", 401);
+  return { storeId: row.store_id, userId: row.ml_user_id, accessToken };
+}
+
+// Near expiry, claim the connection before contacting the provider. Other workers re-read the saved pair instead
+// of submitting the same single-use refresh token. Waiting is bounded; a slow peer is temporary unavailability.
 export async function ownerConnection(config: MercadoLibreConfig, ownerUserId: string, fetcher: Fetcher = fetch): Promise<Connection | null> {
   const admin = getSupabaseAdminClient();
   if (!admin) throw new MercadoLibreError("MERCADOLIBRE_OFF", "La importación desde Mercado Libre no está disponible por ahora.", 503);
   const db = storeReachDb(admin);
-  const { data, error } = await db.rpc("get_mercadolibre_tokens", { p_owner_user_id: ownerUserId });
-  if (error) throw new MercadoLibreError("MERCADOLIBRE_UNAVAILABLE", "No pudimos leer tu conexión. Intenta de nuevo.", 503);
-  const row = data as { store_id?: string; ml_user_id?: number; access_token_enc?: string; refresh_token_enc?: string | null; expires_at?: string } | null;
-  if (!row?.store_id || !row.access_token_enc || !row.ml_user_id) return null;
-  const accessToken = decryptToken(config.key, row.store_id, row.access_token_enc);
-  if (!accessToken) throw new MercadoLibreError("MERCADOLIBRE_AUTH", "Vuelve a conectar tu cuenta de Mercado Libre.", 401);
-  if (Date.parse(row.expires_at ?? "") > Date.now() + 5 * 60_000) return { storeId: row.store_id, userId: row.ml_user_id, accessToken };
-
-  const refreshToken = row.refresh_token_enc ? decryptToken(config.key, row.store_id, row.refresh_token_enc) : null;
-  if (!refreshToken) throw new MercadoLibreError("MERCADOLIBRE_AUTH", "La conexión con Mercado Libre venció. Vuelve a conectar tu cuenta.", 401);
-  const tokens = await refreshTokens(config, refreshToken, fetcher).catch((failure) => {
-    if (failure instanceof MercadoLibreError && failure.code === "MERCADOLIBRE_TOKEN_INVALID") {
-      throw new MercadoLibreError("MERCADOLIBRE_AUTH", "La conexión con Mercado Libre venció. Vuelve a conectar tu cuenta.", 401);
+  const claimId = crypto.randomUUID();
+  for (let attempt = 0; attempt < 21; attempt += 1) {
+    const { data, error } = await db.rpc("get_mercadolibre_tokens", { p_owner_user_id: ownerUserId });
+    if (error) throw connectionUnavailable();
+    const row = data as TokenRow | null;
+    if (!row?.store_id || !row.access_token_enc || !row.ml_user_id) {
+      pendingRefreshes.delete(ownerUserId);
+      return null;
     }
-    throw failure;
-  });
-  // Mercado Libre's refresh tokens are single use: the new pair replaces the old one, unless another request already did.
-  await db.rpc("update_mercadolibre_tokens", {
-    p_store_id: row.store_id,
-    p_previous_access_token_enc: row.access_token_enc,
-    p_access_token_enc: encryptToken(config.key, row.store_id, tokens.accessToken),
-    p_refresh_token_enc: tokens.refreshToken ? encryptToken(config.key, row.store_id, tokens.refreshToken) : null,
-    p_expires_at: tokens.expiresAt.toISOString(),
-  });
-  return { storeId: row.store_id, userId: row.ml_user_id, accessToken: tokens.accessToken };
+    const pending = pendingRefreshes.get(ownerUserId);
+    if (pending) {
+      if (pending.p_store_id === row.store_id && pending.p_previous_access_token_enc === row.access_token_enc) {
+        if (await saveRefresh(db, pending)) {
+          pendingRefreshes.delete(ownerUserId);
+          return usableConnection(config, row, pending.p_access_token_enc);
+        }
+        pendingRefreshes.delete(ownerUserId);
+        continue; // A reconnect or disconnect won while saving; read it instead of returning the old account.
+      }
+      pendingRefreshes.delete(ownerUserId);
+    }
+    if (Date.parse(row.expires_at) > Date.now() + 5 * 60_000) return usableConnection(config, row);
+    const claim = await db.rpc("claim_mercadolibre_refresh", {
+      p_store_id: row.store_id, p_previous_access_token_enc: row.access_token_enc, p_claim_id: claimId,
+    });
+    if (claim.error) throw connectionUnavailable();
+    if (claim.data === "changed") continue;
+    if (claim.data === "busy") { await pause(100); continue; }
+    if (claim.data !== "claimed") throw connectionUnavailable();
+
+    const release = async () => { await db.rpc("release_mercadolibre_refresh", { p_store_id: row.store_id, p_claim_id: claimId }); };
+    let tokens;
+    try {
+      const refreshToken = row.refresh_token_enc ? decryptToken(config.key, row.store_id, row.refresh_token_enc) : null;
+      if (!refreshToken) throw new MercadoLibreError("MERCADOLIBRE_TOKEN_INVALID", "Vuelve a conectar tu cuenta de Mercado Libre.");
+      tokens = await refreshTokens(config, refreshToken, fetcher);
+      if (tokens.userId !== row.ml_user_id || !tokens.refreshToken) throw new MercadoLibreError("MERCADOLIBRE_TOKEN_INVALID", "Vuelve a conectar tu cuenta de Mercado Libre.");
+    } catch (failure) {
+      await release().catch(() => undefined);
+      // An OAuth callback may have replaced this connection during the provider request.
+      const latest = await db.rpc("get_mercadolibre_tokens", { p_owner_user_id: ownerUserId });
+      if (latest.error) throw connectionUnavailable();
+      if ((latest.data as TokenRow | null)?.access_token_enc !== row.access_token_enc) continue;
+      if (failure instanceof MercadoLibreError && failure.code === "MERCADOLIBRE_TOKEN_INVALID") {
+        throw new MercadoLibreError("MERCADOLIBRE_AUTH", "La conexión con Mercado Libre venció. Vuelve a conectar tu cuenta.", 401);
+      }
+      throw failure;
+    }
+    const replacement: PendingRefresh = {
+      p_store_id: row.store_id, p_previous_access_token_enc: row.access_token_enc, p_claim_id: claimId,
+      p_access_token_enc: encryptToken(config.key, row.store_id, tokens.accessToken),
+      p_refresh_token_enc: encryptToken(config.key, row.store_id, tokens.refreshToken),
+      p_expires_at: tokens.expiresAt.toISOString(),
+    };
+    pendingRefreshes.set(ownerUserId, replacement);
+    // Leave the claim and encrypted replacement intact on a save error, for a retry (never return unsaved tokens).
+    if (await saveRefresh(db, replacement)) {
+      pendingRefreshes.delete(ownerUserId);
+      return usableConnection(config, row, replacement.p_access_token_enc);
+    }
+    pendingRefreshes.delete(ownerUserId);
+  }
+  throw new MercadoLibreError("MERCADOLIBRE_BUSY", "Tu conexión se está actualizando. Intenta de nuevo en unos segundos.", 503);
 }
 
 export async function listItems(connection: Connection, offset: number, fetcher: Fetcher = fetch) {

@@ -31,6 +31,7 @@ type DetectorConstructor = new (options?: { formats?: string[] }) => Detector;
 
 const FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "qr_code"];
 const RETRY_MS = 30_000;
+const EMPTY_LOCATION_STOCK: Record<string, Record<string, number>> = {};
 
 function storage() {
   try {
@@ -44,7 +45,7 @@ function storage() {
 // (run-03) offers the boleta or factura with the sale when the store connected its Nubefact account.
 export type CounterLocation = { id: string; name: string; is_primary: boolean };
 
-export function Counter({ storeId, storeName = "la tienda", locations = [], locationStock = {}, receipts = null }: {
+export function Counter({ storeId, storeName = "la tienda", locations = [], locationStock = EMPTY_LOCATION_STOCK, receipts = null }: {
   storeId: string;
   storeName?: string;
   locations?: CounterLocation[];
@@ -78,16 +79,18 @@ export function Counter({ storeId, storeName = "la tienda", locations = [], loca
   const supportsCamera = typeof window !== "undefined" && "BarcodeDetector" in window && Boolean(navigator.mediaDevices?.getUserMedia);
 
   const loadIndex = useCallback(async () => {
-    const result = await inventoryAction<{ items: CounterItem[] }>({ action: "counter_index" });
+    const result = await inventoryAction<{ items: CounterItem[]; location_stock: Record<string, Record<string, number>> }>({ action: "counter_index" });
     if (result.ok) {
       setItems(result.data.items);
+      setAtLocation(result.data.location_stock);
       writeJson(storage(), INDEX_KEY(storeId), result.data.items);
       setLoaded("online");
-      return;
+      return true;
     }
     const cached = readJson<CounterItem[]>(storage(), INDEX_KEY(storeId), []);
     setItems(cached);
     setLoaded(cached.length ? "offline" : "failed");
+    return false;
   }, [storeId]);
 
   const queueMemory = useRef<{ storeId: string; entries: QueuedSale[] }>({ storeId, entries: [] });
@@ -110,13 +113,19 @@ export function Counter({ storeId, storeName = "la tienda", locations = [], loca
         if (issued.ok) setLastReceipt(issued.data.receipt);
         else setReceiptNote(`La venta que esperaba conexión se registró, pero su comprobante no: ${issued.message}`);
       }
+      // Keep its pending-stock deduction until the authoritative snapshot is available. A retry after a lost
+      // response is an idempotent replay, so subtracting the sale locally here would double-apply it.
+      if (result.ok && !(await loadIndex())) {
+        return { ok: false, code: "UNAVAILABLE", message: "La venta se registró; falta actualizar el stock. Intentaremos de nuevo.", detail: null };
+      }
       return result;
     },
     onRecorded: (sent) => {
       setNotice({ kind: "success", message: `${sent === 1 ? "Se registró la venta" : `Se registraron ${sent} ventas`} que esperaban conexión.` });
-      void loadIndex();
     },
   }), [readQueue, updateQueue, loadIndex]);
+
+  useEffect(() => { setAtLocation(locationStock); }, [locationStock]);
 
   useEffect(() => {
     const saved = readJson<string>(storage(), COUNTER_LOCATION_KEY(storeId), "");

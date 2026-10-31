@@ -8314,6 +8314,14 @@ export type Database = {
         Args: { p_limit?: number; p_session_id: string }
         Returns: Json
       }
+      claim_mercadolibre_refresh: {
+        Args: {
+          p_claim_id: string
+          p_previous_access_token_enc: string
+          p_store_id: string
+        }
+        Returns: string
+      }
       claim_public_page_changes: {
         Args: { p_deployment?: string }
         Returns: string
@@ -8730,6 +8738,17 @@ export type Database = {
           p_status: string
         }
         Returns: undefined
+      }
+      finish_mercadolibre_refresh: {
+        Args: {
+          p_access_token_enc: string
+          p_claim_id: string
+          p_expires_at: string
+          p_previous_access_token_enc: string
+          p_refresh_token_enc: string
+          p_store_id: string
+        }
+        Returns: boolean
       }
       finish_push_deliveries: {
         Args: {
@@ -9712,6 +9731,10 @@ export type Database = {
       record_store_receipt_result: {
         Args: { p_receipt_id: string; p_result: Json }
         Returns: Json
+      }
+      release_mercadolibre_refresh: {
+        Args: { p_claim_id: string; p_store_id: string }
+        Returns: undefined
       }
       release_store_import_step: {
         Args: { p_lock_token: string; p_session_id: string }

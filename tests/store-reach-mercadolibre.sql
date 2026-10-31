@@ -70,6 +70,47 @@ select pg_temp.check(public.update_mercadolibre_tokens('e7440000-0000-4000-8000-
   'a refresh applies');
 select pg_temp.check(public.get_mercadolibre_tokens('e7440000-0000-4000-8000-0000000000a1')->>'refresh_token_enc' = 'v1.refresh', 'the refresh token is kept');
 
+set local role service_role;
+select pg_temp.as_service();
+-- Final review: separate workers share one lease; saved replacements survive response retries and never undo OAuth.
+do $$ declare
+  store uuid := 'e7440000-0000-4000-8000-000000000001';
+  first_claim uuid := 'e7440000-0000-4000-8000-000000000201';
+  other_claim uuid := 'e7440000-0000-4000-8000-000000000202';
+begin
+  perform pg_temp.check(public.claim_mercadolibre_refresh(store, 'v1.access2', first_claim) = 'claimed', 'first worker claims');
+  perform pg_temp.check(public.claim_mercadolibre_refresh(store, 'v1.access2', other_claim) = 'busy', 'second worker waits');
+  perform pg_temp.check(not public.finish_mercadolibre_refresh(store, 'v1.access2', other_claim, 'v1.bad', 'v1.bad.refresh', now()+interval '6 hours'), 'wrong claim cannot save');
+  perform public.release_mercadolibre_refresh(store, other_claim);
+  perform pg_temp.check(public.claim_mercadolibre_refresh(store, 'v1.access2', other_claim) = 'busy', 'wrong release cannot steal lease');
+  perform pg_temp.check(public.finish_mercadolibre_refresh(store, 'v1.access2', first_claim, 'v1.access3', 'v1.refresh3', now()+interval '6 hours'), 'claimed worker saves');
+  perform pg_temp.check(public.finish_mercadolibre_refresh(store, 'v1.access2', first_claim, 'v1.access3', 'v1.refresh3', now()+interval '6 hours'), 'lost save response retries successfully');
+  perform pg_temp.check(public.claim_mercadolibre_refresh(store, 'v1.access2', other_claim) = 'changed', 'waiting worker re-reads new pair');
+  perform pg_temp.check(public.claim_mercadolibre_refresh(store, 'v1.access3', first_claim) = 'claimed', 'claim before OAuth callback');
+  perform public.save_mercadolibre_connection('e7440000-0000-4000-8000-0000000000a1', 99, 'TIENDAML', 'v1.reconnected', 'v1.reconnected.refresh', now()+interval '6 hours', 'read');
+  perform pg_temp.check(not public.finish_mercadolibre_refresh(store, 'v1.access3', first_claim, 'v1.stale', 'v1.stale.refresh', now()+interval '6 hours'), 'reconnect wins');
+  perform pg_temp.check(public.claim_mercadolibre_refresh(store, 'v1.reconnected', other_claim) = 'claimed', 'reconnect is not blocked by old lease');
+  perform public.release_mercadolibre_refresh(store, other_claim);
+end $$;
+reset role;
+do $$ begin
+  perform pg_temp.check(not has_table_privilege('service_role','laria_private.mercadolibre_refresh_claims','select'), 'API role cannot read private claims');
+  perform pg_temp.check(not has_function_privilege('anon','public.claim_mercadolibre_refresh(uuid,text,uuid)','execute'), 'anonymous cannot claim');
+  perform pg_temp.check(not has_function_privilege('authenticated','public.finish_mercadolibre_refresh(uuid,text,uuid,text,text,timestamp with time zone)','execute'), 'owners cannot save provider tokens');
+end $$;
+-- An abandoned worker does not block the connection forever; the old lease is fenced after takeover.
+set local role service_role;
+select pg_temp.as_service();
+select public.claim_mercadolibre_refresh('e7440000-0000-4000-8000-000000000001', 'v1.reconnected', 'e7440000-0000-4000-8000-000000000201');
+reset role;
+update laria_private.mercadolibre_refresh_claims set lease_until = now()-interval '1 minute' where store_id='e7440000-0000-4000-8000-000000000001';
+set local role service_role;
+select pg_temp.as_service();
+select pg_temp.check(public.claim_mercadolibre_refresh('e7440000-0000-4000-8000-000000000001', 'v1.reconnected', 'e7440000-0000-4000-8000-000000000202')='claimed', 'expired lease can be reclaimed');
+select pg_temp.check(not public.finish_mercadolibre_refresh('e7440000-0000-4000-8000-000000000001', 'v1.reconnected', 'e7440000-0000-4000-8000-000000000201', 'v1.late', 'v1.late.refresh', now()+interval '6 hours'), 'late old worker fenced');
+select public.release_mercadolibre_refresh('e7440000-0000-4000-8000-000000000001', 'e7440000-0000-4000-8000-000000000202');
+
+
 reset role;
 set local role authenticated;
 select pg_temp.as_user('e7440000-0000-4000-8000-0000000000a1');
